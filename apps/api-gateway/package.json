@@ -1,17 +1,14 @@
 {
-  "name": "api-gateway",
+  "name": "terramatch-api-gateway",
   "version": "0.1.0",
   "bin": {
     "api-gateway": "bin/api-gateway.js"
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
-    "test": "jest",
     "build-local-proxy": "(cd lambda/local-proxy; npm run build)",
     "synth-local": "NODE_ENV=development PHP_PROXY_TARGET=http://host.docker.internal:8080 cdk synth --no-staging --quiet",
-    "prestart": "npm run build-local-proxy && npm run synth-local",
-    "start": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack.template.json -p 4000",
+    "build": "npm run build-local-proxy && npm run synth-local",
+    "serve": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack.template.json -p 4000",
     "deploy": "PHP_PROXY_TARGET=https://new-wri-staging.wri-restoration-marketplace-api.com cdk deploy"
   },
   "devDependencies": {

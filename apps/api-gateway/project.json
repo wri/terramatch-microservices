@@ -1,0 +1,7 @@
+{
+  "name": "api-gateway",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/api-gateway/lib/src",
+  "projectType": "application",
+  "tags": []
+}

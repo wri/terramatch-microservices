@@ -1,0 +1,31 @@
+{
+  "name": "api-gateway",
+  "version": "0.1.0",
+  "bin": {
+    "api-gateway": "bin/api-gateway.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "build-local-proxy": "(cd lambda/local-proxy; npm run build)",
+    "synth-local": "NODE_ENV=development PHP_PROXY_TARGET=http://host.docker.internal:8080 cdk synth --no-staging --quiet",
+    "prestart": "npm run build-local-proxy && npm run synth-local",
+    "start": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack.template.json -p 4000",
+    "deploy": "PHP_PROXY_TARGET=https://new-wri-staging.wri-restoration-marketplace-api.com cdk deploy"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "aws-cdk": "2.157.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.5.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.157.0",
+    "constructs": "^10.0.0",
+    "source-map-support": "^0.5.21"
+  }
+}

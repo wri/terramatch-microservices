@@ -6,6 +6,10 @@ import {NodejsFunction} from 'aws-cdk-lib/aws-lambda-nodejs'
 import {Architecture, Runtime} from 'aws-cdk-lib/aws-lambda'
 import {RetentionDays} from 'aws-cdk-lib/aws-logs'
 
+// References the .env in the root of this repo, so building from this directory will not find
+// the file correctly. Instead, use `nx build api-gateway` in the root directory.
+require('dotenv').config();
+
 export class ApiGatewayStack extends cdk.Stack {
   protected httpApi: HttpApi;
 
@@ -28,7 +32,18 @@ export class ApiGatewayStack extends cdk.Stack {
       }
     });
 
-    this.addProxy('PHP Monolith', '/api/{proxy+}', process.env.PHP_PROXY_TARGET ?? '', '/api/{proxy}');
+    this.addProxy(
+      'User Service',
+      '/user-service/{proxy+}',
+      process.env.USER_SERVICE_PROXY_TARGET ?? '',
+      '/{proxy}'
+    );
+    this.addProxy(
+      'PHP Monolith',
+      '/api/{proxy+}',
+      process.env.PHP_PROXY_TARGET ?? '',
+      '/api/{proxy}'
+    );
   }
 
   protected addProxy (name: string, path: string, targetHost: string, targetPath: string) {

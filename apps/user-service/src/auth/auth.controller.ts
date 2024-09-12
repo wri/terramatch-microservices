@@ -1,8 +1,8 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { Login } from './entities/login.entity';
+import { LoginRequest } from './dto/login-request.dto';
 import { JsonApiResponse } from '../decorators/json-api-response.decorator';
+import { LoginResponse } from './dto/login-response.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -12,10 +12,10 @@ export class AuthController {
   @JsonApiResponse({
     status: 201,
     description: 'Receive a JWT Token in exchange for login credentials',
-    dataType: Login
+    dataType: LoginResponse
   })
-  login(@Body() loginDto: LoginDto): Login {
-    const token = this.authService.login(loginDto.email_address, loginDto.password);
+  async login(@Body() { email_address, password }: LoginRequest): Promise<LoginResponse> {
+    const token = await this.authService.login(email_address, password);
     return { token };
   }
 }

@@ -7,6 +7,7 @@ Repository for the Microservices API backend of the TerraMatch service
  * [CDK CLI](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) (install globally)
  * [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
  * [NX](https://nx.dev/getting-started/installation#installing-nx-globally) (install globally)
+ * [NestJS](https://docs.nestjs.com/) (install globally, useful for development)
 
 # Building and starting the apps
  * Copy `.env.local.sample` to `.env`

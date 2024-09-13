@@ -14,8 +14,8 @@ export class AuthController {
     description: 'Receive a JWT Token in exchange for login credentials',
     dataType: LoginResponse
   })
-  async login(@Body() { email_address, password }: LoginRequest): Promise<LoginResponse> {
-    const token = await this.authService.login(email_address, password);
+  async login(@Body() { emailAddress, password }: LoginRequest): Promise<LoginResponse> {
+    const token = await this.authService.login(emailAddress, password);
     return { token };
   }
 }

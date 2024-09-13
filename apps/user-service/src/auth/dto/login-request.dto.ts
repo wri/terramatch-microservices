@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class LoginRequest {
   @IsEmail()
   @ApiProperty()
-  email_address: string;
+  emailAddress: string;
 
   @IsNotEmpty()
   @ApiProperty()

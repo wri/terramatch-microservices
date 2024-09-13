@@ -3,9 +3,12 @@ import { User } from '@terramatch-microservices/database';
 
 @Injectable()
 export class AuthService {
-  async login(email_address: string, password: string) {
-    const user = await User.findOneBy({ email_address });
+  async login(emailAddress: string, password: string) {
+    // TODO: what additional fields do we need for JWT generation? This could simply be
+    //  User.findOneBy(), but it's nice not to have to pull the whole role from this fairly large
+    //  table
+    const { password: dbPassword } = await User.findOne({ select: { password: true }, where: { emailAddress } });
 
-    return `Auth Service [${email_address}, ${user.id}, ${user.uuid}]`;
+    return `Auth Service [${dbPassword}]`;
   }
 }

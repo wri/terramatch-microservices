@@ -16,41 +16,41 @@ export class User extends BaseEntity {
   @Column('uuid')
   uuid: string;
 
-  @CreateDateColumn()
-  created_at: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @UpdateDateColumn()
-  updated_at: Date;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 
-  @DeleteDateColumn()
-  deleted_at: Date;
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt: Date;
 
   // TODO: relate this to the organisations table
   // Note: this is a bigint(20) unsigned according to describe users, but TypeORM claims that
   // unsigned big int isn't supported by MariaDB.
-  @Column('bigint')
-  organisation_id: number;
+  @Column('bigint', { name: 'organisation_id' })
+  organisationId: number;
 
-  @Column()
-  first_name: string;
+  @Column({ name: 'first_name' })
+  firstName: string;
 
-  @Column()
-  last_name: string;
+  @Column({ name: 'last_name' })
+  lastName: string;
 
-  @Column()
-  email_address: string;
+  @Column({ name: 'email_address' })
+  emailAddress: string;
 
   @Column()
   password: string;
 
-  @Column()
-  email_address_verified_at: Date;
+  @Column({ name: 'email_address_verified_at' })
+  emailAddressVerifiedAt: Date;
 
-  @Column()
-  last_logged_in_at: Date;
+  @Column({ name: 'last_logged_in_at' })
+  lastLoggedInAt: Date;
 
-  @Column()
-  job_role: string;
+  @Column({ name: 'job_role' })
+  jobRole: string;
 
   @Column()
   facebook: string;
@@ -67,23 +67,23 @@ export class User extends BaseEntity {
   @Column()
   avatar: string;
 
-  @Column()
-  phone_number: string;
+  @Column({ name: 'phone_number' })
+  phoneNumber: string;
 
-  @Column()
-  whatsapp_phone: string;
+  @Column({ name: 'whatsapp_phone' })
+  whatsappPhone: string;
 
-  @Column('bool')
-  is_subscribed: boolean;
+  @Column('bool', { name: 'is_subscribed' })
+  isSubscribed: boolean;
 
-  @Column('bool')
-  has_consented: boolean;
+  @Column('bool', { name: 'has_consented' })
+  hasConsented: boolean;
 
   @Column()
   banners: string;
 
-  @Column()
-  api_key: string;
+  @Column({ name: 'api_key' })
+  apiKey: string;
 
   @Column()
   country: string;

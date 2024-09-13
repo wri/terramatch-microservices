@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '@terramatch-microservices/database';
+import bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
@@ -7,8 +8,13 @@ export class AuthService {
     // TODO: what additional fields do we need for JWT generation? This could simply be
     //  User.findOneBy(), but it's nice not to have to pull the whole role from this fairly large
     //  table
-    const { password: dbPassword } = await User.findOne({ select: { password: true }, where: { emailAddress } });
+    const { password: passwordHash } =
+      await User.findOne({ select: { password: true }, where: { emailAddress } }) ?? {};
+    if (passwordHash == null) return null;
 
-    return `Auth Service [${dbPassword}]`;
+    const passwordValid = await bcrypt.compare(password, passwordHash);
+    if (!passwordValid) return null;
+
+    return `Auth Service [${passwordHash}]`;
   }
 }

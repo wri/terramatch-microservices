@@ -5,6 +5,7 @@
   "scripts": {},
   "private": true,
   "dependencies": {
+    "@nanogiants/nestjs-swagger-api-exception-decorator": "^1.6.11",
     "@nestjs/common": "^10.0.2",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.0.2",
@@ -36,6 +37,7 @@
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.12",
     "@types/node": "~18.16.9",
     "@typescript-eslint/eslint-plugin": "^7.16.0",

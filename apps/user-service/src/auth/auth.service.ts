@@ -15,6 +15,8 @@ export class AuthService {
     const passwordValid = await bcrypt.compare(password, passwordHash);
     if (!passwordValid) return null;
 
+    await User.update({ id }, { lastLoggedInAt: () => 'now()' });
+
     return await this.jwtService.signAsync({
       sub: id,
       // sha1 hash of 'App\\Models\\V2\\User'. Needed for the PHP Backend to

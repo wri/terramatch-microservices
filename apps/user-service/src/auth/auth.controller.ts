@@ -1,4 +1,4 @@
-import { Body, Controller, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginRequest } from './dto/login-request.dto';
 import { JsonApiResponse } from '../decorators/json-api-response.decorator';
@@ -12,7 +12,7 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Receive a JWT Token in exchange for login credentials' })
-  @JsonApiResponse({ status: HttpStatus.OK, dataType: LoginResponse })
+  @JsonApiResponse({ dataType: LoginResponse })
   @ApiException(
     () => UnauthorizedException,
     { description: 'Authentication failed.', template: { statusCode: '$status', message: '$description', } }

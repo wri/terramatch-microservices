@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/ban-types,@typescript-eslint/no-explicit-any */
 import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from '@nestjs/swagger';
+import { HttpStatus } from '@nestjs/common';
 
 /**
  * Decorator to simplify wrapping the response type from a controller method with the JSON API
  * response structure. Applies the ApiExtraModels and ApiResponse decorators.
  */
 export function JsonApiResponse(options: ApiResponseOptions & { dataType: Function }): MethodDecorator & ClassDecorator {
-  const { dataType, ...rest } = options;
+  const { dataType, status, ...rest } = options;
   const apiResponseOptions = {
     ...rest,
+    status: status ?? HttpStatus.OK,
     schema: {
       type: "object",
       properties: {

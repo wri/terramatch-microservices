@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginRequest } from './dto/login-request.dto';
 import { JsonApiResponse } from '../decorators/json-api-response.decorator';
@@ -12,13 +12,13 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Receive a JWT Token in exchange for login credentials' })
-  @JsonApiResponse({ dataType: LoginResponse })
+  @JsonApiResponse({ status: HttpStatus.CREATED, dataType: LoginResponse })
   @ApiException(
     () => UnauthorizedException,
     { description: 'Authentication failed.', template: { statusCode: '$status', message: '$description', } }
   )
   async login(@Body() { emailAddress, password }: LoginRequest): Promise<LoginResponse> {
-    const token = await this.authService.login(emailAddress, password);
+    const { token, userId } = await this.authService.login(emailAddress, password) ?? {}
     if (token == null) {
       // there are multiple reasons for the token to be null (bad email address, wrong password),
       // but we don't want to report on the specifics because it opens an attack vector: if we
@@ -27,6 +27,6 @@ export class AuthController {
       throw new UnauthorizedException();
     }
 
-    return { token };
+    return { type: 'logins', id: `${userId}`, token };
   }
 }

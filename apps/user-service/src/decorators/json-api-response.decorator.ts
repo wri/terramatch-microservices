@@ -1,12 +1,15 @@
-/* eslint-disable @typescript-eslint/ban-types,@typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from '@nestjs/swagger';
 import { HttpStatus } from '@nestjs/common';
+import { JsonApiDataDto } from '../interfaces/json-api-data-dto.interface';
 
 /**
  * Decorator to simplify wrapping the response type from a controller method with the JSON API
  * response structure. Applies the ApiExtraModels and ApiResponse decorators.
  */
-export function JsonApiResponse(options: ApiResponseOptions & { dataType: Function }): MethodDecorator & ClassDecorator {
+export function JsonApiResponse<C extends JsonApiDataDto>(
+  options: ApiResponseOptions & { dataType: new () => C }
+): MethodDecorator & ClassDecorator {
   const { dataType, status, ...rest } = options;
   const apiResponseOptions = {
     ...rest,

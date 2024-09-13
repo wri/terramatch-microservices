@@ -17,7 +17,7 @@ export class AuthService {
 
     await User.update({ id }, { lastLoggedInAt: () => 'now()' });
 
-    return await this.jwtService.signAsync({
+    const token = await this.jwtService.signAsync({
       sub: id,
       // sha1 hash of 'App\\Models\\V2\\User'. Needed for the PHP Backend to
       // successfully find a user based on the JWT token generated here.
@@ -25,5 +25,6 @@ export class AuthService {
     }, {
       expiresIn: '12h'
     });
+    return { token, userId: id };
   }
 }

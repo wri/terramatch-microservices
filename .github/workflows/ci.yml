@@ -1,11 +1,7 @@
 name: CI
 
 on:
-  push:
-# disabled for now
-    branches:
-      - none
-#  pull_request:
+  pull_request:
 
 permissions:
   actions: read

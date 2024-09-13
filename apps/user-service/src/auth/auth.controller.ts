@@ -8,7 +8,7 @@ import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
-  constructor (protected readonly authService: AuthService) {}
+  constructor (private readonly authService: AuthService) {}
 
   @Post('login')
   @ApiOperation({ summary: 'Receive a JWT Token in exchange for login credentials' })
@@ -20,6 +20,10 @@ export class AuthController {
   async login(@Body() { emailAddress, password }: LoginRequest): Promise<LoginResponse> {
     const token = await this.authService.login(emailAddress, password);
     if (token == null) {
+      // there are multiple reasons for the token to be null (bad email address, wrong password),
+      // but we don't want to report on the specifics because it opens an attack vector: if we
+      // report that an email address isn't valid, that lets an attacker know which email addresses
+      // _are_ valid in our system.
       throw new UnauthorizedException();
     }
 

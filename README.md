@@ -41,3 +41,7 @@ schema:
 This codebase connects to the database running in the `wri-terramatch-api` docker container. The docker-compose
 file included in this repo is used only for setting up the database needed for running unit tests in Github Actions.
 
+To set up the local testing database, run these two commands in the `wri-terramatch-api` directory with the docker container running:
+* `echo "grant all on terramatch_microservices_test to 'wri'@'%';" | dc exec -T mariadb mysql -h localhost -u root -proot `
+* `echo "grant all on terramatch_microservices_test.* to 'wri'@'%';" | dc exec -T mariadb mysql -h localhost -u root -proot`
+

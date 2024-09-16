@@ -78,7 +78,7 @@ describe('AuthService', () => {
   it('should update the last logged in date on the user', async () => {
     const user = await UserFactory.create({ password: 'fakepasswordhash' });
     jest.spyOn(bcrypt, 'compare').mockImplementation(() => Promise.resolve(true));
-    jwtService.signAsync.mockReturnValue(Promise.resolve('fake jwt token'));
+    jwtService.signAsync.mockResolvedValue('fake jwt token');
 
     await service.login(user.emailAddress, 'fakepassword');
 

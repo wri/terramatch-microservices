@@ -38,3 +38,6 @@ schema:
 //   test runs (the only time we let TypeORM modify the DB schema).
 ```
 
+This codebase connects to the database running in the `wri-terramatch-api` docker container. The docker-compose
+file included in this repo is used only for setting up the database needed for running unit tests in Github Actions.
+

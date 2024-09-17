@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: TerraMatch Research Persona APIs
+  description: |-
+    The set of research persona APIs will be developed to assist the data team with fetching
+    well structured data from the TerraMatch API Backend.
+
+    https://app.asana.com/0/1206059288585913/1208023832218964/f
+  version: 0.1.0
+paths:
+  /trees/polygons:
+    get:
+      summary: Pull TerraMatch Polygons for Tree Count and Tree Cover Analyses
+      parameters:
+        - name: status
+          in: query
+          description: A filter for polygons that match this status
+          required: false
+          schema:
+            type: string
+            enum:
+              - submitted
+              - approved
+              - draft
+              - needs-more-information
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SitePolygon'
+components:
+  schemas:
+    SitePolygon:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+
+

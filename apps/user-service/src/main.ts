@@ -15,7 +15,7 @@ async function bootstrap() {
     .addTag('user-service')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('user-service/api', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
   app.useGlobalInterceptors(new TransformInterceptor());

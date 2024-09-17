@@ -6,11 +6,11 @@ import { LoginResponse } from './dto/login-response.dto';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { ApiOperation } from '@nestjs/swagger';
 
-@Controller('auth')
+@Controller('auth/v3')
 export class AuthController {
   constructor (private readonly authService: AuthService) {}
 
-  @Post('login')
+  @Post('logins')
   @ApiOperation({ summary: 'Receive a JWT Token in exchange for login credentials' })
   @JsonApiResponse({ status: HttpStatus.CREATED, dataType: LoginResponse })
   @ApiException(

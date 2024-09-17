@@ -2,7 +2,7 @@ import {APIGatewayProxyEventV2, APIGatewayProxyResultV2} from 'aws-lambda'
 
 export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   const query = event.rawQueryString === '' ? '' : `?${event.rawQueryString}`;
-  const url = `${process.env.PROXY_TARGET}/${event.pathParameters!.proxy}${query}`;
+  const url = `${process.env.PROXY_TARGET}${event.rawPath}${query}`;
   const requestHeaders = new Headers();
   for (const header in event.headers) {
     requestHeaders.append(header, event.headers[header]!);

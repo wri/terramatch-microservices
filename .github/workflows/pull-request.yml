@@ -1,0 +1,46 @@
+name: Pull Request
+
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+on:
+  pull_request:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: KengoTODA/actions-setup-docker-compose@v1
+        with:
+          version: '2.29.1'
+
+      # This enables task distribution via Nx Cloud
+      # Run this command as early as possible, before dependencies are installed
+      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
+      - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+
+      - run: docker-compose up -d
+
+      # Cache node_modules
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci --legacy-peer-deps && (cd apps/api-gateway; npm ci) && (cd apps/api-gateway/lambda/local-proxy; npm ci)
+
+      - uses: nrwl/nx-set-shas@v4
+
+      # Distributed execution only works with cacheable builds. The Api Gateway build is not currently
+      # cacheable. Since the codebase is currently small, we can get away without distribution, but once
+      # it grows, we'll want to look into what it will take to make the api gateway build cacheable and remove
+      # NX_CLOUD_DISTRIBUTED_EXECUTION=false from this command.
+      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx affected -t lint 'test --coverage --passWithNoTests' build

@@ -35,7 +35,8 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci --legacy-peer-deps && (cd apps/api-gateway; npm ci) && (cd apps/api-gateway/lambda/local-proxy; npm ci)
+
       - uses: nrwl/nx-set-shas@v4
 
       # Distributed execution only works with cacheable builds. The Api Gateway build is not currently

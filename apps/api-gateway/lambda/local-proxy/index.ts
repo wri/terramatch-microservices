@@ -18,15 +18,14 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 
   const result = await fetch(url, requestInit);
 
-  const responseHeaders: { [p: string]: string | number | boolean } = {};
-  for (const header in result.headers.keys) {
-    responseHeaders[header] = result.headers.get(header)!;
-  }
-
   return {
     body: await result.text(),
     statusCode: result.status,
     isBase64Encoded: false,
-    headers: responseHeaders,
+    headers: {
+      'Cache-Control': result.headers.get('Cache-Control') ?? 'no-cache',
+      'Content-Type': result.headers.get('Content-Type') ?? 'application/json',
+    },
+    cookies: result.headers.getSetCookie()
   }
 }

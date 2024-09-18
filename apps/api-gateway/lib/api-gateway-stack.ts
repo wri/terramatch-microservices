@@ -43,34 +43,26 @@ export class ApiGatewayStack extends cdk.Stack {
     });
 
     for (const [service, { target, namespaces }] of Object.entries(V3_SERVICES)) {
-      this.addProxy(`API Swagger Docs [${service}]`, `/${service}/api`, target, `/api`)
-      this.addProxy(`API JSON Docs [${service}]`, `/${service}/api-json`, target, `/api-json`)
+      this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, target);
 
       for (const namespace of namespaces) {
-        this.addProxy(
-          `V3 Namespace [${service}/${namespace}]`,
-          `/${namespace}/v3/{proxy+}`,
-          target,
-          `/${namespace}/v3/{proxy}`
-        )
+        this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, target);
       }
     }
 
     // The PHP Monolith proxy keeps `/api/` in its path to avoid conflict with the newer
     // namespace-driven design of the v3 API space, and to minimize disruption with existing
     // consumers (like Greenhouse and the web TM frontend) as we migrate to this API Gateway.
-    this.addProxy(
-      'PHP Monolith',
-      '/api/{proxy+}',
-      process.env.PHP_PROXY_TARGET ?? '',
-      '/api/{proxy}'
-    );
+    this.addProxy('PHP Monolith', '/api/', process.env.PHP_PROXY_TARGET ?? '');
+    this.addProxy('PHP OpenAPI Docs', '/documentation/', process.env.PHP_PROXY_TARGET ?? '')
   }
 
-  protected addProxy (name: string, path: string, targetHost: string, targetPath: string) {
+  protected addProxy (name: string, path: string, targetHost: string, proxyPath: boolean = true) {
+    const sourcePath = `${path}${proxyPath ? '{proxy+}' : ''}`;
     if (process.env.NODE_ENV === 'development') {
-      this.addLocalLambdaProxy(name, path, targetHost);
+      this.addLocalLambdaProxy(name, sourcePath, targetHost);
     } else {
+      const targetPath = `${path}${proxyPath ? '{proxy}' : ''}`;
       this.addHttpUrlProxy(name, path, `${targetHost}${targetPath}`);
     }
   }
@@ -109,6 +101,6 @@ export class ApiGatewayStack extends cdk.Stack {
       path: sourcePath,
       methods: [HttpMethod.ANY],
       integration: new HttpUrlIntegration(name, targetUrl),
-    })
+    });
   }
 }

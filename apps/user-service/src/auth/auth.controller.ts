@@ -11,7 +11,7 @@ export class AuthController {
   constructor (private readonly authService: AuthService) {}
 
   @Post('logins')
-  @ApiOperation({ summary: 'Receive a JWT Token in exchange for login credentials' })
+  @ApiOperation({ operationId: 'authLogin', description: 'Receive a JWT Token in exchange for login credentials' })
   @JsonApiResponse({ status: HttpStatus.CREATED, dataType: LoginResponse })
   @ApiException(
     () => UnauthorizedException,

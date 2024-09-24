@@ -57,13 +57,13 @@ export class ApiGatewayStack extends cdk.Stack {
     this.addProxy('PHP OpenAPI Docs', '/documentation/', process.env.PHP_PROXY_TARGET ?? '')
   }
 
-  protected addProxy (name: string, path: string, targetHost: string, proxyPath: boolean = true) {
-    const sourcePath = `${path}${proxyPath ? '{proxy+}' : ''}`;
+  protected addProxy (name: string, path: string, targetHost: string) {
+    const sourcePath = `${path}{proxy+}`;
     if (process.env.NODE_ENV === 'development') {
       this.addLocalLambdaProxy(name, sourcePath, targetHost);
     } else {
-      const targetPath = `${path}${proxyPath ? '{proxy}' : ''}`;
-      this.addHttpUrlProxy(name, path, `${targetHost}${targetPath}`);
+      const targetPath = `${path}{proxy}`;
+      this.addHttpUrlProxy(name, sourcePath, `${targetHost}${targetPath}`);
     }
   }
 

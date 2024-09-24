@@ -5,6 +5,8 @@ import { DatabaseModule } from '@terramatch-microservices/database';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersController } from './users/users.controller';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from '@terramatch-microservices/common/guards';
 
 @Module({
   imports: [
@@ -18,6 +20,12 @@ import { UsersController } from './users/users.controller';
     }),
   ],
   controllers: [AuthController, UsersController],
-  providers: [AuthService],
+  providers: [
+    AuthService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    }
+  ],
 })
 export class AppModule {}

@@ -5,12 +5,14 @@ import { JsonApiResponse } from '../decorators/json-api-response.decorator';
 import { LoginResponse } from './dto/login-response.dto';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { ApiOperation } from '@nestjs/swagger';
+import { NoBearerAuth } from '@terramatch-microservices/common/guards';
 
 @Controller('auth/v3')
 export class AuthController {
   constructor (private readonly authService: AuthService) {}
 
   @Post('logins')
+  @NoBearerAuth()
   @ApiOperation({ operationId: 'authLogin', description: 'Receive a JWT Token in exchange for login credentials' })
   @JsonApiResponse({ status: HttpStatus.CREATED, dataType: LoginResponse })
   @ApiException(

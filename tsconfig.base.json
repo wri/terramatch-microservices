@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@terramatch-microservices/common": ["libs/common/src/index.ts"],
+      "@terramatch-microservices/common/*": ["libs/common/src/lib/*"],
       "@terramatch-microservices/database": ["libs/database/src/index.ts"]
     }
   },

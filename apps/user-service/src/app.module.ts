@@ -4,6 +4,7 @@ import { AuthService } from './auth/auth.service';
 import { DatabaseModule } from '@terramatch-microservices/database';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UsersController } from './users/users.controller';
 
 @Module({
   imports: [
@@ -14,9 +15,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
       }),
-    })
+    }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController],
   providers: [AuthService],
 })
 export class AppModule {}

@@ -16,7 +16,7 @@ require('dotenv').config();
 const V3_SERVICES = {
   'user-service': {
     target: process.env.USER_SERVICE_PROXY_TARGET ?? '',
-    namespaces: ['auth']
+    namespaces: ['auth', 'users']
   }
 }
 
@@ -62,8 +62,7 @@ export class ApiGatewayStack extends cdk.Stack {
     if (process.env.NODE_ENV === 'development') {
       this.addLocalLambdaProxy(name, sourcePath, targetHost);
     } else {
-      const targetPath = `${path}{proxy}`;
-      this.addHttpUrlProxy(name, sourcePath, `${targetHost}${targetPath}`);
+      this.addHttpUrlProxy(name, sourcePath, `${targetHost}${path}{proxy}`);
     }
   }
 

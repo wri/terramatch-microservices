@@ -29,7 +29,7 @@ export class AuthGuard implements CanActivate {
       const { sub } = await this.jwtService.verifyAsync(token);
       // Most requests won't need the actual user object; instead the roles and permissions
       // are fetched from other (smaller) tables, and only the user id is needed.
-      request.authorizedUserId = sub;
+      request.authenticatedUserId = sub;
       return true;
     } catch {
       throw new UnauthorizedException();

@@ -2,11 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { User } from '@terramatch-microservices/database';
 import { FactoryGirl, TypeOrmRepositoryAdapter } from 'factory-girl-ts';
 import { DataSource } from 'typeorm';
-import { UserFactory } from '@terramatch-microservices/database';
 import bcrypt from 'bcryptjs';
+import { User, UserFactory } from '@terramatch-microservices/database/entities';
 
 const dataSource = new DataSource({
   type: 'mariadb',

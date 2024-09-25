@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@terramatch-microservices/database';
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { User } from '@terramatch-microservices/database/entities';
 
 @Injectable()
 export class AuthService {

@@ -1,14 +1,21 @@
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
-import { User } from '@terramatch-microservices/database/entities';
 
-type BuilderType = ReturnType<typeof createMongoAbility>;
+export type BuilderType = ReturnType<typeof createMongoAbility>;
 
 export abstract class EntityPolicy {
-  protected ability: AbilityBuilder<BuilderType>;
+  /**
+   * Most policies can create their rule set based on the user id and the user permissions. For
+   * those that need access to more resources (like the user's organisation_id), the addRules()
+   * method below is async so that calls to the DB can be made.
+   *
+   * Note that the builder is passed in instead of created here. This is so that the PolicyService
+   * can support
+   */
+  constructor(
+    protected userId: number,
+    protected permissions: string[],
+    protected builder: AbilityBuilder<BuilderType>,
+  ) {}
 
-  constructor(protected userId: number, protected permissions: string[]) {
-    this.ability = new AbilityBuilder(createMongoAbility);
-  }
-
-  public abstract build(): Promise<BuilderType>;
+  public abstract addRules(): Promise<void>;
 }

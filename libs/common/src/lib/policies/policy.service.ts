@@ -1,16 +1,17 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { RequestContext } from 'nestjs-request-context';
-import { UserPolicy } from '@terramatch-microservices/common/policies/user.policy';
+import { UserPolicy } from './user.policy';
 import { BaseEntity } from 'typeorm';
-import { EntityPolicy } from '@terramatch-microservices/common/policies/entity.policy';
+import { BuilderType, EntityPolicy } from './entity.policy';
 import { Permission, User } from '@terramatch-microservices/database/entities';
+import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 
 type EntityClass = {
   new (...args: any[]): BaseEntity;
-}
+};
 
 type PolicyClass = {
-  new (userId: number, permissions: string[]): EntityPolicy;
+  new (userId: number, permissions: string[], builder: AbilityBuilder<BuilderType>): EntityPolicy;
 }
 
 const POLICIES: [ [EntityClass, PolicyClass] ] = [
@@ -41,8 +42,10 @@ export class PolicyService {
     }
 
     const permissions = await Permission.getUserPermissionNames(userId);
-    const ability = await (new PolicyClass(userId, permissions)).build();
+    const builder = new AbilityBuilder(createMongoAbility);
+    await (new PolicyClass(userId, permissions, builder)).addRules();
 
+    const ability = builder.build();
     if (!ability.can(action, subject)) throw new UnauthorizedException();
   }
 }

@@ -1,1 +1,1 @@
-export { JsonApiDataDto } from './json-api-data-dto.interface'
+export { JsonApiDto } from './json-api-data-dto.interface'

@@ -11,20 +11,23 @@ export interface Response<T> {
   data: T;
 }
 
+function transform<T>(data: any) {
+  const { type, ...attributes } = data.attributes;
+
+  return {
+    data: { type, id: data.id, attributes }
+  } as Response<T>;
+}
+
 /**
  * Transforms all method responses into a JSON API response structure.
- * TODO: support additional properties (beyond just data) on the response structure. This will
- *   likely involve returning a custom response object in those cases that this interceptor knows
- *   to look for.
  */
 @Injectable()
 export class TransformInterceptor<T>
   implements NestInterceptor<T, Response<T>>
 {
-  intercept(
+  intercept = (
     context: ExecutionContext,
     next: CallHandler<T>,
-  ): Observable<Response<T>> {
-    return next.handle().pipe(map(data => ({ data })));
-  }
+  ): Observable<Response<T>> => next.handle().pipe(map(transform<T>));
 }

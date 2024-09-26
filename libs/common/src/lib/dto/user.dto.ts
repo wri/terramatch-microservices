@@ -1,5 +1,6 @@
-import { JsonApiDataDto } from '../interfaces';
 import { ApiProperty } from '@nestjs/swagger';
+import { JsonApiDto } from '../decorators';
+import { JsonApiAttributes } from '@terramatch-microservices/common/dto/json-api-attributes';
 
 const USER_ORG_STATUSES = ['rejected', 'approved', 'requested'] as const;
 type UserOrgStatus = (typeof USER_ORG_STATUSES)[number];
@@ -12,13 +13,8 @@ class UserOrg {
   status: UserOrgStatus;
 }
 
-export class UserDto implements JsonApiDataDto {
-  @ApiProperty({ example: 'users' })
-  type: string;
-
-  @ApiProperty({ format: 'uuid' })
-  id: string;
-
+@JsonApiDto({ type: 'users' })
+export class UserDto extends JsonApiAttributes<UserDto> {
   @ApiProperty()
   firstName?: string;
 
@@ -39,10 +35,11 @@ export class UserDto implements JsonApiDataDto {
 
   @ApiProperty()
   locale?: string;
-
-  @ApiProperty()
-  organisation?: UserOrg;
+  //
+  // @ApiProperty()
+  // organisation?: UserOrg;
 }
+
 
 // In use:
 //   uuid?: string;

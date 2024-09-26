@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { TransformInterceptor } from './interceptors/transform.interceptor';
+import { TransformInterceptor } from '@terramatch-microservices/common/interceptors';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

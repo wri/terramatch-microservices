@@ -58,7 +58,7 @@ export class Organisation extends BaseEntity {
   @Column({ name: 'hq_country', nullable: true })
   hqCountry: string | null;
 
-  @Column({ type: 'text', name: 'leadership_team_tst', nullable: true })
+  @Column({ type: 'text', name: 'leadership_team_txt', nullable: true })
   leadershipTeamTxt: string | null;
 
   @Column({ name: 'founding_date', nullable: true })
@@ -214,10 +214,10 @@ export class Organisation extends BaseEntity {
   @Column({ type: 'text', name: 'account_number_2', nullable: true })
   accountNumber2: string | null;
 
-  @Column({ type: 'text', name: 'load_status_amount', nullable: true })
+  @Column({ type: 'text', name: 'loan_status_amount', nullable: true })
   loanStatusAmount: string | null;
 
-  @Column({ type: 'text', name: 'load_status_types', nullable: true })
+  @Column({ type: 'text', name: 'loan_status_types', nullable: true })
   loanStatusTypes: string | null;
 
   @Column({ type: 'text', name: 'approach_of_marginalized_communities', nullable: true })
@@ -229,8 +229,8 @@ export class Organisation extends BaseEntity {
   @Column({ type: 'text', name: 'land_systems', nullable: true })
   landSystems: string | null;
 
-  @Column({ type: 'text', name: 'land_utilisation', nullable: true })
-  landUtilisation: string | null;
+  @Column({ type: 'text', name: 'fund_utilisation', nullable: true })
+  fundUtilisation: string | null;
 
   @Column({ type: 'text', name: 'detailed_intervention_types', nullable: true })
   detailedInterventionTypes: string | null;

@@ -6,12 +6,13 @@ import {
   Request,
   UnauthorizedException
 } from '@nestjs/common';
-import { User } from '@terramatch-microservices/database/entities';
+import { Organisation, User } from '@terramatch-microservices/database/entities';
 import { PolicyService } from '@terramatch-microservices/common';
 import { ApiOperation } from '@nestjs/swagger';
 import { UserDto } from '@terramatch-microservices/common/dto';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
+import { JoinColumn, OneToOne } from 'typeorm';
 
 @Controller('users/v3')
 export class UsersController {
@@ -35,6 +36,8 @@ export class UsersController {
 
     await this.policyService.authorize('read', user);
 
+    const primaryOrganisation = await user.primaryOrganisation();
+
     const { uuid, emailAddress, firstName, lastName, emailAddressVerifiedAt, locale } = user;
     return {
       type: 'users',
@@ -46,7 +49,10 @@ export class UsersController {
       emailAddress,
       emailAddressVerifiedAt,
       locale,
-      organisationUuid: 'asdfasdfasdf',
+      organisation: primaryOrganisation == null ? null : {
+        uuid: primaryOrganisation.uuid,
+        status: 'requested'
+      }
     };
   }
 }

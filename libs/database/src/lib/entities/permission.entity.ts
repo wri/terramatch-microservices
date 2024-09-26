@@ -34,16 +34,14 @@ export class Permission extends BaseEntity {
    * using that capability, but if we started to, this would need to be more complicated.
    */
   public static async getUserPermissionNames(userId: number): Promise<string[]> {
-    const permissions = await this.createQueryBuilder('permissions')
-      .innerJoin('role_has_permissions', 'role_has_permissions', 'role_has_permissions.permission_id = permissions.id')
-      .innerJoin('roles', 'roles', 'roles.id = role_has_permissions.role_id')
-      .innerJoin('model_has_roles', 'model_has_roles', 'model_has_roles.role_id = roles.id')
-      .where(
-        'model_has_roles.model_type = :modelType AND model_has_roles.model_id = :modelId',
-        { modelType: "App\\Models\\V2\\User", modelId: userId }
-      )
-      .select('permissions.name')
+    const permissions = await this.createQueryBuilder('p')
+      .innerJoin('role_has_permissions', 'rhp', 'rhp.permission_id = p.id')
+      .innerJoin('roles', 'r', 'r.id = rhp.role_id')
+      .innerJoin('model_has_roles', 'mhr', 'mhr.role_id = r.id')
+      .where('mhr.model_type = :modelType', { modelType: "App\\Models\\V2\\User" })
+      .andWhere('mhr.model_id = :modelId', { modelId: userId })
+      .select('p.name')
       .getMany();
-    return permissions.map(({ name }) =>  name);
+    return permissions.map(({ name }) => name);
   }
 }

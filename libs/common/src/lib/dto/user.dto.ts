@@ -1,6 +1,17 @@
 import { JsonApiDataDto } from '../interfaces';
 import { ApiProperty } from '@nestjs/swagger';
 
+const USER_ORG_STATUSES = ['rejected', 'approved', 'requested'] as const;
+type UserOrgStatus = (typeof USER_ORG_STATUSES)[number];
+
+class UserOrg {
+  @ApiProperty({ format: 'uuid' })
+  uuid: string;
+
+  @ApiProperty({ enum: USER_ORG_STATUSES })
+  status: UserOrgStatus;
+}
+
 export class UserDto implements JsonApiDataDto {
   @ApiProperty({ example: 'users' })
   type: string;
@@ -29,8 +40,8 @@ export class UserDto implements JsonApiDataDto {
   @ApiProperty()
   locale?: string;
 
-  @ApiProperty({ format: 'uuid' })
-  organisationUuid?: string;
+  @ApiProperty()
+  organisation?: UserOrg;
 }
 
 // In use:

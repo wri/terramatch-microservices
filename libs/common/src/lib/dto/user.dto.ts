@@ -3,9 +3,17 @@ import { JsonApiDto } from '../decorators';
 import { JsonApiAttributes } from './json-api-attributes';
 import { User } from '@terramatch-microservices/database/entities';
 
+class UserFramework  {
+  @ApiProperty({ example: 'TerraFund Landscapes' })
+  name: string;
+
+  @ApiProperty({ example: 'terrafund-landscapes' })
+  slug: string;
+}
+
 @JsonApiDto({ type: 'users' })
 export class UserDto extends JsonApiAttributes<UserDto> {
-  constructor(user: User, primaryRole: string) {
+  constructor(user: User, primaryRole: string, frameworks: { name: string, slug: string }[]) {
     super({
       firstName: user.firstName,
       lastName: user.lastName,
@@ -17,6 +25,7 @@ export class UserDto extends JsonApiAttributes<UserDto> {
       emailAddress: user.emailAddress,
       emailAddressVerifiedAt: user.emailAddressVerifiedAt,
       locale: user.locale,
+      frameworks
     })
   }
 
@@ -40,17 +49,10 @@ export class UserDto extends JsonApiAttributes<UserDto> {
 
   @ApiProperty()
   locale: string | null;
+
+  @ApiProperty({ type: () => UserFramework, isArray: true })
+  frameworks: UserFramework[]
 }
-
-
-// In use:
-
-// role
-
-//   frameworks?: {
-//     name?: string;
-//     slug?: string;
-//   }[];
 
 // organisation: side load, can be null
 // usersStatus (?)

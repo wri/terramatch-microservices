@@ -52,8 +52,12 @@ export class UsersController {
     await this.policyService.authorize('read', user);
 
     const document = buildJsonApi();
-    const primaryRole = (await Role.getUserRoleNames(userId))[0];
-    const userResource = document.addData(user.uuid, new UserDto(user, primaryRole));
+    const userResource = document.addData(
+      user.uuid,
+      // TODO: After switching to Sequelize, I think we'll be able to eager load roles and
+      //  frameworks, and won't need to await those methods here.
+      new UserDto(user, await user.primaryRole(), await user.frameworks())
+    );
 
     const org = await user.primaryOrganisation();
     if (org != null) {

@@ -3,13 +3,13 @@ import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
-  Entity, In,
+  Entity,
+  In,
   Index,
-  JoinColumn, JoinTable,
-  ManyToMany,
+  JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from 'typeorm';
 import { Organisation } from './organisation.entity';
 import { Role } from './role.entity';
@@ -138,16 +138,23 @@ export class User extends BaseEntity {
     return await this.organisationsRequested().getOne();
   }
 
+  private roles: string[];
+  async getRoles(): Promise<string[]> {
+    if (this.roles == null) {
+      this.roles = await Role.getUserRoleNames(this.id);
+    }
+
+    return this.roles;
+  }
+
   async primaryRole() {
-    const roles = await Role.getUserRoleNames(this.id);
-    return roles?.[0];
+    return (await this.getRoles())?.[0];
   }
 
   async frameworks(): Promise<{ name: string, slug: string }[]> {
     // TODO: Once the Framework and Project tables have been ported over, this should
     //  use those entities and associations instead of this set of raw SQL queries.
-    const roles = await Role.getUserRoleNames(this.id);
-    const isAdmin = roles.find(role => role.startsWith('admin-')) != null;
+    const isAdmin = (await this.getRoles()).find(role => role.startsWith('admin-')) != null;
 
     let frameworkSlugs;
     if (isAdmin) {

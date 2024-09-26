@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from '@nestjs/swagger';
 import { HttpStatus } from '@nestjs/common';
-import { JsonApiDataDto } from '../interfaces/json-api-data-dto.interface';
+import { JsonApiDataDto } from '../interfaces';
 
 /**
  * Decorator to simplify wrapping the response type from a controller method with the JSON API
@@ -9,7 +9,7 @@ import { JsonApiDataDto } from '../interfaces/json-api-data-dto.interface';
  */
 export function JsonApiResponse<C extends JsonApiDataDto>(
   options: ApiResponseOptions & { dataType: new () => C }
-): MethodDecorator & ClassDecorator {
+): MethodDecorator {
   const { dataType, status, ...rest } = options;
   const apiResponseOptions = {
     ...rest,
@@ -27,8 +27,8 @@ export function JsonApiResponse<C extends JsonApiDataDto>(
 
   return (
     target: object,
-    key?: string | symbol,
-    descriptor?: TypedPropertyDescriptor<any>
+    key: string | symbol,
+    descriptor: TypedPropertyDescriptor<any>
   ): any => {
     return ApiResponse(apiResponseOptions)(ApiExtraModels(dataType)(target, key, descriptor), key, descriptor);
   }

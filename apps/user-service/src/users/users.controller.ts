@@ -1,17 +1,52 @@
-import { Controller, Get, Param, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Request,
+  UnauthorizedException
+} from '@nestjs/common';
 import { User } from '@terramatch-microservices/database/entities';
 import { PolicyService } from '@terramatch-microservices/common';
+import { ApiOperation } from '@nestjs/swagger';
+import { UserDto } from '@terramatch-microservices/common/dto';
+import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
+import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 
 @Controller('users/v3')
 export class UsersController {
   constructor(private readonly policyService: PolicyService) {}
 
   @Get('users/:id')
-  async findOne(@Param('id') id: string, @Request() req: any): Promise<string> {
-    const userId = id === 'me' ? req.authenticatedUserId : parseInt(id);
+  @ApiOperation({ operationId: "usersFind", description: "Fetch a user by ID, or with the 'me' identifier" })
+  @JsonApiResponse({ dataType: UserDto })
+  @ApiException(
+    () => UnauthorizedException,
+    { description: 'Authorization failed', template: { statusCode: '$status', message: '$description' } }
+  )
+  @ApiException(
+    () => NotFoundException,
+    { description: 'User with that ID not found' }
+  )
+  async findOne(@Param('id') pathId: string, @Request() { authenticatedUserId }): Promise<UserDto> {
+    const userId = pathId === 'me' ? authenticatedUserId : parseInt(pathId);
     const user = await User.findOneBy({ id: userId })
+    if (user == null) throw new NotFoundException();
+
     await this.policyService.authorize('read', user);
 
-    return `email: ${user.emailAddress}, id: ${user.id}`;
+    const { uuid, emailAddress, firstName, lastName, emailAddressVerifiedAt, locale } = user;
+    return {
+      type: 'users',
+      id: uuid,
+      firstName,
+      lastName,
+      fullName: firstName == null || lastName == null ? null : `${firstName} ${lastName}`,
+      primaryRole: 'asdfasdfasdf',
+      emailAddress,
+      emailAddressVerifiedAt,
+      locale,
+      organisationUuid: 'asdfasdfasdf',
+    };
   }
 }

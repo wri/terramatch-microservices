@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { JsonApiDataDto } from '../../interfaces/json-api-data-dto.interface';
+import { JsonApiDataDto } from '@terramatch-microservices/common/interfaces';
 
-export class LoginResponse implements JsonApiDataDto {
+export class LoginDto implements JsonApiDataDto {
   @ApiProperty({ example: 'logins' })
   type: string;
 

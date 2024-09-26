@@ -1,26 +1,38 @@
-import { Body, Controller, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginRequest } from './dto/login-request.dto';
-import { JsonApiResponse } from '../decorators/json-api-response.decorator';
-import { LoginResponse } from './dto/login-response.dto';
+import { LoginDto } from './dto/login.dto';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { ApiOperation } from '@nestjs/swagger';
 import { NoBearerAuth } from '@terramatch-microservices/common/guards';
+import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 
 @Controller('auth/v3')
 export class AuthController {
-  constructor (private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('logins')
   @NoBearerAuth()
-  @ApiOperation({ operationId: 'authLogin', description: 'Receive a JWT Token in exchange for login credentials' })
-  @JsonApiResponse({ status: HttpStatus.CREATED, dataType: LoginResponse })
-  @ApiException(
-    () => UnauthorizedException,
-    { description: 'Authentication failed.', template: { statusCode: '$status', message: '$description', } }
-  )
-  async login(@Body() { emailAddress, password }: LoginRequest): Promise<LoginResponse> {
-    const { token, userId } = await this.authService.login(emailAddress, password) ?? {}
+  @ApiOperation({
+    operationId: 'authLogin',
+    description: 'Receive a JWT Token in exchange for login credentials',
+  })
+  @JsonApiResponse({ status: HttpStatus.CREATED, dataType: LoginDto })
+  @ApiException(() => UnauthorizedException, {
+    description: 'Authentication failed.',
+    template: { statusCode: '$status', message: '$description' },
+  })
+  async login(
+    @Body() { emailAddress, password }: LoginRequest
+  ): Promise<LoginDto> {
+    const { token, userId } =
+      (await this.authService.login(emailAddress, password)) ?? {};
     if (token == null) {
       // there are multiple reasons for the token to be null (bad email address, wrong password),
       // but we don't want to report on the specifics because it opens an attack vector: if we

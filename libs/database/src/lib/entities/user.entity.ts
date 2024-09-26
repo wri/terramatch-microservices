@@ -96,4 +96,7 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true })
   program: string | null;
+
+  @Column()
+  locale: string;
 }

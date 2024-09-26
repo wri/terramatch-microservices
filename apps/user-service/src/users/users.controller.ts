@@ -6,7 +6,7 @@ import {
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
-import { User } from '@terramatch-microservices/database/entities';
+import { Role, User } from '@terramatch-microservices/database/entities';
 import { PolicyService } from '@terramatch-microservices/common';
 import { ApiOperation } from '@nestjs/swagger';
 import { OrganisationDto, UserDto } from '@terramatch-microservices/common/dto';
@@ -52,7 +52,8 @@ export class UsersController {
     await this.policyService.authorize('read', user);
 
     const document = buildJsonApi();
-    const userResource = document.addData(user.uuid, new UserDto(user));
+    const primaryRole = (await Role.getUserRoleNames(userId))[0];
+    const userResource = document.addData(user.uuid, new UserDto(user, primaryRole));
 
     const org = await user.primaryOrganisation();
     if (org != null) {

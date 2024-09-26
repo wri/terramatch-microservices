@@ -9,10 +9,13 @@ import {
 import { User } from '@terramatch-microservices/database/entities';
 import { PolicyService } from '@terramatch-microservices/common';
 import { ApiOperation } from '@nestjs/swagger';
-import { UserDto } from '@terramatch-microservices/common/dto';
+import { OrganisationDto, UserDto } from '@terramatch-microservices/common/dto';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
-import { JsonApiDto } from '@terramatch-microservices/common/interfaces';
+import {
+  buildJsonApi,
+  JsonApiDocument
+} from '@terramatch-microservices/common/util';
 
 @Controller('users/v3')
 export class UsersController {
@@ -23,55 +26,40 @@ export class UsersController {
     operationId: 'usersFind',
     description: "Fetch a user by ID, or with the 'me' identifier",
   })
-  @JsonApiResponse({ data: UserDto })
-  @ApiException(() => UnauthorizedException, {
-    description: 'Authorization failed',
-    template: { statusCode: '$status', message: '$description' },
+  @JsonApiResponse({
+    data: {
+      type: UserDto,
+      relationships: [{
+        name: 'org',
+        type: OrganisationDto,
+        meta: { userStatus: { type: 'string', enum: ['approved', 'requested', 'rejected'] } }
+      }]
+    },
+    included: [{ type: OrganisationDto }]
   })
+  @ApiException(() => UnauthorizedException, { description: 'Authorization failed' })
   @ApiException(() => NotFoundException, {
     description: 'User with that ID not found',
   })
   async findOne(
     @Param('id') pathId: string,
     @Request() { authenticatedUserId }
-  ): Promise<JsonApiDto<UserDto>> {
+  ): Promise<JsonApiDocument> {
     const userId = pathId === 'me' ? authenticatedUserId : parseInt(pathId);
     const user = await User.findOneBy({ id: userId });
     if (user == null) throw new NotFoundException();
 
     await this.policyService.authorize('read', user);
 
-    const primaryOrganisation = await user.primaryOrganisation();
+    const document = buildJsonApi();
+    const userResource = document.addData(user.uuid, new UserDto(user));
 
-    const {
-      uuid,
-      emailAddress,
-      firstName,
-      lastName,
-      emailAddressVerifiedAt,
-      locale,
-    } = user;
-    return {
-      id: uuid,
-      attributes: new UserDto({
-        firstName,
-        lastName,
-        fullName:
-          firstName == null || lastName == null
-            ? null
-            : `${firstName} ${lastName}`,
-        primaryRole: 'asdfasdfasdf',
-        emailAddress,
-        emailAddressVerifiedAt,
-        locale,
-        // organisation:
-        //   primaryOrganisation == null
-        //     ? null
-        //     : {
-        //       uuid: primaryOrganisation.uuid,
-        //       status: 'requested',
-        //     },
-      })
+    const org = await user.primaryOrganisation();
+    if (org != null) {
+      const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
+      userResource.relateTo('org', orgResource, { userStatus: 'accepted' });
     }
+
+    return document.serialize();
   }
 }

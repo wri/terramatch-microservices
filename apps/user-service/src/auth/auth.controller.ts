@@ -12,7 +12,7 @@ import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator
 import { ApiOperation } from '@nestjs/swagger';
 import { NoBearerAuth } from '@terramatch-microservices/common/guards';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
-import { JsonApiDto } from '@terramatch-microservices/common/interfaces';
+import { buildJsonApi, JsonApiDocument } from '@terramatch-microservices/common/util';
 
 @Controller('auth/v3')
 export class AuthController {
@@ -24,14 +24,11 @@ export class AuthController {
     operationId: 'authLogin',
     description: 'Receive a JWT Token in exchange for login credentials',
   })
-  @JsonApiResponse({ status: HttpStatus.CREATED, data: LoginDto })
-  @ApiException(() => UnauthorizedException, {
-    description: 'Authentication failed.',
-    template: { statusCode: '$status', message: '$description' },
-  })
+  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: LoginDto } })
+  @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
   async login(
     @Body() { emailAddress, password }: LoginRequest
-  ): Promise<JsonApiDto<LoginDto>> {
+  ): Promise<JsonApiDocument> {
     const { token, userId } =
       (await this.authService.login(emailAddress, password)) ?? {};
     if (token == null) {
@@ -42,9 +39,8 @@ export class AuthController {
       throw new UnauthorizedException();
     }
 
-    return {
-      id: `${userId}`,
-      attributes: new LoginDto({ token }),
-    };
+    return buildJsonApi()
+      .addData(`${userId}`, new LoginDto({ token }))
+      .document.serialize();
   }
 }

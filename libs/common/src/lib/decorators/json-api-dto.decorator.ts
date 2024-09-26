@@ -1,4 +1,4 @@
-import { applyDecorators, CustomDecorator, SetMetadata } from '@nestjs/common';
+import { applyDecorators, SetMetadata } from '@nestjs/common';
 
 export const DTO_TYPE_METADATA = 'DTO_TYPE_METADATA';
 export const DTO_ID_METADATA = 'DTO_ID_METADATA';

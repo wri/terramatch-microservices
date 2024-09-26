@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { JsonApiDto } from '../decorators';
-import { JsonApiAttributes } from '@terramatch-microservices/common/dto/json-api-attributes';
+import { JsonApiAttributes } from './json-api-attributes';
+import { User } from '@terramatch-microservices/database/entities';
 
 const USER_ORG_STATUSES = ['rejected', 'approved', 'requested'] as const;
 type UserOrgStatus = (typeof USER_ORG_STATUSES)[number];
@@ -15,14 +16,29 @@ class UserOrg {
 
 @JsonApiDto({ type: 'users' })
 export class UserDto extends JsonApiAttributes<UserDto> {
-  @ApiProperty()
-  firstName?: string;
+  constructor(user: User) {
+    super({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName:
+        user.firstName == null || user.lastName == null
+          ? null
+          : `${user.firstName} ${user.lastName}`,
+      primaryRole: 'asdfasdfasdf',
+      emailAddress: user.emailAddress,
+      emailAddressVerifiedAt: user.emailAddressVerifiedAt,
+      locale: user.locale,
+    })
+  }
 
   @ApiProperty()
-  lastName?: string;
+  firstName: string | null;
+
+  @ApiProperty()
+  lastName: string | null;
 
   @ApiProperty({ description: 'Currently just calculated by appending lastName to firstName.' })
-  fullName?: string;
+  fullName: string | null;
 
   @ApiProperty()
   primaryRole: string;
@@ -31,10 +47,10 @@ export class UserDto extends JsonApiAttributes<UserDto> {
   emailAddress: string;
 
   @ApiProperty()
-  emailAddressVerifiedAt?: Date;
+  emailAddressVerifiedAt: Date | null;
 
   @ApiProperty()
-  locale?: string;
+  locale: string | null;
   //
   // @ApiProperty()
   // organisation?: UserOrg;

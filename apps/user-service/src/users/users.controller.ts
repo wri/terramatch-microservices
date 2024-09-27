@@ -6,7 +6,7 @@ import {
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Role, User } from '@terramatch-microservices/database/entities';
+import { User } from '@terramatch-microservices/database/entities';
 import { PolicyService } from '@terramatch-microservices/common';
 import { ApiOperation } from '@nestjs/swagger';
 import { OrganisationDto, UserDto } from '@terramatch-microservices/common/dto';
@@ -14,7 +14,7 @@ import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 import {
   buildJsonApi,
-  JsonApiDocument
+  JsonApiDocument,
 } from '@terramatch-microservices/common/util';
 
 @Controller('users/v3')
@@ -29,15 +29,24 @@ export class UsersController {
   @JsonApiResponse({
     data: {
       type: UserDto,
-      relationships: [{
-        name: 'org',
-        type: OrganisationDto,
-        meta: { userStatus: { type: 'string', enum: ['approved', 'requested', 'rejected'] } }
-      }]
+      relationships: [
+        {
+          name: 'org',
+          type: OrganisationDto,
+          meta: {
+            userStatus: {
+              type: 'string',
+              enum: ['approved', 'requested', 'rejected'],
+            },
+          },
+        },
+      ],
     },
-    included: [{ type: OrganisationDto }]
+    included: [{ type: OrganisationDto }],
   })
-  @ApiException(() => UnauthorizedException, { description: 'Authorization failed' })
+  @ApiException(() => UnauthorizedException, {
+    description: 'Authorization failed',
+  })
   @ApiException(() => NotFoundException, {
     description: 'User with that ID not found',
   })
@@ -61,8 +70,12 @@ export class UsersController {
 
     const org = await user.primaryOrganisation();
     if (org != null) {
-      const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
-      userResource.relateTo('org', orgResource, { userStatus: 'accepted' });
+      const orgResource = document.addIncluded(
+        org.uuid,
+        new OrganisationDto(org)
+      );
+      const userStatus = (await user.organisationUserStatus()) ?? 'na';
+      userResource.relateTo('org', orgResource, { userStatus });
     }
 
     return document.serialize();

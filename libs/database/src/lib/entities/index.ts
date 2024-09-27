@@ -1,5 +1,6 @@
 export * from './framework.entity';
 export * from './organisation.entity';
+export * from './organisation-user.entity';
 export * from './permission.entity';
 export * from './project.entity';
 export * from './role.entity';

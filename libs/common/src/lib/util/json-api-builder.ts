@@ -1,6 +1,4 @@
-import {
-  DTO_TYPE_METADATA
-} from '@terramatch-microservices/common/decorators/json-api-dto.decorator';
+import { DTO_TYPE_METADATA } from '../decorators/json-api-dto.decorator';
 import { InternalServerErrorException } from '@nestjs/common';
 
 type AttributeValue = string | number | boolean;

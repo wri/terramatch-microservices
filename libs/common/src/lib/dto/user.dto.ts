@@ -15,6 +15,7 @@ class UserFramework  {
 export class UserDto extends JsonApiAttributes<UserDto> {
   constructor(user: User, primaryRole: string, frameworks: { name: string, slug: string }[]) {
     super({
+      uuid: user.uuid,
       firstName: user.firstName,
       lastName: user.lastName,
       fullName:
@@ -28,6 +29,9 @@ export class UserDto extends JsonApiAttributes<UserDto> {
       frameworks
     })
   }
+
+  @ApiProperty()
+  uuid: string;
 
   @ApiProperty()
   firstName: string | null;
@@ -53,6 +57,3 @@ export class UserDto extends JsonApiAttributes<UserDto> {
   @ApiProperty({ type: () => UserFramework, isArray: true })
   frameworks: UserFramework[]
 }
-
-// organisation: side load, can be null
-// usersStatus (?)

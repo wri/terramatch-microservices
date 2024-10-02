@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { JsonApiDto } from '../decorators';
 import { JsonApiAttributes } from './json-api-attributes';
-import { User } from '@terramatch-microservices/database/entities';
+import { Framework, User } from '@terramatch-microservices/database/entities';
 
 class UserFramework  {
   @ApiProperty({ example: 'TerraFund Landscapes' })
@@ -13,7 +13,7 @@ class UserFramework  {
 
 @JsonApiDto({ type: 'users' })
 export class UserDto extends JsonApiAttributes<UserDto> {
-  constructor(user: User, frameworks: { name: string, slug: string }[]) {
+  constructor(user: User, frameworks: Framework[]) {
     super({
       uuid: user.uuid ?? '',
       firstName: user.firstName,
@@ -26,7 +26,7 @@ export class UserDto extends JsonApiAttributes<UserDto> {
       emailAddress: user.emailAddress,
       emailAddressVerifiedAt: user.emailAddressVerifiedAt,
       locale: user.locale,
-      frameworks
+      frameworks: frameworks.map(({ name, slug }) => ({ name, slug }))
     })
   }
 

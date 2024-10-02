@@ -1,7 +1,11 @@
 import { AllowNull, BelongsToMany, Column, Index, Model, Table } from 'sequelize-typescript';
-import { BIGINT, UUID } from 'sequelize';
+import { BIGINT, col, fn, Op, UUID } from 'sequelize';
 import { Role } from './role.entity';
 import { ModelHasRole } from './model-has-role.entity';
+import { Permission } from './permission.entity';
+import { Framework } from './framework.entity';
+import { Project } from './project.entity';
+import { ProjectUser } from './project-user.entity';
 
 @Table({ tableName: 'users', underscored: true, paranoid: true })
 export class User extends Model {
@@ -107,12 +111,23 @@ export class User extends Model {
   })
   roles: Role[];
 
+  async loadRoles() {
+    if (this.roles == null) this.roles = await (this as User).$get('roles');
+  }
+
   /**
    * Depends on `roles` being loaded, either through include: [Role] on the find call, or by
-   * await user.$get('roles');
+   * await user.loadRoles()
    */
   get primaryRole() {
     return this.roles?.[0]?.name;
+  }
+
+  @BelongsToMany(() => Project, () => ProjectUser)
+  projects: Project[];
+
+  async loadProjects() {
+    if (this.projects == null) this.projects = await (this as User).$get('projects');
   }
 
 
@@ -156,41 +171,30 @@ export class User extends Model {
   //     : this._primaryOrganisation;
   // }
 
-  // async frameworks(): Promise<{ name: string; slug: string }[]> {
-  //   // TODO: Once the Framework and Project tables have been ported over, this should
-  //   //  use those entities and associations instead of this set of raw SQL queries.
-  //   const isAdmin =
-  //     (await this.roles()).find((role) => role.startsWith('admin-')) != null;
-  //
-  //   let frameworkSlugs: string[];
-  //   if (isAdmin) {
-  //     // Admins have access to all frameworks their permissions say they do
-  //     const permissions = await Permission.getUserPermissionNames(this.id);
-  //     const offset = 'framework-'.length;
-  //     frameworkSlugs = permissions
-  //       .filter((permission) => permission.startsWith('framework-'))
-  //       .map((permission) => permission.substring(offset));
-  //   } else {
-  //     // Other users have access to the frameworks embodied by their set of projects
-  //     frameworkSlugs = (
-  //       await Project.createQueryBuilder('p')
-  //         .innerJoin('v2_project_users', 'pu', 'p.id = pu.project_id')
-  //         .where('pu.user_id = :userId', { userId: this.id })
-  //         .andWhere('p.deleted_at is null')
-  //         .select('p.framework_key')
-  //         .distinct()
-  //         .getRawMany()
-  //     ).map(({ framework_key }) => framework_key);
-  //   }
-  //
-  //   return (
-  //     await Framework.createQueryBuilder('f')
-  //       .select(['slug', 'name'])
-  //       .where({ slug: In(frameworkSlugs) })
-  //       .getRawMany()
-  //   ).map(({ slug, name }) => ({ slug, name }));
-  // }
-  //
+  async frameworks(): Promise<Framework[]> {
+    await this.loadRoles();
+    const isAdmin = this.roles.find(({ name }) => name.startsWith('admin-')) != null;
+
+    let frameworkSlugs: string[];
+    if (isAdmin) {
+      // Admins have access to all frameworks their permissions say they do
+      const permissions = await Permission.getUserPermissionNames(this.id);
+      const offset = 'framework-'.length;
+      frameworkSlugs = permissions
+        .filter((permission) => permission.startsWith('framework-'))
+        .map((permission) => permission.substring(offset));
+    } else {
+      // Other users have access to the frameworks embodied by their set of projects
+      frameworkSlugs = (await (this as User).$get(
+        'projects',
+        { attributes: [[fn('DISTINCT', col('Project.framework_key')), 'frameworkKey']], raw: true }
+      )).map(({ frameworkKey }) => frameworkKey);
+    }
+
+    if (frameworkSlugs.length == 0) return [];
+    return (await Framework.findAll({ where: { slug: { [Op.in]: frameworkSlugs } } }))
+  }
+
   // async organisationUserStatus(): Promise<string | undefined> {
   //   const org = await this.primaryOrganisation();
   //   if (org == null) return undefined;

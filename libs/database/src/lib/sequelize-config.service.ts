@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Permission, Role, User } from './entities';
+import {
+  Framework,
+  ModelHasRole,
+  Permission,
+  Project,
+  ProjectUser,
+  Role,
+  User,
+} from './entities';
 import {
   SequelizeModuleOptions,
   SequelizeOptionsFactory,
 } from '@nestjs/sequelize';
-import { ModelHasRole } from './entities/model-has-role.entity';
 
 @Injectable()
 export class SequelizeConfigService implements SequelizeOptionsFactory {
@@ -20,7 +27,15 @@ export class SequelizeConfigService implements SequelizeOptionsFactory {
       password: this.configService.get<string>('DB_PASSWORD'),
       database: this.configService.get<string>('DB_DATABASE'),
       synchronize: false,
-      models: [ModelHasRole, Permission, Role, User],
+      models: [
+        Framework,
+        ModelHasRole,
+        Permission,
+        Project,
+        ProjectUser,
+        Role,
+        User,
+      ],
     };
   }
 }

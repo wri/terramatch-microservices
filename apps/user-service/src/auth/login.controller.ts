@@ -14,11 +14,11 @@ import { NoBearerAuth } from '@terramatch-microservices/common/guards';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 import { buildJsonApi, JsonApiDocument } from '@terramatch-microservices/common/util';
 
-@Controller('auth/v3')
-export class AuthController {
+@Controller('auth/v3/logins')
+export class LoginController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('logins')
+  @Post()
   @NoBearerAuth()
   @ApiOperation({
     operationId: 'authLogin',
@@ -26,7 +26,7 @@ export class AuthController {
   })
   @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: LoginDto } })
   @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
-  async login(
+  async create(
     @Body() { emailAddress, password }: LoginRequest
   ): Promise<JsonApiDocument> {
     const { token, userId } =

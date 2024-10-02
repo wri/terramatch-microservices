@@ -17,11 +17,11 @@ import {
   JsonApiDocument,
 } from '@terramatch-microservices/common/util';
 
-@Controller('users/v3')
+@Controller('users/v3/users')
 export class UsersController {
   constructor(private readonly policyService: PolicyService) {}
 
-  @Get('users/:id')
+  @Get(':id')
   @ApiOperation({ operationId: 'usersFind', description: "Fetch a user by ID, or with the 'me' identifier" })
   @ApiParam({ name: 'id', example: 'me', description: 'A valid user id or "me"' })
   @JsonApiResponse({

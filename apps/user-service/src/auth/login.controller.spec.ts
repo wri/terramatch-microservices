@@ -1,22 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
+import { LoginController } from './login.controller';
 import { AuthService } from './auth.service';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { UnauthorizedException } from '@nestjs/common';
 
-describe('AuthController', () => {
-  let controller: AuthController;
+describe('LoginController', () => {
+  let controller: LoginController;
   let authService: DeepMocked<AuthService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
+      controllers: [LoginController],
       providers: [
         { provide: AuthService, useValue: authService = createMock<AuthService>() },
       ],
     }).compile();
 
-    controller = module.get<AuthController>(AuthController);
+    controller = module.get<LoginController>(LoginController);
   });
 
   afterEach(() => {
@@ -26,7 +26,7 @@ describe('AuthController', () => {
   it('should throw if creds are invalid', async () => {
     authService.login.mockResolvedValue(null);
 
-    await expect(() => controller.login({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' }))
+    await expect(() => controller.create({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' }))
       .rejects
       .toThrow(UnauthorizedException)
   })
@@ -36,7 +36,7 @@ describe('AuthController', () => {
     const userId = 123;
     authService.login.mockResolvedValue({ token, userId })
 
-    const result = await controller.login({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' });
+    const result = await controller.create({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' });
     expect(result).toEqual({ type: 'logins', token, id: `${userId}` })
   })
 });

@@ -1,16 +1,9 @@
-import {
-  Column,
-  CreatedAt,
-  DeletedAt,
-  Index,
-  Model,
-  Table,
-  UpdatedAt,
-} from 'sequelize-typescript';
+import { AllowNull, BelongsToMany, Column, Index, Model, Table } from 'sequelize-typescript';
 import { BIGINT, UUID } from 'sequelize';
 import { Role } from './role.entity';
+import { ModelHasRole } from './model-has-role.entity';
 
-@Table({ tableName: 'users' })
+@Table({ tableName: 'users', underscored: true, paranoid: true })
 export class User extends Model {
   // There are many rows in the prod DB without a UUID assigned, so this cannot be a unique
   // index until that is fixed.
@@ -18,89 +11,110 @@ export class User extends Model {
   @Index({ unique: false })
   uuid: string | null;
 
-  @CreatedAt
-  @Column({ field: 'created_at' })
-  override createdAt: Date;
-
-  @UpdatedAt
-  @Column({ field: 'updated_at' })
-  override updatedAt: Date;
-
-  @DeletedAt
-  @Column({ field: 'deleted_at' })
-  override deletedAt: Date;
-
-  @Column({
-    type: BIGINT({ unsigned: true }),
-    field: 'organisation_id',
-    allowNull: true,
-  })
+  @Column({ type: BIGINT({ unsigned: true }), allowNull: true })
   organisationId: number | null;
 
-  @Column({ field: 'first_name', allowNull: true })
+  @AllowNull
+  @Column
   firstName: string | null;
 
-  @Column({ field: 'last_name', allowNull: true })
+  @AllowNull
+  @Column
   lastName: string | null;
 
-  @Column({ field: 'email_address', unique: true })
+  @AllowNull
+  @Column({ unique: true })
   emailAddress: string;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   password: string | null;
 
-  @Column({ field: 'email_address_verified_at', allowNull: true })
+  @AllowNull
+  @Column
   emailAddressVerifiedAt: Date | null;
 
-  @Column({ field: 'last_logged_in_at', allowNull: true })
+  @AllowNull
+  @Column
   lastLoggedInAt: Date | null;
 
-  @Column({ field: 'job_role', allowNull: true })
+  @AllowNull
+  @Column
   jobRole: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   facebook: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   twitter: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   linkedin: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   instagram: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   avatar: string | null;
 
-  @Column({ field: 'phone_number', allowNull: true })
+  @AllowNull
+  @Column
   phoneNumber: string | null;
 
-  @Column({ field: 'whatsapp_phone', allowNull: true })
+  @AllowNull
+  @Column
   whatsappPhone: string | null;
 
-  @Column({ field: 'is_subscribed', defaultValue: true })
+  @Column({ defaultValue: true })
   isSubscribed: boolean;
 
-  @Column({ field: 'has_consented', defaultValue: true })
+  @Column({ defaultValue: true })
   hasConsented: boolean;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   banners: string | null;
 
-  @Column({ field: 'api_key', allowNull: true })
+  @AllowNull
+  @Column
   apiKey: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   country: string | null;
 
-  @Column({ allowNull: true })
+  @AllowNull
+  @Column
   program: string | null;
 
   @Column
   locale: string;
 
-  // Relations
+  @BelongsToMany(() => Role, {
+    foreignKey: 'modelId',
+    through: {
+      model: () => ModelHasRole,
+      unique: false,
+      scope: {
+        modelType: "App\\Models\\V2\\User"
+      }
+    }
+  })
+  roles: Role[];
+
+  /**
+   * Depends on `roles` being loaded, either through include: [Role] on the find call, or by
+   * await user.$get('roles');
+   */
+  get primaryRole() {
+    return this.roles?.[0]?.name;
+  }
+
 
   // @OneToOne(() => Organisation, { allowNull: true })
   // @JoinColumn({ name: 'organisation_id' })
@@ -136,25 +150,11 @@ export class User extends Model {
   //     this._primaryOrganisation =
   //       (await this.organisationsRequested().getOne()) ?? false;
   //   }
-  ///
+  //
   //   return this._primaryOrganisation === false
   //     ? null
   //     : this._primaryOrganisation;
   // }
-
-  // TODO: turn into a proper association in Sequelize
-  private _roles: string[];
-  async roles(): Promise<string[]> {
-    if (this._roles == null) {
-      this._roles = await Role.getUserRoleNames(this.id);
-    }
-
-    return this._roles;
-  }
-
-  async primaryRole() {
-    return (await this.roles())?.[0];
-  }
 
   // async frameworks(): Promise<{ name: string; slug: string }[]> {
   //   // TODO: Once the Framework and Project tables have been ported over, this should

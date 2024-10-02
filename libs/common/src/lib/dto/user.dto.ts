@@ -13,7 +13,7 @@ class UserFramework  {
 
 @JsonApiDto({ type: 'users' })
 export class UserDto extends JsonApiAttributes<UserDto> {
-  constructor(user: User, primaryRole: string, frameworks: { name: string, slug: string }[]) {
+  constructor(user: User, frameworks: { name: string, slug: string }[]) {
     super({
       uuid: user.uuid ?? '',
       firstName: user.firstName,
@@ -22,7 +22,7 @@ export class UserDto extends JsonApiAttributes<UserDto> {
         user.firstName == null || user.lastName == null
           ? null
           : `${user.firstName} ${user.lastName}`,
-      primaryRole,
+      primaryRole: user.primaryRole,
       emailAddress: user.emailAddress,
       emailAddressVerifiedAt: user.emailAddressVerifiedAt,
       locale: user.locale,

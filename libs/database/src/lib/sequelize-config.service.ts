@@ -5,6 +5,7 @@ import {
   SequelizeModuleOptions,
   SequelizeOptionsFactory,
 } from '@nestjs/sequelize';
+import { ModelHasRole } from './entities/model-has-role.entity';
 
 @Injectable()
 export class SequelizeConfigService implements SequelizeOptionsFactory {
@@ -19,7 +20,7 @@ export class SequelizeConfigService implements SequelizeOptionsFactory {
       password: this.configService.get<string>('DB_PASSWORD'),
       database: this.configService.get<string>('DB_DATABASE'),
       synchronize: false,
-      models: [Permission, Role, User],
+      models: [ModelHasRole, Permission, Role, User],
     };
   }
 }

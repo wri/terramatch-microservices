@@ -1,26 +1,12 @@
-import {
-  Column,
-  CreatedAt,
-  Model,
-  Table,
-  UpdatedAt,
-} from 'sequelize-typescript';
+import { Column, Model, Table } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
 
-@Table({ tableName: 'permissions' })
+@Table({ tableName: 'permissions', underscored: true })
 export class Permission extends Model {
-  @CreatedAt
-  @Column({ field: 'created_at' })
-  override createdAt: Date;
-
-  @UpdatedAt
-  @Column({ field: 'updated_at' })
-  override updatedAt: Date;
-
   @Column
   name: string;
 
-  @Column({ field: 'guard_name' })
+  @Column
   guardName: string;
 
   /**
@@ -35,7 +21,7 @@ export class Permission extends Model {
   public static async getUserPermissionNames(
     userId: number
   ): Promise<string[]> {
-    const permissions = await this.sequelize?.query(
+    const permissions = (await this.sequelize?.query(
       `
         SELECT permissions.name FROM permissions
         INNER JOIN role_has_permissions ON role_has_permissions.permission_id = permissions.id
@@ -49,7 +35,7 @@ export class Permission extends Model {
         replacements: { modelType: 'App\\Models\\V2\\User', modelId: userId },
         type: QueryTypes.SELECT,
       }
-    ) as { name: string }[]
+    )) as { name: string }[];
 
     return permissions?.map(({ name }) => name) ?? [];
   }

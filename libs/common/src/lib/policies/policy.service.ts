@@ -7,6 +7,7 @@ import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 import { Model } from 'sequelize-typescript';
 
 type EntityClass = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new (...args: any[]): Model;
 };
 

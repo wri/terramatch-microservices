@@ -1,337 +1,419 @@
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn, DeleteDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn, UpdateDateColumn
-} from 'typeorm';
+import { AllowNull, Column, Index, Model, Table } from 'sequelize-typescript';
+import { BIGINT, DECIMAL, ENUM, INTEGER, TEXT, TINYINT, UUID } from 'sequelize';
 
-@Entity({ name: 'organisations' })
-export class Organisation extends BaseEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: number;
+@Table({ tableName: 'organisations', underscored: true })
+export class Organisation extends Model {
+  @Index
+  @Column({ type: UUID })
+  uuid: string | null;
 
-  @Column({ type: 'char', width: 36 })
-  @Index()
-  uuid: string;
-
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at' })
-  deletedAt: Date;
-
-  @Column({ default: 'draft' })
+  @Column({ defaultValue: 'draft' })
   status: string;
 
-  @Column({ nullable: true })
+  @AllowNull
+  @Column
   type: string | null;
 
-  @Column({ width: 1 })
+  @Column({ defaultValue: false })
   private: boolean;
 
-  @Column({ nullable: true})
+  @AllowNull
+  @Column
   name: string | null;
 
-  @Column({ nullable: true })
+  @AllowNull
+  @Column
   phone: string | null;
 
-  @Column({ name: 'hq_street_1', nullable: true })
+  @AllowNull
+  @Column({ field: 'hq_street_1' })
   hqStreet1: string | null;
 
-  @Column({ name: 'hq_street_2', nullable: true })
+  @AllowNull
+  @Column({ field: 'hq_street_2' })
   hqStreet2: string | null;
 
-  @Column({ name: 'hq_city', nullable: true })
+  @AllowNull
+  @Column
   hqCity: string | null;
 
-  @Column({ name: 'hq_state', nullable: true })
+  @AllowNull
+  @Column
   hqState: string | null;
 
-  @Column({ name: 'hq_zipcode', nullable: true })
-  hqZipCode: string | null;
+  @AllowNull
+  @Column
+  hqZipcode: string | null;
 
-  @Column({ name: 'hq_country', nullable: true })
+  @AllowNull
+  @Column
   hqCountry: string | null;
 
-  @Column({ type: 'text', name: 'leadership_team_txt', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   leadershipTeamTxt: string | null;
 
-  @Column({ name: 'founding_date', nullable: true })
+  @AllowNull
+  @Column
   foundingDate: Date | null;
 
-  @Column({ type: 'text', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   description: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   countries: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   languages: string | null;
 
-  @Column({ type: 'text', name: 'tree_care_approach', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   treeCareApproach: string | null;
 
-  @Column({ type: 'int', name: 'relevant_experience_years', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   relevantExperienceYears: number | null;
 
-  @Column({ type: 'int', name: 'trees_grown_3year', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'trees_grown_3year' })
   treesGrown3Year: number | null;
 
-  @Column({ type: 'int', name: 'trees_grown_total', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   treesGrownTotal: number | null;
 
-  @Column({ type: 'decimal', name: 'ha_restored_3year', precision: 8, scale: 2, nullable: true })
+  @AllowNull
+  @Column({ type: DECIMAL(8, 2), field: 'ha_restored_3year' })
   haRestored3Year: number | null;
 
-  @Column({ type: 'decimal', name: 'ha_restored_total', precision: 10, scale: 2, nullable: true })
+  @AllowNull
+  @Column({ type: DECIMAL(10, 2) })
   haRestoredTotal: number | null;
 
-  @Column({ type: 'int', name: 'fin_start_month', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   finStartMonth: number | null;
 
-  @Column({ type: 'decimal', name: 'ha_restored_total', precision: 15, scale: 2, nullable: true })
+  @AllowNull
+  @Column({ type: DECIMAL(15, 2) })
   finBudgetCurrentYear: number | null;
 
-  @Column({ type: 'decimal', name: 'ha_restored_total', precision: 15, scale: 2, nullable: true })
+  @AllowNull
+  @Column({ type: DECIMAL(15, 2), field: 'fin_budget_1year' })
   finBudget1Year: number | null;
 
-  @Column({ type: 'decimal', name: 'ha_restored_total', precision: 15, scale: 2, nullable: true })
+  @AllowNull
+  @Column({ type: DECIMAL(15, 2), field: 'fin_budget_2year' })
   finBudget2Year: number | null;
 
-  @Column({ type: 'decimal', name: 'ha_restored_total', precision: 15, scale: 2, nullable: true })
+  @AllowNull
+  @Column({ type: DECIMAL(15, 2), field: 'fin_budget_3year' })
   finBudget3Year: number | null;
 
-  @Column({ name: 'web_url', nullable: true})
+  @AllowNull
+  @Column
   webUrl: string | null;
 
-  @Column({ name: 'facebook_url', nullable: true})
+  @AllowNull
+  @Column
   facebookUrl: string | null;
 
-  @Column({ name: 'instagram_url', nullable: true})
+  @AllowNull
+  @Column
   instagramUrl: string | null;
 
-  @Column({ name: 'linkedin_url', nullable: true})
-  linkedInUrl: string | null;
+  @AllowNull
+  @Column
+  linkedinUrl: string | null;
 
-  @Column({ name: 'twitter_url', nullable: true})
+  @AllowNull
+  @Column
   twitterUrl: string | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'ft_permanent_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
   ftPermanentEmployees: number | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'pt_permanent_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
   ptPermanentEmployees: number | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'temp_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10 }) })
   tempEmployees: number | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'female_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
   femaleEmployees: number | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'male_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
   maleEmployees: number | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'young_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
   youngEmployees: number | null;
 
-  @Column({ type: 'int', name: 'ft_permanent_employees', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10 }), field: 'over_35_employees' })
   over35Employees: number | null;
 
-  @Column({ type: 'text', name: 'additional_funding_details', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   additionalFundingDetails: string | null;
 
-  @Column({ type: 'text', name: 'community_experience', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   communityExperience: string | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'total_engaged_community_members_3yr', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }), field: 'total_engaged_community_members_3yr' })
   totalEngagedCommunityMembers3Yr: number | null;
 
-  @Column({ type: 'tinyint', name: 'percent_engaged_women_3yr', width: 4, nullable: true })
+  @AllowNull
+  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_women_3yr' })
   percentEngagedWomen3Yr: number | null;
 
-  @Column({ type: 'tinyint', name: 'percent_engaged_men_3yr', width: 4, nullable: true })
+  @AllowNull
+  @Column({ type: TINYINT({ length: 4}), field: 'percent_engaged_men_3yr' })
   percentEngagedMen3Yr: number | null;
 
-  @Column({ type: 'tinyint', name: 'percent_engaged_under_35_3yr', width: 4, nullable: true })
+  @AllowNull
+  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_under_35_3yr' })
   percentEngagedUnder353Yr: number | null;
 
-  @Column({ type: 'tinyint', name: 'percent_engaged_over_35_3yr', width: 4, nullable: true })
+  @AllowNull
+  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_over_35_3yr' })
   percentEngagedOver353Yr: number | null;
 
-  @Column({ type: 'tinyint', name: 'percent_engaged_smallholder_3yr', width: 4, nullable: true })
+  @AllowNull
+  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_smallholder_3yr' })
   percentEngagedSmallholder3Yr: number | null;
 
-  @Column({ type: 'int', unsigned: true, name: 'total_trees_grown', width: 10, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
   totalTreesGrown: number | null;
 
-  @Column({ type: 'tinyint', name: 'avg_tree_survival_rate', width: 4, nullable: true })
+  @AllowNull
+  @Column({ type: TINYINT({ length: 4 }) })
   avgTreeSurvivalRate: number | null;
 
-  @Column({ type: 'text', name: 'tree_maintenance_aftercare_approach', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   treeMaintenanceAftercareApproach: string | null;
 
-  @Column({ type: 'text', name: 'restored_areas_description', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   restoredAreasDescription: string | null;
 
-  @Column({ type: 'text', name: 'restoration_types_implemented', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   restorationTypesImplemented: string | null;
 
-  @Column({ type: 'text', name: 'historic_monitoring_geojson', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   historicMonitoringGeojson: string | null;
 
-  @Column({ type: 'text', name: 'monitoring_evaluation_experience', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   monitoringEvaluationExperience: string | null;
 
-  @Column({ type: 'longtext', name: 'funding_history', nullable: true})
+  @AllowNull
+  @Column({ type: TEXT('long') })
   fundingHistory: string | null;
 
-  @Column({ type: 'text', name: 'engagement_farmers', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   engagementFarmers: string | null;
 
-  @Column({ type: 'text', name: 'engagement_women', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   engagementWomen: string | null;
 
-  @Column({ type: 'text', name: 'engagement_youth', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   engagementYouth: string | null;
 
-  @Column({ default: 'USD' })
+  @Column({ defaultValue: 'USD' })
   currency: string;
 
-  @Column({ type: 'text', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   states: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   district: string | null;
 
-  @Column({ type: 'text', name: 'account_number_1', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT, field: 'account_number_1' })
   accountNumber1: string | null;
 
-  @Column({ type: 'text', name: 'account_number_2', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT, field: 'account_number_2' })
   accountNumber2: string | null;
 
-  @Column({ type: 'text', name: 'loan_status_amount', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   loanStatusAmount: string | null;
 
-  @Column({ type: 'text', name: 'loan_status_types', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   loanStatusTypes: string | null;
 
-  @Column({ type: 'text', name: 'approach_of_marginalized_communities', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   approachOfMarginalizedCommunities: string | null;
 
-  @Column({ type: 'text', name: 'community_engagement_numbers_marginalized', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   communityEngagementNumbersMarginalized: string | null;
 
-  @Column({ type: 'text', name: 'land_systems', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   landSystems: string | null;
 
-  @Column({ type: 'text', name: 'fund_utilisation', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   fundUtilisation: string | null;
 
-  @Column({ type: 'text', name: 'detailed_intervention_types', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   detailedInterventionTypes: string | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr' })
   communityMembersEngaged3yr: number | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr_women', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_women' })
   communityMembersEngaged3yrWomen: number | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr_men', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_men' })
   communityMembersEngaged3yrMen: number | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr_youth', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_youth' })
   communityMembersEngaged3yrYouth: number | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr_non_youth', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_non_youth' })
   communityMembersEngaged3yrNonYouth: number | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr_smallholder', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_smallholder' })
   communityMembersEngaged3yrSmallholder: number | null;
 
-  @Column({ type: 'int', name: 'community_members_engaged_3yr_backward_class', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_backward_class' })
   communityMembersEngaged3YrBackwardClass: number | null;
 
-  @Column({ type: 'int', name: 'total_board_members', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   totalBoardMembers: number | null;
 
-  @Column({ type: 'int', name: 'pct_board_women', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   pctBoardWomen: number | null;
 
-  @Column({ type: 'int', name: 'pct_board_men', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   pctBoardMen: number | null;
 
-  @Column({ type: 'int', name: 'pct_board_youth', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   pctBoardYouth: number | null;
 
-  @Column({ type: 'int', name: 'pct_board_non_youth', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   pctBoardNonYouth: number | null;
 
-  @Column({ type: 'text', name: 'engagement_non_youth', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   engagementNonYouth: string | null;
 
-  @Column({ type: 'text', name: 'tree_restoration_practices', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   treeRestorationPractices: string | null;
 
-  @Column({ type: 'text', name: 'business_model', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   businessModel: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   subtype: string | null;
 
-  @Column({ type: 'bigint', name: 'organisation_revenue_this_year', width: 20, nullable: true })
+  @AllowNull
+  @Column({ type: BIGINT({ length: 20 }) })
   organisationRevenueThisYear: number | null;
 
-  @Column({ type: 'text', name: 'field_staff_skills', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   fieldStaffSkills: string | null;
 
-  @Column({ type: 'enum', enum: ['yes', 'no'], name: 'fpc_company', nullable: true })
+  @AllowNull
+  @Column({ type: ENUM, values: ['yes', 'no'] })
   fpcCompany: string | null;
 
-  @Column({ type: 'int', name: 'num_of_farmers_on_board', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   numOfFarmersOnBoard: number | null;
 
-  @Column({ type: 'int', name: 'num_of_marginalised_employees', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   numOfMarginalisedEmployees: number | null;
 
-  @Column({ type: 'text', name: 'benefactors_fpc_company', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   benefactorsFpcCompany: string | null;
 
-  @Column({ name: 'board_remuneration_fpc_company', nullable: true })
+  @AllowNull
+  @Column
   boardRemunerationFpcCompany: string | null;
 
-  @Column({ name: 'board_engagement_fpc_company', nullable: true })
+  @AllowNull
+  @Column
   boardEngagementFpcCompany: string | null;
 
-  @Column({ name: 'biodiversity_focus', nullable: true })
+  @AllowNull
+  @Column
   biodiversityFocus: string | null;
 
-  @Column({ type: 'text', name: 'global_planning_frameworks', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   globalPlanningFrameworks: string | null;
 
-  @Column({ type: 'text', name: 'past_gov_collaboration', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   pastGovCollaboration: string | null;
 
-  @Column({ type: 'text', name: 'engagement_landless', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   engagementLandless: string | null;
 
-  @Column({ type: 'text', name: 'socioeconomic_impact', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   socioeconomicImpact: string | null;
 
-  @Column({ type: 'text', name: 'environmental_impact', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   environmentalImpact: string | null;
 
-  // name misspelled intentionally to match the current DB schema
-  @Column({ type: 'text', name: 'growith_stage', nullable: true })
+  // field misspelled intentionally to match the current DB schema
+  @AllowNull
+  @Column({ type: TEXT, field: 'growith_stage' })
   growthStage: string | null;
 
-  @Column({ type: 'int', name: 'total_employees', width: 11, nullable: true })
+  @AllowNull
+  @Column({ type: INTEGER({ length: 11 }) })
   totalEmployees: number | null
 
-  @Column({ type: 'text', name: 'additional_comments', nullable: true })
+  @AllowNull
+  @Column({ type: TEXT })
   additionalComments: string | null;
 }

@@ -1,16 +1,18 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, ForeignKey, Model, Table } from 'sequelize-typescript';
+import { STRING } from 'sequelize';
+import { Organisation } from './organisation.entity';
+import { User } from './user.entity';
 
-@Entity({ name: 'organisation_user' })
-export class OrganisationUser extends BaseEntity {
-  @PrimaryGeneratedColumn({ unsigned: true })
-  id: number;
+@Table({ tableName: 'organisation_user', underscored: true, timestamps: false })
+export class OrganisationUser extends Model {
+  @ForeignKey(() => User)
+  @Column
+  userId: bigint;
 
-  @Column({ name: 'user_id' })
-  userId: number;
+  @ForeignKey(() => Organisation)
+  @Column
+  organisationId: bigint;
 
-  @Column({ name: 'organisation_id' })
-  organisationId: number;
-
-  @Column({ width: 20 })
+  @Column({ type: STRING(20) })
   status: string;
 }

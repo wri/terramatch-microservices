@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Framework,
-  ModelHasRole,
+  ModelHasRole, Organisation, OrganisationUser,
   Permission,
   Project,
   ProjectUser,
   Role,
-  User,
+  User
 } from './entities';
 import {
   SequelizeModuleOptions,
@@ -30,6 +30,8 @@ export class SequelizeConfigService implements SequelizeOptionsFactory {
       models: [
         Framework,
         ModelHasRole,
+        Organisation,
+        OrganisationUser,
         Permission,
         Project,
         ProjectUser,

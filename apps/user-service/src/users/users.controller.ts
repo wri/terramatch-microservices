@@ -62,18 +62,16 @@ export class UsersController {
 
     const document = buildJsonApi();
     const userResource = document.addData(user.uuid, new UserDto(user, await user.frameworks()));
-    return document.serialize();
 
-  //   const org = await user.primaryOrganisation();
-  //   if (org != null) {
-  //     const orgResource = document.addIncluded(
-  //       org.uuid,
-  //       new OrganisationDto(org)
-  //     );
-  //     const userStatus = (await user.organisationUserStatus()) ?? 'na';
-  //     userResource.relateTo('org', orgResource, { userStatus });
-  //   }
-  //
-  //   return document.serialize();
+    const org = await user.primaryOrganisation();
+    if (org != null) {
+      const orgResource = document.addIncluded(
+        org.uuid,
+        new OrganisationDto(org)
+      );
+      userResource.relateTo('org', orgResource, { userStatus: org.OrganisationUser?.status ?? 'na' });
+    }
+
+    return document.serialize();
   }
 }

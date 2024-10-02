@@ -9,13 +9,13 @@ export class AuthService {
 
   async login(emailAddress: string, password: string) {
     const { id, password: passwordHash } =
-      await User.findOne({ select: { id: true, password: true }, where: { emailAddress } }) ?? {};
+      await User.findOne({ where: { emailAddress }, attributes: ['id', 'password'] }) ?? {};
     if (passwordHash == null) return null;
 
     const passwordValid = await bcrypt.compare(password, passwordHash);
     if (!passwordValid) return null;
 
-    await User.update({ id }, { lastLoggedInAt: () => 'now()' });
+    await User.update({ lastLoggedInAt: new Date() }, { where: { id } });
 
     const token = await this.jwtService.signAsync({
       sub: id,

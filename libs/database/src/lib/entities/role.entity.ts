@@ -1,27 +1,20 @@
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn
-} from 'typeorm';
+import { Column, CreatedAt, Model, Table, UpdatedAt } from 'sequelize-typescript';
+import { QueryTypes } from 'sequelize';
 
-@Entity({ name: 'roles' })
-export class Role extends BaseEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: number;
+@Table({ tableName: 'roles' })
+export class Role extends Model {
+  @CreatedAt
+  @Column({ field: 'created_at' })
+  override createdAt: Date;
 
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  createdAt: Date;
+  @UpdatedAt
+  @Column({ field: 'updated_at' })
+  override updatedAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  updatedAt: Date;
-
-  @Column()
+  @Column
   name: string;
 
-  @Column({ name: 'guard_name' })
+  @Column({ field: 'guard_name' })
   guardName: string;
 
   /**
@@ -30,12 +23,17 @@ export class Role extends BaseEntity {
    * those models represented, the ManyToOne and OneToMany associations can't be represented.
    */
   public static async getUserRoleNames(userId: number): Promise<string[]> {
-    const roles = await this.createQueryBuilder('r')
-      .innerJoin('model_has_roles', 'mhr', 'mhr.role_id = r.id')
-      .where('mhr.model_type = :modelType', { modelType: "App\\Models\\V2\\User" })
-      .andWhere('mhr.model_id = :modelId', { modelId: userId })
-      .select('r.name')
-      .getMany();
-    return roles.map(({ name }) => name);
+    const roles = await this.sequelize?.query(`
+        SELECT roles.name FROM roles
+        INNER JOIN model_has_roles ON model_has_roles.role_id = roles.id
+        WHERE
+            model_has_roles.model_type = :modelType AND
+            model_has_roles.model_id = :modelId
+    `, {
+      replacements: { modelType: "App\\Models\\V2\\User", modelId: userId },
+      type: QueryTypes.SELECT
+    }) as { name: string }[]
+
+    return roles?.map(({ name }) => name) ?? [];
   }
 }

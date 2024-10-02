@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { RequestContext } from 'nestjs-request-context';
 import { UserPolicy } from './user.policy';
-import { BaseEntity } from 'typeorm';
 import { BuilderType, EntityPolicy } from './entity.policy';
 import { Permission, User } from '@terramatch-microservices/database/entities';
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
+import { Model } from 'sequelize-typescript';
 
 type EntityClass = {
-  new (...args: any[]): BaseEntity;
+  new (...args: any[]): Model;
 };
 
 type PolicyClass = {
@@ -30,7 +30,7 @@ const POLICIES: [ [EntityClass, PolicyClass] ] = [
  */
 @Injectable()
 export class PolicyService {
-  async authorize<T extends BaseEntity>(action: string, subject: T): Promise<void> {
+  async authorize<T extends Model>(action: string, subject: T): Promise<void> {
     // Added by AuthGuard
     const userId = RequestContext.currentContext.req.authenticatedUserId;
     if (userId == null) throw new UnauthorizedException();

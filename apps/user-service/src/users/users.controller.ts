@@ -55,7 +55,7 @@ export class UsersController {
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
     const userId = pathId === 'me' ? authenticatedUserId : parseInt(pathId);
-    const user = await User.findOneBy({ id: userId });
+    const user = await User.findOne({ where: { id: userId } });
     if (user == null) throw new NotFoundException();
 
     await this.policyService.authorize('read', user);
@@ -65,19 +65,20 @@ export class UsersController {
       user.uuid,
       // TODO: After switching to Sequelize, I think we'll be able to eager load roles and
       //  frameworks, and won't need to await those methods here.
-      new UserDto(user, await user.primaryRole(), await user.frameworks())
+      new UserDto(user, await user.primaryRole(), []) // await user.frameworks())
     );
-
-    const org = await user.primaryOrganisation();
-    if (org != null) {
-      const orgResource = document.addIncluded(
-        org.uuid,
-        new OrganisationDto(org)
-      );
-      const userStatus = (await user.organisationUserStatus()) ?? 'na';
-      userResource.relateTo('org', orgResource, { userStatus });
-    }
-
     return document.serialize();
+
+  //   const org = await user.primaryOrganisation();
+  //   if (org != null) {
+  //     const orgResource = document.addIncluded(
+  //       org.uuid,
+  //       new OrganisationDto(org)
+  //     );
+  //     const userStatus = (await user.organisationUserStatus()) ?? 'na';
+  //     userResource.relateTo('org', orgResource, { userStatus });
+  //   }
+  //
+  //   return document.serialize();
   }
 }

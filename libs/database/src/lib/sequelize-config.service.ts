@@ -1,38 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import { Permission, Role, User } from './entities';
 import {
-  Framework,
-  Organisation,
-  OrganisationUser,
-  Permission,
-  Project,
-  Role,
-  User
-} from './entities';
+  SequelizeModuleOptions,
+  SequelizeOptionsFactory,
+} from '@nestjs/sequelize';
 
 @Injectable()
-export class TypeOrmConfigService implements TypeOrmOptionsFactory {
+export class SequelizeConfigService implements SequelizeOptionsFactory {
   constructor(protected readonly configService: ConfigService) {}
 
-  createTypeOrmOptions(): TypeOrmModuleOptions {
+  createSequelizeOptions(): SequelizeModuleOptions {
     return {
-      type: 'mariadb',
+      dialect: 'mariadb',
       host: this.configService.get<string>('DB_HOST'),
       port: this.configService.get<number>('DB_PORT'),
       username: this.configService.get<string>('DB_USERNAME'),
       password: this.configService.get<string>('DB_PASSWORD'),
       database: this.configService.get<string>('DB_DATABASE'),
-      timezone: 'Z',
-      entities: [
-        Framework,
-        Organisation,
-        OrganisationUser,
-        Permission,
-        Project,
-        Role,
-        User
-      ],
+      synchronize: false,
+      models: [Permission, Role, User],
     };
   }
 }

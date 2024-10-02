@@ -15,7 +15,7 @@ class UserFramework  {
 export class UserDto extends JsonApiAttributes<UserDto> {
   constructor(user: User, primaryRole: string, frameworks: { name: string, slug: string }[]) {
     super({
-      uuid: user.uuid,
+      uuid: user.uuid ?? '',
       firstName: user.firstName,
       lastName: user.lastName,
       fullName:

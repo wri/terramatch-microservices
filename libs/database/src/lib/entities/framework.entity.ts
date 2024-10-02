@@ -1,14 +1,12 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Model, Table } from 'sequelize-typescript';
+import { STRING } from 'sequelize';
 
 // A quick stub to get access to a query builder for this table.
-@Entity({ name: 'frameworks' })
-export class Framework extends BaseEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: number;
-
-  @Column({ width: 20 })
+@Table({ tableName: 'frameworks' })
+export class Framework extends Model {
+  @Column({ type: STRING(20) })
   slug: string;
 
-  @Column()
+  @Column
   name: string;
 }

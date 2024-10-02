@@ -6,9 +6,9 @@ import {
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Role, User } from '@terramatch-microservices/database/entities';
+import { User } from '@terramatch-microservices/database/entities';
 import { PolicyService } from '@terramatch-microservices/common';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { OrganisationDto, UserDto } from '@terramatch-microservices/common/dto';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
@@ -22,10 +22,8 @@ export class UsersController {
   constructor(private readonly policyService: PolicyService) {}
 
   @Get('users/:id')
-  @ApiOperation({
-    operationId: 'usersFind',
-    description: "Fetch a user by ID, or with the 'me' identifier",
-  })
+  @ApiOperation({ operationId: 'usersFind', description: "Fetch a user by ID, or with the 'me' identifier" })
+  @ApiParam({ name: 'id', example: 'me', description: 'A valid user id or "me"' })
   @JsonApiResponse({
     data: {
       type: UserDto,
@@ -36,7 +34,7 @@ export class UsersController {
           meta: {
             userStatus: {
               type: 'string',
-              enum: ['approved', 'requested', 'rejected'],
+              enum: ['approved', 'requested', 'rejected', 'na'],
             },
           },
         },
@@ -55,7 +53,7 @@ export class UsersController {
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
     const userId = pathId === 'me' ? authenticatedUserId : parseInt(pathId);
-    const user = await User.findOne({ include: [Role], where: { id: userId } });
+    const user = await User.findOne({ include: ['roles', 'organisation'], where: { id: userId }, });
     if (user == null) throw new NotFoundException();
 
     await this.policyService.authorize('read', user);
@@ -65,11 +63,9 @@ export class UsersController {
 
     const org = await user.primaryOrganisation();
     if (org != null) {
-      const orgResource = document.addIncluded(
-        org.uuid,
-        new OrganisationDto(org)
-      );
-      userResource.relateTo('org', orgResource, { userStatus: org.OrganisationUser?.status ?? 'na' });
+      const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
+      const userStatus = org.OrganisationUser?.status ?? 'na';
+      userResource.relateTo('org', orgResource, { userStatus });
     }
 
     return document.serialize();

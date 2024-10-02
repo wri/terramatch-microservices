@@ -233,34 +233,39 @@ export class User extends Model {
     return this._primaryOrganisation === false ? null : this._primaryOrganisation;
   }
 
+  private _frameworks?: Framework[];
   async frameworks(): Promise<Framework[]> {
-    await this.loadRoles();
-    const isAdmin =
-      this.roles.find(({ name }) => name.startsWith('admin-')) != null;
+    if (this._frameworks == null) {
+      await this.loadRoles();
+      const isAdmin =
+        this.roles.find(({ name }) => name.startsWith('admin-')) != null;
 
-    let frameworkSlugs: string[];
-    if (isAdmin) {
-      // Admins have access to all frameworks their permissions say they do
-      const permissions = await Permission.getUserPermissionNames(this.id);
-      const offset = 'framework-'.length;
-      frameworkSlugs = permissions
-        .filter((permission) => permission.startsWith('framework-'))
-        .map((permission) => permission.substring(offset));
-    } else {
-      // Other users have access to the frameworks embodied by their set of projects
-      frameworkSlugs = (
-        await (this as User).$get('projects', {
-          attributes: [
-            [fn('DISTINCT', col('Project.framework_key')), 'frameworkKey'],
-          ],
-          raw: true,
-        })
-      ).map(({ frameworkKey }) => frameworkKey);
+      let frameworkSlugs: string[];
+      if (isAdmin) {
+        // Admins have access to all frameworks their permissions say they do
+        const permissions = await Permission.getUserPermissionNames(this.id);
+        const prefix = 'framework-';
+        frameworkSlugs = permissions
+          .filter((permission) => permission.startsWith(prefix))
+          .map((permission) => permission.substring(prefix.length));
+      } else {
+        // Other users have access to the frameworks embodied by their set of projects
+        frameworkSlugs = (
+          await (this as User).$get('projects', {
+            attributes: [
+              [fn('DISTINCT', col('Project.framework_key')), 'frameworkKey'],
+            ],
+            raw: true,
+          })
+        ).map(({ frameworkKey }) => frameworkKey);
+      }
+
+      if (frameworkSlugs.length == 0) return this._frameworks = [];
+      return this._frameworks = await Framework.findAll({
+        where: { slug: { [Op.in]: frameworkSlugs } },
+      });
     }
 
-    if (frameworkSlugs.length == 0) return [];
-    return await Framework.findAll({
-      where: { slug: { [Op.in]: frameworkSlugs } },
-    });
+    return this._frameworks;
   }
 }

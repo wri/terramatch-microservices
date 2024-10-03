@@ -1,8 +1,12 @@
-import { Column, Model, Table } from 'sequelize-typescript';
-import { QueryTypes } from 'sequelize';
+import { Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import { BIGINT, QueryTypes } from 'sequelize';
 
 @Table({ tableName: 'permissions', underscored: true })
 export class Permission extends Model {
+  @PrimaryKey
+  @Column({ type: BIGINT({ unsigned: true }) })
+  override id: bigint;
+
   @Column
   name: string;
 
@@ -19,7 +23,7 @@ export class Permission extends Model {
    * using that capability, but if we started to, this would need to be more complicated.
    */
   public static async getUserPermissionNames(
-    userId: number
+    userId: number | bigint
   ): Promise<string[]> {
     const permissions = (await this.sequelize?.query(
       `

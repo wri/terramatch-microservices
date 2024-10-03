@@ -2,37 +2,35 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { FactoryGirl, TypeOrmRepositoryAdapter } from 'factory-girl-ts';
-import { DataSource } from 'typeorm';
+import { FactoryGirl, SequelizeAdapter } from 'factory-girl-ts';
 import bcrypt from 'bcryptjs';
-import { User, UserFactory } from '@terramatch-microservices/database/entities';
-
-const dataSource = new DataSource({
-  type: 'mariadb',
-  host: 'localhost',
-  port: 3360,
-  username: 'wri',
-  password: 'wri',
-  // TODO: script to create DB. Going to need a docker container on github actions
-  database: 'terramatch_microservices_test',
-  timezone: 'Z',
-  entities: [User],
-  synchronize: true,
-});
+import { User } from '@terramatch-microservices/database/entities';
+import { UserFactory } from '@terramatch-microservices/database/factories';
+import { Sequelize } from 'sequelize-typescript';
+import * as Entities from '@terramatch-microservices/database/entities';
 
 describe('AuthService', () => {
   let service: AuthService;
   let jwtService: DeepMocked<JwtService>;
 
-  beforeAll(async () => {
-    FactoryGirl.setAdapter(new TypeOrmRepositoryAdapter(dataSource));
+  const sequelize = new Sequelize({
+    dialect: 'mariadb',
+    host: 'localhost',
+    port: 3360,
+    username: 'wri',
+    password: 'wri',
+    database: 'terramatch_microservices_test',
+    models: Object.values(Entities),
+    logging: false,
+  });
 
-    await dataSource.initialize();
-    await dataSource.getRepository(User).delete({});
+  beforeAll(async () => {
+    await sequelize.sync({ force: true });
+    FactoryGirl.setAdapter(new SequelizeAdapter());
   })
 
   afterAll(async () => {
-    await dataSource.driver.disconnect();
+    await sequelize.close();
   })
 
   beforeEach(async () => {

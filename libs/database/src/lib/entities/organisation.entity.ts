@@ -1,8 +1,21 @@
-import { AllowNull, Column, Index, Model, Table } from 'sequelize-typescript';
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from 'sequelize-typescript';
 import { BIGINT, DECIMAL, ENUM, INTEGER, TEXT, TINYINT, UUID } from 'sequelize';
 
 @Table({ tableName: 'organisations', underscored: true })
 export class Organisation extends Model {
+  @PrimaryKey
+  @AutoIncrement
+  @Column({ type: BIGINT({ unsigned: true }) })
+  override id: bigint;
+
   @Index
   @Column({ type: UUID })
   uuid: string | null;

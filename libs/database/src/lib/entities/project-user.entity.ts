@@ -1,9 +1,23 @@
-import { AllowNull, Column, ForeignKey, Model, Table } from 'sequelize-typescript';
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  ForeignKey,
+  Model,
+  PrimaryKey,
+  Table
+} from 'sequelize-typescript';
 import { Project } from './project.entity';
 import { User } from './user.entity';
+import { BIGINT } from 'sequelize';
 
 @Table({ tableName: 'v2_project_users', underscored: true })
 export class ProjectUser extends Model {
+  @PrimaryKey
+  @AutoIncrement
+  @Column({ type: BIGINT({ unsigned: true }) })
+  override id: bigint;
+
   @ForeignKey(() => Project)
   @Column
   projectId: bigint;

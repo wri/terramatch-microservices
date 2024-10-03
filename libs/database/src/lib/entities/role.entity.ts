@@ -1,8 +1,13 @@
-import { Column, Model, Table } from 'sequelize-typescript';
-import { QueryTypes } from 'sequelize';
+import { AutoIncrement, Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import { BIGINT, QueryTypes } from 'sequelize';
 
 @Table({ tableName: 'roles', underscored: true })
 export class Role extends Model {
+  @PrimaryKey
+  @AutoIncrement
+  @Column({ type: BIGINT({ unsigned: true }) })
+  override id: bigint;
+
   @Column
   name: string;
 

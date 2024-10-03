@@ -1,14 +1,14 @@
 import {
-  AllowNull,
+  AllowNull, AutoIncrement,
   BelongsTo,
   BelongsToMany,
   Column,
   ForeignKey,
   Index,
-  Model,
-  Table,
+  Model, PrimaryKey,
+  Table
 } from 'sequelize-typescript';
-import { col, fn, Op, UUID } from 'sequelize';
+import { BIGINT, col, fn, Op, UUID } from 'sequelize';
 import { Role } from './role.entity';
 import { ModelHasRole } from './model-has-role.entity';
 import { Permission } from './permission.entity';
@@ -20,6 +20,11 @@ import { OrganisationUser } from './organisation-user.entity';
 
 @Table({ tableName: 'users', underscored: true, paranoid: true })
 export class User extends Model {
+  @PrimaryKey
+  @AutoIncrement
+  @Column({ type: BIGINT({ unsigned: true }) })
+  override id: bigint;
+
   // There are many rows in the prod DB without a UUID assigned, so this cannot be a unique
   // index until that is fixed.
   @Column({ type: UUID, allowNull: true })
@@ -28,7 +33,7 @@ export class User extends Model {
 
   @ForeignKey(() => Organisation)
   @AllowNull
-  @Column
+  @Column({ type: BIGINT({ unsigned: true }) })
   organisationId: bigint | null;
 
   @AllowNull

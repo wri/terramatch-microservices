@@ -86,7 +86,7 @@ class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
 
-  addData(id: string, attributes: Attributes): ResourceBuilder {
+  addData(id: string, attributes: any): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes, this);
 
     const matchesType = this.data.length == 0 || this.data[0].type === builder.type;
@@ -103,7 +103,7 @@ class DocumentBuilder {
     return builder;
   }
 
-  addIncluded(id: string, attributes: Attributes): ResourceBuilder {
+  addIncluded(id: string, attributes: any): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes, this);
 
     const collision = this.included.find(

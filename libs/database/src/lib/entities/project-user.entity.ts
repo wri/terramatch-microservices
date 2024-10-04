@@ -1,7 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
-  Column,
+  Column, Default,
   ForeignKey,
   Model,
   PrimaryKey,
@@ -9,30 +9,32 @@ import {
 } from 'sequelize-typescript';
 import { Project } from './project.entity';
 import { User } from './user.entity';
-import { BIGINT } from 'sequelize';
+import { BIGINT, BOOLEAN, STRING } from 'sequelize';
 
 @Table({ tableName: 'v2_project_users', underscored: true })
 export class ProjectUser extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   override id: number;
 
   @ForeignKey(() => Project)
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   projectId: number;
 
   @ForeignKey(() => User)
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   userId: number;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   status: string;
 
-  @Column({ defaultValue: false })
+  @Default(false)
+  @Column(BOOLEAN)
   isMonitoring: boolean;
 
-  @Column({ defaultValue: false })
+  @Default(false)
+  @Column(BOOLEAN)
   isManaging: boolean;
 }

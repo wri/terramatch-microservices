@@ -10,5 +10,7 @@ module.exports = {
       lines: 95,
       statements: 95,
     }
-  }
+  },
+
+  setupFilesAfterEnv: ['./setup-jest.ts'],
 }

@@ -1,6 +1,6 @@
 import { Column, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { Role } from './role.entity';
-import { BIGINT } from 'sequelize';
+import { BIGINT, STRING } from 'sequelize';
 
 @Table({ tableName: 'model_has_roles', underscored: true, timestamps: false })
 export class ModelHasRole extends Model {
@@ -8,9 +8,9 @@ export class ModelHasRole extends Model {
   @Column({ type: BIGINT.UNSIGNED, primaryKey: true })
   roleId: number;
 
-  @Column({ primaryKey: true })
+  @Column({ type: STRING, primaryKey: true })
   modelType: string;
 
-  @Column({ primaryKey: true })
-  modelId: bigint;
+  @Column({ type: BIGINT.UNSIGNED, primaryKey: true })
+  modelId: number;
 }

@@ -1,16 +1,17 @@
-import { Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
-import { BIGINT, QueryTypes } from 'sequelize';
+import { AutoIncrement, Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import { BIGINT, QueryTypes, STRING } from 'sequelize';
 
 @Table({ tableName: 'permissions', underscored: true })
 export class Permission extends Model {
   @PrimaryKey
-  @Column({ type: BIGINT.UNSIGNED })
+  @AutoIncrement
+  @Column(BIGINT.UNSIGNED)
   override id: number;
 
-  @Column
+  @Column(STRING)
   name: string;
 
-  @Column
+  @Column(STRING)
   guardName: string;
 
   /**

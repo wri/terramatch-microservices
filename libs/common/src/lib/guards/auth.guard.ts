@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 
 const NO_BEARER_AUTH = 'noBearerAuth';
-export const NoBearerAuth = () => SetMetadata(NO_BEARER_AUTH, true);
+export const NoBearerAuth = SetMetadata(NO_BEARER_AUTH, true);
 
 @Injectable()
 export class AuthGuard implements CanActivate {

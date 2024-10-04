@@ -1,0 +1,25 @@
+import { Sequelize } from 'sequelize-typescript';
+import { FactoryGirl, SequelizeAdapter } from 'factory-girl-ts';
+import * as Entities from '@terramatch-microservices/database/entities';
+
+let sequelize: Sequelize;
+
+beforeAll(async () => {
+  sequelize = new Sequelize({
+    dialect: 'mariadb',
+    host: 'localhost',
+    port: 3360,
+    username: 'wri',
+    password: 'wri',
+    database: 'terramatch_microservices_test',
+    models: Object.values(Entities),
+    logging: false,
+  })
+
+  await sequelize.sync();
+  FactoryGirl.setAdapter(new SequelizeAdapter());
+});
+
+afterAll(async () => {
+  await sequelize.close();
+});

@@ -1,14 +1,17 @@
 import {
-  AllowNull, AutoIncrement,
+  AllowNull,
+  AutoIncrement,
   BelongsTo,
   BelongsToMany,
-  Column,
+  Column, Default,
   ForeignKey,
   Index,
-  Model, PrimaryKey,
-  Table
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
 } from 'sequelize-typescript';
-import { BIGINT, col, fn, Op, UUID } from 'sequelize';
+import { BIGINT, BOOLEAN, col, DATE, fn, Op, STRING, UUID } from 'sequelize';
 import { Role } from './role.entity';
 import { ModelHasRole } from './model-has-role.entity';
 import { Permission } from './permission.entity';
@@ -22,99 +25,103 @@ import { OrganisationUser } from './organisation-user.entity';
 export class User extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   override id: number;
 
   // There are many rows in the prod DB without a UUID assigned, so this cannot be a unique
   // index until that is fixed.
-  @Column({ type: UUID, allowNull: true })
+  @AllowNull
   @Index({ unique: false })
+  @Column(UUID)
   uuid: string | null;
 
   @ForeignKey(() => Organisation)
   @AllowNull
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   organisationId: number | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   firstName: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   lastName: string | null;
 
   @AllowNull
-  @Column({ unique: true })
+  @Unique
+  @Column(STRING)
   emailAddress: string;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   password: string | null;
 
   @AllowNull
-  @Column
+  @Column(DATE)
   emailAddressVerifiedAt: Date | null;
 
   @AllowNull
-  @Column
+  @Column(DATE)
   lastLoggedInAt: Date | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   jobRole: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   facebook: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   twitter: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   linkedin: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   instagram: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   avatar: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   phoneNumber: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   whatsappPhone: string | null;
 
-  @Column({ defaultValue: true })
+  @Default(true)
+  @Column(BOOLEAN)
   isSubscribed: boolean;
 
-  @Column({ defaultValue: true })
+  @Default(true)
+  @Column(BOOLEAN)
   hasConsented: boolean;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   banners: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   apiKey: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   country: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   program: string | null;
 
-  @Column
+  @Column(STRING)
   locale: string;
 
   @BelongsToMany(() => Role, {
@@ -204,38 +211,50 @@ export class User extends Model {
   async loadOrganisationsRequested() {
     if (this.organisationsRequested == null) {
       this.organisationsRequested = await (this as User).$get(
-        'organisationsRequested',
+        'organisationsRequested'
       );
     }
     return this.organisationsRequested;
   }
 
-  private _primaryOrganisation: (Organisation & { OrganisationUser?: OrganisationUser }) | false;
-  async primaryOrganisation(): Promise<(Organisation & { OrganisationUser?: OrganisationUser }) | null> {
+  private _primaryOrganisation:
+    | (Organisation & { OrganisationUser?: OrganisationUser })
+    | false;
+  async primaryOrganisation(): Promise<
+    (Organisation & { OrganisationUser?: OrganisationUser }) | null
+  > {
     if (this._primaryOrganisation == null) {
       await this.loadOrganisation();
       if (this.organisation != null) {
-        const userOrg = (await (this as User).$get(
-          'organisations',
-          { limit: 1, where: { id: this.organisation.id } }
-        ))[0];
-        return this._primaryOrganisation = userOrg ?? this.organisation;
+        const userOrg = (
+          await (this as User).$get('organisations', {
+            limit: 1,
+            where: { id: this.organisation.id },
+          })
+        )[0];
+        return (this._primaryOrganisation = userOrg ?? this.organisation);
       }
 
-      const confirmed = (await (this as User).$get('organisationsConfirmed', { limit: 1 }))[0];
+      const confirmed = (
+        await (this as User).$get('organisationsConfirmed', { limit: 1 })
+      )[0];
       if (confirmed != null) {
-        return this._primaryOrganisation = confirmed;
+        return (this._primaryOrganisation = confirmed);
       }
 
-      const requested = (await (this as User).$get('organisationsRequested', { limit: 1 }))[0];
+      const requested = (
+        await (this as User).$get('organisationsRequested', { limit: 1 })
+      )[0];
       if (requested != null) {
-        return this._primaryOrganisation = requested;
+        return (this._primaryOrganisation = requested);
       }
 
       this._primaryOrganisation = false;
     }
 
-    return this._primaryOrganisation === false ? null : this._primaryOrganisation;
+    return this._primaryOrganisation === false
+      ? null
+      : this._primaryOrganisation;
   }
 
   private _frameworks?: Framework[];
@@ -265,10 +284,10 @@ export class User extends Model {
         ).map(({ frameworkKey }) => frameworkKey);
       }
 
-      if (frameworkSlugs.length == 0) return this._frameworks = [];
-      return this._frameworks = await Framework.findAll({
+      if (frameworkSlugs.length == 0) return (this._frameworks = []);
+      return (this._frameworks = await Framework.findAll({
         where: { slug: { [Op.in]: frameworkSlugs } },
-      });
+      }));
     }
 
     return this._frameworks;

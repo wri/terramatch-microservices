@@ -2,92 +2,106 @@ import {
   AllowNull,
   AutoIncrement,
   Column,
+  Default,
   Index,
   Model,
   PrimaryKey,
-  Table
+  Table,
 } from 'sequelize-typescript';
-import { BIGINT, DECIMAL, ENUM, INTEGER, TEXT, TINYINT, UUID } from 'sequelize';
+import {
+  BIGINT,
+  BOOLEAN,
+  DATE,
+  DECIMAL,
+  ENUM,
+  INTEGER,
+  STRING,
+  TEXT,
+  TINYINT,
+  UUID
+} from 'sequelize';
 
 @Table({ tableName: 'organisations', underscored: true })
 export class Organisation extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   override id: number;
 
   @Index
-  @Column({ type: UUID })
-  uuid: string | null;
+  @Column(UUID)
+  uuid: string;
 
-  @Column({ defaultValue: 'draft' })
+  @Default('draft')
+  @Column(STRING)
   status: string;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   type: string | null;
 
-  @Column({ defaultValue: false })
+  @Default(false)
+  @Column(BOOLEAN)
   private: boolean;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   name: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   phone: string | null;
 
   @AllowNull
-  @Column({ field: 'hq_street_1' })
+  @Column({ type: STRING, field: 'hq_street_1' })
   hqStreet1: string | null;
 
   @AllowNull
-  @Column({ field: 'hq_street_2' })
+  @Column({ type: STRING, field: 'hq_street_2' })
   hqStreet2: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   hqCity: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   hqState: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   hqZipcode: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   hqCountry: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   leadershipTeamTxt: string | null;
 
   @AllowNull
-  @Column
+  @Column(DATE)
   foundingDate: Date | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   description: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   countries: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   languages: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   treeCareApproach: string | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   relevantExperienceYears: number | null;
 
   @AllowNull
@@ -95,7 +109,7 @@ export class Organisation extends Model {
   treesGrown3Year: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   treesGrownTotal: number | null;
 
   @AllowNull
@@ -103,15 +117,15 @@ export class Organisation extends Model {
   haRestored3Year: number | null;
 
   @AllowNull
-  @Column({ type: DECIMAL(10, 2) })
+  @Column(DECIMAL(10, 2))
   haRestoredTotal: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   finStartMonth: number | null;
 
   @AllowNull
-  @Column({ type: DECIMAL(15, 2) })
+  @Column(DECIMAL(15, 2))
   finBudgetCurrentYear: number | null;
 
   @AllowNull
@@ -127,47 +141,47 @@ export class Organisation extends Model {
   finBudget3Year: number | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   webUrl: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   facebookUrl: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   instagramUrl: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   linkedinUrl: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   twitterUrl: string | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
+  @Column(INTEGER({ length: 10, unsigned: true }))
   ftPermanentEmployees: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
+  @Column(INTEGER({ length: 10, unsigned: true }))
   ptPermanentEmployees: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10 }) })
+  @Column(INTEGER({ length: 10 }))
   tempEmployees: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
+  @Column(INTEGER({ length: 10, unsigned: true }))
   femaleEmployees: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
+  @Column(INTEGER({ length: 10, unsigned: true }))
   maleEmployees: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
+  @Column(INTEGER({ length: 10, unsigned: true }))
   youngEmployees: number | null;
 
   @AllowNull
@@ -175,11 +189,11 @@ export class Organisation extends Model {
   over35Employees: number | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   additionalFundingDetails: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   communityExperience: string | null;
 
   @AllowNull
@@ -191,7 +205,7 @@ export class Organisation extends Model {
   percentEngagedWomen3Yr: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4}), field: 'percent_engaged_men_3yr' })
+  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_men_3yr' })
   percentEngagedMen3Yr: number | null;
 
   @AllowNull
@@ -207,58 +221,59 @@ export class Organisation extends Model {
   percentEngagedSmallholder3Yr: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }) })
+  @Column(INTEGER({ length: 10, unsigned: true }))
   totalTreesGrown: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4 }) })
+  @Column(TINYINT({ length: 4 }))
   avgTreeSurvivalRate: number | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   treeMaintenanceAftercareApproach: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   restoredAreasDescription: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   restorationTypesImplemented: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   historicMonitoringGeojson: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   monitoringEvaluationExperience: string | null;
 
   @AllowNull
-  @Column({ type: TEXT('long') })
+  @Column(TEXT('long'))
   fundingHistory: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   engagementFarmers: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   engagementWomen: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   engagementYouth: string | null;
 
-  @Column({ defaultValue: 'USD' })
+  @Default('usd')
+  @Column(STRING)
   currency: string;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   states: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   district: string | null;
 
   @AllowNull
@@ -270,31 +285,31 @@ export class Organisation extends Model {
   accountNumber2: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   loanStatusAmount: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   loanStatusTypes: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   approachOfMarginalizedCommunities: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   communityEngagementNumbersMarginalized: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   landSystems: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   fundUtilisation: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   detailedInterventionTypes: string | null;
 
   @AllowNull
@@ -326,47 +341,47 @@ export class Organisation extends Model {
   communityMembersEngaged3YrBackwardClass: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   totalBoardMembers: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   pctBoardWomen: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   pctBoardMen: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   pctBoardYouth: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   pctBoardNonYouth: number | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   engagementNonYouth: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   treeRestorationPractices: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   businessModel: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   subtype: string | null;
 
   @AllowNull
-  @Column({ type: BIGINT({ length: 20 }) })
+  @Column(BIGINT({ length: 20 }))
   organisationRevenueThisYear: number | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   fieldStaffSkills: string | null;
 
   @AllowNull
@@ -374,47 +389,47 @@ export class Organisation extends Model {
   fpcCompany: string | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   numOfFarmersOnBoard: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
+  @Column(INTEGER({ length: 11 }))
   numOfMarginalisedEmployees: number | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   benefactorsFpcCompany: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   boardRemunerationFpcCompany: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   boardEngagementFpcCompany: string | null;
 
   @AllowNull
-  @Column
+  @Column(STRING)
   biodiversityFocus: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   globalPlanningFrameworks: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   pastGovCollaboration: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   engagementLandless: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   socioeconomicImpact: string | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   environmentalImpact: string | null;
 
   // field misspelled intentionally to match the current DB schema
@@ -423,10 +438,10 @@ export class Organisation extends Model {
   growthStage: string | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }) })
-  totalEmployees: number | null
+  @Column(INTEGER({ length: 11 }))
+  totalEmployees: number | null;
 
   @AllowNull
-  @Column({ type: TEXT })
+  @Column(TEXT)
   additionalComments: string | null;
 }

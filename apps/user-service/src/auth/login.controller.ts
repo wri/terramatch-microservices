@@ -19,7 +19,7 @@ export class LoginController {
   constructor(private readonly authService: AuthService) {}
 
   @Post()
-  @NoBearerAuth()
+  @NoBearerAuth
   @ApiOperation({
     operationId: 'authLogin',
     description: 'Receive a JWT Token in exchange for login credentials',

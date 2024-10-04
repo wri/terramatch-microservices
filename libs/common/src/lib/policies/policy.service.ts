@@ -5,10 +5,12 @@ import { BuilderType, EntityPolicy } from './entity.policy';
 import { Permission, User } from '@terramatch-microservices/database/entities';
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 import { Model } from 'sequelize-typescript';
+import Log from '../log';
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new (...args: any[]): Model;
+  name?: string;
 };
 
 type PolicyClass = {
@@ -38,7 +40,7 @@ export class PolicyService {
 
     const [, PolicyClass] = POLICIES.find(([entityClass]) => subject instanceof entityClass) ?? [];
     if (PolicyClass == null) {
-      console.error('No policy found for subject type', subject);
+      Log.error('No policy found for subject type', subject.constructor.name);
       throw new UnauthorizedException();
     }
 

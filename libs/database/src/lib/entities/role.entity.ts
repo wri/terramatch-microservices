@@ -5,18 +5,18 @@ import {
   PrimaryKey,
   Table,
 } from 'sequelize-typescript';
-import { BIGINT } from 'sequelize';
+import { BIGINT, STRING } from 'sequelize';
 
 @Table({ tableName: 'roles', underscored: true })
 export class Role extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT.UNSIGNED })
+  @Column(BIGINT.UNSIGNED)
   override id: number;
 
-  @Column
+  @Column(STRING)
   name: string;
 
-  @Column
+  @Column(STRING)
   guardName: string;
 }

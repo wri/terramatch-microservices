@@ -13,8 +13,8 @@ import { BIGINT, DECIMAL, ENUM, INTEGER, TEXT, TINYINT, UUID } from 'sequelize';
 export class Organisation extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT({ unsigned: true }) })
-  override id: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  override id: number;
 
   @Index
   @Column({ type: UUID })

@@ -7,16 +7,16 @@ import { User } from './user.entity';
 export class OrganisationUser extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT({ unsigned: true }) })
-  override id: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  override id: number;
 
   @ForeignKey(() => User)
-  @Column
-  userId: bigint;
+  @Column({ type: BIGINT.UNSIGNED})
+  userId: number;
 
   @ForeignKey(() => Organisation)
-  @Column
-  organisationId: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  organisationId: number;
 
   @Column({ type: STRING(20) })
   status: string;

@@ -37,6 +37,6 @@ describe('LoginController', () => {
     authService.login.mockResolvedValue({ token, userId })
 
     const result = await controller.create({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' });
-    expect(result).toEqual({ type: 'logins', token, id: `${userId}` })
+    expect(result).toMatchObject({ data: { id: `${userId}`, type: 'logins', attributes: { token } } });
   })
 });

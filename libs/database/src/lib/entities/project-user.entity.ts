@@ -15,16 +15,16 @@ import { BIGINT } from 'sequelize';
 export class ProjectUser extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT({ unsigned: true }) })
-  override id: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  override id: number;
 
   @ForeignKey(() => Project)
-  @Column
-  projectId: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  projectId: number;
 
   @ForeignKey(() => User)
-  @Column
-  userId: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  userId: number;
 
   @AllowNull
   @Column

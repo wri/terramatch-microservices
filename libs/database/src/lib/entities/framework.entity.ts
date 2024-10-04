@@ -6,8 +6,8 @@ import { BIGINT, STRING } from 'sequelize';
 export class Framework extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT({ unsigned: true }) })
-  override id: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  override id: number;
 
   @Column({ type: STRING(20) })
   slug: string;

@@ -22,8 +22,8 @@ import { OrganisationUser } from './organisation-user.entity';
 export class User extends Model {
   @PrimaryKey
   @AutoIncrement
-  @Column({ type: BIGINT({ unsigned: true }) })
-  override id: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  override id: number;
 
   // There are many rows in the prod DB without a UUID assigned, so this cannot be a unique
   // index until that is fixed.
@@ -33,8 +33,8 @@ export class User extends Model {
 
   @ForeignKey(() => Organisation)
   @AllowNull
-  @Column({ type: BIGINT({ unsigned: true }) })
-  organisationId: bigint | null;
+  @Column({ type: BIGINT.UNSIGNED })
+  organisationId: number | null;
 
   @AllowNull
   @Column

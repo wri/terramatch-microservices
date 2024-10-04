@@ -4,8 +4,8 @@ import { BIGINT, QueryTypes } from 'sequelize';
 @Table({ tableName: 'permissions', underscored: true })
 export class Permission extends Model {
   @PrimaryKey
-  @Column({ type: BIGINT({ unsigned: true }) })
-  override id: bigint;
+  @Column({ type: BIGINT.UNSIGNED })
+  override id: number;
 
   @Column
   name: string;
@@ -22,9 +22,7 @@ export class Permission extends Model {
    * Note: This ignores permissions that are assigned directly to the user. We are not currently
    * using that capability, but if we started to, this would need to be more complicated.
    */
-  public static async getUserPermissionNames(
-    userId: number | bigint
-  ): Promise<string[]> {
+  public static async getUserPermissionNames(userId: number): Promise<string[]> {
     const permissions = (await this.sequelize?.query(
       `
         SELECT permissions.name FROM permissions

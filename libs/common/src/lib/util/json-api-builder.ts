@@ -6,17 +6,17 @@ type Attributes = {
   [key: string]: AttributeValue | Attributes
 }
 
-type Relationship = {
+export type Relationship = {
   type: string;
   id: string;
   meta?: Attributes;
 }
 
-type Relationships = {
+export type Relationships = {
   [key: string]: { data: Relationship | Relationship[] }
 }
 
-type Resource = {
+export type Resource = {
   type: string;
   id: string;
   attributes: Attributes;

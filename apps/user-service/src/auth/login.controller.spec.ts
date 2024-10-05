@@ -26,7 +26,7 @@ describe('LoginController', () => {
   it('should throw if creds are invalid', async () => {
     authService.login.mockResolvedValue(null);
 
-    await expect(() => controller.create({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' }))
+    await expect(controller.create({ emailAddress: 'foo@bar.com', password: 'asdfasdfasdf' }))
       .rejects
       .toThrow(UnauthorizedException)
   })

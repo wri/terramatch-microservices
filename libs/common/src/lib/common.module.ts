@@ -5,6 +5,7 @@ import { AuthGuard } from './guards';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PolicyService } from './policies/policy.service';
+import { TMLogService } from './util/tm-log.service';
 
 @Module({
   imports: [
@@ -19,8 +20,9 @@ import { PolicyService } from './policies/policy.service';
   ],
   providers: [
     PolicyService,
-    { provide: APP_GUARD, useClass: AuthGuard }
+    { provide: APP_GUARD, useClass: AuthGuard },
+    TMLogService,
   ],
-  exports: [PolicyService, JwtModule],
+  exports: [PolicyService, JwtModule, TMLogService],
 })
 export class CommonModule {}

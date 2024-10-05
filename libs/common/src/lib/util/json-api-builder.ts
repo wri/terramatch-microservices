@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { DTO_TYPE_METADATA } from '../decorators/json-api-dto.decorator';
 import { InternalServerErrorException } from '@nestjs/common';
 

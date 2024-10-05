@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { TMLogService } from '@terramatch-microservices/common/util/tm-log.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,6 +18,7 @@ async function bootstrap() {
   SwaggerModule.setup('user-service/documentation/api', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
+  app.useLogger(app.get(TMLogService));
 
   const port = process.env.PORT ?? 4010;
   await app.listen(port);

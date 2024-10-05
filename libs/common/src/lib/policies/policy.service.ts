@@ -1,11 +1,15 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  LoggerService,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { RequestContext } from 'nestjs-request-context';
 import { UserPolicy } from './user.policy';
 import { BuilderType, EntityPolicy } from './entity.policy';
 import { Permission, User } from '@terramatch-microservices/database/entities';
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 import { Model } from 'sequelize-typescript';
-import Log from '../log';
+import { TMLogService } from '../util/tm-log.service';
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,6 +37,8 @@ const POLICIES: [ [EntityClass, PolicyClass] ] = [
  */
 @Injectable()
 export class PolicyService {
+  private readonly log: LoggerService = new TMLogService(PolicyService.name);
+
   async authorize<T extends Model>(action: string, subject: T): Promise<void> {
     // Added by AuthGuard
     const userId = RequestContext.currentContext.req.authenticatedUserId;
@@ -40,7 +46,7 @@ export class PolicyService {
 
     const [, PolicyClass] = POLICIES.find(([entityClass]) => subject instanceof entityClass) ?? [];
     if (PolicyClass == null) {
-      Log.error('No policy found for subject type', subject.constructor.name);
+      this.log.error(`No policy found for subject type [${subject.constructor.name}]`);
       throw new UnauthorizedException();
     }
 

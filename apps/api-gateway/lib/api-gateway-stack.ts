@@ -13,6 +13,8 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 // the file correctly. Instead, use `nx build api-gateway` in the root directory.
 require('dotenv').config();
 
+const IS_DEV = process.env.NODE_ENV == null || process.env.NODE_ENV === 'development';
+
 const V3_SERVICES = {
   'user-service': {
     target: process.env.USER_SERVICE_PROXY_TARGET ?? '',
@@ -28,7 +30,7 @@ export class ApiGatewayStack extends cdk.Stack {
 
     this.httpApi = new HttpApi(this, "TerraMatch API Gateway", {
       apiName: 'TerraMatch API Gateway',
-      corsPreflight: process.env.NODE_ENV !== 'development' ? undefined : {
+      corsPreflight: IS_DEV ? {
         allowMethods: [
           CorsHttpMethod.GET,
           CorsHttpMethod.DELETE,
@@ -39,7 +41,7 @@ export class ApiGatewayStack extends cdk.Stack {
         ],
         allowOrigins: ["*"],
         allowHeaders: ['authorization,content-type'],
-      }
+      } : undefined
     });
 
     for (const [service, { target, namespaces }] of Object.entries(V3_SERVICES)) {
@@ -59,7 +61,7 @@ export class ApiGatewayStack extends cdk.Stack {
 
   protected addProxy (name: string, path: string, targetHost: string) {
     const sourcePath = `${path}{proxy+}`;
-    if (process.env.NODE_ENV == null || process.env.NODE_ENV === 'development') {
+    if (IS_DEV) {
       this.addLocalLambdaProxy(name, sourcePath, targetHost);
     } else {
       this.addHttpUrlProxy(name, sourcePath, `${targetHost}${path}{proxy}`);

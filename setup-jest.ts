@@ -5,6 +5,7 @@ import * as Entities from '@terramatch-microservices/database/entities';
 let sequelize: Sequelize;
 
 beforeAll(async () => {
+  // To create this database, run the ./setup-test-database.sh script.
   sequelize = new Sequelize({
     dialect: 'mariadb',
     host: 'localhost',

@@ -59,7 +59,7 @@ export class ApiGatewayStack extends cdk.Stack {
 
   protected addProxy (name: string, path: string, targetHost: string) {
     const sourcePath = `${path}{proxy+}`;
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV == null || process.env.NODE_ENV === 'development') {
       this.addLocalLambdaProxy(name, sourcePath, targetHost);
     } else {
       this.addHttpUrlProxy(name, sourcePath, `${targetHost}${path}{proxy}`);

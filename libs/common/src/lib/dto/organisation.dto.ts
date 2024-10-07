@@ -18,6 +18,6 @@ export class OrganisationDto extends JsonApiAttributes<OrganisationDto> {
   @ApiProperty({ enum: STATUSES })
   status: Status;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   name: string | null;
 }

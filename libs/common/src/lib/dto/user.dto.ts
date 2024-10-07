@@ -33,13 +33,13 @@ export class UserDto extends JsonApiAttributes<UserDto> {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   firstName: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   lastName: string | null;
 
-  @ApiProperty({ description: 'Currently just calculated by appending lastName to firstName.' })
+  @ApiProperty({ nullable: true, description: 'Currently just calculated by appending lastName to firstName.' })
   fullName: string | null;
 
   @ApiProperty()
@@ -48,10 +48,10 @@ export class UserDto extends JsonApiAttributes<UserDto> {
   @ApiProperty({ example: 'person@foocorp.net' })
   emailAddress: string;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   emailAddressVerifiedAt: Date | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   locale: string | null;
 
   @ApiProperty({ type: () => UserFramework, isArray: true })

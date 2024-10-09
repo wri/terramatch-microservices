@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Deployment target environment'
+        type: choice
+        required: true
+        options:
+          - dev
+          - test
+          - staging
+          - production
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/github-ecr-access
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd
+  ECR_REPOSITORY: terramatch-microservices/${{ inputs.env }}
+  ECR_REGISTRY: 603634817705.dkr.ecr.eu-west-1.amazonaws.com
+  NODE_ENV: production
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  services:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: AWS
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push images to Amazon ECR
+        id: build-images
+        run: |
+          : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
+          docker build -t terramatch-microservices-base:nx-base .
+          : # Each service we add will get a separate build line here
+          USER_SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:user-service-$IMAGE_TAG
+          docker build --build-arg NODE_ENV=${{ env.NODE_ENV }} -f apps/user-service/Dockerfile -t $USER_SERVICE_IMAGE .
+          docker push $USER_SERVICE_IMAGE
+          echo "image=$USER_SERVICE_IMAGE" >> $GITHUB_OUTPUT
+          echo "image=$USER_SERVICE_IMAGE"
+

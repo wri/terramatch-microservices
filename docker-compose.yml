@@ -1,15 +1,26 @@
-version: "3"
+version: "3.8"
+
+networks:
+  corp:
+    driver: bridge
+
 services:
-  mariadb:
+  user-service:
+    container_name: user-service
     build:
-      context: "."
-      dockerfile: "docker/mariadb.Dockerfile"
+      context: ./
+      cache_from:
+        - terramatch-microservices-base:nx-base
+      dockerfile: ./apps/user-service/Dockerfile
+      args:
+        NODE_ENV: "production"
+        BUILD_FLAG: ""
+    image: user-service:nx-prod
     ports:
-      - "3360:3306"
-    networks:
-      - "default"
+      - 4010:4010
     environment:
-      MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "terramatch_microservices_test"
-      MYSQL_USER: "wri"
-      MYSQL_PASSWORD: "wri"
+      NODE_ENV: "production"
+      PORT: 4010
+    networks:
+      - corp
+    restart: on-failure

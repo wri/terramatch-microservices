@@ -41,7 +41,26 @@ schema:
 This codebase connects to the database running in the `wri-terramatch-api` docker container. The docker-compose
 file included in this repo is used only for setting up the database needed for running unit tests in Github Actions.
 
-To set up the local testing database, run these two commands in the `wri-terramatch-api` directory with the docker container running:
-* `echo "grant all on terramatch_microservices_test to 'wri'@'%';" | dc exec -T mariadb mysql -h localhost -u root -proot `
-* `echo "grant all on terramatch_microservices_test.* to 'wri'@'%';" | dc exec -T mariadb mysql -h localhost -u root -proot`
+# Testing
+To set up the local testing database, run the `./bin/setup-test-database.sh` script. This script assumes that the
+`wri-terramatch-api` project is checked out in the same parent directory as this one. The script may be run 
+again at any time to clear out the test database records and schema.
 
+`setup-jest.ts` is responsible for creating the Sequelize connection for all tests. Via the `sync` command, it also
+creates database tables according to the schema declared in the `entity.ts` files in this codebase. Care should be
+taken to make sure that the schema is set up in this codebase such that the database tables are created with the same
+types and indices as in the primary database controlled by the Laravel backend. 
+
+Factories may be used to create entries in the database for testing. See `user.factory.ts`, and uses of `UserFactory` for 
+an example.
+
+To run the tests for a single app/library:
+* `nx test user-service` or `nx test common`
+
+To run the tests for the whole codebase:
+* `nx run-many -t test --passWithNoTests`
+
+For checking coverage, simply pass the `--coverage` flag:
+* `nx test user-service --coverage` or `nx run-many -t test --passWithNoTests --coverage`
+
+For apps/libraries that have tests defined, the coverage thresholds are set for the whole project in `jest.preset.js`

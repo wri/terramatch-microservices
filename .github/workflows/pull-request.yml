@@ -43,4 +43,6 @@ jobs:
       # cacheable. Since the codebase is currently small, we can get away without distribution, but once
       # it grows, we'll want to look into what it will take to make the api gateway build cacheable and remove
       # NX_CLOUD_DISTRIBUTED_EXECUTION=false from this command.
-      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx affected -t lint 'test --coverage --passWithNoTests' build
+      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx affected -t lint build
+
+      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests

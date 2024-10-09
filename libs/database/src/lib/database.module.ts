@@ -1,18 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmConfigService } from './typeorm-config.service';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { SequelizeConfigService } from './sequelize-config.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forRootAsync({
-      useClass: TypeOrmConfigService,
+    SequelizeModule.forRootAsync({
+      useClass: SequelizeConfigService,
       imports: [ConfigModule],
-    })
+    }),
   ],
-  controllers: [],
-  providers: [],
-  exports: [],
 })
 export class DatabaseModule {}

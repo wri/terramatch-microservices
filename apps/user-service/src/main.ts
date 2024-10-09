@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { TransformInterceptor } from './interceptors/transform.interceptor';
+import { TMLogService } from '@terramatch-microservices/common/util/tm-log.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,13 +18,11 @@ async function bootstrap() {
   SwaggerModule.setup('user-service/documentation/api', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useLogger(app.get(TMLogService));
 
   const port = process.env.PORT ?? 4010;
   await app.listen(port);
-  Logger.log(
-    `User Service is running on: http://localhost:${port}`
-  );
+  Logger.log(`User Service is running on: http://localhost:${port}`);
 }
 
 bootstrap();

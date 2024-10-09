@@ -16,7 +16,9 @@ on:
 env:
   AWS_REGION: eu-west-1
   AWS_ROLE_TO_ASSUME: arn:aws:iam::617001639586:role/github_ecr_access # set the role ARN for AWS authentication
-  AWS_ROLE_SESSION_NAME: fargate_CICD # set the role session name used for AWS logging
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd
+  ECR_REPOSITORY: terramatch-microservices/${{ github.events.inputs.env }}
+  ECR_REGISTRY: 603634817705.dkr.ecr.eu-west-1.amazonaws.com
   NODE_ENV: production
 
 jobs:

@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::617001639586:role/github_ecr_access # set the role ARN for AWS authentication
+  AWS_ROLE_SESSION_NAME: fargate_CICD # set the role session name used for AWS logging
+  NODE_ENV: production
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2.0.0
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: AWS
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        run: |
+          echo "${{secrets.MICROSERVICES_TEST_ENV}}" > ./.env
+          SHORT_SHA_COMMIT=$(git rev-parse --short HEAD)
+          NODE_ENV=${{ env.NODE_ENV }} docker-compose build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+

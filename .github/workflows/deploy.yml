@@ -47,12 +47,12 @@ jobs:
       - name: Build, tag, and push images to Amazon ECR
         id: build-images
         run: |
-          echo "${{ secrets[format('{0}_ENV', inputs.env.uppercase)] }}" > .env
+          echo "${{ secrets[format('{0}_ENV', inputs.env)] }}" > .env
           : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
           docker build -t terramatch-microservices-base:nx-base .
           : # Each service we add will get a separate build line here
           USER_SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:user-service-$IMAGE_TAG
-          docker build --build-arg NODE_ENV=${{ env.NODE_ENV }} -f apps/user-service/Dockerfile -t $USER_SERVICE_IMAGE .
+          docker build --build-arg NODE_ENV=${{ env.NODE_ENV }} --build-arg BUILD_FLAG=--prod -f apps/user-service/Dockerfile -t $USER_SERVICE_IMAGE .
           docker push $USER_SERVICE_IMAGE
           echo "image=$USER_SERVICE_IMAGE" >> $GITHUB_OUTPUT
           echo "image=$USER_SERVICE_IMAGE"

@@ -6,7 +6,7 @@ const IS_TEST = process.env['NODE_ENV'] === 'test';
 
 export class TMLogService extends ConsoleLogger {
   override log(message: string | object, ...optionalParams: [...any, string?, string?]) {
-    if (!IS_PROD && !IS_TEST) super.log(message, ...optionalParams);
+    if (!IS_TEST) super.log(message, ...optionalParams);
   }
 
   override error(message: string | object, ...optionalParams: [...any, string?, string?]) {

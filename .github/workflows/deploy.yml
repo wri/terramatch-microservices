@@ -47,6 +47,7 @@ jobs:
       - name: Build, tag, and push images to Amazon ECR
         id: build-images
         run: |
+          echo "${{ secrets[format('{0}_ENV', inputs.env.uppercase)] }}" > .env
           : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
           docker build -t terramatch-microservices-base:nx-base .
           : # Each service we add will get a separate build line here

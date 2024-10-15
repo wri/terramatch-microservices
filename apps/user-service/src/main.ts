@@ -20,9 +20,9 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   app.useLogger(app.get(TMLogService));
 
-  const port = process.env.PORT ?? 4010;
+  const port = process.env.NODE_ENV === 'production' ? 80 : 4010;
   await app.listen(port);
-  Logger.log(`User Service is running on: http://localhost:${port}`);
+  Logger.log(`Terramatch User Service is running on: http://localhost:${port}`);
 }
 
 bootstrap();

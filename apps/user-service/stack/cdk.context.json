@@ -42,5 +42,14 @@
         ]
       }
     ]
+  },
+  "availability-zones:account=603634817705:region=eu-west-1": [
+    "eu-west-1a",
+    "eu-west-1b",
+    "eu-west-1c"
+  ],
+  "security-group:account=603634817705:region=eu-west-1:securityGroupName=default:vpcId=vpc-0beac5973796d96b1": {
+    "securityGroupId": "sg-0fcff87239114297b",
+    "allowAllOutbound": false
   }
 }

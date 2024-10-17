@@ -2,7 +2,7 @@
   "name": "user-service",
   "version": "0.1.0",
   "bin": {
-    "stack": "bin/stack.js"
+    "stack": "bin/user-service.js"
   },
   "scripts": {
     "build": "tsc",

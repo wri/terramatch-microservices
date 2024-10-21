@@ -1,12 +1,16 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { PrivateSubnet } from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
-import { PrivateSubnet } from 'aws-cdk-lib/aws-ec2';
+import { HttpApi, HttpMethod, VpcLink } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpAlbIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { ApplicationLoadBalancer } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import { Tags } from 'aws-cdk-lib';
 
 export class UserServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -43,6 +47,18 @@ export class UserServiceStack extends cdk.Stack {
       }
     );
 
+    const securityGroup = ec2.SecurityGroup.fromLookupByName(this, 'default', 'default', vpc);
+    const privateSubnets = [
+        PrivateSubnet.fromPrivateSubnetAttributes(this, 'eu-west-1a', {
+          subnetId: 'subnet-065992a829eb772a3',
+          routeTableId: 'rtb-07f85b7827c451bc9',
+        }),
+        PrivateSubnet.fromPrivateSubnetAttributes(this, 'eu-west-1b', {
+          subnetId: 'subnet-0f48d0681051fa49a',
+          routeTableId: 'rtb-06afefb0f592f11d6',
+        }),
+      ];
+
     // Create a load-balanced Fargate service and make it public
     const service = new ecs_patterns.ApplicationLoadBalancedFargateService(
       this,
@@ -57,26 +73,21 @@ export class UserServiceStack extends cdk.Stack {
           family: `terramatch-user-service-${env}`,
           containerName: `terramatch-user-service-${env}`,
           logDriver: ecs.LogDriver.awsLogs({
-            logGroup: LogGroup.fromLogGroupName(this, 'user-service-test', 'ecs/user-service-test'),
-            streamPrefix: 'user-service-test'
+            logGroup: LogGroup.fromLogGroupName(
+              this,
+              'user-service-test',
+              'ecs/user-service-test'
+            ),
+            streamPrefix: 'user-service-test',
           }),
-          executionRole: iam.Role.fromRoleName(this, 'ecsTaskExecutionRole', 'ecsTaskExecutionRole')
+          executionRole: iam.Role.fromRoleName(
+            this,
+            'ecsTaskExecutionRole',
+            'ecsTaskExecutionRole'
+          ),
         },
-        securityGroups: [
-          ec2.SecurityGroup.fromLookupByName(this, 'default', 'default', vpc)
-        ],
-        taskSubnets: {
-          subnets: [
-            PrivateSubnet.fromPrivateSubnetAttributes(this, 'eu-west-1a', {
-              subnetId: 'subnet-065992a829eb772a3',
-              routeTableId: 'rtb-07f85b7827c451bc9'
-            }),
-            PrivateSubnet.fromPrivateSubnetAttributes(this, 'eu-west-1b', {
-              subnetId: 'subnet-0f48d0681051fa49a',
-              routeTableId: 'rtb-06afefb0f592f11d6'
-            })
-          ]
-        },
+        securityGroups: [securityGroup],
+        taskSubnets: { subnets: privateSubnets },
         memoryLimitMiB: 2048,
         assignPublicIp: false,
         publicLoadBalancer: false,
@@ -86,5 +97,6 @@ export class UserServiceStack extends cdk.Stack {
     service.targetGroup.configureHealthCheck({
       path: '/health',
     });
+    Tags.of(service.loadBalancer).add('service', `user-service-${env}`);
   }
 }

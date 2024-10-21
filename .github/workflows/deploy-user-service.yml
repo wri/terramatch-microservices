@@ -28,6 +28,7 @@ env:
 jobs:
   main:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,7 +47,8 @@ jobs:
       - name: Build, tag, and push images to Amazon ECR
         id: build-images
         run: |
-          echo "${{ secrets[format('{0}_ENV', inputs.env)] }}" > .env
+          echo "${{ vars.ENV }}" > .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
           docker build -t terramatch-microservices-base:nx-base .
           USER_SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

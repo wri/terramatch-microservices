@@ -75,10 +75,10 @@ export class UserServiceStack extends cdk.Stack {
           logDriver: ecs.LogDriver.awsLogs({
             logGroup: LogGroup.fromLogGroupName(
               this,
-              'user-service-test',
-              'ecs/user-service-test'
+              `user-service-${env}`,
+              `ecs/user-service-${env}`
             ),
-            streamPrefix: 'user-service-test',
+            streamPrefix: `user-service-${env}`,
           }),
           executionRole: iam.Role.fromRoleName(
             this,

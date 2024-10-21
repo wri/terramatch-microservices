@@ -47,7 +47,10 @@ export class UserServiceStack extends cdk.Stack {
       }
     );
 
-    const securityGroup = ec2.SecurityGroup.fromLookupByName(this, 'default', 'default', vpc);
+    const securityGroups = [
+      ec2.SecurityGroup.fromLookupByName(this, 'default', 'default', vpc),
+      ec2.SecurityGroup.fromLookupByName(this, `db-${env}`, `db-${env}`, vpc),
+    ];
     const privateSubnets = [
         PrivateSubnet.fromPrivateSubnetAttributes(this, 'eu-west-1a', {
           subnetId: 'subnet-065992a829eb772a3',
@@ -86,7 +89,7 @@ export class UserServiceStack extends cdk.Stack {
             'ecsTaskExecutionRole'
           ),
         },
-        securityGroups: [securityGroup],
+        securityGroups: securityGroups,
         taskSubnets: { subnets: privateSubnets },
         memoryLimitMiB: 2048,
         assignPublicIp: false,

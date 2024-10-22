@@ -48,7 +48,7 @@ jobs:
         id: build-images
         run: |
           echo "${{ vars.ENV }}" > .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_PASSWORD=\"${{ secrets.DB_PASSWORD }}\"" >> .env
           : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
           docker build -t terramatch-microservices-base:nx-base .
           USER_SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

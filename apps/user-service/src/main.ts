@@ -23,9 +23,6 @@ async function bootstrap() {
   const port = process.env.NODE_ENV === 'production' ? 80 : 4010;
   await app.listen(port);
 
-  // TODO: remove debug logging
-  Logger.log(`starting with env: ${JSON.stringify(process.env)}`)
-
   Logger.log(`Terramatch User Service is running on: http://localhost:${port}`);
 }
 

@@ -44,4 +44,4 @@ jobs:
         run: |
           cd apps/api-gateway
           NODE_ENV=development npm i
-          npx --yes cdk deploy --require-approval never
+          TM_ENV=${{ inputs.env }} npx --yes cdk deploy --require-approval never

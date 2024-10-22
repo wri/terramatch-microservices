@@ -145,7 +145,6 @@ export class ApiGatewayStack extends Stack {
         logRetention: RetentionDays.ONE_WEEK,
         bundling: {
           externalModules: ['aws-lambda'],
-          minify: true,
           define: {
             'process.env.PROXY_TARGET': JSON.stringify(targetHost),
           }

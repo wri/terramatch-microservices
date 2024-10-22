@@ -6,7 +6,7 @@
   },
   "scripts": {
     "build-local-proxy": "(cd lambda/local-proxy; npm run build)",
-    "synth-local": "cdk synth --no-staging --quiet",
+    "synth-local": "npx cdk synth --no-staging --quiet",
     "build": "npm run build-local-proxy && npm run synth-local",
     "serve": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack.template.json -p 4000"
   },

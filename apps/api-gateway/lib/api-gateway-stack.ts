@@ -1,11 +1,13 @@
-import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  CorsHttpMethod, DomainName, DomainNameAttributes,
-  HttpApi, HttpApiProps,
+  CorsHttpMethod,
+  DomainName,
+  DomainNameAttributes,
+  HttpApi,
+  HttpApiProps,
   HttpMethod,
   IVpcLink,
-  VpcLink
+  VpcLink,
 } from 'aws-cdk-lib/aws-apigatewayv2';
 import {
   HttpAlbIntegration,
@@ -20,8 +22,10 @@ import {
   IApplicationListener,
 } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Vpc } from 'aws-cdk-lib/aws-ec2';
+import { Stack, StackProps } from 'aws-cdk-lib';
 
-const IS_DEV = process.env.NODE_ENV == null || process.env.NODE_ENV === 'development';
+const IS_DEV =
+  process.env.NODE_ENV == null || process.env.NODE_ENV === 'development';
 
 const V3_SERVICES = {
   'user-service': {
@@ -59,11 +63,11 @@ type MutableHttpApiProps = {
 
 type AddProxyProps = { targetHost: string, service?: never } | { targetHost?: never, service: string };
 
-export class ApiGatewayStack extends cdk.Stack {
+export class ApiGatewayStack extends Stack {
   private readonly httpApi: HttpApi;
   private readonly env: string;
 
-  constructor (scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor (scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     if (!IS_DEV && process.env.TM_ENV == null) throw new Error('No TM_ENV defined');

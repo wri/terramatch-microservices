@@ -1,16 +1,14 @@
-import * as cdk from 'aws-cdk-lib';
-import { Tags } from 'aws-cdk-lib';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { PrivateSubnet } from 'aws-cdk-lib/aws-ec2';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecr from 'aws-cdk-lib/aws-ecr';
-import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
-import * as iam from 'aws-cdk-lib/aws-iam';
+import { Stack, StackProps, Tags } from 'aws-cdk-lib';
+import { PrivateSubnet, SecurityGroup, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
+import { Repository } from 'aws-cdk-lib/aws-ecr';
+import { Cluster, ContainerImage, LogDriver } from 'aws-cdk-lib/aws-ecs';
+import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns';
+import { Role } from 'aws-cdk-lib/aws-iam';
 
-export class UserServiceStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class UserServiceStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     const env = process.env.TM_ENV;
@@ -22,18 +20,18 @@ export class UserServiceStack extends cdk.Stack {
     if (imageTag == null) throw new Error('No IMAGE_TAG defined');
 
     // Identify the most recently updated user service docker image
-    const repository = ecr.Repository.fromRepositoryName(
+    const repository = Repository.fromRepositoryName(
       this,
       `Terramatch Microservices ${envName}`,
       `terramatch-microservices/user-service-${env}`
     );
-    const image = ecs.ContainerImage.fromEcrRepository(repository, imageTag);
+    const image = ContainerImage.fromEcrRepository(repository, imageTag);
 
     // Identify our pre-configured cluster.
-    const vpc = ec2.Vpc.fromLookup(this, 'wri-terramatch-vpc', {
+    const vpc = Vpc.fromLookup(this, 'wri-terramatch-vpc', {
       vpcId: 'vpc-0beac5973796d96b1',
     });
-    const cluster = ecs.Cluster.fromClusterAttributes(
+    const cluster = Cluster.fromClusterAttributes(
       this,
       'terramatch-microservices',
       {
@@ -45,8 +43,8 @@ export class UserServiceStack extends cdk.Stack {
     );
 
     const securityGroups = [
-      ec2.SecurityGroup.fromLookupByName(this, 'default', 'default', vpc),
-      ec2.SecurityGroup.fromLookupByName(this, `db-${env}`, `db-${env}`, vpc),
+      SecurityGroup.fromLookupByName(this, 'default', 'default', vpc),
+      SecurityGroup.fromLookupByName(this, `db-${env}`, `db-${env}`, vpc),
     ];
     const privateSubnets = [
       PrivateSubnet.fromPrivateSubnetAttributes(this, 'eu-west-1a', {
@@ -60,7 +58,7 @@ export class UserServiceStack extends cdk.Stack {
     ];
 
     // Create a load-balanced Fargate service and make it public
-    const service = new ecs_patterns.ApplicationLoadBalancedFargateService(
+    const service = new ApplicationLoadBalancedFargateService(
       this,
       `terramatch-user-service-${env}`,
       {
@@ -72,7 +70,7 @@ export class UserServiceStack extends cdk.Stack {
           image,
           family: `terramatch-user-service-${env}`,
           containerName: `terramatch-user-service-${env}`,
-          logDriver: ecs.LogDriver.awsLogs({
+          logDriver: LogDriver.awsLogs({
             logGroup: LogGroup.fromLogGroupName(
               this,
               `user-service-${env}`,
@@ -80,7 +78,7 @@ export class UserServiceStack extends cdk.Stack {
             ),
             streamPrefix: `user-service-${env}`,
           }),
-          executionRole: iam.Role.fromRoleName(
+          executionRole: Role.fromRoleName(
             this,
             'ecsTaskExecutionRole',
             'ecsTaskExecutionRole'

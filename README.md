@@ -25,6 +25,7 @@ Repository for the Microservices API backend of the TerraMatch service
 TBD. The ApiGateway has been tested to be at least functional on AWS. Tooling around deployment will be
 handled in a future ticket.
 
+
 # Database work
 For now, Laravel is the source of truth for all things related to the DB schema. As such, TypeORM is not allowed to modify the 
 schema, and is expected to interface with exactly the schema that is managed by Laravel. This note is included in user.entity.ts, 

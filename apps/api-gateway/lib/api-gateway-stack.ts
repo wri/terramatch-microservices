@@ -141,7 +141,7 @@ export class ApiGatewayStack extends Stack {
         entry: './lambda/local-proxy/index.js',
         runtime: Runtime.NODEJS_20_X,
         handler: 'main',
-        architecture: Architecture.ARM_64,
+        architecture: Architecture.X86_64,
         logRetention: RetentionDays.ONE_WEEK,
         bundling: {
           externalModules: ['aws-lambda'],

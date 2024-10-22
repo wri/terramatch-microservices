@@ -11,7 +11,7 @@ on:
           - dev
           - test
           - staging
-          - production
+          - prod
 
 permissions:
   id-token: write
@@ -20,7 +20,7 @@ permissions:
 env:
   AWS_REGION: eu-west-1
   AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
-  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-user-service
   ECR_REPOSITORY: terramatch-microservices/user-service-${{ inputs.env }}
   ECR_REGISTRY: 603634817705.dkr.ecr.eu-west-1.amazonaws.com
   IMAGE_TAG: ${{ github.sha }}
@@ -40,7 +40,7 @@ jobs:
           role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Login to AWS
         id: AWS
         uses: aws-actions/amazon-ecr-login@v1
 

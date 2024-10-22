@@ -1,0 +1,47 @@
+name: Api Gateway Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Deployment target environment'
+        type: choice
+        required: true
+        options:
+          - dev
+          - test
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  NODE_ENV: production
+  AWS_REGION: eu-west-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-api-gateway
+  PHP_PROXY_TARGET: ${{ vars.PHP_PROXY_TARGET }}
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK Deploy
+        id: cdk-deploy
+        run: |
+          cd apps/api-gateway
+          NODE_ENV=development npm i
+          npx --yes cdk deploy --require-approval never

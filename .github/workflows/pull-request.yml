@@ -24,10 +24,10 @@ jobs:
       - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       # Cache node_modules
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+#      - uses: actions/setup-node@v4
+#        with:
+#          node-version: 20
+#          cache: 'npm'
 
       - run: npm ci --legacy-peer-deps && (cd apps/api-gateway; npm ci) && (cd apps/api-gateway/lambda/local-proxy; npm ci)
 

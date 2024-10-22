@@ -24,12 +24,12 @@ jobs:
       - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       # Cache node_modules
-#      - uses: actions/setup-node@v4
-#        with:
-#          node-version: 20
-#          cache: 'npm'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-      - run: npm ci --legacy-peer-deps && (cd apps/api-gateway; npm ci) && (cd apps/api-gateway/lambda/local-proxy; npm ci)
+      - run: npm i --legacy-peer-deps && (cd apps/api-gateway; npm i) && (cd apps/api-gateway/lambda/local-proxy; npm i)
 
       - uses: nrwl/nx-set-shas@v4
 
@@ -37,7 +37,7 @@ jobs:
       # cacheable. Since the codebase is currently small, we can get away without distribution, but once
       # it grows, we'll want to look into what it will take to make the api gateway build cacheable and remove
       # NX_CLOUD_DISTRIBUTED_EXECUTION=false from this command.
-      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t lint build
+      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx affected -t lint build
 
       - uses: KengoTODA/actions-setup-docker-compose@v1
         with:

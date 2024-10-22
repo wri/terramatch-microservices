@@ -135,13 +135,21 @@ export class ApiGatewayStack extends Stack {
     // In local development, we use SAM to synthesize our CDK API Gateway stack. However, SAM doesn't
     // support HttpUrlIntegration, so we have a lambda that is just a simple node proxy that is
     // only used locally.
+
+    // For some reason, ARM_64 stopped working on Github actions, but X86_64 is noticeably slower
+    // locally (on a modern Mac; folks on Windows might want to go ahead and use X86). Therefore, we
+    // allow switching the arch type by env variable
+    const architecture = process.env.ARCH === 'X86'
+      ? Architecture.X86_64
+      : Architecture.ARM_64;
+
     const lambdaIntegration = new HttpLambdaIntegration(
       name,
       new NodejsFunction(this, `Local Proxy: ${name}`, {
         entry: './lambda/local-proxy/index.js',
         runtime: Runtime.NODEJS_20_X,
         handler: 'main',
-        architecture: Architecture.X86_64,
+        architecture,
         logRetention: RetentionDays.ONE_WEEK,
         bundling: {
           externalModules: ['aws-lambda'],

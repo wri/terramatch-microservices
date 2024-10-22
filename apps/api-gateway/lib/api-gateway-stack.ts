@@ -85,7 +85,7 @@ export class ApiGatewayStack extends Stack {
           CorsHttpMethod.OPTIONS,
         ],
         allowOrigins: ["*"],
-        allowHeaders: ['authorization,content-type'],
+        allowHeaders: ['authorization', 'content-type'],
       },
     }
     if (!IS_DEV) {
@@ -154,7 +154,7 @@ export class ApiGatewayStack extends Stack {
 
     this.httpApi.addRoutes({
       path: path,
-      methods: [HttpMethod.ANY],
+      methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
       integration: lambdaIntegration,
     })
   }
@@ -162,7 +162,7 @@ export class ApiGatewayStack extends Stack {
   private addHttpUrlProxy (name: string, sourcePath: string, targetUrl: string) {
     this.httpApi.addRoutes({
       path: sourcePath,
-      methods: [HttpMethod.ANY],
+      methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
       integration: new HttpUrlIntegration(name, targetUrl),
     });
   }
@@ -190,7 +190,7 @@ export class ApiGatewayStack extends Stack {
 
     this.httpApi.addRoutes({
       path: sourcePath,
-      methods: [HttpMethod.ANY],
+      methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
       integration: new HttpAlbIntegration(name, serviceListener, { vpcLink: this._vpcLink })
     })
   }

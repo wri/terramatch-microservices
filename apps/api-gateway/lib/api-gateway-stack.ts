@@ -138,7 +138,7 @@ export class ApiGatewayStack extends Stack {
     const lambdaIntegration = new HttpLambdaIntegration(
       name,
       new NodejsFunction(this, `Local Proxy: ${name}`, {
-        entry: './lambda/local-proxy/index.ts',
+        entry: './lambda/local-proxy/index.js',
         runtime: Runtime.NODEJS_20_X,
         handler: 'main',
         architecture: Architecture.ARM_64,

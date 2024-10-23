@@ -6,21 +6,21 @@
   },
   "scripts": {
     "build-local-proxy": "(cd lambda/local-proxy; npm run build)",
-    "synth-local": "cdk synth --no-staging --quiet",
+    "synth-local": "npx cdk synth --no-staging --quiet",
     "build": "npm run build-local-proxy && npm run synth-local",
-    "serve": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack.template.json -p 4000"
+    "serve": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack-local.template.json -p 4000"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.9",
-    "aws-cdk": "2.157.0",
+    "aws-cdk": "2.163.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
     "typescript": "~5.5.3"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.157.0",
+    "aws-cdk-lib": "^2.163.0",
     "constructs": "^10.0.0",
     "dotenv": "^16.4.5",
     "source-map-support": "^0.5.21"

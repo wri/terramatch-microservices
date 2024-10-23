@@ -14,6 +14,9 @@ Repository for the Microservices API backend of the TerraMatch service
  * The ApiGateway does not hot-reload and needs to be re-built when there are changes:
    * `nx build api-gateway` or `nx run-many -t build` (to build all apps)
    * This will build the local proxy Lambda function and the CDK Stack
+   * Note: The architecture for the local lambda proxy defaults to ARM_64. This will be the fastest options on ARM-based Macs 
+     (M1, etc), but will be much slower on X86 (AMD/Intel) based machine. If you're on an X86 machine, pass the architecture in
+     an environment variable when building the api gateway: `ARCH=X86 nx build api-gateway`.
  * To run all services:
    * `nx run-many -t serve`
    * Note: the first time this runs, the gateway will take quite awhile to start. It'll be faster on subsequent starts.
@@ -22,8 +25,12 @@ Repository for the Microservices API backend of the TerraMatch service
    * `NEXT_PUBLIC_API_BASE_URL='http://localhost:4000'`
 
 # Deployment
-TBD. The ApiGateway has been tested to be at least functional on AWS. Tooling around deployment will be
-handled in a future ticket.
+Deployment is handled via manual trigger of GitHub actions. There is one for each service, and one for the ApiGateway. The 
+ApiGateway only needs to be redeployed if its code changes; it does not need to be redeployed for updates to individual services
+to take effect.
+
+Once this project is live in production, we can explore continuous deployment to at least staging and prod envs on the staging
+and main branches.
 
 # Database work
 For now, Laravel is the source of truth for all things related to the DB schema. As such, TypeORM is not allowed to modify the 

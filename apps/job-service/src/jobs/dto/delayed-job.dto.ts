@@ -6,8 +6,8 @@ import { DelayedJob } from '@terramatch-microservices/database/entities';
 const STATUSES = ['pending', 'failed', 'succeeded']
 type Status = (typeof STATUSES)[number];
 
-@JsonApiDto({ type: 'jobs' })
-export class JobDto extends JsonApiAttributes<JobDto> {
+@JsonApiDto({ type: 'delayedJobs' })
+export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   constructor(job: DelayedJob) {
     super({
       status: job.status,
@@ -17,7 +17,7 @@ export class JobDto extends JsonApiAttributes<JobDto> {
   }
 
   @ApiProperty({
-    description: 'The current status of the job. If the status is not pending, either the payload or error will be provided.',
+    description: 'The current status of the job. If the status is not pending, the payload and statusCode will be provided.',
     enum: STATUSES
   })
   status: Status;

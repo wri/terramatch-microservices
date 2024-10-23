@@ -6,17 +6,17 @@ import {
   buildJsonApi,
   JsonApiDocument,
 } from '@terramatch-microservices/common/util';
-import { JobDto } from './dto/job.dto';
+import { DelayedJobDto } from './dto/delayed-job.dto';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
 
-@Controller('jobs/v3/jobs')
-export class JobsController {
+@Controller('jobs/v3/delayedJobs')
+export class DelayedJobsController {
   @Get(':uuid')
   @ApiOperation({
-    operationId: 'jobsFind',
+    operationId: 'delayedJobsFind',
     description: 'Get the current status and potentially payload or error from a delayed job.',
   })
-  @JsonApiResponse({ data: { type: JobDto } })
+  @JsonApiResponse({ data: { type: DelayedJobDto } })
   @ApiException(() => UnauthorizedException, {
     description: 'Authentication failed.',
   })
@@ -32,7 +32,7 @@ export class JobsController {
     // include an owner ID on the job table.
 
     return buildJsonApi()
-      .addData(pathUUID, new JobDto(job))
+      .addData(pathUUID, new DelayedJobDto(job))
       .document.serialize();
   }
 }

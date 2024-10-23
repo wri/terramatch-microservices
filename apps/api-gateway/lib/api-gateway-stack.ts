@@ -31,6 +31,10 @@ const V3_SERVICES = {
   'user-service': {
     targetHost: process.env.USER_SERVICE_PROXY_TARGET ?? '',
     namespaces: ['auth', 'users']
+  },
+  'job-service': {
+    targetHost: process.env.JOB_SERVICE_PROXY_TARGET ?? '',
+    namespaces: ['jobs']
   }
 }
 

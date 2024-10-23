@@ -1,4 +1,5 @@
 name: Api Gateway Deploy
+run-name: 'Api Gateway Deploy [env: ${{ inputs.env }}]'
 
 on:
   workflow_dispatch:

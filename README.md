@@ -25,12 +25,26 @@ Repository for the Microservices API backend of the TerraMatch service
    * `NEXT_PUBLIC_API_BASE_URL='http://localhost:4000'`
 
 # Deployment
-Deployment is handled via manual trigger of GitHub actions. There is one for each service, and one for the ApiGateway. The 
+Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The 
 ApiGateway only needs to be redeployed if its code changes; it does not need to be redeployed for updates to individual services
 to take effect.
 
 Once this project is live in production, we can explore continuous deployment to at least staging and prod envs on the staging
 and main branches.
+
+# Creating a new service
+ * In the root directory: `nx g @nx/nest:app apps/foo-service`
+ * Set up the new `main.ts` similarly to existing services.
+   * Make sure swagger docs and the `/health` endpoint are implemented
+   * Pick a default local port that is unique from other services
+ * In your `.env` and `.env.local.sample`, add `_PROXY_PORT` and `_PROXY_TARGET` for the new service
+ * In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
+ * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
+ * In AWS:
+   * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
+     * Set the repo to Immutable
+     * After creation, set a Lifecycle Policy. In lower envs, we retain the most recent 2 images, and in prod it's set to 5
+   * In CloudWatch, create a log group for each env (follow the naming scheme from user-service, e.g. `ecs/foo-service-staging`, etc).
 
 # Database work
 For now, Laravel is the source of truth for all things related to the DB schema. As such, TypeORM is not allowed to modify the 

@@ -6,24 +6,26 @@ import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { Cluster, ContainerImage, LogDriver } from 'aws-cdk-lib/aws-ecs';
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns';
 import { Role } from 'aws-cdk-lib/aws-iam';
+import { upperFirst } from 'lodash';
 
-export class UserServiceStack extends Stack {
+const extractFromEnv = (...names: string[]) => names.map(name => {
+  const value = process.env[name];
+  if (value == null) throw new Error(`No ${name} defined`)
+  return value;
+});
+
+export class ServiceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const env = process.env.TM_ENV;
-    if (env == null) throw new Error('No TM_ENV defined');
+    const [env, service, imageTag] = extractFromEnv('TM_ENV', 'TM_SERVICE', 'IMAGE_TAG');
+    const envName = upperFirst(env);
 
-    const envName = env[0].toUpperCase() + env.substring(1);
-
-    const imageTag = process.env.IMAGE_TAG;
-    if (imageTag == null) throw new Error('No IMAGE_TAG defined');
-
-    // Identify the most recently updated user service docker image
+    // Identify the most recently updated service docker image
     const repository = Repository.fromRepositoryName(
       this,
       `Terramatch Microservices ${envName}`,
-      `terramatch-microservices/user-service-${env}`
+      `terramatch-microservices/${service}-${env}`
     );
     const image = ContainerImage.fromEcrRepository(repository, imageTag);
 
@@ -58,25 +60,25 @@ export class UserServiceStack extends Stack {
     ];
 
     // Create a load-balanced Fargate service and make it public
-    const service = new ApplicationLoadBalancedFargateService(
+    const fargateService = new ApplicationLoadBalancedFargateService(
       this,
-      `terramatch-user-service-${env}`,
+      `terramatch-${service}-${env}`,
       {
-        serviceName: `terramatch-user-service-${env}`,
+        serviceName: `terramatch-${service}-${env}`,
         cluster,
         cpu: 512,
         desiredCount: 1,
         taskImageOptions: {
           image,
-          family: `terramatch-user-service-${env}`,
-          containerName: `terramatch-user-service-${env}`,
+          family: `terramatch-${service}-${env}`,
+          containerName: `terramatch-${service}-${env}`,
           logDriver: LogDriver.awsLogs({
             logGroup: LogGroup.fromLogGroupName(
               this,
-              `user-service-${env}`,
-              `ecs/user-service-${env}`
+              `${service}-${env}`,
+              `ecs/${service}-${env}`
             ),
-            streamPrefix: `user-service-${env}`,
+            streamPrefix: `${service}-${env}`,
           }),
           executionRole: Role.fromRoleName(
             this,
@@ -89,12 +91,12 @@ export class UserServiceStack extends Stack {
         memoryLimitMiB: 2048,
         assignPublicIp: false,
         publicLoadBalancer: false,
-        loadBalancerName: `user-service-${env}`,
+        loadBalancerName: `${service}-${env}`,
       }
     );
-    service.targetGroup.configureHealthCheck({
+    fargateService.targetGroup.configureHealthCheck({
       path: '/health',
     });
-    Tags.of(service.loadBalancer).add('service', `user-service-${env}`);
+    Tags.of(fargateService.loadBalancer).add('service', `${service}-${env}`);
   }
 }

@@ -7,6 +7,7 @@ import {
   JsonApiDocument,
 } from '@terramatch-microservices/common/util';
 import { JobDto } from './dto/job.dto';
+import { DelayedJob } from '@terramatch-microservices/database/entities';
 
 @Controller('jobs/v3/jobs')
 export class JobsController {
@@ -23,8 +24,15 @@ export class JobsController {
     description: 'Job with that UUID not found.'
   })
   async findOne(@Param('uuid') pathUUID: string): Promise<JsonApiDocument> {
+    const job = await DelayedJob.findOne({ where: { uuid: pathUUID }});
+    if (job == null) throw new NotFoundException();
+
+    // Note: Since jobs are very generic and we don't track which resources are related to a given
+    // job, there is no effective way to make a policy for jobs until we expand the service to
+    // include an owner ID on the job table.
+
     return buildJsonApi()
-      .addData(pathUUID, new JobDto({ status: 'pending' }))
+      .addData(pathUUID, new JobDto(job))
       .document.serialize();
   }
 }

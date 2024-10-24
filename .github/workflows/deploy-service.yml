@@ -9,8 +9,9 @@ on:
         type: choice
         required: true
         options:
-          - user-service
           - job-service
+          - research-service
+          - user-service
       env:
         description: 'Deployment target environment'
         type: choice

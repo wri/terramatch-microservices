@@ -35,6 +35,10 @@ const V3_SERVICES = {
   'job-service': {
     targetHost: process.env.JOB_SERVICE_PROXY_TARGET ?? '',
     namespaces: ['jobs']
+  },
+  'research-service': {
+    targetHost: process.env.RESEARCH_SERVICE_PROXY_TARGET ?? '',
+    namespaces: ['research']
   }
 }
 

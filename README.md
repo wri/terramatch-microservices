@@ -47,6 +47,7 @@ and main branches.
    * Make sure to kill your NX `serve` process and run `nx build api-gateway` before restarting it.
  * For deployment to AWS:
    * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
+   * Add the new service name to the "service" workflow input options in `deploy-service.yml`
    * In AWS:
      * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
        * Set the repo to Immutable

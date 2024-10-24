@@ -1,3 +1,4 @@
+export * from './delayed-job.entity';
 export * from './framework.entity';
 export * from './model-has-role.entity'
 export * from './organisation.entity';

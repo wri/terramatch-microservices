@@ -1,9 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import {
-  HealthCheck,
-  HealthCheckService,
-  SequelizeHealthIndicator,
-} from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService, SequelizeHealthIndicator } from '@nestjs/terminus';
 import { NoBearerAuth } from '@terramatch-microservices/common/guards';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { User } from '@terramatch-microservices/database/entities';
@@ -23,7 +19,7 @@ export class HealthController {
     const connection = await User.sequelize.connectionManager.getConnection({ type: 'read' });
     try {
       return this.health.check([
-        () => this.db.pingCheck('database', { connection }),
+        () => this.db.pingCheck('database', { connection })
       ]);
     } finally {
       User.sequelize.connectionManager.releaseConnection(connection);

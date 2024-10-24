@@ -12,6 +12,8 @@ Repository for the Microservices API backend of the TerraMatch service
 # Building and starting the apps
  * Copy `.env.local.sample` to `.env`
  * The ApiGateway does not hot-reload and needs to be re-built when there are changes:
+   * `(cd apps/api-gateway; npm i)` to install packages for the api gateway stack
+   * `(cd apps/api-gateway/lambda; npm i)` to install packages for the local lambda function that acts as a proxy for local dev only.
    * `nx build api-gateway` or `nx run-many -t build` (to build all apps)
    * This will build the local proxy Lambda function and the CDK Stack
    * Note: The architecture for the local lambda proxy defaults to ARM_64. This will be the fastest options on ARM-based Macs 

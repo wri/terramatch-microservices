@@ -21,6 +21,9 @@ Repository for the Microservices API backend of the TerraMatch service
      an environment variable when building the api gateway: `ARCH=X86 nx build api-gateway`.
  * To run all services:
    * `nx run-many -t serve`
+     * The default maximum number of services it can run in parallel is 3. To run all of the services at once, use something like
+       `nx run-many --parallel=100 -t serve`, or you can cherry-pick which services you want to run instead with 
+       `nx run-many -t serve --projects api-gateway user-service`. 
    * Note: the first time this runs, the gateway will take quite awhile to start. It'll be faster on subsequent starts.
    * This starts the ApiGateway and all registered NX apps. 
      * The apps will hot reload if their code, or any of their dependent code in libs changes.

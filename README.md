@@ -22,7 +22,10 @@ Repository for the Microservices API backend of the TerraMatch service
  * To run all services:
    * `nx run-many -t serve`
    * Note: the first time this runs, the gateway will take quite awhile to start. It'll be faster on subsequent starts.
-   * For now, this starts up the ApiGateway and the User service
+   * This starts the ApiGateway and all registered NX apps. 
+     * The apps will hot reload if their code, or any of their dependent code in libs changes.
+     * The ApiGateway does _not_ hot reload when changes are made, so you must kill the NX serve process and re-run 
+       `nx build api-gateway` after making changes.
  * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly:
    * `NEXT_PUBLIC_API_BASE_URL='http://localhost:4000'`
 
@@ -41,12 +44,16 @@ and main branches.
    * Pick a default local port that is unique from other services
  * In your `.env` and `.env.local.sample`, add `_PROXY_PORT` and `_PROXY_TARGET` for the new service
  * In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
- * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
- * In AWS:
-   * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
-     * Set the repo to Immutable
-     * After creation, set a Lifecycle Policy. In lower envs, we retain the most recent 2 images, and in prod it's set to 5
-   * In CloudWatch, create a log group for each env (follow the naming scheme from user-service, e.g. `ecs/foo-service-staging`, etc).
+   * Make sure to kill your NX `serve` process and run `nx build api-gateway` before restarting it.
+ * For deployment to AWS:
+   * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
+   * In AWS:
+     * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
+       * Set the repo to Immutable
+       * After creation, set a Lifecycle Policy. In lower envs, we retain the most recent 2 images, and in prod it's set to 5
+     * In CloudWatch, create a log group for each env (follow the naming scheme from user-service, e.g. `ecs/foo-service-staging`, etc).
+       * TODO: the log groups could be created as part of the stack. The ECR repository is needed before the stack runs, so that will
+         need to remain a manual process.
 
 # Database work
 For now, Laravel is the source of truth for all things related to the DB schema. As such, TypeORM is not allowed to modify the 

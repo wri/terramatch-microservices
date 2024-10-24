@@ -34,7 +34,7 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  main:
+  deploy-service:
     runs-on: ubuntu-latest
     environment: ${{ inputs.env }}
     steps:

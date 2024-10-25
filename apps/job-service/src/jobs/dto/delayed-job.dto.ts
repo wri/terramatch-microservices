@@ -2,6 +2,7 @@ import { JsonApiAttributes } from '@terramatch-microservices/common/dto/json-api
 import { JsonApiDto } from '@terramatch-microservices/common/decorators';
 import { ApiProperty } from '@nestjs/swagger';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
+import { JSON } from 'sequelize';
 
 const STATUSES = ['pending', 'failed', 'succeeded']
 type Status = (typeof STATUSES)[number];
@@ -9,11 +10,8 @@ type Status = (typeof STATUSES)[number];
 @JsonApiDto({ type: 'delayedJobs' })
 export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   constructor(job: DelayedJob) {
-    super({
-      status: job.status,
-      statusCode: job.statusCode,
-      payload: job.payload,
-    })
+    const { status, statusCode, payload } = job;
+    super({ status, statusCode, payload });
   }
 
   @ApiProperty({
@@ -32,5 +30,5 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
     description: 'If the job is out of pending state, this is the JSON payload for the completed process',
     nullable: true
   })
-  payload: string | null;
+  payload: object | null;
 }

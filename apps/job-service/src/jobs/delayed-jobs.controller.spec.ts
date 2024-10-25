@@ -31,7 +31,6 @@ describe('DelayedJobsController', () => {
     expect(resource.type).toBe('delayedJobs');
     expect(resource.id).toBe(uuid);
     expect(resource.attributes.statusCode).toBe(statusCode);
-    // TODO This will need an update when `payload` has been converted to a jsonb field
-    expect(resource.attributes.payload).toBe(payload);
+    expect(resource.attributes.payload).toMatchObject(payload);
   });
 })

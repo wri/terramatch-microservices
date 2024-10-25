@@ -105,12 +105,23 @@ type Relationship = {
 }
 
 type Resource = {
+  /**
+   * The DTO for the attributes of the resource type
+   */
   type: ResourceType;
+
   relationships?: Relationship[];
 }
 
 type JsonApiResponseProps = {
   data: Resource;
+
+  /**
+   * Set to true if this endpoint returns more than one resource in the main `data` member.
+   * @default false
+   */
+  hasMany?: boolean;
+
   included?: Resource[];
 }
 
@@ -122,14 +133,22 @@ type JsonApiResponseProps = {
 export function JsonApiResponse(
   options: ApiResponseOptions & JsonApiResponseProps
 ) {
-  const { data, included, status, ...rest } = options;
+  const { data, hasMany, included, status, ...rest } = options;
 
   const extraModels: ResourceType[] = [data.type];
   const document = {
-    data: {
-      type: "object",
-      properties: constructResource(data)
-    }
+    data: hasMany
+      ? {
+        type: "array",
+        items: {
+          type: "object",
+          properties: constructResource(data)
+        }
+      }
+      : {
+        type: "object",
+        properties: constructResource(data)
+      }
   } as { data: any; included?: any }
   if (included != null && included.length > 0) {
     for (const includedResource of included) {

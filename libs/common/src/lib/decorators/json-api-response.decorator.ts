@@ -84,6 +84,11 @@ function constructResource(resource: Resource) {
   return def;
 }
 
+function addMeta (document: Document, name: string, definition: any) {
+  if (document.meta == null) document.meta = { type: "object", properties: {} };
+  document.meta.properties[name] = definition;
+}
+
 type ResourceType = new (...props: any[]) => JsonApiAttributes<any>;
 
 type Relationship = {
@@ -122,7 +127,18 @@ type JsonApiResponseProps = {
    */
   hasMany?: boolean;
 
+  /**
+   * Set to true if this endpoint response documentation should include cursor pagination metadata.
+   */
+  pagination?: boolean;
+
   included?: Resource[];
+}
+
+type Document = {
+  data: any;
+  meta?: any;
+  included?: any;
 }
 
 /**
@@ -133,7 +149,7 @@ type JsonApiResponseProps = {
 export function JsonApiResponse(
   options: ApiResponseOptions & JsonApiResponseProps
 ) {
-  const { data, hasMany, included, status, ...rest } = options;
+  const { data, hasMany, pagination, included, status, ...rest } = options;
 
   const extraModels: ResourceType[] = [data.type];
   const document = {
@@ -149,7 +165,8 @@ export function JsonApiResponse(
         type: "object",
         properties: constructResource(data)
       }
-  } as { data: any; included?: any }
+  } as Document;
+
   if (included != null && included.length > 0) {
     for (const includedResource of included) {
       extraModels.push(includedResource.type);
@@ -166,6 +183,16 @@ export function JsonApiResponse(
         properties: constructResource(includedResource)
       })
     }
+  }
+
+  if (pagination) {
+    addMeta(document, 'page', {
+      type: "object",
+      properties: {
+        cursor: { type: "string", description: "The cursor for the first record on this page." },
+        total: { type: "number", description: "The total number of records on this page.", example: 42 }
+      }
+    });
   }
 
   const apiResponseOptions = {

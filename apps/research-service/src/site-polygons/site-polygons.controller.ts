@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   NotImplementedException,
@@ -16,10 +17,9 @@ import { SitePolygonQueryDto } from './dto/site-polygon-query.dto';
 export class SitePolygonsController {
   @Get()
   @ApiOperation({ operationId: 'sitePolygonsIndex', summary: 'Get all site polygons' })
-  @JsonApiResponse({ data: { type: SitePolygonDto }, hasMany: true })
-  @ApiException(() => UnauthorizedException, {
-    description: 'Authentication failed.'
-  })
+  @JsonApiResponse({ data: { type: SitePolygonDto }, hasMany: true, pagination: true })
+  @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
+  @ApiException(() => BadRequestException, { description: 'Pagination values are invalid.' })
   async findMany(@Query() query?: SitePolygonQueryDto): Promise<JsonApiDocument> {
     throw new NotImplementedException();
   }

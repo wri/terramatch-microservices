@@ -44,4 +44,21 @@ export class SitePolygonQueryDto {
     description: 'Filter results by polygons that are within the boundary of the polygon referenced by this UUID'
   })
   boundaryPolygon?: string
+
+  @ApiProperty({
+    required: false,
+    name: 'page[size]',
+    description: 'The size of page being requested',
+    minimum: 1,
+    maximum: 100,
+    default: 100
+  })
+  pageSize?: number;
+
+  @ApiProperty({
+    required: false,
+    name: 'page[after]',
+    description: 'The last record before the page being requested. The value is a polygon UUID. If not provided, the first page is returned.'
+  })
+  pageAfterCursor?: string;
 }

@@ -1,6 +1,12 @@
 import { JsonApiAttributes } from '@terramatch-microservices/common/dto/json-api-attributes';
 import { JsonApiDto } from '@terramatch-microservices/common/decorators';
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  IndicatorFieldMonitoringDto,
+  IndicatorHectaresDto, IndicatorMsuCarbonDto,
+  IndicatorTreeCountDto, IndicatorTreeCoverDto,
+  IndicatorTreeCoverLossDto
+} from './indicators.dto';
 
 class TreeSpecies {
   @ApiProperty({ example: 'Acacia binervia' })
@@ -23,27 +29,6 @@ class ReportingPeriod {
     description: 'The tree species reported as planted during this reporting period'
   })
   treeSpecies: TreeSpecies[];
-}
-
-/**
- * Note: this is required to be in the same order as on the source of truth in
- * confluence: https://gfw.atlassian.net/wiki/spaces/TerraMatch/pages/1018396676/D.+Code+Criteria+and+Indicator+Tables#code_indicator
- */
-export const INDICATOR_TYPES = [
-  'treeCover',
-  'treeCoverLoss',
-  'treeCoverLossFires',
-  'restorationEcoregion',
-  'restorationIntervention',
-  'treeCount',
-];
-export type IndicatorType = (typeof INDICATOR_TYPES)[number];
-class Indicator {
-  @ApiProperty({ enum: INDICATOR_TYPES })
-  type: IndicatorType;
-
-  @ApiProperty()
-  value: number;
 }
 
 export const POLYGON_STATUSES = [
@@ -87,11 +72,27 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   calcArea: number;
 
   @ApiProperty({
-    type: () => Indicator,
-    isArray: true,
+    type: 'array',
+    items: {
+      oneOf: [
+        { $ref: '#/components/schemas/IndicatorTreeCoverLossDto' },
+        { $ref: '#/components/schemas/IndicatorHectaresDto' },
+        { $ref: '#/components/schemas/IndicatorTreeCountDto' },
+        { $ref: '#/components/schemas/IndicatorTreeCoverDto' },
+        { $ref: '#/components/schemas/IndicatorFieldMonitoringDto' },
+        { $ref: '#/components/schemas/IndicatorMsuCarbonDto' },
+      ]
+    },
     description: 'All indicators currently recorded for this site polygon'
   })
-  indicators: Indicator[];
+  indicators: (
+    IndicatorTreeCoverLossDto |
+    IndicatorHectaresDto |
+    IndicatorTreeCountDto |
+    IndicatorTreeCoverDto |
+    IndicatorFieldMonitoringDto |
+    IndicatorMsuCarbonDto
+  )[]
 
   @ApiProperty({
     type: () => TreeSpecies,

@@ -29,7 +29,7 @@ class ReportingPeriod {
  * Note: this is required to be in the same order as on the source of truth in
  * confluence: https://gfw.atlassian.net/wiki/spaces/TerraMatch/pages/1018396676/D.+Code+Criteria+and+Indicator+Tables#code_indicator
  */
-const INDICATOR_TYPES = [
+export const INDICATOR_TYPES = [
   'treeCover',
   'treeCoverLoss',
   'treeCoverLossFires',
@@ -37,7 +37,7 @@ const INDICATOR_TYPES = [
   'restorationIntervention',
   'treeCount',
 ];
-type IndicatorType = (typeof INDICATOR_TYPES)[number];
+export type IndicatorType = (typeof INDICATOR_TYPES)[number];
 class Indicator {
   @ApiProperty({ enum: INDICATOR_TYPES })
   type: IndicatorType;

@@ -92,7 +92,7 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     IndicatorTreeCoverDto |
     IndicatorFieldMonitoringDto |
     IndicatorMsuCarbonDto
-  )[]
+  )[];
 
   @ApiProperty({
     type: () => TreeSpecies,

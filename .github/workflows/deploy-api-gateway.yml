@@ -43,6 +43,6 @@ jobs:
       - name: CDK Deploy
         id: cdk-deploy
         run: |
-          cd apps/api-gateway
+          cd cdk/api-gateway
           NODE_ENV=development npm i
           TM_ENV=${{ inputs.env }} npx --yes cdk deploy --require-approval never

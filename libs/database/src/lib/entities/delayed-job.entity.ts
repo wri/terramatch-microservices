@@ -8,7 +8,7 @@ import {
   PrimaryKey,
   Table,
 } from 'sequelize-typescript';
-import { BIGINT, INTEGER, STRING, UUID } from 'sequelize';
+import { BIGINT, INTEGER, JSON, STRING, UUID } from 'sequelize';
 
 @Table({ tableName: 'delayed_jobs', underscored: true })
 export class DelayedJob extends Model {
@@ -25,13 +25,11 @@ export class DelayedJob extends Model {
   @Column(STRING)
   status: string;
 
-  // TODO this will be changed to camel_case in the DB
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'statusCode' })
+  @Column(INTEGER({ length: 11 }))
   statusCode: number | null;
 
-  // TODO this will get updated to a json type
   @AllowNull
-  @Column(STRING)
-  payload: string | null;
+  @Column(JSON)
+  payload: object | null;
 }

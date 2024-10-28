@@ -11,26 +11,17 @@ Repository for the Microservices API backend of the TerraMatch service
 
 # Building and starting the apps
  * Copy `.env.local.sample` to `.env`
- * The ApiGateway does not hot-reload and needs to be re-built when there are changes:
-   * `(cd apps/api-gateway; npm i)` to install packages for the api gateway stack
-   * `(cd apps/api-gateway/lambda; npm i)` to install packages for the local lambda function that acts as a proxy for local dev only.
-   * `nx build api-gateway` or `nx run-many -t build` (to build all apps)
-   * This will build the local proxy Lambda function and the CDK Stack
-   * Note: The architecture for the local lambda proxy defaults to ARM_64. This will be the fastest options on ARM-based Macs 
-     (M1, etc), but will be much slower on X86 (AMD/Intel) based machine. If you're on an X86 machine, pass the architecture in
-     an environment variable when building the api gateway: `ARCH=X86 nx build api-gateway`.
+   * On Linux systems, the DOCKER_HOST value should be `unix:///var/run/docker.sock` instead of what's in the sample.
  * To run all services:
    * `nx run-many -t serve`
-     * The default maximum number of services it can run in parallel is 3. To run all of the services at once, use something like
-       `nx run-many --parallel=100 -t serve`, or you can cherry-pick which services you want to run instead with 
-       `nx run-many -t serve --projects api-gateway user-service`. 
-   * Note: the first time this runs, the gateway will take quite awhile to start. It'll be faster on subsequent starts.
-   * This starts the ApiGateway and all registered NX apps. 
-     * The apps will hot reload if their code, or any of their dependent code in libs changes.
-     * The ApiGateway does _not_ hot reload when changes are made, so you must kill the NX serve process and re-run 
-       `nx build api-gateway` after making changes.
- * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly:
-   * `NEXT_PUBLIC_API_BASE_URL='http://localhost:4000'`
+   * The default maximum number of services it can run in parallel is 3. To run all of the services at once, use something like
+     `nx run-many --parallel=100 -t serve`, or you can cherry-pick which services you want to run instead with
+     `nx run-many -t serve --projects user-service jobs-service`.
+ * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly by noting the config
+   in `.env.local.sample` for local development.
+   * The `NEXT_PUBLIC_API_BASE_URL` still points at the PHP BE directly
+   * New `NEXT_PUBLIC_<SERVICE>_URL` values are needed for each service you're running locally. This will typically match
+     the services defined in `V3_NAMESPACES` in `src/generated/v3/utils.ts`.
 
 # Deployment
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The 
@@ -45,9 +36,9 @@ and main branches.
  * Set up the new `main.ts` similarly to existing services.
    * Make sure swagger docs and the `/health` endpoint are implemented
    * Pick a default local port that is unique from other services
- * In your `.env` and `.env.local.sample`, add `_PROXY_PORT` and `_PROXY_TARGET` for the new service
+ * In your `.env` and `.env.local.sample`, add `_PORT` for the new service
  * In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
-   * Make sure to kill your NX `serve` process and run `nx build api-gateway` before restarting it.
+ * In your local web repo, follow directions in `README.md` for setting up a new service.
  * For deployment to AWS:
    * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
    * Add the new service name to the "service" workflow input options in `deploy-service.yml`

@@ -29,15 +29,11 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - run: npm ci --legacy-peer-deps && (cd apps/api-gateway; npm ci) && (cd apps/api-gateway/lambda/local-proxy; npm ci)
+      - run: npm ci --legacy-peer-deps
 
       - uses: nrwl/nx-set-shas@v4
 
-      # Distributed execution only works with cacheable builds. The Api Gateway build is not currently
-      # cacheable. Since the codebase is currently small, we can get away without distribution, but once
-      # it grows, we'll want to look into what it will take to make the api gateway build cacheable and remove
-      # NX_CLOUD_DISTRIBUTED_EXECUTION=false from this command.
-      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false ARCH=X86 npx nx affected -t lint build
+      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx affected -t lint build
 
       - uses: KengoTODA/actions-setup-docker-compose@v1
         with:

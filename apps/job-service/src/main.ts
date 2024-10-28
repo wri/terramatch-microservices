@@ -8,6 +8,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  if (process.env.NODE_ENV === 'development') {
+    // CORS is handled by the Api Gateway in AWS
+    app.enableCors();
+  }
+
   const config = new DocumentBuilder()
     .setTitle('TerraMatch Job Service')
     .setDescription('APIs related to delayed jobs')
@@ -22,7 +27,7 @@ async function bootstrap() {
 
   const port = process.env.NODE_ENV === 'production'
     ? 80
-    : process.env.JOB_SERVICE_PROXY_PORT ?? 4020;
+    : process.env.JOB_SERVICE_PORT ?? 4020;
   await app.listen(port);
 
   Logger.log(`TerraMatch Job Service is running on: http://localhost:${port}`);

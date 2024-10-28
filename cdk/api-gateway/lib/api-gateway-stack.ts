@@ -11,12 +11,8 @@ import {
 } from 'aws-cdk-lib/aws-apigatewayv2';
 import {
   HttpAlbIntegration,
-  HttpLambdaIntegration,
   HttpUrlIntegration,
 } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import {
   ApplicationListener,
   IApplicationListener,
@@ -24,18 +20,9 @@ import {
 import { Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
-const IS_DEV =
-  process.env.NODE_ENV == null || process.env.NODE_ENV === 'development';
-
 const V3_SERVICES = {
-  'user-service': {
-    targetHost: process.env.USER_SERVICE_PROXY_TARGET ?? '',
-    namespaces: ['auth', 'users']
-  },
-  'job-service': {
-    targetHost: process.env.JOB_SERVICE_PROXY_TARGET ?? '',
-    namespaces: ['jobs']
-  }
+  'user-service': ['auth', 'users'],
+  'job-service': ['jobs']
 }
 
 const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {
@@ -61,10 +48,6 @@ const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {
   }
 }
 
-type MutableHttpApiProps = {
-  -readonly [K in keyof HttpApiProps]: HttpApiProps[K]
-}
-
 type AddProxyProps = { targetHost: string, service?: never } | { targetHost?: never, service: string };
 
 export class ApiGatewayStack extends Stack {
@@ -74,10 +57,10 @@ export class ApiGatewayStack extends Stack {
   constructor (scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    if (!IS_DEV && process.env.TM_ENV == null) throw new Error('No TM_ENV defined');
+    if (process.env.TM_ENV == null) throw new Error('No TM_ENV defined');
     this.env = process.env.TM_ENV ?? 'local';
 
-    const httpApiProps: MutableHttpApiProps = {
+    const httpApiProps: HttpApiProps = {
       apiName: `TerraMatch API Gateway - ${this.env}`,
       corsPreflight: {
         allowMethods: [
@@ -91,26 +74,23 @@ export class ApiGatewayStack extends Stack {
         allowOrigins: ["*"],
         allowHeaders: ['authorization', 'content-type'],
       },
-    }
-    if (!IS_DEV) {
-      httpApiProps.disableExecuteApiEndpoint = true;
-      httpApiProps.defaultDomainMapping = {
+      disableExecuteApiEndpoint: true,
+      defaultDomainMapping: {
         domainName: DomainName.fromDomainNameAttributes(
           this,
           `API Domain Name - ${this.env}`,
           DOMAIN_MAPPINGS[this.env]
         )
-      };
+      }
     }
 
     this.httpApi = new HttpApi(this, `TerraMatch API Gateway - ${this.env}`, httpApiProps);
 
-    for (const [service, { targetHost, namespaces }] of Object.entries(V3_SERVICES)) {
-      const props: AddProxyProps = IS_DEV ? { targetHost } : { service };
-      this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, props);
+    for (const [service, namespaces] of Object.entries(V3_SERVICES)) {
+      this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, { service });
 
       for (const namespace of namespaces) {
-        this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, props);
+        this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });
       }
     }
 
@@ -123,52 +103,11 @@ export class ApiGatewayStack extends Stack {
 
   private addProxy (name: string, path: string, { targetHost, service }: AddProxyProps) {
     const sourcePath = `${path}{proxy+}`;
-    if (IS_DEV) {
-      if (targetHost == null) throw new Error(`Missing target host for local dev [${name}, ${path}]`);
-      this.addLocalLambdaProxy(name, sourcePath, targetHost);
+    if (targetHost == null) {
+      this.addAlbProxy(name, sourcePath, service);
     } else {
-      if (targetHost == null) {
-        this.addAlbProxy(name, sourcePath, service);
-      } else {
-        this.addHttpUrlProxy(name, sourcePath, `${targetHost}${path}{proxy}`);
-      }
+      this.addHttpUrlProxy(name, sourcePath, `${targetHost}${path}{proxy}`);
     }
-  }
-
-  private addLocalLambdaProxy (name: string, path: string, targetHost: string) {
-    // In local development, we use SAM to synthesize our CDK API Gateway stack. However, SAM doesn't
-    // support HttpUrlIntegration, so we have a lambda that is just a simple node proxy that is
-    // only used locally.
-
-    // For some reason, ARM_64 stopped working on Github actions, but X86_64 is noticeably slower
-    // locally (on a modern Mac; folks on Windows might want to go ahead and use X86). Therefore, we
-    // allow switching the arch type by env variable
-    const architecture = process.env.ARCH === 'X86'
-      ? Architecture.X86_64
-      : Architecture.ARM_64;
-
-    const lambdaIntegration = new HttpLambdaIntegration(
-      name,
-      new NodejsFunction(this, `Local Proxy: ${name}`, {
-        entry: './lambda/local-proxy/index.js',
-        runtime: Runtime.NODEJS_20_X,
-        handler: 'main',
-        architecture,
-        logRetention: RetentionDays.ONE_WEEK,
-        bundling: {
-          externalModules: ['aws-lambda'],
-          define: {
-            'process.env.PROXY_TARGET': JSON.stringify(targetHost),
-          }
-        },
-      }),
-    );
-
-    this.httpApi.addRoutes({
-      path: path,
-      methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
-      integration: lambdaIntegration,
-    })
   }
 
   private addHttpUrlProxy (name: string, sourcePath: string, targetUrl: string) {

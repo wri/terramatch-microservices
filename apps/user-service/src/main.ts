@@ -8,6 +8,11 @@ import { TMLogService } from '@terramatch-microservices/common/util/tm-log.servi
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  if (process.env.NODE_ENV === 'development') {
+    // CORS is handled by the Api Gateway in AWS
+    app.enableCors();
+  }
+
   const config = new DocumentBuilder()
     .setTitle('TerraMatch User Service')
     .setDescription('APIs related to login, users and organisations.')
@@ -22,7 +27,7 @@ async function bootstrap() {
 
   const port = process.env.NODE_ENV === 'production'
     ? 80
-    : process.env.USER_SERVICE_PROXY_PORT ?? 4010;
+    : process.env.USER_SERVICE_PORT ?? 4010;
   await app.listen(port);
 
   Logger.log(`TerraMatch User Service is running on: http://localhost:${port}`);

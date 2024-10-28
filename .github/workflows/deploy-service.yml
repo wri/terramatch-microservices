@@ -67,7 +67,7 @@ jobs:
       - name: Launch new task definition
         id: launch
         run: |
-          cd service-stack
+          cd cdk/service-stack
           npm i
           IMAGE_TAG=$IMAGE_TAG TM_SERVICE=${{ inputs.service }} TM_ENV=${{ inputs.env }} npx --yes cdk deploy --require-approval never
 

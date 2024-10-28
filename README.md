@@ -11,6 +11,9 @@ Repository for the Microservices API backend of the TerraMatch service
 
 # Building and starting the apps
  * Copy `.env.local.sample` to `.env`
+   * On Linux systems, `host.docker.internal` is not always available. Replace this host name in the `_PROXY_TARGET` assignments with
+     `172.17.0.1`, or add a mapping in your `/etc/hosts`: `172.17.0.1: host.docker.internal`
+   * On Linux systems, the DOCKER_HOST value should be `unix:///var/run/docker.sock` instead of what's in the sample.
  * The ApiGateway does not hot-reload and needs to be re-built when there are changes:
    * `(cd apps/api-gateway; npm i)` to install packages for the api gateway stack
    * `(cd apps/api-gateway/lambda; npm i)` to install packages for the local lambda function that acts as a proxy for local dev only.

@@ -14,8 +14,11 @@ Repository for the Microservices API backend of the TerraMatch service
    * On Linux systems, the DOCKER_HOST value should be `unix:///var/run/docker.sock` instead of what's in the sample.
  * To run all services:
    * `nx run-many -t serve`
- * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly:
-   * `NEXT_PUBLIC_API_BASE_URL='http://localhost:4000'`
+ * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly by noting the config
+   in `.env.local.sample` for local development.
+   * The `NEXT_PUBLIC_API_BASE_URL` still points at the PHP BE directly
+   * New `NEXT_PUBLIC_<SERVICE>_URL` values are needed for each service you're running locally. This will typically match
+     the services defined in `V3_NAMESPACES` in `src/generated/v3/utils.ts`.
 
 # Deployment
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The 

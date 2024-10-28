@@ -8,7 +8,7 @@
     "build-local-proxy": "(cd lambda/local-proxy; npm run build)",
     "synth-local": "npx cdk synth --no-staging --quiet",
     "build": "npm run build-local-proxy && npm run synth-local",
-    "serve": "DOCKER_HOST=unix://$HOME/.docker/run/docker.sock sam local start-api -t ./cdk.out/ApiGatewayStack-local.template.json -p 4000"
+    "serve": "sam local start-api -t ./cdk.out/ApiGatewayStack-local.template.json -p 4000"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

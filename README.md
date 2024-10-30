@@ -14,6 +14,9 @@ Repository for the Microservices API backend of the TerraMatch service
    * On Linux systems, the DOCKER_HOST value should be `unix:///var/run/docker.sock` instead of what's in the sample.
  * To run all services:
    * `nx run-many -t serve`
+   * The default maximum number of services it can run in parallel is 3. To run all of the services at once, use something like
+     `nx run-many --parallel=100 -t serve`, or you can cherry-pick which services you want to run instead with
+     `nx run-many -t serve --projects user-service jobs-service`.
  * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly by noting the config
    in `.env.local.sample` for local development.
    * The `NEXT_PUBLIC_API_BASE_URL` still points at the PHP BE directly
@@ -38,6 +41,7 @@ and main branches.
  * In your local web repo, follow directions in `README.md` for setting up a new service.
  * For deployment to AWS:
    * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
+   * Add the new service name to the "service" workflow input options in `deploy-service.yml`
    * In AWS:
      * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
        * Set the repo to Immutable

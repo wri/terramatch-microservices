@@ -53,13 +53,16 @@ export class UsersController {
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
     const userId = pathId === 'me' ? authenticatedUserId : parseInt(pathId);
-    const user = await User.findOne({ include: ['roles', 'organisation'], where: { id: userId }, });
+    const user = await User.findOne({
+      include: ['roles', 'organisation', 'frameworks'],
+      where: { id: userId },
+    });
     if (user == null) throw new NotFoundException();
 
     await this.policyService.authorize('read', user);
 
     const document = buildJsonApi();
-    const userResource = document.addData(user.uuid, new UserDto(user, await user.frameworks()));
+    const userResource = document.addData(user.uuid, new UserDto(user, await user.myFrameworks()));
 
     const org = await user.primaryOrganisation();
     if (org != null) {

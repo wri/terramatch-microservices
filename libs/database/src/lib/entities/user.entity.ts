@@ -1,15 +1,17 @@
+import { uniq } from 'lodash';
 import {
   AllowNull,
   AutoIncrement,
   BelongsTo,
   BelongsToMany,
-  Column, Default,
+  Column,
+  Default,
   ForeignKey,
   Index,
   Model,
   PrimaryKey,
   Table,
-  Unique
+  Unique,
 } from 'sequelize-typescript';
 import { BIGINT, BOOLEAN, col, DATE, fn, Op, STRING, UUID } from 'sequelize';
 import { Role } from './role.entity';
@@ -20,6 +22,7 @@ import { Project } from './project.entity';
 import { ProjectUser } from './project-user.entity';
 import { Organisation } from './organisation.entity';
 import { OrganisationUser } from './organisation-user.entity';
+import { FrameworkUser } from './framework-user.entity';
 
 @Table({ tableName: 'users', underscored: true, paranoid: true })
 export class User extends Model {
@@ -257,39 +260,59 @@ export class User extends Model {
       : this._primaryOrganisation;
   }
 
-  private _frameworks?: Framework[];
-  async frameworks(): Promise<Framework[]> {
-    if (this._frameworks == null) {
+  @BelongsToMany(() => Framework, () => FrameworkUser)
+  frameworks: Framework[];
+
+  async loadFrameworks() {
+    if (this.frameworks == null) {
+      this.frameworks = await (this as User).$get('frameworks');
+    }
+    return this.frameworks;
+  }
+
+  private _myFrameworks?: Framework[];
+  async myFrameworks(): Promise<Framework[]> {
+    if (this._myFrameworks == null) {
       await this.loadRoles();
       const isAdmin =
         this.roles.find(({ name }) => name.startsWith('admin-')) != null;
 
-      let frameworkSlugs: string[];
+      await this.loadFrameworks();
+
+      let frameworkSlugs: string[] = this.frameworks.map(({ slug }) => slug);
       if (isAdmin) {
         // Admins have access to all frameworks their permissions say they do
         const permissions = await Permission.getUserPermissionNames(this.id);
         const prefix = 'framework-';
-        frameworkSlugs = permissions
-          .filter((permission) => permission.startsWith(prefix))
-          .map((permission) => permission.substring(prefix.length));
+        frameworkSlugs = [
+          ...frameworkSlugs,
+          ...permissions
+            .filter((permission) => permission.startsWith(prefix))
+            .map((permission) => permission.substring(prefix.length)),
+        ];
       } else {
         // Other users have access to the frameworks embodied by their set of projects
-        frameworkSlugs = (
-          await (this as User).$get('projects', {
-            attributes: [
-              [fn('DISTINCT', col('Project.framework_key')), 'frameworkKey'],
-            ],
-            raw: true,
-          })
-        ).map(({ frameworkKey }) => frameworkKey);
+        frameworkSlugs = [
+          ...frameworkSlugs,
+          ...(
+            await (this as User).$get('projects', {
+              attributes: [
+                [fn('DISTINCT', col('Project.framework_key')), 'frameworkKey'],
+              ],
+              raw: true,
+            })
+          ).map(({ frameworkKey }) => frameworkKey),
+        ];
       }
 
-      if (frameworkSlugs.length == 0) return (this._frameworks = []);
-      return (this._frameworks = await Framework.findAll({
+      if (frameworkSlugs.length == 0) return (this._myFrameworks = []);
+
+      frameworkSlugs = uniq(frameworkSlugs);
+      return (this._myFrameworks = await Framework.findAll({
         where: { slug: { [Op.in]: frameworkSlugs } },
       }));
     }
 
-    return this._frameworks;
+    return this._myFrameworks;
   }
 }

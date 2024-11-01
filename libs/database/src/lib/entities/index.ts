@@ -1,5 +1,6 @@
 export * from './delayed-job.entity';
 export * from './framework.entity';
+export * from './framework-user.entity';
 export * from './model-has-role.entity'
 export * from './organisation.entity';
 export * from './organisation-user.entity';

@@ -1,9 +1,9 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
-import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TMLogService } from '@terramatch-microservices/common/util/tm-log.service';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,23 +14,23 @@ async function bootstrap() {
   }
 
   const config = new DocumentBuilder()
-    .setTitle('TerraMatch User Service')
-    .setDescription('APIs related to login, users and organisations.')
+    .setTitle('TerraMatch Job Service')
+    .setDescription('APIs related to delayed jobs')
     .setVersion('1.0')
-    .addTag('user-service')
+    .addTag('job-service')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('user-service/documentation/api', app, document);
+  SwaggerModule.setup('job-service/documentation/api', app, document);
 
   app.useGlobalPipes(new ValidationPipe());
   app.useLogger(app.get(TMLogService));
 
   const port = process.env.NODE_ENV === 'production'
     ? 80
-    : process.env.USER_SERVICE_PORT ?? 4010;
+    : process.env.JOB_SERVICE_PORT ?? 4020;
   await app.listen(port);
 
-  Logger.log(`TerraMatch User Service is running on: http://localhost:${port}`);
+  Logger.log(`TerraMatch Job Service is running on: http://localhost:${port}`);
 }
 
 bootstrap();

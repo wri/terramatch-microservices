@@ -1,0 +1,73 @@
+name: Service Deploy
+run-name: 'Service Deploy [service: ${{ inputs.service }}, env: ${{ inputs.env }}]'
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy'
+        type: choice
+        required: true
+        options:
+          - user-service
+          - job-service
+      env:
+        description: 'Deployment target environment'
+        type: choice
+        required: true
+        options:
+          - dev
+          - test
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.service }}
+  ECR_REPOSITORY: terramatch-microservices/${{ inputs.service }}-${{ inputs.env }}
+  ECR_REGISTRY: 603634817705.dkr.ecr.eu-west-1.amazonaws.com
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy-service:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to AWS
+        id: AWS
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push images to Amazon ECR
+        id: build-images
+        run: |
+          echo "${{ vars.ENV }}" > .env
+          echo "DB_PASSWORD=\"${{ secrets.DB_PASSWORD }}\"" >> .env
+          : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
+          docker build -t terramatch-microservices-base:nx-base .
+          SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker build --build-arg NODE_ENV=production --build-arg BUILD_FLAG=--prod -f apps/${{ inputs.service }}/Dockerfile -t $SERVICE_IMAGE .
+          docker push $SERVICE_IMAGE
+          echo "image=$SERVICE_IMAGE"
+
+      - name: Launch new task definition
+        id: launch
+        run: |
+          cd cdk/service-stack
+          npm i
+          IMAGE_TAG=$IMAGE_TAG TM_SERVICE=${{ inputs.service }} TM_ENV=${{ inputs.env }} npx --yes cdk deploy --require-approval never
+

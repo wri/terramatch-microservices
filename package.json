@@ -2,7 +2,11 @@
   "name": "@terramatch-microservices/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "research": "nx run-many -t serve --projects research-service",
+    "fe-services": "nx run-many -t serve --projects user-service job-service",
+    "all": "nx run-many --parallel=100 -t serve"
+  },
   "private": true,
   "dependencies": {
     "@casl/ability": "^6.7.1",

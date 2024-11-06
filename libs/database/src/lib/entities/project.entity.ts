@@ -1,8 +1,8 @@
-import { AutoIncrement, Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
-import { BIGINT, STRING } from 'sequelize';
+import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, STRING } from "sequelize";
 
-// A quick stub to get The information needed for users/me
-@Table({ tableName: 'v2_projects', underscored: true })
+// A quick stub to get the information needed for users/me
+@Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model {
   @PrimaryKey
   @AutoIncrement

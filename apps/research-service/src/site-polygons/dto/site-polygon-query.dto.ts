@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { POLYGON_STATUSES, PolygonStatus } from "./site-polygon.dto";
 import { INDICATOR_SLUGS, IndicatorSlug } from "./indicators.dto";
 import { IsArray, IsDate, IsInt, IsOptional, ValidateNested } from "class-validator";
+import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 
 class Page {
   @ApiProperty({

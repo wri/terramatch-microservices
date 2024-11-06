@@ -50,9 +50,12 @@ export class SitePolygonsController {
       throw new BadRequestException("Page size is invalid");
     }
 
-    const builder = this.sitePolygonService.buildQuery(pageSize, pageAfter);
+    const builder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
 
     const document = buildJsonApi();
+    for (const sitePolygon of await builder.execute()) {
+      document.addData(sitePolygon.uuid, new SitePolygonDto(sitePolygon));
+    }
     return document.serialize();
   }
 

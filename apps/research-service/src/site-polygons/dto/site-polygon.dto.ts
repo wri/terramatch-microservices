@@ -1,15 +1,19 @@
-import { JsonApiAttributes } from '@terramatch-microservices/common/dto/json-api-attributes';
-import { JsonApiDto } from '@terramatch-microservices/common/decorators';
-import { ApiProperty } from '@nestjs/swagger';
+import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { ApiProperty } from "@nestjs/swagger";
 import {
   IndicatorFieldMonitoringDto,
-  IndicatorHectaresDto, IndicatorMsuCarbonDto,
-  IndicatorTreeCountDto, IndicatorTreeCoverDto,
+  IndicatorHectaresDto,
+  IndicatorMsuCarbonDto,
+  IndicatorTreeCountDto,
+  IndicatorTreeCoverDto,
   IndicatorTreeCoverLossDto
-} from './indicators.dto';
+} from "./indicators.dto";
+import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
+import { SitePolygon } from "@terramatch-microservices/database/entities";
 
 class TreeSpecies {
-  @ApiProperty({ example: 'Acacia binervia' })
+  @ApiProperty({ example: "Acacia binervia" })
   name: string;
 
   @ApiProperty({ example: 15000 })
@@ -26,21 +30,31 @@ class ReportingPeriod {
   @ApiProperty({
     type: () => TreeSpecies,
     isArray: true,
-    description: 'The tree species reported as planted during this reporting period'
+    description: "The tree species reported as planted during this reporting period"
   })
   treeSpecies: TreeSpecies[];
 }
 
-export const POLYGON_STATUSES = [
-  'draft',
-  'submitted',
-  'needs-more-information',
-  'approved'
-];
-export type PolygonStatus = (typeof POLYGON_STATUSES)[number];
-
-@JsonApiDto({ type: 'sitePolygons' })
+@JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
+  constructor(sitePolygon: SitePolygon) {
+    super({
+      name: sitePolygon.polyName,
+      status: sitePolygon.status,
+      siteId: sitePolygon.siteUuid,
+      plantStart: sitePolygon.plantStart,
+      plantEnd: sitePolygon.plantEnd,
+      practice: sitePolygon.practice,
+      targetSys: sitePolygon.targetSys,
+      distr: sitePolygon.distr,
+      numTrees: sitePolygon.numTrees,
+      calcArea: sitePolygon.calcArea,
+      indicators: [],
+      establishmentTreeSpecies: [],
+      reportingPeriods: []
+    });
+  }
+
   @ApiProperty()
   name: string;
 
@@ -51,60 +65,60 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   siteId: string;
 
   @ApiProperty()
-  plantStart: Date;
+  plantStart: Date | null;
 
   @ApiProperty()
-  plantEnd: Date;
+  plantEnd: Date | null;
 
   @ApiProperty()
-  practice: string;
+  practice: string | null;
 
   @ApiProperty()
-  targetSys: string;
+  targetSys: string | null;
 
   @ApiProperty()
-  distr: string;
+  distr: string | null;
 
   @ApiProperty()
-  numTrees: number;
+  numTrees: number | null;
 
   @ApiProperty()
-  calcArea: number;
+  calcArea: number | null;
 
   @ApiProperty({
-    type: 'array',
+    type: "array",
     items: {
       oneOf: [
-        { $ref: '#/components/schemas/IndicatorTreeCoverLossDto' },
-        { $ref: '#/components/schemas/IndicatorHectaresDto' },
-        { $ref: '#/components/schemas/IndicatorTreeCountDto' },
-        { $ref: '#/components/schemas/IndicatorTreeCoverDto' },
-        { $ref: '#/components/schemas/IndicatorFieldMonitoringDto' },
-        { $ref: '#/components/schemas/IndicatorMsuCarbonDto' },
+        { $ref: "#/components/schemas/IndicatorTreeCoverLossDto" },
+        { $ref: "#/components/schemas/IndicatorHectaresDto" },
+        { $ref: "#/components/schemas/IndicatorTreeCountDto" },
+        { $ref: "#/components/schemas/IndicatorTreeCoverDto" },
+        { $ref: "#/components/schemas/IndicatorFieldMonitoringDto" },
+        { $ref: "#/components/schemas/IndicatorMsuCarbonDto" }
       ]
     },
-    description: 'All indicators currently recorded for this site polygon'
+    description: "All indicators currently recorded for this site polygon"
   })
   indicators: (
-    IndicatorTreeCoverLossDto |
-    IndicatorHectaresDto |
-    IndicatorTreeCountDto |
-    IndicatorTreeCoverDto |
-    IndicatorFieldMonitoringDto |
-    IndicatorMsuCarbonDto
+    | IndicatorTreeCoverLossDto
+    | IndicatorHectaresDto
+    | IndicatorTreeCountDto
+    | IndicatorTreeCoverDto
+    | IndicatorFieldMonitoringDto
+    | IndicatorMsuCarbonDto
   )[];
 
   @ApiProperty({
     type: () => TreeSpecies,
     isArray: true,
-    description: 'The tree species associated with the establishment of the site that this polygon relates to.'
+    description: "The tree species associated with the establishment of the site that this polygon relates to."
   })
   establishmentTreeSpecies: TreeSpecies[];
 
   @ApiProperty({
     type: () => ReportingPeriod,
     isArray: true,
-    description: 'Access to reported trees planted for each approved report on this site.'
+    description: "Access to reported trees planted for each approved report on this site."
   })
   reportingPeriods: ReportingPeriod[];
 }

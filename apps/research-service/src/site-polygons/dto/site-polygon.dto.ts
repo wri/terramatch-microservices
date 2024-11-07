@@ -20,12 +20,12 @@ export type IndicatorDto =
   | IndicatorFieldMonitoringDto
   | IndicatorMsuCarbonDto;
 
-class TreeSpecies {
+export class TreeSpeciesDto {
   @ApiProperty({ example: "Acacia binervia" })
   name: string;
 
-  @ApiProperty({ example: 15000 })
-  amount: number;
+  @ApiProperty({ example: 15000, nullable: true })
+  amount: number | null;
 }
 
 class ReportingPeriod {
@@ -36,22 +36,22 @@ class ReportingPeriod {
   submittedAt: Date;
 
   @ApiProperty({
-    type: () => TreeSpecies,
+    type: () => TreeSpeciesDto,
     isArray: true,
     description: "The tree species reported as planted during this reporting period"
   })
-  treeSpecies: TreeSpecies[];
+  treeSpecies: TreeSpeciesDto[];
 }
 
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
-  constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[]) {
+  constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[], establishmentTreeSpecies: TreeSpeciesDto[]) {
     super({
       ...pickApiProperties(sitePolygon, SitePolygonDto),
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
       indicators,
-      establishmentTreeSpecies: [],
+      establishmentTreeSpecies,
       reportingPeriods: []
     });
   }
@@ -65,25 +65,25 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   @ApiProperty()
   siteId: string;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   plantStart: Date | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   plantEnd: Date | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   practice: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   targetSys: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   distr: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   numTrees: number | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true })
   calcArea: number | null;
 
   @ApiProperty({
@@ -103,11 +103,11 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   indicators: IndicatorDto[];
 
   @ApiProperty({
-    type: () => TreeSpecies,
+    type: () => TreeSpeciesDto,
     isArray: true,
     description: "The tree species associated with the establishment of the site that this polygon relates to."
   })
-  establishmentTreeSpecies: TreeSpecies[];
+  establishmentTreeSpecies: TreeSpeciesDto[];
 
   @ApiProperty({
     type: () => ReportingPeriod,

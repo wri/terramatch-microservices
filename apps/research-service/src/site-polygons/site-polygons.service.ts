@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Type } from "@nestjs/common";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
-import { IndicatorDto } from "./dto/site-polygon.dto";
+import { IndicatorDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
@@ -14,7 +14,8 @@ class SitePolygonQueryBuilder {
       "indicatorsMsuCarbon",
       "indicatorsTreeCount",
       "indicatorsTreeCover",
-      "indicatorsTreeCoverLoss"
+      "indicatorsTreeCoverLoss",
+      { model: Site, include: ["treeSpecies"] }
     ]
   };
 
@@ -57,5 +58,12 @@ export class SitePolygonsService {
     }
 
     return indicators;
+  }
+
+  async getEstablishmentTreeSpecies(sitePolygon: SitePolygon): Promise<TreeSpeciesDto[]> {
+    // These associations are expected to be eager loaded, so this should not result in new SQL
+    // queries.
+    const site = await sitePolygon.loadSite();
+    return (await site.loadTreeSpecies()).map(({ name, amount }) => ({ name, amount }));
   }
 }

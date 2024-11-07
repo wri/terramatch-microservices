@@ -1,9 +1,10 @@
-import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AutoIncrement, Column, HasMany, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
+import { TreeSpecies } from "./tree-species.entity";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
-export class Site extends Model {
+export class Site extends Model<Site> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -12,4 +13,17 @@ export class Site extends Model {
   @Index
   @Column(UUID)
   uuid: string;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site" }
+  })
+  treeSpecies: TreeSpecies[] | null;
+
+  async loadTreeSpecies() {
+    if (this.treeSpecies == null) {
+      this.treeSpecies = await this.$get("treeSpecies");
+    }
+    return this.treeSpecies;
+  }
 }

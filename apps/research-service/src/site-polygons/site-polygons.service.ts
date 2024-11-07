@@ -67,6 +67,8 @@ export class SitePolygonsService {
     // These associations are expected to be eager loaded, so this should not result in new SQL
     // queries.
     const site = await sitePolygon.loadSite();
+    if (site == null) return [];
+
     return (await site.loadTreeSpecies()).map(({ name, amount }) => ({ name, amount }));
   }
 
@@ -74,6 +76,8 @@ export class SitePolygonsService {
     // These associations are expected to be eager loaded, so this should not result in new SQL
     // queries
     const site = await sitePolygon.loadSite();
+    if (site == null) return [];
+
     const reportingPeriods: ReportingPeriodDto[] = [];
     for (const report of await site.loadSiteReports()) {
       reportingPeriods.push({

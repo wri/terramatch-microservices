@@ -47,16 +47,9 @@ class ReportingPeriod {
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[]) {
     super({
+      ...sitePolygon,
       name: sitePolygon.polyName,
-      status: sitePolygon.status,
       siteId: sitePolygon.siteUuid,
-      plantStart: sitePolygon.plantStart,
-      plantEnd: sitePolygon.plantEnd,
-      practice: sitePolygon.practice,
-      targetSys: sitePolygon.targetSys,
-      distr: sitePolygon.distr,
-      numTrees: sitePolygon.numTrees,
-      calcArea: sitePolygon.calcArea,
       indicators,
       establishmentTreeSpecies: [],
       reportingPeriods: []

@@ -1,3 +1,6 @@
+import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
+import { pick } from "lodash";
+
 /**
  * A simple class to make it easy to create a typed attributes DTO with new()
  *
@@ -5,7 +8,9 @@
  * See auth.controller.ts login for a simple example.
  */
 export class JsonApiAttributes<DTO> {
-  constructor(props: Omit<DTO, "type">) {
-    Object.assign(this, props);
+  constructor(source: Omit<DTO, "type">) {
+    // This assigns only the attributes from source that are defined as ApiProperty in this DTO.
+    const accessor = new ModelPropertiesAccessor();
+    Object.assign(this, pick(source, accessor.getModelProperties(this.constructor.prototype)));
   }
 }

@@ -54,7 +54,10 @@ export class SitePolygonsController {
 
     const document = buildJsonApi();
     for (const sitePolygon of await builder.execute()) {
-      document.addData(sitePolygon.uuid, new SitePolygonDto(sitePolygon));
+      document.addData(
+        sitePolygon.uuid,
+        new SitePolygonDto(sitePolygon, await this.sitePolygonService.convertIndicators(sitePolygon))
+      );
     }
     return document.serialize();
   }

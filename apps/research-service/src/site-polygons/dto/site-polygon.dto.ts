@@ -12,6 +12,14 @@ import {
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 
+export type IndicatorDto =
+  | IndicatorTreeCoverLossDto
+  | IndicatorHectaresDto
+  | IndicatorTreeCountDto
+  | IndicatorTreeCoverDto
+  | IndicatorFieldMonitoringDto
+  | IndicatorMsuCarbonDto;
+
 class TreeSpecies {
   @ApiProperty({ example: "Acacia binervia" })
   name: string;
@@ -37,7 +45,7 @@ class ReportingPeriod {
 
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
-  constructor(sitePolygon: SitePolygon) {
+  constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[]) {
     super({
       name: sitePolygon.polyName,
       status: sitePolygon.status,
@@ -49,7 +57,7 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
       distr: sitePolygon.distr,
       numTrees: sitePolygon.numTrees,
       calcArea: sitePolygon.calcArea,
-      indicators: [],
+      indicators,
       establishmentTreeSpecies: [],
       reportingPeriods: []
     });
@@ -99,14 +107,7 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     },
     description: "All indicators currently recorded for this site polygon"
   })
-  indicators: (
-    | IndicatorTreeCoverLossDto
-    | IndicatorHectaresDto
-    | IndicatorTreeCountDto
-    | IndicatorTreeCoverDto
-    | IndicatorFieldMonitoringDto
-    | IndicatorMsuCarbonDto
-  )[];
+  indicators: IndicatorDto[];
 
   @ApiProperty({
     type: () => TreeSpecies,

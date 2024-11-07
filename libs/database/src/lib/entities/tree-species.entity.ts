@@ -11,6 +11,7 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, STRING, UUID } from "sequelize";
 import { Site } from "./site.entity";
+import { SiteReport } from "./site-report.entity";
 
 @Table({ tableName: "v2_tree_species", underscored: true, paranoid: true })
 export class TreeSpecies extends Model<TreeSpecies> {
@@ -52,4 +53,10 @@ export class TreeSpecies extends Model<TreeSpecies> {
 
   @BelongsTo(() => Site, { foreignKey: "speciesableId", scope: { speciesableType: "App\\Models\\V2\\Sites\\Site" } })
   site: Site | null;
+
+  @BelongsTo(() => SiteReport, {
+    foreignKey: "speciesableId",
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport" }
+  })
+  siteReport: SiteReport | null;
 }

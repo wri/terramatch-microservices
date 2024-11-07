@@ -28,7 +28,7 @@ export class TreeSpeciesDto {
   amount: number | null;
 }
 
-class ReportingPeriod {
+export class ReportingPeriodDto {
   @ApiProperty()
   dueAt: Date;
 
@@ -45,14 +45,19 @@ class ReportingPeriod {
 
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
-  constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[], establishmentTreeSpecies: TreeSpeciesDto[]) {
+  constructor(
+    sitePolygon: SitePolygon,
+    indicators: IndicatorDto[],
+    establishmentTreeSpecies: TreeSpeciesDto[],
+    reportingPeriods: ReportingPeriodDto[]
+  ) {
     super({
       ...pickApiProperties(sitePolygon, SitePolygonDto),
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
       indicators,
       establishmentTreeSpecies,
-      reportingPeriods: []
+      reportingPeriods
     });
   }
 
@@ -110,9 +115,9 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   establishmentTreeSpecies: TreeSpeciesDto[];
 
   @ApiProperty({
-    type: () => ReportingPeriod,
+    type: () => ReportingPeriodDto,
     isArray: true,
     description: "Access to reported trees planted for each approved report on this site."
   })
-  reportingPeriods: ReportingPeriod[];
+  reportingPeriods: ReportingPeriodDto[];
 }

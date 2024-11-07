@@ -18,5 +18,6 @@ export * from "./project-user.entity";
 export * from "./role.entity";
 export * from "./site.entity";
 export * from "./site-polygon.entity";
+export * from "./site-report.entity";
 export * from "./tree-species.entity";
 export * from "./user.entity";

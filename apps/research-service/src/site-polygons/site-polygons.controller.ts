@@ -56,7 +56,11 @@ export class SitePolygonsController {
     for (const sitePolygon of await builder.execute()) {
       const indicators = await this.sitePolygonService.convertIndicators(sitePolygon);
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
-      document.addData(sitePolygon.uuid, new SitePolygonDto(sitePolygon, indicators, establishmentTreeSpecies));
+      const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
+      document.addData(
+        sitePolygon.uuid,
+        new SitePolygonDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods)
+      );
     }
     return document.serialize();
   }

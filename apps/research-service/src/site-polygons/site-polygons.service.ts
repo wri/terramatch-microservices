@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Type } from "@nestjs/common";
-import { Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
-import { IndicatorDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
+import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
@@ -15,7 +15,10 @@ class SitePolygonQueryBuilder {
       "indicatorsTreeCount",
       "indicatorsTreeCover",
       "indicatorsTreeCoverLoss",
-      { model: Site, include: ["treeSpecies"] }
+      {
+        model: Site,
+        include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }]
+      }
     ]
   };
 
@@ -65,5 +68,21 @@ export class SitePolygonsService {
     // queries.
     const site = await sitePolygon.loadSite();
     return (await site.loadTreeSpecies()).map(({ name, amount }) => ({ name, amount }));
+  }
+
+  async getReportingPeriods(sitePolygon: SitePolygon): Promise<ReportingPeriodDto[]> {
+    // These associations are expected to be eager loaded, so this should not result in new SQL
+    // queries
+    const site = await sitePolygon.loadSite();
+    const reportingPeriods: ReportingPeriodDto[] = [];
+    for (const report of await site.loadSiteReports()) {
+      reportingPeriods.push({
+        dueAt: report.dueAt,
+        submittedAt: report.submittedAt,
+        treeSpecies: (await report.loadTreeSpecies()).map(({ name, amount }) => ({ name, amount }))
+      });
+    }
+
+    return reportingPeriods;
   }
 }

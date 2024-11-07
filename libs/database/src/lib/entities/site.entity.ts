@@ -1,6 +1,7 @@
 import { AutoIncrement, Column, HasMany, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
+import { SiteReport } from "./site-report.entity";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -25,5 +26,15 @@ export class Site extends Model<Site> {
       this.treeSpecies = await this.$get("treeSpecies");
     }
     return this.treeSpecies;
+  }
+
+  @HasMany(() => SiteReport)
+  siteReports: SiteReport[] | null;
+
+  async loadSiteReports() {
+    if (this.siteReports == null) {
+      this.siteReports = await this.$get("siteReports");
+    }
+    return this.siteReports;
   }
 }

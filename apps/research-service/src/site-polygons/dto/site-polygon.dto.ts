@@ -1,4 +1,4 @@
-import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import {
@@ -46,7 +46,8 @@ class ReportingPeriod {
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[]) {
-    super(sitePolygon, {
+    super({
+      ...pickApiProperties(sitePolygon, SitePolygonDto),
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
       indicators,

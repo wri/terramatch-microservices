@@ -14,11 +14,8 @@ class UserFramework {
 @JsonApiDto({ type: "users" })
 export class UserDto extends JsonApiAttributes<UserDto> {
   constructor(user: User, frameworks: Framework[]) {
-    super({
-      ...user,
+    super(user as Omit<User, "uuid">, {
       uuid: user.uuid ?? "",
-      fullName: user.firstName == null || user.lastName == null ? null : `${user.firstName} ${user.lastName}`,
-      primaryRole: user.primaryRole,
       frameworks: frameworks.map(({ name, slug }) => ({ name, slug }))
     });
   }

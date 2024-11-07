@@ -46,8 +46,7 @@ class ReportingPeriod {
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[]) {
-    super({
-      ...sitePolygon,
+    super(sitePolygon, {
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
       indicators,

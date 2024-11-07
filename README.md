@@ -17,6 +17,8 @@ Repository for the Microservices API backend of the TerraMatch service
    * The default maximum number of services it can run in parallel is 3. To run all of the services at once, use something like
      `nx run-many --parallel=100 -t serve`, or you can cherry-pick which services you want to run instead with
      `nx run-many -t serve --projects user-service jobs-service`.
+ * Some useful targets have been added to the root `package.json` for service sets. For instance, to run just the services needed
+   by the TM React front end, use `npm run fe-services`, or to run all use `npm run all`.
  * In `.env` in your `wri-terramatch-website` repository, set your BE connection URL correctly by noting the config
    in `.env.local.sample` for local development.
    * The `NEXT_PUBLIC_API_BASE_URL` still points at the PHP BE directly

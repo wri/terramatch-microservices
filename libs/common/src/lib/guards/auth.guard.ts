@@ -21,13 +21,17 @@ export class AuthGuard implements CanActivate {
     const [type, token] = request.headers.authorization?.split(" ") ?? [];
     if (type !== "Bearer" || token == null) throw new UnauthorizedException();
 
-    const userId = (await this.getJwtUserId(token)) ?? (await this.getApiKeyUserId(token));
+    const userId = this.isJwtToken(token) ? await this.getJwtUserId(token) : await this.getApiKeyUserId(token);
     if (userId == null) throw new UnauthorizedException();
 
     // Most requests won't need the actual user object; instead the roles and permissions
     // are fetched from other (smaller) tables, and only the user id is needed.
     request.authenticatedUserId = userId;
     return true;
+  }
+
+  private isJwtToken(token: string) {
+    return this.jwtService.decode(token) != null;
   }
 
   private async getJwtUserId(token: string) {

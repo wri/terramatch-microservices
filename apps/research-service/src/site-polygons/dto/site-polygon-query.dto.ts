@@ -13,7 +13,8 @@ class Page {
     description: "The size of page being requested",
     minimum: 1,
     maximum: 100,
-    default: 100
+    default: 100,
+    required: false
   })
   @IsOptional()
   @IsInt()
@@ -21,6 +22,7 @@ class Page {
 
   @ApiProperty({
     name: "page[after]",
+    required: false,
     description:
       "The last record before the page being requested. The value is a polygon UUID. If not provided, the first page is returned."
   })
@@ -33,6 +35,7 @@ export class SitePolygonQueryDto {
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",
     isArray: true,
+    required: false,
     description: "Filter results by polygon status"
   })
   @IsOptional()
@@ -42,6 +45,7 @@ export class SitePolygonQueryDto {
   @ApiProperty({
     name: "projectId[]",
     isArray: true,
+    required: false,
     description: "Filter results by project UUID(s)"
   })
   @IsOptional()
@@ -52,24 +56,29 @@ export class SitePolygonQueryDto {
     enum: INDICATOR_SLUGS,
     name: "missingIndicator[]",
     isArray: true,
+    required: false,
     description: "Filter results by polygons that are missing at least one of the indicators listed"
   })
   @IsOptional()
   @IsArray()
   missingIndicator?: IndicatorSlug[];
 
-  @ApiProperty({ description: "Filter results by polygons that have been modified since the date provided" })
+  @ApiProperty({
+    required: false,
+    description: "Filter results by polygons that have been modified since the date provided"
+  })
   @IsOptional()
   @IsDate()
   lastModifiedDate?: Date;
 
   @ApiProperty({
+    required: false,
     description: "Filter results by polygons that are within the boundary of the polygon referenced by this UUID"
   })
   @IsOptional()
   boundaryPolygon?: string;
 
-  @ApiProperty({ name: "page", description: "Pagination information" })
+  @ApiProperty({ name: "page", required: false, description: "Pagination information" })
   @ValidateNested()
   @IsOptional()
   page?: Page;

@@ -15,6 +15,7 @@ class SitePolygonQueryBuilder {
       "indicatorsTreeCount",
       "indicatorsTreeCover",
       "indicatorsTreeCoverLoss",
+      "polygon",
       {
         model: Site,
         include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }]

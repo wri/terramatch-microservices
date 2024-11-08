@@ -11,6 +11,7 @@ import {
 } from "./indicators.dto";
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Polygon } from "geojson";
 
 export type IndicatorDto =
   | IndicatorTreeCoverLossDto
@@ -47,6 +48,7 @@ export class ReportingPeriodDto {
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   constructor(
     sitePolygon: SitePolygon,
+    geometry: Polygon,
     indicators: IndicatorDto[],
     establishmentTreeSpecies: TreeSpeciesDto[],
     reportingPeriods: ReportingPeriodDto[]
@@ -55,6 +57,7 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
       ...pickApiProperties(sitePolygon, SitePolygonDto),
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
+      geometry,
       indicators,
       establishmentTreeSpecies,
       reportingPeriods
@@ -67,8 +70,13 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   @ApiProperty({ enum: POLYGON_STATUSES })
   status: PolygonStatus;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "If this ID points to a deleted site, the tree species and reporting period will be empty."
+  })
   siteId: string;
+
+  @ApiProperty()
+  geometry: Polygon;
 
   @ApiProperty({ nullable: true })
   plantStart: Date | null;

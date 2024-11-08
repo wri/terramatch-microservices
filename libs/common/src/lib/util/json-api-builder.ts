@@ -22,11 +22,26 @@ export type Resource = {
   id: string;
   attributes: Attributes;
   relationships?: Relationships;
+  meta?: ResourceMeta;
+};
+
+type DocumentMeta = {
+  page?: {
+    cursor?: string;
+    total: number;
+  };
+};
+
+type ResourceMeta = {
+  page?: {
+    cursor: string;
+  };
 };
 
 export type JsonApiDocument = {
   data: Resource | Resource[];
   included?: Resource | Resource[];
+  meta?: DocumentMeta;
 };
 
 export class ResourceBuilder {
@@ -77,15 +92,27 @@ export class ResourceBuilder {
       resource.relationships = this.relationships;
     }
 
+    if (this.documentBuilder.options?.pagination) {
+      resource.meta = {
+        page: { cursor: this.id }
+      };
+    }
+
     return resource;
   }
 }
 
 export class ApiBuilderException extends Error {}
 
+type DocumentBuilderOptions = {
+  pagination?: boolean;
+};
+
 class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
+
+  constructor(public readonly options?: DocumentBuilderOptions) {}
 
   addData(id: string, attributes: any): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes, this);
@@ -129,8 +156,20 @@ class DocumentBuilder {
       doc.included = this.included.map(resource => resource.serialize());
     }
 
+    const meta: DocumentMeta = {};
+    if (this.options?.pagination) {
+      meta.page = {
+        cursor: this.data[0]?.id,
+        total: this.data.length
+      };
+    }
+
+    if (Object.keys(meta).length > 0) {
+      doc.meta = meta;
+    }
+
     return doc;
   }
 }
 
-export const buildJsonApi = () => new DocumentBuilder();
+export const buildJsonApi = (options?: DocumentBuilderOptions) => new DocumentBuilder(options);

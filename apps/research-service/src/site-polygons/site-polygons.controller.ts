@@ -46,7 +46,7 @@ export class SitePolygonsController {
 
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
-  @JsonApiResponse({ data: { type: SitePolygonDto }, hasMany: true, pagination: true })
+  @JsonApiResponse({ data: { type: SitePolygonDto }, pagination: true })
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
   @ApiException(() => BadRequestException, { description: "Pagination values are invalid." })
   async findMany(@Query() query?: SitePolygonQueryDto): Promise<JsonApiDocument> {
@@ -59,7 +59,7 @@ export class SitePolygonsController {
 
     const queryBuilder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
 
-    const document = buildJsonApi();
+    const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {
       const geometry = await sitePolygon.loadPolygon();
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
@@ -70,6 +70,7 @@ export class SitePolygonsController {
         new SitePolygonDto(sitePolygon, geometry?.polygon, indicators, establishmentTreeSpecies, reportingPeriods)
       );
     }
+
     return document.serialize();
   }
 

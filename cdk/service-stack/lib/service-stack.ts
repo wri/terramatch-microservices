@@ -24,7 +24,8 @@ type Mutable<T> = {
 
 const customizeFargate = (service: string, env: string, props: Mutable<ApplicationLoadBalancedFargateServiceProps>) => {
   if (service === "research-service") {
-    props.cpu = 1024;
+    props.cpu = 2048;
+    props.memoryLimitMiB = 4096;
   }
 
   return props;

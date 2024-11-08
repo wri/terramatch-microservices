@@ -25,7 +25,7 @@ import {
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 
-const DEFAULT_PAGE_SIZE = 100 as const;
+const MAX_PAGE_SIZE = 100 as const;
 
 @Controller("research/v3/sitePolygons")
 @ApiExtraModels(
@@ -45,17 +45,17 @@ export class SitePolygonsController {
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
   @ApiException(() => BadRequestException, { description: "Pagination values are invalid." })
   async findMany(@Query() query?: SitePolygonQueryDto): Promise<JsonApiDocument> {
-    const { size: pageSize = DEFAULT_PAGE_SIZE, after: pageAfter } = query.page ?? {};
-    if (pageSize > DEFAULT_PAGE_SIZE || pageSize < 1) {
+    const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
+    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException("Page size is invalid");
     }
 
-    const builder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
+    const queryBuilder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
 
     const document = buildJsonApi();
-    for (const sitePolygon of await builder.execute()) {
+    for (const sitePolygon of await queryBuilder.execute()) {
       const geometry = await sitePolygon.loadPolygon();
-      const indicators = await this.sitePolygonService.convertIndicators(sitePolygon);
+      const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
       const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
       document.addData(

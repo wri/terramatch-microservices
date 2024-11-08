@@ -52,7 +52,7 @@ export class SitePolygonsService {
     return builder;
   }
 
-  async convertIndicators(sitePolygon: SitePolygon): Promise<IndicatorDto[]> {
+  async getIndicators(sitePolygon: SitePolygon): Promise<IndicatorDto[]> {
     const accessor = new ModelPropertiesAccessor();
     const indicators: IndicatorDto[] = [];
     for (const indicator of await sitePolygon.getIndicators()) {

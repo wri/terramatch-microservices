@@ -24,6 +24,8 @@ import {
 } from "./dto/indicators.dto";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
+import { PolicyService } from "@terramatch-microservices/common";
+import { SitePolygon } from "@terramatch-microservices/database/entities";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -37,7 +39,10 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorMsuCarbonDto
 )
 export class SitePolygonsController {
-  constructor(private readonly sitePolygonService: SitePolygonsService) {}
+  constructor(
+    private readonly sitePolygonService: SitePolygonsService,
+    private readonly policyService: PolicyService
+  ) {}
 
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
@@ -45,6 +50,8 @@ export class SitePolygonsController {
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
   @ApiException(() => BadRequestException, { description: "Pagination values are invalid." })
   async findMany(@Query() query?: SitePolygonQueryDto): Promise<JsonApiDocument> {
+    await this.policyService.authorize("readAll", SitePolygon);
+
     const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
     if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException("Page size is invalid");

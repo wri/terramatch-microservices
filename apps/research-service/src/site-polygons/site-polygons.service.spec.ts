@@ -11,7 +11,8 @@ import {
   SiteReportFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
-import { Indicator, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { Indicator, PolygonGeometry, SitePolygon, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { BadRequestException } from "@nestjs/common";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -81,5 +82,43 @@ describe("SitePolygonsService", () => {
     expect(reportingPeriodsDto.length).toBe(siteReports.length);
     expect(siteReports[0]).toMatchObject(reportingPeriodsDto[0]);
     expect(siteReports[1]).toMatchObject(reportingPeriodsDto[1]);
+  });
+
+  it("should return all polygons when there are fewer than the page size", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+    await SitePolygonFactory.createMany(15);
+    const query = await service.buildQuery(20);
+    const result = await query.execute();
+    expect(result.length).toBe(15);
+  });
+
+  it("should return page size when there are more than the page size", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+    await SitePolygonFactory.createMany(15);
+    const query = await service.buildQuery(10);
+    const result = await query.execute();
+    expect(result.length).toBe(10);
+  });
+
+  it("Should return only the entries after the given entry when pageAfter is provided", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+    await SitePolygonFactory.createMany(15);
+    const first = await SitePolygon.findOne();
+    const query = await service.buildQuery(20, first.uuid);
+    const result = await query.execute();
+    expect(result.length).toBe(14);
+  });
+
+  it("Should throw when pageAfter polygon not found", () => {
+    expect(service.buildQuery(20, "asdfasdf")).rejects.toThrow(BadRequestException);
+  });
+
+  it("Should return empty arrays from utility methods if no associated records exist", async () => {
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: null });
+    expect(await service.getEstablishmentTreeSpecies(sitePolygon)).toEqual([]);
+    expect(await service.getReportingPeriods(sitePolygon)).toEqual([]);
   });
 });

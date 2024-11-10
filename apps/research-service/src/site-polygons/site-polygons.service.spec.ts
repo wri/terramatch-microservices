@@ -7,10 +7,11 @@ import {
   IndicatorOutputTreeCountFactory,
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
-  SitePolygonFactory
+  SitePolygonFactory,
+  SiteReportFactory,
+  TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { Indicator, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { TreeSpeciesFactory } from "@terramatch-microservices/database/factories/tree-species.factory";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -64,5 +65,21 @@ describe("SitePolygonsService", () => {
       expect(dto).not.toBeNull();
       expect(tree).toMatchObject(dto);
     }
+  });
+
+  it("should return all reporting periods", async () => {
+    const sitePolygon = await SitePolygonFactory.create();
+    const site = await sitePolygon.loadSite();
+    await SiteReportFactory.createMany(2, { siteId: site.id });
+    const siteReports = await site.loadSiteReports();
+    await TreeSpeciesFactory.forSiteReport.createMany(3, { speciesableId: siteReports[0].id });
+    await TreeSpeciesFactory.forSiteReport.createMany(5, { speciesableId: siteReports[1].id });
+
+    await siteReports[0].loadTreeSpecies();
+    await siteReports[1].loadTreeSpecies();
+    const reportingPeriodsDto = await service.getReportingPeriods(sitePolygon);
+    expect(reportingPeriodsDto.length).toBe(siteReports.length);
+    expect(siteReports[0]).toMatchObject(reportingPeriodsDto[0]);
+    expect(siteReports[1]).toMatchObject(reportingPeriodsDto[1]);
   });
 });

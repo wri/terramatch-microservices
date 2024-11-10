@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { SiteFactory } from "./site.factory";
 import { FactoryGirl } from "factory-girl-ts";
 import { TreeSpecies } from "../entities";
+import { SiteReportFactory } from "./site-report.factory";
 
 const defaultAttributesFactory = async () => ({
   uuid: crypto.randomUUID(),
@@ -15,10 +16,11 @@ export const TreeSpeciesFactory = {
     ...(await defaultAttributesFactory()),
     speciesableType: "App\\Models\\V2\\Sites\\Site",
     speciesableId: SiteFactory.associate("id")
+  })),
+
+  forSiteReport: FactoryGirl.define(TreeSpecies, async () => ({
+    ...(await defaultAttributesFactory()),
+    speciesableType: "App\\Models\\V2\\Sites\\SiteReport",
+    speciesableId: SiteReportFactory.associate("id")
   }))
 };
-
-// export const TreeSpeciesForSiteReportFactory = TreeSpeciesFactory.extendParams({
-//   speciesableType: "App\\Models\\V2\\Sites\\SiteReport",
-//   speciesableId: SiteReportFactory.associate("id")
-// });

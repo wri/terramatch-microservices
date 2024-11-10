@@ -9,4 +9,6 @@ export * from "./organisation.factory";
 export * from "./polygon-geometry.factory";
 export * from "./site.factory";
 export * from "./site-polygon.factory";
+export * from "./site-report.factory";
+export * from "./tree-species.factory";
 export * from "./user.factory";

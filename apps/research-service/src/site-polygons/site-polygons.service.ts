@@ -6,7 +6,7 @@ import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
 
-class SitePolygonQueryBuilder {
+export class SitePolygonQueryBuilder {
   private findOptions: FindOptions<Attributes<SitePolygon>> = {
     include: [
       "indicatorsFieldMonitoring",

@@ -49,7 +49,7 @@ export class SitePolygonsController {
   @JsonApiResponse({ data: { type: SitePolygonDto }, pagination: true })
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
   @ApiException(() => BadRequestException, { description: "Pagination values are invalid." })
-  async findMany(@Query() query?: SitePolygonQueryDto): Promise<JsonApiDocument> {
+  async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
     const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};

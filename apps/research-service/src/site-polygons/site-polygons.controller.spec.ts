@@ -1,9 +1,11 @@
 import { SitePolygonsController } from "./site-polygons.controller";
-import { SitePolygonQueryBuilder, SitePolygonsService } from "./site-polygons.service";
+import { SitePolygonsService } from "./site-polygons.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotImplementedException, UnauthorizedException } from "@nestjs/common";
+import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
+import { Resource } from "@terramatch-microservices/common/util";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -46,13 +48,19 @@ describe("SitePolygonsController", () => {
 
     it("Returns a valid value if the request is valid", async () => {
       policyService.authorize.mockResolvedValue(undefined);
+      const sitePolygon = await SitePolygonFactory.create();
       const Builder = { execute: jest.fn() };
-      Builder.execute.mockResolvedValue([]);
-      sitePolygonService.buildQuery.mockResolvedValue(Builder as unknown as SitePolygonQueryBuilder);
+      Builder.execute.mockResolvedValue([sitePolygon]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sitePolygonService.buildQuery.mockResolvedValue(Builder as any);
       const result = await controller.findMany({});
       expect(result.meta).not.toBe(null);
-      expect(result.meta.page.total).toBe(0);
-      expect(result.meta.page.cursor).toBeUndefined();
+      expect(result.meta.page.total).toBe(1);
+      expect(result.meta.page.cursor).toBe(sitePolygon.uuid);
+
+      const resources = result.data as Resource[];
+      expect(resources.length).toBe(1);
+      expect(resources[0].id).toBe(sitePolygon.uuid);
     });
   });
 

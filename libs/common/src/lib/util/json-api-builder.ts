@@ -146,9 +146,10 @@ class DocumentBuilder {
   }
 
   serialize(): JsonApiDocument {
+    const singular = this.data.length === 1 && this.options?.pagination !== true;
     const doc: JsonApiDocument = {
       // Data can either be a single object or an array
-      data: this.data.length === 1 ? this.data[0].serialize() : this.data.map(resource => resource.serialize())
+      data: singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize())
     };
 
     if (this.included.length > 0) {

@@ -44,6 +44,7 @@ and main branches.
  * For deployment to AWS:
    * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
    * Add the new service name to the "service" workflow input options in `deploy-service.yml`
+   * Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
    * In AWS:
      * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
        * Set the repo to Immutable

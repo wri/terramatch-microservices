@@ -1,22 +1,35 @@
-import { JsonApiAttributes } from '@terramatch-microservices/common/dto/json-api-attributes';
-import { JsonApiDto } from '@terramatch-microservices/common/decorators';
-import { ApiProperty } from '@nestjs/swagger';
+import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { ApiProperty } from "@nestjs/swagger";
 import {
   IndicatorFieldMonitoringDto,
-  IndicatorHectaresDto, IndicatorMsuCarbonDto,
-  IndicatorTreeCountDto, IndicatorTreeCoverDto,
+  IndicatorHectaresDto,
+  IndicatorMsuCarbonDto,
+  IndicatorTreeCountDto,
+  IndicatorTreeCoverDto,
   IndicatorTreeCoverLossDto
-} from './indicators.dto';
+} from "./indicators.dto";
+import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
+import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Polygon } from "geojson";
 
-class TreeSpecies {
-  @ApiProperty({ example: 'Acacia binervia' })
+export type IndicatorDto =
+  | IndicatorTreeCoverLossDto
+  | IndicatorHectaresDto
+  | IndicatorTreeCountDto
+  | IndicatorTreeCoverDto
+  | IndicatorFieldMonitoringDto
+  | IndicatorMsuCarbonDto;
+
+export class TreeSpeciesDto {
+  @ApiProperty({ example: "Acacia binervia" })
   name: string;
 
-  @ApiProperty({ example: 15000 })
-  amount: number;
+  @ApiProperty({ example: 15000, nullable: true })
+  amount: number | null;
 }
 
-class ReportingPeriod {
+export class ReportingPeriodDto {
   @ApiProperty()
   dueAt: Date;
 
@@ -24,87 +37,95 @@ class ReportingPeriod {
   submittedAt: Date;
 
   @ApiProperty({
-    type: () => TreeSpecies,
+    type: () => TreeSpeciesDto,
     isArray: true,
-    description: 'The tree species reported as planted during this reporting period'
+    description: "The tree species reported as planted during this reporting period"
   })
-  treeSpecies: TreeSpecies[];
+  treeSpecies: TreeSpeciesDto[];
 }
 
-export const POLYGON_STATUSES = [
-  'draft',
-  'submitted',
-  'needs-more-information',
-  'approved'
-];
-export type PolygonStatus = (typeof POLYGON_STATUSES)[number];
-
-@JsonApiDto({ type: 'sitePolygons' })
+@JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
+  constructor(
+    sitePolygon: SitePolygon,
+    geometry: Polygon,
+    indicators: IndicatorDto[],
+    establishmentTreeSpecies: TreeSpeciesDto[],
+    reportingPeriods: ReportingPeriodDto[]
+  ) {
+    super({
+      ...pickApiProperties(sitePolygon, SitePolygonDto),
+      name: sitePolygon.polyName,
+      siteId: sitePolygon.siteUuid,
+      geometry,
+      indicators,
+      establishmentTreeSpecies,
+      reportingPeriods
+    });
+  }
+
   @ApiProperty()
   name: string;
 
   @ApiProperty({ enum: POLYGON_STATUSES })
   status: PolygonStatus;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "If this ID points to a deleted site, the tree species and reporting period will be empty."
+  })
   siteId: string;
 
   @ApiProperty()
-  plantStart: Date;
+  geometry: Polygon;
 
-  @ApiProperty()
-  plantEnd: Date;
+  @ApiProperty({ nullable: true })
+  plantStart: Date | null;
 
-  @ApiProperty()
-  practice: string;
+  @ApiProperty({ nullable: true })
+  plantEnd: Date | null;
 
-  @ApiProperty()
-  targetSys: string;
+  @ApiProperty({ nullable: true })
+  practice: string | null;
 
-  @ApiProperty()
-  distr: string;
+  @ApiProperty({ nullable: true })
+  targetSys: string | null;
 
-  @ApiProperty()
-  numTrees: number;
+  @ApiProperty({ nullable: true })
+  distr: string | null;
 
-  @ApiProperty()
-  calcArea: number;
+  @ApiProperty({ nullable: true })
+  numTrees: number | null;
+
+  @ApiProperty({ nullable: true })
+  calcArea: number | null;
 
   @ApiProperty({
-    type: 'array',
+    type: "array",
     items: {
       oneOf: [
-        { $ref: '#/components/schemas/IndicatorTreeCoverLossDto' },
-        { $ref: '#/components/schemas/IndicatorHectaresDto' },
-        { $ref: '#/components/schemas/IndicatorTreeCountDto' },
-        { $ref: '#/components/schemas/IndicatorTreeCoverDto' },
-        { $ref: '#/components/schemas/IndicatorFieldMonitoringDto' },
-        { $ref: '#/components/schemas/IndicatorMsuCarbonDto' },
+        { $ref: "#/components/schemas/IndicatorTreeCoverLossDto" },
+        { $ref: "#/components/schemas/IndicatorHectaresDto" },
+        { $ref: "#/components/schemas/IndicatorTreeCountDto" },
+        { $ref: "#/components/schemas/IndicatorTreeCoverDto" },
+        { $ref: "#/components/schemas/IndicatorFieldMonitoringDto" },
+        { $ref: "#/components/schemas/IndicatorMsuCarbonDto" }
       ]
     },
-    description: 'All indicators currently recorded for this site polygon'
+    description: "All indicators currently recorded for this site polygon"
   })
-  indicators: (
-    IndicatorTreeCoverLossDto |
-    IndicatorHectaresDto |
-    IndicatorTreeCountDto |
-    IndicatorTreeCoverDto |
-    IndicatorFieldMonitoringDto |
-    IndicatorMsuCarbonDto
-  )[];
+  indicators: IndicatorDto[];
 
   @ApiProperty({
-    type: () => TreeSpecies,
+    type: () => TreeSpeciesDto,
     isArray: true,
-    description: 'The tree species associated with the establishment of the site that this polygon relates to.'
+    description: "The tree species associated with the establishment of the site that this polygon relates to."
   })
-  establishmentTreeSpecies: TreeSpecies[];
+  establishmentTreeSpecies: TreeSpeciesDto[];
 
   @ApiProperty({
-    type: () => ReportingPeriod,
+    type: () => ReportingPeriodDto,
     isArray: true,
-    description: 'Access to reported trees planted for each approved report on this site.'
+    description: "Access to reported trees planted for each approved report on this site."
   })
-  reportingPeriods: ReportingPeriod[];
+  reportingPeriods: ReportingPeriodDto[];
 }

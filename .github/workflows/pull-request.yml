@@ -31,9 +31,7 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - uses: nrwl/nx-set-shas@v4
-
-      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx affected -t lint build
+      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t lint build
 
       - uses: KengoTODA/actions-setup-docker-compose@v1
         with:

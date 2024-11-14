@@ -2,6 +2,14 @@ name: Service Deploy
 run-name: 'Service Deploy [service: ${{ inputs.service }}, env: ${{ inputs.env }}]'
 
 on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      env:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       service:
@@ -9,8 +17,9 @@ on:
         type: choice
         required: true
         options:
-          - user-service
           - job-service
+          - research-service
+          - user-service
       env:
         description: 'Deployment target environment'
         type: choice

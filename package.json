@@ -2,7 +2,11 @@
   "name": "@terramatch-microservices/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "research": "nx run-many -t serve --projects research-service",
+    "fe-services": "nx run-many -t serve --projects user-service job-service",
+    "all": "nx run-many --parallel=100 -t serve"
+  },
   "private": true,
   "dependencies": {
     "@casl/ability": "^6.7.1",
@@ -19,6 +23,9 @@
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "geojson": "^0.5.0",
+    "lodash": "^4.17.21",
+    "luxon": "^3.5.0",
     "mariadb": "^3.3.2",
     "mysql2": "^3.11.2",
     "nestjs-request-context": "^3.0.0",
@@ -46,7 +53,10 @@
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
     "@types/bcryptjs": "^2.4.6",
+    "@types/geojson": "^7946.0.14",
     "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.13",
+    "@types/luxon": "^3.4.2",
     "@types/node": "~18.16.9",
     "@types/supertest": "^6.0.2",
     "@types/validator": "^13.12.2",

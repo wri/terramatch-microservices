@@ -78,6 +78,13 @@ export class SitePolygonQueryDto {
   @IsOptional()
   boundaryPolygon?: string;
 
+  @ApiProperty({
+    required: false,
+    default: false,
+    description: "Include polygons for test projects in the results"
+  })
+  includeTestProjects?: boolean;
+
   @ApiProperty({ name: "page", required: false, description: "Pagination information" })
   @ValidateNested()
   @IsOptional()

@@ -5,6 +5,7 @@ import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-pol
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
+import { PolygonStatus } from "@terramatch-microservices/database/constants";
 
 export class SitePolygonQueryBuilder {
   private siteJoin: IncludeOptions = {
@@ -33,6 +34,11 @@ export class SitePolygonQueryBuilder {
     // avoid joining against the entire project table by doing a quick query first. The number of test projects is small
     const testProjects = await Project.findAll({ where: { isTest: true }, attributes: ["id"] });
     this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
+    return this;
+  }
+
+  filterPolygonStatuses(polygonStatuses: PolygonStatus[]) {
+    this.where({ status: { [Op.in]: polygonStatuses } });
     return this;
   }
 

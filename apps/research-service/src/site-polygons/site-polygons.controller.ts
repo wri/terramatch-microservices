@@ -62,6 +62,10 @@ export class SitePolygonsController {
       await queryBuilder.excludeTestProjects();
     }
 
+    if (query.polygonStatus != null) {
+      queryBuilder.filterPolygonStatuses(query.polygonStatus);
+    }
+
     const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {
       const geometry = await sitePolygon.loadPolygon();

@@ -70,6 +70,10 @@ export class SitePolygonsController {
       queryBuilder.filterPolygonStatuses(query.polygonStatus);
     }
 
+    if (query.lastModifiedDate != null) {
+      queryBuilder.modifiedSince(query.lastModifiedDate);
+    }
+
     const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {
       const geometry = await sitePolygon.loadPolygon();

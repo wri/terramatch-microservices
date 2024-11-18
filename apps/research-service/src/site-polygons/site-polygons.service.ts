@@ -48,6 +48,11 @@ export class SitePolygonQueryBuilder {
     return this;
   }
 
+  modifiedSince(date: Date) {
+    this.where({ updatedAt: { [Op.gte]: date } });
+    return this;
+  }
+
   async pageAfter(pageAfter: string) {
     const sitePolygon = await SitePolygon.findOne({ where: { uuid: pageAfter }, attributes: ["id"] });
     if (sitePolygon == null) throw new BadRequestException("pageAfter polygon not found");

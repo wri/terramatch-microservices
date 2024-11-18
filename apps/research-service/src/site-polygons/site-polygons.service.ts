@@ -42,6 +42,12 @@ export class SitePolygonQueryBuilder {
     return this;
   }
 
+  async filterProjectUuids(projectUuids: string[]) {
+    const filterProjects = await Project.findAll({ where: { uuid: { [Op.in]: projectUuids } }, attributes: ["id"] });
+    this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
+    return this;
+  }
+
   async pageAfter(pageAfter: string) {
     const sitePolygon = await SitePolygon.findOne({ where: { uuid: pageAfter }, attributes: ["id"] });
     if (sitePolygon == null) throw new BadRequestException("pageAfter polygon not found");

@@ -58,7 +58,11 @@ export class SitePolygonsController {
     }
 
     const queryBuilder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
-    if (query.includeTestProjects !== true) {
+
+    // If projectIds are sent, ignore filtering on project is_test flag.
+    if (query.projectId != null) {
+      await queryBuilder.filterProjectUuids(query.projectId);
+    } else if (query.includeTestProjects !== true) {
       await queryBuilder.excludeTestProjects();
     }
 

@@ -46,7 +46,7 @@ export class SitePolygonQueryDto {
     name: "projectId[]",
     isArray: true,
     required: false,
-    description: "Filter results by project UUID(s)"
+    description: "Filter results by project UUID(s). If specified, the includeTestProjects param is ignored"
   })
   @IsOptional()
   @IsArray()
@@ -81,7 +81,8 @@ export class SitePolygonQueryDto {
   @ApiProperty({
     required: false,
     default: false,
-    description: "Include polygons for test projects in the results"
+    description:
+      "Include polygons for test projects in the results. If an explicit list of project UUIDs is included in projectId[], this parameter is ignored."
   })
   includeTestProjects?: boolean;
 

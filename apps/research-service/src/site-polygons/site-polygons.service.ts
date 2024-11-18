@@ -1,12 +1,17 @@
 import { BadRequestException, Injectable, Type } from "@nestjs/common";
-import { Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
-import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
+import { Project, Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
+import { Attributes, FindOptions, IncludeOptions, Op, WhereOptions } from "sequelize";
 import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
 
 export class SitePolygonQueryBuilder {
+  private siteJoin: IncludeOptions = {
+    model: Site,
+    include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }],
+    required: true
+  };
   private findOptions: FindOptions<Attributes<SitePolygon>> = {
     include: [
       "indicatorsFieldMonitoring",
@@ -16,15 +21,19 @@ export class SitePolygonQueryBuilder {
       "indicatorsTreeCover",
       "indicatorsTreeCoverLoss",
       "polygon",
-      {
-        model: Site,
-        include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }]
-      }
+      this.siteJoin
     ]
   };
 
   constructor(pageSize: number) {
     this.findOptions.limit = pageSize;
+  }
+
+  async excludeTestProjects() {
+    // avoid joining against the entire project table by doing a quick query first. The number of test projects is small
+    const testProjects = await Project.findAll({ where: { isTest: true }, attributes: ["id"] });
+    this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
+    return this;
   }
 
   async pageAfter(pageAfter: string) {
@@ -38,9 +47,16 @@ export class SitePolygonQueryBuilder {
     return await SitePolygon.findAll(this.findOptions);
   }
 
-  private where(options: WhereOptions) {
-    if (this.findOptions.where == null) this.findOptions.where = {};
-    Object.assign(this.findOptions.where, options);
+  private where(options: WhereOptions, include?: IncludeOptions) {
+    let where: WhereOptions;
+    if (include != null) {
+      if (include.where == null) include.where = {};
+      where = include.where;
+    } else {
+      if (this.findOptions.where == null) this.findOptions.where = {};
+      where = this.findOptions.where;
+    }
+    Object.assign(where, options);
   }
 }
 

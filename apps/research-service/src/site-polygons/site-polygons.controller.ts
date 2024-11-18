@@ -58,6 +58,9 @@ export class SitePolygonsController {
     }
 
     const queryBuilder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
+    if (query.includeTestProjects !== true) {
+      await queryBuilder.excludeTestProjects();
+    }
 
     const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {

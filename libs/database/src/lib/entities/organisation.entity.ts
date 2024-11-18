@@ -1,27 +1,7 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column,
-  Default,
-  Index,
-  Model,
-  PrimaryKey,
-  Table,
-} from 'sequelize-typescript';
-import {
-  BIGINT,
-  BOOLEAN,
-  DATE,
-  DECIMAL,
-  ENUM,
-  INTEGER,
-  STRING,
-  TEXT,
-  TINYINT,
-  UUID
-} from 'sequelize';
+import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 
-@Table({ tableName: 'organisations', underscored: true })
+@Table({ tableName: "organisations", underscored: true })
 export class Organisation extends Model {
   @PrimaryKey
   @AutoIncrement
@@ -32,7 +12,7 @@ export class Organisation extends Model {
   @Column(UUID)
   uuid: string;
 
-  @Default('draft')
+  @Default("draft")
   @Column(STRING)
   status: string;
 
@@ -44,6 +24,10 @@ export class Organisation extends Model {
   @Column(BOOLEAN)
   private: boolean;
 
+  @Default(false)
+  @Column(BOOLEAN)
+  isTest: boolean;
+
   @AllowNull
   @Column(STRING)
   name: string | null;
@@ -53,11 +37,11 @@ export class Organisation extends Model {
   phone: string | null;
 
   @AllowNull
-  @Column({ type: STRING, field: 'hq_street_1' })
+  @Column({ type: STRING, field: "hq_street_1" })
   hqStreet1: string | null;
 
   @AllowNull
-  @Column({ type: STRING, field: 'hq_street_2' })
+  @Column({ type: STRING, field: "hq_street_2" })
   hqStreet2: string | null;
 
   @AllowNull
@@ -105,7 +89,7 @@ export class Organisation extends Model {
   relevantExperienceYears: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'trees_grown_3year' })
+  @Column({ type: INTEGER({ length: 11 }), field: "trees_grown_3year" })
   treesGrown3Year: number | null;
 
   @AllowNull
@@ -113,7 +97,7 @@ export class Organisation extends Model {
   treesGrownTotal: number | null;
 
   @AllowNull
-  @Column({ type: DECIMAL(8, 2), field: 'ha_restored_3year' })
+  @Column({ type: DECIMAL(8, 2), field: "ha_restored_3year" })
   haRestored3Year: number | null;
 
   @AllowNull
@@ -129,15 +113,15 @@ export class Organisation extends Model {
   finBudgetCurrentYear: number | null;
 
   @AllowNull
-  @Column({ type: DECIMAL(15, 2), field: 'fin_budget_1year' })
+  @Column({ type: DECIMAL(15, 2), field: "fin_budget_1year" })
   finBudget1Year: number | null;
 
   @AllowNull
-  @Column({ type: DECIMAL(15, 2), field: 'fin_budget_2year' })
+  @Column({ type: DECIMAL(15, 2), field: "fin_budget_2year" })
   finBudget2Year: number | null;
 
   @AllowNull
-  @Column({ type: DECIMAL(15, 2), field: 'fin_budget_3year' })
+  @Column({ type: DECIMAL(15, 2), field: "fin_budget_3year" })
   finBudget3Year: number | null;
 
   @AllowNull
@@ -185,7 +169,7 @@ export class Organisation extends Model {
   youngEmployees: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10 }), field: 'over_35_employees' })
+  @Column({ type: INTEGER({ length: 10 }), field: "over_35_employees" })
   over35Employees: number | null;
 
   @AllowNull
@@ -197,27 +181,27 @@ export class Organisation extends Model {
   communityExperience: string | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 10, unsigned: true }), field: 'total_engaged_community_members_3yr' })
+  @Column({ type: INTEGER({ length: 10, unsigned: true }), field: "total_engaged_community_members_3yr" })
   totalEngagedCommunityMembers3Yr: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_women_3yr' })
+  @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_women_3yr" })
   percentEngagedWomen3Yr: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_men_3yr' })
+  @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_men_3yr" })
   percentEngagedMen3Yr: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_under_35_3yr' })
+  @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_under_35_3yr" })
   percentEngagedUnder353Yr: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_over_35_3yr' })
+  @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_over_35_3yr" })
   percentEngagedOver353Yr: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT({ length: 4 }), field: 'percent_engaged_smallholder_3yr' })
+  @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_smallholder_3yr" })
   percentEngagedSmallholder3Yr: number | null;
 
   @AllowNull
@@ -249,7 +233,7 @@ export class Organisation extends Model {
   monitoringEvaluationExperience: string | null;
 
   @AllowNull
-  @Column(TEXT('long'))
+  @Column(TEXT("long"))
   fundingHistory: string | null;
 
   @AllowNull
@@ -264,7 +248,7 @@ export class Organisation extends Model {
   @Column(TEXT)
   engagementYouth: string | null;
 
-  @Default('usd')
+  @Default("usd")
   @Column(STRING)
   currency: string;
 
@@ -277,11 +261,11 @@ export class Organisation extends Model {
   district: string | null;
 
   @AllowNull
-  @Column({ type: TEXT, field: 'account_number_1' })
+  @Column({ type: TEXT, field: "account_number_1" })
   accountNumber1: string | null;
 
   @AllowNull
-  @Column({ type: TEXT, field: 'account_number_2' })
+  @Column({ type: TEXT, field: "account_number_2" })
   accountNumber2: string | null;
 
   @AllowNull
@@ -313,31 +297,31 @@ export class Organisation extends Model {
   detailedInterventionTypes: string | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr" })
   communityMembersEngaged3yr: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_women' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_women" })
   communityMembersEngaged3yrWomen: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_men' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_men" })
   communityMembersEngaged3yrMen: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_youth' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_youth" })
   communityMembersEngaged3yrYouth: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_non_youth' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_non_youth" })
   communityMembersEngaged3yrNonYouth: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_smallholder' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_smallholder" })
   communityMembersEngaged3yrSmallholder: number | null;
 
   @AllowNull
-  @Column({ type: INTEGER({ length: 11 }), field: 'community_members_engaged_3yr_backward_class' })
+  @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_backward_class" })
   communityMembersEngaged3YrBackwardClass: number | null;
 
   @AllowNull
@@ -385,7 +369,7 @@ export class Organisation extends Model {
   fieldStaffSkills: string | null;
 
   @AllowNull
-  @Column({ type: ENUM, values: ['yes', 'no'] })
+  @Column({ type: ENUM, values: ["yes", "no"] })
   fpcCompany: string | null;
 
   @AllowNull
@@ -434,7 +418,7 @@ export class Organisation extends Model {
 
   // field misspelled intentionally to match the current DB schema
   @AllowNull
-  @Column({ type: TEXT, field: 'growith_stage' })
+  @Column({ type: TEXT, field: "growith_stage" })
   growthStage: string | null;
 
   @AllowNull

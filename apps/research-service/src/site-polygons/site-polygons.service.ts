@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Type } from "@nestjs/common";
-import { Project, Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
-import { Attributes, FindOptions, IncludeOptions, literal, Op, WhereOptions } from "sequelize";
+import { PolygonGeometry, Project, Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
+import { Attributes, Filterable, FindOptions, IncludeOptions, literal, Op, WhereOptions } from "sequelize";
 import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
@@ -26,6 +26,10 @@ export class SitePolygonQueryBuilder {
     include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }],
     required: true
   };
+  private polygonJoin: IncludeOptions = {
+    model: PolygonGeometry,
+    required: true
+  };
   private findOptions: FindOptions<Attributes<SitePolygon>> = {
     include: [
       "indicatorsFieldMonitoring",
@@ -34,7 +38,7 @@ export class SitePolygonQueryBuilder {
       "indicatorsTreeCount",
       "indicatorsTreeCover",
       "indicatorsTreeCoverLoss",
-      "polygon",
+      this.polygonJoin,
       this.siteJoin
     ]
   };
@@ -50,14 +54,14 @@ export class SitePolygonQueryBuilder {
     return this;
   }
 
-  filterPolygonStatuses(polygonStatuses?: PolygonStatus[]) {
-    if (polygonStatuses != null) this.where({ status: { [Op.in]: polygonStatuses } });
-    return this;
-  }
-
   async filterProjectUuids(projectUuids: string[]) {
     const filterProjects = await Project.findAll({ where: { uuid: { [Op.in]: projectUuids } }, attributes: ["id"] });
     this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
+    return this;
+  }
+
+  hasStatuses(polygonStatuses?: PolygonStatus[]) {
+    if (polygonStatuses != null) this.where({ status: { [Op.in]: polygonStatuses } });
     return this;
   }
 
@@ -66,7 +70,7 @@ export class SitePolygonQueryBuilder {
     return this;
   }
 
-  filterMissingIndicator(indicatorSlugs?: IndicatorSlug[]) {
+  isMissingIndicators(indicatorSlugs?: IndicatorSlug[]) {
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {
         const table = INDICATOR_TABLES[slug];
@@ -76,9 +80,27 @@ export class SitePolygonQueryBuilder {
           `(SELECT COUNT(*) = 0 from ${table} WHERE indicator_slug = "${slug}" AND site_polygon_id = SitePolygon.id)`
         );
       });
-      // Note: If we end up needing to use this [Op.and] trick for another query in this builder, we'll need
-      // to make where() smart enough to merge arrays of literals on that query  member.
       this.where({ [Op.and]: literals });
+    }
+    return this;
+  }
+
+  async touchesBoundary(polygonUuid?: string) {
+    if (polygonUuid != null) {
+      // This check isn't strictly necessary for constructing the query, but we do want to throw a useful
+      // error to the caller if the polygonUuid doesn't exist, and simply mixing it into the query won't
+      // do it
+      if ((await PolygonGeometry.count({ where: { uuid: polygonUuid } })) === 0) {
+        throw new BadRequestException(`Unrecognized polygon UUID: ${polygonUuid}`);
+      }
+
+      this.where({
+        [Op.and]: [
+          literal(
+            `(SELECT ST_INTERSECTS(polygon.geom, (SELECT geom FROM polygon_geometry WHERE uuid = "${polygonUuid}")))`
+          )
+        ]
+      });
     }
     return this;
   }
@@ -94,16 +116,16 @@ export class SitePolygonQueryBuilder {
     return await SitePolygon.findAll(this.findOptions);
   }
 
-  private where(options: WhereOptions, include?: IncludeOptions) {
-    let where: WhereOptions;
-    if (include != null) {
-      if (include.where == null) include.where = {};
-      where = include.where;
-    } else {
-      if (this.findOptions.where == null) this.findOptions.where = {};
-      where = this.findOptions.where;
+  private where(options: WhereOptions, filterable: Filterable = this.findOptions) {
+    if (filterable.where == null) filterable.where = {};
+
+    const clauses = { ...options };
+    if (clauses[Op.and] != null && filterable.where[Op.and] != null) {
+      // For this builder, we only use arrays of literals with Op.and, so we can simply merge the arrays
+      clauses[Op.and] = [...filterable.where[Op.and], ...clauses[Op.and]];
     }
-    Object.assign(where, options);
+
+    Object.assign(filterable.where, clauses);
   }
 }
 

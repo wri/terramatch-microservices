@@ -73,7 +73,7 @@ export class SitePolygonQueryDto {
 
   @ApiProperty({
     required: false,
-    description: "Filter results by polygons that are within the boundary of the polygon referenced by this UUID"
+    description: "Filter results by polygons that intersect with the boundary of the polygon referenced by this UUID"
   })
   @IsOptional()
   boundaryPolygon?: string;

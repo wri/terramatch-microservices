@@ -58,9 +58,11 @@ export class SitePolygonsController {
     }
 
     const queryBuilder = (await this.sitePolygonService.buildQuery(pageSize, pageAfter))
-      .filterPolygonStatuses(query.polygonStatus)
+      .hasStatuses(query.polygonStatus)
       .modifiedSince(query.lastModifiedDate)
-      .filterMissingIndicator(query.missingIndicator);
+      .isMissingIndicators(query.missingIndicator);
+
+    await queryBuilder.touchesBoundary(query.boundaryPolygon);
 
     // If projectIds are sent, ignore filtering on project is_test flag.
     if (query.projectId != null) {

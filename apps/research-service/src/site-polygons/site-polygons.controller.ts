@@ -74,6 +74,10 @@ export class SitePolygonsController {
       queryBuilder.modifiedSince(query.lastModifiedDate);
     }
 
+    if (query.missingIndicator != null) {
+      queryBuilder.filterMissingIndicator(query.missingIndicator);
+    }
+
     const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {
       const geometry = await sitePolygon.loadPolygon();

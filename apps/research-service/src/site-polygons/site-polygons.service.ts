@@ -1,11 +1,24 @@
 import { BadRequestException, Injectable, Type } from "@nestjs/common";
 import { Project, Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
-import { Attributes, FindOptions, IncludeOptions, Op, WhereOptions } from "sequelize";
+import { Attributes, FindOptions, IncludeOptions, literal, Op, WhereOptions } from "sequelize";
 import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
-import { pick } from "lodash";
-import { PolygonStatus } from "@terramatch-microservices/database/constants";
+import { pick, uniq } from "lodash";
+import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
+
+const INDICATOR_TABLES: { [Slug in IndicatorSlug]: string } = {
+  treeCover: "indicator_output_tree_cover",
+  treeCoverLoss: "indicator_output_tree_cover_loss",
+  treeCoverLossFires: "indicator_output_tree_cover_loss",
+  restorationByEcoRegion: "indicator_output_hectares",
+  restorationByStrategy: "indicator_output_hectares",
+  restorationByLandUse: "indicator_output_hectares",
+  treeCount: "indicator_output_tree_count",
+  earlyTreeVerification: "indicator_output_tree_count",
+  fieldMonitoring: "indicator_output_field_monitoring",
+  msuCarbon: "indicator_output_msu_carbon"
+};
 
 export class SitePolygonQueryBuilder {
   private siteJoin: IncludeOptions = {
@@ -50,6 +63,21 @@ export class SitePolygonQueryBuilder {
 
   modifiedSince(date: Date) {
     this.where({ updatedAt: { [Op.gte]: date } });
+    return this;
+  }
+
+  filterMissingIndicator(indicatorSlugs: IndicatorSlug[]) {
+    const literals = uniq(indicatorSlugs).map(slug => {
+      const table = INDICATOR_TABLES[slug];
+      if (table == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+
+      return literal(
+        `(SELECT COUNT(*) = 0 from ${table} WHERE indicator_slug = "${slug}" AND site_polygon_id = SitePolygon.id)`
+      );
+    });
+    // Note: If we end up needing to use this [Op.and] trick for another query in this builder, we'll need
+    // to make where() smart enough to merge arrays of literals on that query  member.
+    this.where({ [Op.and]: literals });
     return this;
   }
 

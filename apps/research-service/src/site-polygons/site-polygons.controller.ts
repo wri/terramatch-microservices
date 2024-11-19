@@ -57,25 +57,16 @@ export class SitePolygonsController {
       throw new BadRequestException("Page size is invalid");
     }
 
-    const queryBuilder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
+    const queryBuilder = (await this.sitePolygonService.buildQuery(pageSize, pageAfter))
+      .filterPolygonStatuses(query.polygonStatus)
+      .modifiedSince(query.lastModifiedDate)
+      .filterMissingIndicator(query.missingIndicator);
 
     // If projectIds are sent, ignore filtering on project is_test flag.
     if (query.projectId != null) {
       await queryBuilder.filterProjectUuids(query.projectId);
     } else if (query.includeTestProjects !== true) {
       await queryBuilder.excludeTestProjects();
-    }
-
-    if (query.polygonStatus != null) {
-      queryBuilder.filterPolygonStatuses(query.polygonStatus);
-    }
-
-    if (query.lastModifiedDate != null) {
-      queryBuilder.modifiedSince(query.lastModifiedDate);
-    }
-
-    if (query.missingIndicator != null) {
-      queryBuilder.filterMissingIndicator(query.missingIndicator);
     }
 
     const document = buildJsonApi({ pagination: true });

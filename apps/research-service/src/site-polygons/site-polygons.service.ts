@@ -50,8 +50,8 @@ export class SitePolygonQueryBuilder {
     return this;
   }
 
-  filterPolygonStatuses(polygonStatuses: PolygonStatus[]) {
-    this.where({ status: { [Op.in]: polygonStatuses } });
+  filterPolygonStatuses(polygonStatuses?: PolygonStatus[]) {
+    if (polygonStatuses != null) this.where({ status: { [Op.in]: polygonStatuses } });
     return this;
   }
 
@@ -61,23 +61,25 @@ export class SitePolygonQueryBuilder {
     return this;
   }
 
-  modifiedSince(date: Date) {
-    this.where({ updatedAt: { [Op.gte]: date } });
+  modifiedSince(date?: Date) {
+    if (date != null) this.where({ updatedAt: { [Op.gte]: date } });
     return this;
   }
 
-  filterMissingIndicator(indicatorSlugs: IndicatorSlug[]) {
-    const literals = uniq(indicatorSlugs).map(slug => {
-      const table = INDICATOR_TABLES[slug];
-      if (table == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+  filterMissingIndicator(indicatorSlugs?: IndicatorSlug[]) {
+    if (indicatorSlugs != null) {
+      const literals = uniq(indicatorSlugs).map(slug => {
+        const table = INDICATOR_TABLES[slug];
+        if (table == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
-      return literal(
-        `(SELECT COUNT(*) = 0 from ${table} WHERE indicator_slug = "${slug}" AND site_polygon_id = SitePolygon.id)`
-      );
-    });
-    // Note: If we end up needing to use this [Op.and] trick for another query in this builder, we'll need
-    // to make where() smart enough to merge arrays of literals on that query  member.
-    this.where({ [Op.and]: literals });
+        return literal(
+          `(SELECT COUNT(*) = 0 from ${table} WHERE indicator_slug = "${slug}" AND site_polygon_id = SitePolygon.id)`
+        );
+      });
+      // Note: If we end up needing to use this [Op.and] trick for another query in this builder, we'll need
+      // to make where() smart enough to merge arrays of literals on that query  member.
+      this.where({ [Op.and]: literals });
+    }
     return this;
   }
 

@@ -1,5 +1,18 @@
 import { BadRequestException, Injectable, Type } from "@nestjs/common";
-import { PolygonGeometry, Project, Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
+import {
+  IndicatorOutputFieldMonitoring,
+  IndicatorOutputHectares,
+  IndicatorOutputMsuCarbon,
+  IndicatorOutputTreeCount,
+  IndicatorOutputTreeCover,
+  IndicatorOutputTreeCoverLoss,
+  PolygonGeometry,
+  Project,
+  Site,
+  SitePolygon,
+  SiteReport,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import { Attributes, Filterable, FindOptions, IncludeOptions, literal, Op, WhereOptions } from "sequelize";
 import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
@@ -20,25 +33,31 @@ const INDICATOR_TABLES: { [Slug in IndicatorSlug]: string } = {
   msuCarbon: "indicator_output_msu_carbon"
 };
 
+const INDICATOR_EXCLUDE_COLUMNS = ["id", "sitePolygonId", "createdAt", "updatedAt", "deletedAt"];
+
 export class SitePolygonQueryBuilder {
   private siteJoin: IncludeOptions = {
     model: Site,
-    include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }],
-    required: true
-  };
-  private polygonJoin: IncludeOptions = {
-    model: PolygonGeometry,
+    include: [
+      { model: TreeSpecies, attributes: ["name", "amount"] },
+      {
+        model: SiteReport,
+        include: [{ model: TreeSpecies, attributes: ["name", "amount"] }],
+        attributes: ["dueAt", "submittedAt"]
+      }
+    ],
+    attributes: ["projectId"],
     required: true
   };
   private findOptions: FindOptions<Attributes<SitePolygon>> = {
     include: [
-      "indicatorsFieldMonitoring",
-      "indicatorsHectares",
-      "indicatorsMsuCarbon",
-      "indicatorsTreeCount",
-      "indicatorsTreeCover",
-      "indicatorsTreeCoverLoss",
-      this.polygonJoin,
+      { model: IndicatorOutputFieldMonitoring, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
+      { model: IndicatorOutputHectares, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
+      { model: IndicatorOutputMsuCarbon, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
+      { model: IndicatorOutputTreeCount, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
+      { model: IndicatorOutputTreeCover, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
+      { model: IndicatorOutputTreeCoverLoss, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
+      { model: PolygonGeometry, attributes: ["polygon"], required: true },
       this.siteJoin
     ]
   };

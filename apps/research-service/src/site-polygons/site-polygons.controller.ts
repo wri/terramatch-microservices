@@ -48,7 +48,7 @@ export class SitePolygonsController {
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
   @JsonApiResponse({ data: { type: SitePolygonDto }, pagination: true })
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
-  @ApiException(() => BadRequestException, { description: "Pagination values are invalid." })
+  @ApiException(() => BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 

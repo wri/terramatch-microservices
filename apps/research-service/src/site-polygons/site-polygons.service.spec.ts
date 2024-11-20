@@ -1,3 +1,4 @@
+import FakeTimers from "@sinonjs/fake-timers";
 import { SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import {
@@ -7,12 +8,16 @@ import {
   IndicatorOutputTreeCountFactory,
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
+  ProjectFactory,
+  SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { Indicator, PolygonGeometry, SitePolygon, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common";
+import { faker } from "@faker-js/faker";
+import { DateTime } from "luxon";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -120,5 +125,145 @@ describe("SitePolygonsService", () => {
     const sitePolygon = await SitePolygonFactory.create({ siteUuid: null });
     expect(await service.getEstablishmentTreeSpecies(sitePolygon)).toEqual([]);
     expect(await service.getReportingPeriods(sitePolygon)).toEqual([]);
+  });
+
+  it("Should filter out test projects", async () => {
+    await SitePolygon.truncate();
+    const project1 = await ProjectFactory.create({ isTest: true });
+    const site1 = await SiteFactory.create({ projectId: project1.id });
+    const project2 = await ProjectFactory.create();
+    const site2 = await SiteFactory.create({ projectId: project2.id });
+    const poly1 = await SitePolygonFactory.create({ siteUuid: site1.uuid });
+    const poly2 = await SitePolygonFactory.create({ siteUuid: site2.uuid });
+
+    let query = await service.buildQuery(20);
+    await query.excludeTestProjects();
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly2.id);
+
+    query = await service.buildQuery(20);
+    result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
+  });
+
+  it("Should only include given projects", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const poly1 = await SitePolygonFactory.create({ siteUuid: site.uuid });
+    const poly2 = await SitePolygonFactory.create();
+
+    let query = await service.buildQuery(20);
+    await query.filterProjectUuids([project.uuid]);
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly1.id);
+
+    query = await service.buildQuery(20);
+    result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
+  });
+
+  it("should only include polys with the given statuses", async () => {
+    await SitePolygon.truncate();
+    const draftPoly = await SitePolygonFactory.create({ status: "draft" });
+    const submittedPoly = await SitePolygonFactory.create({ status: "submitted" });
+    const approvedPoly = await SitePolygonFactory.create({ status: "approved" });
+
+    let query = (await service.buildQuery(20)).hasStatuses(["draft"]);
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(draftPoly.id);
+
+    query = (await service.buildQuery(20)).hasStatuses(["draft", "approved"]);
+    result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual([draftPoly.id, approvedPoly.id].sort());
+
+    query = await service.buildQuery(20);
+    result = await query.execute();
+    expect(result.length).toBe(3);
+    expect(result.map(({ id }) => id).sort()).toEqual([draftPoly.id, submittedPoly.id, approvedPoly.id].sort());
+  });
+
+  it("should only return polys updated since the given date", async () => {
+    // sequelize doesn't support manually setting createdAt or updatedAt, so we have to mess with the
+    // system clock for this test.
+    const clock = FakeTimers.install({ shouldAdvanceTime: true });
+    try {
+      await SitePolygon.truncate();
+      const oldDate = faker.date.past({ years: 1 });
+      const newDate = faker.date.recent();
+      clock.setSystemTime(oldDate);
+      const poly1 = await SitePolygonFactory.create({ status: "draft" });
+      clock.setSystemTime(newDate);
+      const poly2 = await SitePolygonFactory.create();
+
+      let query = (await service.buildQuery(20)).modifiedSince(
+        DateTime.fromJSDate(oldDate).plus({ days: 5 }).toJSDate()
+      );
+      let result = await query.execute();
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe(poly2.id);
+
+      const updateDate = DateTime.fromJSDate(newDate).plus({ days: 1 }).toJSDate();
+      clock.setSystemTime(updateDate);
+      await poly1.update({ status: "submitted" });
+      // The SQL query uses greater than or equal, but in order to get around weirdness with
+      // truncated date precision, we test with a slightly older date time.
+      query = (await service.buildQuery(20)).modifiedSince(
+        DateTime.fromJSDate(updateDate).minus({ minutes: 1 }).toJSDate()
+      );
+      result = await query.execute();
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe(poly1.id);
+
+      query = await service.buildQuery(20);
+      result = await query.execute();
+      expect(result.length).toBe(2);
+      expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
+    } finally {
+      clock.uninstall();
+    }
+  });
+
+  it("should only return polys missing the given indicators", async () => {
+    await SitePolygon.truncate();
+    const poly1 = await SitePolygonFactory.create();
+    await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: poly1.id });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "restorationByLandUse" });
+    const poly2 = await SitePolygonFactory.create();
+    await IndicatorOutputMsuCarbonFactory.create({ sitePolygonId: poly2.id });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly2.id, indicatorSlug: "restorationByLandUse" });
+    const poly3 = await SitePolygonFactory.create();
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly3.id, indicatorSlug: "restorationByStrategy" });
+
+    let query = (await service.buildQuery(20)).isMissingIndicators(["fieldMonitoring"]);
+    let result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly2.id, poly3.id].sort());
+
+    query = (await service.buildQuery(20)).isMissingIndicators(["restorationByLandUse"]);
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly3.id);
+
+    query = (await service.buildQuery(20)).isMissingIndicators(["restorationByStrategy", "msuCarbon"]);
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly1.id);
+
+    query = (await service.buildQuery(20)).isMissingIndicators(["restorationByEcoRegion"]);
+    result = await query.execute();
+    expect(result.length).toBe(3);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+
+    query = await service.buildQuery(20);
+    result = await query.execute();
+    expect(result.length).toBe(3);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
   });
 });

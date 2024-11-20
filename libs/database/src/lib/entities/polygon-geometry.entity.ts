@@ -4,7 +4,7 @@ import { Polygon } from "geojson";
 import { User } from "./user.entity";
 
 @Table({ tableName: "polygon_geometry", underscored: true, paranoid: true })
-export class PolygonGeometry extends Model {
+export class PolygonGeometry extends Model<PolygonGeometry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

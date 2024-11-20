@@ -2,7 +2,7 @@ import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Ta
 import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 
 @Table({ tableName: "organisations", underscored: true })
-export class Organisation extends Model {
+export class Organisation extends Model<Organisation> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

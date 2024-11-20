@@ -4,7 +4,7 @@ import { SitePolygon } from "./site-polygon.entity";
 import { INDICATOR_SLUGS, IndicatorSlug } from "../constants";
 
 @Table({ tableName: "indicator_output_tree_cover", underscored: true, paranoid: true })
-export class IndicatorOutputTreeCover extends Model {
+export class IndicatorOutputTreeCover extends Model<IndicatorOutputTreeCover> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

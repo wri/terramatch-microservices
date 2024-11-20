@@ -25,7 +25,7 @@ import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
-export class User extends Model {
+export class User extends Model<User> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -1,10 +1,10 @@
-import { AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
-import { BIGINT, STRING } from 'sequelize';
-import { Organisation } from './organisation.entity';
-import { User } from './user.entity';
+import { AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, STRING } from "sequelize";
+import { Organisation } from "./organisation.entity";
+import { User } from "./user.entity";
 
-@Table({ tableName: 'organisation_user', underscored: true, timestamps: false })
-export class OrganisationUser extends Model {
+@Table({ tableName: "organisation_user", underscored: true, timestamps: false })
+export class OrganisationUser extends Model<OrganisationUser> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

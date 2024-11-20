@@ -1,9 +1,9 @@
-import { AutoIncrement, Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
-import { BIGINT, STRING } from 'sequelize';
+import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, STRING } from "sequelize";
 
 // A quick stub to get the information needed for users/me
-@Table({ tableName: 'frameworks', underscored: true })
-export class Framework extends Model {
+@Table({ tableName: "frameworks", underscored: true })
+export class Framework extends Model<Framework> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

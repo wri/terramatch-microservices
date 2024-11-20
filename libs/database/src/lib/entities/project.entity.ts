@@ -3,7 +3,7 @@ import { BIGINT, BOOLEAN, STRING, UUID } from "sequelize";
 
 // A quick stub to get the information needed for users/me
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
-export class Project extends Model {
+export class Project extends Model<Project> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

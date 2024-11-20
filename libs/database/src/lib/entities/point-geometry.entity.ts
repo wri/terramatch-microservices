@@ -4,7 +4,7 @@ import { Point } from "geojson";
 import { User } from "./user.entity";
 
 @Table({ tableName: "point_geometry", underscored: true, paranoid: true })
-export class PointGeometry extends Model {
+export class PointGeometry extends Model<PointGeometry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

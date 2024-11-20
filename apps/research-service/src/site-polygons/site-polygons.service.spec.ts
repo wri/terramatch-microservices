@@ -8,6 +8,8 @@ import {
   IndicatorOutputTreeCountFactory,
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
+  POLYGON,
+  PolygonGeometryFactory,
   ProjectFactory,
   SiteFactory,
   SitePolygonFactory,
@@ -18,6 +20,7 @@ import { Indicator, PolygonGeometry, SitePolygon, TreeSpecies } from "@terramatc
 import { BadRequestException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
+import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -117,8 +120,8 @@ describe("SitePolygonsService", () => {
     expect(result.length).toBe(14);
   });
 
-  it("Should throw when pageAfter polygon not found", () => {
-    expect(service.buildQuery(20, "asdfasdf")).rejects.toThrow(BadRequestException);
+  it("Should throw when pageAfter polygon not found", async () => {
+    await expect(service.buildQuery(20, "asdfasdf")).rejects.toThrow(BadRequestException);
   });
 
   it("Should return empty arrays from utility methods if no associated records exist", async () => {
@@ -265,5 +268,65 @@ describe("SitePolygonsService", () => {
     result = await query.execute();
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+  });
+
+  it("throws when an indicator slug is invalid", async () => {
+    const query = await service.buildQuery(20);
+    expect(() => query.isMissingIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
+  });
+
+  it("filters polygons by boundary polygon", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+    const sitePoly1 = await SitePolygonFactory.create();
+    const poly2 = await PolygonGeometryFactory.create({
+      polygon: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
+    });
+    const sitePoly2 = await SitePolygonFactory.create({ polygonUuid: poly2.uuid });
+
+    let query = await service.buildQuery(20);
+    await query.touchesBoundary(poly2.uuid);
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(sitePoly2.id);
+
+    query = await service.buildQuery(20);
+    result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual([sitePoly1.id, sitePoly2.id].sort());
+  });
+
+  it("throws when a boundary poly uuid doesn't exist", async () => {
+    const query = await service.buildQuery(20);
+    await expect(query.touchesBoundary("asdf")).rejects.toThrow(BadRequestException);
+  });
+
+  it("Can apply multiple filter types at once", async () => {
+    await SitePolygon.truncate();
+    const project1 = await ProjectFactory.create({ isTest: true });
+    const site1 = await SiteFactory.create({ projectId: project1.id });
+    const project2 = await ProjectFactory.create();
+    const site2 = await SiteFactory.create({ projectId: project2.id });
+    const draftPoly1 = await SitePolygonFactory.create({ siteUuid: site1.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: draftPoly1.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+    const draftPoly2 = await SitePolygonFactory.create({ siteUuid: site2.uuid, status: "draft" });
+    await SitePolygonFactory.create({ siteUuid: site1.uuid, status: "approved" });
+    const approvedPoly2 = await SitePolygonFactory.create({ siteUuid: site2.uuid, status: "approved" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: approvedPoly2.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+
+    const query = (await service.buildQuery(20))
+      .isMissingIndicators(["restorationByStrategy"])
+      .hasStatuses(["draft", "approved"]);
+    await query.filterProjectUuids([project2.uuid]);
+    await query.touchesBoundary(approvedPoly2.polygonUuid);
+    const result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(draftPoly2.id);
   });
 });

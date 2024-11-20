@@ -4,9 +4,9 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotImplementedException, UnauthorizedException } from "@nestjs/common";
-import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
 import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -67,7 +67,7 @@ describe("SitePolygonsController", () => {
 
     it("Returns a valid value if the request is valid", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const sitePolygon = await SitePolygonFactory.create();
+      const sitePolygon = await SitePolygonFactory.build();
       mockQueryBuilder([sitePolygon]);
       const result = await controller.findMany({});
       expect(result.meta).not.toBe(null);

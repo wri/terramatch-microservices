@@ -1,17 +1,8 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column,
-  Default,
-  Index,
-  Model,
-  PrimaryKey,
-  Table,
-} from 'sequelize-typescript';
-import { BIGINT, INTEGER, JSON, STRING, UUID } from 'sequelize';
+import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, INTEGER, JSON, STRING, UUID } from "sequelize";
 
-@Table({ tableName: 'delayed_jobs', underscored: true })
-export class DelayedJob extends Model {
+@Table({ tableName: "delayed_jobs", underscored: true })
+export class DelayedJob extends Model<DelayedJob> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -21,7 +12,7 @@ export class DelayedJob extends Model {
   @Column(UUID)
   uuid: string;
 
-  @Default('pending')
+  @Default("pending")
   @Column(STRING)
   status: string;
 

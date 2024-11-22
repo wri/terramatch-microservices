@@ -7,6 +7,7 @@ export * from "./indicator-output-tree-cover.factory";
 export * from "./indicator-output-tree-cover-loss.factory";
 export * from "./organisation.factory";
 export * from "./polygon-geometry.factory";
+export * from "./project.factory";
 export * from "./site.factory";
 export * from "./site-polygon.factory";
 export * from "./site-report.factory";

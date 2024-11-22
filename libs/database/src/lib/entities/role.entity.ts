@@ -1,14 +1,8 @@
-import {
-  AutoIncrement,
-  Column,
-  Model,
-  PrimaryKey,
-  Table,
-} from 'sequelize-typescript';
-import { BIGINT, STRING } from 'sequelize';
+import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, STRING } from "sequelize";
 
-@Table({ tableName: 'roles', underscored: true })
-export class Role extends Model {
+@Table({ tableName: "roles", underscored: true })
+export class Role extends Model<Role> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -64,7 +64,7 @@ export class SitePolygonsService {
     const { indicatorSlug, yearOfAnalysis } = indicator;
     const IndicatorClass = INDICATOR_MODEL_CLASSES[indicatorSlug];
     if (IndicatorClass == null) {
-      throw new BadRequestException(`Model not found for indicator: ${indicator.indicatorSlug}`);
+      throw new BadRequestException(`Model not found for indicator: ${indicatorSlug}`);
     }
 
     const model =

@@ -56,12 +56,12 @@ export class SitePolygonsService {
 
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
     const accessor = new ModelPropertiesAccessor();
-    const { indicatorSlug, yearOfAnalysis } = indicator;
     const { id: sitePolygonId } = (await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } })) ?? {};
     if (sitePolygonId == null) {
       throw new NotFoundException(`SitePolygon not found for id: ${sitePolygonUuid}`);
     }
 
+    const { indicatorSlug, yearOfAnalysis } = indicator;
     const IndicatorClass = INDICATOR_MODEL_CLASSES[indicatorSlug];
     if (IndicatorClass == null) {
       throw new BadRequestException(`Model not found for indicator: ${indicator.indicatorSlug}`);
@@ -75,7 +75,7 @@ export class SitePolygonsService {
     if (model.sitePolygonId == null) model.sitePolygonId = sitePolygonId;
 
     const DtoPrototype = INDICATOR_DTOS[indicatorSlug];
-    const fields = accessor.getModelProperties(DtoPrototype as unknown as Type<unknown>);
+    const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
     Object.assign(model, pick(indicator, fields));
     await model.save({ transaction });
   }

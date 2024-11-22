@@ -3,10 +3,12 @@ import { SitePolygonsService } from "./site-polygons.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
-import { BadRequestException, NotImplementedException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
+import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
+import { Transaction } from "sequelize";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -108,8 +110,60 @@ describe("SitePolygonsController", () => {
   });
 
   describe("bulkUpdate", () => {
-    it("Should throw", async () => {
-      await expect(controller.bulkUpdate(null)).rejects.toThrow(NotImplementedException);
+    it("Should authorize", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.bulkUpdate(null)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should use a transaction for updates", async () => {
+      const transaction = {} as Transaction;
+      sitePolygonService.updateIndicator.mockResolvedValue();
+      sitePolygonService.transaction.mockImplementation(callback => callback(transaction));
+      const indicator = {
+        indicatorSlug: "restorationByLandUse",
+        yearOfAnalysis: 2025,
+        value: {
+          "Northern Acacia-Commiphora bushlands and thickets": 0.114
+        }
+      };
+      const payload = {
+        data: [{ type: "sitePolygons", id: "1234", attributes: { indicators: [indicator] } }]
+      } as SitePolygonBulkUpdateBodyDto;
+      await controller.bulkUpdate(payload);
+      expect(sitePolygonService.updateIndicator).toHaveBeenCalledWith("1234", indicator, transaction);
+    });
+
+    it("should call update for each indicator in the payload", async () => {
+      const transaction = {} as Transaction;
+      sitePolygonService.updateIndicator.mockResolvedValue();
+      sitePolygonService.transaction.mockImplementation(callback => callback(transaction));
+      const indicator1 = {
+        indicatorSlug: "restorationByLandUse",
+        yearOfAnalysis: 2025,
+        value: {
+          "Northern Acacia-Commiphora bushlands and thickets": 0.114
+        }
+      };
+      const indicator2 = {
+        indicatorSlug: "treeCoverLoss",
+        yearOfAnalysis: 2025,
+        value: {
+          "2023": 0.45,
+          "2024": 0.6,
+          "2025": 0.8
+        }
+      };
+      const payload = {
+        data: [
+          { type: "sitePolygons", id: "1234", attributes: { indicators: [indicator1, indicator2] } },
+          { type: "sitePolygons", id: "2345", attributes: { indicators: [indicator2] } }
+        ]
+      } as SitePolygonBulkUpdateBodyDto;
+      await controller.bulkUpdate(payload);
+      expect(sitePolygonService.updateIndicator).toHaveBeenCalledTimes(3);
+      expect(sitePolygonService.updateIndicator).toHaveBeenNthCalledWith(1, "1234", indicator1, transaction);
+      expect(sitePolygonService.updateIndicator).toHaveBeenNthCalledWith(2, "1234", indicator2, transaction);
+      expect(sitePolygonService.updateIndicator).toHaveBeenNthCalledWith(3, "2345", indicator2, transaction);
     });
   });
 });

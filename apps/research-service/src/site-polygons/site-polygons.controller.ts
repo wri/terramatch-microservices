@@ -105,7 +105,6 @@ export class SitePolygonsController {
       const updates: Promise<void>[] = [];
       for (const update of updatePayload.data) {
         for (const indicator of update.attributes.indicators) {
-          console.log("FOUND INDICATOR", indicator);
           updates.push(this.sitePolygonService.updateIndicator(update.id, indicator, transaction));
         }
       }

@@ -46,7 +46,7 @@ jobs:
       # in a clean way. For some reason, the `run-many` is necessary here. If this line simply uses
       # nx test database, the connection to the DB gets cut off before the sync is complete.
       - name: Sync DB Schema
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test database
+        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test database --no-cache
 
       - name: Test all
         run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests

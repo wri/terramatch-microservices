@@ -3,7 +3,7 @@ import {
   Body,
   Controller,
   Get,
-  NotImplementedException,
+  NotFoundException,
   Patch,
   Query,
   UnauthorizedException
@@ -96,7 +96,20 @@ export class SitePolygonsController {
   })
   @ApiOkResponse()
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
+  @ApiException(() => BadRequestException, { description: "One or more of the data payload members has a problem." })
+  @ApiException(() => NotFoundException, { description: "A site polygon specified in the data was not found." })
   async bulkUpdate(@Body() updatePayload: SitePolygonBulkUpdateBodyDto): Promise<void> {
-    throw new NotImplementedException();
+    await this.policyService.authorize("updateAll", SitePolygon);
+
+    await this.sitePolygonService.transaction(async transaction => {
+      const updates: Promise<void>[] = [];
+      for (const update of updatePayload.data) {
+        for (const indicator of update.attributes.indicators) {
+          updates.push(this.sitePolygonService.updateIndicator(update.id, indicator, transaction));
+        }
+      }
+
+      await Promise.all(updates);
+    });
   }
 }

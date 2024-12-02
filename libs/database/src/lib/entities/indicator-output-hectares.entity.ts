@@ -4,7 +4,7 @@ import { SitePolygon } from "./site-polygon.entity";
 import { INDICATOR_SLUGS, IndicatorSlug } from "../constants";
 
 @Table({ tableName: "indicator_output_hectares", underscored: true, paranoid: true })
-export class IndicatorOutputHectares extends Model {
+export class IndicatorOutputHectares extends Model<IndicatorOutputHectares> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

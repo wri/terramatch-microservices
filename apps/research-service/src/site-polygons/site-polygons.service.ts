@@ -1,48 +1,11 @@
-import { BadRequestException, Injectable, Type } from "@nestjs/common";
-import { Site, SitePolygon, SiteReport } from "@terramatch-microservices/database/entities";
-import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
+import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
+import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
-
-export class SitePolygonQueryBuilder {
-  private findOptions: FindOptions<Attributes<SitePolygon>> = {
-    include: [
-      "indicatorsFieldMonitoring",
-      "indicatorsHectares",
-      "indicatorsMsuCarbon",
-      "indicatorsTreeCount",
-      "indicatorsTreeCover",
-      "indicatorsTreeCoverLoss",
-      "polygon",
-      {
-        model: Site,
-        include: ["treeSpecies", { model: SiteReport, include: ["treeSpecies"] }]
-      }
-    ]
-  };
-
-  constructor(pageSize: number) {
-    this.findOptions.limit = pageSize;
-  }
-
-  async pageAfter(pageAfter: string) {
-    const sitePolygon = await SitePolygon.findOne({ where: { uuid: pageAfter }, attributes: ["id"] });
-    if (sitePolygon == null) throw new BadRequestException("pageAfter polygon not found");
-    this.where({ id: { [Op.gt]: sitePolygon.id } });
-    return this;
-  }
-
-  async execute(): Promise<SitePolygon[]> {
-    return await SitePolygon.findAll(this.findOptions);
-  }
-
-  private where(options: WhereOptions) {
-    if (this.findOptions.where == null) this.findOptions.where = {};
-    Object.assign(this.findOptions.where, options);
-  }
-}
+import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
+import { Transaction } from "sequelize";
 
 @Injectable()
 export class SitePolygonsService {
@@ -57,8 +20,8 @@ export class SitePolygonsService {
     const indicators: IndicatorDto[] = [];
     for (const indicator of await sitePolygon.getIndicators()) {
       const DtoPrototype = INDICATOR_DTOS[indicator.indicatorSlug];
-      const fields = accessor.getModelProperties(DtoPrototype as unknown as Type<unknown>);
-      indicators.push(pick(indicator, fields) as typeof DtoPrototype);
+      const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
+      indicators.push(pick(indicator, fields) as typeof DtoPrototype.prototype);
     }
 
     return indicators;
@@ -89,5 +52,43 @@ export class SitePolygonsService {
     }
 
     return reportingPeriods;
+  }
+
+  async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
+    const accessor = new ModelPropertiesAccessor();
+    const { id: sitePolygonId } = (await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } })) ?? {};
+    if (sitePolygonId == null) {
+      throw new NotFoundException(`SitePolygon not found for id: ${sitePolygonUuid}`);
+    }
+
+    const { indicatorSlug, yearOfAnalysis } = indicator;
+    const IndicatorClass = INDICATOR_MODEL_CLASSES[indicatorSlug];
+    if (IndicatorClass == null) {
+      throw new BadRequestException(`Model not found for indicator: ${indicatorSlug}`);
+    }
+
+    const model =
+      // @ts-expect-error The compiler is getting confused here; this is legal.
+      (await IndicatorClass.findOne({
+        where: { sitePolygonId, indicatorSlug, yearOfAnalysis }
+      })) ?? new IndicatorClass();
+    if (model.sitePolygonId == null) model.sitePolygonId = sitePolygonId;
+
+    const DtoPrototype = INDICATOR_DTOS[indicatorSlug];
+    const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
+    Object.assign(model, pick(indicator, fields));
+    await model.save({ transaction });
+  }
+
+  async transaction<TReturn>(callback: (transaction: Transaction) => Promise<TReturn>) {
+    const transaction = await SitePolygon.sequelize.transaction();
+    try {
+      const result = await callback(transaction);
+      await transaction.commit();
+      return result;
+    } catch (e) {
+      await transaction.rollback();
+      throw e;
+    }
   }
 }

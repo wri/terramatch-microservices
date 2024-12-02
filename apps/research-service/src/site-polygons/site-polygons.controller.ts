@@ -3,7 +3,7 @@ import {
   Body,
   Controller,
   Get,
-  NotImplementedException,
+  NotFoundException,
   Patch,
   Query,
   UnauthorizedException
@@ -48,7 +48,7 @@ export class SitePolygonsController {
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
   @JsonApiResponse({ data: { type: SitePolygonDto }, pagination: true })
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
-  @ApiException(() => BadRequestException, { description: "Pagination values are invalid." })
+  @ApiException(() => BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
@@ -57,7 +57,19 @@ export class SitePolygonsController {
       throw new BadRequestException("Page size is invalid");
     }
 
-    const queryBuilder = await this.sitePolygonService.buildQuery(pageSize, pageAfter);
+    const queryBuilder = (await this.sitePolygonService.buildQuery(pageSize, pageAfter))
+      .hasStatuses(query.polygonStatus)
+      .modifiedSince(query.lastModifiedDate)
+      .isMissingIndicators(query.missingIndicator);
+
+    await queryBuilder.touchesBoundary(query.boundaryPolygon);
+
+    // If projectIds are sent, ignore filtering on project is_test flag.
+    if (query.projectId != null) {
+      await queryBuilder.filterProjectUuids(query.projectId);
+    } else if (query.includeTestProjects !== true) {
+      await queryBuilder.excludeTestProjects();
+    }
 
     const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {
@@ -84,7 +96,20 @@ export class SitePolygonsController {
   })
   @ApiOkResponse()
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
+  @ApiException(() => BadRequestException, { description: "One or more of the data payload members has a problem." })
+  @ApiException(() => NotFoundException, { description: "A site polygon specified in the data was not found." })
   async bulkUpdate(@Body() updatePayload: SitePolygonBulkUpdateBodyDto): Promise<void> {
-    throw new NotImplementedException();
+    await this.policyService.authorize("updateAll", SitePolygon);
+
+    await this.sitePolygonService.transaction(async transaction => {
+      const updates: Promise<void>[] = [];
+      for (const update of updatePayload.data) {
+        for (const indicator of update.attributes.indicators) {
+          updates.push(this.sitePolygonService.updateIndicator(update.id, indicator, transaction));
+        }
+      }
+
+      await Promise.all(updates);
+    });
   }
 }

@@ -4,7 +4,7 @@ import { SitePolygon } from "./site-polygon.entity";
 import { INDICATOR_SLUGS, IndicatorSlug } from "../constants";
 
 @Table({ tableName: "indicator_output_field_monitoring", underscored: true, paranoid: true })
-export class IndicatorOutputFieldMonitoring extends Model {
+export class IndicatorOutputFieldMonitoring extends Model<IndicatorOutputFieldMonitoring> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

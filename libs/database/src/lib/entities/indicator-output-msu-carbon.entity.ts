@@ -4,7 +4,7 @@ import { SitePolygon } from "./site-polygon.entity";
 import { INDICATOR_SLUGS, IndicatorSlug } from "../constants";
 
 @Table({ tableName: "indicator_output_msu_carbon", underscored: true, paranoid: true })
-export class IndicatorOutputMsuCarbon extends Model {
+export class IndicatorOutputMsuCarbon extends Model<IndicatorOutputMsuCarbon> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

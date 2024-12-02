@@ -1,48 +1,55 @@
-import { ApiProperty } from '@nestjs/swagger';
-import {
-  IndicatorFieldMonitoringDto,
-  IndicatorHectaresDto, IndicatorMsuCarbonDto,
-  IndicatorTreeCountDto, IndicatorTreeCoverDto,
-  IndicatorTreeCoverLossDto
-} from './indicators.dto';
+import { ApiProperty } from "@nestjs/swagger";
+import { IndicatorDto } from "./site-polygon.dto";
+import { Equals, IsArray, IsUUID, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { INDICATOR_DTOS } from "./indicators.dto";
 
 class SitePolygonUpdateAttributes {
+  @IsArray()
+  @ValidateNested()
+  @Type(() => Object, {
+    keepDiscriminatorProperty: true,
+    discriminator: {
+      property: "indicatorSlug",
+      subTypes: Object.entries(INDICATOR_DTOS).map(([name, value]) => ({ name, value }))
+    }
+  })
   @ApiProperty({
-    type: 'array',
+    type: "array",
     items: {
       oneOf: [
-        { $ref: '#/components/schemas/IndicatorTreeCoverLossDto' },
-        { $ref: '#/components/schemas/IndicatorHectaresDto' },
-        { $ref: '#/components/schemas/IndicatorTreeCountDto' },
-        { $ref: '#/components/schemas/IndicatorTreeCoverDto' },
-        { $ref: '#/components/schemas/IndicatorFieldMonitoringDto' },
-        { $ref: '#/components/schemas/IndicatorMsuCarbonDto' },
+        { $ref: "#/components/schemas/IndicatorTreeCoverLossDto" },
+        { $ref: "#/components/schemas/IndicatorHectaresDto" },
+        { $ref: "#/components/schemas/IndicatorTreeCountDto" },
+        { $ref: "#/components/schemas/IndicatorTreeCoverDto" },
+        { $ref: "#/components/schemas/IndicatorFieldMonitoringDto" },
+        { $ref: "#/components/schemas/IndicatorMsuCarbonDto" }
       ]
     },
-    description: 'All indicators to update for this polygon'
+    description: "All indicators to update for this polygon"
   })
-  indicators: (
-    IndicatorTreeCoverLossDto |
-    IndicatorHectaresDto |
-    IndicatorTreeCountDto |
-    IndicatorTreeCoverDto |
-    IndicatorFieldMonitoringDto |
-    IndicatorMsuCarbonDto
-  )[];
+  indicators: IndicatorDto[];
 }
 
 class SitePolygonUpdate {
-  @ApiProperty({ enum: ['sitePolygons'] })
-  type: 'sitePolygons';
+  @Equals("sitePolygons")
+  @ApiProperty({ enum: ["sitePolygons"] })
+  type: string;
 
-  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  @ApiProperty({ format: "uuid" })
   id: string;
 
+  @ValidateNested()
+  @Type(() => SitePolygonUpdateAttributes)
   @ApiProperty({ type: () => SitePolygonUpdateAttributes })
   attributes: SitePolygonUpdateAttributes;
 }
 
 export class SitePolygonBulkUpdateBodyDto {
+  @IsArray()
+  @ValidateNested()
+  @Type(() => SitePolygonUpdate)
   @ApiProperty({ isArray: true, type: () => SitePolygonUpdate })
   data: SitePolygonUpdate[];
 }

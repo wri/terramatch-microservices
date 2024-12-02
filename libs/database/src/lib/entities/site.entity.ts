@@ -1,7 +1,8 @@
-import { AutoIncrement, Column, HasMany, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AutoIncrement, Column, ForeignKey, HasMany, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
+import { Project } from "./project.entity";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -14,6 +15,10 @@ export class Site extends Model<Site> {
   @Index
   @Column(UUID)
   uuid: string;
+
+  @ForeignKey(() => Project)
+  @Column(BIGINT.UNSIGNED)
+  projectId: number;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

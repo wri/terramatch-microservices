@@ -3,7 +3,7 @@ import { PolygonGeometry } from "../entities";
 import { UserFactory } from "./user.factory";
 
 // The shortest polygon defined in the prod DB as of the writing of this test.
-const POLYGON = {
+export const POLYGON = {
   type: "Polygon",
   coordinates: [
     [

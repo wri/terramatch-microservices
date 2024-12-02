@@ -33,7 +33,7 @@ export type Indicator =
   | IndicatorOutputMsuCarbon;
 
 @Table({ tableName: "site_polygon", underscored: true, paranoid: true })
-export class SitePolygon extends Model {
+export class SitePolygon extends Model<SitePolygon> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

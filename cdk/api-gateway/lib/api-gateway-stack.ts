@@ -17,7 +17,8 @@ import { Stack, StackProps } from "aws-cdk-lib";
 const V3_SERVICES = {
   "user-service": ["auth", "users"],
   "job-service": ["jobs"],
-  "research-service": ["research"]
+  "research-service": ["research"],
+  "unified-database-service": ["unified-database"]
 };
 
 const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {

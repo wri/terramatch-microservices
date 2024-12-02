@@ -26,12 +26,14 @@ jobs:
       job-service-enabled: ${{ steps.check-services.outputs.job }}
       user-service-enabled: ${{ steps.check-services.outputs.user }}
       research-service-enabled: ${{ steps.check-services.outputs.research }}
+      unified-database-service-enabled: ${{ steps.check-services.outputs.unified-database }}
     steps:
       - id: check-services
         run: |
           echo "job=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'job-service') }}" >> "$GITHUB_OUTPUT"
           echo "user=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'user-service') }}" >> "$GITHUB_OUTPUT"
           echo "research=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'research-service') }}" >> "$GITHUB_OUTPUT"
+          echo "unified-database=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'unified-database-service') }}" >> "$GITHUB_OUTPUT"
 
   job-service:
     needs: check-services
@@ -61,4 +63,11 @@ jobs:
       service: research-service
     secrets: inherit
 
-
+  unified-database-service:
+    needs: check-services
+    if: needs.check-services.outputs.unified-database-service-enabled == 'true'
+    uses: ./.github/workflows/deploy-service.yml
+    with:
+      env: ${{ inputs.env }}
+      service: unified-database-service
+    secrets: inherit

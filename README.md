@@ -41,10 +41,12 @@ and main branches.
  * In your `.env` and `.env.local.sample`, add `_PORT` for the new service
  * In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
  * In your local web repo, follow directions in `README.md` for setting up a new service.
+   * This step can be skipped for services that will not be used by the FE website.
  * For deployment to AWS:
    * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
    * Add the new service name to the "service" workflow input options in `deploy-service.yml`
    * Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
+     * Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.
    * In AWS:
      * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
        * Set the repo to Immutable

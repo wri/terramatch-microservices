@@ -20,6 +20,7 @@ on:
           - job-service
           - research-service
           - user-service
+          - unified-database-service
       env:
         description: 'Deployment target environment'
         type: choice

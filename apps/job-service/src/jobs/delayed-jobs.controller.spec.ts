@@ -32,5 +32,8 @@ describe('DelayedJobsController', () => {
     expect(resource.id).toBe(uuid);
     expect(resource.attributes.statusCode).toBe(statusCode);
     expect(resource.attributes.payload).toMatchObject(payload);
+    expect(resource.attributes.total_content).toBe(payload);
+    expect(resource.attributes.processed_content).toBe(payload);
+    expect(resource.attributes.proccess_message).toBe(payload);
   });
 })

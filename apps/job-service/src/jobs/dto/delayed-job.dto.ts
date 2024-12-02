@@ -10,8 +10,8 @@ type Status = (typeof STATUSES)[number];
 @JsonApiDto({ type: 'delayedJobs' })
 export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   constructor(job: DelayedJob) {
-    const { status, statusCode, payload } = job;
-    super({ status, statusCode, payload });
+    const { status, statusCode, payload, processed_content, total_content } = job;
+    super({ status, statusCode, payload, processed_content, total_content });
   }
 
   @ApiProperty({
@@ -31,4 +31,17 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
     nullable: true
   })
   payload: object | null;
+
+
+  @ApiProperty({
+    description: 'If the job is in progress, this is the total content to process',
+    nullable: true
+  })
+  total_content: number | null;
+
+  @ApiProperty({
+    description: 'If the job is in progress, this is the total content processed',
+    nullable: true
+  })
+  processed_content: number | null;
 }

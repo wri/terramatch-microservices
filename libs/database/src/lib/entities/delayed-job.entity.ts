@@ -32,4 +32,12 @@ export class DelayedJob extends Model {
   @AllowNull
   @Column(JSON)
   payload: object | null;
+
+  @AllowNull
+  @Column(JSON)
+  total_content: number | null;
+
+  @AllowNull
+  @Column(JSON)
+  processed_content: number | null;
 }

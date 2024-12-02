@@ -1,6 +1,7 @@
 import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];

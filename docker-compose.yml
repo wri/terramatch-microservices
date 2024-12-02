@@ -1,4 +1,3 @@
-version: "3"
 services:
   mariadb:
     build:
@@ -13,3 +12,5 @@ services:
       MYSQL_DATABASE: "terramatch_microservices_test"
       MYSQL_USER: "wri"
       MYSQL_PASSWORD: "wri"
+networks:
+  default:

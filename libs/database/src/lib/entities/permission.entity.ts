@@ -1,8 +1,8 @@
-import { AutoIncrement, Column, Model, PrimaryKey, Table } from 'sequelize-typescript';
-import { BIGINT, QueryTypes, STRING } from 'sequelize';
+import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, QueryTypes, STRING } from "sequelize";
 
-@Table({ tableName: 'permissions', underscored: true })
-export class Permission extends Model {
+@Table({ tableName: "permissions", underscored: true })
+export class Permission extends Model<Permission> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -35,8 +35,8 @@ export class Permission extends Model {
             model_has_roles.model_id = :modelId
     `,
       {
-        replacements: { modelType: 'App\\Models\\V2\\User', modelId: userId },
-        type: QueryTypes.SELECT,
+        replacements: { modelType: "App\\Models\\V2\\User", modelId: userId },
+        type: QueryTypes.SELECT
       }
     )) as { name: string }[];
 

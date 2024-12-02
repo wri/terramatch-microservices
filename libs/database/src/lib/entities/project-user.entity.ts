@@ -1,18 +1,10 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column, Default,
-  ForeignKey,
-  Model,
-  PrimaryKey,
-  Table
-} from 'sequelize-typescript';
-import { Project } from './project.entity';
-import { User } from './user.entity';
-import { BIGINT, BOOLEAN, STRING } from 'sequelize';
+import { AllowNull, AutoIncrement, Column, Default, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { Project } from "./project.entity";
+import { User } from "./user.entity";
+import { BIGINT, BOOLEAN, STRING } from "sequelize";
 
-@Table({ tableName: 'v2_project_users', underscored: true })
-export class ProjectUser extends Model {
+@Table({ tableName: "v2_project_users", underscored: true })
+export class ProjectUser extends Model<ProjectUser> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

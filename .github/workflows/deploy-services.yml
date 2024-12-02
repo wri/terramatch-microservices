@@ -19,14 +19,33 @@ permissions:
   contents: read
 
 jobs:
+  check-services:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    outputs:
+      job-service-enabled: ${{ steps.check-services.outputs.job }}
+      user-service-enabled: ${{ steps.check-services.outputs.user }}
+      research-service-enabled: ${{ steps.check-services.outputs.research }}
+    steps:
+      - id: check-services
+        run: |
+          echo "job=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'job-service') }}" >> "$GITHUB_OUTPUT"
+          echo "user=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'user-service') }}" >> "$GITHUB_OUTPUT"
+          echo "research=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'research-service') }}" >> "$GITHUB_OUTPUT"
+
   job-service:
+    needs: check-services
+    if: needs.check-services.outputs.job-service-enabled == 'true'
     uses: ./.github/workflows/deploy-service.yml
     with:
       env: ${{ inputs.env }}
       service: job-service
     secrets: inherit
 
+
   user-service:
+    needs: check-services
+    if: needs.check-services.outputs.user-service-enabled == 'true'
     uses: ./.github/workflows/deploy-service.yml
     with:
       env: ${{ inputs.env }}
@@ -34,6 +53,8 @@ jobs:
     secrets: inherit
 
   research-service:
+    needs: check-services
+    if: needs.check-services.outputs.research-service-enabled == 'true'
     uses: ./.github/workflows/deploy-service.yml
     with:
       env: ${{ inputs.env }}

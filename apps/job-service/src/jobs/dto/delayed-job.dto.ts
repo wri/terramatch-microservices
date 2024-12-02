@@ -31,7 +31,6 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   })
   payload: object | null;
 
-
   @ApiProperty({
     description: 'If the job is in progress, this is the total content to process',
     nullable: true

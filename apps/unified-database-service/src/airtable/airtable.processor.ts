@@ -11,8 +11,16 @@ import { Job } from "bullmq";
 import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import * as inflection from "inflection";
 import { Project } from "@terramatch-microservices/database/entities";
+import { ProjectEntity } from "./entities";
+import { AirtableEntity } from "./entities/airtable-entity";
+import { Model } from "sequelize-typescript";
+import { FieldSet } from "airtable/lib/field_set";
+import { Records } from "airtable/lib/records";
+
+const AIRTABLE_ENTITIES = {
+  project: ProjectEntity
+};
 
 /**
  * Processes jobs in the airtable queue. Note that if we see problems with this crashing or
@@ -37,8 +45,7 @@ export class AirtableProcessor extends WorkerHost {
   async process(job: Job) {
     switch (job.name) {
       case "updateEntities":
-        await this.updateEntities(job.data as UpdateEntitiesData);
-        break;
+        return await this.updateEntities(job.data as UpdateEntitiesData);
 
       default:
         throw new NotImplementedException(`Unknown job type: ${job.name}`);
@@ -47,26 +54,56 @@ export class AirtableProcessor extends WorkerHost {
 
   private async updateEntities({ entityType, entityUuid }: UpdateEntitiesData) {
     this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType, entityUuid })}`);
-    const tableName = inflection.pluralize(inflection.titleize(entityType));
-    const records = await this.base(tableName)
-      .select({ maxRecords: 2, filterByFormula: `{uuid} = '${entityUuid}'` })
-      .firstPage();
-    if (records.length === 0) {
-      this.logger.error(`No ${entityType} with UUID ${entityUuid} found in Airtable`);
-      throw new NotFoundException(`No ${entityType} with UUID ${entityUuid} found in Airtable`);
-    } else if (records.length > 1) {
-      this.logger.error(`More than one ${entityType} with UUID ${entityUuid} found in Airtable`);
-      throw new InternalServerErrorException(`More than one ${entityType} with UUID ${entityUuid} found in Airtable`);
+
+    const airtableEntity = AIRTABLE_ENTITIES[entityType];
+    if (airtableEntity == null) {
+      throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    let record;
-    switch (entityType) {
-      case "project":
-        record = await Project.findOne({ where: { uuid: entityUuid } });
-        break;
+    const id = await this.findAirtableEntity(airtableEntity, entityUuid);
+    const record = await airtableEntity.findOne(entityUuid);
+    try {
+      await this.base(airtableEntity.TABLE_NAME).update(id, await airtableEntity.mapDbEntity(record));
+    } catch (error) {
+      this.logger.error(
+        `Entity update failed: ${JSON.stringify({
+          entityType,
+          entityUuid,
+          error
+        })}`
+      );
+      throw error;
     }
-
-    this.base(tableName).update(records[0].id, { project_name: record.name });
     this.logger.log(`Entity update complete: ${JSON.stringify({ entityType, entityUuid })}`);
+  }
+
+  private async findAirtableEntity<T extends Model<T>>(entity: AirtableEntity<T>, entityUuid: string) {
+    let records: Records<FieldSet>;
+    try {
+      records = await this.base(entity.TABLE_NAME)
+        .select({
+          maxRecords: 2,
+          fields: [entity.UUID_COLUMN],
+          filterByFormula: `{${entity.UUID_COLUMN}} = '${entityUuid}'`
+        })
+        .firstPage();
+    } catch (error) {
+      this.logger.error(
+        `Error finding entity in Airtable: ${JSON.stringify({ table: entity.TABLE_NAME, entityUuid, error })}`
+      );
+      throw new NotFoundException(`No ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
+    }
+
+    if (records.length === 0) {
+      this.logger.error(`No ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
+      throw new NotFoundException(`No ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
+    } else if (records.length > 1) {
+      this.logger.error(`More than one ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
+      throw new InternalServerErrorException(
+        `More than one ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`
+      );
+    }
+
+    return records[0].id;
   }
 }

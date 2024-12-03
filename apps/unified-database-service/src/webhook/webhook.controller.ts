@@ -8,6 +8,7 @@ export class WebhookController {
 
   @Get()
   @NoBearerAuth
+  // TODO (NJC): Documentation if we end up keeping this webhook.
   async triggerWebhook() {
     await this.airtableService.updateAirtableJob();
 

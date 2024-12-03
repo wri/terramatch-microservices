@@ -6,6 +6,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { WebhookController } from "./webhook/webhook.controller";
 import { AirtableService } from "./airtable/airtable.service";
+import { AirtableProcessor } from "./airtable/airtable.processor";
 
 @Module({
   imports: [
@@ -27,6 +28,6 @@ import { AirtableService } from "./airtable/airtable.service";
     BullModule.registerQueue({ name: "airtable" })
   ],
   controllers: [WebhookController],
-  providers: [AirtableService]
+  providers: [AirtableService, AirtableProcessor]
 })
 export class AppModule {}

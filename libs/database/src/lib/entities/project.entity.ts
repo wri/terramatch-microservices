@@ -19,4 +19,7 @@ export class Project extends Model<Project> {
   @Default(false)
   @Column(BOOLEAN)
   isTest: boolean;
+
+  @Column(STRING)
+  name: string;
 }

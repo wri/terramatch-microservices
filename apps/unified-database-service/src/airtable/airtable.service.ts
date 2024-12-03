@@ -3,8 +3,10 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 
+export type EntityType = "project";
+
 export type UpdateEntitiesData = {
-  entityType: "Project" | "Organisation";
+  entityType: EntityType;
   entityUuid: string;
 };
 
@@ -14,11 +16,9 @@ export class AirtableService {
 
   constructor(@InjectQueue("airtable") private readonly airtableQueue: Queue) {}
 
-  async updateAirtableJob() {
-    const data: UpdateEntitiesData = {
-      entityType: "Project",
-      entityUuid: "asdfasdfasdf"
-    };
+  // TODO (NJC) This method will probably go away entirely, or at least change drastically after this POC
+  async updateAirtableJob(entityType: EntityType, entityUuid: string) {
+    const data: UpdateEntitiesData = { entityType, entityUuid };
 
     this.logger.log(`Adding entity update to queue: ${JSON.stringify(data)}`);
     await this.airtableQueue.add("updateEntities", data);

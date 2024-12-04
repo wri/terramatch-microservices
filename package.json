@@ -57,7 +57,6 @@
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
-    "@types/airtable": "^0.10.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/geojson": "^7946.0.14",
     "@types/jest": "^29.5.12",

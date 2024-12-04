@@ -18,8 +18,9 @@ on:
         required: true
         options:
           - job-service
-          - research-service
           - user-service
+          - entity-service
+          - research-service
           - unified-database-service
       env:
         description: 'Deployment target environment'

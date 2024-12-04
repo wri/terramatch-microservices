@@ -24,6 +24,7 @@ env:
   AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
   AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-api-gateway
   PHP_PROXY_TARGET: ${{ vars.PHP_PROXY_TARGET }}
+  ENABLED_SERVICES: ${{ vars.ENABLED_SERVICES }}
 
 jobs:
   deploy-api-gateway:

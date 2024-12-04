@@ -38,6 +38,7 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @ForeignKey(() => Organisation)
+  @Column(BIGINT.UNSIGNED)
   organisationId: number | null;
 
   // TODO once the Application record has been added

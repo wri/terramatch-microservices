@@ -12,7 +12,7 @@ export class TreesController {
   @Get("scientific-names")
   @ApiOperation({
     operationId: "treeScientificNames",
-    description: "Search scientific names of tree species. Returns up to 10 entries"
+    description: "Search scientific names of tree species. Returns up to 10 entries."
   })
   @JsonApiResponse({ data: { type: ScientificNameDto } })
   async searchScientificNames(@Query("search") search: string) {
@@ -20,7 +20,7 @@ export class TreesController {
 
     const document = buildJsonApi();
     for (const treeSpecies of await this.researchService.searchScientificNames(search)) {
-      document.addData(`${treeSpecies.taxonId}`, new ScientificNameDto(treeSpecies));
+      document.addData(treeSpecies.taxonId, new ScientificNameDto(treeSpecies));
     }
 
     return document.serialize();

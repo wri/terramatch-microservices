@@ -4,7 +4,7 @@ import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class ResearchService {
-  async searchScientificNames(search: string) {
+  async searchScientificNames(search: string): Promise<{ taxonId: string; scientificName: string }[]> {
     return await TreeSpeciesResearch.findAll({
       where: {
         [Op.or]: [

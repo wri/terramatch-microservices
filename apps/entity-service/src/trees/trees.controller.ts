@@ -15,11 +15,11 @@ export class TreesController {
     operationId: "treeScientificNames",
     description: "Search scientific names of tree species. Returns up to 10 entries."
   })
-  @JsonApiResponse({ data: { type: ScientificNameDto } })
+  @JsonApiResponse({ data: { type: ScientificNameDto }, hasMany: true })
   async searchScientificNames(@Query("search") search: string) {
     if (isEmpty(search)) throw new BadRequestException("search query param is required");
 
-    const document = buildJsonApi();
+    const document = buildJsonApi({ forceDataArray: true });
     for (const treeSpecies of await this.researchService.searchScientificNames(search)) {
       document.addData(treeSpecies.taxonId, new ScientificNameDto(treeSpecies));
     }

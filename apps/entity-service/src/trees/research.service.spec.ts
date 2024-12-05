@@ -1,9 +1,9 @@
 import { ResearchService } from "./research.service";
 import { Test } from "@nestjs/testing";
 import { TreeSpeciesResearch } from "@terramatch-microservices/database/entities";
-import { TreeSpeciesResearchFactory } from "@terramatch-microservices/database/factories/tree-species-research.factory";
 import { pick } from "lodash";
 import { faker } from "@faker-js/faker";
+import { TreeSpeciesResearchFactory } from "@terramatch-microservices/database/factories";
 
 describe("ResearchService", () => {
   let service: ResearchService;

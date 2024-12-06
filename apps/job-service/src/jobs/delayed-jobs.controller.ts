@@ -12,10 +12,10 @@ import { DelayedJob } from '@terramatch-microservices/database/entities';
 
 @Controller('jobs/v3/delayedJobs')
 export class DelayedJobsController {
-  @Get('running')
+  @Get()
   @ApiOperation({
-    operationId: 'getRunningJobs',
-    description: 'Get all currently running delayed jobs.',
+    operationId: 'listDelayedJobs',
+    description: 'Retrieve a list of all delayed jobs.',
   })
   @JsonApiResponse({ data: { type: DelayedJobDto } })
   @ApiException(() => UnauthorizedException, {

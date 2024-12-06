@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, JSON, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
 
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {
@@ -35,4 +35,12 @@ export class DelayedJob extends Model<DelayedJob> {
   @AllowNull
   @Column(STRING)
   proccess_message: string | null
+
+  @AllowNull
+  @Column(STRING)
+  created_by: string | null;
+
+  @Column(BOOLEAN)
+  is_cleared: boolean;
+  
 }

@@ -20,4 +20,5 @@ export * from "./site.entity";
 export * from "./site-polygon.entity";
 export * from "./site-report.entity";
 export * from "./tree-species.entity";
+export * from "./tree-species-research.entity";
 export * from "./user.entity";

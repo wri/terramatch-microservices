@@ -26,21 +26,21 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @AllowNull
   @Column(INTEGER)
-  total_content: number | null;
+  totalContent: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  processed_content: number | null;
+  processedContent: number | null;
 
   @AllowNull
   @Column(STRING)
-  proccess_message: string | null
+  progressMessage: string | null
 
   @AllowNull
   @Column(STRING)
-  created_by: string | null;
+  createdBy: string | null;
 
   @Column(BOOLEAN)
-  is_cleared: boolean;
+  isCleared: boolean;
   
 }

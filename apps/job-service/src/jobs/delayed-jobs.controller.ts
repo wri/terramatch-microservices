@@ -26,8 +26,8 @@ export class DelayedJobsController {
   ): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
       where: {
-        is_cleared: 0,
-        created_by: authenticatedUserId
+        isCleared: 0,
+        createdBy: authenticatedUserId
       },
       order: [['createdAt', 'DESC']],
     });

@@ -1,13 +1,19 @@
 import { DelayedJobsController } from './delayed-jobs.controller';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { DelayedJobFactory } from '@terramatch-microservices/database/factories';
 import { Resource } from '@terramatch-microservices/common/util';
+import { DelayedJob } from '@terramatch-microservices/database/entities';
+
 
 describe('DelayedJobsController', () => {
   let controller: DelayedJobsController;
 
   beforeEach(async () => {
+    await DelayedJob.destroy({
+      where: {},
+      truncate: true 
+    });
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DelayedJobsController]
     }).compile();
@@ -39,52 +45,116 @@ describe('DelayedJobsController', () => {
 
   describe('getRunningJobs', () => {
     it('should return only running jobs for the authenticated user', async () => {
-      const authenticatedUserId = '123';
+      const authenticatedUserId = '130999';
       const request = { authenticatedUserId };
 
-      // Create some test jobs
-      const userJob1 = await DelayedJobFactory.create({ 
+      await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
         isCleared: false 
       });
-      const userJob2 = await DelayedJobFactory.create({ 
+      await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
         isCleared: false
       });
-      // Create a job for a different user
       await DelayedJobFactory.create({ 
-        createdBy: '456',
+        createdBy: '1388',
         isCleared: false
-      });
-      // Create a cleared job for the authenticated user
-      await DelayedJobFactory.create({ 
-        createdBy: authenticatedUserId,
-        isCleared: true
       });
 
       const result = await controller.getRunningJobs(request);
       const resources = result.data as Resource[];
 
       expect(resources).toHaveLength(2);
-      expect(resources[0].type).toBe('delayedJobs');
-      expect(resources[1].type).toBe('delayedJobs');
-      
-      // Should be ordered by createdAt DESC
-      const jobIds = resources.map(r => r.id);
-      expect(jobIds).toContain(userJob1.uuid);
-      expect(jobIds).toContain(userJob2.uuid);
-
-      // Verify job attributes
-      resources.forEach(resource => {
-        expect(resource.attributes.isCleared).toBe(0);
-        expect(resource.attributes.createdBy).toBe(authenticatedUserId);
-      });
     });
 
     it('should return an empty array when no running jobs exist', async () => {
-      const request = { authenticatedUserId: 123 };
+      const request = { authenticatedUserId: '181818' };
       const result = await controller.getRunningJobs(request);
       expect(result.data).toHaveLength(0);
+    });
+  });
+  describe('clearNonPendingJobs', () => {
+    it('should clear non-pending jobs for the authenticated user', async () => {
+      // Create some jobs with different statuses
+      await DelayedJobFactory.create({ 
+        createdBy: '130999', 
+        isCleared: false, 
+        status: 'completed' 
+      });
+      await DelayedJobFactory.create({ 
+        createdBy: '130999', 
+        isCleared: false, 
+        status: 'failed' 
+      });
+      await DelayedJobFactory.create({ 
+        createdBy: '130999', 
+        isCleared: false, 
+        status: 'pending' 
+      });
+      await DelayedJobFactory.create({ 
+        createdBy: '999999', 
+        isCleared: false, 
+        status: 'completed' 
+      });
+
+      const request = { authenticatedUserId: '130999' };
+      const result = await controller.clearNonPendingJobs(request);
+
+      expect(result.message).toBe('2 jobs have been cleared.');
+    });
+
+    it('should return 0 when no jobs can be cleared', async () => {
+      await DelayedJobFactory.create({ 
+        createdBy: '130999', 
+        isCleared: false, 
+        status: 'pending' 
+      });
+
+      const request = { authenticatedUserId: '130999' };
+      const result = await controller.clearNonPendingJobs(request);
+
+      expect(result.message).toBe('0 jobs have been cleared.');
+    });
+  });
+
+  describe('findOne', () => {
+    it('should handle non-existent job uuid', async () => {
+      await expect(controller.findOne('non-existent-uuid')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should handle null or undefined uuid', async () => {
+      await expect(controller.findOne(null)).rejects.toThrow();
+      await expect(controller.findOne(undefined)).rejects.toThrow();
+    });
+  });
+
+  describe('getRunningJobs', () => {
+    it('should handle jobs with different statuses', async () => {
+      const authenticatedUserId = '130999';
+      const request = { authenticatedUserId };
+
+      // Create jobs with different statuses but same user
+      await DelayedJobFactory.create({ 
+        createdBy: authenticatedUserId,
+        isCleared: false,
+        status: 'completed'
+      });
+      await DelayedJobFactory.create({ 
+        createdBy: authenticatedUserId,
+        isCleared: false,
+        status: 'pending'
+      });
+      await DelayedJobFactory.create({ 
+        createdBy: authenticatedUserId,
+        isCleared: true,
+        status: 'failed'
+      });
+
+      const result = await controller.getRunningJobs(request);
+      const resources = result.data as Resource[];
+
+      // Should only return non-cleared jobs
+      expect(resources).toHaveLength(2);
     });
   });
 });

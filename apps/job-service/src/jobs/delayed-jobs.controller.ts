@@ -1,7 +1,7 @@
-import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request, Patch } from '@nestjs/common';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { ApiOperation } from '@nestjs/swagger';
-import { User } from '@terramatch-microservices/database/entities';
+import { Op } from 'sequelize';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 import {
   buildJsonApi,
@@ -62,5 +62,28 @@ export class DelayedJobsController {
     return buildJsonApi()
       .addData(pathUUID, new DelayedJobDto(job))
       .document.serialize();
+  }
+
+  @Patch('clear')
+  @ApiOperation({
+    operationId: 'clearNonPendingJobs',
+    description: 'Set isCleared to true for all jobs where status is not pending.',
+  })
+  @ApiException(() => UnauthorizedException, {
+    description: 'Authentication failed.',
+  })
+  async clearNonPendingJobs(@Request() { authenticatedUserId }): Promise<{ message: string }> {
+    const updatedCount = await DelayedJob.update(
+      { isCleared: true },
+      {
+        where: {
+          isCleared: false,
+          status: { [Op.ne]: 'pending' },
+          createdBy: authenticatedUserId,
+        },
+      }
+    );
+
+    return { message: `${updatedCount[0]} jobs have been cleared.` };
   }
 }

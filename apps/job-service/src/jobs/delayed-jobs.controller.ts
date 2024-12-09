@@ -26,7 +26,7 @@ export class DelayedJobsController {
   ): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
       where: {
-        isCleared: 0,
+        isCleared: false,
         createdBy: authenticatedUserId
       },
       order: [['createdAt', 'DESC']],
@@ -52,6 +52,9 @@ export class DelayedJobsController {
   @ApiException(() => NotFoundException, {
     description: 'Job with that UUID not found.',
   })
+  // Note: Since jobs are very generic and we don't track which resources are related to a given
+  // job, there is no effective way to make a policy for jobs until we expand the service to
+  // include an owner ID on the job table.
   async findOne(@Param('uuid') pathUUID: string): Promise<JsonApiDocument> {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();

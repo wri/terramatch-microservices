@@ -40,7 +40,7 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   processedContent: number | null;
 
   @ApiProperty({
-    description: 'If the job is in progress, this is the proccess message',
+    description: 'If the job is in progress, this is the progress message',
     nullable: true
   })
   progressMessage: string | null

@@ -34,6 +34,6 @@ describe('DelayedJobsController', () => {
     expect(resource.attributes.payload).toMatchObject(payload);
     expect(resource.attributes.totalContent).toBe(totalContent);
     expect(resource.attributes.processedContent).toBe(processedContent);
-    expect(resource.attributes.proccessMessage).toBe(progressMessage);
+    expect(resource.attributes.progressMessage).toBe(progressMessage);
   });
 })

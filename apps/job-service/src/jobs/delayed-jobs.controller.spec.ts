@@ -36,4 +36,55 @@ describe('DelayedJobsController', () => {
     expect(resource.attributes.processedContent).toBe(processedContent);
     expect(resource.attributes.progressMessage).toBe(progressMessage);
   });
-})
+
+  describe('getRunningJobs', () => {
+    it('should return only running jobs for the authenticated user', async () => {
+      const authenticatedUserId = '123';
+      const request = { authenticatedUserId };
+
+      // Create some test jobs
+      const userJob1 = await DelayedJobFactory.create({ 
+        createdBy: authenticatedUserId,
+        isCleared: false 
+      });
+      const userJob2 = await DelayedJobFactory.create({ 
+        createdBy: authenticatedUserId,
+        isCleared: false
+      });
+      // Create a job for a different user
+      await DelayedJobFactory.create({ 
+        createdBy: '456',
+        isCleared: false
+      });
+      // Create a cleared job for the authenticated user
+      await DelayedJobFactory.create({ 
+        createdBy: authenticatedUserId,
+        isCleared: true
+      });
+
+      const result = await controller.getRunningJobs(request);
+      const resources = result.data as Resource[];
+
+      expect(resources).toHaveLength(2);
+      expect(resources[0].type).toBe('delayedJobs');
+      expect(resources[1].type).toBe('delayedJobs');
+      
+      // Should be ordered by createdAt DESC
+      const jobIds = resources.map(r => r.id);
+      expect(jobIds).toContain(userJob1.uuid);
+      expect(jobIds).toContain(userJob2.uuid);
+
+      // Verify job attributes
+      resources.forEach(resource => {
+        expect(resource.attributes.isCleared).toBe(0);
+        expect(resource.attributes.createdBy).toBe(authenticatedUserId);
+      });
+    });
+
+    it('should return an empty array when no running jobs exist', async () => {
+      const request = { authenticatedUserId: 123 };
+      const result = await controller.getRunningJobs(request);
+      expect(result.data).toHaveLength(0);
+    });
+  });
+});

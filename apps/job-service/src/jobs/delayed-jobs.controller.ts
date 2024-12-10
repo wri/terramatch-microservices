@@ -1,6 +1,6 @@
-import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request, Patch } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request, Patch, BadRequestException, Body } from '@nestjs/common';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiOperation } from '@nestjs/swagger';
 import { Op } from 'sequelize';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 import {
@@ -9,6 +9,7 @@ import {
 } from '@terramatch-microservices/common/util';
 import { DelayedJobDto } from './dto/delayed-job.dto';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
+import { JobBulkUpdateBodyDto, JobData } from './dto/delayed-job-update.dto';
 
 @Controller('jobs/v3/delayedJobs')
 export class DelayedJobsController {
@@ -26,7 +27,7 @@ export class DelayedJobsController {
   ): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
       where: {
-        isAknowledged: false,
+        isAcknowledged: false,
         createdBy: authenticatedUserId
       },
       order: [['createdAt', 'DESC']],
@@ -64,26 +65,75 @@ export class DelayedJobsController {
       .document.serialize();
   }
 
-  @Patch('clear')
+  @Patch('bulk-clear')
   @ApiOperation({
-    operationId: 'clearNonPendingJobs',
-    description: 'Set isAknowledged to true for all jobs where status is not pending.',
+    operationId: 'bulkClearJobs',
+    summary: 'Bulk update jobs to modify isAcknowledged for specified job IDs',
+    description: `Accepts a JSON:API-compliant payload to bulk update jobs, allowing each job's isAcknowledged attribute to be set to true or false.`,
   })
-  @ApiException(() => UnauthorizedException, {
-    description: 'Authentication failed.',
-  })
-  async clearNonPendingJobs(@Request() { authenticatedUserId }): Promise<{ message: string }> {
-    const updatedCount = await DelayedJob.update(
-      { isAknowledged: true },
-      {
-        where: {
-          isAknowledged: false,
-          status: { [Op.ne]: 'pending' },
-          createdBy: authenticatedUserId,
+  @ApiBody({
+    description: 'JSON:API bulk update payload for jobs',
+    type: JobBulkUpdateBodyDto,
+    examples: {
+      example: {
+        value: {
+          data: [
+            {
+              type: 'jobs',
+              uuid: 'uuid-1',
+              attributes: {
+                isAcknowledged: true,
+              },
+            },
+            {
+              type: 'jobs',
+              uuid: 'uuid-2',
+              attributes: {
+                isAcknowledged: false,
+              },
+            },
+          ],
         },
-      }
-    );
+      },
+    },
+  })
+  @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
+  @ApiException(() => BadRequestException, { description: 'Invalid payload or IDs provided.' })
+  @ApiException(() => NotFoundException, { description: 'One or more jobs specified in the payload could not be found.' })
+  async bulkClearJobs(
+    @Body() bulkClearJobsDto: JobBulkUpdateBodyDto,
+    @Request() { authenticatedUserId }
+  ): Promise<{ data: JobData[] }> {
+    const jobUpdates = bulkClearJobsDto.data;
 
-    return { message: `${updatedCount[0]} jobs have been cleared.` };
+    if (!jobUpdates || jobUpdates.length === 0) {
+      throw new BadRequestException('No jobs provided in the payload.');
+    }
+
+    const updatePromises = jobUpdates.map(async (job) => {
+      const [updatedCount] = await DelayedJob.update(
+        { isAcknowledged: job.attributes.isAcknowledged },
+        {
+          where: {
+            uuid: job.uuid,
+            createdBy: authenticatedUserId,
+            status: { [Op.ne]: 'pending' },
+          },
+        }
+      );
+
+      if (updatedCount === 0) {
+        throw new NotFoundException(`Job with UUID ${job.uuid} could not be updated.`);
+      }
+
+      return job;
+    });
+
+    const updatedJobs = await Promise.all(updatePromises);
+
+    return {
+      data: updatedJobs,
+    };
   }
+
 }

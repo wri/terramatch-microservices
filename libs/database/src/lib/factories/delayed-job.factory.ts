@@ -9,6 +9,6 @@ export const DelayedJobFactory = FactoryGirl.define(DelayedJob, async () => ({
   totalContent: 0,
   processedContent: 0,
   progressMessage: "test",
-  isAknowledged: false,
-  createdBy: '1290'
+  isAcknowledged: false,
+  createdBy: 1290
 }));

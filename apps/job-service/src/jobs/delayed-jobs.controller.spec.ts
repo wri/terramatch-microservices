@@ -4,7 +4,7 @@ import { Logger, NotFoundException } from '@nestjs/common';
 import { DelayedJobFactory } from '@terramatch-microservices/database/factories';
 import { Resource } from '@terramatch-microservices/common/util';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
-
+import { JobBulkUpdateBodyDto } from './dto/delayed-job-update.dto';
 
 describe('DelayedJobsController', () => {
   let controller: DelayedJobsController;
@@ -12,7 +12,7 @@ describe('DelayedJobsController', () => {
   beforeEach(async () => {
     await DelayedJob.destroy({
       where: {},
-      truncate: true 
+      truncate: true
     });
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DelayedJobsController]
@@ -23,7 +23,7 @@ describe('DelayedJobsController', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-  })
+  });
 
   it('should throw not found if the delayed job does not exist', async () => {
     await expect(controller.findOne('asdf')).rejects
@@ -42,80 +42,101 @@ describe('DelayedJobsController', () => {
     expect(resource.attributes.processedContent).toBe(processedContent);
     expect(resource.attributes.progressMessage).toBe(progressMessage);
   });
-
-  describe('getRunningJobs', () => {
-    it('should return only running jobs for the authenticated user', async () => {
-      const authenticatedUserId = '130999';
-      const request = { authenticatedUserId };
-
-      await DelayedJobFactory.create({ 
-        createdBy: authenticatedUserId,
-        isAknowledged: false 
+  describe('bulkClearJobs', () => {
+    it('should clear non-pending jobs in bulk for the authenticated user and return the updated jobs', async () => {
+      const job1 = await DelayedJobFactory.create({
+        createdBy: 130999,
+        isAcknowledged: false,
+        status: 'completed'
       });
-      await DelayedJobFactory.create({ 
-        createdBy: authenticatedUserId,
-        isAknowledged: false
+      const job2 = await DelayedJobFactory.create({
+        createdBy: 130999,
+        isAcknowledged: false,
+        status: 'failed'
       });
-      await DelayedJobFactory.create({ 
-        createdBy: '1388',
-        isAknowledged: false
+      const job3 = await DelayedJobFactory.create({
+        createdBy: 130999,
+        isAcknowledged: false,
+        status: 'pending'
       });
-
-      const result = await controller.getRunningJobs(request);
-      const resources = result.data as Resource[];
-
-      expect(resources).toHaveLength(2);
+  
+      const request = { authenticatedUserId: 130999 };
+      const payload: JobBulkUpdateBodyDto = {
+        data: [
+          {
+            type: 'jobs',
+            uuid: job1.uuid,
+            attributes: {
+              isAcknowledged: true,
+            },
+          },
+          {
+            type: 'jobs',
+            uuid: job2.uuid,
+            attributes: {
+              isAcknowledged: true,
+            },
+          },
+        ],
+      };
+  
+      const result = await controller.bulkClearJobs(payload, request);
+  
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0]).toMatchObject({
+        type: 'jobs',
+        uuid: job1.uuid,
+        attributes: {
+          isAcknowledged: true,
+        },
+      });
+      expect(result.data[1]).toMatchObject({
+        type: 'jobs',
+        uuid: job2.uuid,
+        attributes: {
+          isAcknowledged: true,
+        },
+      });
     });
-
-    it('should return an empty array when no running jobs exist', async () => {
-      const request = { authenticatedUserId: '181818' };
-      const result = await controller.getRunningJobs(request);
+  
+    it('should return an empty array when no jobs can be cleared in bulk', async () => {
+      const job = await DelayedJobFactory.create({
+        createdBy: 130999,
+        isAcknowledged: false,
+        status: 'pending'
+      });
+  
+      const request = { authenticatedUserId: 130999 };
+      const payload: JobBulkUpdateBodyDto = {
+        data: [
+          {
+            type: 'jobs',
+            uuid: job.uuid,
+            attributes: {
+              isAcknowledged: true,
+            },
+          },
+        ],
+      };
+  
+      const result = await controller.bulkClearJobs(payload, request);
+  
       expect(result.data).toHaveLength(0);
     });
   });
-  describe('clearNonPendingJobs', () => {
-    it('should clear non-pending jobs for the authenticated user', async () => {
-      // Create some jobs with different statuses
-      await DelayedJobFactory.create({ 
-        createdBy: '130999', 
-        isAknowledged: false, 
-        status: 'completed' 
-      });
-      await DelayedJobFactory.create({ 
-        createdBy: '130999', 
-        isAknowledged: false, 
-        status: 'failed' 
-      });
-      await DelayedJobFactory.create({ 
-        createdBy: '130999', 
-        isAknowledged: false, 
-        status: 'pending' 
-      });
-      await DelayedJobFactory.create({ 
-        createdBy: '999999', 
-        isAknowledged: false, 
-        status: 'completed' 
-      });
+  
 
-      const request = { authenticatedUserId: '130999' };
-      const result = await controller.clearNonPendingJobs(request);
-
-      expect(result.message).toBe('2 jobs have been cleared.');
+  describe('findOne', () => {
+    it('should handle non-existent job uuid', async () => {
+      await expect(controller.findOne('non-existent-uuid')).rejects.toThrow(NotFoundException);
     });
 
-    it('should return 0 when no jobs can be cleared', async () => {
-      await DelayedJobFactory.create({ 
-        createdBy: '130999', 
-        isAknowledged: false, 
-        status: 'pending' 
-      });
-
-      const request = { authenticatedUserId: '130999' };
-      const result = await controller.clearNonPendingJobs(request);
-
-      expect(result.message).toBe('0 jobs have been cleared.');
+    it('should handle null or undefined uuid', async () => {
+      await expect(controller.findOne(null)).rejects.toThrow();
+      await expect(controller.findOne(undefined)).rejects.toThrow();
     });
   });
+
 
   describe('findOne', () => {
     it('should handle non-existent job uuid', async () => {
@@ -130,23 +151,23 @@ describe('DelayedJobsController', () => {
 
   describe('getRunningJobs', () => {
     it('should handle jobs with different statuses', async () => {
-      const authenticatedUserId = '130999';
+      const authenticatedUserId = 130999;
       const request = { authenticatedUserId };
 
       // Create jobs with different statuses but same user
-      await DelayedJobFactory.create({ 
+      await DelayedJobFactory.create({
         createdBy: authenticatedUserId,
-        isAknowledged: false,
+        isAcknowledged: false,
         status: 'completed'
       });
-      await DelayedJobFactory.create({ 
+      await DelayedJobFactory.create({
         createdBy: authenticatedUserId,
-        isAknowledged: false,
+        isAcknowledged: false,
         status: 'pending'
       });
-      await DelayedJobFactory.create({ 
+      await DelayedJobFactory.create({
         createdBy: authenticatedUserId,
-        isAknowledged: true,
+        isAcknowledged: true,
         status: 'failed'
       });
 

@@ -37,10 +37,10 @@ export class DelayedJob extends Model<DelayedJob> {
   progressMessage: string | null
 
   @AllowNull
-  @Column(STRING)
-  createdBy: string | null;
+  @Column(BIGINT)
+  createdBy: number | null;
 
   @Column(BOOLEAN)
-  isAknowledged: boolean;
+  isAcknowledged: boolean;
   
 }

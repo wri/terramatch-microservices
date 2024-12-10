@@ -49,5 +49,5 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
     description: 'Indicates whether the jobs have been cleared',
     nullable: true
   })
-  isAknowledged: boolean | null
+  isAcknowledged: boolean | null
 }

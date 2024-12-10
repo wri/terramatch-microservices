@@ -41,6 +41,6 @@ export class DelayedJob extends Model<DelayedJob> {
   createdBy: string | null;
 
   @Column(BOOLEAN)
-  isCleared: boolean;
+  isAknowledged: boolean;
   
 }

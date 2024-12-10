@@ -26,7 +26,7 @@ export class DelayedJobsController {
   ): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
       where: {
-        isCleared: false,
+        isAknowledged: false,
         createdBy: authenticatedUserId
       },
       order: [['createdAt', 'DESC']],
@@ -67,17 +67,17 @@ export class DelayedJobsController {
   @Patch('clear')
   @ApiOperation({
     operationId: 'clearNonPendingJobs',
-    description: 'Set isCleared to true for all jobs where status is not pending.',
+    description: 'Set isAknowledged to true for all jobs where status is not pending.',
   })
   @ApiException(() => UnauthorizedException, {
     description: 'Authentication failed.',
   })
   async clearNonPendingJobs(@Request() { authenticatedUserId }): Promise<{ message: string }> {
     const updatedCount = await DelayedJob.update(
-      { isCleared: true },
+      { isAknowledged: true },
       {
         where: {
-          isCleared: false,
+          isAknowledged: false,
           status: { [Op.ne]: 'pending' },
           createdBy: authenticatedUserId,
         },

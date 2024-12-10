@@ -50,15 +50,15 @@ describe('DelayedJobsController', () => {
 
       await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
-        isCleared: false 
+        isAknowledged: false 
       });
       await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
-        isCleared: false
+        isAknowledged: false
       });
       await DelayedJobFactory.create({ 
         createdBy: '1388',
-        isCleared: false
+        isAknowledged: false
       });
 
       const result = await controller.getRunningJobs(request);
@@ -78,22 +78,22 @@ describe('DelayedJobsController', () => {
       // Create some jobs with different statuses
       await DelayedJobFactory.create({ 
         createdBy: '130999', 
-        isCleared: false, 
+        isAknowledged: false, 
         status: 'completed' 
       });
       await DelayedJobFactory.create({ 
         createdBy: '130999', 
-        isCleared: false, 
+        isAknowledged: false, 
         status: 'failed' 
       });
       await DelayedJobFactory.create({ 
         createdBy: '130999', 
-        isCleared: false, 
+        isAknowledged: false, 
         status: 'pending' 
       });
       await DelayedJobFactory.create({ 
         createdBy: '999999', 
-        isCleared: false, 
+        isAknowledged: false, 
         status: 'completed' 
       });
 
@@ -106,7 +106,7 @@ describe('DelayedJobsController', () => {
     it('should return 0 when no jobs can be cleared', async () => {
       await DelayedJobFactory.create({ 
         createdBy: '130999', 
-        isCleared: false, 
+        isAknowledged: false, 
         status: 'pending' 
       });
 
@@ -136,17 +136,17 @@ describe('DelayedJobsController', () => {
       // Create jobs with different statuses but same user
       await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
-        isCleared: false,
+        isAknowledged: false,
         status: 'completed'
       });
       await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
-        isCleared: false,
+        isAknowledged: false,
         status: 'pending'
       });
       await DelayedJobFactory.create({ 
         createdBy: authenticatedUserId,
-        isCleared: true,
+        isAknowledged: true,
         status: 'failed'
       });
 

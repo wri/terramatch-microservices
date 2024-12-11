@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class DelayedJobAttributes {
+export class DelayedJobAttributes {
   @IsBoolean()
   @ApiProperty({ description: 'Value to set for isAcknowledged', example: true })
   isAcknowledged: boolean;

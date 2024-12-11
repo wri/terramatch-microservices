@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DelayedJobsController } from './delayed-jobs.controller';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
-import { DelayedJobBulkUpdateBodyDto } from './dto/delayed-job-update.dto';
+import { DelayedJobBulkUpdateBodyDto, DelayedJobAttributes, DelayedJobData } from './dto/delayed-job-update.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NotFoundException } from '@nestjs/common';
+import { plainToClass } from 'class-transformer';
+import { validate } from 'class-validator';
 
 describe('DelayedJobsController', () => {
   let controller: DelayedJobsController;
@@ -121,7 +123,7 @@ describe('DelayedJobsController', () => {
       expect(updatedJob1.isAcknowledged).toBe(true);
       expect(updatedJob2.isAcknowledged).toBe(true);
     });
-    
+
     it('should throw NotFoundException for non-existent job', async () => {
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
@@ -162,5 +164,44 @@ describe('DelayedJobsController', () => {
         .rejects.toThrow(NotFoundException);
     });
     
+  });
+  describe('DelayedJobAttributes', () => {
+    it('should require an array of DelayedJobData', async () => {
+      const invalidData = {
+        data: 'not an array'
+      };
+
+      const invalidInstance = plainToClass(DelayedJobBulkUpdateBodyDto, invalidData);
+      const invalidResult = await validate(invalidInstance);
+
+      expect(invalidResult).toHaveLength(1);
+      expect(invalidResult[0].constraints).toHaveProperty('isArray');
+    });
+    it('should validate nested DelayedJobAttributes', async () => {
+      const validData = {
+        type: 'delayedJobs',
+        uuid: uuidv4(),
+        attributes: { isAcknowledged: true }
+      };
+    
+      const invalidData = {
+        type: 'delayedJobs',
+        uuid: uuidv4(),
+        attributes: { 
+          isAcknowledged: 'not a boolean' 
+        }
+      };
+    
+      const validInstance = plainToClass(DelayedJobData, validData);
+      const validResult = await validate(validInstance);
+      expect(validResult).toHaveLength(0);
+      const invalidInstance = plainToClass(DelayedJobData, invalidData);
+      const invalidResult = await validate(invalidInstance);
+      expect(invalidResult).toHaveLength(1);
+      expect(invalidResult[0].property).toBe('attributes');
+      const nestedErrors = invalidResult[0].children;
+      expect(nestedErrors).toHaveLength(1);
+      expect(nestedErrors[0].constraints).toHaveProperty('isBoolean');
+    });
   });
 });

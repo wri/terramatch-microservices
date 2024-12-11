@@ -1,6 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
   ForeignKey,
   HasMany,
@@ -29,6 +30,9 @@ export class SiteReport extends Model<SiteReport> {
   @Column(BIGINT.UNSIGNED)
   siteId: number;
 
+  @BelongsTo(() => Site)
+  site: Site | null;
+
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
@@ -39,7 +43,7 @@ export class SiteReport extends Model<SiteReport> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport" }
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "tree-planted" }
   })
   treeSpecies: TreeSpecies[] | null;
 
@@ -48,5 +52,18 @@ export class SiteReport extends Model<SiteReport> {
       this.treeSpecies = await this.$get("treeSpecies");
     }
     return this.treeSpecies;
+  }
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "non-tree" }
+  })
+  nonTreeSpecies: TreeSpecies[] | null;
+
+  async loadNonTreeSpecies() {
+    if (this.nonTreeSpecies == null) {
+      this.nonTreeSpecies = await this.$get("nonTreeSpecies");
+    }
+    return this.nonTreeSpecies;
   }
 }

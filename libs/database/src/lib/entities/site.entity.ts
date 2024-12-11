@@ -1,4 +1,14 @@
-import { AutoIncrement, Column, ForeignKey, HasMany, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  ForeignKey,
+  HasMany,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
@@ -20,9 +30,12 @@ export class Site extends Model<Site> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @BelongsTo(() => Project)
+  project: Project | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site" }
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "tree-planted" }
   })
   treeSpecies: TreeSpecies[] | null;
 
@@ -31,6 +44,19 @@ export class Site extends Model<Site> {
       this.treeSpecies = await this.$get("treeSpecies");
     }
     return this.treeSpecies;
+  }
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "non-tree" }
+  })
+  nonTreeSpecies: TreeSpecies[] | null;
+
+  async loadNonTreeSpecies() {
+    if (this.nonTreeSpecies == null) {
+      this.nonTreeSpecies = await this.$get("nonTreeSpecies");
+    }
+    return this.nonTreeSpecies;
   }
 
   @HasMany(() => SiteReport)

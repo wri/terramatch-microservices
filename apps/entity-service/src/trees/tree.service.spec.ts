@@ -1,4 +1,4 @@
-import { ResearchService } from "./research.service";
+import { TreeService } from "./tree.service";
 import { Test } from "@nestjs/testing";
 import { TreeSpeciesResearch } from "@terramatch-microservices/database/entities";
 import { pick } from "lodash";
@@ -6,7 +6,7 @@ import { faker } from "@faker-js/faker";
 import { TreeSpeciesResearchFactory } from "@terramatch-microservices/database/factories";
 
 describe("ResearchService", () => {
-  let service: ResearchService;
+  let service: TreeService;
 
   beforeAll(async () => {
     await TreeSpeciesResearch.truncate();
@@ -14,10 +14,10 @@ describe("ResearchService", () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [ResearchService]
+      providers: [TreeService]
     }).compile();
 
-    service = module.get(ResearchService);
+    service = module.get(TreeService);
   });
 
   afterEach(() => {

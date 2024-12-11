@@ -1,5 +1,5 @@
 import { TreesController } from "./trees.controller";
-import { ResearchService } from "./research.service";
+import { TreeService } from "./tree.service";
 import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException } from "@nestjs/common";
@@ -7,12 +7,12 @@ import { Resource } from "@terramatch-microservices/common/util";
 
 describe("TreesController", () => {
   let controller: TreesController;
-  let researchService: DeepMocked<ResearchService>;
+  let researchService: DeepMocked<TreeService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [TreesController],
-      providers: [{ provide: ResearchService, useValue: (researchService = createMock<ResearchService>()) }]
+      providers: [{ provide: TreeService, useValue: (researchService = createMock<TreeService>()) }]
     }).compile();
 
     controller = module.get(TreesController);

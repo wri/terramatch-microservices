@@ -5,6 +5,7 @@ import {
   Column,
   Default,
   ForeignKey,
+  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -12,6 +13,7 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { Organisation } from "./organisation.entity";
+import { TreeSpecies } from "./tree-species.entity";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -327,5 +329,18 @@ export class Project extends Model<Project> {
       this.organisation = await this.$get("organisation");
     }
     return this.organisation;
+  }
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    scope: { speciesableType: "App\\Models\\V2\\Projects\\Project", collection: "tree-planted" }
+  })
+  treeSpecies: TreeSpecies[] | null;
+
+  async loadTreeSpecies() {
+    if (this.treeSpecies == null) {
+      this.treeSpecies = await this.$get("treeSpecies");
+    }
+    return this.treeSpecies;
   }
 }

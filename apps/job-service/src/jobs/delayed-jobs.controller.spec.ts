@@ -3,7 +3,7 @@ import { DelayedJobsController } from './delayed-jobs.controller';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
 import { DelayedJobBulkUpdateBodyDto } from './dto/delayed-job-update.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 describe('DelayedJobsController', () => {
   let controller: DelayedJobsController;
@@ -121,15 +121,7 @@ describe('DelayedJobsController', () => {
       expect(updatedJob1.isAcknowledged).toBe(true);
       expect(updatedJob2.isAcknowledged).toBe(true);
     });
-
-    it('should throw BadRequestException when no jobs are provided', async () => {
-      const payload: DelayedJobBulkUpdateBodyDto = { data: [] };
-      const request = { authenticatedUserId: 130999 };
-
-      await expect(controller.bulkClearJobs(payload, request))
-        .rejects.toThrow(BadRequestException);
-    });
-
+    
     it('should throw NotFoundException for non-existent job', async () => {
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
@@ -144,17 +136,6 @@ describe('DelayedJobsController', () => {
 
       await expect(controller.bulkClearJobs(payload, request))
         .rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw UnauthorizedException if no authenticated user id', async () => {
-      const payload: DelayedJobBulkUpdateBodyDto = {
-        data: [
-          { type: 'delayedJobs', uuid: uuidv4(), attributes: { isAcknowledged: true } }
-        ]
-      };
-
-      await expect(controller.bulkClearJobs(payload, { authenticatedUserId: null }))
-        .rejects.toThrow(UnauthorizedException);
     });
 
     it('should not update jobs with status "pending"', async () => {

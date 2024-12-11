@@ -71,32 +71,6 @@ export class DelayedJobsController {
     summary: 'Bulk update jobs to modify isAcknowledged for specified job IDs',
     description: `Accepts a JSON:API-compliant payload to bulk update jobs, allowing each job's isAcknowledged attribute to be set to true or false.`,
   })
-  @ApiBody({
-    description: 'JSON:API bulk update payload for jobs',
-    type: DelayedJobBulkUpdateBodyDto,
-    examples: {
-      example: {
-        value: {
-          data: [
-            {
-              type: 'jobs',
-              uuid: 'uuid-1',
-              attributes: {
-                isAcknowledged: true,
-              },
-            },
-            {
-              type: 'jobs',
-              uuid: 'uuid-2',
-              attributes: {
-                isAcknowledged: false,
-              },
-            },
-          ],
-        },
-      },
-    },
-  })
   @JsonApiResponse({ data: { type: DelayedJobDto } })
   @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
   @ApiException(() => BadRequestException, { description: 'Invalid payload or IDs provided.' })
@@ -106,14 +80,6 @@ export class DelayedJobsController {
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
     const jobUpdates = bulkClearJobsDto.data;
-  
-    if (!jobUpdates || jobUpdates.length === 0) {
-      throw new BadRequestException('No jobs provided in the payload.');
-    }
-  
-    if (!authenticatedUserId) {
-      throw new UnauthorizedException('Authentication failed.');
-    }
     const updatePromises = jobUpdates.map(async (job) => {
       const [updatedCount] = await DelayedJob.update(
         { isAcknowledged: job.attributes.isAcknowledged },

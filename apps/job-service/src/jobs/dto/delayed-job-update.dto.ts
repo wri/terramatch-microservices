@@ -2,30 +2,30 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class JobAttributes {
+class DelayedJobAttributes {
   @IsBoolean()
   @ApiProperty({ description: 'Value to set for isAcknowledged', example: true })
   isAcknowledged: boolean;
 }
 
-export class JobData {
-  @ApiProperty({ enum: ['jobs'], description: 'Type of the resource', example: 'jobs' })
-  type: 'jobs';
+export class DelayedJobData {
+  @ApiProperty({ enum: ['delayedJobs'], description: 'Type of the resource', example: 'delayedJobs' })
+  type: 'delayedJobs';
 
   @IsUUID()
   @ApiProperty({ format: 'uuid', description: 'UUID of the job', example: 'uuid-1' })
   uuid: string;
 
   @ValidateNested()
-  @Type(() => JobAttributes)
-  @ApiProperty({ description: 'Attributes to update for the job', type: JobAttributes })
-  attributes: JobAttributes;
+  @Type(() => DelayedJobAttributes)
+  @ApiProperty({ description: 'Attributes to update for the job', type: DelayedJobAttributes })
+  attributes: DelayedJobAttributes;
 }
 
-export class JobBulkUpdateBodyDto {
+export class DelayedJobBulkUpdateBodyDto {
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => JobData)
-  @ApiProperty({ description: 'List of jobs to update', type: [JobData] })
-  data: JobData[];
+  @Type(() => DelayedJobData)
+  @ApiProperty({ description: 'List of jobs to update isAcknowledged', type: [DelayedJobData] })
+  data: DelayedJobData[];
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request, Patch, BadRequestException, Body } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request, Patch, BadRequestException, Body, Logger } from '@nestjs/common';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
 import { ApiBody, ApiOperation } from '@nestjs/swagger';
 import { Op } from 'sequelize';
@@ -9,7 +9,7 @@ import {
 } from '@terramatch-microservices/common/util';
 import { DelayedJobDto } from './dto/delayed-job.dto';
 import { DelayedJob } from '@terramatch-microservices/database/entities';
-import { JobBulkUpdateBodyDto, JobData } from './dto/delayed-job-update.dto';
+import { DelayedJobBulkUpdateBodyDto } from './dto/delayed-job-update.dto';
 
 @Controller('jobs/v3/delayedJobs')
 export class DelayedJobsController {
@@ -73,7 +73,7 @@ export class DelayedJobsController {
   })
   @ApiBody({
     description: 'JSON:API bulk update payload for jobs',
-    type: JobBulkUpdateBodyDto,
+    type: DelayedJobBulkUpdateBodyDto,
     examples: {
       example: {
         value: {
@@ -97,19 +97,23 @@ export class DelayedJobsController {
       },
     },
   })
+  @JsonApiResponse({ data: { type: DelayedJobDto } })
   @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
   @ApiException(() => BadRequestException, { description: 'Invalid payload or IDs provided.' })
   @ApiException(() => NotFoundException, { description: 'One or more jobs specified in the payload could not be found.' })
   async bulkClearJobs(
-    @Body() bulkClearJobsDto: JobBulkUpdateBodyDto,
+    @Body() bulkClearJobsDto: DelayedJobBulkUpdateBodyDto,
     @Request() { authenticatedUserId }
-  ): Promise<{ data: JobData[] }> {
+  ): Promise<JsonApiDocument> {
     const jobUpdates = bulkClearJobsDto.data;
-
+  
     if (!jobUpdates || jobUpdates.length === 0) {
       throw new BadRequestException('No jobs provided in the payload.');
     }
-
+  
+    if (!authenticatedUserId) {
+      throw new UnauthorizedException('Authentication failed.');
+    }
     const updatePromises = jobUpdates.map(async (job) => {
       const [updatedCount] = await DelayedJob.update(
         { isAcknowledged: job.attributes.isAcknowledged },
@@ -119,21 +123,28 @@ export class DelayedJobsController {
             createdBy: authenticatedUserId,
             status: { [Op.ne]: 'pending' },
           },
-        }
-      );
-
+        });
+    
       if (updatedCount === 0) {
         throw new NotFoundException(`Job with UUID ${job.uuid} could not be updated.`);
       }
+    
+      const updatedJob = await DelayedJob.findOne({
+        where: { uuid: job.uuid },
+      });
 
-      return job;
+      return updatedJob;
     });
-
+    
     const updatedJobs = await Promise.all(updatePromises);
-
-    return {
-      data: updatedJobs,
-    };
+    
+    
+    const jsonApiBuilder = buildJsonApi();
+    updatedJobs.forEach((job) => {
+      jsonApiBuilder.addData(job.uuid, new DelayedJobDto(job));
+    });
+    
+    return jsonApiBuilder.serialize();
+    
   }
-
 }

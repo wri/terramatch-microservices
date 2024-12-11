@@ -1,5 +1,6 @@
-import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Default, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
+import { User } from "./user.entity";
 
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {
@@ -36,8 +37,9 @@ export class DelayedJob extends Model<DelayedJob> {
   @Column(STRING)
   progressMessage: string | null
 
+  @ForeignKey(() => User)
   @AllowNull
-  @Column(BIGINT)
+  @Column(BIGINT.UNSIGNED)
   createdBy: number | null;
 
   @Column(BOOLEAN)

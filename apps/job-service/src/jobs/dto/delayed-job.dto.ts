@@ -31,17 +31,23 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
     description: 'If the job is in progress, this is the total content to process',
     nullable: true
   })
-  total_content: number | null;
+  totalContent: number | null;
 
   @ApiProperty({
     description: 'If the job is in progress, this is the total content processed',
     nullable: true
   })
-  processed_content: number | null;
+  processedContent: number | null;
 
   @ApiProperty({
-    description: 'If the job is in progress, this is the proccess message',
+    description: 'If the job is in progress, this is the progress message',
     nullable: true
   })
-  proccess_message: string | null
+  progressMessage: string | null
+
+  @ApiProperty({
+    description: 'Indicates whether the jobs have been acknowledged (cleared)',
+    nullable: true
+  })
+  isAcknowledged: boolean | null
 }

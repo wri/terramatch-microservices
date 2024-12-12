@@ -2,6 +2,7 @@ import {
   Nursery,
   NurseryReport,
   Project,
+  ProjectReport,
   Site,
   SiteReport,
   TreeSpeciesResearch
@@ -74,7 +75,30 @@ export class TreeService {
       const parentTrees = parent.treeSpecies.map(({ name }) => name);
       const projectTrees = parent.project.treeSpecies.map(({ name }) => name);
       return uniq(filter([...parentTrees, ...projectTrees]));
-    } else if (['sites", "nurseries', "project-reports"].includes(entity)) {
+    } else if (["sites", "nurseries", "project-reports"].includes(entity)) {
+      // for these we simply pull the project's trees
+      const whereOptions = {
+        where: { uuid },
+        attributes: [],
+        include: [
+          {
+            model: Project,
+            // This id isn't necessary for the data we want to fetch, but sequelize requires it for
+            // the nested includes
+            attributes: ["id"],
+            include: [{ association: "treeSpecies", attributes: ["name"] }]
+          }
+        ]
+      };
+
+      const entityModel = await (entity === "sites"
+        ? Site.findOne(whereOptions)
+        : entity === "nurseries"
+        ? Nursery.findOne(whereOptions)
+        : ProjectReport.findOne(whereOptions));
+      if (entityModel == null) throw new NotFoundException();
+
+      return filter(entityModel.project.treeSpecies.map(({ name }) => name));
     } else {
       throw new BadRequestException(`Entity type not supported: [${entity}]`);
     }

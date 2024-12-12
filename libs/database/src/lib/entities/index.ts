@@ -16,6 +16,7 @@ export * from "./permission.entity";
 export * from "./point-geometry.entity";
 export * from "./polygon-geometry.entity";
 export * from "./project.entity";
+export * from "./project-report.entity";
 export * from "./project-user.entity";
 export * from "./role.entity";
 export * from "./site.entity";

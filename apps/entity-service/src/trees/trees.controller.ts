@@ -39,12 +39,13 @@ export class TreesController {
   @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
   @ApiException(() => BadRequestException, { description: "One or more path param values is invalid." })
   async getEstablishmentData(@Param() { entity, uuid }: EstablishmentsTreesParamsDto) {
-    const establishmentTrees = await this.treeService.findEstablishmentTreeSpecies(entity, uuid);
+    const establishmentTrees = await this.treeService.getEstablishmentTrees(entity, uuid);
+    const previousPlantingCounts = await this.treeService.getPreviousPlanting(entity, uuid);
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
     return buildJsonApi()
-      .addData(`${entity}|${uuid}`, new EstablishmentsTreesDto({ establishmentTrees }))
+      .addData(`${entity}|${uuid}`, new EstablishmentsTreesDto({ establishmentTrees, previousPlantingCounts }))
       .document.serialize();
   }
 }

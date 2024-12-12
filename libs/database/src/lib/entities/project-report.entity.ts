@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   AutoIncrement,
   BelongsTo,
   Column,
@@ -9,7 +10,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, UUID } from "sequelize";
+import { BIGINT, DATE, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 
@@ -31,6 +32,10 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  @AllowNull
+  @Column(DATE)
+  dueAt: Date | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

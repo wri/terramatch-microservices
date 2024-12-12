@@ -12,6 +12,7 @@ import {
 import { BIGINT, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
+import { NurseryReport } from "./nursery-report.entity";
 
 // A quick stub for the tree service endpoints.
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
@@ -44,4 +45,7 @@ export class Nursery extends Model<Nursery> {
     }
     return this.treeSpecies;
   }
+
+  @HasMany(() => NurseryReport)
+  reports: NurseryReport[] | null;
 }

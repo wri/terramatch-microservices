@@ -8,17 +8,16 @@ import {
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { filter, uniq } from "lodash";
+import { BadRequestException, Injectable, NotFoundException, NotImplementedException } from "@nestjs/common";
+import { filter, flatten, uniq } from "lodash";
 
-export const ESTABLISHMENT_ENTITIES = [
-  "sites",
-  "nurseries",
-  "project-reports",
-  "site-reports",
-  "nursery-reports"
-] as const;
+export const ESTABLISHMENT_REPORTS = ["project-reports", "site-reports", "nursery-reports"] as const;
+export type EstablishmentReport = (typeof ESTABLISHMENT_REPORTS)[number];
+
+export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...ESTABLISHMENT_REPORTS] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
+
+const isReport = (type: EstablishmentEntity): type is EstablishmentReport => type.endsWith("-reports");
 
 @Injectable()
 export class TreeService {
@@ -39,7 +38,7 @@ export class TreeService {
     ).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));
   }
 
-  async findEstablishmentTreeSpecies(entity: EstablishmentEntity, uuid: string): Promise<string[]> {
+  async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<string[]> {
     if (entity === "site-reports" || entity === "nursery-reports") {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
@@ -102,5 +101,71 @@ export class TreeService {
     } else {
       throw new BadRequestException(`Entity type not supported: [${entity}]`);
     }
+  }
+
+  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<Record<string, number>> {
+    if (!isReport(entity)) return undefined;
+
+    const treeReportWhere = (parentAttribute: string, report: ProjectReport | SiteReport | NurseryReport) => ({
+      attributes: [],
+      where: {
+        [parentAttribute]: report[parentAttribute],
+        dueAt: { [Op.lt]: report.dueAt }
+      },
+      include: [
+        {
+          association: "treeSpecies",
+          attributes: ["name", "amount"],
+          where: { amount: { [Op.gt]: 0 } }
+        }
+      ]
+    });
+
+    let records: (SiteReport | ProjectReport | NurseryReport)[];
+    switch (entity) {
+      case "project-reports": {
+        const report = await ProjectReport.findOne({
+          where: { uuid },
+          attributes: ["dueAt", "projectId"]
+        });
+        if (report == null) throw new NotFoundException();
+
+        records = await ProjectReport.findAll(treeReportWhere("projectId", report));
+        break;
+      }
+
+      case "site-reports": {
+        const report = await SiteReport.findOne({
+          where: { uuid },
+          attributes: ["dueAt", "siteId"]
+        });
+        if (report == null) throw new NotFoundException();
+
+        records = await SiteReport.findAll(treeReportWhere("siteId", report));
+        break;
+      }
+
+      case "nursery-reports": {
+        const report = await NurseryReport.findOne({
+          where: { uuid },
+          attributes: ["dueAt", "nurseryId"]
+        });
+        if (report == null) throw new NotFoundException();
+
+        records = await NurseryReport.findAll(treeReportWhere("nurseryId", report));
+        break;
+      }
+
+      default:
+        throw new NotImplementedException();
+    }
+
+    const trees = flatten(records.map(({ treeSpecies }) => treeSpecies));
+    return trees.reduce<Record<string, number>>((counts, tree) => {
+      return {
+        ...counts,
+        [tree.name]: (counts[tree.name] ?? 0) + tree.amount
+      };
+    }, {});
   }
 }

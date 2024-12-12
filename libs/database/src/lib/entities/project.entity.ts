@@ -14,6 +14,7 @@ import {
 import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
+import { ProjectReport } from "./project-report.entity";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -337,10 +338,6 @@ export class Project extends Model<Project> {
   })
   treeSpecies: TreeSpecies[] | null;
 
-  async loadTreeSpecies() {
-    if (this.treeSpecies == null) {
-      this.treeSpecies = await this.$get("treeSpecies");
-    }
-    return this.treeSpecies;
-  }
+  @HasMany(() => ProjectReport)
+  reports: ProjectReport[] | null;
 }

@@ -60,12 +60,12 @@ export class Site extends Model<Site> {
   }
 
   @HasMany(() => SiteReport)
-  siteReports: SiteReport[] | null;
+  reports: SiteReport[] | null;
 
-  async loadSiteReports() {
-    if (this.siteReports == null) {
-      this.siteReports = await this.$get("siteReports");
+  async loadReports() {
+    if (this.reports == null) {
+      this.reports = await this.$get("reports");
     }
-    return this.siteReports;
+    return this.reports;
   }
 }

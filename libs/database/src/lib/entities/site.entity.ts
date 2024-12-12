@@ -35,6 +35,7 @@ export class Site extends Model<Site> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "tree-planted" }
   })
   treeSpecies: TreeSpecies[] | null;
@@ -48,6 +49,7 @@ export class Site extends Model<Site> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "non-tree" }
   })
   nonTreeSpecies: TreeSpecies[] | null;

@@ -43,6 +43,7 @@ export class SiteReport extends Model<SiteReport> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "tree-planted" }
   })
   treeSpecies: TreeSpecies[] | null;
@@ -56,6 +57,7 @@ export class SiteReport extends Model<SiteReport> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "non-tree" }
   })
   nonTreeSpecies: TreeSpecies[] | null;

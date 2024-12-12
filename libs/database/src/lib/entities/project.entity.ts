@@ -334,6 +334,7 @@ export class Project extends Model<Project> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Projects\\Project", collection: "tree-planted" }
   })
   treeSpecies: TreeSpecies[] | null;

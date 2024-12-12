@@ -5,11 +5,13 @@ import { pick } from "lodash";
 import { faker } from "@faker-js/faker";
 import { TreeSpeciesResearchFactory } from "@terramatch-microservices/database/factories";
 
-describe("ResearchService", () => {
+describe("TreeService", () => {
   let service: TreeService;
 
   beforeAll(async () => {
-    await TreeSpeciesResearch.truncate();
+    console.log("before truncate", await TreeSpeciesResearch.count());
+    await TreeSpeciesResearch.truncate({ force: true });
+    console.log("after truncate", await TreeSpeciesResearch.count());
   });
 
   beforeEach(async () => {

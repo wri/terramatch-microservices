@@ -35,6 +35,7 @@ export class Nursery extends Model<Nursery> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Nurseries\\Nursery", collection: "nursery-seedling" }
   })
   treeSpecies: TreeSpecies[] | null;

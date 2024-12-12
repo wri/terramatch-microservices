@@ -8,6 +8,8 @@ export * from "./indicator-output-tree-count.entity";
 export * from "./indicator-output-tree-cover.entity";
 export * from "./indicator-output-tree-cover-loss.entity";
 export * from "./model-has-role.entity";
+export * from "./nursery.entity";
+export * from "./nursery-report.entity";
 export * from "./organisation.entity";
 export * from "./organisation-user.entity";
 export * from "./permission.entity";

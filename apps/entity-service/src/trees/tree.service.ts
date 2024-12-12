@@ -1,6 +1,13 @@
-import { Project, Site, SiteReport, TreeSpeciesResearch } from "@terramatch-microservices/database/entities";
+import {
+  Nursery,
+  NurseryReport,
+  Project,
+  Site,
+  SiteReport,
+  TreeSpeciesResearch
+} from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
-import { Injectable, NotFoundException, NotImplementedException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { filter, uniq } from "lodash";
 
 export const ESTABLISHMENT_ENTITIES = [
@@ -32,14 +39,15 @@ export class TreeService {
   }
 
   async findEstablishmentTreeSpecies(entity: EstablishmentEntity, uuid: string): Promise<string[]> {
-    if (entity === "site-reports") {
-      // For site reports, we fetch both the establishment species on Site and on Project
-      const report = await SiteReport.findOne({
+    if (entity === "site-reports" || entity === "nursery-reports") {
+      // For site and nursery reports, we fetch both the establishment species on the parent entity
+      // and on the Project
+      const whereOptions = {
         where: { uuid },
         attributes: [],
         include: [
           {
-            model: Site,
+            model: entity === "site-reports" ? Site : Nursery,
             // This id isn't necessary for the data we want to fetch, but sequelize requires it for
             // the nested includes
             attributes: ["id"],
@@ -55,15 +63,20 @@ export class TreeService {
             ]
           }
         ]
-      });
+      };
+
+      const report = await (entity === "site-reports"
+        ? SiteReport.findOne(whereOptions)
+        : NurseryReport.findOne(whereOptions));
       if (report == null) throw new NotFoundException();
 
-      const siteNames = report.site.treeSpecies.map(({ name }) => name);
-      const projectNames = report.site.project.treeSpecies.map(({ name }) => name);
-      return uniq(filter([...projectNames, ...siteNames]));
+      const parent = report instanceof SiteReport ? report.site : report.nursery;
+      const parentTrees = parent.treeSpecies.map(({ name }) => name);
+      const projectTrees = parent.project.treeSpecies.map(({ name }) => name);
+      return uniq(filter([...parentTrees, ...projectTrees]));
+    } else if (['sites", "nurseries', "project-reports"].includes(entity)) {
     } else {
-      // TODO
-      throw new NotImplementedException();
+      throw new BadRequestException(`Entity type not supported: [${entity}]`);
     }
   }
 }

@@ -79,7 +79,7 @@ describe('DelayedJobsController', () => {
     
   });
 
-  describe('bulkClearJobs', () => {
+  describe('bulkUdpateJobs', () => {
     it('should successfully bulk update jobs to acknowledged', async () => {
       const authenticatedUserId = 130999;
       const job1 = await DelayedJob.create({
@@ -112,7 +112,7 @@ describe('DelayedJobsController', () => {
 
       const request = { authenticatedUserId };
 
-      const result = await controller.bulkClearJobs(payload, request);
+      const result = await controller.bulkUpdateJobs(payload, request);
 
       expect(result.data).toHaveLength(2);
       expect(result.data[0].id).toBe(job1.uuid);
@@ -136,7 +136,7 @@ describe('DelayedJobsController', () => {
       };
       const request = { authenticatedUserId: 130999 };
 
-      await expect(controller.bulkClearJobs(payload, request))
+      await expect(controller.bulkUpdateJobs(payload, request))
         .rejects.toThrow(NotFoundException);
     });
 
@@ -160,7 +160,7 @@ describe('DelayedJobsController', () => {
       };
       const request = { authenticatedUserId };
 
-      await expect(controller.bulkClearJobs(payload, request))
+      await expect(controller.bulkUpdateJobs(payload, request))
         .rejects.toThrow(NotFoundException);
     });
     

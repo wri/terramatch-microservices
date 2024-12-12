@@ -46,7 +46,7 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   progressMessage: string | null
 
   @ApiProperty({
-    description: 'Indicates whether the jobs have been cleared',
+    description: 'Indicates whether the jobs have been acknowledged (cleared)',
     nullable: true
   })
   isAcknowledged: boolean | null

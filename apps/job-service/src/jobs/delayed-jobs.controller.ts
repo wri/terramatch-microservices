@@ -1,6 +1,6 @@
 import { Controller, Get, NotFoundException, Param, UnauthorizedException, Request, Patch, BadRequestException, Body, Logger } from '@nestjs/common';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiOperation } from '@nestjs/swagger';
 import { Op } from 'sequelize';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 import {
@@ -65,9 +65,9 @@ export class DelayedJobsController {
       .document.serialize();
   }
 
-  @Patch('bulk-clear')
+  @Patch('bulk-update')
   @ApiOperation({
-    operationId: 'bulkClearJobs',
+    operationId: 'bulkUpdateJobs',
     summary: 'Bulk update jobs to modify isAcknowledged for specified job IDs',
     description: `Accepts a JSON:API-compliant payload to bulk update jobs, allowing each job's isAcknowledged attribute to be set to true or false.`,
   })
@@ -75,11 +75,11 @@ export class DelayedJobsController {
   @ApiException(() => UnauthorizedException, { description: 'Authentication failed.' })
   @ApiException(() => BadRequestException, { description: 'Invalid payload or IDs provided.' })
   @ApiException(() => NotFoundException, { description: 'One or more jobs specified in the payload could not be found.' })
-  async bulkClearJobs(
-    @Body() bulkClearJobsDto: DelayedJobBulkUpdateBodyDto,
+  async bulkUpdateJobs(
+    @Body() bulkUpdateJobsDto: DelayedJobBulkUpdateBodyDto,
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
-    const jobUpdates = bulkClearJobsDto.data;
+    const jobUpdates = bulkUpdateJobsDto.data;
     const updatePromises = jobUpdates.map(async (job) => {
       const [updatedCount] = await DelayedJob.update(
         { isAcknowledged: job.attributes.isAcknowledged },

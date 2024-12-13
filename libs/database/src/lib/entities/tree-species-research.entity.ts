@@ -1,4 +1,4 @@
-import { Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 import { STRING } from "sequelize";
 
 @Table({ tableName: "tree_species_research", underscored: true, paranoid: true })
@@ -7,6 +7,7 @@ export class TreeSpeciesResearch extends Model<TreeSpeciesResearch> {
   @Column(STRING)
   taxonId: string;
 
+  @Unique
   @Column(STRING)
   scientificName: string;
 
@@ -18,4 +19,7 @@ export class TreeSpeciesResearch extends Model<TreeSpeciesResearch> {
 
   @Column(STRING)
   specificEpithet: string;
+
+  @Column(STRING)
+  infraspecificEpithet: string;
 }

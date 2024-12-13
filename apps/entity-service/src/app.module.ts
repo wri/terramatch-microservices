@@ -3,11 +3,11 @@ import { DatabaseModule } from "@terramatch-microservices/database";
 import { CommonModule } from "@terramatch-microservices/common";
 import { HealthModule } from "./health/health.module";
 import { TreesController } from "./trees/trees.controller";
-import { ResearchService } from "./trees/research.service";
+import { TreeService } from "./trees/tree.service";
 
 @Module({
   imports: [DatabaseModule, CommonModule, HealthModule],
   controllers: [TreesController],
-  providers: [ResearchService]
+  providers: [TreeService]
 })
 export class AppModule {}

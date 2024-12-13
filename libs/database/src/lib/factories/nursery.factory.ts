@@ -1,8 +1,8 @@
-import { Site } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
+import { Nursery } from "../entities";
 import { ProjectFactory } from "./project.factory";
 
-export const SiteFactory = FactoryGirl.define(Site, async () => ({
+export const NurseryFactory = FactoryGirl.define(Nursery, async () => ({
   uuid: crypto.randomUUID(),
   projectId: ProjectFactory.associate("id")
 }));

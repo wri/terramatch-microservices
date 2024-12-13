@@ -43,7 +43,7 @@ export class SitePolygonsService {
     if (site == null) return [];
 
     const reportingPeriods: ReportingPeriodDto[] = [];
-    for (const report of await site.loadSiteReports()) {
+    for (const report of await site.loadReports()) {
       reportingPeriods.push({
         dueAt: report.dueAt,
         submittedAt: report.submittedAt,

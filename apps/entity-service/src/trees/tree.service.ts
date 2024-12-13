@@ -8,7 +8,7 @@ import {
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
-import { BadRequestException, Injectable, NotFoundException, NotImplementedException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { filter, flatten, uniq } from "lodash";
 
 export const ESTABLISHMENT_REPORTS = ["project-reports", "site-reports", "nursery-reports"] as const;
@@ -157,15 +157,16 @@ export class TreeService {
       }
 
       default:
-        throw new NotImplementedException();
+        throw new BadRequestException();
     }
 
     const trees = flatten(records.map(({ treeSpecies }) => treeSpecies));
-    return trees.reduce<Record<string, number>>((counts, tree) => {
-      return {
+    return trees.reduce<Record<string, number>>(
+      (counts, tree) => ({
         ...counts,
-        [tree.name]: (counts[tree.name] ?? 0) + tree.amount
-      };
-    }, {});
+        [tree.name]: (counts[tree.name] ?? 0) + (tree.amount ?? 0)
+      }),
+      {}
+    );
   }
 }

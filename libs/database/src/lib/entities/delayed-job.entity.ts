@@ -1,5 +1,6 @@
-import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, JSON, STRING, UUID } from "sequelize";
+import { AllowNull, AutoIncrement, Column, Default, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
+import { User } from "./user.entity";
 
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {
@@ -26,13 +27,22 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @AllowNull
   @Column(INTEGER)
-  total_content: number | null;
+  totalContent: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  processed_content: number | null;
+  processedContent: number | null;
 
   @AllowNull
   @Column(STRING)
-  proccess_message: string | null
+  progressMessage: string | null
+
+  @ForeignKey(() => User)
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  createdBy: number | null;
+
+  @Column(BOOLEAN)
+  isAcknowledged: boolean;
+  
 }

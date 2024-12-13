@@ -38,6 +38,12 @@ and main branches.
  * Set up the new `main.ts` similarly to existing services.
    * Make sure swagger docs and the `/health` endpoint are implemented
    * Pick a default local port that is unique from other services
+   * Make sure the top of `main.ts` has these two lines:
+    ```
+    // eslint-disable-next-line @nx/enforce-module-boundaries
+    import "../../../instrument-sentry";
+    ```
+   * Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
  * In your `.env` and `.env.local.sample`, add `_PORT` for the new service
  * In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
  * In your local web repo, follow directions in `README.md` for setting up a new service.

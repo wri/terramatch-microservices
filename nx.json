@@ -39,7 +39,8 @@
         "apps/user-service-e2e/**/*",
         "apps/job-service-e2e/**/*",
         "apps/research-service-e2e/**/*",
-        "apps/unified-database-service-e2e/**/*"
+        "apps/unified-database-service-e2e/**/*",
+        "apps/entity-service-e2e/**/*"
       ]
     }
   ]

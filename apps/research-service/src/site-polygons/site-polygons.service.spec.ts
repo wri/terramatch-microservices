@@ -81,7 +81,7 @@ describe("SitePolygonsService", () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = await sitePolygon.loadSite();
     await SiteReportFactory.createMany(2, { siteId: site.id });
-    const siteReports = await site.loadSiteReports();
+    const siteReports = await site.loadReports();
     await TreeSpeciesFactory.forSiteReport.createMany(3, { speciesableId: siteReports[0].id });
     await TreeSpeciesFactory.forSiteReport.createMany(5, { speciesableId: siteReports[1].id });
 

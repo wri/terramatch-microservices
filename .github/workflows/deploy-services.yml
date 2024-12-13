@@ -25,6 +25,7 @@ jobs:
     outputs:
       job-service-enabled: ${{ steps.check-services.outputs.job }}
       user-service-enabled: ${{ steps.check-services.outputs.user }}
+      entity-service-enabled: ${{ steps.check-services.outputs.entity }}
       research-service-enabled: ${{ steps.check-services.outputs.research }}
       unified-database-service-enabled: ${{ steps.check-services.outputs.unified-database }}
     steps:
@@ -32,6 +33,7 @@ jobs:
         run: |
           echo "job=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'job-service') }}" >> "$GITHUB_OUTPUT"
           echo "user=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'user-service') }}" >> "$GITHUB_OUTPUT"
+          echo "entity=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'entity-service') }}" >> "$GITHUB_OUTPUT"
           echo "research=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'research-service') }}" >> "$GITHUB_OUTPUT"
           echo "unified-database=${{ vars.ENABLED_SERVICES == '' || contains(vars.ENABLED_SERVICES, 'unified-database-service') }}" >> "$GITHUB_OUTPUT"
 
@@ -44,7 +46,6 @@ jobs:
       service: job-service
     secrets: inherit
 
-
   user-service:
     needs: check-services
     if: needs.check-services.outputs.user-service-enabled == 'true'
@@ -52,6 +53,15 @@ jobs:
     with:
       env: ${{ inputs.env }}
       service: user-service
+    secrets: inherit
+
+  entity-service:
+    needs: check-services
+    if: needs.check-services.outputs.entity-service-enabled == 'true'
+    uses: ./.github/workflows/deploy-service.yml
+    with:
+      env: ${{ inputs.env }}
+      service: entity-service
     secrets: inherit
 
   research-service:

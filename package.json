@@ -5,7 +5,7 @@
   "scripts": {
     "research": "nx serve research-service",
     "unified-database": "nx serve unified-database-service",
-    "fe-services": "nx run-many -t serve --projects user-service job-service",
+    "fe-services": "nx run-many -t serve --projects user-service job-service entity-service",
     "all": "nx run-many --parallel=100 -t serve"
   },
   "private": true,
@@ -28,7 +28,6 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "geojson": "^0.5.0",
-    "inflection": "^3.0.0",
     "lodash": "^4.17.21",
     "luxon": "^3.5.0",
     "mariadb": "^3.3.2",
@@ -58,10 +57,8 @@
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
-    "@types/airtable": "^0.10.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/geojson": "^7946.0.14",
-    "@types/inflection": "^1.13.2",
     "@types/jest": "^29.5.12",
     "@types/lodash": "^4.17.13",
     "@types/luxon": "^3.4.2",

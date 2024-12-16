@@ -7,6 +7,11 @@ type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "delayedJobs" })
 export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
+  @ApiProperty({
+    description: "The unique identifier for the delayed job.",
+    type: String
+  })
+  uuid: string;
 
   @ApiProperty({
     description:
@@ -28,26 +33,26 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
   payload: object | null;
 
   @ApiProperty({
-    description: 'If the job is in progress, this is the total content to process',
+    description: "If the job is in progress, this is the total content to process",
     nullable: true
   })
   totalContent: number | null;
 
   @ApiProperty({
-    description: 'If the job is in progress, this is the total content processed',
+    description: "If the job is in progress, this is the total content processed",
     nullable: true
   })
   processedContent: number | null;
 
   @ApiProperty({
-    description: 'If the job is in progress, this is the progress message',
+    description: "If the job is in progress, this is the progress message",
     nullable: true
   })
-  progressMessage: string | null
+  progressMessage: string | null;
 
   @ApiProperty({
-    description: 'Indicates whether the jobs have been acknowledged (cleared)',
+    description: "Indicates whether the jobs have been acknowledged (cleared)",
     nullable: true
   })
-  isAcknowledged: boolean | null
+  isAcknowledged: boolean | null;
 }

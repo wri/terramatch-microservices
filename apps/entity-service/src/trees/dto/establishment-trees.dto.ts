@@ -24,7 +24,7 @@ export class EstablishmentsTreesDto extends JsonApiAttributes<EstablishmentsTree
 
   @ApiProperty({
     type: "object",
-    additionalProperties: { $ref: "#/components/schemas/PreviousPlantingCount" },
+    additionalProperties: { $ref: "#/components/schemas/PreviousPlantingCountDto" },
     nullable: true,
     description: "If the entity in this request is a report, the sum totals of previous planting by species.",
     example: { "Aster persaliens": { amount: 256 }, "Cirsium carniolicum": { taxonId: "wfo-0000130112", amount: 1024 } }

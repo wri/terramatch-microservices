@@ -2,14 +2,15 @@ import { BadRequestException, Controller, Get, Param, Query, UnauthorizedExcepti
 import { TreeService } from "./tree.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { isEmpty } from "lodash";
 import { EstablishmentsTreesParamsDto } from "./dto/establishments-trees-params.dto";
 import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
-import { EstablishmentsTreesDto } from "./dto/establishment-trees.dto";
+import { EstablishmentsTreesDto, PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
 
 @Controller("trees/v3")
+@ApiExtraModels(PreviousPlantingCountDto)
 export class TreesController {
   constructor(private readonly treeService: TreeService) {}
 

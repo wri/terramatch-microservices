@@ -10,6 +10,7 @@ import {
 import { Op } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { filter, flatten, uniq } from "lodash";
+import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
 
 export const ESTABLISHMENT_REPORTS = ["project-reports", "site-reports", "nursery-reports"] as const;
 export type EstablishmentReport = (typeof ESTABLISHMENT_REPORTS)[number];
@@ -103,7 +104,10 @@ export class TreeService {
     }
   }
 
-  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<Record<string, number>> {
+  async getPreviousPlanting(
+    entity: EstablishmentEntity,
+    uuid: string
+  ): Promise<Record<string, PreviousPlantingCountDto>> {
     if (!isReport(entity)) return undefined;
 
     const treeReportWhere = (parentAttribute: string, report: ProjectReport | SiteReport | NurseryReport) => ({
@@ -115,7 +119,7 @@ export class TreeService {
       include: [
         {
           association: "treeSpecies",
-          attributes: ["name", "amount"],
+          attributes: ["taxonId", "name", "amount"],
           where: { amount: { [Op.gt]: 0 } }
         }
       ]
@@ -161,10 +165,13 @@ export class TreeService {
     }
 
     const trees = flatten(records.map(({ treeSpecies }) => treeSpecies));
-    return trees.reduce<Record<string, number>>(
+    return trees.reduce<Record<string, PreviousPlantingCountDto>>(
       (counts, tree) => ({
         ...counts,
-        [tree.name]: (counts[tree.name] ?? 0) + (tree.amount ?? 0)
+        [tree.name]: {
+          taxonId: counts[tree.name]?.taxonId ?? tree.taxonId,
+          amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
+        }
       }),
       {}
     );

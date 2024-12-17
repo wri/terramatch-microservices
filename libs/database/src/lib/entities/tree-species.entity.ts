@@ -3,6 +3,7 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
+  ForeignKey,
   Index,
   Model,
   PrimaryKey,
@@ -16,6 +17,7 @@ import { Project } from "./project.entity";
 import { ProjectReport } from "./project-report.entity";
 import { Nursery } from "./nursery.entity";
 import { NurseryReport } from "./nursery-report.entity";
+import { TreeSpeciesResearch } from "./tree-species-research.entity";
 
 @Table({
   tableName: "v2_tree_species",
@@ -40,6 +42,11 @@ export class TreeSpecies extends Model<TreeSpecies> {
   @AllowNull
   @Column(STRING)
   name: string | null;
+
+  @AllowNull
+  @ForeignKey(() => TreeSpeciesResearch)
+  @Column(STRING)
+  taxonId: string | null;
 
   @AllowNull
   @Column(BIGINT)

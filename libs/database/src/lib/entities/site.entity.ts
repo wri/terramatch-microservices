@@ -22,6 +22,9 @@ export class Site extends Model<Site> {
   @Column(BIGINT.UNSIGNED)
   override id: number;
 
+  @Column
+  name: string;
+
   @Index
   @Column(UUID)
   uuid: string;

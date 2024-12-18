@@ -1,0 +1,26 @@
+{
+  "name": "unified-database-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/unified-database-service/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "unified-database-service:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "unified-database-service:build:development"
+        },
+        "production": {
+          "buildTarget": "unified-database-service:build:production"
+        }
+      }
+    }
+  }
+}

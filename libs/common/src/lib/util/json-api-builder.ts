@@ -106,13 +106,18 @@ export class ApiBuilderException extends Error {}
 
 type DocumentBuilderOptions = {
   pagination?: boolean;
+  /**
+   * If true, the `data` member of the resulting response will always be an array, even if there's
+   * only one member
+   **/
+  forceDataArray?: boolean;
 };
 
 class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
 
-  constructor(public readonly options?: DocumentBuilderOptions) {}
+  constructor(public readonly options: DocumentBuilderOptions = {}) {}
 
   addData(id: string, attributes: any): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes, this);
@@ -146,7 +151,7 @@ class DocumentBuilder {
   }
 
   serialize(): JsonApiDocument {
-    const singular = this.data.length === 1 && this.options?.pagination !== true;
+    const singular = this.data.length === 1 && this.options.pagination !== true && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
       // Data can either be a single object or an array
       data: singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize())
@@ -158,7 +163,7 @@ class DocumentBuilder {
     }
 
     const meta: DocumentMeta = {};
-    if (this.options?.pagination) {
+    if (this.options.pagination) {
       meta.page = {
         cursor: this.data[0]?.id,
         total: this.data.length

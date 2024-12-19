@@ -17,6 +17,8 @@ import { NurseryReport } from "./nursery-report.entity";
 // A quick stub for the tree service endpoints.
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
 export class Nursery extends Model<Nursery> {
+  static readonly TREE_ASSOCIATIONS = ["seedlings"];
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -38,14 +40,7 @@ export class Nursery extends Model<Nursery> {
     constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Nurseries\\Nursery", collection: "nursery-seedling" }
   })
-  treeSpecies: TreeSpecies[] | null;
-
-  async loadTreeSpecies() {
-    if (this.treeSpecies == null) {
-      this.treeSpecies = await this.$get("treeSpecies");
-    }
-    return this.treeSpecies;
-  }
+  seedlings: TreeSpecies[] | null;
 
   @HasMany(() => NurseryReport)
   reports: NurseryReport[] | null;

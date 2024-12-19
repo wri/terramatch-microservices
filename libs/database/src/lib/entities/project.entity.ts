@@ -18,6 +18,8 @@ import { ProjectReport } from "./project-report.entity";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -337,7 +339,7 @@ export class Project extends Model<Project> {
     constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Projects\\Project", collection: "tree-planted" }
   })
-  treeSpecies: TreeSpecies[] | null;
+  treesPlanted: TreeSpecies[] | null;
 
   @HasMany(() => ProjectReport)
   reports: ProjectReport[] | null;

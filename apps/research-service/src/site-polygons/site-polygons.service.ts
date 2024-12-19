@@ -33,7 +33,7 @@ export class SitePolygonsService {
     const site = await sitePolygon.loadSite();
     if (site == null) return [];
 
-    return (await site.loadTreeSpecies()).map(({ name, amount }) => ({ name, amount }));
+    return (await site.loadTreesPlanted()).map(({ name, amount }) => ({ name, amount }));
   }
 
   async getReportingPeriods(sitePolygon: SitePolygon): Promise<ReportingPeriodDto[]> {
@@ -47,7 +47,7 @@ export class SitePolygonsService {
       reportingPeriods.push({
         dueAt: report.dueAt,
         submittedAt: report.submittedAt,
-        treeSpecies: (await report.loadTreeSpecies()).map(({ name, amount }) => ({ name, amount }))
+        treeSpecies: (await report.loadTreesPlanted()).map(({ name, amount }) => ({ name, amount }))
       });
     }
 

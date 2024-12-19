@@ -97,7 +97,20 @@ export class DelayedJobsController {
         uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
         createdBy: authenticatedUserId,
         status: { [Op.ne]: "pending" }
-      }
+      },
+      include: [
+        {
+          association: "entityProject",
+          attributes: ["name"],
+          required: false
+        },
+        {
+          association: "entitySite",
+          attributes: ["name"],
+          required: false
+        }
+      ],
+      logging: console.log
     });
     if (!jobs.length) {
       throw new NotFoundException("Some jobs in the request could not be updated");

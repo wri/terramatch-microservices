@@ -15,13 +15,8 @@ import { User } from "./user.entity";
 import { Site } from "./site.entity";
 import { Project } from "./project.entity";
 
-interface EntityAssociations {
-  getEntityProject(): Promise<Project | null>;
-  getEntitySite(): Promise<Site | null>;
-}
-
 @Table({ tableName: "delayed_jobs", underscored: true })
-export class DelayedJob extends Model<DelayedJob> implements EntityAssociations {
+export class DelayedJob extends Model<DelayedJob> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -78,37 +73,26 @@ export class DelayedJob extends Model<DelayedJob> implements EntityAssociations 
 
   @BelongsTo(() => Project, {
     foreignKey: "entityId",
-    constraints: false,
-    scope: {
-      entityType: "App\\Models\\V2\\Projects\\Project"
-    },
-    as: "entityProject"
+    constraints: false
   })
   entityProject?: Project;
 
   @BelongsTo(() => Site, {
     foreignKey: "entityId",
-    constraints: false,
-    scope: {
-      entityType: "App\\Models\\V2\\Sites\\Site"
-    },
-    as: "entitySite"
+    constraints: false
   })
   entitySite?: Site;
-
-  declare getEntityProject: () => Promise<Project | null>;
-  declare getEntitySite: () => Promise<Site | null>;
 
   async getRelatedEntity(): Promise<string | null> {
     if (!this.entityId) return null;
 
     if (this.entityType === "App\\Models\\V2\\Projects\\Project") {
-      const project = this.entityProject ?? (await this.getEntityProject());
+      const project = this.entityProject ?? (await this.$get("entityProject"));
       return project?.name ?? null;
     }
 
     if (this.entityType === "App\\Models\\V2\\Sites\\Site") {
-      const site = this.entitySite ?? (await this.getEntitySite());
+      const site = this.entitySite ?? (await this.$get("entitySite"));
       return site?.name ?? null;
     }
 

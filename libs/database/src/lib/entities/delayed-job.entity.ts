@@ -1,6 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
   Default,
   ForeignKey,
@@ -13,14 +14,14 @@ import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
 import { User } from "./user.entity";
 import { Site } from "./site.entity";
 import { Project } from "./project.entity";
-import { Logger } from "@nestjs/common";
 
-const ENTITY_TYPE_MAPPING: Record<string, any> = {
-  "App\\Models\\V2\\Sites\\Site": Site,
-  "App\\Models\\V2\\Projects\\Project": Project
-};
+interface EntityAssociations {
+  getEntityProject(): Promise<Project | null>;
+  getEntitySite(): Promise<Site | null>;
+}
+
 @Table({ tableName: "delayed_jobs", underscored: true })
-export class DelayedJob extends Model<DelayedJob> {
+export class DelayedJob extends Model<DelayedJob> implements EntityAssociations {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -70,18 +71,45 @@ export class DelayedJob extends Model<DelayedJob> {
   @Column(STRING)
   entityType: string | null;
 
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  entityId: number | null;
+  @ForeignKey(() => Project)
+  @ForeignKey(() => Site)
+  @Column
+  entityId: number;
 
-  /**
-   * Fetch the related entity dynamically based on the entityType and entityId.
-   */
-  async getRelatedEntity() {
-    const Model = ENTITY_TYPE_MAPPING[this.entityType || ""];
-    if (Model && this.entityId) {
-      const entity = await Model.findByPk(this.entityId);
-      return entity?.name;
+  @BelongsTo(() => Project, {
+    foreignKey: "entityId",
+    constraints: false,
+    scope: {
+      entityType: "App\\Models\\V2\\Projects\\Project"
+    },
+    as: "entityProject"
+  })
+  entityProject?: Project;
+
+  @BelongsTo(() => Site, {
+    foreignKey: "entityId",
+    constraints: false,
+    scope: {
+      entityType: "App\\Models\\V2\\Sites\\Site"
+    },
+    as: "entitySite"
+  })
+  entitySite?: Site;
+
+  declare getEntityProject: () => Promise<Project | null>;
+  declare getEntitySite: () => Promise<Site | null>;
+
+  async getRelatedEntity(): Promise<string | null> {
+    if (!this.entityId) return null;
+
+    if (this.entityType === "App\\Models\\V2\\Projects\\Project") {
+      const project = this.entityProject ?? (await this.getEntityProject());
+      return project?.name ?? null;
+    }
+
+    if (this.entityType === "App\\Models\\V2\\Sites\\Site") {
+      const site = this.entitySite ?? (await this.getEntitySite());
+      return site?.name ?? null;
     }
 
     return null;

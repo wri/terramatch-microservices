@@ -1,6 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
   ForeignKey,
   HasMany,
@@ -16,6 +17,9 @@ import { Site } from "./site.entity";
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
+  static readonly PARENT_ID = "siteId";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -29,6 +33,9 @@ export class SiteReport extends Model<SiteReport> {
   @Column(BIGINT.UNSIGNED)
   siteId: number;
 
+  @BelongsTo(() => Site)
+  site: Site | null;
+
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
@@ -39,14 +46,29 @@ export class SiteReport extends Model<SiteReport> {
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport" }
+    constraints: false,
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "tree-planted" }
   })
-  treeSpecies: TreeSpecies[] | null;
+  treesPlanted: TreeSpecies[] | null;
 
-  async loadTreeSpecies() {
-    if (this.treeSpecies == null) {
-      this.treeSpecies = await this.$get("treeSpecies");
+  async loadTreesPlanted() {
+    if (this.treesPlanted == null) {
+      this.treesPlanted = await this.$get("treesPlanted");
     }
-    return this.treeSpecies;
+    return this.treesPlanted;
+  }
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "non-tree" }
+  })
+  nonTrees: TreeSpecies[] | null;
+
+  async loadNonTrees() {
+    if (this.nonTrees == null) {
+      this.nonTrees = await this.$get("nonTrees");
+    }
+    return this.nonTrees;
   }
 }

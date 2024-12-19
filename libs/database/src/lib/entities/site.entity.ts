@@ -1,4 +1,14 @@
-import { AutoIncrement, Column, ForeignKey, HasMany, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  ForeignKey,
+  HasMany,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
@@ -7,6 +17,8 @@ import { Project } from "./project.entity";
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -20,26 +32,44 @@ export class Site extends Model<Site> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @BelongsTo(() => Project)
+  project: Project | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site" }
+    constraints: false,
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "tree-planted" }
   })
-  treeSpecies: TreeSpecies[] | null;
+  treesPlanted: TreeSpecies[] | null;
 
-  async loadTreeSpecies() {
-    if (this.treeSpecies == null) {
-      this.treeSpecies = await this.$get("treeSpecies");
+  async loadTreesPlanted() {
+    if (this.treesPlanted == null) {
+      this.treesPlanted = await this.$get("treesPlanted");
     }
-    return this.treeSpecies;
+    return this.treesPlanted;
+  }
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "non-tree" }
+  })
+  nonTrees: TreeSpecies[] | null;
+
+  async loadNonTrees() {
+    if (this.nonTrees == null) {
+      this.nonTrees = await this.$get("nonTrees");
+    }
+    return this.nonTrees;
   }
 
   @HasMany(() => SiteReport)
-  siteReports: SiteReport[] | null;
+  reports: SiteReport[] | null;
 
-  async loadSiteReports() {
-    if (this.siteReports == null) {
-      this.siteReports = await this.$get("siteReports");
+  async loadReports() {
+    if (this.reports == null) {
+      this.reports = await this.$get("reports");
     }
-    return this.siteReports;
+    return this.reports;
   }
 }

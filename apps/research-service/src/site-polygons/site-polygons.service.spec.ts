@@ -63,9 +63,9 @@ describe("SitePolygonsService", () => {
   it("should return all establishment tree species", async () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = await sitePolygon.loadSite();
-    await TreeSpeciesFactory.forSite.createMany(3, { speciesableId: site.id });
+    await TreeSpeciesFactory.forSiteTreePlanted.createMany(3, { speciesableId: site.id });
 
-    const treeSpecies = await site.loadTreeSpecies();
+    const treeSpecies = await site.loadTreesPlanted();
     const treeSpeciesDto = await service.getEstablishmentTreeSpecies(sitePolygon);
     expect(treeSpeciesDto.length).toBe(treeSpecies.length);
 
@@ -81,16 +81,24 @@ describe("SitePolygonsService", () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = await sitePolygon.loadSite();
     await SiteReportFactory.createMany(2, { siteId: site.id });
-    const siteReports = await site.loadSiteReports();
-    await TreeSpeciesFactory.forSiteReport.createMany(3, { speciesableId: siteReports[0].id });
-    await TreeSpeciesFactory.forSiteReport.createMany(5, { speciesableId: siteReports[1].id });
+    const siteReports = await site.loadReports();
+    await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReports[0].id });
+    await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(5, { speciesableId: siteReports[1].id });
 
-    await siteReports[0].loadTreeSpecies();
-    await siteReports[1].loadTreeSpecies();
+    await siteReports[0].loadTreesPlanted();
+    await siteReports[1].loadTreesPlanted();
     const reportingPeriodsDto = await service.getReportingPeriods(sitePolygon);
     expect(reportingPeriodsDto.length).toBe(siteReports.length);
-    expect(siteReports[0]).toMatchObject(reportingPeriodsDto[0]);
-    expect(siteReports[1]).toMatchObject(reportingPeriodsDto[1]);
+    expect({
+      dueAt: siteReports[0].dueAt,
+      submittedAt: siteReports[0].submittedAt,
+      treeSpecies: siteReports[0].treesPlanted
+    }).toMatchObject(reportingPeriodsDto[0]);
+    expect({
+      dueAt: siteReports[1].dueAt,
+      submittedAt: siteReports[1].submittedAt,
+      treeSpecies: siteReports[1].treesPlanted
+    }).toMatchObject(reportingPeriodsDto[1]);
   });
 
   it("should return all polygons when there are fewer than the page size", async () => {

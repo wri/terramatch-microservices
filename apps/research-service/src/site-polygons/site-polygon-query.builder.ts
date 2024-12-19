@@ -10,8 +10,7 @@ import {
   Project,
   Site,
   SitePolygon,
-  SiteReport,
-  TreeSpecies
+  SiteReport
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
@@ -44,10 +43,10 @@ export class SitePolygonQueryBuilder {
   private siteJoin: IncludeOptions = {
     model: Site,
     include: [
-      { model: TreeSpecies, attributes: ["name", "amount"] },
+      { association: "treesPlanted", attributes: ["name", "amount"] },
       {
         model: SiteReport,
-        include: [{ model: TreeSpecies, attributes: ["name", "amount"] }],
+        include: [{ association: "treesPlanted", attributes: ["name", "amount"] }],
         attributes: ["dueAt", "submittedAt"]
       }
     ],

@@ -23,7 +23,8 @@ type Mutable<T> = {
 };
 
 const customizeFargate = (service: string, env: string, props: Mutable<ApplicationLoadBalancedFargateServiceProps>) => {
-  if (service === "research-service") {
+  if (service === "research-service" && ["prod", "staging"].includes(env)) {
+    // Beef up the research service in staging and prod
     props.cpu = 2048;
     props.memoryLimitMiB = 4096;
   }

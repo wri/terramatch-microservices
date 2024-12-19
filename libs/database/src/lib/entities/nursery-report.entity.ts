@@ -17,6 +17,9 @@ import { TreeSpecies } from "./tree-species.entity";
 // A quick stub for tree endpoints
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
+  static readonly TREE_ASSOCIATIONS = ["seedlings"];
+  static readonly PARENT_ID = "nurseryId";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -42,5 +45,5 @@ export class NurseryReport extends Model<NurseryReport> {
     constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Nurseries\\NurseryReport", collection: "nursery-seedling" }
   })
-  treeSpecies: TreeSpecies[] | null;
+  seedlings: TreeSpecies[] | null;
 }

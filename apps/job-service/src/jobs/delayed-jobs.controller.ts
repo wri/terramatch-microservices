@@ -39,8 +39,15 @@ export class DelayedJobsController {
       order: [["createdAt", "DESC"]]
     });
 
+    const jobsWithEntityNames = await Promise.all(
+      runningJobs.map(async job => {
+        const entityName = await job.getRelatedEntity();
+        return { ...job.toJSON(), entityName };
+      })
+    );
+
     const document = buildJsonApi();
-    runningJobs.forEach(job => {
+    jobsWithEntityNames.forEach(job => {
       document.addData(job.uuid, new DelayedJobDto(job));
     });
     return document.serialize();
@@ -90,18 +97,33 @@ export class DelayedJobsController {
         uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
         createdBy: authenticatedUserId,
         status: { [Op.ne]: "pending" }
-      }
+      },
+      include: [
+        {
+          association: "entityProject",
+          attributes: ["name"],
+          required: false
+        },
+        {
+          association: "entitySite",
+          attributes: ["name"],
+          required: false
+        }
+      ],
+      logging: console.log
     });
-    if (jobs.length !== jobUpdates.length) {
+    if (!jobs.length) {
       throw new NotFoundException("Some jobs in the request could not be updated");
     }
 
-    const updatePromises = jobUpdates.map(async ({ uuid, attributes }) => {
-      const job = jobs.find(job => job.uuid === uuid);
-      job.isAcknowledged = attributes.isAcknowledged;
-      await job.save();
-      return job;
-    });
+    const updatePromises = jobUpdates
+      .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
+      .map(async ({ uuid, attributes }) => {
+        const job = jobs.find(job => job.uuid === uuid);
+        job.isAcknowledged = attributes.isAcknowledged;
+        await job.save();
+        return job;
+      });
 
     const updatedJobs = await Promise.all(updatePromises);
 

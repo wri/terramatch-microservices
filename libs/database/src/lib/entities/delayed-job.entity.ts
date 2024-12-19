@@ -1,6 +1,19 @@
-import { AllowNull, AutoIncrement, Column, Default, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  Default,
+  ForeignKey,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
 import { User } from "./user.entity";
+import { Site } from "./site.entity";
+import { Project } from "./project.entity";
 
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {
@@ -35,7 +48,7 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @AllowNull
   @Column(STRING)
-  progressMessage: string | null
+  progressMessage: string | null;
 
   @ForeignKey(() => User)
   @AllowNull
@@ -44,5 +57,45 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @Column(BOOLEAN)
   isAcknowledged: boolean;
-  
+
+  @AllowNull
+  @Column(STRING)
+  name: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  entityType: string | null;
+
+  @ForeignKey(() => Project)
+  @ForeignKey(() => Site)
+  @Column
+  entityId: number;
+
+  @BelongsTo(() => Project, {
+    foreignKey: "entityId",
+    constraints: false
+  })
+  entityProject?: Project;
+
+  @BelongsTo(() => Site, {
+    foreignKey: "entityId",
+    constraints: false
+  })
+  entitySite?: Site;
+
+  async getRelatedEntity(): Promise<string | null> {
+    if (!this.entityId) return null;
+
+    if (this.entityType === "App\\Models\\V2\\Projects\\Project") {
+      const project = this.entityProject ?? (await this.$get("entityProject"));
+      return project?.name ?? null;
+    }
+
+    if (this.entityType === "App\\Models\\V2\\Sites\\Site") {
+      const site = this.entitySite ?? (await this.$get("entitySite"));
+      return site?.name ?? null;
+    }
+
+    return null;
+  }
 }

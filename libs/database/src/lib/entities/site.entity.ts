@@ -17,6 +17,8 @@ import { Project } from "./project.entity";
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -38,13 +40,13 @@ export class Site extends Model<Site> {
     constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "tree-planted" }
   })
-  treeSpecies: TreeSpecies[] | null;
+  treesPlanted: TreeSpecies[] | null;
 
-  async loadTreeSpecies() {
-    if (this.treeSpecies == null) {
-      this.treeSpecies = await this.$get("treeSpecies");
+  async loadTreesPlanted() {
+    if (this.treesPlanted == null) {
+      this.treesPlanted = await this.$get("treesPlanted");
     }
-    return this.treeSpecies;
+    return this.treesPlanted;
   }
 
   @HasMany(() => TreeSpecies, {
@@ -52,13 +54,13 @@ export class Site extends Model<Site> {
     constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "non-tree" }
   })
-  nonTreeSpecies: TreeSpecies[] | null;
+  nonTrees: TreeSpecies[] | null;
 
-  async loadNonTreeSpecies() {
-    if (this.nonTreeSpecies == null) {
-      this.nonTreeSpecies = await this.$get("nonTreeSpecies");
+  async loadNonTrees() {
+    if (this.nonTrees == null) {
+      this.nonTrees = await this.$get("nonTrees");
     }
-    return this.nonTreeSpecies;
+    return this.nonTrees;
   }
 
   @HasMany(() => SiteReport)

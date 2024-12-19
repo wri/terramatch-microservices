@@ -17,6 +17,9 @@ import { Project } from "./project.entity";
 // A quick stub for the tree endpoints
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
+  static readonly PARENT_ID = "projectId";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -42,5 +45,5 @@ export class ProjectReport extends Model<ProjectReport> {
     constraints: false,
     scope: { speciesableType: "App\\Models\\V2\\Projects\\ProjectReport", collection: "tree-planted" }
   })
-  treeSpecies: TreeSpecies[] | null;
+  treesPlanted: TreeSpecies[] | null;
 }

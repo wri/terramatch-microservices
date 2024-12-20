@@ -25,36 +25,51 @@ describe("DelayedJobsController", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
-
   describe("getRunningJobs", () => {
-    it("should return a list of running jobs with entity_name for the authenticated user", async () => {
+    it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
 
-      // Create a job with entity_name in metadata
       const job = await DelayedJob.create({
         uuid: uuidv4(),
         createdBy: authenticatedUserId,
         isAcknowledged: false,
         status: "completed",
-        metadata: { entity_name: "TestEntity" } // Adding entity_name
+        metadata: { entity_name: "TestEntity" }
       });
-      const request = {
-        authenticatedUserId
-      };
 
+      const request = { authenticatedUserId };
       const result = await controller.getRunningJobs(request);
 
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
       expect(data).toHaveLength(1);
       expect(data[0].id).toBe(job.uuid);
-    });
-    it("should return an empty list when there are no running jobs", async () => {
-      const authenticatedUserId = 130999;
-      const request = { authenticatedUserId };
 
+      const entityName = data[0].attributes.entityName;
+      expect(entityName).toBe("TestEntity");
+    });
+
+    it("should return a job with null entity_name if metadata does not have entity_name", async () => {
+      const authenticatedUserId = 130999;
+
+      const job = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: {}
+      });
+
+      const request = { authenticatedUserId };
       const result = await controller.getRunningJobs(request);
-      expect(result.data).toHaveLength(0);
+
+      const data = Array.isArray(result.data) ? result.data : [result.data];
+
+      expect(data).toHaveLength(1);
+      expect(data[0].id).toBe(job.uuid);
+
+      const entityName = data[0].attributes.entityName;
+      expect(entityName).toBeUndefined();
     });
   });
 

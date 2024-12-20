@@ -68,11 +68,4 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
     required: false
   })
   entityName?: string | null;
-
-  @ApiProperty({
-    description: "The type of the entity (e.g., site, project).",
-    nullable: true,
-    required: false
-  })
-  entityType?: string | null;
 }

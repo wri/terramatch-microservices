@@ -36,6 +36,18 @@ export class DelayedJobsController {
         isAcknowledged: false,
         createdBy: authenticatedUserId
       },
+      include: [
+        {
+          association: "entityProject",
+          attributes: ["name"],
+          required: false
+        },
+        {
+          association: "entitySite",
+          attributes: ["name"],
+          required: false
+        }
+      ],
       order: [["createdAt", "DESC"]]
     });
 
@@ -109,8 +121,7 @@ export class DelayedJobsController {
           attributes: ["name"],
           required: false
         }
-      ],
-      logging: console.log
+      ]
     });
     if (!jobs.length) {
       throw new NotFoundException("Some jobs in the request could not be updated");

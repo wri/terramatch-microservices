@@ -1,0 +1,26 @@
+{
+  "name": "entity-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/entity-service/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "entity-service:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "entity-service:build:development"
+        },
+        "production": {
+          "buildTarget": "entity-service:build:production"
+        }
+      }
+    }
+  }
+}

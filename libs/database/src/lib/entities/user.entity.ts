@@ -284,7 +284,9 @@ export class User extends Model<User> {
               attributes: [[fn("DISTINCT", col("Project.framework_key")), "frameworkKey"]],
               raw: true
             })
-          ).map(({ frameworkKey }) => frameworkKey)
+          )
+            .map(({ frameworkKey }) => frameworkKey)
+            .filter(frameworkKey => frameworkKey != null)
         ];
       }
 

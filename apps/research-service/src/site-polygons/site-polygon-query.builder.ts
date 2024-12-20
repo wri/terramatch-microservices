@@ -43,10 +43,10 @@ export class SitePolygonQueryBuilder {
   private siteJoin: IncludeOptions = {
     model: Site,
     include: [
-      { association: "treeSpecies", attributes: ["name", "amount"] },
+      { association: "treesPlanted", attributes: ["name", "amount"] },
       {
         model: SiteReport,
-        include: [{ association: "treeSpecies", attributes: ["name", "amount"] }],
+        include: [{ association: "treesPlanted", attributes: ["name", "amount"] }],
         attributes: ["dueAt", "submittedAt"]
       }
     ],

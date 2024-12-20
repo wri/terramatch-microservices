@@ -74,27 +74,42 @@ describe("TreeService", () => {
       const nursery = await NurseryFactory.create({ projectId: project.id });
       const nurseryReport = await NurseryReportFactory.create({ nurseryId: nursery.id });
 
-      const projectTrees = (await TreeSpeciesFactory.forProject.createMany(3, { speciesableId: project.id }))
+      const projectTreesPlanted = (
+        await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: project.id })
+      )
         .map(({ name }) => name)
         .sort();
-      const siteTrees = (await TreeSpeciesFactory.forSite.createMany(2, { speciesableId: site.id }))
+      const siteTreesPlanted = (await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, { speciesableId: site.id }))
         .map(({ name }) => name)
         .sort();
-      const nurseryTrees = (await TreeSpeciesFactory.forNursery.createMany(4, { speciesableId: nursery.id }))
+      const siteNonTrees = (await TreeSpeciesFactory.forSiteNonTree.createMany(3, { speciesableId: site.id }))
+        .map(({ name }) => name)
+        .sort();
+      const nurserySeedlings = (
+        await TreeSpeciesFactory.forNurserySeedling.createMany(4, { speciesableId: nursery.id })
+      )
         .map(({ name }) => name)
         .sort();
 
       let result = await service.getEstablishmentTrees("project-reports", projectReport.uuid);
-      expect(result.sort()).toEqual(projectTrees);
+      console.log("result", result);
+      expect(Object.keys(result).length).toBe(1);
+      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
       result = await service.getEstablishmentTrees("sites", site.uuid);
-      expect(result.sort()).toEqual(projectTrees);
+      expect(Object.keys(result).length).toBe(1);
+      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
       result = await service.getEstablishmentTrees("nurseries", nursery.uuid);
-      expect(result.sort()).toEqual(projectTrees);
+      expect(Object.keys(result).length).toBe(1);
+      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
 
       result = await service.getEstablishmentTrees("site-reports", siteReport.uuid);
-      expect(result.sort()).toEqual(uniq([...siteTrees, ...projectTrees]).sort());
+      expect(Object.keys(result).length).toBe(2);
+      expect(result["tree-planted"].sort()).toEqual(uniq([...siteTreesPlanted, ...projectTreesPlanted]).sort());
+      expect(result["non-tree"].sort()).toEqual(siteNonTrees);
       result = await service.getEstablishmentTrees("nursery-reports", nurseryReport.uuid);
-      expect(result.sort()).toEqual(uniq([...nurseryTrees, ...projectTrees]).sort());
+      expect(Object.keys(result).length).toBe(2);
+      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
+      expect(result["nursery-seedling"].sort()).toEqual(nurserySeedlings);
     });
 
     it("throws with bad inputs to establishment trees", async () => {
@@ -137,41 +152,55 @@ describe("TreeService", () => {
           amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
         }
       });
-      const projectReportTrees = await TreeSpeciesFactory.forProjectReport.createMany(3, {
+      const projectReportTreesPlanted = await TreeSpeciesFactory.forProjectReportTreePlanted.createMany(3, {
         speciesableId: projectReport1.id
       });
-      projectReportTrees.push(
-        await TreeSpeciesFactory.forProjectReport.create({
+      projectReportTreesPlanted.push(
+        await TreeSpeciesFactory.forProjectReportTreePlanted.create({
           speciesableId: projectReport1.id,
           taxonId: "wfo-projectreporttree"
         })
       );
       let result = await service.getPreviousPlanting("project-reports", projectReport2.uuid);
-      expect(result).toMatchObject(projectReportTrees.reduce(reduceTreeCounts, {}));
+      expect(Object.keys(result)).toMatchObject(["tree-planted"]);
+      expect(result).toMatchObject({ "tree-planted": projectReportTreesPlanted.reduce(reduceTreeCounts, {}) });
 
-      const siteReport1Trees = await TreeSpeciesFactory.forSiteReport.createMany(3, { speciesableId: siteReport1.id });
-      siteReport1Trees.push(
-        await TreeSpeciesFactory.forSiteReport.create({
+      const siteReport1TreesPlanted = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, {
+        speciesableId: siteReport1.id
+      });
+      siteReport1TreesPlanted.push(
+        await TreeSpeciesFactory.forSiteReportTreePlanted.create({
           speciesableId: siteReport1.id,
           taxonId: "wfo-sitereporttree"
         })
       );
-      const siteReport2Trees = await TreeSpeciesFactory.forSiteReport.createMany(3, { speciesableId: siteReport2.id });
+      const siteReport2TreesPlanted = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, {
+        speciesableId: siteReport2.id
+      });
+      const siteReport2NonTrees = await TreeSpeciesFactory.forSiteReportNonTree.createMany(2, {
+        speciesableId: siteReport2.id
+      });
       result = await service.getPreviousPlanting("site-reports", siteReport1.uuid);
       expect(result).toMatchObject({});
       result = await service.getPreviousPlanting("site-reports", siteReport2.uuid);
-      const siteReport1TreesReduced = siteReport1Trees.reduce(reduceTreeCounts, {});
-      expect(result).toMatchObject(siteReport1TreesReduced);
+      const siteReport1TreesPlantedReduced = siteReport1TreesPlanted.reduce(reduceTreeCounts, {});
+      expect(Object.keys(result)).toMatchObject(["tree-planted"]);
+      expect(result).toMatchObject({ "tree-planted": siteReport1TreesPlantedReduced });
       result = await service.getPreviousPlanting("site-reports", siteReport3.uuid);
-      expect(result).toMatchObject(siteReport2Trees.reduce(reduceTreeCounts, siteReport1TreesReduced));
+      expect(Object.keys(result).sort()).toMatchObject(["non-tree", "tree-planted"]);
+      expect(result).toMatchObject({
+        "tree-planted": siteReport2TreesPlanted.reduce(reduceTreeCounts, siteReport1TreesPlantedReduced),
+        "non-tree": siteReport2NonTrees.reduce(reduceTreeCounts, {})
+      });
 
       result = await service.getPreviousPlanting("nursery-reports", nurseryReport2.uuid);
       expect(result).toMatchObject({});
-      const nurseryReportTrees = await TreeSpeciesFactory.forNurseryReport.createMany(5, {
+      const nurseryReportSeedlings = await TreeSpeciesFactory.forNurseryReportSeedling.createMany(5, {
         speciesableId: nurseryReport1.id
       });
       result = await service.getPreviousPlanting("nursery-reports", nurseryReport2.uuid);
-      expect(result).toMatchObject(nurseryReportTrees.reduce(reduceTreeCounts, {}));
+      expect(Object.keys(result)).toMatchObject(["nursery-seedling"]);
+      expect(result).toMatchObject({ "nursery-seedling": nurseryReportSeedlings.reduce(reduceTreeCounts, {}) });
     });
 
     it("handles bad input to get previous planting with undefined or an exception", async () => {

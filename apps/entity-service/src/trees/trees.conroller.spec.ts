@@ -47,10 +47,12 @@ describe("TreesController", () => {
   describe("getEstablishmentData", () => {
     it("should return establishment data", async () => {
       const stubData = {
-        Coffee: { amount: 123 },
-        Banana: { amount: 75, taxonId: "wfo-faketaxonid" }
+        "non-tree": {
+          Coffee: { amount: 123 },
+          Banana: { amount: 75, taxonId: "wfo-faketaxonid" }
+        }
       };
-      treeService.getEstablishmentTrees.mockResolvedValue(Object.keys(stubData));
+      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": ["Coffee", "Banana"] });
       treeService.getPreviousPlanting.mockResolvedValue(stubData);
       const result = await controller.getEstablishmentData({
         entity: "site-reports",
@@ -60,7 +62,7 @@ describe("TreesController", () => {
       expect(treeService.getPreviousPlanting).toHaveBeenCalledWith("site-reports", "fakeuuid");
       const resource = result.data as Resource;
       expect(resource.id).toBe("site-reports|fakeuuid");
-      expect(resource.attributes.establishmentTrees).toMatchObject(Object.keys(stubData));
+      expect(resource.attributes.establishmentTrees).toMatchObject({ "non-tree": ["Coffee", "Banana"] });
       expect(resource.attributes.previousPlantingCounts).toMatchObject(stubData);
     });
   });

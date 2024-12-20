@@ -55,4 +55,17 @@ export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
     nullable: true
   })
   isAcknowledged: boolean | null;
+
+  @ApiProperty({
+    description: "The name of the delayedJob",
+    nullable: true
+  })
+  name: string | null;
+
+  @ApiProperty({
+    description: "The name of the related entity (e.g., Kerrawarra, New Site, etc).",
+    nullable: true,
+    required: false
+  })
+  entityName?: string | null;
 }

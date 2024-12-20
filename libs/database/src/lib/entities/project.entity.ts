@@ -174,7 +174,7 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(TEXT)
-  projectCountryDistrict: string | null;
+  projectCountyDistrict: string | null;
 
   @AllowNull
   @Column(TEXT)
@@ -221,7 +221,7 @@ export class Project extends Model<Project> {
   pctEmployeesWomen: number | null;
 
   @AllowNull
-  @Column({ type: TINYINT, field: "pct_employees_18t35" })
+  @Column({ type: TINYINT, field: "pct_employees_18to35" })
   pctEmployees18To35: number | null;
 
   @AllowNull

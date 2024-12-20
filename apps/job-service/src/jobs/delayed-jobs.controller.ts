@@ -36,24 +36,12 @@ export class DelayedJobsController {
         isAcknowledged: false,
         createdBy: authenticatedUserId
       },
-      include: [
-        {
-          association: "entityProject",
-          attributes: ["name"],
-          required: false
-        },
-        {
-          association: "entitySite",
-          attributes: ["name"],
-          required: false
-        }
-      ],
       order: [["createdAt", "DESC"]]
     });
 
     const jobsWithEntityNames = await Promise.all(
       runningJobs.map(async job => {
-        const entityName = await job.getRelatedEntity();
+        const entityName = job.metadata?.entity_name;
         return { ...job.toJSON(), entityName };
       })
     );
@@ -64,7 +52,6 @@ export class DelayedJobsController {
     });
     return document.serialize();
   }
-
   @Get(":uuid")
   @ApiOperation({
     operationId: "delayedJobsFind",
@@ -110,19 +97,10 @@ export class DelayedJobsController {
         createdBy: authenticatedUserId,
         status: { [Op.ne]: "pending" }
       },
-      include: [
-        {
-          association: "entityProject",
-          attributes: ["name"],
-          required: false
-        },
-        {
-          association: "entitySite",
-          attributes: ["name"],
-          required: false
-        }
-      ]
+      logging: console.log,
+      order: [["createdAt", "DESC"]]
     });
+
     if (!jobs.length) {
       throw new NotFoundException("Some jobs in the request could not be updated");
     }
@@ -133,7 +111,10 @@ export class DelayedJobsController {
         const job = jobs.find(job => job.uuid === uuid);
         job.isAcknowledged = attributes.isAcknowledged;
         await job.save();
-        return job;
+
+        const entityName = job.metadata ? job.metadata.entity_name : null;
+
+        return { ...job.toJSON(), entityName };
       });
 
     const updatedJobs = await Promise.all(updatePromises);
@@ -142,6 +123,7 @@ export class DelayedJobsController {
     updatedJobs.forEach(job => {
       jsonApiBuilder.addData(job.uuid, new DelayedJobDto(job));
     });
+
     return jsonApiBuilder.serialize();
   }
 }

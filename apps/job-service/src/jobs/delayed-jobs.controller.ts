@@ -41,7 +41,7 @@ export class DelayedJobsController {
 
     const jobsWithEntityNames = await Promise.all(
       runningJobs.map(async job => {
-        const entityName = job.metadata?.entity_name;
+        const entityName = (job.metadata as { entity_name?: string })?.entity_name;
         return { ...job.toJSON(), entityName };
       })
     );
@@ -112,7 +112,7 @@ export class DelayedJobsController {
         job.isAcknowledged = attributes.isAcknowledged;
         await job.save();
 
-        const entityName = job.metadata ? job.metadata.entity_name : null;
+        const entityName = (job.metadata as { entity_name?: string })?.entity_name || null;
 
         return { ...job.toJSON(), entityName };
       });

@@ -79,6 +79,9 @@ export class DelayedJob extends Model<DelayedJob> implements EntityAssociations 
   @BelongsTo(() => Project, {
     foreignKey: "entityId",
     constraints: false,
+    scope: {
+      entityType: "App\\Models\\V2\\Projects\\Project"
+    },
     as: "entityProject"
   })
   entityProject?: Project;
@@ -86,6 +89,9 @@ export class DelayedJob extends Model<DelayedJob> implements EntityAssociations 
   @BelongsTo(() => Site, {
     foreignKey: "entityId",
     constraints: false,
+    scope: {
+      entityType: "App\\Models\\V2\\Sites\\Site"
+    },
     as: "entitySite"
   })
   entitySite?: Site;

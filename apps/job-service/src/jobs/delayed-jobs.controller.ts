@@ -97,7 +97,6 @@ export class DelayedJobsController {
         createdBy: authenticatedUserId,
         status: { [Op.ne]: "pending" }
       },
-      logging: console.log,
       order: [["createdAt", "DESC"]]
     });
 

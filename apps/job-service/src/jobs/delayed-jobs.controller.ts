@@ -39,13 +39,19 @@ export class DelayedJobsController {
       order: [["createdAt", "DESC"]]
     });
 
+    const jobsWithEntityNames = await Promise.all(
+      runningJobs.map(async job => {
+        const entityName = (job.metadata as { entity_name?: string }).entity_name;
+        return { ...job.toJSON(), entityName };
+      })
+    );
+
     const document = buildJsonApi();
-    runningJobs.forEach(job => {
+    jobsWithEntityNames.forEach(job => {
       document.addData(job.uuid, new DelayedJobDto(job));
     });
     return document.serialize();
   }
-
   @Get(":uuid")
   @ApiOperation({
     operationId: "delayedJobsFind",
@@ -90,18 +96,25 @@ export class DelayedJobsController {
         uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
         createdBy: authenticatedUserId,
         status: { [Op.ne]: "pending" }
-      }
+      },
+      order: [["createdAt", "DESC"]]
     });
+
     if (jobs.length !== jobUpdates.length) {
       throw new NotFoundException("Some jobs in the request could not be updated");
     }
 
-    const updatePromises = jobUpdates.map(async ({ uuid, attributes }) => {
-      const job = jobs.find(job => job.uuid === uuid);
-      job.isAcknowledged = attributes.isAcknowledged;
-      await job.save();
-      return job;
-    });
+    const updatePromises = jobUpdates
+      .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
+      .map(async ({ uuid, attributes }) => {
+        const job = jobs.find(job => job.uuid === uuid);
+        job.isAcknowledged = attributes.isAcknowledged;
+        await job.save();
+
+        const entityName = (job.metadata as { entity_name?: string }).entity_name;
+
+        return { ...job.toJSON(), entityName };
+      });
 
     const updatedJobs = await Promise.all(updatePromises);
 
@@ -109,6 +122,7 @@ export class DelayedJobsController {
     updatedJobs.forEach(job => {
       jsonApiBuilder.addData(job.uuid, new DelayedJobDto(job));
     });
+
     return jsonApiBuilder.serialize();
   }
 }

@@ -15,6 +15,9 @@ import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, U
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
+import { Application } from "./application.entity";
+import { Site } from "./site.entity";
+import { Nursery } from "./nursery.entity";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -46,10 +49,10 @@ export class Project extends Model<Project> {
   @Column(BIGINT.UNSIGNED)
   organisationId: number | null;
 
-  // TODO once the Application record has been added
-  // @AllowNull
-  // @ForeignKey(() => Application)
-  // applicationId: number | null;
+  @AllowNull
+  @ForeignKey(() => Application)
+  @Column(BIGINT.UNSIGNED)
+  applicationId: number | null;
 
   @AllowNull
   @Column(STRING)
@@ -334,6 +337,16 @@ export class Project extends Model<Project> {
     return this.organisation;
   }
 
+  @BelongsTo(() => Application)
+  application: Application | null;
+
+  async loadApplication() {
+    if (this.application == null && this.applicationId != null) {
+      this.application = await this.$get("application");
+    }
+    return this.application;
+  }
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
@@ -341,6 +354,19 @@ export class Project extends Model<Project> {
   })
   treesPlanted: TreeSpecies[] | null;
 
+  async loadTreesPlanted() {
+    if (this.treesPlanted == null) {
+      this.treesPlanted = await this.$get("treesPlanted");
+    }
+    return this.treesPlanted;
+  }
+
   @HasMany(() => ProjectReport)
   reports: ProjectReport[] | null;
+
+  @HasMany(() => Site)
+  sites: Site[] | null;
+
+  @HasMany(() => Nursery)
+  nurseries: Nursery[] | null;
 }

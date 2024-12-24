@@ -11,7 +11,6 @@ import { Job } from "bullmq";
 import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import { Project } from "@terramatch-microservices/database/entities";
 import { ProjectEntity } from "./entities";
 import { AirtableEntity } from "./entities/airtable-entity";
 import { Model } from "sequelize-typescript";

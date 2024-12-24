@@ -1,3 +1,4 @@
+export * from "./application.entity";
 export * from "./delayed-job.entity";
 export * from "./framework.entity";
 export * from "./framework-user.entity";

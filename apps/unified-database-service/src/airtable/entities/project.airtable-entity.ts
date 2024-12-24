@@ -1,5 +1,5 @@
-import { Organisation, Project } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes } from "./airtable-entity";
+import { Application, Nursery, Organisation, Project, Site } from "@terramatch-microservices/database/entities";
+import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes, selectIncludes } from "./airtable-entity";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
@@ -7,46 +7,100 @@ const COHORTS = {
   ppc: "Priceless Planet Coalition (PPC)"
 };
 
-const UUID_COLUMN = "TM Project ID";
-
 const COLUMNS: ColumnMapping<Project>[] = [
-  ["uuid", UUID_COLUMN],
-  ["name", "Project Name"],
-  {
-    airtableColumn: "TM Organization ID",
-    valueMap: async project => (await project.loadOrganisation())?.uuid
-  },
-  {
-    airtableColumn: "Organization Name Clean (lookup)",
-    valueMap: async project => (await project.loadOrganisation())?.name
-  },
-  ["country", "Project Location Country Code"],
+  "uuid",
+  "name",
   {
     dbColumn: "frameworkKey",
     airtableColumn: "Cohort",
-    valueMap: async ({ frameworkKey }) => COHORTS[frameworkKey]
+    valueMap: async ({ frameworkKey }) => COHORTS[frameworkKey] ?? frameworkKey
   },
-  ["objectives", "Project Objectives"],
-  ["budget", "Project Budget"],
-  ["totalHectaresRestoredGoal", "Number of Hectares to be Restored"],
-  ["goalTreesRestoredPlanting", "Number of Trees to be Planted"],
-  ["goalTreesRestoredAnr", "Total Trees Naturally Regenerated"],
-  ["jobsCreatedGoal", "Jobs to be Created"],
-  ["projBeneficiaries", "Project Beneficiaries Expected"],
-  ["plantingStartDate", "Planting Dates - Start"],
-  ["plantingEndDate", "Planting Dates - End"]
+  {
+    airtableColumn: "applicationUuid",
+    association: { model: Application, attributes: ["uuid"] },
+    valueMap: async ({ application }) => application?.uuid
+  },
+  {
+    airtableColumn: "organisationUuid",
+    association: { model: Organisation, attributes: ["uuid"] },
+    valueMap: async ({ organisation }) => organisation?.uuid
+  },
+  {
+    airtableColumn: "organisationName",
+    association: { model: Organisation, attributes: ["name"] },
+    valueMap: async ({ organisation }) => organisation?.name
+  },
+  "status",
+  "country",
+  "description",
+  "plantingStartDate",
+  "plantingEndDate",
+  "budget",
+  "objectives",
+  "projPartnerInfo",
+  "sitingStrategy",
+  "sitingStrategyDescription",
+  "history",
+  {
+    airtableColumn: "treeSpecies",
+    association: { association: "treesPlanted", attributes: ["name"] },
+    valueMap: async ({ treesPlanted }) => treesPlanted?.map(({ name }) => name)?.join(", ")
+  },
+  "treesGrownGoal",
+  "totalHectaresRestoredGoal",
+  "environmentalGoals",
+  "seedlingsSource",
+  "landUseTypes",
+  "restorationStrategy",
+  "socioeconomicGoals",
+  "communityIncentives",
+  "landTenureProjectArea",
+  "jobsCreatedGoal",
+  "projBeneficiaries",
+  "longTermGrowth",
+  "projectCountyDistrict",
+  "goalTreesRestoredPlanting",
+  "goalTreesRestoredAnr",
+  "goalTreesRestoredDirectSeeding",
+
+  // trees planted to date
+  // jobs created to date
+  // hectares restored to date
+
+  {
+    airtableColumn: "numberOfSites",
+    association: { model: Site, attributes: ["id"] },
+    valueMap: async ({ sites }) => (sites ?? []).length
+  },
+  {
+    airtableColumn: "numberOfNurseries",
+    association: { model: Nursery, attributes: ["id"] },
+    valueMap: async ({ nurseries }) => (nurseries ?? []).length
+  },
+  "continent",
+
+  // job breakdown by gender, age, full-time/part-time (each a separate number)
+  // number of volunteers
+  // volunteers breakdown by gender and age
+  // total number of tree species being planted
+  // workdays created (new calculation)
+  // seeds planted
+
+  "survivalRate",
+  "descriptionOfProjectTimeline",
+  "landholderCommEngage"
 ];
 
 export const ProjectEntity: AirtableEntity<Project> = {
   TABLE_NAME: "Projects",
-  UUID_COLUMN,
+  UUID_COLUMN: "uuid",
 
   findOne: async (uuid: string) =>
     await Project.findOne({
       where: { uuid },
       attributes: selectAttributes(COLUMNS),
-      include: { model: Organisation, attributes: ["uuid", "name"] }
+      include: selectIncludes(COLUMNS)
     }),
 
-  mapDbEntity: async (project: Project) => mapEntityColumns(project, COLUMNS)
+  mapDbEntity: async (project: Project) => await mapEntityColumns(project, COLUMNS)
 };

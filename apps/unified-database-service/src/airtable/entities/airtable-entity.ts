@@ -1,6 +1,6 @@
-import { Model } from "sequelize-typescript";
-import { isArray } from "lodash";
-import { Attributes } from "sequelize";
+import { Model, ModelType } from "sequelize-typescript";
+import { isArray, isObject, uniq } from "lodash";
+import { Attributes, IncludeOptions } from "sequelize";
 
 export type AirtableEntity<T extends Model<T>> = {
   TABLE_NAME: string;
@@ -13,21 +13,65 @@ export type AirtableEntity<T extends Model<T>> = {
  * A ColumnMapping is either a tuple of [dbColumn, airtableColumn], or a more descriptive object
  */
 export type ColumnMapping<T extends Model<T>> =
+  | keyof Attributes<T>
   | [keyof Attributes<T>, string]
   | {
       airtableColumn: string;
+      // Include if this mapping should include a particular DB column in the DB query
       dbColumn?: keyof Attributes<T>;
+      // Include if this mapping should eager load an association on the DB query
+      association?: {
+        model?: ModelType<unknown, unknown>;
+        association?: string;
+        attributes?: string[];
+      };
       valueMap: (entity: T) => Promise<null | string | number | boolean | Date>;
     };
 
 export const selectAttributes = <T extends Model<T>>(columns: ColumnMapping<T>[]) =>
-  columns.map(mapping => (isArray(mapping) ? mapping[0] : mapping.dbColumn)).filter(dbColumn => dbColumn != null);
+  columns
+    .map(mapping => (isArray(mapping) ? mapping[0] : isObject(mapping) ? mapping.dbColumn : mapping))
+    .filter(dbColumn => dbColumn != null);
+
+export const selectIncludes = <T extends Model<T>>(columns: ColumnMapping<T>[]) =>
+  columns.reduce((includes, mapping) => {
+    if (isArray(mapping) || !isObject(mapping)) return includes;
+    if (mapping.association == null) return includes;
+
+    const mappingAssociation = mapping.association;
+    const include: IncludeOptions = includes.find(
+      ({ model, association }) =>
+        (model != null && model === mappingAssociation.model) ||
+        (association != null && association === mappingAssociation.association)
+    );
+    if (include == null) {
+      includes.push({ ...mappingAssociation });
+    } else if (include.attributes != null) {
+      // If either the current include or the new mapping is missing an attributes array, we want
+      // to make sure the final include is missing it as well so that all columns are pulled.
+      if (mappingAssociation.attributes == null) {
+        delete include.attributes;
+      } else {
+        include.attributes = uniq([...mappingAssociation.attributes, ...(include.attributes as string[])]);
+      }
+    }
+
+    return includes;
+  }, [] as IncludeOptions[]);
 
 export const mapEntityColumns = async <T extends Model<T>>(entity: T, columns: ColumnMapping<T>[]) => {
   const airtableObject = {};
   for (const mapping of columns) {
-    const airtableColumn = isArray(mapping) ? mapping[1] : mapping.airtableColumn;
-    airtableObject[airtableColumn] = isArray(mapping) ? entity[mapping[0]] : await mapping.valueMap(entity);
+    const airtableColumn = isArray(mapping)
+      ? mapping[1]
+      : isObject(mapping)
+      ? mapping.airtableColumn
+      : (mapping as string);
+    airtableObject[airtableColumn] = isArray(mapping)
+      ? entity[mapping[0]]
+      : isObject(mapping)
+      ? await mapping.valueMap(entity)
+      : entity[mapping];
   }
 
   return airtableObject;

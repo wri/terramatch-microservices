@@ -9,7 +9,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, UUID } from "sequelize";
+import { BIGINT, STRING, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -18,14 +18,18 @@ import { Project } from "./project.entity";
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
+  static readonly APPROVED_STATUSES = ["approved", "restoration-in-progress"];
 
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
   override id: number;
 
-  @Column
+  @Column(STRING)
   name: string;
+
+  @Column(STRING)
+  status: string;
 
   @Index
   @Column(UUID)

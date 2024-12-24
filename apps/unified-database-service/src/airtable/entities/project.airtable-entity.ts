@@ -1,5 +1,13 @@
-import { Application, Nursery, Organisation, Project, Site } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Nursery,
+  Organisation,
+  Project,
+  Site,
+  SiteReport
+} from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes, selectIncludes } from "./airtable-entity";
+import { flattenDeep } from "lodash";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
@@ -17,17 +25,17 @@ const COLUMNS: ColumnMapping<Project>[] = [
   },
   {
     airtableColumn: "applicationUuid",
-    association: { model: Application, attributes: ["uuid"] },
+    include: [{ model: Application, attributes: ["uuid"] }],
     valueMap: async ({ application }) => application?.uuid
   },
   {
     airtableColumn: "organisationUuid",
-    association: { model: Organisation, attributes: ["uuid"] },
+    include: [{ model: Organisation, attributes: ["uuid"] }],
     valueMap: async ({ organisation }) => organisation?.uuid
   },
   {
     airtableColumn: "organisationName",
-    association: { model: Organisation, attributes: ["name"] },
+    include: [{ model: Organisation, attributes: ["name"] }],
     valueMap: async ({ organisation }) => organisation?.name
   },
   "status",
@@ -43,7 +51,7 @@ const COLUMNS: ColumnMapping<Project>[] = [
   "history",
   {
     airtableColumn: "treeSpecies",
-    association: { association: "treesPlanted", attributes: ["name"] },
+    include: [{ association: "treesPlanted", attributes: ["name"] }],
     valueMap: async ({ treesPlanted }) => treesPlanted?.map(({ name }) => name)?.join(", ")
   },
   "treesGrownGoal",
@@ -62,19 +70,47 @@ const COLUMNS: ColumnMapping<Project>[] = [
   "goalTreesRestoredPlanting",
   "goalTreesRestoredAnr",
   "goalTreesRestoredDirectSeeding",
+  {
+    airtableColumn: "treesPlantedToDate",
+    include: [
+      {
+        model: Site,
+        attributes: ["id", "status"],
+        include: [
+          {
+            model: SiteReport,
+            attributes: ["id", "status"],
+            include: [{ association: "treesPlanted", attributes: ["amount", "hidden"] }]
+          }
+        ]
+      }
+    ],
+    // We could potentially limit the number of rows in the query by filtering for these statuses
+    // in a where clause, but the mergeable include system is complicated enough without it trying
+    // to understand how to merge where clauses, so doing this filtering in memory is fine.
+    valueMap: async ({ sites }) =>
+      flattenDeep(
+        (sites ?? [])
+          .filter(({ status }) => Site.APPROVED_STATUSES.includes(status))
+          .map(({ reports }) =>
+            (reports ?? [])
+              .filter(({ status }) => SiteReport.APPROVED_STATUSES.includes(status))
+              .map(({ treesPlanted }) => treesPlanted?.map(({ amount }) => amount))
+          )
+      ).reduce((sum, amount) => sum + (amount ?? 0), 0)
+  },
 
-  // trees planted to date
   // jobs created to date
   // hectares restored to date
 
   {
     airtableColumn: "numberOfSites",
-    association: { model: Site, attributes: ["id"] },
+    include: [{ model: Site, attributes: ["id"] }],
     valueMap: async ({ sites }) => (sites ?? []).length
   },
   {
     airtableColumn: "numberOfNurseries",
-    association: { model: Nursery, attributes: ["id"] },
+    include: [{ model: Nursery, attributes: ["id"] }],
     valueMap: async ({ nurseries }) => (nurseries ?? []).length
   },
   "continent",

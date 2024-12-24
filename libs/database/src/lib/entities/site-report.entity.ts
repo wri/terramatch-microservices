@@ -10,7 +10,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, UUID } from "sequelize";
+import { BIGINT, DATE, STRING, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 
@@ -19,6 +19,7 @@ import { Site } from "./site.entity";
 export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
+  static readonly APPROVED_STATUSES = ["approved"];
 
   @PrimaryKey
   @AutoIncrement
@@ -35,6 +36,9 @@ export class SiteReport extends Model<SiteReport> {
 
   @BelongsTo(() => Site)
   site: Site | null;
+
+  @Column(STRING)
+  status: string;
 
   @AllowNull
   @Column(DATE)

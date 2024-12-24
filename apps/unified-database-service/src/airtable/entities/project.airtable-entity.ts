@@ -3,6 +3,7 @@ import {
   Nursery,
   Organisation,
   Project,
+  ProjectReport,
   Site,
   SiteReport
 } from "@terramatch-microservices/database/entities";
@@ -75,11 +76,11 @@ const COLUMNS: ColumnMapping<Project>[] = [
     include: [
       {
         model: Site,
-        attributes: ["id", "status"],
+        attributes: ["status"],
         include: [
           {
             model: SiteReport,
-            attributes: ["id", "status"],
+            attributes: ["status"],
             include: [{ association: "treesPlanted", attributes: ["amount", "hidden"] }]
           }
         ]
@@ -99,8 +100,21 @@ const COLUMNS: ColumnMapping<Project>[] = [
           )
       ).reduce((sum, amount) => sum + (amount ?? 0), 0)
   },
+  {
+    airtableColumn: "jobsCreatedToDate",
+    include: [
+      {
+        model: ProjectReport,
+        attributes: ["status", "ftTotal", "ptTotal"]
+      }
+    ],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .map(({ ftTotal, ptTotal }) => (ftTotal ?? 0) + (ptTotal ?? 0))
+        .reduce((sum, total) => sum + total, 0)
+  },
 
-  // jobs created to date
   // hectares restored to date
 
   {

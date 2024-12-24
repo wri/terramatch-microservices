@@ -10,7 +10,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, STRING, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 
@@ -19,6 +19,7 @@ import { Project } from "./project.entity";
 export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly PARENT_ID = "projectId";
+  static readonly APPROVED_STATUSES = ["approved"];
 
   @PrimaryKey
   @AutoIncrement
@@ -36,9 +37,20 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => Project)
   project: Project | null;
 
+  @Column(STRING)
+  status: string;
+
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  ftTotal: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  ptTotal: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

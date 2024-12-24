@@ -12,7 +12,7 @@ const COLUMNS: ColumnMapping<Project>[] = [
   "name",
   {
     dbColumn: "frameworkKey",
-    airtableColumn: "Cohort",
+    airtableColumn: "cohort",
     valueMap: async ({ frameworkKey }) => COHORTS[frameworkKey] ?? frameworkKey
   },
   {

@@ -59,21 +59,22 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    const id = await this.findAirtableEntity(airtableEntity, entityUuid);
+    // const id = await this.findAirtableEntity(airtableEntity, entityUuid);
     const record = await airtableEntity.findOne(entityUuid);
-    try {
-      await this.base(airtableEntity.TABLE_NAME).update(id, await airtableEntity.mapDbEntity(record));
-    } catch (error) {
-      this.logger.error(
-        `Entity update failed: ${JSON.stringify({
-          entityType,
-          entityUuid,
-          error
-        })}`
-      );
-      throw error;
-    }
-    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType, entityUuid })}`);
+    this.logger.log(`Entity mapping: ${JSON.stringify(await airtableEntity.mapDbEntity(record), null, 2)}`);
+    // try {
+    //   await this.base(airtableEntity.TABLE_NAME).update(id, await airtableEntity.mapDbEntity(record));
+    // } catch (error) {
+    //   this.logger.error(
+    //     `Entity update failed: ${JSON.stringify({
+    //       entityType,
+    //       entityUuid,
+    //       error
+    //     })}`
+    //   );
+    //   throw error;
+    // }
+    // this.logger.log(`Entity update complete: ${JSON.stringify({ entityType, entityUuid })}`);
   }
 
   private async findAirtableEntity<T extends Model<T>>(entity: AirtableEntity<T>, entityUuid: string) {

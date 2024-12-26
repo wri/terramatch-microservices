@@ -20,6 +20,7 @@ export * from "./project.entity";
 export * from "./project-report.entity";
 export * from "./project-user.entity";
 export * from "./role.entity";
+export * from "./seeding.entity";
 export * from "./site.entity";
 export * from "./site-polygon.entity";
 export * from "./site-report.entity";

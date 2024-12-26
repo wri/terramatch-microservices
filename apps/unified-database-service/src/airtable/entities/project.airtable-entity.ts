@@ -108,6 +108,35 @@ const COLUMNS: ColumnMapping<Project>[] = [
       ).reduce((sum, amount) => sum + (amount ?? 0), 0)
   },
   {
+    airtableColumn: "seedsPlantedToDate",
+    include: [
+      {
+        model: Site,
+        attributes: ["status"],
+        include: [
+          {
+            model: SiteReport,
+            attributes: ["status"],
+            include: [{ association: "seedsPlanted", attributes: ["amount", "hidden"] }]
+          }
+        ]
+      }
+    ],
+    // We could potentially limit the number of rows in the query by filtering for these statuses
+    // in a where clause, but the mergeable include system is complicated enough without it trying
+    // to understand how to merge where clauses, so doing this filtering in memory is fine.
+    valueMap: async ({ sites }) =>
+      flattenDeep(
+        (sites ?? [])
+          .filter(({ status }) => Site.APPROVED_STATUSES.includes(status))
+          .map(({ reports }) =>
+            (reports ?? [])
+              .filter(({ status }) => SiteReport.APPROVED_STATUSES.includes(status))
+              .map(({ seedsPlanted }) => seedsPlanted?.map(({ amount }) => amount))
+          )
+      ).reduce((sum, amount) => sum + (amount ?? 0), 0)
+  },
+  {
     airtableColumn: "jobsCreatedToDate",
     include: [
       {
@@ -257,7 +286,6 @@ const COLUMNS: ColumnMapping<Project>[] = [
   },
 
   // workdays created (new calculation)
-  // seeds planted
 
   "survivalRate",
   "descriptionOfProjectTimeline",

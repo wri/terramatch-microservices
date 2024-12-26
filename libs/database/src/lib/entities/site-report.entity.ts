@@ -13,6 +13,7 @@ import {
 import { BIGINT, DATE, STRING, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
+import { Seeding } from "./seeding.entity";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
@@ -56,9 +57,7 @@ export class SiteReport extends Model<SiteReport> {
   treesPlanted: TreeSpecies[] | null;
 
   async loadTreesPlanted() {
-    if (this.treesPlanted == null) {
-      this.treesPlanted = await this.$get("treesPlanted");
-    }
+    this.treesPlanted ??= await this.$get("treesPlanted");
     return this.treesPlanted;
   }
 
@@ -70,9 +69,19 @@ export class SiteReport extends Model<SiteReport> {
   nonTrees: TreeSpecies[] | null;
 
   async loadNonTrees() {
-    if (this.nonTrees == null) {
-      this.nonTrees = await this.$get("nonTrees");
-    }
+    this.nonTrees ??= await this.$get("nonTrees");
     return this.nonTrees;
+  }
+
+  @HasMany(() => Seeding, {
+    foreignKey: "seedableId",
+    constraints: false,
+    scope: { seedableType: "App\\Models\\V2\\Sites\\SiteReport" }
+  })
+  seedsPlanted: Seeding[] | null;
+
+  async loadSeedsPlanted() {
+    this.seedsPlanted ??= await this.$get("seedsPlanted");
+    return this.seedsPlanted;
   }
 }

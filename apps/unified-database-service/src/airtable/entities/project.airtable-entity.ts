@@ -57,6 +57,11 @@ const COLUMNS: ColumnMapping<Project>[] = [
     include: [{ association: "treesPlanted", attributes: ["name"] }],
     valueMap: async ({ treesPlanted }) => treesPlanted?.map(({ name }) => name)?.join(", ")
   },
+  {
+    airtableColumn: "treeSpeciesCount",
+    include: [{ association: "treesPlanted", attributes: ["name"] }],
+    valueMap: async ({ treesPlanted }) => treesPlanted?.length ?? 0
+  },
   "treesGrownGoal",
   "totalHectaresRestoredGoal",
   "environmentalGoals",
@@ -113,8 +118,7 @@ const COLUMNS: ColumnMapping<Project>[] = [
     valueMap: async ({ reports }) =>
       (reports ?? [])
         .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .map(({ ftTotal, ptTotal }) => (ftTotal ?? 0) + (ptTotal ?? 0))
-        .reduce((sum, total) => sum + total, 0)
+        .reduce((sum, { ftTotal, ptTotal }) => sum + (ftTotal ?? 0) + (ptTotal ?? 0), 0)
   },
   {
     airtableColumn: "hectaresRestoredToDate",
@@ -147,11 +151,111 @@ const COLUMNS: ColumnMapping<Project>[] = [
     valueMap: async ({ nurseries }) => (nurseries ?? []).length
   },
   "continent",
+  {
+    airtableColumn: "ftWomen",
+    include: [{ model: ProjectReport, attributes: ["ftWomen"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ftWomen }) => sum + ftWomen, 0)
+  },
+  {
+    airtableColumn: "ftMen",
+    include: [{ model: ProjectReport, attributes: ["ftMen"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ftMen }) => sum + ftMen, 0)
+  },
+  {
+    airtableColumn: "ftYouth",
+    include: [{ model: ProjectReport, attributes: ["ftYouth"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ftYouth }) => sum + ftYouth, 0)
+  },
+  {
+    airtableColumn: "ftNonYouth",
+    include: [{ model: ProjectReport, attributes: ["ftNonYouth"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ftNonYouth }) => sum + ftNonYouth, 0)
+  },
+  {
+    airtableColumn: "ptWomen",
+    include: [{ model: ProjectReport, attributes: ["ptWomen"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ptWomen }) => sum + ptWomen, 0)
+  },
+  {
+    airtableColumn: "ptMen",
+    include: [{ model: ProjectReport, attributes: ["ptMen"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ptMen }) => sum + ptMen, 0)
+  },
+  {
+    airtableColumn: "ptYouth",
+    include: [{ model: ProjectReport, attributes: ["ptYouth"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ptYouth }) => sum + ptYouth, 0)
+  },
+  {
+    airtableColumn: "ptNonYouth",
+    include: [{ model: ProjectReport, attributes: ["ptNonYouth"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { ptNonYouth }) => sum + ptNonYouth, 0)
+  },
+  {
+    airtableColumn: "volunteerTotal",
+    include: [{ model: ProjectReport, attributes: ["volunteerTotal"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { volunteerTotal }) => sum + volunteerTotal, 0)
+  },
+  {
+    airtableColumn: "volunteerWomen",
+    include: [{ model: ProjectReport, attributes: ["volunteerWomen"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { volunteerWomen }) => sum + volunteerWomen, 0)
+  },
+  {
+    airtableColumn: "volunteerMen",
+    include: [{ model: ProjectReport, attributes: ["volunteerMen"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { volunteerMen }) => sum + volunteerMen, 0)
+  },
+  {
+    airtableColumn: "volunteerYouth",
+    include: [{ model: ProjectReport, attributes: ["volunteerYouth"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { volunteerYouth }) => sum + volunteerYouth, 0)
+  },
+  {
+    airtableColumn: "volunteerNonYouth",
+    include: [{ model: ProjectReport, attributes: ["volunteerNonYouth"] }],
+    valueMap: async ({ reports }) =>
+      (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .reduce((sum, { volunteerNonYouth }) => sum + volunteerNonYouth, 0)
+  },
 
-  // job breakdown by gender, age, full-time/part-time (each a separate number)
-  // number of volunteers
-  // volunteers breakdown by gender and age
-  // total number of tree species being planted
   // workdays created (new calculation)
   // seeds planted
 

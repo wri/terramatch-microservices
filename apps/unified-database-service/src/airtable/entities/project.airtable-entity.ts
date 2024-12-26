@@ -348,11 +348,12 @@ export const ProjectEntity: AirtableEntity<Project> = {
   TABLE_NAME: "Projects",
   UUID_COLUMN: "uuid",
 
-  findOne: async (uuid: string) =>
-    await Project.findOne({
-      where: { uuid },
+  findMany: async (pageSize: number, offset: number) =>
+    await Project.findAll({
       attributes: selectAttributes(COLUMNS),
-      include: selectIncludes(COLUMNS)
+      include: selectIncludes(COLUMNS),
+      limit: pageSize,
+      offset
     }),
 
   mapDbEntity: async (project: Project) => await mapEntityColumns(project, COLUMNS)

@@ -8,7 +8,6 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export type UpdateEntitiesData = {
   entityType: EntityType;
-  entityUuid: string;
 };
 
 @Injectable()
@@ -18,8 +17,8 @@ export class AirtableService {
   constructor(@InjectQueue("airtable") private readonly airtableQueue: Queue) {}
 
   // TODO (NJC) This method will probably go away entirely, or at least change drastically after this POC
-  async updateAirtableJob(entityType: EntityType, entityUuid: string) {
-    const data: UpdateEntitiesData = { entityType, entityUuid };
+  async updateAirtableJob(entityType: EntityType) {
+    const data: UpdateEntitiesData = { entityType };
 
     this.logger.log(`Adding entity update to queue: ${JSON.stringify(data)}`);
     await this.airtableQueue.add("updateEntities", data);

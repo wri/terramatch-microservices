@@ -41,32 +41,31 @@ export class AirtableProcessor extends WorkerHost {
     }
   }
 
-  private async updateEntities({ entityType, entityUuid }: UpdateEntitiesData) {
-    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType, entityUuid })}`);
+  private async updateEntities({ entityType }: UpdateEntitiesData) {
+    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
 
     const airtableEntity = AIRTABLE_ENTITIES[entityType];
     if (airtableEntity == null) {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    const record = await airtableEntity.findOne(entityUuid);
+    // bogus offset and page size. The big early PPC records are blowing up the JS memory heap. Need
+    // to make some performance improvements to how the project airtable entity fetches records, pulling
+    // in fewer included associations. That will be a refactor for the next ticket.
+    const records = await airtableEntity.findMany(3, 200);
+    const airtableRecords = await Promise.all(
+      records.map(async record => ({ fields: await airtableEntity.mapDbEntity(record) }))
+    );
     try {
-      const airtableRecord = await airtableEntity.mapDbEntity(record);
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
-      await this.base(airtableEntity.TABLE_NAME).update([{ fields: airtableRecord }], {
+      await this.base(airtableEntity.TABLE_NAME).update(airtableRecords, {
         performUpsert: { fieldsToMergeOn: ["uuid"] }
       });
     } catch (error) {
-      this.logger.error(
-        `Entity update failed: ${JSON.stringify({
-          entityType,
-          entityUuid,
-          error
-        })}`
-      );
+      this.logger.error(`Entity update failed: ${JSON.stringify({ entityType, error, airtableRecords }, null, 2)}`);
       throw error;
     }
-    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType, entityUuid })}`);
+    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType })}`);
   }
 }

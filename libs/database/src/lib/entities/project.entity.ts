@@ -11,7 +11,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { JSON, BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
@@ -81,12 +81,12 @@ export class Project extends Model<Project> {
   boundaryGeojson: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  landUseTypes: string | null;
+  @Column(JSON)
+  landUseTypes: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  restorationStrategy: string | null;
+  @Column(JSON)
+  restorationStrategy: string[] | null;
 
   @AllowNull
   @Column(TEXT)
@@ -185,16 +185,16 @@ export class Project extends Model<Project> {
   descriptionOfProjectTimeline: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  sitingStrategyDescription: string | null;
+  @Column(JSON)
+  sitingStrategyDescription: string[] | null;
 
   @AllowNull
   @Column(TEXT)
   sitingStrategy: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  landTenureProjectArea: string | null;
+  @Column(JSON)
+  landTenureProjectArea: string[] | null;
 
   @AllowNull
   @Column(TEXT)

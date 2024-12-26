@@ -26,6 +26,26 @@ describe("DelayedJobsController", () => {
     jest.restoreAllMocks();
   });
   describe("getRunningJobs", () => {
+    it("should return a job with null entity_name if metadata is null", async () => {
+      const authenticatedUserId = 130999;
+
+      const job = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: null
+      });
+
+      const request = { authenticatedUserId };
+      const result = await controller.getRunningJobs(request);
+
+      const data = Array.isArray(result.data) ? result.data : [result.data];
+
+      expect(data).toHaveLength(1);
+      expect(data[0].id).toBe(job.uuid);
+      expect(data[0].attributes.entityName).toBeNull();
+    });
     it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
 
@@ -96,6 +116,51 @@ describe("DelayedJobsController", () => {
   });
 
   describe("bulkUdpateJobs", () => {
+    it("should successfully update jobs with null metadata", async () => {
+      const authenticatedUserId = 130999;
+      const job = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: null
+      });
+
+      const job1 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: { entity_name: "TestEntity1" }
+      });
+
+      const payload: DelayedJobBulkUpdateBodyDto = {
+        data: [
+          {
+            type: "delayedJobs",
+            uuid: job.uuid,
+            attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: job1.uuid,
+            attributes: { isAcknowledged: true }
+          }
+        ]
+      };
+
+      const request = { authenticatedUserId };
+
+      const result = await controller.bulkUpdateJobs(payload, request);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].id).toBe(job.uuid);
+      expect(result.data[0].attributes.entityName).toBeNull();
+      expect(result.data[1].id).toBe(job1.uuid);
+      expect(result.data[1].attributes.entityName).toBe("TestEntity1");
+
+      const updatedJob = await DelayedJob.findOne({ where: { uuid: job.uuid } });
+      expect(updatedJob.isAcknowledged).toBe(true);
+    });
     it("should successfully bulk update jobs to acknowledged with entity_name", async () => {
       const authenticatedUserId = 130999;
       const job1 = await DelayedJob.create({

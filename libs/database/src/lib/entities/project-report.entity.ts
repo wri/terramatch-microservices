@@ -20,6 +20,7 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
 
   @PrimaryKey
   @AutoIncrement
@@ -108,7 +109,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Projects\\ProjectReport", collection: "tree-planted" }
+    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
 }

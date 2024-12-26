@@ -1,16 +1,18 @@
 import {
   Application,
+  Demographic,
   Nursery,
   Organisation,
   Project,
   ProjectReport,
   Site,
   SitePolygon,
-  SiteReport
+  SiteReport,
+  Workday
 } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes, selectIncludes } from "./airtable-entity";
-import { flattenDeep } from "lodash";
-import { Op } from "sequelize";
+import { flatten, flattenDeep } from "lodash";
+import { literal, Op } from "sequelize";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
@@ -284,9 +286,59 @@ const COLUMNS: ColumnMapping<Project>[] = [
         .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
         .reduce((sum, { volunteerNonYouth }) => sum + volunteerNonYouth, 0)
   },
+  {
+    airtableColumn: "workdaysCount",
+    include: [
+      { model: ProjectReport, attributes: ["id", "status"] },
+      {
+        model: Site,
+        attributes: ["status"],
+        include: [
+          {
+            model: SiteReport,
+            attributes: ["id", "status"]
+          }
+        ]
+      }
+    ],
+    valueMap: async ({ reports, sites }) => {
+      const siteReportIds = flatten(
+        (sites ?? []).filter(({ status }) => Site.APPROVED_STATUSES.includes(status)).map(({ reports }) => reports)
+      )
+        .filter(({ status }) => SiteReport.APPROVED_STATUSES.includes(status))
+        .map(({ id }) => id);
+      const siteReportWorkdays = literal(`(
+        select id
+        from v2_workdays
+        where workdayable_type = '${SiteReport.LARAVEL_TYPE.replace(/\\/g, "\\\\")}'
+          and workdayable_id in (${siteReportIds.join(",")})
+          and hidden = false
+      )`);
 
-  // workdays created (new calculation)
+      const projectReportIds = (reports ?? [])
+        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
+        .map(({ id }) => id);
+      const projectReportWorkdays = literal(`(
+        select id
+        from v2_workdays
+          where workdayable_type = '${ProjectReport.LARAVEL_TYPE.replace(/\\/g, "\\\\")}'
+          and workdayable_id in (${projectReportIds.join(",")})
+          and hidden = false
+      )`);
 
+      return (
+        await Demographic.findAll({
+          attributes: ["amount"],
+          where: {
+            demographicalType: Workday.LARAVEL_TYPE,
+            demographicalId: {
+              [Op.or]: [{ [Op.in]: siteReportWorkdays }, { [Op.in]: projectReportWorkdays }]
+            }
+          }
+        })
+      ).reduce((count, { amount }) => count + amount, 0);
+    }
+  },
   "survivalRate",
   "descriptionOfProjectTimeline",
   "landholderCommEngage"

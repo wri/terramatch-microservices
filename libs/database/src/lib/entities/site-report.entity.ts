@@ -21,6 +21,7 @@ export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
   @PrimaryKey
   @AutoIncrement
@@ -52,7 +53,7 @@ export class SiteReport extends Model<SiteReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "tree-planted" }
+    scope: { speciesableType: SiteReport.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
 
@@ -64,7 +65,7 @@ export class SiteReport extends Model<SiteReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\SiteReport", collection: "non-tree" }
+    scope: { speciesableType: SiteReport.LARAVEL_TYPE, collection: "non-tree" }
   })
   nonTrees: TreeSpecies[] | null;
 
@@ -76,7 +77,7 @@ export class SiteReport extends Model<SiteReport> {
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
-    scope: { seedableType: "App\\Models\\V2\\Sites\\SiteReport" }
+    scope: { seedableType: SiteReport.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
 

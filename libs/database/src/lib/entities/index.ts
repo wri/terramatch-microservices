@@ -1,5 +1,6 @@
 export * from "./application.entity";
 export * from "./delayed-job.entity";
+export * from "./demographic.entity";
 export * from "./framework.entity";
 export * from "./framework-user.entity";
 export * from "./indicator-output-field-monitoring.entity";
@@ -27,3 +28,4 @@ export * from "./site-report.entity";
 export * from "./tree-species.entity";
 export * from "./tree-species-research.entity";
 export * from "./user.entity";
+export * from "./workday.entity";

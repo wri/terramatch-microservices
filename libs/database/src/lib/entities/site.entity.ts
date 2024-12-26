@@ -20,6 +20,7 @@ import { SitePolygon } from "./site-polygon.entity";
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = ["approved", "restoration-in-progress"];
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
   @PrimaryKey
   @AutoIncrement
@@ -46,7 +47,7 @@ export class Site extends Model<Site> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "tree-planted" }
+    scope: { speciesableType: Site.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
 
@@ -58,7 +59,7 @@ export class Site extends Model<Site> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Sites\\Site", collection: "non-tree" }
+    scope: { speciesableType: Site.LARAVEL_TYPE, collection: "non-tree" }
   })
   nonTrees: TreeSpecies[] | null;
 

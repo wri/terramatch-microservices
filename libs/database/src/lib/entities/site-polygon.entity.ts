@@ -48,10 +48,11 @@ export class SitePolygon extends Model<SitePolygon> {
 
   // This column got called site_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull
+  @ForeignKey(() => Site)
   @Column({ type: UUID, field: "site_id" })
   siteUuid: string;
 
-  @BelongsTo(() => Site, { foreignKey: "siteUuid", targetKey: "uuid" })
+  @BelongsTo(() => Site, { targetKey: "uuid" })
   site: Site | null;
 
   async loadSite() {

@@ -355,9 +355,7 @@ export class Project extends Model<Project> {
   treesPlanted: TreeSpecies[] | null;
 
   async loadTreesPlanted() {
-    if (this.treesPlanted == null) {
-      this.treesPlanted = await this.$get("treesPlanted");
-    }
+    this.treesPlanted ??= await this.$get("treesPlanted");
     return this.treesPlanted;
   }
 

@@ -13,6 +13,7 @@ import { BIGINT, STRING, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
+import { SitePolygon } from "./site-polygon.entity";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -50,9 +51,7 @@ export class Site extends Model<Site> {
   treesPlanted: TreeSpecies[] | null;
 
   async loadTreesPlanted() {
-    if (this.treesPlanted == null) {
-      this.treesPlanted = await this.$get("treesPlanted");
-    }
+    this.treesPlanted ??= await this.$get("treesPlanted");
     return this.treesPlanted;
   }
 
@@ -64,9 +63,7 @@ export class Site extends Model<Site> {
   nonTrees: TreeSpecies[] | null;
 
   async loadNonTrees() {
-    if (this.nonTrees == null) {
-      this.nonTrees = await this.$get("nonTrees");
-    }
+    this.nonTrees ??= await this.$get("nonTrees");
     return this.nonTrees;
   }
 
@@ -74,9 +71,15 @@ export class Site extends Model<Site> {
   reports: SiteReport[] | null;
 
   async loadReports() {
-    if (this.reports == null) {
-      this.reports = await this.$get("reports");
-    }
+    this.reports ??= await this.$get("reports");
     return this.reports;
+  }
+
+  @HasMany(() => SitePolygon)
+  sitePolygons: SitePolygon[] | null;
+
+  async loadSitePolygons() {
+    this.sitePolygons ??= await this.$get("sitePolygons");
+    return this.sitePolygons;
   }
 }

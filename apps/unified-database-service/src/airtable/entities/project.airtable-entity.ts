@@ -5,10 +5,12 @@ import {
   Project,
   ProjectReport,
   Site,
+  SitePolygon,
   SiteReport
 } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes, selectIncludes } from "./airtable-entity";
 import { flattenDeep } from "lodash";
+import { Op } from "sequelize";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
@@ -114,9 +116,26 @@ const COLUMNS: ColumnMapping<Project>[] = [
         .map(({ ftTotal, ptTotal }) => (ftTotal ?? 0) + (ptTotal ?? 0))
         .reduce((sum, total) => sum + total, 0)
   },
-
-  // hectares restored to date
-
+  {
+    airtableColumn: "hectaresRestoredToDate",
+    include: [
+      {
+        model: Site,
+        attributes: ["uuid"]
+      }
+    ],
+    // A given project can end up with _a lot_ of site polygons, which blows up the
+    // first SQL query into too many rows, so doing this one as its own query is more
+    // efficient.
+    valueMap: async ({ sites }) => {
+      if (sites == null || sites.length === 0) return 0;
+      const sitePolygons = await SitePolygon.findAll({
+        where: { siteUuid: { [Op.in]: sites.map(({ uuid }) => uuid) }, isActive: true },
+        attributes: ["calcArea"]
+      });
+      return Math.round(sitePolygons.reduce((total, { calcArea }) => total + calcArea, 0));
+    }
+  },
   {
     airtableColumn: "numberOfSites",
     include: [{ model: Site, attributes: ["id"] }],

@@ -12,6 +12,11 @@ import {
 import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
 import { User } from "./user.entity";
 
+// holds the definition for members that may exist in a job metadata that this codebase explicitly
+// references.
+interface Metadata {
+  entity_name?: string;
+}
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {
   @PrimaryKey
@@ -61,5 +66,5 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @AllowNull
   @Column(JSON)
-  metadata: object | null;
+  metadata: Metadata | null;
 }

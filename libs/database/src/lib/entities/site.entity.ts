@@ -76,7 +76,7 @@ export class Site extends Model<Site> {
     return this.reports;
   }
 
-  @HasMany(() => SitePolygon)
+  @HasMany(() => SitePolygon, { foreignKey: "siteUuid", sourceKey: "uuid" })
   sitePolygons: SitePolygon[] | null;
 
   async loadSitePolygons() {

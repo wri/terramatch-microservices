@@ -6,7 +6,7 @@ import { BIGINT, INTEGER, STRING } from "sequelize";
   underscored: true,
   paranoid: true,
   indexes: [
-    // Multi-column @Index doesn't work with underscored column names
+    // @Index doesn't work with underscored column names
     { name: "demographics_morph_index", fields: ["demographical_id", "demographical_type"] }
   ]
 })

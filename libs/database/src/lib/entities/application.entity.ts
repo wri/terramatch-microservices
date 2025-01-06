@@ -1,8 +1,14 @@
-import { AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { User } from "./user.entity";
 
-@Table({ tableName: "applications", underscored: true, paranoid: true })
+@Table({
+  tableName: "applications",
+  underscored: true,
+  paranoid: true,
+  // @Index doesn't work with underscored column names
+  indexes: [{ name: "applications_funding_programme_uuid_index", fields: ["funding_programme_uuid"] }]
+})
 export class Application extends Model<Application> {
   @PrimaryKey
   @AutoIncrement
@@ -13,7 +19,7 @@ export class Application extends Model<Application> {
   @Column(UUID)
   uuid: string;
 
-  @Index
+  @AllowNull
   @Column(UUID)
   fundingProgrammeUuid: string | null;
 

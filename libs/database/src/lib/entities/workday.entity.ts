@@ -7,7 +7,7 @@ import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
   underscored: true,
   paranoid: true,
   indexes: [
-    // Multi-column @Index doesn't work with underscored column names
+    // @Index doesn't work with underscored column names
     { name: "v2_workdays_morph_index", fields: ["workdayable_id", "workdayable_type"] }
   ]
 })

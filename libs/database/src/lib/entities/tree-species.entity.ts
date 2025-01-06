@@ -16,7 +16,7 @@ import { TreeSpeciesResearch } from "./tree-species-research.entity";
   tableName: "v2_tree_species",
   underscored: true,
   paranoid: true,
-  // Multi-column @Index doesn't work with underscored column names
+  // @Index doesn't work with underscored column names
   indexes: [
     { name: "tree_species_type_id_collection", fields: ["collection", "speciesable_id", "speciesable_type"] },
     { name: "v2_tree_species_morph_index", fields: ["speciesable_id", "speciesable_type"] }

@@ -14,6 +14,7 @@ beforeAll(async () => {
     password: "wri",
     database: "terramatch_microservices_test",
     models: Object.values(Entities),
+    // Switch to true locally to debug SQL statements in unit tests, especially table/index creation problems.
     logging: false
   });
 

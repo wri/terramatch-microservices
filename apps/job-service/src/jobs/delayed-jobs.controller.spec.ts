@@ -44,7 +44,7 @@ describe("DelayedJobsController", () => {
 
       expect(data).toHaveLength(1);
       expect(data[0].id).toBe(job.uuid);
-      expect(data[0].attributes.entityName).toBeNull();
+      expect(data[0].attributes.entityName).toBeUndefined();
     });
     it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
@@ -154,7 +154,7 @@ describe("DelayedJobsController", () => {
       const result = await controller.bulkUpdateJobs(payload, request);
       expect(result.data).toHaveLength(2);
       expect(result.data[0].id).toBe(job.uuid);
-      expect(result.data[0].attributes.entityName).toBeNull();
+      expect(result.data[0].attributes.entityName).toBeUndefined();
       expect(result.data[1].id).toBe(job1.uuid);
       expect(result.data[1].attributes.entityName).toBe("TestEntity1");
 

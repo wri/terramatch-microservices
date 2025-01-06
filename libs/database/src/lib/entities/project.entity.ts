@@ -185,8 +185,8 @@ export class Project extends Model<Project> {
   descriptionOfProjectTimeline: string | null;
 
   @AllowNull
-  @Column(JSON)
-  sitingStrategyDescription: string[] | null;
+  @Column(TEXT)
+  sitingStrategyDescription: string | null;
 
   @AllowNull
   @Column(TEXT)

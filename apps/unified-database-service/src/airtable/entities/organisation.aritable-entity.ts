@@ -4,6 +4,8 @@ import { FindOptions } from "sequelize";
 
 const COLUMNS: ColumnMapping<Organisation>[] = [
   "uuid",
+  "createdAt",
+  "updatedAt",
   "status",
   "type",
   "private",

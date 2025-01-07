@@ -136,6 +136,8 @@ type ProjectAssociations = {
 const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "uuid",
   "name",
+  "createdAt",
+  "updatedAt",
   {
     dbColumn: "frameworkKey",
     airtableColumn: "cohort",

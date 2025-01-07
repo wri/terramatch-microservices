@@ -1,5 +1,6 @@
 import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, QueryTypes, STRING } from "sequelize";
+import { User } from "./user.entity";
 
 @Table({ tableName: "permissions", underscored: true })
 export class Permission extends Model<Permission> {
@@ -35,7 +36,7 @@ export class Permission extends Model<Permission> {
             model_has_roles.model_id = :modelId
     `,
       {
-        replacements: { modelType: "App\\Models\\V2\\User", modelId: userId },
+        replacements: { modelType: User.LARAVEL_TYPE, modelId: userId },
         type: QueryTypes.SELECT
       }
     )) as { name: string }[];

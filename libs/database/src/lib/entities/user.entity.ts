@@ -26,6 +26,8 @@ import { FrameworkUser } from "./framework-user.entity";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\User";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -133,7 +135,7 @@ export class User extends Model<User> {
       model: () => ModelHasRole,
       unique: false,
       scope: {
-        modelType: "App\\Models\\V2\\User"
+        modelType: User.LARAVEL_TYPE
       }
     }
   })

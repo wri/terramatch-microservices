@@ -19,6 +19,7 @@ import { TreeSpecies } from "./tree-species.entity";
 export class NurseryReport extends Model<NurseryReport> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly PARENT_ID = "nurseryId";
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\NurseryReport";
 
   @PrimaryKey
   @AutoIncrement
@@ -43,7 +44,7 @@ export class NurseryReport extends Model<NurseryReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Nurseries\\NurseryReport", collection: "nursery-seedling" }
+    scope: { speciesableType: NurseryReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
   seedlings: TreeSpecies[] | null;
 }

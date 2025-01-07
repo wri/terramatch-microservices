@@ -11,14 +11,18 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { JSON, BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
+import { Application } from "./application.entity";
+import { Site } from "./site.entity";
+import { Nursery } from "./nursery.entity";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
   @PrimaryKey
   @AutoIncrement
@@ -46,10 +50,10 @@ export class Project extends Model<Project> {
   @Column(BIGINT.UNSIGNED)
   organisationId: number | null;
 
-  // TODO once the Application record has been added
-  // @AllowNull
-  // @ForeignKey(() => Application)
-  // applicationId: number | null;
+  @AllowNull
+  @ForeignKey(() => Application)
+  @Column(BIGINT.UNSIGNED)
+  applicationId: number | null;
 
   @AllowNull
   @Column(STRING)
@@ -77,12 +81,12 @@ export class Project extends Model<Project> {
   boundaryGeojson: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  landUseTypes: string | null;
+  @Column(JSON)
+  landUseTypes: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  restorationStrategy: string | null;
+  @Column(JSON)
+  restorationStrategy: string[] | null;
 
   @AllowNull
   @Column(TEXT)
@@ -189,8 +193,8 @@ export class Project extends Model<Project> {
   sitingStrategy: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  landTenureProjectArea: string | null;
+  @Column(JSON)
+  landTenureProjectArea: string[] | null;
 
   @AllowNull
   @Column(TEXT)
@@ -334,13 +338,34 @@ export class Project extends Model<Project> {
     return this.organisation;
   }
 
+  @BelongsTo(() => Application)
+  application: Application | null;
+
+  async loadApplication() {
+    if (this.application == null && this.applicationId != null) {
+      this.application = await this.$get("application");
+    }
+    return this.application;
+  }
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: "App\\Models\\V2\\Projects\\Project", collection: "tree-planted" }
+    scope: { speciesableType: Project.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
 
+  async loadTreesPlanted() {
+    this.treesPlanted ??= await this.$get("treesPlanted");
+    return this.treesPlanted;
+  }
+
   @HasMany(() => ProjectReport)
   reports: ProjectReport[] | null;
+
+  @HasMany(() => Site)
+  sites: Site[] | null;
+
+  @HasMany(() => Nursery)
+  nurseries: Nursery[] | null;
 }

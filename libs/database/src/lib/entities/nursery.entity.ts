@@ -9,7 +9,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, UUID } from "sequelize";
+import { BIGINT, STRING, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -17,6 +17,7 @@ import { NurseryReport } from "./nursery-report.entity";
 // A quick stub for the tree service endpoints.
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
 export class Nursery extends Model<Nursery> {
+  static readonly APPROVED_STATUSES = ["approved"];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
 
@@ -28,6 +29,9 @@ export class Nursery extends Model<Nursery> {
   @Index
   @Column(UUID)
   uuid: string;
+
+  @Column(STRING)
+  status: string;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)

@@ -5,22 +5,145 @@ import {
   Organisation,
   Project,
   ProjectReport,
+  Seeding,
   Site,
   SitePolygon,
   SiteReport,
+  TreeSpecies,
   Workday
 } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes, selectIncludes } from "./airtable-entity";
-import { flatten, flattenDeep } from "lodash";
-import { literal, Op } from "sequelize";
+import { flatten } from "lodash";
+import { literal, Op, WhereOptions } from "sequelize";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
   "terrafund-landscapes": "TerraFund Landscapes",
-  ppc: "Priceless Planet Coalition (PPC)"
+  ppc: "Priceless Planet Coalition (PPC)",
+  enterprises: "TerraFund Enterprises",
+  hbf: "Harit Bharat Fund",
+  "epa-ghana-pilot": "EPA-Ghana Pilot"
 };
 
-const COLUMNS: ColumnMapping<Project>[] = [
+const associationReducer =
+  <E, KeyType extends string | number = number>(foreignKey: string) =>
+  (byProject: Record<KeyType, E[]>, entity: E) => {
+    if (byProject[entity[foreignKey]] == null) {
+      byProject[entity[foreignKey]] = [];
+    }
+    byProject[entity[foreignKey]].push(entity);
+    return byProject;
+  };
+
+const loadProjectTreesPlanted = async (projectIds: number[]) =>
+  (
+    await TreeSpecies.findAll({
+      where: {
+        speciesableId: projectIds,
+        speciesableType: Project.LARAVEL_TYPE,
+        collection: "tree-planted",
+        hidden: false
+      },
+      attributes: ["speciesableId", "name"]
+    })
+  ).reduce(associationReducer<TreeSpecies>("speciesableId"), {});
+
+const loadApprovedProjectReports = async (projectIds: number[]) =>
+  (
+    await ProjectReport.findAll({
+      where: { projectId: projectIds, status: ProjectReport.APPROVED_STATUSES },
+      attributes: [
+        "id",
+        "projectId",
+        "status",
+        "ftTotal",
+        "ptTotal",
+        "ftWomen",
+        "ftMen",
+        "ftYouth",
+        "ftNonYouth",
+        "ptWomen",
+        "ptMen",
+        "ptYouth",
+        "ptNonYouth",
+        "volunteerTotal",
+        "volunteerWomen",
+        "volunteerMen",
+        "volunteerYouth",
+        "volunteerNonYouth"
+      ]
+    })
+  ).reduce(associationReducer<ProjectReport>("projectId"), {});
+
+const loadApprovedSites = async (projectIds: number[]) =>
+  (
+    await Site.findAll({
+      where: { projectId: projectIds, status: Site.APPROVED_STATUSES },
+      attributes: ["id", "uuid", "projectId"]
+    })
+  ).reduce(associationReducer<Site>("projectId"), {});
+
+const loadApprovedNurseries = async (projectIds: number[]) =>
+  (
+    await Nursery.findAll({
+      where: { projectId: projectIds, status: Nursery.APPROVED_STATUSES },
+      attributes: ["id"]
+    })
+  ).reduce(associationReducer<Nursery>("projectId"), {});
+
+const loadApprovedSiteReports = async (siteIds: number[]) =>
+  (
+    await SiteReport.findAll({
+      where: { siteId: siteIds, status: SiteReport.APPROVED_STATUSES },
+      attributes: ["id", "siteId"]
+    })
+  ).reduce(associationReducer<SiteReport>("siteId"), {});
+
+const loadTreesPlantedToDate = async (siteReportIds: number[]) =>
+  (
+    await TreeSpecies.findAll({
+      where: {
+        speciesableId: siteReportIds,
+        speciesableType: SiteReport.LARAVEL_TYPE,
+        collection: "tree-planted",
+        hidden: false
+      },
+      attributes: ["speciesableId", "name", "amount"]
+    })
+  ).reduce(associationReducer<TreeSpecies>("speciesableId"), {});
+
+const loadSeedsPlantedToDate = async (siteReportIds: number[]) =>
+  (
+    await Seeding.findAll({
+      where: {
+        seedableId: siteReportIds,
+        seedableType: SiteReport.LARAVEL_TYPE,
+        hidden: false
+      },
+      attributes: ["seedableId", "name", "amount"]
+    })
+  ).reduce(associationReducer<Seeding>("seedableId"), {});
+
+const loadSitePolygons = async (siteUuids: string[]) =>
+  (
+    await SitePolygon.findAll({
+      where: { siteUuid: siteUuids, isActive: true },
+      attributes: ["siteUuid", "calcArea"]
+    })
+  ).reduce(associationReducer<SitePolygon, string>("siteUuid"), {});
+
+type ProjectAssociations = {
+  treesPlanted: TreeSpecies[];
+  approvedProjectReports: ProjectReport[];
+  approvedSites: Site[];
+  approvedSiteReports: SiteReport[];
+  approvedNurseries: Nursery[];
+  treesPlantedToDate: TreeSpecies[];
+  seedsPlantedToDate: Seeding[];
+  sitePolygons: SitePolygon[];
+};
+
+const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "uuid",
   "name",
   {
@@ -56,13 +179,11 @@ const COLUMNS: ColumnMapping<Project>[] = [
   "history",
   {
     airtableColumn: "treeSpecies",
-    include: [{ association: "treesPlanted", attributes: ["name"] }],
-    valueMap: async ({ treesPlanted }) => treesPlanted?.map(({ name }) => name)?.join(", ")
+    valueMap: async (_, { treesPlanted }) => treesPlanted.map(({ name }) => name)?.join(", ")
   },
   {
     airtableColumn: "treeSpeciesCount",
-    include: [{ association: "treesPlanted", attributes: ["name"] }],
-    valueMap: async ({ treesPlanted }) => treesPlanted?.length ?? 0
+    valueMap: async (_, { treesPlanted }) => treesPlanted.length
   },
   "treesGrownGoal",
   "totalHectaresRestoredGoal",
@@ -82,261 +203,143 @@ const COLUMNS: ColumnMapping<Project>[] = [
   "goalTreesRestoredDirectSeeding",
   {
     airtableColumn: "treesPlantedToDate",
-    include: [
-      {
-        model: Site,
-        attributes: ["status"],
-        include: [
-          {
-            model: SiteReport,
-            attributes: ["status"],
-            include: [{ association: "treesPlanted", attributes: ["amount", "hidden"] }]
-          }
-        ]
-      }
-    ],
-    // We could potentially limit the number of rows in the query by filtering for these statuses
-    // in a where clause, but the mergeable include system is complicated enough without it trying
-    // to understand how to merge where clauses, so doing this filtering in memory is fine.
-    valueMap: async ({ sites }) =>
-      flattenDeep(
-        (sites ?? [])
-          .filter(({ status }) => Site.APPROVED_STATUSES.includes(status))
-          .map(({ reports }) =>
-            (reports ?? [])
-              .filter(({ status }) => SiteReport.APPROVED_STATUSES.includes(status))
-              .map(({ treesPlanted }) => treesPlanted?.map(({ amount }) => amount))
-          )
-      ).reduce((sum, amount) => sum + (amount ?? 0), 0)
+    valueMap: async (_, { treesPlantedToDate }) =>
+      treesPlantedToDate.reduce((sum, { amount }) => sum + (amount ?? 0), 0)
   },
   {
     airtableColumn: "seedsPlantedToDate",
-    include: [
-      {
-        model: Site,
-        attributes: ["status"],
-        include: [
-          {
-            model: SiteReport,
-            attributes: ["status"],
-            include: [{ association: "seedsPlanted", attributes: ["amount", "hidden"] }]
-          }
-        ]
-      }
-    ],
-    // We could potentially limit the number of rows in the query by filtering for these statuses
-    // in a where clause, but the mergeable include system is complicated enough without it trying
-    // to understand how to merge where clauses, so doing this filtering in memory is fine.
-    valueMap: async ({ sites }) =>
-      flattenDeep(
-        (sites ?? [])
-          .filter(({ status }) => Site.APPROVED_STATUSES.includes(status))
-          .map(({ reports }) =>
-            (reports ?? [])
-              .filter(({ status }) => SiteReport.APPROVED_STATUSES.includes(status))
-              .map(({ seedsPlanted }) => seedsPlanted?.map(({ amount }) => amount))
-          )
-      ).reduce((sum, amount) => sum + (amount ?? 0), 0)
+    valueMap: async (_, { seedsPlantedToDate }) =>
+      seedsPlantedToDate.reduce((sum, { amount }) => sum + (amount ?? 0), 0)
   },
   {
     airtableColumn: "jobsCreatedToDate",
-    include: [
-      {
-        model: ProjectReport,
-        attributes: ["status", "ftTotal", "ptTotal"]
-      }
-    ],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ftTotal, ptTotal }) => sum + (ftTotal ?? 0) + (ptTotal ?? 0), 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ftTotal, ptTotal }) => sum + (ftTotal ?? 0) + (ptTotal ?? 0), 0)
   },
   {
     airtableColumn: "hectaresRestoredToDate",
-    include: [
-      {
-        model: Site,
-        attributes: ["uuid"]
-      }
-    ],
-    // A given project can end up with _a lot_ of site polygons, which blows up the
-    // first SQL query into too many rows, so doing this one as its own query is more
-    // efficient.
-    valueMap: async ({ sites }) => {
-      if (sites == null || sites.length === 0) return 0;
-      const sitePolygons = await SitePolygon.findAll({
-        where: { siteUuid: { [Op.in]: sites.map(({ uuid }) => uuid) }, isActive: true },
-        attributes: ["calcArea"]
-      });
-      return Math.round(sitePolygons.reduce((total, { calcArea }) => total + calcArea, 0));
-    }
+    valueMap: async (_, { sitePolygons }) =>
+      Math.round(sitePolygons.reduce((total, { calcArea }) => total + calcArea, 0))
   },
   {
     airtableColumn: "numberOfSites",
-    include: [{ model: Site, attributes: ["id"] }],
-    valueMap: async ({ sites }) => (sites ?? []).length
+    valueMap: async (_, { approvedSites }) => approvedSites.length
   },
   {
     airtableColumn: "numberOfNurseries",
-    include: [{ model: Nursery, attributes: ["id"] }],
-    valueMap: async ({ nurseries }) => (nurseries ?? []).length
+    valueMap: async (_, { approvedNurseries }) => approvedNurseries.length
   },
-  "continent",
+  {
+    airtableColumn: "continent",
+    dbColumn: "continent",
+    valueMap: async ({ continent }) => continent?.replace("_", "-")
+  },
   {
     airtableColumn: "ftWomen",
-    include: [{ model: ProjectReport, attributes: ["ftWomen"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ftWomen }) => sum + ftWomen, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ftWomen }) => sum + ftWomen, 0)
   },
   {
     airtableColumn: "ftMen",
-    include: [{ model: ProjectReport, attributes: ["ftMen"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ftMen }) => sum + ftMen, 0)
+    valueMap: async (_, { approvedProjectReports }) => approvedProjectReports.reduce((sum, { ftMen }) => sum + ftMen, 0)
   },
   {
     airtableColumn: "ftYouth",
-    include: [{ model: ProjectReport, attributes: ["ftYouth"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ftYouth }) => sum + ftYouth, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ftYouth }) => sum + ftYouth, 0)
   },
   {
     airtableColumn: "ftNonYouth",
-    include: [{ model: ProjectReport, attributes: ["ftNonYouth"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ftNonYouth }) => sum + ftNonYouth, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ftNonYouth }) => sum + ftNonYouth, 0)
   },
   {
     airtableColumn: "ptWomen",
-    include: [{ model: ProjectReport, attributes: ["ptWomen"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ptWomen }) => sum + ptWomen, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ptWomen }) => sum + ptWomen, 0)
   },
   {
     airtableColumn: "ptMen",
-    include: [{ model: ProjectReport, attributes: ["ptMen"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ptMen }) => sum + ptMen, 0)
+    valueMap: async (_, { approvedProjectReports }) => approvedProjectReports.reduce((sum, { ptMen }) => sum + ptMen, 0)
   },
   {
     airtableColumn: "ptYouth",
-    include: [{ model: ProjectReport, attributes: ["ptYouth"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ptYouth }) => sum + ptYouth, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ptYouth }) => sum + ptYouth, 0)
   },
   {
     airtableColumn: "ptNonYouth",
-    include: [{ model: ProjectReport, attributes: ["ptNonYouth"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { ptNonYouth }) => sum + ptNonYouth, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { ptNonYouth }) => sum + ptNonYouth, 0)
   },
   {
     airtableColumn: "volunteerTotal",
-    include: [{ model: ProjectReport, attributes: ["volunteerTotal"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { volunteerTotal }) => sum + volunteerTotal, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { volunteerTotal }) => sum + volunteerTotal, 0)
   },
   {
     airtableColumn: "volunteerWomen",
-    include: [{ model: ProjectReport, attributes: ["volunteerWomen"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { volunteerWomen }) => sum + volunteerWomen, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { volunteerWomen }) => sum + volunteerWomen, 0)
   },
   {
     airtableColumn: "volunteerMen",
-    include: [{ model: ProjectReport, attributes: ["volunteerMen"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { volunteerMen }) => sum + volunteerMen, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { volunteerMen }) => sum + volunteerMen, 0)
   },
   {
     airtableColumn: "volunteerYouth",
-    include: [{ model: ProjectReport, attributes: ["volunteerYouth"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { volunteerYouth }) => sum + volunteerYouth, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { volunteerYouth }) => sum + volunteerYouth, 0)
   },
   {
     airtableColumn: "volunteerNonYouth",
-    include: [{ model: ProjectReport, attributes: ["volunteerNonYouth"] }],
-    valueMap: async ({ reports }) =>
-      (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .reduce((sum, { volunteerNonYouth }) => sum + volunteerNonYouth, 0)
+    valueMap: async (_, { approvedProjectReports }) =>
+      approvedProjectReports.reduce((sum, { volunteerNonYouth }) => sum + volunteerNonYouth, 0)
   },
   {
     airtableColumn: "workdaysCount",
-    include: [
-      { model: ProjectReport, attributes: ["id", "status"] },
-      {
-        model: Site,
-        attributes: ["status"],
-        include: [
-          {
-            model: SiteReport,
-            attributes: ["id", "status"]
-          }
-        ]
+    // Querying once per project is more efficient than getting all the demographics for a set of
+    // projects at once, and trying to associate them back to the project id.
+    valueMap: async (_, { approvedProjectReports, approvedSiteReports }) => {
+      const siteReportWorkdays =
+        approvedSiteReports.length == 0
+          ? null
+          : literal(`(
+        SELECT id
+        FROM v2_workdays
+        WHERE workdayable_type = '${SiteReport.LARAVEL_TYPE.replace(/\\/g, "\\\\")}'
+          AND workdayable_id IN (${approvedSiteReports.map(({ id }) => id).join(",")})
+          AND hidden = false
+      )`);
+
+      const projectReportWorkdays =
+        approvedProjectReports.length == 0
+          ? null
+          : literal(`(
+        SELECT id
+        FROM v2_workdays
+          WHERE workdayable_type = '${ProjectReport.LARAVEL_TYPE.replace(/\\/g, "\\\\")}'
+          AND workdayable_id IN (${approvedProjectReports.map(({ id }) => id).join(",")})
+          AND hidden = false
+      )`);
+
+      const where = {
+        demographicalType: Workday.LARAVEL_TYPE,
+        // We use Gender as the canonical sum value for a set of demographics
+        type: "gender"
+      } as WhereOptions<Demographic>;
+      if (siteReportWorkdays == null && projectReportWorkdays == null) {
+        return 0;
+      } else if (siteReportWorkdays == null || projectReportWorkdays == null) {
+        where["demographicalId"] = { [Op.in]: siteReportWorkdays ?? projectReportWorkdays };
+      } else {
+        where["demographicalId"] = {
+          [Op.or]: [{ [Op.in]: siteReportWorkdays }, { [Op.in]: projectReportWorkdays }]
+        };
       }
-    ],
-    valueMap: async ({ reports, sites }) => {
-      const siteReportIds = flatten(
-        (sites ?? []).filter(({ status }) => Site.APPROVED_STATUSES.includes(status)).map(({ reports }) => reports)
-      )
-        .filter(({ status }) => SiteReport.APPROVED_STATUSES.includes(status))
-        .map(({ id }) => id);
-      const siteReportWorkdays = literal(`(
-        select id
-        from v2_workdays
-        where workdayable_type = '${SiteReport.LARAVEL_TYPE.replace(/\\/g, "\\\\")}'
-          and workdayable_id in (${siteReportIds.join(",")})
-          and hidden = false
-      )`);
 
-      const projectReportIds = (reports ?? [])
-        .filter(({ status }) => ProjectReport.APPROVED_STATUSES.includes(status))
-        .map(({ id }) => id);
-      const projectReportWorkdays = literal(`(
-        select id
-        from v2_workdays
-          where workdayable_type = '${ProjectReport.LARAVEL_TYPE.replace(/\\/g, "\\\\")}'
-          and workdayable_id in (${projectReportIds.join(",")})
-          and hidden = false
-      )`);
-
-      return (
-        await Demographic.findAll({
-          attributes: ["amount"],
-          where: {
-            demographicalType: Workday.LARAVEL_TYPE,
-            demographicalId: {
-              [Op.or]: [{ [Op.in]: siteReportWorkdays }, { [Op.in]: projectReportWorkdays }]
-            }
-          }
-        })
-      ).reduce((count, { amount }) => count + amount, 0);
+      return (await Demographic.sum("amount", { where })) ?? 0;
     }
   },
   "survivalRate",
@@ -344,7 +347,7 @@ const COLUMNS: ColumnMapping<Project>[] = [
   "landholderCommEngage"
 ];
 
-export const ProjectEntity: AirtableEntity<Project> = {
+export const ProjectEntity: AirtableEntity<Project, ProjectAssociations> = {
   TABLE_NAME: "Projects",
   UUID_COLUMN: "uuid",
 
@@ -356,5 +359,52 @@ export const ProjectEntity: AirtableEntity<Project> = {
       offset
     }),
 
-  mapDbEntity: async (project: Project) => await mapEntityColumns(project, COLUMNS)
+  loadAssociations: async (projects: Project[]) => {
+    const projectIds = projects.map(({ id }) => id);
+    const treesPlanted = await loadProjectTreesPlanted(projectIds);
+    const approvedProjectReports = await loadApprovedProjectReports(projectIds);
+    const approvedSites = await loadApprovedSites(projectIds);
+    const allSiteIds = flatten(Object.values(approvedSites).map(sites => sites.map(({ id }) => id)));
+    const allSiteUuids = flatten(Object.values(approvedSites).map(sites => sites.map(({ uuid }) => uuid)));
+    const approvedNurseries = await loadApprovedNurseries(projectIds);
+    const approvedSiteReports = await loadApprovedSiteReports(allSiteIds);
+    const allSiteReportIds = flatten(Object.values(approvedSiteReports).map(reports => reports.map(({ id }) => id)));
+    const treesPlantedToDate = await loadTreesPlantedToDate(allSiteReportIds);
+    const seedsPlantedToDate = await loadSeedsPlantedToDate(allSiteReportIds);
+    const sitePolygons = await loadSitePolygons(allSiteUuids);
+
+    return projectIds.reduce((associations, projectId) => {
+      const sites = approvedSites[projectId] ?? [];
+      const siteReports = sites.reduce(
+        (reports, { id }) => [...reports, ...(approvedSiteReports[id] ?? [])],
+        [] as SiteReport[]
+      );
+
+      return {
+        ...associations,
+        [projectId]: {
+          treesPlanted: treesPlanted[projectId] ?? [],
+          approvedProjectReports: approvedProjectReports[projectId] ?? [],
+          approvedSites: sites,
+          approvedSiteReports: siteReports,
+          approvedNurseries: approvedNurseries[projectId] ?? [],
+          treesPlantedToDate: siteReports.reduce(
+            (trees, { id }) => [...trees, ...(treesPlantedToDate[id] ?? [])],
+            [] as TreeSpecies[]
+          ),
+          seedsPlantedToDate: siteReports.reduce(
+            (seedings, { id }) => [...seedings, ...(seedsPlantedToDate[id] ?? [])],
+            [] as Seeding[]
+          ),
+          sitePolygons: sites.reduce(
+            (polygons, { uuid }) => [...polygons, ...(sitePolygons[uuid] ?? [])],
+            [] as SitePolygon[]
+          )
+        }
+      };
+    }, {} as Record<number, ProjectAssociations>);
+  },
+
+  mapDbEntity: async (project: Project, associations: ProjectAssociations) =>
+    await mapEntityColumns(project, associations, COLUMNS)
 };

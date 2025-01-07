@@ -49,13 +49,22 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    // bogus offset and page size. The big early PPC records are blowing up the JS memory heap. Need
-    // to make some performance improvements to how the project airtable entity fetches records, pulling
-    // in fewer included associations. That will be a refactor for the next ticket.
-    const records = await airtableEntity.findMany(3, 200);
-    const airtableRecords = await Promise.all(
-      records.map(async record => ({ fields: await airtableEntity.mapDbEntity(record) }))
-    );
+    let airtableRecords: { fields: object }[];
+    try {
+      // bogus offset and page size. The big early PPC records are blowing up the JS memory heap. Need
+      // to make some performance improvements to how the project airtable entity fetches records, pulling
+      // in fewer included associations. That will be a refactor for the next ticket.
+      const records = await airtableEntity.findMany(10, 0);
+      const associations = await airtableEntity.loadAssociations(records);
+
+      airtableRecords = await Promise.all(
+        records.map(async record => ({ fields: await airtableEntity.mapDbEntity(record, associations[record.id]) }))
+      );
+    } catch (error) {
+      this.logger.error("Airtable mapping failed", error.stack);
+      throw error;
+    }
+
     try {
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
@@ -66,6 +75,7 @@ export class AirtableProcessor extends WorkerHost {
       this.logger.error(`Entity update failed: ${JSON.stringify({ entityType, error, airtableRecords }, null, 2)}`);
       throw error;
     }
+
     this.logger.log(`Entity update complete: ${JSON.stringify({ entityType })}`);
   }
 }

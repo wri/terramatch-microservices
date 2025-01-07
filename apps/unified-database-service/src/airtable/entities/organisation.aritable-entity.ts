@@ -116,5 +116,5 @@ export class OrganisationEntity extends AirtableEntity<Organisation> {
   readonly TABLE_NAME = "Organisations";
   readonly COLUMNS = COLUMNS;
 
-  protected findAll = (whereOptions: FindOptions<Organisation>) => Organisation.findAll(whereOptions);
+  protected findAll = (options: FindOptions<Organisation>) => Organisation.findAll(options);
 }

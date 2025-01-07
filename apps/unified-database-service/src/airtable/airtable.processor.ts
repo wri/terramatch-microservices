@@ -2,14 +2,20 @@ import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { InternalServerErrorException, LoggerService, NotImplementedException, Scope } from "@nestjs/common";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { Job } from "bullmq";
-import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import { OrganisationEntity, ProjectEntity } from "./entities";
+import { ApplicationEntity, OrganisationEntity, ProjectEntity } from "./entities";
+
+export const ENTITY_TYPES = ["application", "organisation", "project"] as const;
+export type EntityType = (typeof ENTITY_TYPES)[number];
+export type UpdateEntitiesData = {
+  entityType: EntityType;
+};
 
 const AIRTABLE_ENTITIES = {
-  project: new ProjectEntity(),
-  organisation: new OrganisationEntity()
+  application: new ApplicationEntity(),
+  organisation: new OrganisationEntity(),
+  project: new ProjectEntity()
 };
 
 /**

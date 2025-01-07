@@ -2,13 +2,7 @@ import { Injectable, LoggerService } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
-
-export const ENTITY_TYPES = ["project", "organisation"] as const;
-export type EntityType = (typeof ENTITY_TYPES)[number];
-
-export type UpdateEntitiesData = {
-  entityType: EntityType;
-};
+import { EntityType, UpdateEntitiesData } from "./airtable.processor";
 
 @Injectable()
 export class AirtableService {

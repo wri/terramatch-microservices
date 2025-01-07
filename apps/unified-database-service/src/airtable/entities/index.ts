@@ -1,2 +1,3 @@
-export { ProjectEntity } from "./project.airtable-entity";
-export { OrganisationEntity } from "./organisation.aritable-entity";
+export * from "./application.airtable-entity";
+export * from "./organisation.aritable-entity";
+export * from "./project.airtable-entity";

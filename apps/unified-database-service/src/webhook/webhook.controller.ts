@@ -1,6 +1,7 @@
 import { BadRequestException, Controller, Get, Query } from "@nestjs/common";
-import { AirtableService, ENTITY_TYPES, EntityType } from "../airtable/airtable.service";
+import { AirtableService } from "../airtable/airtable.service";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { ENTITY_TYPES, EntityType } from "../airtable/airtable.processor";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {

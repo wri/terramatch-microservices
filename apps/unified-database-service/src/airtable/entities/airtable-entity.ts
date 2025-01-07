@@ -59,7 +59,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     }
 
     try {
-      // TODO: testing, do not commit with this console log
+      // TODO: testing, do not merge with this console log
       // console.log("records", airtableRecords);
 
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts

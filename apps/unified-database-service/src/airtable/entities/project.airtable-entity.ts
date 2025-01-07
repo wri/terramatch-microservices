@@ -153,11 +153,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
     include: [{ model: Organisation, attributes: ["uuid"] }],
     valueMap: async ({ organisation }) => organisation?.uuid
   },
-  {
-    airtableColumn: "organisationName",
-    include: [{ model: Organisation, attributes: ["name"] }],
-    valueMap: async ({ organisation }) => organisation?.name
-  },
   "status",
   "country",
   "description",

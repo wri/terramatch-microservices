@@ -14,7 +14,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associationReducer, ColumnMapping } from "./airtable-entity";
 import { flatten } from "lodash";
-import { FindOptions, literal, Op, WhereOptions } from "sequelize";
+import { literal, Op, WhereOptions } from "sequelize";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
@@ -337,8 +337,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {
   readonly TABLE_NAME = "Projects";
   readonly COLUMNS = COLUMNS;
-
-  findAll = (options: FindOptions<Project>) => Project.findAll(options);
+  readonly MODEL = Project;
 
   async loadAssociations(projects: Project[]) {
     const projectIds = projects.map(({ id }) => id);

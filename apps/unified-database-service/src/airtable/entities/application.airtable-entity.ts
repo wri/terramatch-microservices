@@ -1,6 +1,5 @@
 import { AirtableEntity, associationReducer, ColumnMapping } from "./airtable-entity";
 import { Application, FormSubmission, FundingProgramme } from "@terramatch-microservices/database/entities";
-import { FindOptions } from "sequelize";
 import { orderBy } from "lodash";
 
 const loadFormSubmissions = async (applicationIds: number[]) =>
@@ -35,8 +34,7 @@ const COLUMNS: ColumnMapping<Application, ApplicationAssociations>[] = [
 export class ApplicationEntity extends AirtableEntity<Application, ApplicationAssociations> {
   readonly TABLE_NAME = "Applications";
   readonly COLUMNS = COLUMNS;
-
-  protected findAll = (options: FindOptions<Application>) => Application.findAll(options);
+  readonly MODEL = Application;
 
   protected async loadAssociations(applications: Application[]) {
     const applicationIds = applications.map(({ id }) => id);

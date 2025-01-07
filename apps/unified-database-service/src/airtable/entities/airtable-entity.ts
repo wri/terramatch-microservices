@@ -11,10 +11,9 @@ const AIRTABLE_PAGE_SIZE = 10;
 export abstract class AirtableEntity<ModelType extends Model<ModelType>, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
+  abstract readonly MODEL: { findAll: (options: FindOptions<ModelType>) => Promise<ModelType[]> };
 
   private readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
-
-  protected abstract findAll(whereOptions: FindOptions<ModelType>): Promise<ModelType[]>;
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden
@@ -30,7 +29,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   async updateBase(base: Airtable.Base) {
     for (let page = 0; await this.processPage(base, page); page++) {
       this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
-      // TODO testing; do not commit with this break
+      // TODO testing; do not merge with this break
       // break;
     }
   }
@@ -38,7 +37,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   private async processPage(base: Airtable.Base, page: number) {
     let airtableRecords: { fields: object }[];
     try {
-      const records = await this.findAll({
+      const records = await this.MODEL.findAll({
         attributes: selectAttributes(this.COLUMNS),
         include: selectIncludes(this.COLUMNS),
         limit: AIRTABLE_PAGE_SIZE,

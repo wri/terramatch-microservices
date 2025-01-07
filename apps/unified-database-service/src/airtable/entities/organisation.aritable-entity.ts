@@ -1,6 +1,5 @@
 import { AirtableEntity, ColumnMapping } from "./airtable-entity";
 import { Organisation } from "@terramatch-microservices/database/entities";
-import { FindOptions } from "sequelize";
 
 const COLUMNS: ColumnMapping<Organisation>[] = [
   "uuid",
@@ -115,6 +114,5 @@ const COLUMNS: ColumnMapping<Organisation>[] = [
 export class OrganisationEntity extends AirtableEntity<Organisation> {
   readonly TABLE_NAME = "Organisations";
   readonly COLUMNS = COLUMNS;
-
-  protected findAll = (options: FindOptions<Organisation>) => Organisation.findAll(options);
+  readonly MODEL = Organisation;
 }

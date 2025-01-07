@@ -8,18 +8,30 @@ import Airtable from "airtable";
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
 
-export abstract class AirtableEntity<T extends Model<T>, A> {
+export abstract class AirtableEntity<ModelType extends Model<ModelType>, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
-  abstract readonly COLUMNS: ColumnMapping<T, A>[];
+  abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
 
   private readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
 
-  protected abstract findAll(whereOptions: FindOptions<T>): Promise<T[]>;
-  protected abstract loadAssociations(entities: T[]): Promise<Record<number, A>>;
+  protected abstract findAll(whereOptions: FindOptions<ModelType>): Promise<ModelType[]>;
+
+  /**
+   * If an airtable entity provides a concrete type for Associations, this method should be overridden
+   * to execute the necessary DB queries and provide a mapping of record number to concrete instance
+   * of the association type.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected async loadAssociations(entities: ModelType[]): Promise<Record<number, AssociationType>> {
+    // The default implementation returns an empty mapping.
+    return {};
+  }
 
   async updateBase(base: Airtable.Base) {
     for (let page = 0; await this.processPage(base, page); page++) {
       this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
+      // TODO testing; do not commit wit this break
+      break;
     }
   }
 
@@ -31,7 +43,7 @@ export abstract class AirtableEntity<T extends Model<T>, A> {
         include: selectIncludes(this.COLUMNS),
         limit: AIRTABLE_PAGE_SIZE,
         offset: page * AIRTABLE_PAGE_SIZE
-      } as FindOptions<T>);
+      } as FindOptions<ModelType>);
 
       // Page had no records, halt processing.
       if (records.length === 0) return false;
@@ -47,13 +59,16 @@ export abstract class AirtableEntity<T extends Model<T>, A> {
     }
 
     try {
-      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
-      // https://github.com/Airtable/airtable.js/issues/348
-      await base(this.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] },
-        // Enables new multi/single selection options to be populated by this upsert.
-        typecast: true
-      });
+      // TODO: testing, do not commit with this console log
+      console.log("records", airtableRecords);
+
+      // // @ts-expect-error The types for this lib haven't caught up with its support for upserts
+      // // https://github.com/Airtable/airtable.js/issues/348
+      // await base(this.TABLE_NAME).update(airtableRecords, {
+      //   performUpsert: { fieldsToMergeOn: ["uuid"] },
+      //   // Enables new multi/single selection options to be populated by this upsert.
+      //   typecast: true
+      // });
     } catch (error) {
       this.logger.error(
         `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, error, airtableRecords }, null, 2)}`
@@ -76,7 +91,7 @@ export type MergeableInclude = {
 /**
  * A ColumnMapping is either a tuple of [dbColumn, airtableColumn], or a more descriptive object
  */
-export type ColumnMapping<T extends Model<T>, A> =
+export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
   | keyof Attributes<T>
   | [keyof Attributes<T>, string]
   | {

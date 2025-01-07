@@ -2,24 +2,117 @@ import { AirtableEntity, ColumnMapping } from "./airtable-entity";
 import { Organisation } from "@terramatch-microservices/database/entities";
 import { FindOptions } from "sequelize";
 
-type OrganisationAssociations = Record<string, never>;
+const COLUMNS: ColumnMapping<Organisation>[] = [
+  "uuid",
+  "status",
+  "type",
+  "private",
+  "isTest",
+  "name",
+  "phone",
+  "hqStreet1",
+  "hqStreet2",
+  "hqCity",
+  "hqState",
+  "hqZipcode",
+  "hqCountry",
+  "leadershipTeamTxt",
+  "foundingDate",
+  "description",
+  "countries",
+  "languages",
+  "treeCareApproach",
+  "relevantExperienceYears",
+  "treesGrown3Year",
+  "treesGrownTotal",
+  "haRestored3Year",
+  "haRestoredTotal",
+  "finStartMonth",
+  "finBudgetCurrentYear",
+  "finBudget1Year",
+  "finBudget2Year",
+  "finBudget3Year",
+  "webUrl",
+  "facebookUrl",
+  "instagramUrl",
+  "linkedinUrl",
+  "twitterUrl",
+  "ftPermanentEmployees",
+  "ptPermanentEmployees",
+  "tempEmployees",
+  "femaleEmployees",
+  "maleEmployees",
+  "youngEmployees",
+  "over35Employees",
+  "additionalFundingDetails",
+  "communityExperience",
+  "totalEngagedCommunityMembers3Yr",
+  "percentEngagedWomen3Yr",
+  "percentEngagedMen3Yr",
+  "percentEngagedUnder353Yr",
+  "percentEngagedOver353Yr",
+  "percentEngagedSmallholder3Yr",
+  "totalTreesGrown",
+  "avgTreeSurvivalRate",
+  "treeMaintenanceAftercareApproach",
+  "restoredAreasDescription",
+  "restorationTypesImplemented",
+  "historicMonitoringGeojson",
+  "monitoringEvaluationExperience",
+  "fundingHistory",
+  "engagementFarmers",
+  "engagementWomen",
+  "engagementYouth",
+  "currency",
+  "states",
+  "district",
+  "accountNumber1",
+  "accountNumber2",
+  "loanStatusAmount",
+  "loanStatusTypes",
+  "approachOfMarginalizedCommunities",
+  "communityEngagementNumbersMarginalized",
+  "landSystems",
+  "fundUtilisation",
+  "detailedInterventionTypes",
+  "communityMembersEngaged3yr",
+  "communityMembersEngaged3yrWomen",
+  "communityMembersEngaged3yrMen",
+  "communityMembersEngaged3yrYouth",
+  "communityMembersEngaged3yrNonYouth",
+  "communityMembersEngaged3yrSmallholder",
+  "communityMembersEngaged3YrBackwardClass",
+  "totalBoardMembers",
+  "pctBoardWomen",
+  "pctBoardMen",
+  "pctBoardYouth",
+  "pctBoardNonYouth",
+  "engagementNonYouth",
+  "treeRestorationPractices",
+  "businessModel",
+  "subtype",
+  "organisationRevenueThisYear",
+  "fieldStaffSkills",
+  "fpcCompany",
+  "numOfFarmersOnBoard",
+  "numOfMarginalisedEmployees",
+  "benefactorsFpcCompany",
+  "boardRemunerationFpcCompany",
+  "boardEngagementFpcCompany",
+  "biodiversityFocus",
+  "globalPlanningFrameworks",
+  "pastGovCollaboration",
+  "engagementLandless",
+  "socioeconomicImpact",
+  "environmentalImpact",
+  "growthStage",
+  "totalEmployees",
+  "additionalComments"
+];
 
-const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = ["uuid"];
-
-export class OrganisationEntity extends AirtableEntity<Organisation, OrganisationAssociations> {
+export class OrganisationEntity extends AirtableEntity<Organisation> {
   readonly TABLE_NAME = "Organisations";
   readonly COLUMNS = COLUMNS;
 
   protected findAll = (whereOptions: FindOptions<Organisation>) => Organisation.findAll(whereOptions);
-
-  async loadAssociations(organisations: Organisation[]) {
-    const organisationIds = organisations.map(({ id }) => id);
-
-    return organisationIds.reduce((associations, organisationId) => {
-      return {
-        ...associations,
-        [organisationId]: {}
-      };
-    }, {} as Record<number, OrganisationAssociations>);
-  }
 }

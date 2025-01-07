@@ -5,12 +5,11 @@ import { Job } from "bullmq";
 import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import { ProjectEntity } from "./entities";
-import { AirtableEntity } from "./entities/airtable-entity";
-import { Model } from "sequelize-typescript";
+import { OrganisationEntity, ProjectEntity } from "./entities";
 
 const AIRTABLE_ENTITIES = {
-  project: ProjectEntity
+  project: new ProjectEntity(),
+  organisation: new OrganisationEntity()
 };
 
 /**
@@ -51,46 +50,11 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    for (let page = 0; await this.processPage(airtableEntity, page); page++);
-  }
-
-  private async processPage<T extends Model<T, T>, A>(airtableEntity: AirtableEntity<T, A>, page: number) {
-    let airtableRecords: { fields: object }[];
-    try {
-      // The Airtable API only supports bulk updates of up to 10 rows
-      const records = await airtableEntity.findMany(10, page * 10);
-      // TODO maybe refactor this method to a generator
-      if (records.length === 0) return false;
-      const associations = await airtableEntity.loadAssociations(records);
-
-      airtableRecords = await Promise.all(
-        records.map(async record => ({ fields: await airtableEntity.mapDbEntity(record, associations[record.id]) }))
-      );
-    } catch (error) {
-      this.logger.error("Airtable mapping failed", error.stack);
-      throw error;
+    for (let page = 0; await airtableEntity.processPage(this.base, page); page++) {
+      // TODO limit processing for testing; do not merge with this break
+      break;
     }
 
-    try {
-      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
-      // https://github.com/Airtable/airtable.js/issues/348
-      await this.base(airtableEntity.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] },
-        // Enables new multi/single selection options to be populated by this upsert.
-        typecast: true
-      });
-    } catch (error) {
-      this.logger.error(
-        `Entity update failed: ${JSON.stringify(
-          { entity: airtableEntity.TABLE_NAME, error, airtableRecords },
-          null,
-          2
-        )}`
-      );
-      throw error;
-    }
-
-    this.logger.log(`Entity update complete: [${airtableEntity.TABLE_NAME}]`);
-    return true;
+    this.logger.log(`Completed entity update: ${JSON.stringify({ entityType })}`);
   }
 }

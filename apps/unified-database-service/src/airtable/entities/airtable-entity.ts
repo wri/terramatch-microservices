@@ -1,14 +1,58 @@
 import { Model, ModelType } from "sequelize-typescript";
 import { cloneDeep, isArray, isObject, uniq } from "lodash";
-import { Attributes } from "sequelize";
+import { Attributes, FindOptions } from "sequelize";
+import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { LoggerService } from "@nestjs/common";
+import Airtable from "airtable";
 
-export type AirtableEntity<T extends Model<T>, A> = {
-  TABLE_NAME: string;
-  UUID_COLUMN: string;
-  mapDbEntity: (entity: T, associations: A) => Promise<object>;
-  findMany: (pageSize: number, offset: number) => Promise<T[]>;
-  loadAssociations: (entities: T[]) => Promise<Record<number, A>>;
-};
+export abstract class AirtableEntity<T extends Model<T>, A> {
+  abstract readonly TABLE_NAME: string;
+  abstract readonly COLUMNS: ColumnMapping<T, A>[];
+
+  private readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
+
+  // TODO maybe refactor this method to a generator
+  async processPage(base: Airtable.Base, page: number) {
+    let airtableRecords: { fields: object }[];
+    try {
+      // The Airtable API only supports bulk updates of up to 10 rows
+      const records = await this.findAll({
+        attributes: selectAttributes(this.COLUMNS),
+        include: selectIncludes(this.COLUMNS),
+        limit: 10,
+        offset: page * 10
+      } as FindOptions<T>);
+      // TODO maybe refactor this method to a generator
+      if (records.length === 0) return false;
+      const associations = await this.loadAssociations(records);
+
+      airtableRecords = await Promise.all(
+        records.map(async record => ({ fields: await mapEntityColumns(record, associations[record.id], this.COLUMNS) }))
+      );
+    } catch (error) {
+      this.logger.error("Airtable mapping failed", error.stack);
+      throw error;
+    }
+
+    try {
+      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
+      // https://github.com/Airtable/airtable.js/issues/348
+      await base(this.TABLE_NAME).update(airtableRecords, {
+        performUpsert: { fieldsToMergeOn: ["uuid"] },
+        // Enables new multi/single selection options to be populated by this upsert.
+        typecast: true
+      });
+    } catch (error) {
+      this.logger.error(
+        `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, error, airtableRecords }, null, 2)}`
+      );
+      throw error;
+    }
+  }
+
+  protected abstract findAll(whereOptions: FindOptions<T>): Promise<T[]>;
+  protected abstract loadAssociations(entities: T[]): Promise<Record<number, A>>;
+}
 
 export type MergeableInclude = {
   model?: ModelType<unknown, unknown>;
@@ -32,7 +76,7 @@ export type ColumnMapping<T extends Model<T>, A> =
       valueMap: (entity: T, associations: A) => Promise<null | string | number | boolean | Date>;
     };
 
-export const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
+const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
   uniq([
     "id",
     ...columns
@@ -78,7 +122,7 @@ const mergeInclude = (includes: MergeableInclude[], include: MergeableInclude) =
   return includes;
 };
 
-export const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
+const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
   columns.reduce((includes, mapping) => {
     if (isArray(mapping) || !isObject(mapping)) return includes;
     if (mapping.include == null) return includes;
@@ -86,11 +130,7 @@ export const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, 
     return mapping.include.reduce(mergeInclude, includes);
   }, [] as MergeableInclude[]);
 
-export const mapEntityColumns = async <T extends Model<T>, A>(
-  entity: T,
-  associations: A,
-  columns: ColumnMapping<T, A>[]
-) => {
+const mapEntityColumns = async <T extends Model<T>, A>(entity: T, associations: A, columns: ColumnMapping<T, A>[]) => {
   const airtableObject = {};
   for (const mapping of columns) {
     const airtableColumn = isArray(mapping)

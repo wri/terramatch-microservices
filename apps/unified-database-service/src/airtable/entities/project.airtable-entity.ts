@@ -12,9 +12,9 @@ import {
   TreeSpecies,
   Workday
 } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, ColumnMapping, mapEntityColumns, selectAttributes, selectIncludes } from "./airtable-entity";
+import { AirtableEntity, ColumnMapping } from "./airtable-entity";
 import { flatten } from "lodash";
-import { literal, Op, WhereOptions } from "sequelize";
+import { FindOptions, literal, Op, WhereOptions } from "sequelize";
 
 const COHORTS = {
   terrafund: "TerraFund Top 100",
@@ -347,19 +347,13 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "landholderCommEngage"
 ];
 
-export const ProjectEntity: AirtableEntity<Project, ProjectAssociations> = {
-  TABLE_NAME: "Projects",
-  UUID_COLUMN: "uuid",
+export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {
+  readonly TABLE_NAME = "Projects";
+  readonly COLUMNS = COLUMNS;
 
-  findMany: async (pageSize: number, offset: number) =>
-    await Project.findAll({
-      attributes: selectAttributes(COLUMNS),
-      include: selectIncludes(COLUMNS),
-      limit: pageSize,
-      offset
-    }),
+  findAll = (options: FindOptions<Project>) => Project.findAll(options);
 
-  loadAssociations: async (projects: Project[]) => {
+  async loadAssociations(projects: Project[]) {
     const projectIds = projects.map(({ id }) => id);
     const treesPlanted = await loadProjectTreesPlanted(projectIds);
     const approvedProjectReports = await loadApprovedProjectReports(projectIds);
@@ -403,8 +397,5 @@ export const ProjectEntity: AirtableEntity<Project, ProjectAssociations> = {
         }
       };
     }, {} as Record<number, ProjectAssociations>);
-  },
-
-  mapDbEntity: async (project: Project, associations: ProjectAssociations) =>
-    await mapEntityColumns(project, associations, COLUMNS)
-};
+  }
+}

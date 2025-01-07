@@ -12,7 +12,7 @@ import {
   TreeSpecies,
   Workday
 } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity, associationReducer, ColumnMapping } from "./airtable-entity";
 import { flatten } from "lodash";
 import { FindOptions, literal, Op, WhereOptions } from "sequelize";
 
@@ -24,16 +24,6 @@ const COHORTS = {
   hbf: "Harit Bharat Fund",
   "epa-ghana-pilot": "EPA-Ghana Pilot"
 };
-
-const associationReducer =
-  <E, KeyType extends string | number = number>(foreignKey: string) =>
-  (byProject: Record<KeyType, E[]>, entity: E) => {
-    if (byProject[entity[foreignKey]] == null) {
-      byProject[entity[foreignKey]] = [];
-    }
-    byProject[entity[foreignKey]].push(entity);
-    return byProject;
-  };
 
 const loadProjectTreesPlanted = async (projectIds: number[]) =>
   (

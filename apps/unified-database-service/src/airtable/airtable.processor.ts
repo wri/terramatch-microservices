@@ -50,10 +50,7 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    for (let page = 0; await airtableEntity.processPage(this.base, page); page++) {
-      // TODO limit processing for testing; do not merge with this break
-      break;
-    }
+    await airtableEntity.updateBase(this.base);
 
     this.logger.log(`Completed entity update: ${JSON.stringify({ entityType })}`);
   }

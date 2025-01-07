@@ -5,25 +5,37 @@ import { TMLogService } from "@terramatch-microservices/common/util/tm-log.servi
 import { LoggerService } from "@nestjs/common";
 import Airtable from "airtable";
 
+// The Airtable API only supports bulk updates of up to 10 rows.
+const AIRTABLE_PAGE_SIZE = 10;
+
 export abstract class AirtableEntity<T extends Model<T>, A> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<T, A>[];
 
   private readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
 
-  // TODO maybe refactor this method to a generator
-  async processPage(base: Airtable.Base, page: number) {
+  protected abstract findAll(whereOptions: FindOptions<T>): Promise<T[]>;
+  protected abstract loadAssociations(entities: T[]): Promise<Record<number, A>>;
+
+  async updateBase(base: Airtable.Base) {
+    for (let page = 0; await this.processPage(base, page); page++) {
+      this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
+    }
+  }
+
+  private async processPage(base: Airtable.Base, page: number) {
     let airtableRecords: { fields: object }[];
     try {
-      // The Airtable API only supports bulk updates of up to 10 rows
       const records = await this.findAll({
         attributes: selectAttributes(this.COLUMNS),
         include: selectIncludes(this.COLUMNS),
-        limit: 10,
-        offset: page * 10
+        limit: AIRTABLE_PAGE_SIZE,
+        offset: page * AIRTABLE_PAGE_SIZE
       } as FindOptions<T>);
-      // TODO maybe refactor this method to a generator
+
+      // Page had no records, halt processing.
       if (records.length === 0) return false;
+
       const associations = await this.loadAssociations(records);
 
       airtableRecords = await Promise.all(
@@ -48,10 +60,10 @@ export abstract class AirtableEntity<T extends Model<T>, A> {
       );
       throw error;
     }
-  }
 
-  protected abstract findAll(whereOptions: FindOptions<T>): Promise<T[]>;
-  protected abstract loadAssociations(entities: T[]): Promise<Record<number, A>>;
+    // True signals that processing succeeded and the next page should begin
+    return true;
+  }
 }
 
 export type MergeableInclude = {
@@ -147,3 +159,16 @@ const mapEntityColumns = async <T extends Model<T>, A>(entity: T, associations: 
 
   return airtableObject;
 };
+
+/**
+ * Used with Array.reduce to produce a map of parent record id => array of associated records
+ */
+export const associationReducer =
+  <E, K extends string | number = number>(foreignKey: string) =>
+  (byParentRecord: Record<K, E[]>, entity: E) => {
+    if (byParentRecord[entity[foreignKey]] == null) {
+      byParentRecord[entity[foreignKey]] = [];
+    }
+    byParentRecord[entity[foreignKey]].push(entity);
+    return byParentRecord;
+  };

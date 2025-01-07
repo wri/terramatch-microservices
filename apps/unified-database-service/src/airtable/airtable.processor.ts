@@ -75,7 +75,9 @@ export class AirtableProcessor extends WorkerHost {
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
       await this.base(airtableEntity.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] }
+        performUpsert: { fieldsToMergeOn: ["uuid"] },
+        // Enables new multi/single selection options to be populated by this upsert.
+        typecast: true
       });
     } catch (error) {
       this.logger.error(

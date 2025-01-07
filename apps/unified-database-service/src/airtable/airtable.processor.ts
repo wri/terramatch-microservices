@@ -6,6 +6,8 @@ import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
 import { ProjectEntity } from "./entities";
+import { AirtableEntity } from "./entities/airtable-entity";
+import { Model } from "sequelize-typescript";
 
 const AIRTABLE_ENTITIES = {
   project: ProjectEntity
@@ -49,12 +51,16 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
+    for (let page = 0; await this.processPage(airtableEntity, page); page++);
+  }
+
+  private async processPage<T extends Model<T, T>, A>(airtableEntity: AirtableEntity<T, A>, page: number) {
     let airtableRecords: { fields: object }[];
     try {
-      // bogus offset and page size. The big early PPC records are blowing up the JS memory heap. Need
-      // to make some performance improvements to how the project airtable entity fetches records, pulling
-      // in fewer included associations. That will be a refactor for the next ticket.
-      const records = await airtableEntity.findMany(10, 0);
+      // The Airtable API only supports bulk updates of up to 10 rows
+      const records = await airtableEntity.findMany(10, page * 10);
+      // TODO maybe refactor this method to a generator
+      if (records.length === 0) return false;
       const associations = await airtableEntity.loadAssociations(records);
 
       airtableRecords = await Promise.all(
@@ -72,10 +78,17 @@ export class AirtableProcessor extends WorkerHost {
         performUpsert: { fieldsToMergeOn: ["uuid"] }
       });
     } catch (error) {
-      this.logger.error(`Entity update failed: ${JSON.stringify({ entityType, error, airtableRecords }, null, 2)}`);
+      this.logger.error(
+        `Entity update failed: ${JSON.stringify(
+          { entity: airtableEntity.TABLE_NAME, error, airtableRecords },
+          null,
+          2
+        )}`
+      );
       throw error;
     }
 
-    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType })}`);
+    this.logger.log(`Entity update complete: [${airtableEntity.TABLE_NAME}]`);
+    return true;
   }
 }

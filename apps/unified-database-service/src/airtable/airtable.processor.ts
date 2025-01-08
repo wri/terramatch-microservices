@@ -7,25 +7,26 @@ import Airtable from "airtable";
 import {
   ApplicationEntity,
   NurseryEntity,
+  NurseryReportEntity,
   OrganisationEntity,
   ProjectEntity,
   SiteEntity,
   SiteReportEntity
 } from "./entities";
 
-export const ENTITY_TYPES = ["application", "nursery", "organisation", "project", "site", "site-report"] as const;
-export type EntityType = (typeof ENTITY_TYPES)[number];
-export type UpdateEntitiesData = {
-  entityType: EntityType;
-};
-
-const AIRTABLE_ENTITIES = {
+export const AIRTABLE_ENTITIES = {
   application: new ApplicationEntity(),
   nursery: new NurseryEntity(),
+  "nursery-report": new NurseryReportEntity(),
   organisation: new OrganisationEntity(),
   project: new ProjectEntity(),
   site: new SiteEntity(),
   "site-report": new SiteReportEntity()
+};
+
+export type EntityType = keyof typeof AIRTABLE_ENTITIES;
+export type UpdateEntitiesData = {
+  entityType: EntityType;
 };
 
 /**

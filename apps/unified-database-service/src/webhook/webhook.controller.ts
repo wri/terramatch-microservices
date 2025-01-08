@@ -1,7 +1,7 @@
 import { BadRequestException, Controller, Get, Query } from "@nestjs/common";
 import { AirtableService } from "../airtable/airtable.service";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { ENTITY_TYPES, EntityType } from "../airtable/airtable.processor";
+import { AIRTABLE_ENTITIES, EntityType } from "../airtable/airtable.processor";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {
@@ -15,7 +15,7 @@ export class WebhookController {
       throw new BadRequestException("Missing query params");
     }
 
-    if (!ENTITY_TYPES.includes(entityType)) {
+    if (!Object.keys(AIRTABLE_ENTITIES).includes(entityType)) {
       throw new BadRequestException("entityType invalid");
     }
 

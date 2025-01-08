@@ -10,11 +10,11 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, STRING, UUID } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
 
-// A quick stub for tree endpoints
+// Incomplete stub
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
@@ -37,9 +37,20 @@ export class NurseryReport extends Model<NurseryReport> {
   @BelongsTo(() => Nursery)
   nursery: Nursery | null;
 
+  @Column(STRING)
+  status: string;
+
+  @AllowNull
+  @Column(STRING)
+  updateRequestStatus: string;
+
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seedlingsYoungTrees: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

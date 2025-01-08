@@ -4,9 +4,9 @@ import { TMLogService } from "@terramatch-microservices/common/util/tm-log.servi
 import { Job } from "bullmq";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import { ApplicationEntity, OrganisationEntity, ProjectEntity, SiteEntity } from "./entities";
+import { ApplicationEntity, NurseryEntity, OrganisationEntity, ProjectEntity, SiteEntity } from "./entities";
 
-export const ENTITY_TYPES = ["application", "organisation", "project", "site"] as const;
+export const ENTITY_TYPES = ["application", "nursery", "organisation", "project", "site"] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 export type UpdateEntitiesData = {
   entityType: EntityType;
@@ -14,6 +14,7 @@ export type UpdateEntitiesData = {
 
 const AIRTABLE_ENTITIES = {
   application: new ApplicationEntity(),
+  nursery: new NurseryEntity(),
   organisation: new OrganisationEntity(),
   project: new ProjectEntity(),
   site: new SiteEntity()

@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   AutoIncrement,
   BelongsTo,
   Column,
@@ -14,7 +15,7 @@ import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
 
-// A quick stub for the tree service endpoints.
+// Incomplete stub
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
 export class Nursery extends Model<Nursery> {
   static readonly APPROVED_STATUSES = ["approved"];
@@ -32,6 +33,14 @@ export class Nursery extends Model<Nursery> {
 
   @Column(STRING)
   status: string;
+
+  @AllowNull
+  @Column(STRING)
+  updateRequestStatus: string;
+
+  @AllowNull
+  @Column(STRING)
+  name: string | null;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)

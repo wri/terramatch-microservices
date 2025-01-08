@@ -29,7 +29,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   async updateBase(base: Airtable.Base) {
     for (let page = 0; await this.processPage(base, page); page++) {
       this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
-      // TODO testing; do not merge with this break
+      // TODO testing, do not merge with this break
       // break;
     }
   }

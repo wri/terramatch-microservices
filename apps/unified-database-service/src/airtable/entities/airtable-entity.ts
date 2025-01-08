@@ -88,7 +88,8 @@ export type MergeableInclude = {
 };
 
 /**
- * A ColumnMapping is either a tuple of [dbColumn, airtableColumn], or a more descriptive object
+ * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), a tuple of [dbColumn, airtableColumn],
+ * or a more descriptive object
  */
 export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
   | keyof Attributes<T>

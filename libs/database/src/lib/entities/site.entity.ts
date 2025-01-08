@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   AutoIncrement,
   BelongsTo,
   Column,
@@ -9,13 +10,13 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
 
-// A quick stub for the research endpoints
+// Incomplete stub
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
@@ -33,6 +34,10 @@ export class Site extends Model<Site> {
   @Column(STRING)
   status: string;
 
+  @AllowNull
+  @Column(STRING)
+  updateRequestStatus: string;
+
   @Index
   @Column(UUID)
   uuid: string;
@@ -43,6 +48,14 @@ export class Site extends Model<Site> {
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  @AllowNull
+  @Column(STRING)
+  sitingStrategy: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  descriptionSitingStrategy: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

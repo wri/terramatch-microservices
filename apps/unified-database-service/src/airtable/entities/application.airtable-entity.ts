@@ -1,6 +1,6 @@
 import { AirtableEntity, associationReducer, ColumnMapping } from "./airtable-entity";
 import { Application, FormSubmission, FundingProgramme } from "@terramatch-microservices/database/entities";
-import { orderBy } from "lodash";
+import { orderBy, uniq } from "lodash";
 
 const loadFormSubmissions = async (applicationIds: number[]) =>
   (
@@ -38,7 +38,7 @@ export class ApplicationEntity extends AirtableEntity<Application, ApplicationAs
 
   protected async loadAssociations(applications: Application[]) {
     const applicationIds = applications.map(({ id }) => id);
-    const fundingProgrammeUuids = applications.map(({ fundingProgrammeUuid }) => fundingProgrammeUuid);
+    const fundingProgrammeUuids = uniq(applications.map(({ fundingProgrammeUuid }) => fundingProgrammeUuid));
     const fundingProgrammes = await FundingProgramme.findAll({
       where: { uuid: fundingProgrammeUuids },
       attributes: ["uuid", "name"]

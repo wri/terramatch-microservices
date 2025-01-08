@@ -12,7 +12,7 @@ import {
   TreeSpecies,
   Workday
 } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associationReducer, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity, associationReducer, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { flatten } from "lodash";
 import { literal, Op, WhereOptions } from "sequelize";
 
@@ -134,10 +134,8 @@ type ProjectAssociations = {
 };
 
 const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
-  "uuid",
+  ...commonEntityColumns<Project, ProjectAssociations>("project"),
   "name",
-  "createdAt",
-  "updatedAt",
   {
     dbColumn: "frameworkKey",
     airtableColumn: "cohort",

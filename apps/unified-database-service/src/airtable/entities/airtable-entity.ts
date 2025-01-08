@@ -187,3 +187,16 @@ export const associationReducer =
     byParentRecord[entity[foreignKey]].push(entity);
     return byParentRecord;
   };
+
+type UuidModel<T> = Model<T> & { uuid: string };
+export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>
+  [
+    "uuid",
+    "createdAt",
+    "updatedAt",
+    {
+      airtableColumn: "linkToTerramatch",
+      dbColumn: "uuid",
+      valueMap: ({ uuid }) => `https://www.terramatch.org/admin#/${adminSiteType}/${uuid}/show`
+    }
+  ] as ColumnMapping<T, A>[];

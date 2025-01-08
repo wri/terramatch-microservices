@@ -1,10 +1,8 @@
-import { AirtableEntity, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Organisation } from "@terramatch-microservices/database/entities";
 
 const COLUMNS: ColumnMapping<Organisation>[] = [
-  "uuid",
-  "createdAt",
-  "updatedAt",
+  ...commonEntityColumns<Organisation>("organisation"),
   "status",
   "type",
   "private",

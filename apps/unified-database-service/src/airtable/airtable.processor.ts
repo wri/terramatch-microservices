@@ -10,18 +10,20 @@ import {
   NurseryReportEntity,
   OrganisationEntity,
   ProjectEntity,
+  ProjectReportEntity,
   SiteEntity,
   SiteReportEntity
 } from "./entities";
 
 export const AIRTABLE_ENTITIES = {
-  application: new ApplicationEntity(),
-  nursery: new NurseryEntity(),
-  "nursery-report": new NurseryReportEntity(),
-  organisation: new OrganisationEntity(),
-  project: new ProjectEntity(),
-  site: new SiteEntity(),
-  "site-report": new SiteReportEntity()
+  application: ApplicationEntity,
+  nursery: NurseryEntity,
+  "nursery-report": NurseryReportEntity,
+  organisation: OrganisationEntity,
+  project: ProjectEntity,
+  "project-report": ProjectReportEntity,
+  site: SiteEntity,
+  "site-report": SiteReportEntity
 };
 
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;
@@ -62,7 +64,7 @@ export class AirtableProcessor extends WorkerHost {
   private async updateEntities({ entityType }: UpdateEntitiesData) {
     this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
 
-    const airtableEntity = AIRTABLE_ENTITIES[entityType];
+    const airtableEntity = new AIRTABLE_ENTITIES[entityType]();
     if (airtableEntity == null) {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }

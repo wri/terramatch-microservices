@@ -1,4 +1,4 @@
-import { AirtableEntity, associationReducer, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity, associationReducer, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Application, FormSubmission, FundingProgramme } from "@terramatch-microservices/database/entities";
 import { orderBy, uniq } from "lodash";
 
@@ -16,9 +16,7 @@ type ApplicationAssociations = {
 };
 
 const COLUMNS: ColumnMapping<Application, ApplicationAssociations>[] = [
-  "uuid",
-  "createdAt",
-  "updatedAt",
+  ...commonEntityColumns<Application, ApplicationAssociations>("application"),
   "organisationUuid",
   {
     airtableColumn: "fundingProgrammeName",

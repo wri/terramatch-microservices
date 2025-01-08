@@ -43,6 +43,10 @@ export class SiteReport extends Model<SiteReport> {
   status: string;
 
   @AllowNull
+  @Column(STRING)
+  updateRequestStatus: string;
+
+  @AllowNull
   @Column(DATE)
   dueAt: Date | null;
 

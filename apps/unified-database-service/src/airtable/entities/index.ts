@@ -3,3 +3,4 @@ export * from "./nursery.airtable-entity";
 export * from "./organisation.aritable-entity";
 export * from "./project.airtable-entity";
 export * from "./site.airtable-entity";
+export * from "./site-report.airtable-entity";

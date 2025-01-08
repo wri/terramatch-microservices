@@ -10,11 +10,11 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 
-// A quick stub for the tree endpoints
+// Incomplete stub
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
@@ -42,8 +42,52 @@ export class ProjectReport extends Model<ProjectReport> {
   status: string;
 
   @AllowNull
+  @Column(STRING)
+  updateRequestStatus: string;
+
+  @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landscapeCommunityContribution: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  topThreeSuccesses: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  challengesFaced: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  lessonsLearned: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  maintenanceAndMonitoringActivities: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  significantChange: string | null;
+
+  @AllowNull
+  @Column(TINYINT.UNSIGNED)
+  pctSurvivalToDate: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  survivalCalculation: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  survivalComparison: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  newJobsDescription: string | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
@@ -105,6 +149,82 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
   volunteerNonYouth: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  volunteersWorkDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiaries: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  beneficiariesDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesLargeScale: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesSmallholder: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesNonYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesIncomeIncrease: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  beneficiariesIncomeIncreaseDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesSkillsKnowledgeIncrease: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  beneficiariesSkillsKnowledgeIncreaseDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  indirectBeneficiaries: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  indirectBeneficiariesDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  sharedDriveLink: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  communityProgress: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  localEngagementDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  equitableOpportunities: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

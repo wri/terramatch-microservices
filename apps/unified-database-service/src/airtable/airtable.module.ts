@@ -18,7 +18,9 @@ import { AirtableProcessor } from "./airtable.processor";
         connection: {
           host: configService.get("REDIS_HOST"),
           port: configService.get("REDIS_PORT"),
-          prefix: "unified-database-service"
+          prefix: "unified-database-service",
+          // Use TLS in AWS
+          ...(process.env.NODE_ENV !== "development" ? { tls: {} } : null)
         }
       })
     }),

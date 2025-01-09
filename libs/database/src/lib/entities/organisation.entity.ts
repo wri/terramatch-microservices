@@ -275,8 +275,8 @@ export class Organisation extends Model<Organisation> {
   loanStatusAmount: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  loanStatusTypes: string | null;
+  @Column(JSON)
+  loanStatusTypes: string[] | null;
 
   @AllowNull
   @Column(TEXT)

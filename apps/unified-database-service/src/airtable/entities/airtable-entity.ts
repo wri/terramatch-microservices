@@ -1,5 +1,5 @@
 import { Model, ModelType } from "sequelize-typescript";
-import { cloneDeep, isArray, isObject, uniq } from "lodash";
+import { cloneDeep, flatten, isArray, isObject, uniq } from "lodash";
 import { Attributes, FindOptions } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { LoggerService } from "@nestjs/common";
@@ -13,7 +13,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: { findAll: (options: FindOptions<ModelType>) => Promise<ModelType[]> };
 
-  private readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
+  protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden
@@ -29,20 +29,22 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   async updateBase(base: Airtable.Base) {
     for (let page = 0; await this.processPage(base, page); page++) {
       this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
-      // TODO testing, do not merge with this break
-      // break;
     }
+  }
+
+  protected getPageFindOptions(page: number) {
+    return {
+      attributes: selectAttributes(this.COLUMNS),
+      include: selectIncludes(this.COLUMNS),
+      limit: AIRTABLE_PAGE_SIZE,
+      offset: page * AIRTABLE_PAGE_SIZE
+    } as FindOptions<ModelType>;
   }
 
   private async processPage(base: Airtable.Base, page: number) {
     let airtableRecords: { fields: object }[];
     try {
-      const records = await this.MODEL.findAll({
-        attributes: selectAttributes(this.COLUMNS),
-        include: selectIncludes(this.COLUMNS),
-        limit: AIRTABLE_PAGE_SIZE,
-        offset: page * AIRTABLE_PAGE_SIZE
-      } as FindOptions<ModelType>);
+      const records = await this.MODEL.findAll(this.getPageFindOptions(page));
 
       // Page had no records, halt processing.
       if (records.length === 0) return false;
@@ -58,9 +60,6 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     }
 
     try {
-      // TODO: testing, do not merge with this console log
-      // console.log("records", airtableRecords);
-
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
       await base(this.TABLE_NAME).update(airtableRecords, {
@@ -97,7 +96,7 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
   | {
       airtableColumn: string;
       // Include if this mapping should include a particular DB column in the DB query
-      dbColumn?: keyof Attributes<T>;
+      dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
       // Include if this mapping should eager load an association on the DB query
       include?: MergeableInclude[];
       valueMap: (entity: T, associations: A) => Promise<null | string | number | boolean | Date>;
@@ -106,9 +105,11 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
 const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
   uniq([
     "id",
-    ...columns
-      .map(mapping => (isArray(mapping) ? mapping[0] : isObject(mapping) ? mapping.dbColumn : mapping))
-      .filter(dbColumn => dbColumn != null)
+    ...flatten(
+      columns
+        .map(mapping => (isArray(mapping) ? mapping[0] : isObject(mapping) ? mapping.dbColumn : mapping))
+        .filter(dbColumn => dbColumn != null)
+    )
   ]);
 
 /**
@@ -200,3 +201,13 @@ export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, n
       valueMap: ({ uuid }) => `https://www.terramatch.org/admin#/${adminSiteType}/${uuid}/show`
     }
   ] as ColumnMapping<T, A>[];
+
+export const associatedValueColumn = <T extends Model<T>, A>(
+  valueName: keyof A,
+  dbColumn: keyof Attributes<T> | (keyof Attributes<T>)[]
+) =>
+  ({
+    airtableColumn: valueName,
+    dbColumn,
+    valueMap: async (_, associations: A) => associations?.[valueName]
+  } as ColumnMapping<T, A>);

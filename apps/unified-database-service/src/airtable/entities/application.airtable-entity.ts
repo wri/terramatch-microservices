@@ -1,4 +1,10 @@
-import { AirtableEntity, associationReducer, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import {
+  AirtableEntity,
+  associatedValueColumn,
+  associationReducer,
+  ColumnMapping,
+  commonEntityColumns
+} from "./airtable-entity";
 import { Application, FormSubmission, FundingProgramme } from "@terramatch-microservices/database/entities";
 import { orderBy, uniq } from "lodash";
 
@@ -18,11 +24,7 @@ type ApplicationAssociations = {
 const COLUMNS: ColumnMapping<Application, ApplicationAssociations>[] = [
   ...commonEntityColumns<Application, ApplicationAssociations>("application"),
   "organisationUuid",
-  {
-    airtableColumn: "fundingProgrammeName",
-    dbColumn: "fundingProgrammeUuid",
-    valueMap: async (_, { fundingProgrammeName }) => fundingProgrammeName
-  },
+  associatedValueColumn("fundingProgrammeName", "fundingProgrammeUuid"),
   {
     airtableColumn: "status",
     valueMap: async (_, { formSubmissions }) => orderBy(formSubmissions, ["id"], ["desc"])[0]?.status

@@ -1,5 +1,11 @@
 import { Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associationReducer, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import {
+  AirtableEntity,
+  associatedValueColumn,
+  associationReducer,
+  ColumnMapping,
+  commonEntityColumns
+} from "./airtable-entity";
 import { uniq } from "lodash";
 
 const loadReportTreesPlanted = async (siteReportIds: number[]) =>
@@ -22,11 +28,7 @@ type SiteReportAssociations = {
 
 const COLUMNS: ColumnMapping<SiteReport, SiteReportAssociations>[] = [
   ...commonEntityColumns<SiteReport, SiteReportAssociations>("siteReport"),
-  {
-    airtableColumn: "siteUuid",
-    dbColumn: "siteId",
-    valueMap: async (_, { siteUuid }) => siteUuid
-  },
+  associatedValueColumn("siteUuid", "siteId"),
   "status",
   "updateRequestStatus",
   "dueAt",

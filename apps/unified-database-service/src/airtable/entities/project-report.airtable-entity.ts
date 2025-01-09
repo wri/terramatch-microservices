@@ -1,5 +1,5 @@
 import { Project, ProjectReport } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 
 type ProjectReportAssociations = {
   projectUuid?: string;
@@ -7,11 +7,7 @@ type ProjectReportAssociations = {
 
 const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   ...commonEntityColumns<ProjectReport, ProjectReportAssociations>("projectReport"),
-  {
-    airtableColumn: "projectUuid",
-    dbColumn: "projectId",
-    valueMap: async (_, { projectUuid }) => projectUuid
-  },
+  associatedValueColumn("projectUuid", "projectId"),
   "status",
   "updateRequestStatus",
   "dueAt",

@@ -12,7 +12,8 @@ import {
   ProjectEntity,
   ProjectReportEntity,
   SiteEntity,
-  SiteReportEntity
+  SiteReportEntity,
+  TreeSpeciesEntity
 } from "./entities";
 
 export const AIRTABLE_ENTITIES = {
@@ -23,7 +24,8 @@ export const AIRTABLE_ENTITIES = {
   project: ProjectEntity,
   "project-report": ProjectReportEntity,
   site: SiteEntity,
-  "site-report": SiteReportEntity
+  "site-report": SiteReportEntity,
+  "tree-species": TreeSpeciesEntity
 };
 
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;

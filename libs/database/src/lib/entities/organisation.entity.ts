@@ -3,6 +3,8 @@ import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, JSON, TEXT, TINY
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true })
 export class Organisation extends Model<Organisation> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

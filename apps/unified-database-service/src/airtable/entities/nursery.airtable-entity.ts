@@ -1,4 +1,4 @@
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Nursery, Project } from "@terramatch-microservices/database/entities";
 import { uniq } from "lodash";
 
@@ -9,11 +9,7 @@ type NurseryAssociations = {
 const COLUMNS: ColumnMapping<Nursery, NurseryAssociations>[] = [
   ...commonEntityColumns<Nursery, NurseryAssociations>("nursery"),
   "name",
-  {
-    airtableColumn: "projectUuid",
-    dbColumn: "projectId",
-    valueMap: async (_, { projectUuid }) => projectUuid
-  },
+  associatedValueColumn("projectUuid", "projectId"),
   "status",
   "updateRequestStatus"
 ];

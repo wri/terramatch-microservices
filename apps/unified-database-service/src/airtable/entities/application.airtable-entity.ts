@@ -1,20 +1,15 @@
-import {
-  AirtableEntity,
-  associatedValueColumn,
-  associationReducer,
-  ColumnMapping,
-  commonEntityColumns
-} from "./airtable-entity";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Application, FormSubmission, FundingProgramme } from "@terramatch-microservices/database/entities";
-import { orderBy, uniq } from "lodash";
+import { groupBy, orderBy, uniq } from "lodash";
 
 const loadFormSubmissions = async (applicationIds: number[]) =>
-  (
+  groupBy(
     await FormSubmission.findAll({
       where: { applicationId: applicationIds },
       attributes: ["applicationId", "status"]
-    })
-  ).reduce(associationReducer<FormSubmission>("applicationId"), {});
+    }),
+    "applicationId"
+  );
 
 type ApplicationAssociations = {
   fundingProgrammeName?: string;

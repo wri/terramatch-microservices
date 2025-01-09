@@ -176,19 +176,6 @@ const mapEntityColumns = async <T extends Model<T>, A>(entity: T, associations: 
   return airtableObject;
 };
 
-/**
- * Used with Array.reduce to produce a map of parent record id => array of associated records
- */
-export const associationReducer =
-  <E, K extends string | number = number>(foreignKey: string) =>
-  (byParentRecord: Record<K, E[]>, entity: E) => {
-    if (byParentRecord[entity[foreignKey]] == null) {
-      byParentRecord[entity[foreignKey]] = [];
-    }
-    byParentRecord[entity[foreignKey]].push(entity);
-    return byParentRecord;
-  };
-
 type UuidModel<T> = Model<T> & { uuid: string };
 export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>
   [

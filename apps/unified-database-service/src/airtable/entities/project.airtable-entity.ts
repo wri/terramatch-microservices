@@ -12,8 +12,8 @@ import {
   TreeSpecies,
   Workday
 } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associationReducer, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { flatten } from "lodash";
+import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { flatten, groupBy } from "lodash";
 import { literal, Op, WhereOptions } from "sequelize";
 
 const COHORTS = {
@@ -26,7 +26,7 @@ const COHORTS = {
 };
 
 const loadProjectTreesPlanted = async (projectIds: number[]) =>
-  (
+  groupBy(
     await TreeSpecies.findAll({
       where: {
         speciesableId: projectIds,
@@ -35,11 +35,12 @@ const loadProjectTreesPlanted = async (projectIds: number[]) =>
         hidden: false
       },
       attributes: ["speciesableId", "name"]
-    })
-  ).reduce(associationReducer<TreeSpecies>("speciesableId"), {});
+    }),
+    "speciesableId"
+  );
 
 const loadApprovedProjectReports = async (projectIds: number[]) =>
-  (
+  groupBy(
     await ProjectReport.findAll({
       where: { projectId: projectIds, status: ProjectReport.APPROVED_STATUSES },
       attributes: [
@@ -62,35 +63,39 @@ const loadApprovedProjectReports = async (projectIds: number[]) =>
         "volunteerYouth",
         "volunteerNonYouth"
       ]
-    })
-  ).reduce(associationReducer<ProjectReport>("projectId"), {});
+    }),
+    "projectId"
+  );
 
 const loadApprovedSites = async (projectIds: number[]) =>
-  (
+  groupBy(
     await Site.findAll({
       where: { projectId: projectIds, status: Site.APPROVED_STATUSES },
       attributes: ["id", "uuid", "projectId"]
-    })
-  ).reduce(associationReducer<Site>("projectId"), {});
+    }),
+    "projectId"
+  );
 
 const loadApprovedNurseries = async (projectIds: number[]) =>
-  (
+  groupBy(
     await Nursery.findAll({
       where: { projectId: projectIds, status: Nursery.APPROVED_STATUSES },
-      attributes: ["id"]
-    })
-  ).reduce(associationReducer<Nursery>("projectId"), {});
+      attributes: ["id", "projectId"]
+    }),
+    "projectId"
+  );
 
 const loadApprovedSiteReports = async (siteIds: number[]) =>
-  (
+  groupBy(
     await SiteReport.findAll({
       where: { siteId: siteIds, status: SiteReport.APPROVED_STATUSES },
       attributes: ["id", "siteId"]
-    })
-  ).reduce(associationReducer<SiteReport>("siteId"), {});
+    }),
+    "siteId"
+  );
 
 const loadTreesPlantedToDate = async (siteReportIds: number[]) =>
-  (
+  groupBy(
     await TreeSpecies.findAll({
       where: {
         speciesableId: siteReportIds,
@@ -99,11 +104,12 @@ const loadTreesPlantedToDate = async (siteReportIds: number[]) =>
         hidden: false
       },
       attributes: ["speciesableId", "name", "amount"]
-    })
-  ).reduce(associationReducer<TreeSpecies>("speciesableId"), {});
+    }),
+    "speciesableId"
+  );
 
 const loadSeedsPlantedToDate = async (siteReportIds: number[]) =>
-  (
+  groupBy(
     await Seeding.findAll({
       where: {
         seedableId: siteReportIds,
@@ -111,16 +117,18 @@ const loadSeedsPlantedToDate = async (siteReportIds: number[]) =>
         hidden: false
       },
       attributes: ["seedableId", "name", "amount"]
-    })
-  ).reduce(associationReducer<Seeding>("seedableId"), {});
+    }),
+    "seedableId"
+  );
 
 const loadSitePolygons = async (siteUuids: string[]) =>
-  (
+  groupBy(
     await SitePolygon.findAll({
       where: { siteUuid: siteUuids, isActive: true },
       attributes: ["siteUuid", "calcArea"]
-    })
-  ).reduce(associationReducer<SitePolygon, string>("siteUuid"), {});
+    }),
+    "siteUuid"
+  );
 
 type ProjectAssociations = {
   treesPlanted: TreeSpecies[];

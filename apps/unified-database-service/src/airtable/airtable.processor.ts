@@ -1,22 +1,11 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
-import {
-  InternalServerErrorException,
-  LoggerService,
-  NotFoundException,
-  NotImplementedException,
-  Scope
-} from "@nestjs/common";
+import { InternalServerErrorException, LoggerService, NotImplementedException, Scope } from "@nestjs/common";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { Job } from "bullmq";
 import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import { Project } from "@terramatch-microservices/database/entities";
 import { ProjectEntity } from "./entities";
-import { AirtableEntity } from "./entities/airtable-entity";
-import { Model } from "sequelize-typescript";
-import { FieldSet } from "airtable/lib/field_set";
-import { Records } from "airtable/lib/records";
 
 const AIRTABLE_ENTITIES = {
   project: ProjectEntity
@@ -52,58 +41,31 @@ export class AirtableProcessor extends WorkerHost {
     }
   }
 
-  private async updateEntities({ entityType, entityUuid }: UpdateEntitiesData) {
-    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType, entityUuid })}`);
+  private async updateEntities({ entityType }: UpdateEntitiesData) {
+    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
 
     const airtableEntity = AIRTABLE_ENTITIES[entityType];
     if (airtableEntity == null) {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    const id = await this.findAirtableEntity(airtableEntity, entityUuid);
-    const record = await airtableEntity.findOne(entityUuid);
+    // bogus offset and page size. The big early PPC records are blowing up the JS memory heap. Need
+    // to make some performance improvements to how the project airtable entity fetches records, pulling
+    // in fewer included associations. That will be a refactor for the next ticket.
+    const records = await airtableEntity.findMany(3, 200);
+    const airtableRecords = await Promise.all(
+      records.map(async record => ({ fields: await airtableEntity.mapDbEntity(record) }))
+    );
     try {
-      await this.base(airtableEntity.TABLE_NAME).update(id, await airtableEntity.mapDbEntity(record));
+      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
+      // https://github.com/Airtable/airtable.js/issues/348
+      await this.base(airtableEntity.TABLE_NAME).update(airtableRecords, {
+        performUpsert: { fieldsToMergeOn: ["uuid"] }
+      });
     } catch (error) {
-      this.logger.error(
-        `Entity update failed: ${JSON.stringify({
-          entityType,
-          entityUuid,
-          error
-        })}`
-      );
+      this.logger.error(`Entity update failed: ${JSON.stringify({ entityType, error, airtableRecords }, null, 2)}`);
       throw error;
     }
-    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType, entityUuid })}`);
-  }
-
-  private async findAirtableEntity<T extends Model<T>>(entity: AirtableEntity<T>, entityUuid: string) {
-    let records: Records<FieldSet>;
-    try {
-      records = await this.base(entity.TABLE_NAME)
-        .select({
-          maxRecords: 2,
-          fields: [entity.UUID_COLUMN],
-          filterByFormula: `{${entity.UUID_COLUMN}} = '${entityUuid}'`
-        })
-        .firstPage();
-    } catch (error) {
-      this.logger.error(
-        `Error finding entity in Airtable: ${JSON.stringify({ table: entity.TABLE_NAME, entityUuid, error })}`
-      );
-      throw new NotFoundException(`No ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
-    }
-
-    if (records.length === 0) {
-      this.logger.error(`No ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
-      throw new NotFoundException(`No ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
-    } else if (records.length > 1) {
-      this.logger.error(`More than one ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`);
-      throw new InternalServerErrorException(
-        `More than one ${entity.TABLE_NAME} with UUID ${entityUuid} found in Airtable`
-      );
-    }
-
-    return records[0].id;
+    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType })}`);
   }
 }

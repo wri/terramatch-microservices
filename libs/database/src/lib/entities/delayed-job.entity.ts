@@ -1,7 +1,22 @@
-import { AllowNull, AutoIncrement, Column, Default, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  Default,
+  ForeignKey,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
 import { User } from "./user.entity";
 
+// holds the definition for members that may exist in a job metadata that this codebase explicitly
+// references.
+interface Metadata {
+  entity_name?: string;
+}
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {
   @PrimaryKey
@@ -35,7 +50,7 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @AllowNull
   @Column(STRING)
-  progressMessage: string | null
+  progressMessage: string | null;
 
   @ForeignKey(() => User)
   @AllowNull
@@ -44,5 +59,12 @@ export class DelayedJob extends Model<DelayedJob> {
 
   @Column(BOOLEAN)
   isAcknowledged: boolean;
-  
+
+  @AllowNull
+  @Column(STRING)
+  name: string | null;
+
+  @AllowNull
+  @Column(JSON)
+  metadata: Metadata | null;
 }

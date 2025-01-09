@@ -9,8 +9,8 @@ export class WebhookController {
   @Get()
   @NoBearerAuth
   // TODO (NJC): Documentation if we end up keeping this webhook.
-  async triggerWebhook(@Query("entityType") entityType: EntityType, @Query("entityUuid") entityUuid: string) {
-    if (entityType == null || entityUuid == null) {
+  async triggerWebhook(@Query("entityType") entityType: EntityType) {
+    if (entityType == null) {
       throw new BadRequestException("Missing query params");
     }
 
@@ -18,7 +18,7 @@ export class WebhookController {
       throw new BadRequestException("entityType invalid");
     }
 
-    await this.airtableService.updateAirtableJob(entityType, entityUuid);
+    await this.airtableService.updateAirtableJob(entityType);
 
     return { status: "OK" };
   }

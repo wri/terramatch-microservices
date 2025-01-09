@@ -57,9 +57,12 @@ export class ServiceStack extends Stack {
       vpc
     });
 
+    // The staging redis security group has an inconsistent name
+    const redisSecurityGroup = env === "staging" ? "chache-stage" : `cache-${env}`;
     const securityGroups = [
       SecurityGroup.fromLookupByName(this, "default", "default", vpc),
-      SecurityGroup.fromLookupByName(this, `db-${env}`, `db-${env}`, vpc)
+      SecurityGroup.fromLookupByName(this, `db-${env}`, `db-${env}`, vpc),
+      SecurityGroup.fromLookupByName(this, redisSecurityGroup, redisSecurityGroup, vpc)
     ];
     const privateSubnets = [
       PrivateSubnet.fromPrivateSubnetAttributes(this, "eu-west-1a", {

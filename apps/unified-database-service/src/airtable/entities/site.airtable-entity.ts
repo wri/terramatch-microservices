@@ -8,6 +8,7 @@ type SiteAssociations = {
 
 const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
   ...commonEntityColumns<Site, SiteAssociations>("site"),
+  "name",
   associatedValueColumn("projectUuid", "projectId"),
   "status",
   "updateRequestStatus",

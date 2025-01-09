@@ -1,4 +1,4 @@
-import { Model, ModelType } from "sequelize-typescript";
+import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, isArray, isObject, uniq } from "lodash";
 import { Attributes, FindOptions } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
@@ -11,7 +11,7 @@ const AIRTABLE_PAGE_SIZE = 10;
 export abstract class AirtableEntity<ModelType extends Model<ModelType>, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
-  abstract readonly MODEL: { findAll: (options: FindOptions<ModelType>) => Promise<ModelType[]> };
+  abstract readonly MODEL: ModelCtor<ModelType>;
 
   protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
 

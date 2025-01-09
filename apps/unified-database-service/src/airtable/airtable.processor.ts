@@ -31,6 +31,7 @@ export const AIRTABLE_ENTITIES = {
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;
 export type UpdateEntitiesData = {
   entityType: EntityType;
+  startPage?: number;
 };
 
 /**
@@ -63,7 +64,7 @@ export class AirtableProcessor extends WorkerHost {
     }
   }
 
-  private async updateEntities({ entityType }: UpdateEntitiesData) {
+  private async updateEntities({ entityType, startPage }: UpdateEntitiesData) {
     this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
 
     const airtableEntity = new AIRTABLE_ENTITIES[entityType]();
@@ -71,7 +72,7 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    await airtableEntity.updateBase(this.base);
+    await airtableEntity.updateBase(this.base, startPage);
 
     this.logger.log(`Completed entity update: ${JSON.stringify({ entityType })}`);
   }

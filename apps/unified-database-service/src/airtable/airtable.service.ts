@@ -11,8 +11,8 @@ export class AirtableService {
   constructor(@InjectQueue("airtable") private readonly airtableQueue: Queue) {}
 
   // TODO (NJC) This method will probably go away entirely, or at least change drastically after this POC
-  async updateAirtableJob(entityType: EntityType) {
-    const data: UpdateEntitiesData = { entityType };
+  async updateAirtableJob(entityType: EntityType, startPage?: number) {
+    const data: UpdateEntitiesData = { entityType, startPage };
 
     this.logger.log(`Adding entity update to queue: ${JSON.stringify(data)}`);
     await this.airtableQueue.add("updateEntities", data);

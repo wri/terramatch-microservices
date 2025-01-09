@@ -26,8 +26,8 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     return {};
   }
 
-  async updateBase(base: Airtable.Base) {
-    for (let page = 0; await this.processPage(base, page); page++) {
+  async updateBase(base: Airtable.Base, startPage?: number) {
+    for (let page = startPage ?? 0; await this.processPage(base, page); page++) {
       this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
     }
   }

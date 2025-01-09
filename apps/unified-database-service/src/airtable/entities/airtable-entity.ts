@@ -55,7 +55,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
         records.map(async record => ({ fields: await mapEntityColumns(record, associations[record.id], this.COLUMNS) }))
       );
     } catch (error) {
-      this.logger.error("Airtable mapping failed", error.stack);
+      this.logger.error(`Airtable mapping failed [table=${this.TABLE_NAME}, page=${page}]`, error.stack);
       throw error;
     }
 
@@ -69,7 +69,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
       });
     } catch (error) {
       this.logger.error(
-        `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, error, airtableRecords }, null, 2)}`
+        `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, page, error, airtableRecords }, null, 2)}`
       );
       throw error;
     }

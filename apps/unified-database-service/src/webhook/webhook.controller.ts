@@ -29,7 +29,7 @@ export class WebhookController {
   })
   @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
   @ApiException(() => BadRequestException, { description: "Query params were invalid" })
-  async triggerWebhook(@Query() { entityType, startPage }: WebhookParamsDto, @Request() { authenticatedUserId }) {
+  async updateRecords(@Query() { entityType, startPage }: WebhookParamsDto, @Request() { authenticatedUserId }) {
     const permissions = await Permission.getUserPermissionNames(authenticatedUserId);
     // This isn't a perfect match for what this controller does, but it is close, and all admins have
     // this permission, so it's a reasonable way for now to restrict this controller to logged in

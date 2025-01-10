@@ -48,5 +48,11 @@ jobs:
       - name: Sync DB Schema
         run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test database --no-cache
 
+      # Run the UDB service tests in isolation because they require clearing out DB tables and ensuring
+      # they know exactly what's in them, which is not conducive to parallel runs with other test
+      # suites.
+      - name: Unified DB Test
+        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test unified-database-service
+
       - name: Test all
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests
+        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests --exclude unified-database-service database

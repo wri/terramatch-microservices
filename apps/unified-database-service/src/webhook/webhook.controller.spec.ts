@@ -1,5 +1,5 @@
 import { WebhookController } from "./webhook.controller";
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { AirtableService } from "../airtable/airtable.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
@@ -11,7 +11,7 @@ describe("WebhookController", () => {
   let permissionSpy: jest.SpyInstance<Promise<string[]>, [userId: number]>;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module = await Test.createTestingModule({
       controllers: [WebhookController],
       providers: [{ provide: AirtableService, useValue: (service = createMock<AirtableService>()) }]
     }).compile();

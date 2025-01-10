@@ -1,15 +1,23 @@
-import { BadRequestException, Controller, Get, HttpStatus, Query, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Request,
+  UnauthorizedException
+} from "@nestjs/common";
 import { AirtableService } from "../airtable/airtable.service";
-import { ENTITY_TYPES } from "../airtable/airtable.processor";
 import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { WebhookParamsDto } from "./dto/webhook-params.dto";
+import { Permission } from "@terramatch-microservices/database/entities";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {
   constructor(private readonly airtableService: AirtableService) {}
 
-  @Get()
+  @Get("updateRecords")
   @ApiOperation({
     operationId: "triggerAirtableUpdate",
     description: "trigger an update of a specific set of records to Airtable"
@@ -21,13 +29,13 @@ export class WebhookController {
   })
   @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
   @ApiException(() => BadRequestException, { description: "Query params were invalid" })
-  async triggerWebhook(@Query() { entityType, startPage }: WebhookParamsDto) {
-    if (entityType == null) {
-      throw new BadRequestException("Missing query params");
-    }
-
-    if (!ENTITY_TYPES.includes(entityType)) {
-      throw new BadRequestException("entityType invalid");
+  async triggerWebhook(@Query() { entityType, startPage }: WebhookParamsDto, @Request() { authenticatedUserId }) {
+    const permissions = await Permission.getUserPermissionNames(authenticatedUserId);
+    // This isn't a perfect match for what this controller does, but it is close, and all admins have
+    // this permission, so it's a reasonable way for now to restrict this controller to logged in
+    // admins.
+    if (!permissions.includes("reports-manage")) {
+      throw new UnauthorizedException();
     }
 
     await this.airtableService.updateAirtableJob(entityType, startPage);

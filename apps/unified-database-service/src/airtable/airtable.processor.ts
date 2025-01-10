@@ -28,6 +28,7 @@ export const AIRTABLE_ENTITIES = {
   "tree-species": TreeSpeciesEntity
 };
 
+export const ENTITY_TYPES = Object.keys(AIRTABLE_ENTITIES);
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;
 export type UpdateEntitiesData = {
   entityType: EntityType;

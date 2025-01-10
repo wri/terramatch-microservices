@@ -25,20 +25,6 @@ const COHORTS = {
   "epa-ghana-pilot": "EPA-Ghana Pilot"
 };
 
-const loadProjectTreesPlanted = async (projectIds: number[]) =>
-  groupBy(
-    await TreeSpecies.findAll({
-      where: {
-        speciesableId: projectIds,
-        speciesableType: Project.LARAVEL_TYPE,
-        collection: "tree-planted",
-        hidden: false
-      },
-      attributes: ["speciesableId", "name"]
-    }),
-    "speciesableId"
-  );
-
 const loadApprovedProjectReports = async (projectIds: number[]) =>
   groupBy(
     await ProjectReport.findAll({
@@ -131,7 +117,6 @@ const loadSitePolygons = async (siteUuids: string[]) =>
   );
 
 type ProjectAssociations = {
-  treesPlanted: TreeSpecies[];
   approvedProjectReports: ProjectReport[];
   approvedSites: Site[];
   approvedSiteReports: SiteReport[];
@@ -170,14 +155,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "sitingStrategy",
   "sitingStrategyDescription",
   "history",
-  {
-    airtableColumn: "treeSpecies",
-    valueMap: async (_, { treesPlanted }) => treesPlanted.map(({ name }) => name)?.join(", ")
-  },
-  {
-    airtableColumn: "treeSpeciesCount",
-    valueMap: async (_, { treesPlanted }) => treesPlanted.length
-  },
   "treesGrownGoal",
   "totalHectaresRestoredGoal",
   "environmentalGoals",
@@ -347,7 +324,6 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
 
   async loadAssociations(projects: Project[]) {
     const projectIds = projects.map(({ id }) => id);
-    const treesPlanted = await loadProjectTreesPlanted(projectIds);
     const approvedProjectReports = await loadApprovedProjectReports(projectIds);
     const approvedSites = await loadApprovedSites(projectIds);
     const allSiteIds = flatten(Object.values(approvedSites).map(sites => sites.map(({ id }) => id)));
@@ -369,7 +345,6 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
       return {
         ...associations,
         [projectId]: {
-          treesPlanted: treesPlanted[projectId] ?? [],
           approvedProjectReports: approvedProjectReports[projectId] ?? [],
           approvedSites: sites,
           approvedSiteReports: siteReports,

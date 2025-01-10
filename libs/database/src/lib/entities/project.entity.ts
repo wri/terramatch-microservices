@@ -11,13 +11,14 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { JSON, BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
 import { Application } from "./application.entity";
 import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -81,11 +82,11 @@ export class Project extends Model<Project> {
   boundaryGeojson: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   landUseTypes: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   restorationStrategy: string[] | null;
 
   @AllowNull
@@ -193,7 +194,7 @@ export class Project extends Model<Project> {
   sitingStrategy: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   landTenureProjectArea: string[] | null;
 
   @AllowNull

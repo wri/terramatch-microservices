@@ -1,5 +1,6 @@
 import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, JSON, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true })
 export class Organisation extends Model<Organisation> {
@@ -75,11 +76,11 @@ export class Organisation extends Model<Organisation> {
   description: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   countries: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   languages: string[] | null;
 
   @AllowNull
@@ -223,7 +224,7 @@ export class Organisation extends Model<Organisation> {
   restoredAreasDescription: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   restorationTypesImplemented: string[] | null;
 
   @AllowNull
@@ -239,15 +240,15 @@ export class Organisation extends Model<Organisation> {
   fundingHistory: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   engagementFarmers: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   engagementWomen: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   engagementYouth: string[] | null;
 
   @Default("usd")
@@ -255,7 +256,7 @@ export class Organisation extends Model<Organisation> {
   currency: string;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   states: string[] | null;
 
   @AllowNull
@@ -275,7 +276,7 @@ export class Organisation extends Model<Organisation> {
   loanStatusAmount: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   loanStatusTypes: string[] | null;
 
   @AllowNull
@@ -287,15 +288,15 @@ export class Organisation extends Model<Organisation> {
   communityEngagementNumbersMarginalized: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   landSystems: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   fundUtilisation: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   detailedInterventionTypes: string[] | null;
 
   @AllowNull
@@ -351,7 +352,7 @@ export class Organisation extends Model<Organisation> {
   engagementNonYouth: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   treeRestorationPractices: string[] | null;
 
   @AllowNull
@@ -395,11 +396,11 @@ export class Organisation extends Model<Organisation> {
   boardEngagementFpcCompany: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   biodiversityFocus: string[] | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   globalPlanningFrameworks: string[] | null;
 
   @AllowNull

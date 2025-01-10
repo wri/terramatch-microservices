@@ -29,6 +29,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   async updateBase(base: Airtable.Base, startPage?: number) {
     for (let page = startPage ?? 0; await this.processPage(base, page); page++) {
       this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page })}`);
+      break; // TESTING
     }
   }
 
@@ -60,13 +61,14 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     }
 
     try {
-      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
-      // https://github.com/Airtable/airtable.js/issues/348
-      await base(this.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] },
-        // Enables new multi/single selection options to be populated by this upsert.
-        typecast: true
-      });
+      console.log("records", airtableRecords); // TESTING
+      // // @ts-expect-error The types for this lib haven't caught up with its support for upserts
+      // // https://github.com/Airtable/airtable.js/issues/348
+      // await base(this.TABLE_NAME).update(airtableRecords, {
+      //   performUpsert: { fieldsToMergeOn: ["uuid"] },
+      //   // Enables new multi/single selection options to be populated by this upsert.
+      //   typecast: true
+      // });
     } catch (error) {
       this.logger.error(
         `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, page, airtableRecords }, null, 2)}`,

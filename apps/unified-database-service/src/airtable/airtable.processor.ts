@@ -68,12 +68,12 @@ export class AirtableProcessor extends WorkerHost {
   private async updateEntities({ entityType, startPage }: UpdateEntitiesData) {
     this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
 
-    const airtableEntity = new AIRTABLE_ENTITIES[entityType]();
+    const airtableEntity = AIRTABLE_ENTITIES[entityType];
     if (airtableEntity == null) {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    await airtableEntity.updateBase(this.base, startPage);
+    await new airtableEntity().updateBase(this.base, startPage);
 
     this.logger.log(`Completed entity update: ${JSON.stringify({ entityType })}`);
   }

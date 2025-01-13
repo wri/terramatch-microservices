@@ -82,12 +82,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   protected async mapEntityColumns(record: ModelType, associations: AssociationType) {
     const airtableObject = {};
     for (const mapping of this.COLUMNS) {
-      const airtableColumn = isArray(mapping)
-        ? mapping[1]
-        : isObject(mapping)
-        ? mapping.airtableColumn
-        : (mapping as string);
-      airtableObject[airtableColumn] = isArray(mapping)
+      airtableObject[airtableColumnName(mapping)] = isArray(mapping)
         ? record[mapping[0]]
         : isObject(mapping)
         ? await mapping.valueMap(record, associations)
@@ -120,6 +115,10 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
       include?: MergeableInclude[];
       valueMap: (entity: T, associations: A) => Promise<null | string | number | boolean | Date>;
     };
+
+// used in the test suite
+export const airtableColumnName = <T extends Model<T>>(mapping: ColumnMapping<T, unknown>) =>
+  isArray(mapping) ? mapping[1] : isObject(mapping) ? mapping.airtableColumn : (mapping as string);
 
 const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
   uniq([

@@ -1,6 +1,14 @@
 import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-entity";
 import { faker } from "@faker-js/faker";
-import { Application, Nursery, NurseryReport, Site, SiteReport } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Nursery,
+  NurseryReport,
+  Organisation,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
   FormSubmissionFactory,
@@ -9,11 +17,20 @@ import {
   NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   SiteFactory,
   SiteReportFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
-import { ApplicationEntity, NurseryEntity, NurseryReportEntity, SiteEntity, SiteReportEntity } from "./";
+import {
+  ApplicationEntity,
+  NurseryEntity,
+  NurseryReportEntity,
+  OrganisationEntity,
+  ProjectReportEntity,
+  SiteEntity,
+  SiteReportEntity
+} from "./";
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
 
@@ -207,6 +224,62 @@ describe("AirtableEntity", () => {
     });
   });
 
+  describe("OrganisationEntity", () => {
+    let organisations: Organisation[];
+
+    beforeAll(async () => {
+      await Organisation.truncate();
+
+      const allOrgs = await OrganisationFactory.createMany(16);
+      await allOrgs[5].destroy();
+      await allOrgs[12].destroy();
+
+      organisations = allOrgs.filter(org => !org.isSoftDeleted());
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(new OrganisationEntity(), organisations, ({ uuid, name, status }) => ({
+        fields: {
+          uuid,
+          name,
+          status
+        }
+      }));
+    });
+  });
+
+  describe("ProjectReportEntity", () => {
+    let projectUuids: Record<number, string>;
+    let reports: ProjectReport[];
+
+    beforeAll(async () => {
+      await ProjectReport.truncate();
+
+      const projects = await ProjectFactory.createMany(2);
+      projectUuids = projects.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
+      const projectIds = projects.reduce((ids, { id }) => [...ids, id], [] as number[]);
+      const allReports = [];
+      for (let ii = 0; ii < 15; ii++) {
+        allReports.push(await ProjectReportFactory.create({ projectId: faker.helpers.arrayElement(projectIds) }));
+      }
+      allReports.push(await ProjectReportFactory.create({ projectId: null }));
+
+      await allReports[6].destroy();
+      reports = allReports.filter(report => !report.isSoftDeleted());
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(new ProjectReportEntity(), reports, ({ uuid, projectId, status, dueAt }) => ({
+        fields: {
+          uuid,
+          projectUuid: projectUuids[projectId],
+          status,
+          dueAt
+        }
+      }));
+    });
+  });
+
   describe("SiteEntity", () => {
     let projectUuids: Record<number, string>;
     let sites: Site[];
@@ -239,7 +312,6 @@ describe("AirtableEntity", () => {
   describe("SiteReportEntity", () => {
     let siteUuids: Record<number, string>;
     let reports: SiteReport[];
-
     beforeAll(async () => {
       await SiteReport.truncate();
 

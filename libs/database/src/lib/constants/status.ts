@@ -23,3 +23,7 @@ export const FORM_SUBMISSION_STATUSES = [
   STARTED
 ] as const;
 export type FormSubmissionStatus = (typeof FORM_SUBMISSION_STATUSES)[number];
+
+export const PENDING = "pending";
+export const ORGANISATION_STATUSES = [APPROVED, PENDING, REJECTED, DRAFT];
+export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];

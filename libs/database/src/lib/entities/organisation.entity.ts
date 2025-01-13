@@ -1,6 +1,7 @@
 import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { OrganisationStatus } from "../constants/status";
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true })
 export class Organisation extends Model<Organisation> {
@@ -17,7 +18,7 @@ export class Organisation extends Model<Organisation> {
 
   @Default("draft")
   @Column(STRING)
-  status: string;
+  status: OrganisationStatus;
 
   @AllowNull
   @Column(STRING)

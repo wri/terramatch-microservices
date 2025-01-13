@@ -14,6 +14,7 @@ import { BIGINT, STRING, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
+import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 
 // Incomplete stub
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
@@ -32,11 +33,11 @@ export class Nursery extends Model<Nursery> {
   uuid: string;
 
   @Column(STRING)
-  status: string;
+  status: EntityStatus;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: string;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(STRING)

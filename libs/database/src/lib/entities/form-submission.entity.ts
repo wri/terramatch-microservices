@@ -11,6 +11,7 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, STRING, UUID } from "sequelize";
 import { Application } from "./application.entity";
+import { FormSubmissionStatus } from "../constants/status";
 
 // Incomplete stub
 @Table({ tableName: "form_submissions", underscored: true, paranoid: true })
@@ -25,7 +26,7 @@ export class FormSubmission extends Model<FormSubmission> {
   uuid: string;
 
   @Column(STRING)
-  status: string;
+  status: FormSubmissionStatus;
 
   @AllowNull
   @ForeignKey(() => Application)

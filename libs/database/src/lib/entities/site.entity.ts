@@ -15,7 +15,7 @@ import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
-import { EntityStatus, UpdateRequestStatus } from "../constants/entity-state-machine";
+import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 
 // Incomplete stub

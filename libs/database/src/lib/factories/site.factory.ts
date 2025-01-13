@@ -2,7 +2,7 @@ import { Site } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { ProjectFactory } from "./project.factory";
 import { faker } from "@faker-js/faker";
-import { ENTITY_STATUSES, UPDATE_REQUEST_STATUSES } from "../constants/entity-state-machine";
+import { ENTITY_STATUSES, UPDATE_REQUEST_STATUSES } from "../constants/status";
 import { SITING_STRATEGIES } from "../constants/entity-selects";
 
 export const SiteFactory = FactoryGirl.define(Site, async () => ({

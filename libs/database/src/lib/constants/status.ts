@@ -12,3 +12,14 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number];
 export const DRAFT = "draft";
 export const UPDATE_REQUEST_STATUSES = [DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
+
+export const REJECTED = "rejected";
+export const REQUIRES_MORE_INFORMATION = "requires-more-information";
+export const FORM_SUBMISSION_STATUSES = [
+  APPROVED,
+  AWAITING_APPROVAL,
+  REJECTED,
+  REQUIRES_MORE_INFORMATION,
+  STARTED
+] as const;
+export type FormSubmissionStatus = (typeof FORM_SUBMISSION_STATUSES)[number];

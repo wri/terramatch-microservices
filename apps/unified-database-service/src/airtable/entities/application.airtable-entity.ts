@@ -6,7 +6,7 @@ const loadFormSubmissions = async (applicationIds: number[]) =>
   groupBy(
     await FormSubmission.findAll({
       where: { applicationId: applicationIds },
-      attributes: ["applicationId", "status"]
+      attributes: ["applicationId", "id", "status"]
     }),
     "applicationId"
   );

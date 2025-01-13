@@ -1,9 +1,17 @@
 import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-entity";
-import { Project, Site } from "@terramatch-microservices/database/entities";
-import { ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
+import { faker } from "@faker-js/faker";
+import { Application, Site } from "@terramatch-microservices/database/entities";
+import {
+  ApplicationFactory,
+  FormSubmissionFactory,
+  FundingProgrammeFactory,
+  OrganisationFactory,
+  ProjectFactory,
+  SiteFactory
+} from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
-import { SiteEntity } from "./";
-import { sortBy } from "lodash";
+import { ApplicationEntity, SiteEntity } from "./";
+import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
@@ -23,7 +31,7 @@ export class StubEntity extends AirtableEntity<Site> {
   protected mapEntityColumns = mapEntityColumns;
 }
 
-async function testUpdates<M extends Model<M>, A>(
+async function testAirtableUpdates<M extends Model<M>, A>(
   entity: AirtableEntity<M, A>,
   records: M[],
   spotCheckFields: (record: M) => { fields: object }
@@ -74,13 +82,69 @@ describe("AirtableEntity", () => {
     });
   });
 
+  describe("ApplicationEntity", () => {
+    let fundingProgrammeNames: Record<string, string>;
+    let applications: Application[];
+    let submissionStatuses: Record<string, string>;
+
+    beforeAll(async () => {
+      await Application.truncate();
+
+      const org = await OrganisationFactory.create({});
+      const fundingProgrammes = await FundingProgrammeFactory.createMany(3);
+      fundingProgrammeNames = fundingProgrammes.reduce((names, { uuid, name }) => ({ ...names, [uuid]: name }), {});
+      const allApplications = [];
+      for (let ii = 0; ii < 15; ii++) {
+        allApplications.push(
+          await ApplicationFactory.create({
+            organisationUuid: org.uuid,
+            fundingProgrammeUuid: faker.helpers.arrayElement(Object.keys(fundingProgrammeNames))
+          })
+        );
+      }
+
+      await allApplications[3].destroy();
+      await allApplications[11].destroy();
+      applications = allApplications.filter(application => !application.isSoftDeleted());
+
+      let first = true;
+      submissionStatuses = {};
+      for (const { id, uuid } of applications) {
+        // skip for the first one so we test an export that's missing a submission
+        if (first) {
+          first = false;
+          continue;
+        }
+
+        const submissions = await FormSubmissionFactory.createMany(faker.number.int({ min: 1, max: 5 }), {
+          applicationId: id
+        });
+        submissionStatuses[uuid] = orderBy(submissions, ["id"], ["desc"])[0].status;
+      }
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new ApplicationEntity(),
+        applications,
+        ({ uuid, organisationUuid, fundingProgrammeUuid }) => ({
+          fields: {
+            uuid,
+            organisationUuid,
+            fundingProgrammeName: fundingProgrammeNames[fundingProgrammeUuid],
+            status: submissionStatuses[uuid]
+          }
+        })
+      );
+    });
+  });
+
   describe("SiteEntity", () => {
     let projectUuids: Record<number, string>;
     let sites: Site[];
 
     beforeAll(async () => {
       await Site.truncate();
-      await Project.truncate();
 
       const projects = await ProjectFactory.createMany(2);
       projectUuids = projects.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
@@ -89,11 +153,12 @@ describe("AirtableEntity", () => {
       await sites1[4].destroy();
       const sites2 = await SiteFactory.createMany(8, { projectId: projects[1].id });
       await sites2[1].destroy();
-      sites = [...sites1, ...sites2].filter(site => !site.isSoftDeleted());
+      const siteWithoutProject = await SiteFactory.create({ projectId: null });
+      sites = [...sites1, ...sites2, siteWithoutProject].filter(site => !site.isSoftDeleted());
     });
 
     it("sends all records to airtable", async () => {
-      await testUpdates(new SiteEntity(), sites, ({ uuid, name, projectId, status }: Site) => ({
+      await testAirtableUpdates(new SiteEntity(), sites, ({ uuid, name, projectId, status }: Site) => ({
         fields: {
           uuid,
           name,

@@ -1,4 +1,7 @@
+export * from "./application.factory";
 export * from "./delayed-job.factory";
+export * from "./form-submission.factory";
+export * from "./funding-programme.factory";
 export * from "./indicator-output-field-monitoring.factory";
 export * from "./indicator-output-hectares.factory";
 export * from "./indicator-output-msu-carbon.factory";

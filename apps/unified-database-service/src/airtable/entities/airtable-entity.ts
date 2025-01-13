@@ -52,7 +52,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
       const associations = await this.loadAssociations(records);
 
       airtableRecords = await Promise.all(
-        records.map(async record => ({ fields: await mapEntityColumns(record, associations[record.id], this.COLUMNS) }))
+        records.map(async record => ({ fields: await this.mapEntityColumns(record, associations[record.id]) }))
       );
     } catch (error) {
       this.logger.error(`Airtable mapping failed: ${JSON.stringify({ entity: this.TABLE_NAME, page })}`, error.stack);
@@ -77,6 +77,24 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
 
     // True signals that processing succeeded and the next page should begin
     return true;
+  }
+
+  protected async mapEntityColumns(record: ModelType, associations: AssociationType) {
+    const airtableObject = {};
+    for (const mapping of this.COLUMNS) {
+      const airtableColumn = isArray(mapping)
+        ? mapping[1]
+        : isObject(mapping)
+        ? mapping.airtableColumn
+        : (mapping as string);
+      airtableObject[airtableColumn] = isArray(mapping)
+        ? record[mapping[0]]
+        : isObject(mapping)
+        ? await mapping.valueMap(record, associations)
+        : record[mapping];
+    }
+
+    return airtableObject;
   }
 }
 
@@ -158,24 +176,6 @@ const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =
 
     return mapping.include.reduce(mergeInclude, includes);
   }, [] as MergeableInclude[]);
-
-const mapEntityColumns = async <T extends Model<T>, A>(entity: T, associations: A, columns: ColumnMapping<T, A>[]) => {
-  const airtableObject = {};
-  for (const mapping of columns) {
-    const airtableColumn = isArray(mapping)
-      ? mapping[1]
-      : isObject(mapping)
-      ? mapping.airtableColumn
-      : (mapping as string);
-    airtableObject[airtableColumn] = isArray(mapping)
-      ? entity[mapping[0]]
-      : isObject(mapping)
-      ? await mapping.valueMap(entity, associations)
-      : entity[mapping];
-  }
-
-  return airtableObject;
-};
 
 type UuidModel<T> = Model<T> & { uuid: string };
 export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>

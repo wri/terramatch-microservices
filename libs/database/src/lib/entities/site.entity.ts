@@ -15,6 +15,8 @@ import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
+import { EntityStatus, UpdateRequestStatus } from "../constants/entity-state-machine";
+import { SitingStrategy } from "../constants/entity-selects";
 
 // Incomplete stub
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -32,11 +34,11 @@ export class Site extends Model<Site> {
   name: string;
 
   @Column(STRING)
-  status: string;
+  status: EntityStatus;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: string;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @Index
   @Column(UUID)
@@ -51,7 +53,7 @@ export class Site extends Model<Site> {
 
   @AllowNull
   @Column(STRING)
-  sitingStrategy: string | null;
+  sitingStrategy: SitingStrategy | null;
 
   @AllowNull
   @Column(TEXT)

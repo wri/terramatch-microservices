@@ -5,9 +5,11 @@ import {
   Nursery,
   NurseryReport,
   Organisation,
+  Project,
   ProjectReport,
   Site,
-  SiteReport
+  SiteReport,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
@@ -19,7 +21,8 @@ import {
   ProjectFactory,
   ProjectReportFactory,
   SiteFactory,
-  SiteReportFactory
+  SiteReportFactory,
+  TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {
@@ -29,7 +32,8 @@ import {
   OrganisationEntity,
   ProjectReportEntity,
   SiteEntity,
-  SiteReportEntity
+  SiteReportEntity,
+  TreeSpeciesEntity
 } from "./";
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
@@ -337,6 +341,95 @@ describe("AirtableEntity", () => {
           dueAt
         }
       }));
+    });
+  });
+
+  describe("TreeSpeciesEntity", () => {
+    let associationUuids: Record<string, { airtableField: string; uuid: string }>;
+    let trees: TreeSpecies[];
+
+    beforeAll(async () => {
+      await TreeSpecies.truncate();
+
+      associationUuids = {};
+      const nursery = await NurseryFactory.create();
+      associationUuids[Nursery.LARAVEL_TYPE] = { airtableField: "nurseryUuid", uuid: nursery.uuid };
+      const nurseryReport = await NurseryReportFactory.create();
+      associationUuids[NurseryReport.LARAVEL_TYPE] = { airtableField: "nurseryReportUuid", uuid: nurseryReport.uuid };
+      const organisation = await OrganisationFactory.create();
+      associationUuids[Organisation.LARAVEL_TYPE] = { airtableField: "organisationUuid", uuid: organisation.uuid };
+      const project = await ProjectFactory.create();
+      associationUuids[Project.LARAVEL_TYPE] = { airtableField: "projectUuid", uuid: project.uuid };
+      const projectReport = await ProjectReportFactory.create();
+      associationUuids[ProjectReport.LARAVEL_TYPE] = { airtableField: "projectReportUuid", uuid: projectReport.uuid };
+      const site = await SiteFactory.create();
+      associationUuids[Site.LARAVEL_TYPE] = { airtableField: "siteUuid", uuid: site.uuid };
+      const siteReport = await SiteReportFactory.create();
+      associationUuids[SiteReport.LARAVEL_TYPE] = { airtableField: "siteReportUuid", uuid: siteReport.uuid };
+
+      const factories = [
+        () => TreeSpeciesFactory.forNurserySeedling.create({ speciesableId: nursery.id }),
+        () => TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: nurseryReport.id }),
+        () => TreeSpeciesFactory.forProjectTreePlanted.create({ speciesableId: project.id }),
+        () => TreeSpeciesFactory.forProjectReportTreePlanted.create({ speciesableId: projectReport.id }),
+        () => TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id }),
+        () => TreeSpeciesFactory.forSiteNonTree.create({ speciesableId: site.id }),
+        () => TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport.id }),
+        () => TreeSpeciesFactory.forSiteReportNonTree.create({ speciesableId: siteReport.id })
+      ];
+
+      const allTrees: TreeSpecies[] = [
+        // create one with a bogus association type for testing
+        await TreeSpeciesFactory.forNurserySeedling.create({ speciesableType: "foo", speciesableId: 3 }),
+        // create one with a bad association id for testing
+        await TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: 0 })
+      ];
+      for (const factory of factories) {
+        // make sure we have at least one of each type
+        allTrees.push(await factory());
+      }
+      for (let ii = 0; ii < 35; ii++) {
+        // create a whole bunch more at random
+        allTrees.push(await faker.helpers.arrayElement(factories)());
+      }
+      const toDeleteOrHide = faker.helpers.uniqueArray(() => faker.number.int(allTrees.length - 1), 10);
+      let hide = true;
+      for (const ii of toDeleteOrHide) {
+        if (hide) {
+          await allTrees[ii].update({ hidden: true });
+        } else {
+          await allTrees[ii].destroy();
+        }
+        hide = !hide;
+      }
+
+      trees = allTrees.filter(tree => !tree.isSoftDeleted() && tree.hidden === false);
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new TreeSpeciesEntity(),
+        trees,
+        ({ uuid, name, amount, collection, speciesableType, speciesableId }) => ({
+          fields: {
+            uuid,
+            name,
+            amount,
+            collection,
+            nurseryUuid: speciesableType === Nursery.LARAVEL_TYPE ? associationUuids[speciesableType].uuid : undefined,
+            nurseryReportUuid:
+              speciesableType === NurseryReport.LARAVEL_TYPE && speciesableId > 0
+                ? associationUuids[speciesableType].uuid
+                : undefined,
+            projectUuid: speciesableType === Project.LARAVEL_TYPE ? associationUuids[speciesableType].uuid : undefined,
+            projectReportUuid:
+              speciesableType === ProjectReport.LARAVEL_TYPE ? associationUuids[speciesableType].uuid : undefined,
+            siteUuid: speciesableType === Site.LARAVEL_TYPE ? associationUuids[speciesableType].uuid : undefined,
+            siteReportUuid:
+              speciesableType === SiteReport.LARAVEL_TYPE ? associationUuids[speciesableType].uuid : undefined
+          }
+        })
+      );
     });
   });
 });

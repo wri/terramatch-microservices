@@ -87,12 +87,12 @@ async function testAirtableUpdates<M extends Model<M>, A>(
   }
 }
 
-// This spec only tests the error cases. The individual entity tests cover everything else.
 describe("AirtableEntity", () => {
   afterEach(async () => {
     airtableUpdate.mockClear();
   });
 
+  // This spec only tests the error cases. The individual entity tests cover everything else.
   describe("BaseClass", () => {
     beforeAll(async () => {
       // Ensure there's at least one site so the mapping happens

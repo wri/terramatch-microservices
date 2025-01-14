@@ -1,5 +1,5 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, isArray, isObject, uniq } from "lodash";
+import { cloneDeep, flatten, isObject, uniq } from "lodash";
 import { Attributes, FindOptions } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { LoggerService } from "@nestjs/common";
@@ -82,9 +82,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   protected async mapEntityColumns(record: ModelType, associations: AssociationType) {
     const airtableObject = {};
     for (const mapping of this.COLUMNS) {
-      airtableObject[airtableColumnName(mapping)] = isArray(mapping)
-        ? record[mapping[0]]
-        : isObject(mapping)
+      airtableObject[airtableColumnName(mapping)] = isObject(mapping)
         ? await mapping.valueMap(record, associations)
         : record[mapping];
     }
@@ -101,12 +99,10 @@ export type MergeableInclude = {
 };
 
 /**
- * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), a tuple of [dbColumn, airtableColumn],
- * or a more descriptive object
+ * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), or a more descriptive object
  */
 export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
   | keyof Attributes<T>
-  | [keyof Attributes<T>, string]
   | {
       airtableColumn: string;
       // Include if this mapping should include a particular DB column in the DB query
@@ -118,15 +114,13 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
 
 // used in the test suite
 export const airtableColumnName = <T extends Model<T>>(mapping: ColumnMapping<T, unknown>) =>
-  isArray(mapping) ? mapping[1] : isObject(mapping) ? mapping.airtableColumn : (mapping as string);
+  isObject(mapping) ? mapping.airtableColumn : (mapping as string);
 
 const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
   uniq([
     "id",
     ...flatten(
-      columns
-        .map(mapping => (isArray(mapping) ? mapping[0] : isObject(mapping) ? mapping.dbColumn : mapping))
-        .filter(dbColumn => dbColumn != null)
+      columns.map(mapping => (isObject(mapping) ? mapping.dbColumn : mapping)).filter(dbColumn => dbColumn != null)
     )
   ]);
 
@@ -170,7 +164,7 @@ const mergeInclude = (includes: MergeableInclude[], include: MergeableInclude) =
 
 const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
   columns.reduce((includes, mapping) => {
-    if (isArray(mapping) || !isObject(mapping)) return includes;
+    if (!isObject(mapping)) return includes;
     if (mapping.include == null) return includes;
 
     return mapping.include.reduce(mergeInclude, includes);

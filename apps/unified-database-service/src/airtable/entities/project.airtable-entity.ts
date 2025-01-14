@@ -15,15 +15,7 @@ import {
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { flatten, groupBy } from "lodash";
 import { literal, Op, WhereOptions } from "sequelize";
-
-const COHORTS = {
-  terrafund: "TerraFund Top 100",
-  "terrafund-landscapes": "TerraFund Landscapes",
-  ppc: "Priceless Planet Coalition (PPC)",
-  enterprises: "TerraFund Enterprises",
-  hbf: "Harit Bharat Fund",
-  "epa-ghana-pilot": "EPA-Ghana Pilot"
-};
+import { FRAMEWORK_NAMES } from "@terramatch-microservices/database/constants/framework";
 
 const loadApprovedProjectReports = async (projectIds: number[]) =>
   groupBy(
@@ -132,7 +124,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   {
     dbColumn: "frameworkKey",
     airtableColumn: "cohort",
-    valueMap: async ({ frameworkKey }) => COHORTS[frameworkKey] ?? frameworkKey
+    valueMap: async ({ frameworkKey }) => FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey
   },
   {
     airtableColumn: "applicationUuid",

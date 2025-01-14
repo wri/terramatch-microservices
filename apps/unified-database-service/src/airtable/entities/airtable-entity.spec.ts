@@ -13,6 +13,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
+  DemographicFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
   NurseryFactory,
@@ -20,9 +21,12 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectReportFactory,
+  SeedingFactory,
   SiteFactory,
+  SitePolygonFactory,
   SiteReportFactory,
-  TreeSpeciesFactory
+  TreeSpeciesFactory,
+  WorkdayFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {
@@ -30,6 +34,7 @@ import {
   NurseryEntity,
   NurseryReportEntity,
   OrganisationEntity,
+  ProjectEntity,
   ProjectReportEntity,
   SiteEntity,
   SiteReportEntity,
@@ -37,6 +42,7 @@ import {
 } from "./";
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
+import { FRAMEWORK_NAMES, FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
 const Base = jest.fn(() => ({ update: airtableUpdate })) as unknown as Airtable.Base;
@@ -95,7 +101,7 @@ describe("AirtableEntity", () => {
 
     it("re-raises mapping errors", async () => {
       mapEntityColumns.mockRejectedValue(new Error("mapping error"));
-      await expect(new StubEntity().updateBase(null)).rejects.toThrow("mapping error");
+      await expect(new StubEntity().updateBase(null, 0)).rejects.toThrow("mapping error");
       mapEntityColumns.mockReset();
     });
 
@@ -252,6 +258,171 @@ describe("AirtableEntity", () => {
     });
   });
 
+  describe("ProjectEntity", () => {
+    let organisationUuids: Record<number, string>;
+    let applicationUuids: Record<number, string>;
+    let projects: Project[];
+    let calculatedValues: Record<string, Record<string, string | number>>;
+
+    beforeAll(async () => {
+      await Project.truncate();
+
+      const orgs = await OrganisationFactory.createMany(3);
+      organisationUuids = orgs.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
+      const orgIds = orgs.reduce((ids, { id }) => [...ids, id], [] as number[]);
+      const orgId = () => faker.helpers.arrayElement(orgIds);
+
+      const allProjects = [] as Project[];
+      for (let ii = 0; ii < 15; ii++) {
+        allProjects.push(await ProjectFactory.create({ organisationId: orgId() }));
+      }
+
+      for (const ii of faker.helpers.uniqueArray(() => allProjects.length - 1, 2)) {
+        await allProjects[ii].destroy();
+      }
+
+      // include some slightly broken fields for testing.
+      allProjects.push(
+        await ProjectFactory.create({
+          organisationId: null,
+          continent: null,
+          applicationId: null,
+          frameworkKey: "foo" as FrameworkKey
+        })
+      );
+
+      projects = allProjects.filter(project => !project.isSoftDeleted());
+      applicationUuids = (
+        await Application.findAll({
+          where: { id: projects.map(({ applicationId }) => applicationId) },
+          attributes: ["id", "uuid"]
+        })
+      ).reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
+
+      // Add some additional records to test calculations
+      const { id: projectReport1 } = await ProjectReportFactory.create({
+        projectId: projects[0].id,
+        status: "started", // Not an approved status, so this one should not be included in calculations
+        ftTotal: 1,
+        ptTotal: 1
+      });
+      const { id: projectReport2 } = await ProjectReportFactory.create({
+        projectId: projects[0].id,
+        status: "approved",
+        ftTotal: 2
+      });
+      await ProjectReportFactory.create({
+        projectId: projects[0].id,
+        status: "approved",
+        ptTotal: 6
+      });
+
+      await NurseryFactory.create({ projectId: projects[0].id, status: "approved" });
+
+      const { uuid: startedSiteUuid } = await SiteFactory.create({ projectId: projects[0].id, status: "started" });
+      const { id: site1, uuid: site1Uuid } = await SiteFactory.create({
+        projectId: projects[0].id,
+        status: "approved"
+      });
+      const { id: site2, uuid: site2Uuid } = await SiteFactory.create({
+        projectId: projects[0].id,
+        status: "approved"
+      });
+      await SiteFactory.create({ projectId: projects[0].id, status: "approved" });
+
+      const { id: siteReport1 } = await SiteReportFactory.create({
+        siteId: site1,
+        status: "due"
+      });
+      const { id: siteReport2 } = await SiteReportFactory.create({
+        siteId: site1,
+        status: "approved"
+      });
+      const { id: siteReport3 } = await SiteReportFactory.create({
+        siteId: site2,
+        status: "approved"
+      });
+      const { id: siteReport4 } = await SiteReportFactory.create({
+        siteId: site2,
+        status: "approved"
+      });
+
+      // won't count because siteReport1 is not an approved report
+      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport1 });
+      let treesPlantedToDate = (
+        await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport2 })
+      ).amount;
+      // won't count because it's hidden
+      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport3, hidden: true });
+      // won't count because it's the wrong collection
+      await TreeSpeciesFactory.forSiteReportNonTree.create({ speciesableId: siteReport4 });
+      treesPlantedToDate += (await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport4 }))
+        .amount;
+      treesPlantedToDate += (await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport4 }))
+        .amount;
+      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport4, amount: null });
+
+      await SeedingFactory.forSiteReport.create({ seedableId: siteReport1 });
+      let seedsPlantedToDate = (await SeedingFactory.forSiteReport.create({ seedableId: siteReport2 })).amount;
+      await SeedingFactory.forSiteReport.create({ seedableId: siteReport4, amount: null });
+      seedsPlantedToDate += (await SeedingFactory.forSiteReport.create({ seedableId: siteReport4 })).amount;
+
+      // won't count because siteReport1 is not approved
+      await SitePolygonFactory.create({ siteUuid: startedSiteUuid });
+      let hectaresRestoredToDate = (await SitePolygonFactory.create({ siteUuid: site1Uuid })).calcArea;
+      // won't count because it's not active
+      await SitePolygonFactory.create({ siteUuid: site2Uuid, isActive: false });
+      hectaresRestoredToDate += (await SitePolygonFactory.create({ siteUuid: site2Uuid })).calcArea;
+
+      // won't count because project report 1 isn't approved
+      const { id: workday1 } = await WorkdayFactory.forProjectReport.create({ workdayableId: projectReport1 });
+      await DemographicFactory.forWorkday.create({ demographicalId: workday1, type: "gender" });
+      const { id: workday2 } = await WorkdayFactory.forProjectReport.create({ workdayableId: projectReport2 });
+      let workdaysCount = (await DemographicFactory.forWorkday.create({ demographicalId: workday2, type: "gender" }))
+        .amount;
+      // ignored because only gender is used
+      await DemographicFactory.forWorkday.create({ demographicalId: workday2, type: "age" });
+      const { id: workday3 } = await WorkdayFactory.forSiteReport.create({ workdayableId: siteReport3 });
+      workdaysCount += (await DemographicFactory.forWorkday.create({ demographicalId: workday3, type: "gender" }))
+        .amount;
+
+      calculatedValues = {
+        [projects[0].uuid]: {
+          jobsCreatedToDate: 8,
+          numberOfSites: 3,
+          numberOfNurseries: 1,
+          treesPlantedToDate,
+          seedsPlantedToDate,
+          hectaresRestoredToDate: Math.round(hectaresRestoredToDate),
+          workdaysCount
+        }
+      };
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new ProjectEntity(),
+        projects,
+        ({ uuid, name, frameworkKey, organisationId, applicationId }) => ({
+          fields: {
+            uuid,
+            name,
+            cohort: FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey,
+            organisationUuid: organisationUuids[organisationId],
+            applicationUuid: applicationUuids[applicationId],
+            jobsCreatedToDate: calculatedValues[uuid]?.jobsCreatedToDate ?? 0,
+            numberOfSites: calculatedValues[uuid]?.numberOfSites ?? 0,
+            numberOfNurseries: calculatedValues[uuid]?.numberOfNurseries ?? 0,
+            treesPlantedToDate: calculatedValues[uuid]?.treesPlantedToDate ?? 0,
+            seedsPlantedToDate: calculatedValues[uuid]?.seedsPlantedToDate ?? 0,
+            hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0,
+            workdaysCount: calculatedValues[uuid]?.workdaysCount ?? 0
+          }
+        })
+      );
+    });
+  });
+
   describe("ProjectReportEntity", () => {
     let projectUuids: Record<number, string>;
     let reports: ProjectReport[];
@@ -378,12 +549,7 @@ describe("AirtableEntity", () => {
         () => TreeSpeciesFactory.forSiteReportNonTree.create({ speciesableId: siteReport.id })
       ];
 
-      const allTrees: TreeSpecies[] = [
-        // create one with a bogus association type for testing
-        await TreeSpeciesFactory.forNurserySeedling.create({ speciesableType: "foo", speciesableId: 3 }),
-        // create one with a bad association id for testing
-        await TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: 0 })
-      ];
+      const allTrees: TreeSpecies[] = [];
       for (const factory of factories) {
         // make sure we have at least one of each type
         allTrees.push(await factory());
@@ -402,6 +568,11 @@ describe("AirtableEntity", () => {
         }
         hide = !hide;
       }
+
+      // create one with a bogus association type for testing
+      allTrees.push(await TreeSpeciesFactory.forNurserySeedling.create({ speciesableType: "foo", speciesableId: 3 }));
+      // create one with a bad association id for testing
+      allTrees.push(await TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: 0 }));
 
       trees = allTrees.filter(tree => !tree.isSoftDeleted() && tree.hidden === false);
     });

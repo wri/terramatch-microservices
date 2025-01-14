@@ -19,6 +19,7 @@ import { Application } from "./application.entity";
 import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { FrameworkKey } from "../constants/framework";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -36,7 +37,7 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: string | null;
+  frameworkKey: FrameworkKey | null;
 
   @Default(false)
   @Column(BOOLEAN)

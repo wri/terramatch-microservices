@@ -92,11 +92,10 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   }
 }
 
-export type MergeableInclude = {
+export type Include = {
   model?: ModelType<unknown, unknown>;
   association?: string;
   attributes?: string[];
-  include?: MergeableInclude[];
 };
 
 /**
@@ -109,7 +108,7 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
       // Include if this mapping should include a particular DB column in the DB query
       dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
       // Include if this mapping should eager load an association on the DB query
-      include?: MergeableInclude[];
+      include?: Include[];
       valueMap: (entity: T, associations: A) => Promise<null | string | number | boolean | Date>;
     };
 
@@ -126,10 +125,9 @@ const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[])
   ]);
 
 /**
- * Recursively merges MergeableIncludes to arrive at a cohesive set of IncludeOptions for a Sequelize find
- * query.
+ * Merges Includes to arrive at a cohesive set of IncludeOptions for a Sequelize find query.
  */
-const mergeInclude = (includes: MergeableInclude[], include: MergeableInclude) => {
+const mergeInclude = (includes: Include[], include: Include) => {
   const existing = includes.find(
     ({ model, association }) =>
       (model != null && model === include.model) || (association != null && association === include.association)
@@ -149,15 +147,6 @@ const mergeInclude = (includes: MergeableInclude[], include: MergeableInclude) =
         existing.attributes = uniq([...existing.attributes, ...include.attributes]);
       }
     }
-
-    if (include.include != null) {
-      // Use clone deep here so that if this include gets modified in the future, it doesn't mutate the
-      // original definition.
-      if (existing.include == null) existing.include = cloneDeep(include.include);
-      else {
-        existing.include = include.include.reduce(mergeInclude, existing.include);
-      }
-    }
   }
 
   return includes;
@@ -169,7 +158,7 @@ const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =
     if (mapping.include == null) return includes;
 
     return mapping.include.reduce(mergeInclude, includes);
-  }, [] as MergeableInclude[]);
+  }, [] as Include[]);
 
 type UuidModel<T> = Model<T> & { uuid: string };
 export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>

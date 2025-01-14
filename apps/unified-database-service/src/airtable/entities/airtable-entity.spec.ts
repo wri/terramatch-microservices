@@ -53,8 +53,8 @@ export class StubEntity extends AirtableEntity<Site> {
   readonly COLUMNS = ["id"] as ColumnMapping<Site>[];
   readonly MODEL = Site;
 
-  protected getPageFindOptions = (page: number) => ({
-    ...super.getPageFindOptions(page),
+  protected getUpdatePageFindOptions = (page: number) => ({
+    ...super.getUpdatePageFindOptions(page),
     limit: 1
   });
 

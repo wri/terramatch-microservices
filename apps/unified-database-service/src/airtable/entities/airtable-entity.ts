@@ -1,6 +1,6 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, isObject, uniq } from "lodash";
-import { Attributes, FindOptions } from "sequelize";
+import { Attributes, FindOptions, Op } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { LoggerService } from "@nestjs/common";
 import Airtable from "airtable";
@@ -27,13 +27,26 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   }
 
   async updateBase(base: Airtable.Base, startPage?: number) {
-    const expectedPages = Math.floor((await this.MODEL.count()) / AIRTABLE_PAGE_SIZE);
-    for (let page = startPage ?? 0; await this.processPage(base, page); page++) {
-      this.logger.log(`Processed page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
+    // Get any find options that might have been provided by a subclass to issue this query
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { offset, limit, attributes, include, ...countOptions } = this.getUpdatePageFindOptions(0);
+    const expectedPages = Math.floor((await this.MODEL.count(countOptions)) / AIRTABLE_PAGE_SIZE);
+    for (let page = startPage ?? 0; await this.processUpdatePage(base, page); page++) {
+      this.logger.log(`Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
     }
   }
 
-  protected getPageFindOptions(page: number) {
+  async deleteStaleRecords(base: Airtable.Base, deletedSince: Date) {
+    // Use the delete page find options except limit and offset to get an accurate count
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { offset, limit, attributes, ...countOptions } = this.getDeletePageFindOptions(deletedSince, 0);
+    const expectedPages = Math.floor((await this.MODEL.count(countOptions)) / AIRTABLE_PAGE_SIZE);
+    for (let page = 0; await this.processDeletePage(base, deletedSince, page); page++) {
+      this.logger.log(`Processed delete page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
+    }
+  }
+
+  protected getUpdatePageFindOptions(page: number) {
     return {
       attributes: selectAttributes(this.COLUMNS),
       include: selectIncludes(this.COLUMNS),
@@ -42,10 +55,20 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     } as FindOptions<ModelType>;
   }
 
-  private async processPage(base: Airtable.Base, page: number) {
+  protected getDeletePageFindOptions(deletedSince: Date, page: number) {
+    return {
+      attributes: ["uuid"],
+      paranoid: false,
+      where: { deletedAt: { [Op.gte]: deletedSince } },
+      limit: AIRTABLE_PAGE_SIZE,
+      offset: page * AIRTABLE_PAGE_SIZE
+    } as FindOptions<ModelType>;
+  }
+
+  private async processUpdatePage(base: Airtable.Base, page: number) {
     let airtableRecords: { fields: object }[];
     try {
-      const records = await this.MODEL.findAll(this.getPageFindOptions(page));
+      const records = await this.MODEL.findAll(this.getUpdatePageFindOptions(page));
 
       // Page had no records, halt processing.
       if (records.length === 0) return false;
@@ -71,6 +94,56 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     } catch (error) {
       this.logger.error(
         `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, page, airtableRecords }, null, 2)}`,
+        error.stack
+      );
+      throw error;
+    }
+
+    // True signals that processing succeeded and the next page should begin
+    return true;
+  }
+
+  private async processDeletePage(base: Airtable.Base, deletedSince: Date, page: number) {
+    let idMapping: Record<string, string>;
+
+    try {
+      const records = (await this.MODEL.findAll(
+        this.getDeletePageFindOptions(deletedSince, page)
+      )) as unknown as UuidModel<ModelType>[];
+
+      // Page had no records, halt processing.
+      if (records.length === 0) return false;
+
+      const formula = `OR(${records.map(({ uuid }) => `{uuid}='${uuid}'`).join(",")})`;
+      const result = await base(this.TABLE_NAME)
+        .select({ filterByFormula: formula, fields: ["uuid"] })
+        .firstPage();
+
+      idMapping = result.reduce(
+        (idMapping, { id, fields: { uuid } }) => ({
+          ...idMapping,
+          [id]: uuid
+        }),
+        {}
+      );
+    } catch (error) {
+      this.logger.error(
+        `Fetching Airtable records failed: ${JSON.stringify({ entity: this.TABLE_NAME, page })}`,
+        error.stack
+      );
+      throw error;
+    }
+
+    const recordIds = Object.keys(idMapping);
+    // None of these records in our DB currently exist on AirTable. On to the next page.
+    if (recordIds.length == 0) return true;
+
+    try {
+      await base(this.TABLE_NAME).destroy(recordIds);
+      this.logger.log(`Deleted records from Airtable: ${JSON.stringify({ entity: this.TABLE_NAME, idMapping })}`);
+    } catch (error) {
+      this.logger.error(
+        `Airtable record delete failed: ${JSON.stringify({ entity: this.TABLE_NAME, page, idMapping })}`,
         error.stack
       );
       throw error;

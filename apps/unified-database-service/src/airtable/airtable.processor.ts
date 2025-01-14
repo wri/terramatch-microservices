@@ -36,6 +36,11 @@ export type UpdateEntitiesData = {
   startPage?: number;
 };
 
+export type DeleteEntitiesData = {
+  entityType: EntityType;
+  deletedSince: Date;
+};
+
 /**
  * Processes jobs in the airtable queue. Note that if we see problems with this crashing or
  * consuming too many resources, we have the option to run this in a forked process, although
@@ -57,6 +62,9 @@ export class AirtableProcessor extends WorkerHost {
     switch (job.name) {
       case "updateEntities":
         return await this.updateEntities(job.data as UpdateEntitiesData);
+
+      case "deleteEntities":
+        return await this.deleteEntities(job.data as DeleteEntitiesData);
 
       default:
         throw new NotImplementedException(`Unknown job type: ${job.name}`);
@@ -80,5 +88,18 @@ export class AirtableProcessor extends WorkerHost {
     await new airtableEntity().updateBase(this.base, startPage);
 
     this.logger.log(`Completed entity update: ${JSON.stringify({ entityType })}`);
+  }
+
+  private async deleteEntities({ entityType, deletedSince }: DeleteEntitiesData) {
+    this.logger.log(`Beginning entity delete: ${JSON.stringify({ entityType, deletedSince })}`);
+
+    const airtableEntity = AIRTABLE_ENTITIES[entityType];
+    if (airtableEntity == null) {
+      throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
+    }
+
+    await new airtableEntity().deleteStaleRecords(this.base, deletedSince);
+
+    this.logger.log(`Completed entity delete: ${JSON.stringify({ entityType, deletedSince })}`);
   }
 }

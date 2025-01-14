@@ -1,5 +1,5 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
-import { InternalServerErrorException, LoggerService, NotImplementedException, Scope } from "@nestjs/common";
+import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
+import { InternalServerErrorException, LoggerService, NotImplementedException } from "@nestjs/common";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { Job } from "bullmq";
 import { ConfigService } from "@nestjs/config";
@@ -15,6 +15,7 @@ import {
   SiteReportEntity,
   TreeSpeciesEntity
 } from "./entities";
+import * as Sentry from "@sentry/node";
 
 export const AIRTABLE_ENTITIES = {
   application: ApplicationEntity,
@@ -39,11 +40,8 @@ export type UpdateEntitiesData = {
  * Processes jobs in the airtable queue. Note that if we see problems with this crashing or
  * consuming too many resources, we have the option to run this in a forked process, although
  * it will involve some additional setup: https://docs.nestjs.com/techniques/queues#separate-processes
- *
- * Scope.REQUEST causes this processor to get created fresh for each event in the Queue, which means
- * that it will be fully garbage collected after its work is done.
  */
-@Processor({ name: "airtable", scope: Scope.REQUEST })
+@Processor("airtable")
 export class AirtableProcessor extends WorkerHost {
   private readonly logger: LoggerService = new TMLogService(AirtableProcessor.name);
   private readonly base: Airtable.Base;
@@ -63,6 +61,12 @@ export class AirtableProcessor extends WorkerHost {
       default:
         throw new NotImplementedException(`Unknown job type: ${job.name}`);
     }
+  }
+
+  @OnWorkerEvent("failed")
+  onFailed(job: Job, error: Error) {
+    Sentry.captureException(error);
+    this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
   }
 
   private async updateEntities({ entityType, startPage }: UpdateEntitiesData) {

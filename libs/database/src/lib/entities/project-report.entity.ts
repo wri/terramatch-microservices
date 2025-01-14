@@ -102,6 +102,10 @@ export class ProjectReport extends Model<ProjectReport> {
   ftMen: number | null;
 
   @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  ftOther: number | null;
+
+  @AllowNull
   // There is also an `ft_jobs_youth` field, but it appears to be unused.
   @Column(INTEGER({ unsigned: true, length: 10 }))
   ftYouth: number | null;
@@ -132,6 +136,10 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
+  ptOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
   volunteerTotal: number | null;
 
   @AllowNull
@@ -153,6 +161,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   volunteersWorkDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  volunteerOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -185,6 +197,30 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(INTEGER.UNSIGNED)
   beneficiariesMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  beneficiariesOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  beneficiariesTrainingWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  beneficiariesTrainingMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  beneficiariesTrainingOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  beneficiariesTrainingYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  beneficiariesTrainingNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

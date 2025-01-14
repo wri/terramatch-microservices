@@ -385,6 +385,9 @@ describe("AirtableEntity", () => {
       const { id: workday3 } = await WorkdayFactory.forSiteReport.create({ workdayableId: siteReport3 });
       workdaysCount += (await DemographicFactory.forWorkday.create({ demographicalId: workday3, type: "gender" }))
         .amount;
+      // ignored because it's hidden
+      const { id: workday4 } = await WorkdayFactory.forSiteReport.create({ workdayableId: siteReport4, hidden: true });
+      await DemographicFactory.forWorkday.create({ demographicalId: workday4, type: "gender" });
 
       calculatedValues = {
         [projects[0].uuid]: {

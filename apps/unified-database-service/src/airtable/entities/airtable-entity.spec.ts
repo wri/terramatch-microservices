@@ -302,19 +302,11 @@ describe("AirtableEntity", () => {
       // Add some additional records to test calculations
       const { id: projectReport1 } = await ProjectReportFactory.create({
         projectId: projects[0].id,
-        status: "started", // Not an approved status, so this one should not be included in calculations
-        ftTotal: 1,
-        ptTotal: 1
+        status: "started" // Not an approved status, so this one should not be included in calculations
       });
       const { id: projectReport2 } = await ProjectReportFactory.create({
         projectId: projects[0].id,
-        status: "approved",
-        ftTotal: 2
-      });
-      await ProjectReportFactory.create({
-        projectId: projects[0].id,
-        status: "approved",
-        ptTotal: 6
+        status: "approved"
       });
 
       await NurseryFactory.create({ projectId: projects[0].id, status: "approved" });
@@ -347,21 +339,6 @@ describe("AirtableEntity", () => {
         status: "approved"
       });
 
-      // won't count because siteReport1 is not an approved report
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport1 });
-      let treesPlantedToDate = (
-        await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport2 })
-      ).amount;
-      // won't count because it's hidden
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport3, hidden: true });
-      // won't count because it's the wrong collection
-      await TreeSpeciesFactory.forSiteReportNonTree.create({ speciesableId: siteReport4 });
-      treesPlantedToDate += (await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport4 }))
-        .amount;
-      treesPlantedToDate += (await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport4 }))
-        .amount;
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport4, amount: null });
-
       await SeedingFactory.forSiteReport.create({ seedableId: siteReport1 });
       let seedsPlantedToDate = (await SeedingFactory.forSiteReport.create({ seedableId: siteReport2 })).amount;
       await SeedingFactory.forSiteReport.create({ seedableId: siteReport4, amount: null });
@@ -391,10 +368,6 @@ describe("AirtableEntity", () => {
 
       calculatedValues = {
         [projects[0].uuid]: {
-          jobsCreatedToDate: 8,
-          numberOfSites: 3,
-          numberOfNurseries: 1,
-          treesPlantedToDate,
           seedsPlantedToDate,
           hectaresRestoredToDate: Math.round(hectaresRestoredToDate),
           workdaysCount
@@ -413,10 +386,6 @@ describe("AirtableEntity", () => {
             cohort: FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey,
             organisationUuid: organisationUuids[organisationId],
             applicationUuid: applicationUuids[applicationId],
-            jobsCreatedToDate: calculatedValues[uuid]?.jobsCreatedToDate ?? 0,
-            numberOfSites: calculatedValues[uuid]?.numberOfSites ?? 0,
-            numberOfNurseries: calculatedValues[uuid]?.numberOfNurseries ?? 0,
-            treesPlantedToDate: calculatedValues[uuid]?.treesPlantedToDate ?? 0,
             seedsPlantedToDate: calculatedValues[uuid]?.seedsPlantedToDate ?? 0,
             hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0,
             workdaysCount: calculatedValues[uuid]?.workdaysCount ?? 0

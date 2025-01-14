@@ -1,7 +1,6 @@
 import {
   Application,
   Demographic,
-  Nursery,
   Organisation,
   Project,
   ProjectReport,
@@ -9,7 +8,6 @@ import {
   Site,
   SitePolygon,
   SiteReport,
-  TreeSpecies,
   Workday
 } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
@@ -21,26 +19,7 @@ const loadApprovedProjectReports = async (projectIds: number[]) =>
   groupBy(
     await ProjectReport.findAll({
       where: { projectId: projectIds, status: ProjectReport.APPROVED_STATUSES },
-      attributes: [
-        "id",
-        "projectId",
-        "status",
-        "ftTotal",
-        "ptTotal",
-        "ftWomen",
-        "ftMen",
-        "ftYouth",
-        "ftNonYouth",
-        "ptWomen",
-        "ptMen",
-        "ptYouth",
-        "ptNonYouth",
-        "volunteerTotal",
-        "volunteerWomen",
-        "volunteerMen",
-        "volunteerYouth",
-        "volunteerNonYouth"
-      ]
+      attributes: ["id", "projectId"]
     }),
     "projectId"
   );
@@ -54,15 +33,6 @@ const loadApprovedSites = async (projectIds: number[]) =>
     "projectId"
   );
 
-const loadApprovedNurseries = async (projectIds: number[]) =>
-  groupBy(
-    await Nursery.findAll({
-      where: { projectId: projectIds, status: Nursery.APPROVED_STATUSES },
-      attributes: ["id", "projectId"]
-    }),
-    "projectId"
-  );
-
 const loadApprovedSiteReports = async (siteIds: number[]) =>
   groupBy(
     await SiteReport.findAll({
@@ -70,20 +40,6 @@ const loadApprovedSiteReports = async (siteIds: number[]) =>
       attributes: ["id", "siteId"]
     }),
     "siteId"
-  );
-
-const loadTreesPlantedToDate = async (siteReportIds: number[]) =>
-  groupBy(
-    await TreeSpecies.findAll({
-      where: {
-        speciesableId: siteReportIds,
-        speciesableType: SiteReport.LARAVEL_TYPE,
-        collection: "tree-planted",
-        hidden: false
-      },
-      attributes: ["speciesableId", "name", "amount"]
-    }),
-    "speciesableId"
   );
 
 const loadSeedsPlantedToDate = async (siteReportIds: number[]) =>
@@ -110,10 +66,7 @@ const loadSitePolygons = async (siteUuids: string[]) =>
 
 type ProjectAssociations = {
   approvedProjectReports: ProjectReport[];
-  approvedSites: Site[];
   approvedSiteReports: SiteReport[];
-  approvedNurseries: Nursery[];
-  treesPlantedToDate: TreeSpecies[];
   seedsPlantedToDate: Seeding[];
   sitePolygons: SitePolygon[];
 };
@@ -164,19 +117,9 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "goalTreesRestoredAnr",
   "goalTreesRestoredDirectSeeding",
   {
-    airtableColumn: "treesPlantedToDate",
-    valueMap: async (_, { treesPlantedToDate }) =>
-      treesPlantedToDate.reduce((sum, { amount }) => sum + (amount ?? 0), 0)
-  },
-  {
     airtableColumn: "seedsPlantedToDate",
     valueMap: async (_, { seedsPlantedToDate }) =>
       seedsPlantedToDate.reduce((sum, { amount }) => sum + (amount ?? 0), 0)
-  },
-  {
-    airtableColumn: "jobsCreatedToDate",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ftTotal, ptTotal }) => sum + (ftTotal ?? 0) + (ptTotal ?? 0), 0)
   },
   {
     airtableColumn: "hectaresRestoredToDate",
@@ -184,80 +127,9 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
       Math.round(sitePolygons.reduce((total, { calcArea }) => total + calcArea, 0))
   },
   {
-    airtableColumn: "numberOfSites",
-    valueMap: async (_, { approvedSites }) => approvedSites.length
-  },
-  {
-    airtableColumn: "numberOfNurseries",
-    valueMap: async (_, { approvedNurseries }) => approvedNurseries.length
-  },
-  {
     airtableColumn: "continent",
     dbColumn: "continent",
     valueMap: async ({ continent }) => continent?.replace("_", "-")
-  },
-  {
-    airtableColumn: "ftWomen",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ftWomen }) => sum + ftWomen, 0)
-  },
-  {
-    airtableColumn: "ftMen",
-    valueMap: async (_, { approvedProjectReports }) => approvedProjectReports.reduce((sum, { ftMen }) => sum + ftMen, 0)
-  },
-  {
-    airtableColumn: "ftYouth",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ftYouth }) => sum + ftYouth, 0)
-  },
-  {
-    airtableColumn: "ftNonYouth",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ftNonYouth }) => sum + ftNonYouth, 0)
-  },
-  {
-    airtableColumn: "ptWomen",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ptWomen }) => sum + ptWomen, 0)
-  },
-  {
-    airtableColumn: "ptMen",
-    valueMap: async (_, { approvedProjectReports }) => approvedProjectReports.reduce((sum, { ptMen }) => sum + ptMen, 0)
-  },
-  {
-    airtableColumn: "ptYouth",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ptYouth }) => sum + ptYouth, 0)
-  },
-  {
-    airtableColumn: "ptNonYouth",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { ptNonYouth }) => sum + ptNonYouth, 0)
-  },
-  {
-    airtableColumn: "volunteerTotal",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { volunteerTotal }) => sum + volunteerTotal, 0)
-  },
-  {
-    airtableColumn: "volunteerWomen",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { volunteerWomen }) => sum + volunteerWomen, 0)
-  },
-  {
-    airtableColumn: "volunteerMen",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { volunteerMen }) => sum + volunteerMen, 0)
-  },
-  {
-    airtableColumn: "volunteerYouth",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { volunteerYouth }) => sum + volunteerYouth, 0)
-  },
-  {
-    airtableColumn: "volunteerNonYouth",
-    valueMap: async (_, { approvedProjectReports }) =>
-      approvedProjectReports.reduce((sum, { volunteerNonYouth }) => sum + volunteerNonYouth, 0)
   },
   {
     airtableColumn: "workdaysCount",
@@ -320,10 +192,8 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
     const approvedSites = await loadApprovedSites(projectIds);
     const allSiteIds = flatten(Object.values(approvedSites).map(sites => sites.map(({ id }) => id)));
     const allSiteUuids = flatten(Object.values(approvedSites).map(sites => sites.map(({ uuid }) => uuid)));
-    const approvedNurseries = await loadApprovedNurseries(projectIds);
     const approvedSiteReports = await loadApprovedSiteReports(allSiteIds);
     const allSiteReportIds = flatten(Object.values(approvedSiteReports).map(reports => reports.map(({ id }) => id)));
-    const treesPlantedToDate = await loadTreesPlantedToDate(allSiteReportIds);
     const seedsPlantedToDate = await loadSeedsPlantedToDate(allSiteReportIds);
     const sitePolygons = await loadSitePolygons(allSiteUuids);
 
@@ -338,13 +208,7 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
         ...associations,
         [projectId]: {
           approvedProjectReports: approvedProjectReports[projectId] ?? [],
-          approvedSites: sites,
           approvedSiteReports: siteReports,
-          approvedNurseries: approvedNurseries[projectId] ?? [],
-          treesPlantedToDate: siteReports.reduce(
-            (trees, { id }) => [...trees, ...(treesPlantedToDate[id] ?? [])],
-            [] as TreeSpecies[]
-          ),
           seedsPlantedToDate: siteReports.reduce(
             (seedings, { id }) => [...seedings, ...(seedsPlantedToDate[id] ?? [])],
             [] as Seeding[]

@@ -52,7 +52,7 @@ jobs:
       # they know exactly what's in them, which is not conducive to parallel runs with other test
       # suites.
       - name: Unified DB Test
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test unified-database-service
+        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test unified-database-service --coverage
 
       - name: Test all
         run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests --exclude unified-database-service database

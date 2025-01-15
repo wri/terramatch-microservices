@@ -83,7 +83,7 @@ export class AirtableProcessor extends WorkerHost {
   async onFailed(job: Job, error: Error) {
     Sentry.captureException(error);
     this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
-    this.sendSlackUpdate(`ERROR: Job processing failed: ${JSON.stringify(job)}`);
+    this.sendSlackUpdate(`:warning: ERROR: Job processing failed: ${JSON.stringify(job)}`);
   }
 
   private async updateEntities({ entityType, startPage, updatedSince }: UpdateEntitiesData) {
@@ -117,12 +117,12 @@ export class AirtableProcessor extends WorkerHost {
   }
 
   private async updateAll({ updatedSince }: UpdateAllData) {
-    this.sendSlackUpdate(`Beginning sync of all data [changedSince: ${updatedSince}]`);
+    this.sendSlackUpdate(`:white_check_mark: Beginning sync of all data [changedSince: ${updatedSince}]`);
     for (const entityType of ENTITY_TYPES) {
       await this.updateEntities({ entityType, updatedSince });
       await this.deleteEntities({ entityType, deletedSince: updatedSince });
     }
-    this.sendSlackUpdate(`Completed sync of all data [changedSince: ${updatedSince}]`);
+    this.sendSlackUpdate(`:100: Completed sync of all data [changedSince: ${updatedSince}]`);
   }
 
   private sendSlackUpdate(message: string) {
@@ -130,6 +130,6 @@ export class AirtableProcessor extends WorkerHost {
     if (channel == null) return;
 
     // Ignore promise; we don't want the process to fail if comms with Slack break down.
-    this.slack.sendText(`UDB Update [${process.env.DEPLOY_ENV}]: ${message}`, { channel });
+    this.slack.sendText(`[${process.env.DEPLOY_ENV}]: ${message}`, { channel });
   }
 }

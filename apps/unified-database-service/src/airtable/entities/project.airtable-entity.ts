@@ -186,6 +186,10 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Project;
 
+  protected get supportsUpdatedSince() {
+    return false;
+  }
+
   async loadAssociations(projects: Project[]) {
     const projectIds = projects.map(({ id }) => id);
     const approvedProjectReports = await loadApprovedProjectReports(projectIds);

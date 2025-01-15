@@ -5,6 +5,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { AirtableService } from "./airtable.service";
 import { AirtableProcessor } from "./airtable.processor";
+import { QueueHealthService } from "./queue-health.service";
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { AirtableProcessor } from "./airtable.processor";
     }),
     BullModule.registerQueue({ name: "airtable" })
   ],
-  providers: [AirtableService, AirtableProcessor],
-  exports: [AirtableService]
+  providers: [AirtableService, AirtableProcessor, QueueHealthService],
+  exports: [AirtableService, QueueHealthService]
 })
 export class AirtableModule {}

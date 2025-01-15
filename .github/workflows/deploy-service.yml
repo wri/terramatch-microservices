@@ -71,7 +71,7 @@ jobs:
           : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
           docker build -t terramatch-microservices-base:nx-base .
           SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker build --build-arg NODE_ENV=production --build-arg BUILD_FLAG='--prod --verbose' -f apps/${{ inputs.service }}/Dockerfile -t $SERVICE_IMAGE .
+          docker build --build-arg NODE_ENV=production --build-arg DEPLOY_ENV=${{ inputs.env }} --build-arg SENTRY_DSN="${{ vars.SENTRY_DSN }}" --build-arg BUILD_FLAG='--prod --verbose' -f apps/${{ inputs.service }}/Dockerfile -t $SERVICE_IMAGE .
           docker push $SERVICE_IMAGE
           echo "image=$SERVICE_IMAGE"
 

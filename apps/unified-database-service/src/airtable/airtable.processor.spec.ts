@@ -1,0 +1,46 @@
+import { AIRTABLE_ENTITIES, AirtableProcessor } from "./airtable.processor";
+import { Test } from "@nestjs/testing";
+import { ConfigService } from "@nestjs/config";
+import { createMock } from "@golevelup/ts-jest";
+import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
+import { Job } from "bullmq";
+
+jest.mock("airtable", () =>
+  jest.fn(() => ({
+    base: () => jest.fn()
+  }))
+);
+
+describe("AirtableProcessor", () => {
+  let processor: AirtableProcessor;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [AirtableProcessor, { provide: ConfigService, useValue: createMock<ConfigService>() }]
+    }).compile();
+
+    processor = await module.resolve(AirtableProcessor);
+  });
+
+  it("throws an error with an unknown job name", async () => {
+    await expect(processor.process({ name: "unknown" } as Job)).rejects.toThrow(NotImplementedException);
+  });
+
+  describe("updateEntities", () => {
+    it("throws an error with an unknown entity type", async () => {
+      await expect(processor.process({ name: "updateEntities", data: { entityType: "foo" } } as Job)).rejects.toThrow(
+        InternalServerErrorException
+      );
+    });
+
+    it("calls updateBase on the entity", async () => {
+      const updateBase = jest.fn(() => Promise.resolve());
+      // @ts-expect-error faking the SiteEntity
+      AIRTABLE_ENTITIES.site = class {
+        updateBase = updateBase;
+      };
+      await processor.process({ name: "updateEntities", data: { entityType: "site", startPage: 2 } } as Job);
+      expect(updateBase).toHaveBeenCalledWith(expect.anything(), 2);
+    });
+  });
+});

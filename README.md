@@ -7,7 +7,6 @@ Repository for the Microservices API backend of the TerraMatch service
 - Node v20.11.1. Using [NVM](https://github.com/nvm-sh/nvm?tab=readme-ov-file) is recommended.
 - [Docker](https://www.docker.com/)
 - [CDK CLI](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) (install globally)
-- [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
 - [NX](https://nx.dev/getting-started/installation#installing-nx-globally) (install globally)
 - [NestJS](https://docs.nestjs.com/) (install globally, useful for development)
 

@@ -87,19 +87,21 @@ export class TreeSpeciesEntity extends AirtableEntity<TreeSpecies, TreeSpeciesAs
     where: { hidden: false }
   });
 
-  protected getDeletePageFindOptions = (deletedSince: Date, page: number) => ({
-    ...super.getDeletePageFindOptions(deletedSince, page),
-    where: {
-      [Op.or]: {
-        deletedAt: { [Op.gte]: deletedSince },
-        // Include records that have been hidden since the timestamp as well.
-        [Op.and]: {
-          updatedAt: { [Op.gte]: deletedSince },
-          hidden: true
+  protected getDeletePageFindOptions(deletedSince: Date, page: number) {
+    return {
+      ...super.getDeletePageFindOptions(deletedSince, page),
+      where: {
+        [Op.or]: {
+          deletedAt: { [Op.gte]: deletedSince },
+          // Include records that have been hidden since the timestamp as well.
+          [Op.and]: {
+            updatedAt: { [Op.gte]: deletedSince },
+            hidden: true
+          }
         }
       }
-    }
-  });
+    };
+  }
 
   protected async loadAssociations(treeSpecies: TreeSpecies[]) {
     const bySpeciesableType = groupBy(treeSpecies, "speciesableType");

@@ -43,4 +43,23 @@ describe("AirtableProcessor", () => {
       expect(updateBase).toHaveBeenCalledWith(expect.anything(), 2);
     });
   });
+
+  describe("deleteEntities", () => {
+    it("throws an error with an unknown entity type", async () => {
+      await expect(processor.process({ name: "deleteEntities", data: { entityType: "foo" } } as Job)).rejects.toThrow(
+        InternalServerErrorException
+      );
+    });
+
+    it("calls deleteStaleRecords on the entity", async () => {
+      const deleteStaleRecords = jest.fn(() => Promise.resolve());
+      // @ts-expect-error faking the SiteEntity
+      AIRTABLE_ENTITIES.site = class {
+        deleteStaleRecords = deleteStaleRecords;
+      };
+      const deletedSince = new Date();
+      await processor.process({ name: "deleteEntities", data: { entityType: "site", deletedSince } } as Job);
+      expect(deleteStaleRecords).toHaveBeenCalledWith(expect.anything(), deletedSince);
+    });
+  });
 });

@@ -28,4 +28,12 @@ describe("AirtableService", () => {
       expect(queue.add).toHaveBeenCalledWith("updateEntities", { entityType: "nursery", startPage: 10 });
     });
   });
+
+  describe("deleteAirtableJob", () => {
+    it("adds the job to the queue", async () => {
+      const deletedSince = new Date();
+      await service.deleteAirtableJob("project", deletedSince);
+      expect(queue.add).toHaveBeenCalledWith("deleteEntities", { entityType: "project", deletedSince });
+    });
+  });
 });

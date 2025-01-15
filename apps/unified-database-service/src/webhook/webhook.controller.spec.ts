@@ -43,4 +43,23 @@ describe("WebhookController", () => {
       expect(service.updateAirtableJob).toHaveBeenCalledWith("site-report", undefined);
     });
   });
+
+  describe("removeDeletedRecords", () => {
+    it("should throw an error if the user doesn't have the correct permissions", async () => {
+      permissionSpy.mockResolvedValue([]);
+      await expect(
+        controller.removeDeletedRecords({ entityType: "project", deletedSince: new Date() }, { authenticatedUserId: 1 })
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should call into the service with query params", async () => {
+      const deletedSince = new Date();
+      const result = await controller.removeDeletedRecords(
+        { entityType: "project", deletedSince },
+        { authenticatedUserId: 1 }
+      );
+      expect(result).toEqual({ status: "OK" });
+      expect(service.deleteAirtableJob).toHaveBeenCalledWith("project", deletedSince);
+    });
+  });
 });

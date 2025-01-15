@@ -2,7 +2,7 @@ import { Injectable, LoggerService } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
-import { EntityType, UpdateEntitiesData } from "./airtable.processor";
+import { DeleteEntitiesData, EntityType, UpdateEntitiesData } from "./airtable.processor";
 
 @Injectable()
 export class AirtableService {
@@ -15,5 +15,12 @@ export class AirtableService {
 
     this.logger.log(`Adding entity update to queue: ${JSON.stringify(data)}`);
     await this.airtableQueue.add("updateEntities", data);
+  }
+
+  async deleteAirtableJob(entityType: EntityType, deletedSince: Date) {
+    const data: DeleteEntitiesData = { entityType, deletedSince };
+
+    this.logger.log(`Adding entity delete to queue: ${JSON.stringify(data)}`);
+    await this.airtableQueue.add("deleteEntities", data);
   }
 }

@@ -43,9 +43,18 @@ import {
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
 import { FRAMEWORK_NAMES, FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { Op } from "sequelize";
+import { DateTime } from "luxon";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
-const Base = jest.fn(() => ({ update: airtableUpdate })) as unknown as Airtable.Base;
+const airtableSelectFirstPage = jest.fn<Promise<unknown>, never>(() => Promise.resolve([]));
+const airtableSelect = jest.fn(() => ({ firstPage: airtableSelectFirstPage }));
+const airtableDestroy = jest.fn(() => Promise.resolve());
+const Base = jest.fn(() => ({
+  update: airtableUpdate,
+  select: airtableSelect,
+  destroy: airtableDestroy
+})) as unknown as Airtable.Base;
 
 const mapEntityColumns = jest.fn(() => Promise.resolve({}));
 export class StubEntity extends AirtableEntity<Site> {
@@ -53,8 +62,8 @@ export class StubEntity extends AirtableEntity<Site> {
   readonly COLUMNS = ["id"] as ColumnMapping<Site>[];
   readonly MODEL = Site;
 
-  protected getPageFindOptions = (page: number) => ({
-    ...super.getPageFindOptions(page),
+  protected getUpdatePageFindOptions = (page: number) => ({
+    ...super.getUpdatePageFindOptions(page),
     limit: 1
   });
 
@@ -90,25 +99,92 @@ async function testAirtableUpdates<M extends Model<M>, A>(
 describe("AirtableEntity", () => {
   afterEach(async () => {
     airtableUpdate.mockClear();
+    airtableSelect.mockClear();
+    airtableSelectFirstPage.mockClear();
+    airtableDestroy.mockClear();
   });
 
-  // This spec only tests the error cases. The individual entity tests cover everything else.
   describe("BaseClass", () => {
-    beforeAll(async () => {
-      // Ensure there's at least one site so the mapping happens
-      await SiteFactory.create();
+    describe("updateBase", () => {
+      // This spec only tests the error cases. The individual entity tests cover everything else.
+      beforeAll(async () => {
+        // Ensure there's at least one site so the mapping happens
+        await SiteFactory.create();
+      });
+
+      it("re-raises mapping errors", async () => {
+        mapEntityColumns.mockRejectedValue(new Error("mapping error"));
+        await expect(new StubEntity().updateBase(null, 0)).rejects.toThrow("mapping error");
+        mapEntityColumns.mockReset();
+      });
+
+      it("re-raises airtable errors", async () => {
+        airtableUpdate.mockRejectedValue(new Error("airtable error"));
+        await expect(new StubEntity().updateBase(Base)).rejects.toThrow("airtable error");
+        airtableUpdate.mockReset();
+      });
     });
 
-    it("re-raises mapping errors", async () => {
-      mapEntityColumns.mockRejectedValue(new Error("mapping error"));
-      await expect(new StubEntity().updateBase(null, 0)).rejects.toThrow("mapping error");
-      mapEntityColumns.mockReset();
-    });
+    describe("deleteStaleRecords", () => {
+      let deletedSites: Site[];
+      const deletedSince = DateTime.fromJSDate(new Date()).minus({ days: 2 }).toJSDate();
 
-    it("re-raises airtable errors", async () => {
-      airtableUpdate.mockRejectedValue(new Error("airtable error"));
-      await expect(new StubEntity().updateBase(Base)).rejects.toThrow("airtable error");
-      airtableUpdate.mockReset();
+      beforeAll(async () => {
+        // Truncate on a paranoid model soft deletes instead of removing the row. There is a force: true
+        // option, but it doesn't work on tables that have foreign key constraints from other tables
+        // so we're working around it here by making sure all rows in the table were "deleted" before
+        // our deletedSince timestamp before creating new rows
+        await Site.truncate();
+        await Site.update(
+          { deletedAt: DateTime.fromJSDate(deletedSince).minus({ days: 1 }).toJSDate() },
+          { where: {}, paranoid: false }
+        );
+
+        const sites = await SiteFactory.createMany(25);
+        for (const site of faker.helpers.uniqueArray(sites, 9)) {
+          await site.destroy();
+        }
+
+        deletedSites = sites.filter(site => site.isSoftDeleted());
+      });
+
+      afterEach(async () => {
+        airtableSelect.mockClear();
+        airtableSelectFirstPage.mockClear();
+        airtableDestroy.mockClear();
+      });
+
+      it("re-raises search errors", async () => {
+        airtableSelectFirstPage.mockRejectedValue(new Error("select error"));
+        await expect(new SiteEntity().deleteStaleRecords(Base, deletedSince)).rejects.toThrow("select error");
+      });
+
+      it("re-raises delete errors", async () => {
+        airtableSelectFirstPage.mockResolvedValue([{ id: "fakeid", fields: { uuid: "fakeuuid" } }]);
+        airtableDestroy.mockRejectedValue(new Error("delete error"));
+        await expect(new SiteEntity().deleteStaleRecords(Base, deletedSince)).rejects.toThrow("delete error");
+        airtableDestroy.mockReset();
+      });
+
+      it("calls delete with all records found", async () => {
+        const searchResult = deletedSites.map(({ uuid }) => ({
+          id: String(faker.number.int({ min: 1000, max: 9999 })),
+          fields: { uuid }
+        }));
+        airtableSelectFirstPage.mockResolvedValue(searchResult);
+        await new SiteEntity().deleteStaleRecords(Base, deletedSince);
+        expect(airtableSelect).toHaveBeenCalledTimes(1);
+        expect(airtableSelect).toHaveBeenCalledWith(
+          expect.objectContaining({
+            fields: ["uuid"],
+            filterByFormula: expect.stringMatching(
+              `(${deletedSites.map(({ uuid }) => `{uuid}='${uuid}'`).join("|")}{${deletedSites.length + 1})`
+            )
+          })
+        );
+        expect(airtableDestroy).toHaveBeenCalledTimes(1);
+        expect(airtableDestroy).toHaveBeenCalledWith(expect.arrayContaining(searchResult.map(({ id }) => id)));
+      });
     });
   });
 
@@ -573,6 +649,17 @@ describe("AirtableEntity", () => {
           }
         })
       );
+    });
+
+    it("customizes the where clause for deleting records", async () => {
+      class Test extends TreeSpeciesEntity {
+        public getDeletePageFindOptions = (deletedSince: Date, page: number) =>
+          super.getDeletePageFindOptions(deletedSince, page);
+      }
+      const deletedSince = new Date();
+      const result = new Test().getDeletePageFindOptions(deletedSince, 0);
+      expect(result.where[Op.or]).not.toBeNull();
+      expect(result.where[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
     });
   });
 });

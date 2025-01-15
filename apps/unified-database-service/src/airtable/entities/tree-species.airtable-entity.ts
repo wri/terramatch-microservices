@@ -12,6 +12,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { groupBy, uniq } from "lodash";
 import { ModelCtor } from "sequelize-typescript";
+import { Op } from "sequelize";
 
 const LARAVEL_TYPE_MAPPING: Record<string, { model: ModelCtor; association: keyof TreeSpeciesAssociations }> = {
   [Nursery.LARAVEL_TYPE]: {
@@ -80,11 +81,25 @@ export class TreeSpeciesEntity extends AirtableEntity<TreeSpecies, TreeSpeciesAs
   readonly COLUMNS = COLUMNS;
   readonly MODEL = TreeSpecies;
 
-  protected getPageFindOptions(page: number) {
+  protected getUpdatePageFindOptions = (page: number) => ({
+    ...super.getUpdatePageFindOptions(page),
+    // exclude hidden records
+    where: { hidden: false }
+  });
+
+  protected getDeletePageFindOptions(deletedSince: Date, page: number) {
     return {
-      ...super.getPageFindOptions(page),
-      // exclude hidden records
-      where: { hidden: false }
+      ...super.getDeletePageFindOptions(deletedSince, page),
+      where: {
+        [Op.or]: {
+          deletedAt: { [Op.gte]: deletedSince },
+          // Include records that have been hidden since the timestamp as well.
+          [Op.and]: {
+            updatedAt: { [Op.gte]: deletedSince },
+            hidden: true
+          }
+        }
+      }
     };
   }
 

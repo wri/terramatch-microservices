@@ -13,6 +13,7 @@ import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator
 import { UpdateRecordsQueryDto } from "./dto/update-records-query.dto";
 import { Permission } from "@terramatch-microservices/database/entities";
 import { DeleteRecordsQueryDto } from "./dto/delete-records-query.dto";
+import { UpdateAllQueryDto } from "./dto/update-all-query.dto";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {
@@ -45,7 +46,7 @@ export class WebhookController {
     @Request() { authenticatedUserId }
   ) {
     await this.authorize(authenticatedUserId);
-    await this.airtableService.updateAirtableJob(entityType, startPage, updatedSince);
+    await this.airtableService.updateAirtable(entityType, startPage, updatedSince);
 
     return { status: "OK" };
   }
@@ -67,7 +68,26 @@ export class WebhookController {
     @Request() { authenticatedUserId }
   ) {
     await this.authorize(authenticatedUserId);
-    await this.airtableService.deleteAirtableJob(entityType, deletedSince);
+    await this.airtableService.deleteFromAirtable(entityType, deletedSince);
+
+    return { status: "OK" };
+  }
+
+  @Get("updateAll")
+  @ApiOperation({
+    operationId: "triggerAirtableUpdateAll",
+    description: "trigger a complete update of airtable (changes and deletions for all records)"
+  })
+  // This endpoint is not to be consumed by the TM FE and does not conform to our usual JSON API structure
+  @ApiResponse({
+    status: HttpStatus.OK,
+    schema: { type: "object", properties: { status: { type: "string", example: "OK" } } }
+  })
+  @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
+  @ApiException(() => BadRequestException, { description: "Query params were invalid" })
+  async updateAll(@Query() { updatedSince }: UpdateAllQueryDto, @Request() { authenticatedUserId }) {
+    await this.authorize(authenticatedUserId);
+    await this.airtableService.updateAll(updatedSince);
 
     return { status: "OK" };
   }

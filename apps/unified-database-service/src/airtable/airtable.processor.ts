@@ -29,8 +29,9 @@ export const AIRTABLE_ENTITIES = {
   "tree-species": TreeSpeciesEntity
 };
 
-export const ENTITY_TYPES = Object.keys(AIRTABLE_ENTITIES);
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;
+export const ENTITY_TYPES = Object.keys(AIRTABLE_ENTITIES) as EntityType[];
+
 export type UpdateEntitiesData = {
   entityType: EntityType;
   startPage?: number;
@@ -40,6 +41,10 @@ export type UpdateEntitiesData = {
 export type DeleteEntitiesData = {
   entityType: EntityType;
   deletedSince: Date;
+};
+
+export type UpdateAllData = {
+  updatedSince: Date;
 };
 
 /**
@@ -67,6 +72,9 @@ export class AirtableProcessor extends WorkerHost {
       case "deleteEntities":
         return await this.deleteEntities(job.data as DeleteEntitiesData);
 
+      case "updateAll":
+        return await this.updateAll(job.data as UpdateAllData);
+
       default:
         throw new NotImplementedException(`Unknown job type: ${job.name}`);
     }
@@ -79,7 +87,7 @@ export class AirtableProcessor extends WorkerHost {
   }
 
   private async updateEntities({ entityType, startPage, updatedSince }: UpdateEntitiesData) {
-    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
+    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType, updatedSince })}`);
 
     const airtableEntity = AIRTABLE_ENTITIES[entityType];
     if (airtableEntity == null) {
@@ -88,7 +96,7 @@ export class AirtableProcessor extends WorkerHost {
 
     await new airtableEntity().updateBase(this.base, { startPage, updatedSince });
 
-    this.logger.log(`Completed entity update: ${JSON.stringify({ entityType })}`);
+    this.logger.log(`Completed entity update: ${JSON.stringify({ entityType, updatedSince })}`);
   }
 
   private async deleteEntities({ entityType, deletedSince }: DeleteEntitiesData) {
@@ -102,5 +110,12 @@ export class AirtableProcessor extends WorkerHost {
     await new airtableEntity().deleteStaleRecords(this.base, deletedSince);
 
     this.logger.log(`Completed entity delete: ${JSON.stringify({ entityType, deletedSince })}`);
+  }
+
+  private async updateAll({ updatedSince }: UpdateAllData) {
+    for (const entityType of ENTITY_TYPES) {
+      await this.updateEntities({ entityType, updatedSince });
+      await this.deleteEntities({ entityType, deletedSince: updatedSince });
+    }
   }
 }

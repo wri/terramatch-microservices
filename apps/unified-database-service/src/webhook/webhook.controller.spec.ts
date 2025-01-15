@@ -40,11 +40,11 @@ describe("WebhookController", () => {
         { authenticatedUserId: 1 }
       );
       expect(result).toEqual({ status: "OK" });
-      expect(service.updateAirtableJob).toHaveBeenCalledWith("project", 2, updatedSince);
+      expect(service.updateAirtable).toHaveBeenCalledWith("project", 2, updatedSince);
 
       result = await controller.updateRecords({ entityType: "site-report" }, { authenticatedUserId: 1 });
       expect(result).toEqual({ status: "OK" });
-      expect(service.updateAirtableJob).toHaveBeenCalledWith("site-report", undefined, undefined);
+      expect(service.updateAirtable).toHaveBeenCalledWith("site-report", undefined, undefined);
     });
   });
 
@@ -63,7 +63,7 @@ describe("WebhookController", () => {
         { authenticatedUserId: 1 }
       );
       expect(result).toEqual({ status: "OK" });
-      expect(service.deleteAirtableJob).toHaveBeenCalledWith("project", deletedSince);
+      expect(service.deleteFromAirtable).toHaveBeenCalledWith("project", deletedSince);
     });
   });
 });

@@ -74,10 +74,6 @@ export class AirtableProcessor extends WorkerHost {
       case "updateAll":
         return await this.updateAll(job.data as UpdateAllData);
 
-      case "sendCronSlack":
-        this.sendSlackUpdate(":dancer: Cron tick");
-        return;
-
       default:
         throw new NotImplementedException(`Unknown job type: ${job.name}`);
     }

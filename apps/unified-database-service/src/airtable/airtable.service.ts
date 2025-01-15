@@ -3,7 +3,6 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { DeleteEntitiesData, EntityType, UpdateAllData, UpdateEntitiesData } from "./airtable.processor";
-import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class AirtableService {
@@ -30,11 +29,5 @@ export class AirtableService {
 
     this.logger.log(`Adding update all to queue: ${JSON.stringify(data)}`);
     await this.airtableQueue.add("updateAll", data);
-  }
-
-  @Cron(CronExpression.EVERY_30_SECONDS)
-  async handleCron() {
-    this.logger.log("Cron trigger");
-    await this.airtableQueue.add("sendCronSlack", {});
   }
 }

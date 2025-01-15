@@ -29,3 +29,4 @@ export * from "./tree-species.entity";
 export * from "./tree-species-research.entity";
 export * from "./user.entity";
 export * from "./workday.entity";
+export * from "./localization-keys.entity";

@@ -23,7 +23,7 @@ export class EmailService {
       from: this.configService.get<string>('MAIL_FROM_ADDRESS'),
       to,
       subject,
-      text: body,
+      html: body,
     };
 
     await this.transporter.sendMail(mailOptions);

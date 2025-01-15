@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@terramatch-microservices/database/entities';
+import { User, LocalizationKeys } from '@terramatch-microservices/database/entities';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RequestResetPasswordDto } from './dto/reset-password-request.dto';
 import { ResetPasswordResponseDto } from './dto/reset-password-response.dto';
@@ -23,18 +23,23 @@ export class ResetPasswordService {
 
     const resetToken = await this.jwtService.signAsync(
       { sub: user.uuid }, // user id as the subject
-      { expiresIn: '1h', secret: 'reset_password_secret' } // token expires in 1 hour
+      { expiresIn: '2h', secret: 'reset_password_secret' } // token expires in 1 hour
     );
 
+    const localizationKeys = await LocalizationKeys.findOne({where: { key: 'reset-password.body'}});
+
+    if (!localizationKeys) {
+      throw new NotFoundException('Localization body not found');
+    }
     const resetLink = `https://your-app.com/reset-password?token=${resetToken}`;
+    const bodyEmail = localizationKeys.value.replace('link', `<a href="${resetLink}">link</a>`);
     await this.emailService.sendEmail(
       user.emailAddress,
       'Reset Password',
-      `Click the link to reset your password: ${resetLink}`
+      bodyEmail,
     );
 
-    const resetPasswordResponse = new ResetPasswordResponseDto({emailAddress: user.emailAddress, uuid: user.uuid});
-    return resetPasswordResponse;
+    return  new ResetPasswordResponseDto({emailAddress: user.emailAddress, uuid: user.uuid, userId: user.id});
   }
 
   async resetPassword(resetToken: string, newPassword: string) {

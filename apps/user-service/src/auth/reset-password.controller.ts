@@ -30,7 +30,7 @@ export class ResetPasswordController {
   async requestReset(@Body() { emailAddress }: RequestResetPasswordDto): Promise<JsonApiDocument> {
     const response = await this.resetPasswordService.sendResetPasswordEmail(emailAddress);
     return buildJsonApi()
-      .addData('sdad',response)
+      .addData(`${response.userId}`, response)
       .document.serialize();
   }
 

@@ -40,11 +40,11 @@ describe("WebhookController", () => {
         { authenticatedUserId: 1 }
       );
       expect(result).toEqual({ status: "OK" });
-      expect(service.updateAirtableJob).toHaveBeenCalledWith("project", 2, updatedSince);
+      expect(service.updateAirtable).toHaveBeenCalledWith("project", 2, updatedSince);
 
       result = await controller.updateRecords({ entityType: "site-report" }, { authenticatedUserId: 1 });
       expect(result).toEqual({ status: "OK" });
-      expect(service.updateAirtableJob).toHaveBeenCalledWith("site-report", undefined, undefined);
+      expect(service.updateAirtable).toHaveBeenCalledWith("site-report", undefined, undefined);
     });
   });
 
@@ -63,7 +63,23 @@ describe("WebhookController", () => {
         { authenticatedUserId: 1 }
       );
       expect(result).toEqual({ status: "OK" });
-      expect(service.deleteAirtableJob).toHaveBeenCalledWith("project", deletedSince);
+      expect(service.deleteFromAirtable).toHaveBeenCalledWith("project", deletedSince);
+    });
+  });
+
+  describe("updateAll", () => {
+    it("should throw an error if the user doesn't have the correct permissions", async () => {
+      permissionSpy.mockResolvedValue([]);
+      await expect(controller.updateAll({ updatedSince: new Date() }, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should call into the service with query params", async () => {
+      const updatedSince = new Date();
+      const result = await controller.updateAll({ updatedSince: updatedSince }, { authenticatedUserId: 1 });
+      expect(result).toEqual({ status: "OK" });
+      expect(service.updateAll).toHaveBeenCalledWith(updatedSince);
     });
   });
 });

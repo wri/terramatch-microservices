@@ -1,9 +1,10 @@
-import { AIRTABLE_ENTITIES, AirtableProcessor } from "./airtable.processor";
+import { AIRTABLE_ENTITIES, AirtableProcessor, ENTITY_TYPES } from "./airtable.processor";
 import { Test } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { createMock } from "@golevelup/ts-jest";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { Job } from "bullmq";
+import { SlackService } from "nestjs-slack";
 
 jest.mock("airtable", () =>
   jest.fn(() => ({
@@ -16,7 +17,11 @@ describe("AirtableProcessor", () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [AirtableProcessor, { provide: ConfigService, useValue: createMock<ConfigService>() }]
+      providers: [
+        AirtableProcessor,
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
+        { provide: SlackService, useValue: createMock<SlackService>() }
+      ]
     }).compile();
 
     processor = await module.resolve(AirtableProcessor);
@@ -64,6 +69,29 @@ describe("AirtableProcessor", () => {
       const deletedSince = new Date();
       await processor.process({ name: "deleteEntities", data: { entityType: "site", deletedSince } } as Job);
       expect(deleteStaleRecords).toHaveBeenCalledWith(expect.anything(), deletedSince);
+    });
+  });
+
+  describe("updateAll", () => {
+    it("calls updateEntities and deleteEntities with all types", async () => {
+      const updateSpy = (
+        jest.spyOn(processor as never, "updateEntities") as jest.SpyInstance<Promise<void>>
+      ).mockImplementation(() => Promise.resolve());
+      const deleteSpy = (
+        jest.spyOn(processor as never, "deleteEntities") as jest.SpyInstance<Promise<void>>
+      ).mockImplementation(() => Promise.resolve());
+
+      const updatedSince = new Date();
+      await processor.process({ name: "updateAll", data: { updatedSince } } as Job);
+
+      for (let ii = 0; ii < ENTITY_TYPES.length; ii++) {
+        const entityType = ENTITY_TYPES[ii];
+        expect(updateSpy).toHaveBeenNthCalledWith(ii + 1, { entityType, updatedSince });
+        expect(deleteSpy).toHaveBeenNthCalledWith(ii + 1, { entityType, deletedSince: updatedSince });
+      }
+
+      updateSpy.mockRestore();
+      deleteSpy.mockRestore();
     });
   });
 });

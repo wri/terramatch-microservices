@@ -36,7 +36,13 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     // Get any find options that might have been provided by a subclass to issue this query
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { offset, limit, attributes, include, ...countOptions } = this.getUpdatePageFindOptions(0, updatedSince);
-    const expectedPages = Math.floor((await this.MODEL.count(countOptions)) / AIRTABLE_PAGE_SIZE);
+    const count = await this.MODEL.count(countOptions);
+    if (count === 0) {
+      this.logger.log(`No updates to process, skipping: ${JSON.stringify({ table: this.TABLE_NAME, updatedSince })}`);
+      return;
+    }
+
+    const expectedPages = Math.floor(count / AIRTABLE_PAGE_SIZE);
     for (let page = startPage ?? 0; await this.processUpdatePage(base, page, updatedSince); page++) {
       this.logger.log(`Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
     }
@@ -46,7 +52,13 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     // Use the delete page find options except limit and offset to get an accurate count
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { offset, limit, attributes, ...countOptions } = this.getDeletePageFindOptions(deletedSince, 0);
-    const expectedPages = Math.floor((await this.MODEL.count(countOptions)) / AIRTABLE_PAGE_SIZE);
+    const count = await this.MODEL.count(countOptions);
+    if (count === 0) {
+      this.logger.log(`No deletes to process, skipping: ${JSON.stringify({ table: this.TABLE_NAME, deletedSince })})`);
+      return;
+    }
+
+    const expectedPages = Math.floor(count / AIRTABLE_PAGE_SIZE);
     for (let page = 0; await this.processDeletePage(base, deletedSince, page); page++) {
       this.logger.log(`Processed delete page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
     }

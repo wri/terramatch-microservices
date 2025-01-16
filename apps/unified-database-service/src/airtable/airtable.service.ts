@@ -10,8 +10,8 @@ export class AirtableService {
 
   constructor(@InjectQueue("airtable") private readonly airtableQueue: Queue) {}
 
-  async updateAirtableJob(entityType: EntityType, startPage?: number) {
-    const data: UpdateEntitiesData = { entityType, startPage };
+  async updateAirtableJob(entityType: EntityType, startPage?: number, updatedSince?: Date) {
+    const data: UpdateEntitiesData = { entityType, startPage, updatedSince };
 
     this.logger.log(`Adding entity update to queue: ${JSON.stringify(data)}`);
     await this.airtableQueue.add("updateEntities", data);

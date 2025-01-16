@@ -39,8 +39,12 @@ describe("AirtableProcessor", () => {
       AIRTABLE_ENTITIES.site = class {
         updateBase = updateBase;
       };
-      await processor.process({ name: "updateEntities", data: { entityType: "site", startPage: 2 } } as Job);
-      expect(updateBase).toHaveBeenCalledWith(expect.anything(), 2);
+      const updatedSince = new Date();
+      await processor.process({
+        name: "updateEntities",
+        data: { entityType: "site", startPage: 2, updatedSince }
+      } as Job);
+      expect(updateBase).toHaveBeenCalledWith(expect.anything(), { startPage: 2, updatedSince });
     });
   });
 

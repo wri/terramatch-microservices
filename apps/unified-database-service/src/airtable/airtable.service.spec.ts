@@ -24,8 +24,9 @@ describe("AirtableService", () => {
 
   describe("updateAirtableJob", () => {
     it("adds the job to the queue", async () => {
-      await service.updateAirtableJob("nursery", 10);
-      expect(queue.add).toHaveBeenCalledWith("updateEntities", { entityType: "nursery", startPage: 10 });
+      const updatedSince = new Date();
+      await service.updateAirtableJob("nursery", 10, updatedSince);
+      expect(queue.add).toHaveBeenCalledWith("updateEntities", { entityType: "nursery", startPage: 10, updatedSince });
     });
   });
 

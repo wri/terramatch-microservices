@@ -31,6 +31,10 @@ export class ApplicationEntity extends AirtableEntity<Application, ApplicationAs
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Application;
 
+  protected get supportsUpdatedSince() {
+    return false;
+  }
+
   protected async loadAssociations(applications: Application[]) {
     const applicationIds = applications.map(({ id }) => id);
     const fundingProgrammeUuids = uniq(applications.map(({ fundingProgrammeUuid }) => fundingProgrammeUuid));

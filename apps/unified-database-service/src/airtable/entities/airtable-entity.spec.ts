@@ -43,7 +43,7 @@ import {
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
 import { FRAMEWORK_NAMES, FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Op } from "sequelize";
+import { FindOptions, Op } from "sequelize";
 import { DateTime } from "luxon";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
@@ -62,8 +62,8 @@ export class StubEntity extends AirtableEntity<Site> {
   readonly COLUMNS = ["id"] as ColumnMapping<Site>[];
   readonly MODEL = Site;
 
-  protected getUpdatePageFindOptions = (page: number) => ({
-    ...super.getUpdatePageFindOptions(page),
+  protected getUpdatePageFindOptions = (page: number, updatedSince?: Date) => ({
+    ...super.getUpdatePageFindOptions(page, updatedSince),
     limit: 1
   });
 
@@ -106,7 +106,6 @@ describe("AirtableEntity", () => {
 
   describe("BaseClass", () => {
     describe("updateBase", () => {
-      // This spec only tests the error cases. The individual entity tests cover everything else.
       beforeAll(async () => {
         // Ensure there's at least one site so the mapping happens
         await SiteFactory.create();
@@ -114,7 +113,7 @@ describe("AirtableEntity", () => {
 
       it("re-raises mapping errors", async () => {
         mapEntityColumns.mockRejectedValue(new Error("mapping error"));
-        await expect(new StubEntity().updateBase(null, 0)).rejects.toThrow("mapping error");
+        await expect(new StubEntity().updateBase(null, { startPage: 0 })).rejects.toThrow("mapping error");
         mapEntityColumns.mockReset();
       });
 
@@ -122,6 +121,30 @@ describe("AirtableEntity", () => {
         airtableUpdate.mockRejectedValue(new Error("airtable error"));
         await expect(new StubEntity().updateBase(Base)).rejects.toThrow("airtable error");
         airtableUpdate.mockReset();
+      });
+
+      it("includes the updatedSince timestamp in the query", async () => {
+        const entity = new StubEntity();
+        const spy = jest.spyOn(entity as never, "getUpdatePageFindOptions") as jest.SpyInstance<FindOptions<Site>>;
+        const updatedSince = new Date();
+        await entity.updateBase(Base, { updatedSince });
+        expect(spy.mock.results[0].value.where).toMatchObject({
+          updatedAt: { [Op.gte]: updatedSince }
+        });
+        spy.mockReset();
+      });
+
+      it("skips the updatedSince timestamp if the model doesn't support it", async () => {
+        const entity = new StubEntity();
+        (jest.spyOn(entity as never, "supportsUpdatedSince", "get") as jest.SpyInstance<boolean>).mockImplementation(
+          () => false
+        );
+        const spy = jest.spyOn(entity as never, "getUpdatePageFindOptions") as jest.SpyInstance<FindOptions<Site>>;
+        const updatedSince = new Date();
+        await entity.updateBase(Base, { updatedSince });
+        expect(spy.mock.results[0].value.where).not.toMatchObject({
+          updatedAt: expect.anything()
+        });
       });
     });
 
@@ -146,12 +169,6 @@ describe("AirtableEntity", () => {
         }
 
         deletedSites = sites.filter(site => site.isSoftDeleted());
-      });
-
-      afterEach(async () => {
-        airtableSelect.mockClear();
-        airtableSelectFirstPage.mockClear();
-        airtableDestroy.mockClear();
       });
 
       it("re-raises search errors", async () => {

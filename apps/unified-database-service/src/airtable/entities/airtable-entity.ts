@@ -8,12 +8,18 @@ import Airtable from "airtable";
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
 
+type UpdateBaseOptions = { startPage?: number; updatedSince?: Date };
+
 export abstract class AirtableEntity<ModelType extends Model<ModelType>, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
 
   protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
+
+  protected get supportsUpdatedSince() {
+    return true;
+  }
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden
@@ -26,12 +32,12 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     return {};
   }
 
-  async updateBase(base: Airtable.Base, startPage?: number) {
+  async updateBase(base: Airtable.Base, { startPage, updatedSince }: UpdateBaseOptions = {}) {
     // Get any find options that might have been provided by a subclass to issue this query
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { offset, limit, attributes, include, ...countOptions } = this.getUpdatePageFindOptions(0);
+    const { offset, limit, attributes, include, ...countOptions } = this.getUpdatePageFindOptions(0, updatedSince);
     const expectedPages = Math.floor((await this.MODEL.count(countOptions)) / AIRTABLE_PAGE_SIZE);
-    for (let page = startPage ?? 0; await this.processUpdatePage(base, page); page++) {
+    for (let page = startPage ?? 0; await this.processUpdatePage(base, page, updatedSince); page++) {
       this.logger.log(`Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
     }
   }
@@ -46,12 +52,15 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     }
   }
 
-  protected getUpdatePageFindOptions(page: number) {
+  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
     return {
       attributes: selectAttributes(this.COLUMNS),
       include: selectIncludes(this.COLUMNS),
       limit: AIRTABLE_PAGE_SIZE,
-      offset: page * AIRTABLE_PAGE_SIZE
+      offset: page * AIRTABLE_PAGE_SIZE,
+      where: {
+        ...(this.supportsUpdatedSince && updatedSince != null ? { updatedAt: { [Op.gte]: updatedSince } } : null)
+      }
     } as FindOptions<ModelType>;
   }
 
@@ -65,10 +74,10 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     } as FindOptions<ModelType>;
   }
 
-  private async processUpdatePage(base: Airtable.Base, page: number) {
+  private async processUpdatePage(base: Airtable.Base, page: number, updatedSince?: Date) {
     let airtableRecords: { fields: object }[];
     try {
-      const records = await this.MODEL.findAll(this.getUpdatePageFindOptions(page));
+      const records = await this.MODEL.findAll(this.getUpdatePageFindOptions(page, updatedSince));
 
       // Page had no records, halt processing.
       if (records.length === 0) return false;

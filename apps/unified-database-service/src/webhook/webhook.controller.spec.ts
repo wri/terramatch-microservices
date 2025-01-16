@@ -34,13 +34,17 @@ describe("WebhookController", () => {
     });
 
     it("should call into the service with query params", async () => {
-      let result = await controller.updateRecords({ entityType: "project", startPage: 2 }, { authenticatedUserId: 1 });
+      const updatedSince = new Date();
+      let result = await controller.updateRecords(
+        { entityType: "project", startPage: 2, updatedSince },
+        { authenticatedUserId: 1 }
+      );
       expect(result).toEqual({ status: "OK" });
-      expect(service.updateAirtableJob).toHaveBeenCalledWith("project", 2);
+      expect(service.updateAirtableJob).toHaveBeenCalledWith("project", 2, updatedSince);
 
       result = await controller.updateRecords({ entityType: "site-report" }, { authenticatedUserId: 1 });
       expect(result).toEqual({ status: "OK" });
-      expect(service.updateAirtableJob).toHaveBeenCalledWith("site-report", undefined);
+      expect(service.updateAirtableJob).toHaveBeenCalledWith("site-report", undefined, undefined);
     });
   });
 

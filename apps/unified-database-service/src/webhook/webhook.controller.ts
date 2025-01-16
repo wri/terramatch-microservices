@@ -40,9 +40,12 @@ export class WebhookController {
   })
   @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
   @ApiException(() => BadRequestException, { description: "Query params were invalid" })
-  async updateRecords(@Query() { entityType, startPage }: UpdateRecordsQueryDto, @Request() { authenticatedUserId }) {
+  async updateRecords(
+    @Query() { entityType, startPage, updatedSince }: UpdateRecordsQueryDto,
+    @Request() { authenticatedUserId }
+  ) {
     await this.authorize(authenticatedUserId);
-    await this.airtableService.updateAirtableJob(entityType, startPage);
+    await this.airtableService.updateAirtableJob(entityType, startPage, updatedSince);
 
     return { status: "OK" };
   }

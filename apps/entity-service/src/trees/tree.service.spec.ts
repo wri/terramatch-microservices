@@ -1,6 +1,6 @@
 import { TreeService } from "./tree.service";
 import { Test } from "@nestjs/testing";
-import { TreeSpecies, TreeSpeciesResearch } from "@terramatch-microservices/database/entities";
+import { Seeding, TreeSpecies, TreeSpeciesResearch } from "@terramatch-microservices/database/entities";
 import { pick, uniq } from "lodash";
 import { faker } from "@faker-js/faker";
 import {
@@ -8,6 +8,7 @@ import {
   NurseryReportFactory,
   ProjectFactory,
   ProjectReportFactory,
+  SeedingFactory,
   SiteFactory,
   SiteReportFactory,
   TreeSpeciesFactory,
@@ -79,6 +80,7 @@ describe("TreeService", () => {
       )
         .map(({ name }) => name)
         .sort();
+      // hidden trees are ignored
       await TreeSpeciesFactory.forProjectTreePlanted.create({
         speciesableId: project.id,
         hidden: true
@@ -90,6 +92,10 @@ describe("TreeService", () => {
       const siteNonTrees = (await TreeSpeciesFactory.forSiteNonTree.createMany(3, { speciesableId: site.id }))
         .map(({ name }) => name)
         .sort();
+      const siteSeedings = (await SeedingFactory.forSite.createMany(3, { seedableId: site.id }))
+        .map(({ name }) => name)
+        .sort();
+      await SeedingFactory.forSite.create({ seedableId: site.id, hidden: true });
       const nurserySeedlings = (
         await TreeSpeciesFactory.forNurserySeedling.createMany(4, { speciesableId: nursery.id })
       )
@@ -111,9 +117,11 @@ describe("TreeService", () => {
       expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
 
       result = await service.getEstablishmentTrees("site-reports", siteReport.uuid);
-      expect(Object.keys(result).length).toBe(2);
+      expect(Object.keys(result).length).toBe(3);
       expect(result["tree-planted"].sort()).toEqual(uniq([...siteTreesPlanted, ...projectTreesPlanted]).sort());
       expect(result["non-tree"].sort()).toEqual(siteNonTrees);
+      expect(result["seeds"].sort()).toEqual(siteSeedings);
+
       result = await service.getEstablishmentTrees("nursery-reports", nurseryReport.uuid);
       expect(Object.keys(result).length).toBe(2);
       expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
@@ -153,7 +161,7 @@ describe("TreeService", () => {
         dueAt: DateTime.fromJSDate(nurseryReport1.dueAt).plus({ months: 3 }).toJSDate()
       });
 
-      const reduceTreeCounts = (counts: Record<string, PreviousPlantingCountDto>, tree: TreeSpecies) => ({
+      const reduceTreeCounts = (counts: Record<string, PreviousPlantingCountDto>, tree: TreeSpecies | Seeding) => ({
         ...counts,
         [tree.name]: {
           taxonId: counts[tree.name]?.taxonId ?? tree.taxonId,
@@ -200,19 +208,22 @@ describe("TreeService", () => {
       const siteReport2NonTrees = await TreeSpeciesFactory.forSiteReportNonTree.createMany(2, {
         speciesableId: siteReport2.id
       });
+      const siteReport2Seedings = await SeedingFactory.forSiteReport.createMany(2, { seedableId: siteReport2.id });
+      await SeedingFactory.forSiteReport.create({ seedableId: siteReport2.id, hidden: true });
 
       result = await service.getPreviousPlanting("site-reports", siteReport1.uuid);
       expect(result).toMatchObject({});
       result = await service.getPreviousPlanting("site-reports", siteReport2.uuid);
       const siteReport1TreesPlantedReduced = siteReport1TreesPlanted.reduce(reduceTreeCounts, {});
-      expect(Object.keys(result)).toMatchObject(["tree-planted"]);
-      expect(result).toMatchObject({ "tree-planted": siteReport1TreesPlantedReduced });
+      expect(Object.keys(result).sort()).toMatchObject(["seeds", "tree-planted"]);
+      expect(result).toMatchObject({ "tree-planted": siteReport1TreesPlantedReduced, seeds: {} });
       expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
       result = await service.getPreviousPlanting("site-reports", siteReport3.uuid);
-      expect(Object.keys(result).sort()).toMatchObject(["non-tree", "tree-planted"]);
+      expect(Object.keys(result).sort()).toMatchObject(["non-tree", "seeds", "tree-planted"]);
       expect(result).toMatchObject({
         "tree-planted": siteReport2TreesPlanted.reduce(reduceTreeCounts, siteReport1TreesPlantedReduced),
-        "non-tree": siteReport2NonTrees.reduce(reduceTreeCounts, {})
+        "non-tree": siteReport2NonTrees.reduce(reduceTreeCounts, {}),
+        seeds: siteReport2Seedings.reduce(reduceTreeCounts, {})
       });
       expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
 

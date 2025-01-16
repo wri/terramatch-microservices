@@ -8,7 +8,7 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Op, WhereOptions } from "sequelize";
+import { Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, uniq } from "lodash";
 import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
@@ -65,27 +65,36 @@ export class TreeService {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
       const parentModel = entity === "site-reports" ? Site : Nursery;
-      const whereOptions = {
-        where: { uuid },
-        attributes: [],
+      const include = {
+        model: parentModel,
+        // This id isn't necessary for the data we want to fetch, but sequelize requires it for
+        // the nested includes
+        attributes: ["id"],
         include: [
+          ...treeAssociations(parentModel, ["name", "collection"]),
           {
-            model: parentModel,
+            model: Project,
             // This id isn't necessary for the data we want to fetch, but sequelize requires it for
             // the nested includes
             attributes: ["id"],
-            include: [
-              ...treeAssociations(parentModel, ["name", "collection"]),
-              {
-                model: Project,
-                // This id isn't necessary for the data we want to fetch, but sequelize requires it for
-                // the nested includes
-                attributes: ["id"],
-                include: treeAssociations(Project, ["name", "collection"])
-              }
-            ]
+            include: treeAssociations(Project, ["name", "collection"])
           }
         ]
+      };
+
+      if (entity === "site-reports") {
+        include.include.push({
+          required: false,
+          association: "seedsPlanted",
+          attributes: ["name"],
+          where: { hidden: false }
+        });
+      }
+
+      const whereOptions = {
+        where: { uuid },
+        attributes: [],
+        include: [include]
       };
 
       const report = await (entity === "site-reports"
@@ -102,7 +111,11 @@ export class TreeService {
         "collection"
       );
 
-      return uniqueTreeNames(trees);
+      const treeNames = uniqueTreeNames(trees);
+      if (entity === "site-reports") {
+        treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name));
+      }
+      return treeNames;
     } else if (["sites", "nurseries", "project-reports"].includes(entity)) {
       // for these we simply pull the project's trees
       const whereOptions = {
@@ -165,6 +178,18 @@ export class TreeService {
     });
     if (report == null) throw new NotFoundException();
 
+    const modelIncludes: Includeable[] = treeAssociations(model, ["taxonId", "name", "collection", "amount"], {
+      amount: { [Op.gt]: 0 }
+    });
+    if (entity === "site-reports") {
+      modelIncludes.push({
+        required: false,
+        association: "seedsPlanted",
+        attributes: ["name", "taxonId", "amount"],
+        where: { hidden: false, amount: { [Op.gt]: 0 } }
+      });
+    }
+
     // @ts-expect-error Can't narrow the union TreeReportModelType automatically
     const records: InstanceType<TreeReportModelType>[] = await model.findAll({
       attributes: [],
@@ -172,7 +197,7 @@ export class TreeService {
         [model.PARENT_ID]: report[model.PARENT_ID],
         dueAt: { [Op.lt]: report.dueAt }
       },
-      include: treeAssociations(model, ["taxonId", "name", "collection", "amount"], { amount: { [Op.gt]: 0 } })
+      include: modelIncludes
     });
 
     const trees = groupBy(
@@ -182,7 +207,7 @@ export class TreeService {
       "collection"
     );
 
-    return Object.keys(trees).reduce(
+    const planting = Object.keys(trees).reduce(
       (dict, collection) => ({
         ...dict,
         [collection]: trees[collection].reduce(
@@ -198,5 +223,20 @@ export class TreeService {
       }),
       {} as Dictionary<Dictionary<PreviousPlantingCountDto>>
     );
+
+    if (entity === "site-reports") {
+      planting["seeds"] = flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)).reduce(
+        (counts, seeding) => ({
+          ...counts,
+          [seeding.name]: {
+            taxonId: undefined,
+            amount: (counts[seeding.name]?.amount ?? 0) + (seeding.amount ?? 0)
+          }
+        }),
+        {} as Dictionary<PreviousPlantingCountDto>
+      );
+    }
+
+    return planting;
   }
 }

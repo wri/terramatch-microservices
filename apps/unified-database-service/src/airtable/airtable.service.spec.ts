@@ -37,4 +37,19 @@ describe("AirtableService", () => {
       expect(queue.add).toHaveBeenCalledWith("deleteEntities", { entityType: "project", deletedSince });
     });
   });
+
+  describe("updateAll", () => {
+    it("adds the job to the queue", async () => {
+      const updatedSince = new Date();
+      await service.updateAll(updatedSince);
+      expect(queue.add).toHaveBeenCalledWith("updateAll", { updatedSince });
+    });
+  });
+
+  describe("handleDailyUpdate", () => {
+    it("adds the job to the queue", async () => {
+      await service.handleDailyUpdate();
+      expect(queue.add).toHaveBeenCalledWith("updateAll", { updatedSince: expect.any(Date) });
+    });
+  });
 });

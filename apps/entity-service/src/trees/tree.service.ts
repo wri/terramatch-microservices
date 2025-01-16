@@ -25,7 +25,12 @@ type TreeModelType = TreeReportModelType | typeof Project | typeof Site | typeof
 const isReport = (type: EstablishmentEntity): type is EstablishmentReport => type.endsWith("-reports");
 
 const treeAssociations = (model: TreeModelType, attributes: string[], where?: WhereOptions) =>
-  model.TREE_ASSOCIATIONS.map(association => ({ required: false, association, attributes, where }));
+  model.TREE_ASSOCIATIONS.map(association => ({
+    required: false,
+    association,
+    attributes,
+    where: { ...where, hidden: false }
+  }));
 
 const uniqueTreeNames = (trees: Dictionary<TreeSpecies[]>) =>
   Object.keys(trees).reduce(

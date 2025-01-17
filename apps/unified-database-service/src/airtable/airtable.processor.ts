@@ -6,6 +6,7 @@ import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
 import {
   ApplicationEntity,
+  DemographicEntity,
   NurseryEntity,
   NurseryReportEntity,
   OrganisationEntity,
@@ -20,6 +21,7 @@ import { SlackService } from "nestjs-slack";
 
 export const AIRTABLE_ENTITIES = {
   application: ApplicationEntity,
+  demographic: DemographicEntity,
   nursery: NurseryEntity,
   "nursery-report": NurseryReportEntity,
   organisation: OrganisationEntity,

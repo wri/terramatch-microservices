@@ -1,4 +1,5 @@
 export * from "./application.airtable-entity";
+export * from "./demographic.airtable-entity";
 export * from "./nursery.airtable-entity";
 export * from "./nursery-report.airtable-entity";
 export * from "./organisation.airtable-entity";

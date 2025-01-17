@@ -14,6 +14,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
+  readonly IDENTITY_COLUMN: string = "uuid";
 
   protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
 
@@ -78,7 +79,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
 
   protected getDeletePageFindOptions(deletedSince: Date, page: number) {
     return {
-      attributes: ["uuid"],
+      attributes: [this.IDENTITY_COLUMN],
       paranoid: false,
       where: { deletedAt: { [Op.gte]: deletedSince } },
       limit: AIRTABLE_PAGE_SIZE,
@@ -108,7 +109,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
       await base(this.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] },
+        performUpsert: { fieldsToMergeOn: [this.IDENTITY_COLUMN] },
         // Enables new multi/single selection options to be populated by this upsert.
         typecast: true
       });
@@ -135,15 +136,17 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
       // Page had no records, halt processing.
       if (records.length === 0) return false;
 
-      const formula = `OR(${records.map(({ uuid }) => `{uuid}='${uuid}'`).join(",")})`;
+      const formula = `OR(${records
+        .map(record => `{${this.IDENTITY_COLUMN}}='${record[this.IDENTITY_COLUMN]}'`)
+        .join(",")})`;
       const result = await base(this.TABLE_NAME)
-        .select({ filterByFormula: formula, fields: ["uuid"] })
+        .select({ filterByFormula: formula, fields: [this.IDENTITY_COLUMN] })
         .firstPage();
 
       idMapping = result.reduce(
-        (idMapping, { id, fields: { uuid } }) => ({
+        (idMapping, { id, fields }) => ({
           ...idMapping,
-          [id]: uuid
+          [id]: fields[this.IDENTITY_COLUMN]
         }),
         {}
       );

@@ -6,12 +6,15 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RequestResetPasswordDto } from './dto/reset-password-request.dto';
 import { ResetPasswordResponseDto } from './dto/reset-password-response.dto';
 import { EmailService } from '../email/email.service';
+import {ConfigService} from "@nestjs/config";
+import { ResetPasswordResponseOperationDto } from "./dto/reset-password-response-operation.dto";
 
 @Injectable()
 export class ResetPasswordService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
     //private readonly userService: UserService  // Assuming you have a User service to interact with the database
   ) {}
 
@@ -23,7 +26,7 @@ export class ResetPasswordService {
 
     const resetToken = await this.jwtService.signAsync(
       { sub: user.uuid }, // user id as the subject
-      { expiresIn: '2h', secret: 'reset_password_secret' } // token expires in 1 hour
+      { expiresIn: '1h', secret: 'reset_password_secret' } // token expires in 1 hour
     );
 
     const localizationKeys = await LocalizationKeys.findOne({where: { key: 'reset-password.body'}});
@@ -31,7 +34,8 @@ export class ResetPasswordService {
     if (!localizationKeys) {
       throw new NotFoundException('Localization body not found');
     }
-    const resetLink = `https://your-app.com/reset-password?token=${resetToken}`;
+    const url = this.configService.get('TERRAMATCH_WEBSITE_URL');
+    const resetLink =  `${url}/auth/reset-password/${resetToken}`;
     const bodyEmail = localizationKeys.value.replace('link', `<a href="${resetLink}">link</a>`);
     await this.emailService.sendEmail(
       user.emailAddress,
@@ -43,6 +47,7 @@ export class ResetPasswordService {
   }
 
   async resetPassword(resetToken: string, newPassword: string) {
+    console.log(" token: ", resetToken)
     let userId;
     try {
       const payload = await this.jwtService.verifyAsync(resetToken, {
@@ -50,7 +55,8 @@ export class ResetPasswordService {
       });
       userId = payload.sub;
     } catch (error) {
-      throw new BadRequestException('Invalid or expired token');
+      console.log(error)
+      throw new BadRequestException('Invalid or provide token is expired');
     }
 
     const user = await User.findOne({ where: { id: userId } });
@@ -61,6 +67,6 @@ export class ResetPasswordService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.update({ password: hashedPassword }, { where: { id: userId } });
 
-    return { message: 'Password successfully reset' };
+    return new ResetPasswordResponseOperationDto({ message: 'Password successfully reset' });
   }
 }

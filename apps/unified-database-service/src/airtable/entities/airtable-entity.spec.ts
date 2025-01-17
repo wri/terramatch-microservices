@@ -136,9 +136,8 @@ describe("AirtableEntity", () => {
 
       it("skips the updatedSince timestamp if the model doesn't support it", async () => {
         const entity = new StubEntity();
-        (jest.spyOn(entity as never, "supportsUpdatedSince", "get") as jest.SpyInstance<boolean>).mockImplementation(
-          () => false
-        );
+        // @ts-expect-error overriding readonly property for test.
+        (entity as never).SUPPORTS_UPDATED_SINCE = false;
         const spy = jest.spyOn(entity as never, "getUpdatePageFindOptions") as jest.SpyInstance<FindOptions<Site>>;
         const updatedSince = new Date();
         await entity.updateBase(Base, { updatedSince });
@@ -670,6 +669,7 @@ describe("AirtableEntity", () => {
 
     it("customizes the where clause for deleting records", async () => {
       class Test extends TreeSpeciesEntity {
+        // make method accessible
         public getDeletePageFindOptions = (deletedSince: Date, page: number) =>
           super.getDeletePageFindOptions(deletedSince, page);
       }

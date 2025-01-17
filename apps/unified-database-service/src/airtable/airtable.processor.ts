@@ -14,7 +14,8 @@ import {
   ProjectReportEntity,
   SiteEntity,
   SiteReportEntity,
-  TreeSpeciesEntity
+  TreeSpeciesEntity,
+  WorkdayEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
 import { SlackService } from "nestjs-slack";
@@ -29,7 +30,8 @@ export const AIRTABLE_ENTITIES = {
   "project-report": ProjectReportEntity,
   site: SiteEntity,
   "site-report": SiteReportEntity,
-  "tree-species": TreeSpeciesEntity
+  "tree-species": TreeSpeciesEntity,
+  workday: WorkdayEntity
 };
 
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;

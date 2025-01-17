@@ -30,10 +30,7 @@ export class ApplicationEntity extends AirtableEntity<Application, ApplicationAs
   readonly TABLE_NAME = "Applications";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Application;
-
-  protected get supportsUpdatedSince() {
-    return false;
-  }
+  readonly SUPPORTS_UPDATED_SINCE = false;
 
   protected async loadAssociations(applications: Application[]) {
     const applicationIds = applications.map(({ id }) => id);

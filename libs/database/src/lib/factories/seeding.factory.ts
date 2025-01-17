@@ -1,7 +1,8 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Seeding, SiteReport } from "../entities";
+import { Seeding, Site, SiteReport } from "../entities";
 import { faker } from "@faker-js/faker";
 import { SiteReportFactory } from "./site-report.factory";
+import { SiteFactory } from "./site.factory";
 
 const defaultAttributesFactory = async () => ({
   uuid: crypto.randomUUID(),
@@ -11,6 +12,12 @@ const defaultAttributesFactory = async () => ({
 });
 
 export const SeedingFactory = {
+  forSite: FactoryGirl.define(Seeding, async () => ({
+    ...(await defaultAttributesFactory()),
+    seedableType: Site.LARAVEL_TYPE,
+    seedableId: SiteFactory.associate("id")
+  })),
+
   forSiteReport: FactoryGirl.define(Seeding, async () => ({
     ...(await defaultAttributesFactory()),
     seedableType: SiteReport.LARAVEL_TYPE,

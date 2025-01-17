@@ -17,6 +17,7 @@ import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
+import { Seeding } from "./seeding.entity";
 
 // Incomplete stub
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -81,6 +82,18 @@ export class Site extends Model<Site> {
   async loadNonTrees() {
     this.nonTrees ??= await this.$get("nonTrees");
     return this.nonTrees;
+  }
+
+  @HasMany(() => Seeding, {
+    foreignKey: "seedableId",
+    constraints: false,
+    scope: { seedableType: Site.LARAVEL_TYPE }
+  })
+  seedsPlanted: Seeding[] | null;
+
+  async loadSeedsPlanted() {
+    this.seedsPlanted ??= await this.$get("seedsPlanted");
+    return this.seedsPlanted;
   }
 
   @HasMany(() => SiteReport)

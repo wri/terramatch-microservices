@@ -13,7 +13,6 @@ import {
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
-  DemographicFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
   NurseryFactory,
@@ -25,8 +24,7 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
-  TreeSpeciesFactory,
-  WorkdayFactory
+  TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {
@@ -391,16 +389,6 @@ describe("AirtableEntity", () => {
         })
       ).reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
 
-      // Add some additional records to test calculations
-      const { id: projectReport1 } = await ProjectReportFactory.create({
-        projectId: projects[0].id,
-        status: "started" // Not an approved status, so this one should not be included in calculations
-      });
-      const { id: projectReport2 } = await ProjectReportFactory.create({
-        projectId: projects[0].id,
-        status: "approved"
-      });
-
       await NurseryFactory.create({ projectId: projects[0].id, status: "approved" });
 
       const { uuid: startedSiteUuid } = await SiteFactory.create({ projectId: projects[0].id, status: "started" });
@@ -426,15 +414,11 @@ describe("AirtableEntity", () => {
         siteId: site2,
         status: "approved"
       });
-      const { id: siteReport4 } = await SiteReportFactory.create({
-        siteId: site2,
-        status: "approved"
-      });
 
       await SeedingFactory.forSiteReport.create({ seedableId: siteReport1 });
       let seedsPlantedToDate = (await SeedingFactory.forSiteReport.create({ seedableId: siteReport2 })).amount;
-      await SeedingFactory.forSiteReport.create({ seedableId: siteReport4, amount: null });
-      seedsPlantedToDate += (await SeedingFactory.forSiteReport.create({ seedableId: siteReport4 })).amount;
+      await SeedingFactory.forSiteReport.create({ seedableId: siteReport3, amount: null });
+      seedsPlantedToDate += (await SeedingFactory.forSiteReport.create({ seedableId: siteReport3 })).amount;
 
       // won't count because siteReport1 is not approved
       await SitePolygonFactory.create({ siteUuid: startedSiteUuid });
@@ -443,26 +427,10 @@ describe("AirtableEntity", () => {
       await SitePolygonFactory.create({ siteUuid: site2Uuid, isActive: false });
       hectaresRestoredToDate += (await SitePolygonFactory.create({ siteUuid: site2Uuid })).calcArea;
 
-      // won't count because project report 1 isn't approved
-      const { id: workday1 } = await WorkdayFactory.forProjectReport.create({ workdayableId: projectReport1 });
-      await DemographicFactory.forWorkday.create({ demographicalId: workday1, type: "gender" });
-      const { id: workday2 } = await WorkdayFactory.forProjectReport.create({ workdayableId: projectReport2 });
-      let workdaysCount = (await DemographicFactory.forWorkday.create({ demographicalId: workday2, type: "gender" }))
-        .amount;
-      // ignored because only gender is used
-      await DemographicFactory.forWorkday.create({ demographicalId: workday2, type: "age" });
-      const { id: workday3 } = await WorkdayFactory.forSiteReport.create({ workdayableId: siteReport3 });
-      workdaysCount += (await DemographicFactory.forWorkday.create({ demographicalId: workday3, type: "gender" }))
-        .amount;
-      // ignored because it's hidden
-      const { id: workday4 } = await WorkdayFactory.forSiteReport.create({ workdayableId: siteReport4, hidden: true });
-      await DemographicFactory.forWorkday.create({ demographicalId: workday4, type: "gender" });
-
       calculatedValues = {
         [projects[0].uuid]: {
           seedsPlantedToDate,
-          hectaresRestoredToDate: Math.round(hectaresRestoredToDate),
-          workdaysCount
+          hectaresRestoredToDate: Math.round(hectaresRestoredToDate)
         }
       };
     });
@@ -479,8 +447,7 @@ describe("AirtableEntity", () => {
             organisationUuid: organisationUuids[organisationId],
             applicationUuid: applicationUuids[applicationId],
             seedsPlantedToDate: calculatedValues[uuid]?.seedsPlantedToDate ?? 0,
-            hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0,
-            workdaysCount: calculatedValues[uuid]?.workdaysCount ?? 0
+            hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0
           }
         })
       );

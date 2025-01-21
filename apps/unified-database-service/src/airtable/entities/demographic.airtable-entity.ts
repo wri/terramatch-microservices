@@ -1,10 +1,20 @@
-import { Demographic, Workday } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associatedValueColumn, ColumnMapping } from "./airtable-entity";
-import { uniq } from "lodash";
-import { FindOptions } from "sequelize";
+import { Demographic, RestorationPartner, Workday } from "@terramatch-microservices/database/entities";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, PolymorphicUuidAssociation } from "./airtable-entity";
+
+const LARAVEL_TYPE_MAPPINGS: Record<string, PolymorphicUuidAssociation<DemographicAssociations>> = {
+  [Workday.LARAVEL_TYPE]: {
+    association: "workdayUuid",
+    model: Workday
+  },
+  [RestorationPartner.LARAVEL_TYPE]: {
+    association: "restorationPartnerUuid",
+    model: RestorationPartner
+  }
+};
 
 type DemographicAssociations = {
   workdayUuid?: string;
+  restorationPartnerUuid?: string;
 };
 
 const COLUMNS: ColumnMapping<Demographic, DemographicAssociations>[] = [
@@ -13,7 +23,8 @@ const COLUMNS: ColumnMapping<Demographic, DemographicAssociations>[] = [
   "subtype",
   "name",
   "amount",
-  associatedValueColumn("workdayUuid", ["demographicalId"])
+  associatedValueColumn("workdayUuid", ["demographicalType", "demographicalId"]),
+  associatedValueColumn("restorationPartnerUuid", ["demographicalType", "demographicalId"])
 ];
 
 export class DemographicEntity extends AirtableEntity<Demographic, DemographicAssociations> {
@@ -22,45 +33,12 @@ export class DemographicEntity extends AirtableEntity<Demographic, DemographicAs
   readonly MODEL = Demographic;
   readonly IDENTITY_COLUMN = "id";
 
-  protected getUpdatePageFindOptions(page: number, updatedSince?: Date): FindOptions<Demographic> {
-    const findOptions = super.getUpdatePageFindOptions(page, updatedSince);
-    return {
-      ...findOptions,
-      where: {
-        ...findOptions.where,
-        // only include records that are attached to workdays.
-        demographicalType: Workday.LARAVEL_TYPE
-      }
-    };
-  }
-
-  protected getDeletePageFindOptions(deletedSince: Date, page: number): FindOptions<Demographic> {
-    const findOptions = super.getDeletePageFindOptions(deletedSince, page);
-    return {
-      ...findOptions,
-      where: {
-        ...findOptions.where,
-        // only include records that are attached to workdays.
-        demographicalType: Workday.LARAVEL_TYPE
-      }
-    };
-  }
-
   protected async loadAssociations(demographics: Demographic[]) {
-    const workdayIds = uniq(demographics.map(({ demographicalId }) => demographicalId));
-    const workdays = await Workday.findAll({
-      where: { id: workdayIds },
-      attributes: ["id", "uuid"]
-    });
-
-    return demographics.reduce(
-      (associations, { id, demographicalId }) => ({
-        ...associations,
-        [id]: {
-          workdayUuid: workdays.find(({ id }) => id === demographicalId)?.uuid
-        }
-      }),
-      {} as Record<number, DemographicAssociations>
+    return this.loadPolymorphicUuidAssociations(
+      LARAVEL_TYPE_MAPPINGS,
+      "demographicalType",
+      "demographicalId",
+      demographics
     );
   }
 }

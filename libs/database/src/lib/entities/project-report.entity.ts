@@ -31,6 +31,28 @@ export class ProjectReport extends Model<ProjectReport> {
     "direct",
     "convergence"
   ];
+  static readonly RESTORATION_PARTNER_COLLECTIONS = [
+    "direct-income",
+    "indirect-income",
+    "direct-benefits",
+    "indirect-benefits",
+    "direct-conservation-payments",
+    "indirect-conservation-payments",
+    "direct-market-access",
+    "indirect-market-access",
+    "direct-capacity",
+    "indirect-capacity",
+    "direct-training",
+    "indirect-training",
+    "direct-land-title",
+    "indirect-land-title",
+    "direct-livelihoods",
+    "indirect-livelihoods",
+    "direct-productivity",
+    "indirect-productivity",
+    "direct-other",
+    "indirect-other"
+  ];
 
   @PrimaryKey
   @AutoIncrement

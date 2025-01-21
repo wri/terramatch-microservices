@@ -119,7 +119,18 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   },
   "survivalRate",
   "descriptionOfProjectTimeline",
-  "landholderCommEngage"
+  "landholderCommEngage",
+  "states",
+  "detailedInterventionTypes",
+  "waterSource",
+  "baselineBiodiversity",
+  "projImpactFoodsec",
+  "projImpactBiodiv",
+  "pctEmployeesMarginalised",
+  "pctBeneficiariesMarginalised",
+  "proposedGovPartners",
+  "yearFiveCrownCover",
+  "directSeedingSurvivalRate"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

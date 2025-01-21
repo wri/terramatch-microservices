@@ -2,6 +2,7 @@ import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-en
 import { faker } from "@faker-js/faker";
 import {
   Application,
+  Demographic,
   Nursery,
   NurseryReport,
   Organisation,
@@ -9,10 +10,12 @@ import {
   ProjectReport,
   Site,
   SiteReport,
-  TreeSpecies
+  TreeSpecies,
+  Workday
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
+  DemographicFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
   NurseryFactory,
@@ -24,11 +27,13 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
-  TreeSpeciesFactory
+  TreeSpeciesFactory,
+  WorkdayFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {
   ApplicationEntity,
+  DemographicEntity,
   NurseryEntity,
   NurseryReportEntity,
   OrganisationEntity,
@@ -36,7 +41,8 @@ import {
   ProjectReportEntity,
   SiteEntity,
   SiteReportEntity,
-  TreeSpeciesEntity
+  TreeSpeciesEntity,
+  WorkdayEntity
 } from "./";
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
@@ -260,6 +266,61 @@ describe("AirtableEntity", () => {
     });
   });
 
+  describe("DemographicEntity", () => {
+    let workdayUuids: Record<number, string>;
+    let demographics: Demographic[];
+
+    beforeAll(async () => {
+      await Demographic.truncate();
+
+      const workdays = await WorkdayFactory.forProjectReport.createMany(2);
+      workdays.push(await WorkdayFactory.forSiteReport.create());
+      workdayUuids = workdays.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
+      const workdayIds = workdays.map(({ id }) => id);
+      const allDemographics = [];
+      for (let ii = 0; ii < 15; ii++) {
+        allDemographics.push(
+          await DemographicFactory.forWorkday.create({ demographicalId: faker.helpers.arrayElement(workdayIds) })
+        );
+      }
+      allDemographics.push(await DemographicFactory.forWorkday.create({ demographicalId: null }));
+
+      await allDemographics[2].destroy();
+      demographics = allDemographics.filter(demographic => !demographic.isSoftDeleted());
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new DemographicEntity(),
+        demographics,
+        ({ id, type, subtype, name, amount, demographicalId }) => ({
+          fields: {
+            id,
+            type,
+            subtype,
+            name,
+            amount,
+            workdayUuid: workdayUuids[demographicalId]
+          }
+        })
+      );
+    });
+
+    it("customizes the where clauses to isolate to workdays only", async () => {
+      class Test extends DemographicEntity {
+        // make methods accessible
+        public getDeletePageFindOptions = (deletedSince: Date, page: number) =>
+          super.getDeletePageFindOptions(deletedSince, page);
+        public getUpdatePageFindOptions = (page: number, updatedSince?: Date) =>
+          super.getUpdatePageFindOptions(page, updatedSince);
+      }
+      let result = new Test().getDeletePageFindOptions(new Date(), 0);
+      expect(result.where["demographicalType"]).toBe(Workday.LARAVEL_TYPE);
+      result = new Test().getUpdatePageFindOptions(0);
+      expect(result.where["demographicalType"]).toBe(Workday.LARAVEL_TYPE);
+    });
+  });
+
   describe("NurseryEntity", () => {
     let projectUuids: Record<number, string>;
     let nurseries: Nursery[];
@@ -269,7 +330,7 @@ describe("AirtableEntity", () => {
 
       const projects = await ProjectFactory.createMany(2);
       projectUuids = projects.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
-      const projectIds = projects.reduce((ids, { id }) => [...ids, id], [] as number[]);
+      const projectIds = projects.map(({ id }) => id);
       const allNurseries = [];
       for (let ii = 0; ii < 15; ii++) {
         allNurseries.push(await NurseryFactory.create({ projectId: faker.helpers.arrayElement(projectIds) }));
@@ -644,6 +705,71 @@ describe("AirtableEntity", () => {
       const result = new Test().getDeletePageFindOptions(deletedSince, 0);
       expect(result.where[Op.or]).not.toBeNull();
       expect(result.where[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
+    });
+  });
+
+  describe("WorkdayEntity", () => {
+    let associationUuids: Record<string, { airtableField: string; uuid: string }>;
+    let workdays: Workday[];
+
+    beforeAll(async () => {
+      await Workday.truncate();
+
+      associationUuids = {};
+      const projectReport = await ProjectReportFactory.create();
+      associationUuids[ProjectReport.LARAVEL_TYPE] = { airtableField: "projectReportUuid", uuid: projectReport.uuid };
+      const siteReport = await SiteReportFactory.create();
+      associationUuids[SiteReport.LARAVEL_TYPE] = { airtableField: "siteReportUuid", uuid: siteReport.uuid };
+
+      const factories = [
+        () => WorkdayFactory.forProjectReport.create({ workdayableId: projectReport.id }),
+        () => WorkdayFactory.forSiteReport.create({ workdayableId: siteReport.id })
+      ];
+
+      const allWorkdays: Workday[] = [];
+      for (const factory of factories) {
+        // make sure we have at least one of each type
+        allWorkdays.push(await factory());
+      }
+      for (let ii = 0; ii < 35; ii++) {
+        // create a whole bunch mor at random
+        allWorkdays.push(await faker.helpers.arrayElement(factories)());
+      }
+      const toDeleteOrHide = faker.helpers.uniqueArray(() => faker.number.int(allWorkdays.length - 1), 10);
+      let hide = true;
+      for (const ii of toDeleteOrHide) {
+        if (hide) {
+          await allWorkdays[ii].update({ hidden: true });
+        } else {
+          await allWorkdays[ii].destroy();
+        }
+        hide = !hide;
+      }
+
+      // create one with a bogus assocation type for testing
+      allWorkdays.push(await WorkdayFactory.forProjectReport.create({ workdayableType: "foo", workdayableId: 1 }));
+      allWorkdays.push(await WorkdayFactory.forSiteReport.create({ workdayableId: 0 }));
+
+      workdays = allWorkdays.filter(workday => !workday.isSoftDeleted() && workday.hidden === false);
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new WorkdayEntity(),
+        workdays,
+        ({ uuid, collection, workdayableType, workdayableId }) => ({
+          fields: {
+            uuid,
+            collection,
+            projectReportUuid:
+              workdayableType === ProjectReport.LARAVEL_TYPE ? associationUuids[workdayableType].uuid : undefined,
+            siteReportUuid:
+              workdayableType === SiteReport.LARAVEL_TYPE && workdayableId > 0
+                ? associationUuids[workdayableType].uuid
+                : undefined
+          }
+        })
+      );
     });
   });
 });

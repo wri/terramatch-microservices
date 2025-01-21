@@ -21,6 +21,16 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
+  static readonly WORKDAY_COLLECTIONS = [
+    "paid-nursery-operations",
+    "paid-project-management",
+    "paid-other-activities",
+    "volunteer-nursery-operations",
+    "volunteer-project-management",
+    "volunteer-other-activities",
+    "direct",
+    "convergence"
+  ];
 
   @PrimaryKey
   @AutoIncrement

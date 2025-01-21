@@ -10,7 +10,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
@@ -65,6 +65,46 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  pctSurvivalToDate: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  survivalCalculation: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  survivalDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  maintenanceActivities: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  regenerationDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  technicalNarrative: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  publicNarrative: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  numTreesRegenerating: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  soilWaterRestorationDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  waterStructures: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

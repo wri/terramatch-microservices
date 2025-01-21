@@ -1,12 +1,4 @@
-import {
-  Application,
-  Organisation,
-  Project,
-  Seeding,
-  Site,
-  SitePolygon,
-  SiteReport
-} from "@terramatch-microservices/database/entities";
+import { Application, Organisation, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { flatten, groupBy } from "lodash";
 import { FRAMEWORK_NAMES } from "@terramatch-microservices/database/constants/framework";
@@ -20,28 +12,6 @@ const loadApprovedSites = async (projectIds: number[]) =>
     "projectId"
   );
 
-const loadApprovedSiteReports = async (siteIds: number[]) =>
-  groupBy(
-    await SiteReport.findAll({
-      where: { siteId: siteIds, status: SiteReport.APPROVED_STATUSES },
-      attributes: ["id", "siteId"]
-    }),
-    "siteId"
-  );
-
-const loadSeedsPlantedToDate = async (siteReportIds: number[]) =>
-  groupBy(
-    await Seeding.findAll({
-      where: {
-        seedableId: siteReportIds,
-        seedableType: SiteReport.LARAVEL_TYPE,
-        hidden: false
-      },
-      attributes: ["seedableId", "name", "amount"]
-    }),
-    "seedableId"
-  );
-
 const loadSitePolygons = async (siteUuids: string[]) =>
   groupBy(
     await SitePolygon.findAll({
@@ -52,8 +22,6 @@ const loadSitePolygons = async (siteUuids: string[]) =>
   );
 
 type ProjectAssociations = {
-  approvedSiteReports: SiteReport[];
-  seedsPlantedToDate: Seeding[];
   sitePolygons: SitePolygon[];
 };
 
@@ -103,11 +71,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "goalTreesRestoredAnr",
   "goalTreesRestoredDirectSeeding",
   {
-    airtableColumn: "seedsPlantedToDate",
-    valueMap: async (_, { seedsPlantedToDate }) =>
-      seedsPlantedToDate.reduce((sum, { amount }) => sum + (amount ?? 0), 0)
-  },
-  {
     airtableColumn: "hectaresRestoredToDate",
     valueMap: async (_, { sitePolygons }) =>
       Math.round(sitePolygons.reduce((total, { calcArea }) => total + calcArea, 0))
@@ -142,28 +105,15 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
   async loadAssociations(projects: Project[]) {
     const projectIds = projects.map(({ id }) => id);
     const approvedSites = await loadApprovedSites(projectIds);
-    const allSiteIds = flatten(Object.values(approvedSites).map(sites => sites.map(({ id }) => id)));
     const allSiteUuids = flatten(Object.values(approvedSites).map(sites => sites.map(({ uuid }) => uuid)));
-    const approvedSiteReports = await loadApprovedSiteReports(allSiteIds);
-    const allSiteReportIds = flatten(Object.values(approvedSiteReports).map(reports => reports.map(({ id }) => id)));
-    const seedsPlantedToDate = await loadSeedsPlantedToDate(allSiteReportIds);
     const sitePolygons = await loadSitePolygons(allSiteUuids);
 
     return projectIds.reduce((associations, projectId) => {
       const sites = approvedSites[projectId] ?? [];
-      const siteReports = sites.reduce(
-        (reports, { id }) => [...reports, ...(approvedSiteReports[id] ?? [])],
-        [] as SiteReport[]
-      );
 
       return {
         ...associations,
         [projectId]: {
-          approvedSiteReports: siteReports,
-          seedsPlantedToDate: siteReports.reduce(
-            (seedings, { id }) => [...seedings, ...(seedsPlantedToDate[id] ?? [])],
-            [] as Seeding[]
-          ),
           sitePolygons: sites.reduce(
             (polygons, { uuid }) => [...polygons, ...(sitePolygons[uuid] ?? [])],
             [] as SitePolygon[]

@@ -453,33 +453,15 @@ describe("AirtableEntity", () => {
       await NurseryFactory.create({ projectId: projects[0].id, status: "approved" });
 
       const { uuid: startedSiteUuid } = await SiteFactory.create({ projectId: projects[0].id, status: "started" });
-      const { id: site1, uuid: site1Uuid } = await SiteFactory.create({
+      const { uuid: site1Uuid } = await SiteFactory.create({
         projectId: projects[0].id,
         status: "approved"
       });
-      const { id: site2, uuid: site2Uuid } = await SiteFactory.create({
+      const { uuid: site2Uuid } = await SiteFactory.create({
         projectId: projects[0].id,
         status: "approved"
       });
       await SiteFactory.create({ projectId: projects[0].id, status: "approved" });
-
-      const { id: siteReport1 } = await SiteReportFactory.create({
-        siteId: site1,
-        status: "due"
-      });
-      const { id: siteReport2 } = await SiteReportFactory.create({
-        siteId: site1,
-        status: "approved"
-      });
-      const { id: siteReport3 } = await SiteReportFactory.create({
-        siteId: site2,
-        status: "approved"
-      });
-
-      await SeedingFactory.forSiteReport.create({ seedableId: siteReport1 });
-      let seedsPlantedToDate = (await SeedingFactory.forSiteReport.create({ seedableId: siteReport2 })).amount;
-      await SeedingFactory.forSiteReport.create({ seedableId: siteReport3, amount: null });
-      seedsPlantedToDate += (await SeedingFactory.forSiteReport.create({ seedableId: siteReport3 })).amount;
 
       // won't count because siteReport1 is not approved
       await SitePolygonFactory.create({ siteUuid: startedSiteUuid });
@@ -490,7 +472,6 @@ describe("AirtableEntity", () => {
 
       calculatedValues = {
         [projects[0].uuid]: {
-          seedsPlantedToDate,
           hectaresRestoredToDate: Math.round(hectaresRestoredToDate)
         }
       };
@@ -507,7 +488,6 @@ describe("AirtableEntity", () => {
             cohort: FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey,
             organisationUuid: organisationUuids[organisationId],
             applicationUuid: applicationUuids[applicationId],
-            seedsPlantedToDate: calculatedValues[uuid]?.seedsPlantedToDate ?? 0,
             hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0
           }
         })
@@ -578,7 +558,9 @@ describe("AirtableEntity", () => {
 
   describe("SiteReportEntity", () => {
     let siteUuids: Record<number, string>;
+    let totalSeedsPlanted: Record<number, number>;
     let reports: SiteReport[];
+
     beforeAll(async () => {
       await SiteReport.truncate();
 
@@ -591,17 +573,21 @@ describe("AirtableEntity", () => {
       }
       allReports.push(await SiteReportFactory.create({ siteId: null }));
 
+      const seedings = await SeedingFactory.forSiteReport.createMany(3, { seedableId: allReports[0].id });
+      totalSeedsPlanted = { [allReports[0].id]: seedings.reduce((total, { amount }) => total + amount, 0) };
+
       await allReports[6].destroy();
       reports = allReports.filter(report => !report.isSoftDeleted());
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new SiteReportEntity(), reports, ({ uuid, siteId, status, dueAt }) => ({
+      await testAirtableUpdates(new SiteReportEntity(), reports, ({ id, uuid, siteId, status, dueAt }) => ({
         fields: {
           uuid,
           siteUuid: siteUuids[siteId],
           status,
-          dueAt
+          dueAt,
+          totalSeedsPlanted: totalSeedsPlanted[id] ?? 0
         }
       }));
     });

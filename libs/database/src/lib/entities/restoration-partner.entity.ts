@@ -3,16 +3,16 @@ import { Demographic } from "./demographic.entity";
 import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
 
 @Table({
-  tableName: "v2_workdays",
+  tableName: "restoration_partners",
   underscored: true,
   paranoid: true,
   indexes: [
     // @Index doesn't work with underscored column names
-    { name: "v2_workdays_morph_index", fields: ["workdayable_id", "workdayable_type"] }
+    { name: "partner_morph_index", fields: ["partnerable_id", "partnerable_type"] }
   ]
 })
-export class Workday extends Model<Workday> {
-  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Workdays\\Workday";
+export class RestorationPartner extends Model<RestorationPartner> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\RestorationPartners\\RestorationPartner";
 
   @PrimaryKey
   @AutoIncrement
@@ -28,10 +28,10 @@ export class Workday extends Model<Workday> {
   collection: string | null;
 
   @Column(STRING)
-  workdayableType: string;
+  partnerableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  workdayableId: number;
+  partnerableId: number;
 
   @AllowNull
   @Column(TEXT)
@@ -43,7 +43,7 @@ export class Workday extends Model<Workday> {
   @HasMany(() => Demographic, {
     foreignKey: "demographicalId",
     constraints: false,
-    scope: { demographicalType: Workday.LARAVEL_TYPE }
+    scope: { demographicalType: RestorationPartner.LARAVEL_TYPE }
   })
   demographics: Demographic[] | null;
 }

@@ -255,8 +255,8 @@ export class Project extends Model<Project> {
   pctBeneficiariesYouth: number | null;
 
   @AllowNull
-  @Column(TEXT)
-  detailedInterventionTypes: string | null;
+  @JsonColumn()
+  detailedInterventionTypes: string[] | null;
 
   @AllowNull
   @Column(TEXT)
@@ -287,8 +287,8 @@ export class Project extends Model<Project> {
   projBoundary: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  states: string | null;
+  @JsonColumn()
+  states: string[] | null;
 
   @AllowNull
   @Column(TEXT)

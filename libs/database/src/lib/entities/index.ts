@@ -23,6 +23,7 @@ export * from "./project.entity";
 export * from "./project-pitch.entity";
 export * from "./project-report.entity";
 export * from "./project-user.entity";
+export * from "./restoration-partner.entity";
 export * from "./role.entity";
 export * from "./seeding.entity";
 export * from "./site.entity";

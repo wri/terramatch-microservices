@@ -1,7 +1,8 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Demographic, Workday } from "../entities";
+import { Demographic, RestorationPartner, Workday } from "../entities";
 import { WorkdayFactory } from "./workday.factory";
 import { faker } from "@faker-js/faker";
+import { RestorationPartnerFactory } from "./restoration-partner.factory";
 
 const TYPES = ["gender", "age", "ethnicity", "caste"];
 const NAMES: Record<string, (null | string)[]> = {
@@ -33,5 +34,11 @@ export const DemographicFactory = {
     ...(await defaultAttributesFactory()),
     demographicalType: Workday.LARAVEL_TYPE,
     demographicalId: WorkdayFactory.forProjectReport.associate("id")
+  })),
+
+  forRestorationPartner: FactoryGirl.define(Demographic, async () => ({
+    ...(await defaultAttributesFactory()),
+    demographicalType: RestorationPartner.LARAVEL_TYPE,
+    demographicalId: RestorationPartnerFactory.forProjectReport.associate("id")
   }))
 };

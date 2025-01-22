@@ -14,6 +14,7 @@ import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
+import { FrameworkKey } from "../constants/framework";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
@@ -44,12 +45,21 @@ export class SiteReport extends Model<SiteReport> {
   @Column(UUID)
   uuid: string;
 
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
   @ForeignKey(() => Site)
   @Column(BIGINT.UNSIGNED)
   siteId: number;
 
   @BelongsTo(() => Site)
   site: Site | null;
+
+  // TODO foreign key for task
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  taskId: number;
 
   @Column(STRING)
   status: string;

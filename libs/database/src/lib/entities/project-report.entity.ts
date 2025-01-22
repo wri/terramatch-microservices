@@ -13,6 +13,7 @@ import {
 import { BIGINT, DATE, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
+import { FrameworkKey } from "../constants/framework";
 
 // Incomplete stub
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
@@ -63,12 +64,21 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(UUID)
   uuid: string;
 
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  // TODO foreign key for task
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  taskId: number;
 
   @Column(STRING)
   status: string;
@@ -293,6 +303,62 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   equitableOpportunities: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  resilienceProgress: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  localGovernance: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  adaptiveManagement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  scalabilityReplicability: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  convergenceJobsDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  convergenceSchemes: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerScstobc: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesScstobc: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesScstobcFarmers: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  communityPartnersAssetsDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  peopleKnowledgeSkillsIncreased: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  technicalNarrative: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  publicNarrative: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  totalUniqueRestorationPartners: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

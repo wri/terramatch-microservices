@@ -500,6 +500,7 @@ describe("AirtableEntity", () => {
   describe("ProjectReportEntity", () => {
     let projectUuids: Record<number, string>;
     let reports: ProjectReport[];
+    let calculatedValues: Record<string, Record<string, string | number>>;
 
     beforeAll(async () => {
       await ProjectReport.truncate();
@@ -513,8 +514,50 @@ describe("AirtableEntity", () => {
       }
       allReports.push(await ProjectReportFactory.create({ projectId: null }));
 
+      const ppcReport = await ProjectReportFactory.create({
+        projectId: faker.helpers.arrayElement(projectIds),
+        frameworkKey: "ppc"
+      });
+      allReports.push(ppcReport);
+      const ppcSeedlings = (
+        await TreeSpeciesFactory.forProjectReportTreePlanted.createMany(3, { speciesableId: ppcReport.id })
+      ).reduce((total, { amount }) => total + amount, 0);
+      // make sure hidden is ignored
+      await TreeSpeciesFactory.forProjectReportTreePlanted.create({ speciesableId: ppcReport.id, hidden: true });
+
+      // TODO this might start causing problems when Task is implemented in this codebase and we have a factory
+      // that's generating real records
+      const terrafundReport = await ProjectReportFactory.create({
+        projectId: faker.helpers.arrayElement(projectIds),
+        frameworkKey: "terrafund",
+        taskId: 123
+      });
+      allReports.push(terrafundReport);
+      const terrafundSeedlings = (
+        await NurseryReportFactory.createMany(2, {
+          taskId: terrafundReport.taskId,
+          seedlingsYoungTrees: faker.number.int({ min: 10, max: 100 }),
+          status: "approved"
+        })
+      ).reduce((total, { seedlingsYoungTrees }) => total + seedlingsYoungTrees, 0);
+      // make sure non-approved reports are ignored
+      await NurseryReportFactory.create({
+        taskId: terrafundReport.taskId,
+        seedlingsYoungTrees: faker.number.int({ min: 10, max: 100 }),
+        status: "due"
+      });
+
       await allReports[6].destroy();
       reports = allReports.filter(report => !report.isSoftDeleted());
+
+      calculatedValues = {
+        [ppcReport.uuid]: {
+          totalSeedlingsGrown: ppcSeedlings
+        },
+        [terrafundReport.uuid]: {
+          totalSeedlingsGrown: terrafundSeedlings
+        }
+      };
     });
 
     it("sends all records to airtable", async () => {
@@ -523,7 +566,8 @@ describe("AirtableEntity", () => {
           uuid,
           projectUuid: projectUuids[projectId],
           status,
-          dueAt
+          dueAt,
+          totalSeedlingsGrown: calculatedValues[uuid]?.totalSeedlingsGrown ?? 0
         }
       }));
     });

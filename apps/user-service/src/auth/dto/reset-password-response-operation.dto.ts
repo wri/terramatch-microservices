@@ -10,4 +10,10 @@ export class ResetPasswordResponseOperationDto extends JsonApiAttributes<ResetPa
     example: 'user@example.com',
   })
   message: string;
+
+  @ApiProperty({
+    description: 'User Id',
+    example: '12345',
+  })
+  userId: number;
 }

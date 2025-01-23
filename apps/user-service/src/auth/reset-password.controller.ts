@@ -49,7 +49,7 @@ export class ResetPasswordController {
   ): Promise<JsonApiDocument> {
     const response = await this.resetPasswordService.resetPassword(token, newPassword);
     return buildJsonApi()
-      .addData('sads',response)
+      .addData(`${response.userId}`,response)
       .document.serialize();
   }
 }

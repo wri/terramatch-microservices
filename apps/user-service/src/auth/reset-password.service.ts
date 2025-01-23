@@ -43,7 +43,7 @@ export class ResetPasswordService {
       bodyEmail,
     );
 
-    return  new ResetPasswordResponseDto({emailAddress: user.emailAddress, uuid: user.uuid, userId: user.id});
+    return new ResetPasswordResponseDto({emailAddress: user.emailAddress, uuid: user.uuid, userId: user.id});
   }
 
   async resetPassword(resetToken: string, newPassword: string) {
@@ -67,6 +67,6 @@ export class ResetPasswordService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.update({ password: hashedPassword }, { where: { id: userId } });
 
-    return new ResetPasswordResponseOperationDto({ message: 'Password successfully reset' });
+    return new ResetPasswordResponseOperationDto({ userId: user.id, message: 'Password successfully reset' });
   }
 }

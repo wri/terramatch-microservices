@@ -47,5 +47,4 @@ export class UserDto extends JsonApiAttributes<UserDto> {
 
   @ApiProperty({ type: () => UserFramework, isArray: true })
   frameworks: UserFramework[];
-  
 }

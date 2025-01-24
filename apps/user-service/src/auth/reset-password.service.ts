@@ -2,11 +2,8 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { User, LocalizationKeys } from '@terramatch-microservices/database/entities';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { RequestResetPasswordDto } from './dto/reset-password-request.dto';
 import { ResetPasswordResponseDto } from './dto/reset-password-response.dto';
 import { EmailService } from '../email/email.service';
-import {ConfigService} from "@nestjs/config";
 import { ResetPasswordResponseOperationDto } from "./dto/reset-password-response-operation.dto";
 
 @Injectable()
@@ -14,11 +11,9 @@ export class ResetPasswordService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
-    private readonly configService: ConfigService,
-    //private readonly userService: UserService  // Assuming you have a User service to interact with the database
   ) {}
 
-  async sendResetPasswordEmail(emailAddress: string) {
+  async sendResetPasswordEmail(emailAddress: string, callbackUrl: string) {
     const user = await User.findOne({ where: { emailAddress } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -34,8 +29,8 @@ export class ResetPasswordService {
     if (!localizationKeys) {
       throw new NotFoundException('Localization body not found');
     }
-    const url = this.configService.get('TERRAMATCH_WEBSITE_URL');
-    const resetLink =  `${url}/auth/reset-password/${resetToken}`;
+
+    const resetLink = `${callbackUrl}/${resetToken}`;
     const bodyEmail = localizationKeys.value.replace('link', `<a href="${resetLink}">link</a>`);
     await this.emailService.sendEmail(
       user.emailAddress,

@@ -28,8 +28,8 @@ export class ResetPasswordController {
   })
   @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: RequestResetPasswordDto } })
   @ApiException(() => BadRequestException, { description: 'Invalid request or email.' })
-  async requestReset(@Body() { emailAddress }: RequestResetPasswordDto): Promise<JsonApiDocument> {
-    const response = await this.resetPasswordService.sendResetPasswordEmail(emailAddress);
+  async requestReset(@Body() { emailAddress, callbackUrl }: RequestResetPasswordDto): Promise<JsonApiDocument> {
+    const response = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
     return buildJsonApi()
       .addData(`${response.userId}`, response)
       .document.serialize();

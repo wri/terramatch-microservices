@@ -13,6 +13,7 @@ import {
 import { BIGINT, DATE, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
+import { FrameworkKey } from "../constants/framework";
 
 // Incomplete stub
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
@@ -21,6 +22,38 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
+  static readonly WORKDAY_COLLECTIONS = [
+    "paid-nursery-operations",
+    "paid-project-management",
+    "paid-other-activities",
+    "volunteer-nursery-operations",
+    "volunteer-project-management",
+    "volunteer-other-activities",
+    "direct",
+    "convergence"
+  ];
+  static readonly RESTORATION_PARTNER_COLLECTIONS = [
+    "direct-income",
+    "indirect-income",
+    "direct-benefits",
+    "indirect-benefits",
+    "direct-conservation-payments",
+    "indirect-conservation-payments",
+    "direct-market-access",
+    "indirect-market-access",
+    "direct-capacity",
+    "indirect-capacity",
+    "direct-training",
+    "indirect-training",
+    "direct-land-title",
+    "indirect-land-title",
+    "direct-livelihoods",
+    "indirect-livelihoods",
+    "direct-productivity",
+    "indirect-productivity",
+    "direct-other",
+    "indirect-other"
+  ];
 
   @PrimaryKey
   @AutoIncrement
@@ -31,12 +64,21 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(UUID)
   uuid: string;
 
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  // TODO foreign key for task
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  taskId: number;
 
   @Column(STRING)
   status: string;
@@ -261,6 +303,62 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   equitableOpportunities: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  resilienceProgress: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  localGovernance: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  adaptiveManagement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  scalabilityReplicability: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  convergenceJobsDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  convergenceSchemes: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerScstobc: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesScstobc: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesScstobcFarmers: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  communityPartnersAssetsDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  peopleKnowledgeSkillsIncreased: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  technicalNarrative: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  publicNarrative: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  totalUniqueRestorationPartners: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

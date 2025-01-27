@@ -1,6 +1,6 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, isObject, uniq } from "lodash";
-import { Attributes, FindOptions, Op } from "sequelize";
+import { cloneDeep, flatten, groupBy, isObject, uniq } from "lodash";
+import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { LoggerService } from "@nestjs/common";
 import Airtable from "airtable";
@@ -14,12 +14,11 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
+  readonly IDENTITY_COLUMN: string = "uuid";
+  readonly SUPPORTS_UPDATED_SINCE: boolean = true;
+  readonly HAS_HIDDEN_FLAG: boolean = false;
 
   protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
-
-  protected get supportsUpdatedSince() {
-    return true;
-  }
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden
@@ -65,22 +64,45 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   }
 
   protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
+    const where = {} as WhereOptions<ModelType>;
+
+    if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
+      where["updatedAt"] = { [Op.gte]: updatedSince };
+    }
+    if (this.HAS_HIDDEN_FLAG) {
+      where["hidden"] = false;
+    }
+
     return {
       attributes: selectAttributes(this.COLUMNS),
       include: selectIncludes(this.COLUMNS),
       limit: AIRTABLE_PAGE_SIZE,
       offset: page * AIRTABLE_PAGE_SIZE,
-      where: {
-        ...(this.supportsUpdatedSince && updatedSince != null ? { updatedAt: { [Op.gte]: updatedSince } } : null)
-      }
+      where
     } as FindOptions<ModelType>;
   }
 
   protected getDeletePageFindOptions(deletedSince: Date, page: number) {
+    const where = {} as WhereOptions<ModelType>;
+
+    const deletedAtCondition = { [Op.gte]: deletedSince };
+    if (this.HAS_HIDDEN_FLAG) {
+      where[Op.or] = {
+        deletedAt: deletedAtCondition,
+        // include records that have been hidden since the timestamp as well
+        [Op.and]: {
+          updatedAt: { ...deletedAtCondition },
+          hidden: true
+        }
+      };
+    } else {
+      where["deletedAt"] = deletedAtCondition;
+    }
+
     return {
-      attributes: ["uuid"],
+      attributes: [this.IDENTITY_COLUMN],
       paranoid: false,
-      where: { deletedAt: { [Op.gte]: deletedSince } },
+      where,
       limit: AIRTABLE_PAGE_SIZE,
       offset: page * AIRTABLE_PAGE_SIZE
     } as FindOptions<ModelType>;
@@ -108,7 +130,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
       // @ts-expect-error The types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
       await base(this.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] },
+        performUpsert: { fieldsToMergeOn: [this.IDENTITY_COLUMN] },
         // Enables new multi/single selection options to be populated by this upsert.
         typecast: true
       });
@@ -135,15 +157,17 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
       // Page had no records, halt processing.
       if (records.length === 0) return false;
 
-      const formula = `OR(${records.map(({ uuid }) => `{uuid}='${uuid}'`).join(",")})`;
+      const formula = `OR(${records
+        .map(record => `{${this.IDENTITY_COLUMN}}='${record[this.IDENTITY_COLUMN]}'`)
+        .join(",")})`;
       const result = await base(this.TABLE_NAME)
-        .select({ filterByFormula: formula, fields: ["uuid"] })
+        .select({ filterByFormula: formula, fields: [this.IDENTITY_COLUMN] })
         .firstPage();
 
       idMapping = result.reduce(
-        (idMapping, { id, fields: { uuid } }) => ({
+        (idMapping, { id, fields }) => ({
           ...idMapping,
-          [id]: uuid
+          [id]: fields[this.IDENTITY_COLUMN]
         }),
         {}
       );
@@ -184,6 +208,38 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
 
     return airtableObject;
   }
+
+  protected async loadPolymorphicUuidAssociations(
+    typeMappings: Record<string, PolymorphicUuidAssociation<AssociationType>>,
+    typeColumn: keyof Attributes<ModelType>,
+    idColumn: keyof Attributes<ModelType>,
+    entities: ModelType[]
+  ) {
+    const byType = groupBy(entities, typeColumn);
+    const associations = {} as Record<number, AssociationType>;
+
+    // This loop takes the polymorphic types that have been grouped from this set of entities, queries
+    // the appropriate models to find their UUIDs, and then associates that UUID with the correct
+    // member of the association type for that entity. Each entity will only have one of these
+    // UUIDs set.
+    for (const type of Object.keys(byType)) {
+      if (typeMappings[type] == null) {
+        this.logger.error(`Speciesable type not recognized, ignoring [${type}]`);
+        continue;
+      }
+
+      const { model, association } = typeMappings[type];
+      const entitiesForType = byType[type];
+      const ids = uniq(entitiesForType.map(entity => entity[idColumn])) as number[];
+      const models = await model.findAll({ where: { id: ids }, attributes: ["id", "uuid"] });
+      for (const entity of entitiesForType) {
+        const { uuid } = (models.find(({ id }) => id === entity[idColumn]) as unknown as { uuid: string }) ?? {};
+        associations[entity.id as number] = { [association]: uuid } as AssociationType;
+      }
+    }
+
+    return associations;
+  }
 }
 
 export type Include = {
@@ -205,6 +261,11 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
       include?: Include[];
       valueMap: (entity: T, associations: A) => Promise<null | string | number | boolean | Date>;
     };
+
+export type PolymorphicUuidAssociation<AssociationType> = {
+  model: ModelCtor;
+  association: keyof AssociationType;
+};
 
 // used in the test suite
 export const airtableColumnName = <T extends Model<T>>(mapping: ColumnMapping<T, unknown>) =>

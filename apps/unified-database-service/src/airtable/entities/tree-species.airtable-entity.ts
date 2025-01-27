@@ -1,4 +1,4 @@
-import { AirtableEntity, associatedValueColumn, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, PolymorphicUuidAssociation } from "./airtable-entity";
 import {
   Nursery,
   NurseryReport,
@@ -10,11 +10,8 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { groupBy, uniq } from "lodash";
-import { ModelCtor } from "sequelize-typescript";
-import { FindOptions, Op } from "sequelize";
 
-const LARAVEL_TYPE_MAPPING: Record<string, { model: ModelCtor; association: keyof TreeSpeciesAssociations }> = {
+const LARAVEL_TYPE_MAPPING: Record<string, PolymorphicUuidAssociation<TreeSpeciesAssociations>> = {
   [Nursery.LARAVEL_TYPE]: {
     association: "nurseryUuid",
     model: Nursery
@@ -80,56 +77,9 @@ export class TreeSpeciesEntity extends AirtableEntity<TreeSpecies, TreeSpeciesAs
   readonly TABLE_NAME = "Tree Species";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = TreeSpecies;
-
-  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
-    const findOptions = super.getUpdatePageFindOptions(page, updatedSince);
-    return {
-      ...findOptions,
-      // exclude hidden records
-      where: { ...findOptions.where, hidden: false }
-    } as FindOptions<TreeSpecies>;
-  }
-
-  protected getDeletePageFindOptions(deletedSince: Date, page: number) {
-    return {
-      ...super.getDeletePageFindOptions(deletedSince, page),
-      where: {
-        [Op.or]: {
-          deletedAt: { [Op.gte]: deletedSince },
-          // Include records that have been hidden since the timestamp as well.
-          [Op.and]: {
-            updatedAt: { [Op.gte]: deletedSince },
-            hidden: true
-          }
-        }
-      }
-    };
-  }
+  readonly HAS_HIDDEN_FLAG = true;
 
   protected async loadAssociations(treeSpecies: TreeSpecies[]) {
-    const bySpeciesableType = groupBy(treeSpecies, "speciesableType");
-    const associations = {} as Record<number, TreeSpeciesAssociations>;
-
-    // This loop takes the speciesable types that have been grouped from this set of trees, queries
-    // the appropriate models to find their UUIDs, and then associates that UUID with the correct
-    // member of the TreeSpeciesAssociations for that tree. Each tree will only have one of these
-    // UUIDs set.
-    for (const type of Object.keys(bySpeciesableType)) {
-      if (LARAVEL_TYPE_MAPPING[type] == null) {
-        this.logger.error(`Speciesable type not recognized, ignoring [${type}]`);
-        continue;
-      }
-
-      const { model, association } = LARAVEL_TYPE_MAPPING[type];
-      const trees = bySpeciesableType[type];
-      const ids = uniq(trees.map(({ speciesableId }) => speciesableId));
-      const models = await model.findAll({ where: { id: ids }, attributes: ["id", "uuid"] });
-      for (const tree of trees) {
-        const { uuid } = (models.find(({ id }) => id === tree.speciesableId) as unknown as { uuid: string }) ?? {};
-        associations[tree.id] = { [association]: uuid };
-      }
-    }
-
-    return associations;
+    return this.loadPolymorphicUuidAssociations(LARAVEL_TYPE_MAPPING, "speciesableType", "speciesableId", treeSpecies);
   }
 }

@@ -37,4 +37,22 @@ describe("UserPolicy", () => {
     mockPermissions();
     await expect(service.authorize("read", await UserFactory.build({ id: 123 }))).resolves.toBeUndefined();
   });
+
+  it("allows updating any user as admin", async () => {
+    mockUserId(123);
+    mockPermissions("users-manage");
+    await expect(service.authorize("update", new User())).resolves.toBeUndefined();
+  });
+
+  it("disallows updating other users as non-admin", async () => {
+    mockUserId(123);
+    mockPermissions();
+    await expect(service.authorize("update", new User())).rejects.toThrow(UnauthorizedException);
+  });
+
+  it("allows updating own user as non-admin", async () => {
+    mockUserId(123);
+    mockPermissions();
+    await expect(service.authorize("update", await UserFactory.build({ id: 123 }))).resolves.toBeUndefined();
+  });
 });

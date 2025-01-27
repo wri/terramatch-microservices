@@ -36,6 +36,7 @@ export const SitePolygonFactory = FactoryGirl.define(SitePolygon, async () => {
     source: "terramatch",
     createdBy: createdBy.get("id"),
     isActive: true,
-    versionName: name
+    versionName: name,
+    calcArea: faker.number.float({ min: 0.5, max: 1000 })
   };
 });

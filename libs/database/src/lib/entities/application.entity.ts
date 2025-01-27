@@ -2,6 +2,7 @@ import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table,
 import { BIGINT, UUID } from "sequelize";
 import { User } from "./user.entity";
 
+// Incomplete stub: not all indexes are specified
 @Table({
   tableName: "applications",
   underscored: true,
@@ -22,6 +23,10 @@ export class Application extends Model<Application> {
   @AllowNull
   @Column(UUID)
   fundingProgrammeUuid: string | null;
+
+  @AllowNull
+  @Column(UUID)
+  organisationUuid: string | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)

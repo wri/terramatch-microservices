@@ -10,10 +10,11 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
+import { FrameworkKey } from "../constants/framework";
 
 // A quick stub for the research endpoints
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
@@ -22,6 +23,18 @@ export class SiteReport extends Model<SiteReport> {
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
+  static readonly WORKDAY_COLLECTIONS = [
+    "paid-site-establishment",
+    "paid-planting",
+    "paid-site-maintenance",
+    "paid-site-monitoring",
+    "paid-other-activities",
+    "volunteer-site-establishment",
+    "volunteer-planting",
+    "volunteer-site-maintenance",
+    "volunteer-site-monitoring",
+    "volunteer-other-activities"
+  ];
 
   @PrimaryKey
   @AutoIncrement
@@ -32,6 +45,10 @@ export class SiteReport extends Model<SiteReport> {
   @Column(UUID)
   uuid: string;
 
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
   @ForeignKey(() => Site)
   @Column(BIGINT.UNSIGNED)
   siteId: number;
@@ -39,8 +56,17 @@ export class SiteReport extends Model<SiteReport> {
   @BelongsTo(() => Site)
   site: Site | null;
 
+  // TODO foreign key for task
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  taskId: number;
+
   @Column(STRING)
   status: string;
+
+  @AllowNull
+  @Column(STRING)
+  updateRequestStatus: string;
 
   @AllowNull
   @Column(DATE)
@@ -49,6 +75,46 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  pctSurvivalToDate: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  survivalCalculation: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  survivalDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  maintenanceActivities: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  regenerationDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  technicalNarrative: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  publicNarrative: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  numTreesRegenerating: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  soilWaterRestorationDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  waterStructures: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

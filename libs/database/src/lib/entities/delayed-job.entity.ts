@@ -9,8 +9,9 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, INTEGER, JSON, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, INTEGER, STRING, UUID } from "sequelize";
 import { User } from "./user.entity";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 // holds the definition for members that may exist in a job metadata that this codebase explicitly
 // references.
@@ -37,7 +38,7 @@ export class DelayedJob extends Model<DelayedJob> {
   statusCode: number | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   payload: object | null;
 
   @AllowNull
@@ -65,6 +66,6 @@ export class DelayedJob extends Model<DelayedJob> {
   name: string | null;
 
   @AllowNull
-  @Column(JSON)
+  @JsonColumn()
   metadata: Metadata | null;
 }

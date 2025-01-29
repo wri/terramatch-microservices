@@ -2,32 +2,33 @@ import {
   AllowNull,
   AutoIncrement,
   Column,
-  Model,
+  Model, NotNull,
   PrimaryKey,
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, NUMBER, STRING } from "sequelize";
+import { BIGINT, INTEGER, NUMBER, STRING, TEXT } from "sequelize";
 
-@Table({ tableName: "localization_keys", underscored: true, paranoid: false })
-export class LocalizationKeys extends Model<LocalizationKeys> {
+@Table({ tableName: "localization_keys", underscored: true })
+export class LocalizationKey extends Model<LocalizationKey> {
 
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
   override id: number;
 
-  @AllowNull
-  @Column(STRING)
+  @NotNull
+  @AllowNull(false)
+  @Column(TEXT)
   key: string | null;
 
-  @AllowNull
-  @Column(STRING)
+  @NotNull
+  @AllowNull(false)
+  @Column(TEXT)
   value: string | null;
 
   @AllowNull
-  @Unique
-  @Column(NUMBER)
+  @Column(INTEGER({ length: 11 }))
   valueId: number;
 
 }

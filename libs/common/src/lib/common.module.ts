@@ -8,6 +8,7 @@ import { PolicyService } from './policies/policy.service';
 import { TMLogService } from './util/tm-log.service';
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { TranslationService } from "@terramatch-microservices/common/localization/translation.service";
+import { EmailService } from "@terramatch-microservices/common/email/email.service";
 
 @Module({
   imports: [
@@ -24,9 +25,10 @@ import { TranslationService } from "@terramatch-microservices/common/localizatio
     PolicyService,
     { provide: APP_GUARD, useClass: AuthGuard },
     TMLogService,
+    EmailService,
     LocalizationService,
     TranslationService,
   ],
-  exports: [PolicyService, JwtModule, TMLogService, LocalizationService, TranslationService],
+  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, TranslationService],
 })
 export class CommonModule {}

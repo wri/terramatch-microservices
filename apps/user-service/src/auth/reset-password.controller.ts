@@ -4,8 +4,8 @@ import {
   Post,
   HttpStatus,
   BadRequestException,
-  Param,
-} from '@nestjs/common';
+  Param, Put
+} from "@nestjs/common";
 import { ResetPasswordService } from './reset-password.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
@@ -16,11 +16,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NoBearerAuth } from '@terramatch-microservices/common/guards';
 import { ResetPasswordResponseOperationDto } from "./dto/reset-password-response-operation.dto";
 
-@Controller('auth/v3/reset-password')
+@Controller('auth/v3/passwordResets')
 export class ResetPasswordController {
   constructor(private readonly resetPasswordService: ResetPasswordService) {}
 
-  @Post('request')
+  @Post()
   @NoBearerAuth
   @ApiOperation({
     operationId: 'requestPasswordReset',
@@ -35,7 +35,7 @@ export class ResetPasswordController {
       .document.serialize();
   }
 
-  @Post('reset/:token')
+  @Put(':token')
   @NoBearerAuth
   @ApiOperation({
     operationId: 'resetPassword',

@@ -7,7 +7,6 @@ import { CommonModule } from "@terramatch-microservices/common";
 import { HealthModule } from "./health/health.module";
 import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
-import { EmailModule } from "./email/email.module";
 import { ResetPasswordController } from "./auth/reset-password.controller";
 import { ResetPasswordService } from "./auth/reset-password.service";
 import { ConfigModule } from "@nestjs/config";
@@ -21,7 +20,6 @@ import { ConfigModule } from "@nestjs/config";
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    EmailModule
   ],
   controllers: [LoginController, UsersController, ResetPasswordController],
   providers: [

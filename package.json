@@ -67,6 +67,7 @@
     "@types/lodash": "^4.17.13",
     "@types/luxon": "^3.4.2",
     "@types/node": "~18.16.9",
+    "@types/nodemailer": "^6.4.17",
     "@types/sinonjs__fake-timers": "^8.1.5",
     "@types/supertest": "^6.0.2",
     "@types/validator": "^13.12.2",

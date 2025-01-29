@@ -6,7 +6,7 @@ import {
   PrimaryKey,
   Table, Unique
 } from "sequelize-typescript";
-import { BIGINT, NUMBER, STRING } from "sequelize";
+import { BIGINT, INTEGER, NUMBER, STRING } from "sequelize";
 
 @Table({ tableName: "i18n_translations", underscored: true, paranoid: false })
 export class i18nTranslation extends Model<i18nTranslation> {
@@ -18,7 +18,7 @@ export class i18nTranslation extends Model<i18nTranslation> {
 
   @AllowNull
   @Unique
-  @Column(NUMBER)
+  @Column(INTEGER({ length: 11 }))
   i18nItemId: number;
 
   @AllowNull

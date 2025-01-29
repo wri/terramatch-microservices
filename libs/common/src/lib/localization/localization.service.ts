@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { i18nTranslation, LocalizationKeys } from "@terramatch-microservices/database/entities";
+import { i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";
 import { TranslationService } from "@terramatch-microservices/common/localization/translation.service";
 
@@ -11,8 +11,8 @@ export class LocalizationService {
     private readonly translationService: TranslationService) {}
 
 
-  async getLocalizationKey(key: string): Promise<LocalizationKeys | null> {
-    return await LocalizationKeys.findOne({where: { key}});
+  async getLocalizationKey(key: string): Promise<LocalizationKey | null> {
+    return await LocalizationKey.findOne({where: { key}});
   }
 
   async getItemI18n(value: string): Promise<i18nItem | null> {

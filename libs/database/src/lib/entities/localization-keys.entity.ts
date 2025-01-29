@@ -9,8 +9,6 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, NUMBER, STRING } from "sequelize";
 
-
-
 @Table({ tableName: "localization_keys", underscored: true, paranoid: false })
 export class LocalizationKeys extends Model<LocalizationKeys> {
 

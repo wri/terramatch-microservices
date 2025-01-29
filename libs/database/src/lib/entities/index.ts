@@ -30,3 +30,5 @@ export * from "./tree-species-research.entity";
 export * from "./user.entity";
 export * from "./workday.entity";
 export * from "./localization-keys.entity";
+export * from "./i18n-item.entity";
+export * from "./i18n-translation.entity";

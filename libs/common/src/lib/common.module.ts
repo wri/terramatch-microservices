@@ -6,6 +6,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PolicyService } from './policies/policy.service';
 import { TMLogService } from './util/tm-log.service';
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { TranslationService } from "@terramatch-microservices/common/localization/translation.service";
 
 @Module({
   imports: [
@@ -22,7 +24,9 @@ import { TMLogService } from './util/tm-log.service';
     PolicyService,
     { provide: APP_GUARD, useClass: AuthGuard },
     TMLogService,
+    LocalizationService,
+    TranslationService,
   ],
-  exports: [PolicyService, JwtModule, TMLogService],
+  exports: [PolicyService, JwtModule, TMLogService, LocalizationService, TranslationService],
 })
 export class CommonModule {}

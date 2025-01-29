@@ -23,6 +23,7 @@
     "@nestjs/terminus": "^10.2.3",
     "@sentry/nestjs": "^8.45.0",
     "@sentry/profiling-node": "^8.45.0",
+    "@transifex/native": "^7.1.3",
     "airtable": "^0.12.2",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",

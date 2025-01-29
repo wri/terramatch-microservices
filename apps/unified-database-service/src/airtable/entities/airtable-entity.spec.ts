@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import {
   Application,
   Demographic,
+  Framework,
   Nursery,
   NurseryReport,
   Organisation,
@@ -49,7 +50,7 @@ import {
 } from "./";
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
-import { FRAMEWORK_NAMES, FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { FindOptions, Op } from "sequelize";
 import { DateTime } from "luxon";
 
@@ -417,8 +418,20 @@ describe("AirtableEntity", () => {
     let projects: Project[];
     let calculatedValues: Record<string, Record<string, string | number>>;
 
+    const FRAMEWORK_NAMES = {
+      ppc: "PPC",
+      terrafund: "TerraFund Top 100"
+    };
+
     beforeAll(async () => {
       await Project.truncate();
+
+      for (const framework of await Framework.findAll()) {
+        await framework.destroy();
+      }
+      for (const [slug, name] of Object.entries(FRAMEWORK_NAMES)) {
+        await Framework.create({ uuid: faker.string.uuid(), slug, name });
+      }
 
       const orgs = await OrganisationFactory.createMany(3);
       organisationUuids = orgs.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
@@ -487,7 +500,7 @@ describe("AirtableEntity", () => {
           fields: {
             uuid,
             name,
-            cohort: FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey,
+            framework: FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey,
             organisationUuid: organisationUuids[organisationId],
             applicationUuid: applicationUuids[applicationId],
             hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0

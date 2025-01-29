@@ -1,11 +1,9 @@
-export const FRAMEWORK_NAMES = {
-  terrafund: "TerraFund Top 100",
-  "terrafund-landscapes": "TerraFund Landscapes",
-  ppc: "Priceless Planet Coalition (PPC)",
-  enterprises: "TerraFund Enterprises",
-  hbf: "Harit Bharat Fund",
-  "epa-ghana-pilot": "EPA-Ghana Pilot"
-} as const;
-
-export const FRAMEWORK_KEYS = Object.keys(FRAMEWORK_NAMES);
-export type FrameworkKey = keyof typeof FRAMEWORK_NAMES;
+export const FRAMEWORK_KEYS = [
+  "terrafund",
+  "terrafund-landscapes",
+  "ppc",
+  "enterprises",
+  "hbf",
+  "epa-ghana-pilot"
+] as const;
+export type FrameworkKey = (typeof FRAMEWORK_KEYS)[number];

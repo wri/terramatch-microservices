@@ -76,6 +76,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     return {
       attributes: selectAttributes(this.COLUMNS),
       include: selectIncludes(this.COLUMNS),
+      order: ["id"],
       limit: AIRTABLE_PAGE_SIZE,
       offset: page * AIRTABLE_PAGE_SIZE,
       where
@@ -102,9 +103,10 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     return {
       attributes: [this.IDENTITY_COLUMN],
       paranoid: false,
-      where,
+      order: ["id"],
       limit: AIRTABLE_PAGE_SIZE,
-      offset: page * AIRTABLE_PAGE_SIZE
+      offset: page * AIRTABLE_PAGE_SIZE,
+      where
     } as FindOptions<ModelType>;
   }
 

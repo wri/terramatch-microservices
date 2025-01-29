@@ -360,6 +360,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(INTEGER.UNSIGNED)
   totalUniqueRestorationPartners: number | null;
 
+  @AllowNull
+  @Column(TEXT)
+  businessMilestones: string | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

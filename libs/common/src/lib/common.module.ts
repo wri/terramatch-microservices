@@ -6,9 +6,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PolicyService } from './policies/policy.service';
 import { TMLogService } from './util/tm-log.service';
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { TranslationService } from "@terramatch-microservices/common/localization/translation.service";
-import { EmailService } from "@terramatch-microservices/common/email/email.service";
+import { LocalizationService } from './localization/localization.service';
+import { TranslationService } from './localization/translation.service';
+import { EmailService } from './email/email.service';
 
 @Module({
   imports: [

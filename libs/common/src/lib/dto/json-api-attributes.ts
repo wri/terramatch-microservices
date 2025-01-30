@@ -58,6 +58,8 @@ export function pickApiProperties<Source, DTO>(source: Source, dtoClass: Type<DT
   return pick(source, fields) as Common<Source | DTO>;
 }
 
+export type JsonApiAttributesInput<DTO> = Omit<DTO, "type">;
+
 /**
  * A simple class to make it easy to create a typed attributes DTO with new()
  *
@@ -65,7 +67,7 @@ export function pickApiProperties<Source, DTO>(source: Source, dtoClass: Type<DT
  * See auth.controller.ts login for a simple example.
  */
 export class JsonApiAttributes<DTO> {
-  constructor(source: Omit<DTO, "type">) {
+  constructor(source: JsonApiAttributesInput<DTO>) {
     Object.assign(this, pickApiProperties(source, this.constructor as Type<DTO>));
   }
 }

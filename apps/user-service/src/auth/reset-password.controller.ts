@@ -11,10 +11,11 @@ import { ApiOperation } from '@nestjs/swagger';
 import { JsonApiResponse } from '@terramatch-microservices/common/decorators';
 import { buildJsonApi, JsonApiDocument } from '@terramatch-microservices/common/util';
 import { ApiException } from '@nanogiants/nestjs-swagger-api-exception-decorator';
-import { RequestResetPasswordDto } from './dto/reset-password-request.dto';
+import { ResetPasswordRequest } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NoBearerAuth } from '@terramatch-microservices/common/guards';
 import { ResetPasswordResponseOperationDto } from "./dto/reset-password-response-operation.dto";
+import { ResetPasswordResponseDto } from "./dto/reset-password-response.dto";
 
 @Controller('auth/v3/passwordResets')
 export class ResetPasswordController {
@@ -26,12 +27,12 @@ export class ResetPasswordController {
     operationId: 'requestPasswordReset',
     description: 'Send password reset email with a token',
   })
-  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: RequestResetPasswordDto } })
+  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: ResetPasswordResponseDto } })
   @ApiException(() => BadRequestException, { description: 'Invalid request or email.' })
-  async requestReset(@Body() { emailAddress, callbackUrl }: RequestResetPasswordDto): Promise<JsonApiDocument> {
-    const response = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
+  async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
+    const { email, userId, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
     return buildJsonApi()
-      .addData(`${response.userId}`, response)
+      .addData(`${userId}`, new ResetPasswordResponseDto({ emailAddress: email, userId, uuid }))
       .document.serialize();
   }
 

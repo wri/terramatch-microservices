@@ -1,19 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { IsEmail, IsNotEmpty } from "class-validator";
 
 
-@JsonApiDto({ type: "logins", id: "number" })
-export class RequestResetPasswordDto extends JsonApiAttributes<RequestResetPasswordDto> {
-  @ApiProperty({
-    description: "User email",
-    example: "user@example.com"
-  })
+export class ResetPasswordRequest {
+  @IsEmail()
+  @ApiProperty()
   emailAddress: string;
 
-  @ApiProperty({
-    description: "Url to redirect the user to after the password reset is completed",
-    example: "www.terramatch.com"
-  })
+  @IsNotEmpty()
+  @ApiProperty()
   callbackUrl: string;
 }

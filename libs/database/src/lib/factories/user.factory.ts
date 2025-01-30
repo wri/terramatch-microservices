@@ -1,6 +1,7 @@
 import { FactoryGirl } from 'factory-girl-ts';
 import { faker } from '@faker-js/faker';
 import { User } from '../entities';
+import * as crypto from 'crypto';
 
 // TODO: generate correctly hashed passwords. This will be easily accomplished once user signup
 //   has been implemented in this codebase.

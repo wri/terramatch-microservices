@@ -44,7 +44,7 @@ export class ResetPasswordService {
       bodyEmail,
     );
 
-    return new ResetPasswordResponseDto({emailAddress: user.emailAddress, uuid: user.uuid, userId: user.id});
+    return {email: user.emailAddress, uuid: user.uuid, userId: user.id};
   }
 
   async resetPassword(resetToken: string, newPassword: string) {

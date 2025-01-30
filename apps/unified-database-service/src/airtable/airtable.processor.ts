@@ -1,71 +1,150 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
-import { InternalServerErrorException, LoggerService, NotImplementedException, Scope } from "@nestjs/common";
+import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
+import { InternalServerErrorException, LoggerService, NotImplementedException } from "@nestjs/common";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { Job } from "bullmq";
-import { UpdateEntitiesData } from "./airtable.service";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
-import { ProjectEntity } from "./entities";
+import {
+  ApplicationEntity,
+  DemographicEntity,
+  NurseryEntity,
+  NurseryReportEntity,
+  OrganisationEntity,
+  ProjectEntity,
+  ProjectReportEntity,
+  RestorationPartnerEntity,
+  SiteEntity,
+  SiteReportEntity,
+  TreeSpeciesEntity,
+  WorkdayEntity
+} from "./entities";
+import * as Sentry from "@sentry/node";
+import { SlackService } from "nestjs-slack";
 
-const AIRTABLE_ENTITIES = {
-  project: ProjectEntity
+export const AIRTABLE_ENTITIES = {
+  application: ApplicationEntity,
+  demographic: DemographicEntity,
+  nursery: NurseryEntity,
+  "nursery-report": NurseryReportEntity,
+  organisation: OrganisationEntity,
+  project: ProjectEntity,
+  "project-report": ProjectReportEntity,
+  "restoration-partner": RestorationPartnerEntity,
+  site: SiteEntity,
+  "site-report": SiteReportEntity,
+  "tree-species": TreeSpeciesEntity,
+  workday: WorkdayEntity
+};
+
+export type EntityType = keyof typeof AIRTABLE_ENTITIES;
+export const ENTITY_TYPES = Object.keys(AIRTABLE_ENTITIES) as EntityType[];
+
+export type UpdateEntitiesData = {
+  entityType: EntityType;
+  startPage?: number;
+  updatedSince?: Date;
+};
+
+export type DeleteEntitiesData = {
+  entityType: EntityType;
+  deletedSince: Date;
+};
+
+export type UpdateAllData = {
+  updatedSince: Date;
 };
 
 /**
  * Processes jobs in the airtable queue. Note that if we see problems with this crashing or
  * consuming too many resources, we have the option to run this in a forked process, although
  * it will involve some additional setup: https://docs.nestjs.com/techniques/queues#separate-processes
- *
- * Scope.REQUEST causes this processor to get created fresh for each event in the Queue, which means
- * that it will be fully garbage collected after its work is done.
  */
-@Processor({ name: "airtable", scope: Scope.REQUEST })
+@Processor("airtable")
 export class AirtableProcessor extends WorkerHost {
   private readonly logger: LoggerService = new TMLogService(AirtableProcessor.name);
   private readonly base: Airtable.Base;
 
-  constructor(configService: ConfigService) {
+  constructor(private readonly config: ConfigService, private readonly slack: SlackService) {
     super();
-    this.base = new Airtable({ apiKey: configService.get("AIRTABLE_API_KEY") }).base(
-      configService.get("AIRTABLE_BASE_ID")
-    );
+    this.base = new Airtable({ apiKey: this.config.get("AIRTABLE_API_KEY") }).base(this.config.get("AIRTABLE_BASE_ID"));
   }
 
   async process(job: Job) {
-    switch (job.name) {
+    const { name, data } = job;
+    await this.sendSlackUpdate(`:construction_worker: Beginning job: ${JSON.stringify({ name, data })}`);
+    switch (name) {
       case "updateEntities":
-        return await this.updateEntities(job.data as UpdateEntitiesData);
+        return await this.updateEntities(data as UpdateEntitiesData);
+
+      case "deleteEntities":
+        return await this.deleteEntities(data as DeleteEntitiesData);
+
+      case "updateAll":
+        return await this.updateAll(data as UpdateAllData);
 
       default:
-        throw new NotImplementedException(`Unknown job type: ${job.name}`);
+        throw new NotImplementedException(`Unknown job type: ${name}`);
     }
   }
 
-  private async updateEntities({ entityType }: UpdateEntitiesData) {
-    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType })}`);
+  @OnWorkerEvent("failed")
+  async onFailed(job: Job, error: Error) {
+    Sentry.captureException(error);
+    this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
+    await this.sendSlackUpdate(`:warning: ERROR: Job processing failed: ${JSON.stringify(job)}`);
+  }
 
-    const airtableEntity = AIRTABLE_ENTITIES[entityType];
-    if (airtableEntity == null) {
+  private async updateEntities({ entityType, startPage, updatedSince }: UpdateEntitiesData) {
+    this.logger.log(`Beginning entity update: ${JSON.stringify({ entityType, updatedSince })}`);
+
+    const entityClass = AIRTABLE_ENTITIES[entityType];
+    if (entityClass == null) {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    // bogus offset and page size. The big early PPC records are blowing up the JS memory heap. Need
-    // to make some performance improvements to how the project airtable entity fetches records, pulling
-    // in fewer included associations. That will be a refactor for the next ticket.
-    const records = await airtableEntity.findMany(3, 200);
-    const airtableRecords = await Promise.all(
-      records.map(async record => ({ fields: await airtableEntity.mapDbEntity(record) }))
-    );
-    try {
-      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
-      // https://github.com/Airtable/airtable.js/issues/348
-      await this.base(airtableEntity.TABLE_NAME).update(airtableRecords, {
-        performUpsert: { fieldsToMergeOn: ["uuid"] }
-      });
-    } catch (error) {
-      this.logger.error(`Entity update failed: ${JSON.stringify({ entityType, error, airtableRecords }, null, 2)}`);
-      throw error;
+    const entity = new entityClass();
+    await entity.updateBase(this.base, { startPage, updatedSince });
+
+    this.logger.log(`Completed entity update: ${JSON.stringify({ entityType, updatedSince })}`);
+    await this.sendSlackUpdate(`Completed updating table "${entity.TABLE_NAME}" [updatedSince: ${updatedSince}]`);
+  }
+
+  private async deleteEntities({ entityType, deletedSince }: DeleteEntitiesData) {
+    this.logger.log(`Beginning entity delete: ${JSON.stringify({ entityType, deletedSince })}`);
+
+    const entityClass = AIRTABLE_ENTITIES[entityType];
+    if (entityClass == null) {
+      throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
-    this.logger.log(`Entity update complete: ${JSON.stringify({ entityType })}`);
+
+    const entity = new entityClass();
+    await entity.deleteStaleRecords(this.base, deletedSince);
+
+    this.logger.log(`Completed entity delete: ${JSON.stringify({ entityType, deletedSince })}`);
+    await this.sendSlackUpdate(
+      `Completed deleting rows from table "${entity.TABLE_NAME}" [deletedSince: ${deletedSince}]`
+    );
+  }
+
+  private async updateAll({ updatedSince }: UpdateAllData) {
+    await this.sendSlackUpdate(`:white_check_mark: Beginning sync of all data [changedSince: ${updatedSince}]`);
+    for (const entityType of ENTITY_TYPES) {
+      await this.updateEntities({ entityType, updatedSince });
+      await this.deleteEntities({ entityType, deletedSince: updatedSince });
+    }
+    await this.sendSlackUpdate(`:100: Completed sync of all data [changedSince: ${updatedSince}]`);
+  }
+
+  private async sendSlackUpdate(message: string) {
+    const channel = this.config.get("UDB_SLACK_CHANNEL");
+    if (channel == null) return;
+
+    await this.slack
+      .sendText(`[${process.env.DEPLOY_ENV}]: ${message}`, { channel })
+      // Don't allow a failure in slack sending to hose our process, but do log it and send it to Sentry
+      .catch(error => {
+        Sentry.captureException(error);
+        this.logger.error("Send to slack failed", error.stack);
+      });
   }
 }

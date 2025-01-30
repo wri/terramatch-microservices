@@ -23,6 +23,10 @@ export class Workday extends Model<Workday> {
   @Column(UUID)
   uuid: string;
 
+  @AllowNull
+  @Column(STRING)
+  collection: string | null;
+
   @Column(STRING)
   workdayableType: string;
 

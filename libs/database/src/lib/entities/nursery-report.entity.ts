@@ -10,14 +10,17 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, STRING, UUID } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
+import { ReportStatus, UpdateRequestStatus } from "../constants/status";
+import { FrameworkKey } from "../constants/framework";
 
-// A quick stub for tree endpoints
+// Incomplete stub
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
+  static readonly APPROVED_STATUSES = ["approved"];
   static readonly PARENT_ID = "nurseryId";
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\NurseryReport";
 
@@ -30,6 +33,10 @@ export class NurseryReport extends Model<NurseryReport> {
   @Column(UUID)
   uuid: string;
 
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
   @ForeignKey(() => Nursery)
   @Column(BIGINT.UNSIGNED)
   nurseryId: number;
@@ -37,9 +44,25 @@ export class NurseryReport extends Model<NurseryReport> {
   @BelongsTo(() => Nursery)
   nursery: Nursery | null;
 
+  // TODO foreign key for task
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  taskId: number;
+
+  @Column(STRING)
+  status: ReportStatus;
+
+  @AllowNull
+  @Column(STRING)
+  updateRequestStatus: UpdateRequestStatus | null;
+
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seedlingsYoungTrees: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

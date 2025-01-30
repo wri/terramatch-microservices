@@ -1,7 +1,8 @@
 import { AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, INTEGER, JSON as JSON_TYPE, STRING } from "sequelize";
+import { BIGINT, INTEGER, STRING } from "sequelize";
 import { SitePolygon } from "./site-polygon.entity";
 import { INDICATOR_SLUGS, IndicatorSlug } from "../constants";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "indicator_output_hectares", underscored: true, paranoid: true })
 export class IndicatorOutputHectares extends Model<IndicatorOutputHectares> {
@@ -23,14 +24,6 @@ export class IndicatorOutputHectares extends Model<IndicatorOutputHectares> {
   @Column(INTEGER)
   yearOfAnalysis: number;
 
-  @Column({
-    type: JSON_TYPE,
-    // Sequelize has a bug where when the data for this model is fetched as part of an include on
-    // findAll, the JSON value isn't getting deserialized.
-    get(this: IndicatorOutputHectares): object {
-      const value = this.getDataValue("value");
-      return typeof value === "string" ? JSON.parse(value) : value;
-    }
-  })
+  @JsonColumn()
   value: object;
 }

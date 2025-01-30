@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   AutoIncrement,
   BelongsTo,
   Column,
@@ -9,13 +10,16 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
+import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { SitingStrategy } from "../constants/entity-selects";
+import { Seeding } from "./seeding.entity";
 
-// A quick stub for the research endpoints
+// Incomplete stub
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
@@ -31,7 +35,11 @@ export class Site extends Model<Site> {
   name: string;
 
   @Column(STRING)
-  status: string;
+  status: EntityStatus;
+
+  @AllowNull
+  @Column(STRING)
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @Index
   @Column(UUID)
@@ -43,6 +51,14 @@ export class Site extends Model<Site> {
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  @AllowNull
+  @Column(STRING)
+  sitingStrategy: SitingStrategy | null;
+
+  @AllowNull
+  @Column(TEXT)
+  descriptionSitingStrategy: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
@@ -66,6 +82,18 @@ export class Site extends Model<Site> {
   async loadNonTrees() {
     this.nonTrees ??= await this.$get("nonTrees");
     return this.nonTrees;
+  }
+
+  @HasMany(() => Seeding, {
+    foreignKey: "seedableId",
+    constraints: false,
+    scope: { seedableType: Site.LARAVEL_TYPE }
+  })
+  seedsPlanted: Seeding[] | null;
+
+  async loadSeedsPlanted() {
+    this.seedsPlanted ??= await this.$get("seedsPlanted");
+    return this.seedsPlanted;
   }
 
   @HasMany(() => SiteReport)

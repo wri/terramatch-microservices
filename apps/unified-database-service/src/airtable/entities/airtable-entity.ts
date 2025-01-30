@@ -1,5 +1,5 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, groupBy, isObject, uniq } from "lodash";
+import { cloneDeep, flatten, groupBy, isEmpty, isObject, uniq } from "lodash";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { LoggerService } from "@nestjs/common";
@@ -16,7 +16,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   abstract readonly MODEL: ModelCtor<ModelType>;
   readonly IDENTITY_COLUMN: string = "uuid";
   readonly SUPPORTS_UPDATED_SINCE: boolean = true;
-  readonly HAS_HIDDEN_FLAG: boolean = false;
+  readonly FILTER_FLAGS: string[] = [];
 
   protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
 
@@ -69,8 +69,10 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
       where["updatedAt"] = { [Op.gte]: updatedSince };
     }
-    if (this.HAS_HIDDEN_FLAG) {
-      where["hidden"] = false;
+    if (!isEmpty(this.FILTER_FLAGS)) {
+      for (const flag of this.FILTER_FLAGS) {
+        where[flag] = false;
+      }
     }
 
     return {
@@ -87,17 +89,17 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     const where = {} as WhereOptions<ModelType>;
 
     const deletedAtCondition = { [Op.gte]: deletedSince };
-    if (this.HAS_HIDDEN_FLAG) {
+    if (isEmpty(this.FILTER_FLAGS)) {
+      where["deletedAt"] = deletedAtCondition;
+    } else {
       where[Op.or] = {
         deletedAt: deletedAtCondition,
         // include records that have been hidden since the timestamp as well
         [Op.and]: {
           updatedAt: { ...deletedAtCondition },
-          hidden: true
+          [Op.or]: this.FILTER_FLAGS.reduce((flags, flag) => ({ ...flags, [flag]: true }), {})
         }
       };
-    } else {
-      where["deletedAt"] = deletedAtCondition;
     }
 
     return {

@@ -77,7 +77,7 @@ export class TreeSpeciesEntity extends AirtableEntity<TreeSpecies, TreeSpeciesAs
   readonly TABLE_NAME = "Tree Species";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = TreeSpecies;
-  readonly HAS_HIDDEN_FLAG = true;
+  readonly FILTER_FLAGS = ["hidden"];
 
   protected async loadAssociations(treeSpecies: TreeSpecies[]) {
     return this.loadPolymorphicUuidAssociations(LARAVEL_TYPE_MAPPING, "speciesableType", "speciesableId", treeSpecies);

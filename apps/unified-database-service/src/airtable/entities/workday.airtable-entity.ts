@@ -29,7 +29,7 @@ export class WorkdayEntity extends AirtableEntity<Workday, WorkdayAssociations> 
   readonly TABLE_NAME = "Workdays";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Workday;
-  readonly HAS_HIDDEN_FLAG = true;
+  readonly FILTER_FLAGS = ["hidden"];
 
   protected async loadAssociations(workdays: Workday[]) {
     return this.loadPolymorphicUuidAssociations(LARAVEL_TYPE_MAPPINGS, "workdayableType", "workdayableId", workdays);

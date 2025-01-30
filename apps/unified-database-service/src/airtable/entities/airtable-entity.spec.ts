@@ -457,6 +457,9 @@ describe("AirtableEntity", () => {
         })
       );
 
+      // make sure test projects are not included
+      await ProjectFactory.create({ organisationId: orgId(), isTest: true });
+
       projects = allProjects.filter(project => !project.isSoftDeleted());
       applicationUuids = (
         await Application.findAll({

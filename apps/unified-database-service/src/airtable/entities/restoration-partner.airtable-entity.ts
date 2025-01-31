@@ -23,7 +23,7 @@ export class RestorationPartnerEntity extends AirtableEntity<RestorationPartner,
   readonly TABLE_NAME = "Restoration Partners";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = RestorationPartner;
-  readonly HAS_HIDDEN_FLAG = true;
+  readonly FILTER_FLAGS = ["hidden"];
 
   protected async loadAssociations(partners: RestorationPartner[]) {
     return this.loadPolymorphicUuidAssociations(LARAVEL_TYPE_MAPPINGS, "partnerableType", "partnerableId", partners);

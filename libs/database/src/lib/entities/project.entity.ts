@@ -20,6 +20,7 @@ import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
+import { Framework } from "./framework.entity";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -38,6 +39,9 @@ export class Project extends Model<Project> {
   @AllowNull
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
+
+  @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
+  framework: Framework | null;
 
   @Default(false)
   @Column(BOOLEAN)

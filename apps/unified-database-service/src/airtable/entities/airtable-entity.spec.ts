@@ -2,22 +2,21 @@ import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-en
 import { faker } from "@faker-js/faker";
 import {
   Application,
-  Demographic,
+  DemographicEntry,
   Framework,
   Nursery,
   NurseryReport,
   Organisation,
   Project,
   ProjectReport,
-  RestorationPartner,
   Site,
   SiteReport,
   TreeSpecies,
-  Workday
+  Demographic
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
-  DemographicFactory,
+  DemographicEntryFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
   NurseryFactory,
@@ -25,28 +24,26 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectReportFactory,
-  RestorationPartnerFactory,
   SeedingFactory,
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
   TreeSpeciesFactory,
-  WorkdayFactory
+  DemographicFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {
   ApplicationEntity,
   DemographicEntity,
+  DemographicEntryEntity,
   NurseryEntity,
   NurseryReportEntity,
   OrganisationEntity,
   ProjectEntity,
   ProjectReportEntity,
-  RestorationPartnerEntity,
   SiteEntity,
   SiteReportEntity,
-  TreeSpeciesEntity,
-  WorkdayEntity
+  TreeSpeciesEntity
 } from "./";
 import { orderBy, sortBy } from "lodash";
 import { Model } from "sequelize-typescript";
@@ -278,14 +275,86 @@ describe("AirtableEntity", () => {
       await Demographic.truncate();
 
       associationUuids = {};
-      const workday = await WorkdayFactory.forProjectReport.create();
-      associationUuids[Workday.LARAVEL_TYPE] = workday.uuid;
-      const partner = await RestorationPartnerFactory.forProjectReport.create();
-      associationUuids[RestorationPartner.LARAVEL_TYPE] = partner.uuid;
+      const projectReport = await ProjectReportFactory.create();
+      associationUuids[ProjectReport.LARAVEL_TYPE] = projectReport.uuid;
+      const siteReport = await SiteReportFactory.create();
+      associationUuids[SiteReport.LARAVEL_TYPE] = siteReport.uuid;
 
       const factories = [
-        () => DemographicFactory.forWorkday.create({ demographicalId: workday.id }),
-        () => DemographicFactory.forRestorationPartner.create({ demographicalId: partner.id })
+        () => DemographicFactory.forProjectReportWorkday.create({ demographicalId: projectReport.id }),
+        () => DemographicFactory.forSiteReportWorkday.create({ demographicalId: siteReport.id }),
+        () => DemographicFactory.forProjectReportRestorationPartner.create({ demographicalId: projectReport.id })
+      ];
+
+      const allDemographics: Demographic[] = [];
+      for (const factory of factories) {
+        // make sure we have at least one of each type
+        allDemographics.push(await factory());
+      }
+      for (let ii = 0; ii < 35; ii++) {
+        // create a whole bunch mor at random
+        allDemographics.push(await faker.helpers.arrayElement(factories)());
+      }
+      const toDeleteOrHide = faker.helpers.uniqueArray(() => faker.number.int(allDemographics.length - 1), 10);
+      let hide = true;
+      for (const ii of toDeleteOrHide) {
+        if (hide) {
+          await allDemographics[ii].update({ hidden: true });
+        } else {
+          await allDemographics[ii].destroy();
+        }
+        hide = !hide;
+      }
+
+      // create one with a bogus association type for testing
+      allDemographics.push(
+        await DemographicFactory.forProjectReportWorkday.create({ demographicalType: "foo", demographicalId: 1 })
+      );
+      allDemographics.push(await DemographicFactory.forSiteReportWorkday.create({ demographicalId: 0 }));
+
+      demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && workday.hidden === false);
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new DemographicEntity(),
+        demographics,
+        ({ uuid, collection, demographicalType, demographicalId }) => ({
+          fields: {
+            uuid,
+            collection,
+            projectReportUuid:
+              demographicalType === ProjectReport.LARAVEL_TYPE ? associationUuids[demographicalType] : undefined,
+            siteReportUuid:
+              demographicalType === SiteReport.LARAVEL_TYPE && demographicalId > 0
+                ? associationUuids[demographicalType]
+                : undefined
+          }
+        })
+      );
+    });
+  });
+
+  describe("DemographicEntryEntity", () => {
+    let demographicUuids: Record<number, string>;
+    let entries: DemographicEntry[];
+
+    beforeAll(async () => {
+      await DemographicEntry.truncate();
+
+      const projectWorkday = await DemographicFactory.forProjectReportWorkday.create();
+      const siteWorkday = await DemographicFactory.forSiteReportWorkday.create();
+      const projectPartner = await DemographicFactory.forProjectReportRestorationPartner.create();
+      demographicUuids = {
+        [projectWorkday.id]: projectWorkday.uuid,
+        [siteWorkday.id]: siteWorkday.uuid,
+        [projectPartner.id]: projectPartner.uuid
+      };
+
+      const factories = [
+        () => DemographicEntryFactory.create({ demographicId: projectWorkday.id }),
+        () => DemographicEntryFactory.create({ demographicId: siteWorkday.id }),
+        () => DemographicEntryFactory.create({ demographicId: projectPartner.id })
       ];
 
       const allDemographics = [];
@@ -301,23 +370,21 @@ describe("AirtableEntity", () => {
         await allDemographics[ii].destroy();
       }
 
-      demographics = allDemographics.filter(demographic => !demographic.isSoftDeleted());
+      entries = allDemographics.filter(demographic => !demographic.isSoftDeleted());
     });
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new DemographicEntity(),
-        demographics,
-        ({ id, type, subtype, name, amount, demographicalType }) => ({
+        new DemographicEntryEntity(),
+        entries,
+        ({ id, type, subtype, name, amount, demographicId }) => ({
           fields: {
             id,
             type,
             subtype,
             name,
             amount,
-            workdayUuid: demographicalType === Workday.LARAVEL_TYPE ? associationUuids[demographicalType] : undefined,
-            restorationPartnerUuid:
-              demographicalType === RestorationPartner.LARAVEL_TYPE ? associationUuids[demographicalType] : undefined
+            demographicUuid: demographicUuids[demographicId]
           }
         })
       );
@@ -589,66 +656,6 @@ describe("AirtableEntity", () => {
     });
   });
 
-  describe("RestorationPartnerEntity", () => {
-    let associationUuids: Record<string, string>;
-    let partners: RestorationPartner[];
-
-    beforeAll(async () => {
-      await RestorationPartner.truncate();
-
-      associationUuids = {};
-      const projectReport = await ProjectReportFactory.create();
-      associationUuids[ProjectReport.LARAVEL_TYPE] = projectReport.uuid;
-
-      const factories = [() => RestorationPartnerFactory.forProjectReport.create({ partnerableId: projectReport.id })];
-
-      const allPartners: RestorationPartner[] = [];
-      for (const factory of factories) {
-        // make sure we have at least one of each type
-        allPartners.push(await factory());
-      }
-      for (let ii = 0; ii < 35; ii++) {
-        // create a whole bunch mor at random
-        allPartners.push(await faker.helpers.arrayElement(factories)());
-      }
-      const toDeleteOrHide = faker.helpers.uniqueArray(() => faker.number.int(allPartners.length - 1), 10);
-      let hide = true;
-      for (const ii of toDeleteOrHide) {
-        if (hide) {
-          await allPartners[ii].update({ hidden: true });
-        } else {
-          await allPartners[ii].destroy();
-        }
-        hide = !hide;
-      }
-
-      // create one with a bogus association type for testing
-      allPartners.push(
-        await RestorationPartnerFactory.forProjectReport.create({ partnerableType: "foo", partnerableId: 1 })
-      );
-      allPartners.push(await RestorationPartnerFactory.forProjectReport.create({ partnerableId: 0 }));
-
-      partners = allPartners.filter(partner => !partner.isSoftDeleted() && partner.hidden === false);
-    });
-
-    it("sends all records to airtable", async () => {
-      await testAirtableUpdates(
-        new RestorationPartnerEntity(),
-        partners,
-        ({ uuid, collection, partnerableType, partnerableId }) => ({
-          fields: {
-            uuid,
-            collection,
-            projectReportUuid:
-              partnerableType === ProjectReport.LARAVEL_TYPE && partnerableId > 0
-                ? associationUuids[partnerableType]
-                : undefined
-          }
-        })
-      );
-    });
-  });
-
   describe("SiteEntity", () => {
     let projectUuids: Record<number, string>;
     let sites: Site[];
@@ -812,71 +819,6 @@ describe("AirtableEntity", () => {
       const result = new Test().getDeletePageFindOptions(deletedSince, 0);
       expect(result.where[Op.or]).not.toBeNull();
       expect(result.where[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
-    });
-  });
-
-  describe("WorkdayEntity", () => {
-    let associationUuids: Record<string, string>;
-    let workdays: Workday[];
-
-    beforeAll(async () => {
-      await Workday.truncate();
-
-      associationUuids = {};
-      const projectReport = await ProjectReportFactory.create();
-      associationUuids[ProjectReport.LARAVEL_TYPE] = projectReport.uuid;
-      const siteReport = await SiteReportFactory.create();
-      associationUuids[SiteReport.LARAVEL_TYPE] = siteReport.uuid;
-
-      const factories = [
-        () => WorkdayFactory.forProjectReport.create({ workdayableId: projectReport.id }),
-        () => WorkdayFactory.forSiteReport.create({ workdayableId: siteReport.id })
-      ];
-
-      const allWorkdays: Workday[] = [];
-      for (const factory of factories) {
-        // make sure we have at least one of each type
-        allWorkdays.push(await factory());
-      }
-      for (let ii = 0; ii < 35; ii++) {
-        // create a whole bunch mor at random
-        allWorkdays.push(await faker.helpers.arrayElement(factories)());
-      }
-      const toDeleteOrHide = faker.helpers.uniqueArray(() => faker.number.int(allWorkdays.length - 1), 10);
-      let hide = true;
-      for (const ii of toDeleteOrHide) {
-        if (hide) {
-          await allWorkdays[ii].update({ hidden: true });
-        } else {
-          await allWorkdays[ii].destroy();
-        }
-        hide = !hide;
-      }
-
-      // create one with a bogus assocation type for testing
-      allWorkdays.push(await WorkdayFactory.forProjectReport.create({ workdayableType: "foo", workdayableId: 1 }));
-      allWorkdays.push(await WorkdayFactory.forSiteReport.create({ workdayableId: 0 }));
-
-      workdays = allWorkdays.filter(workday => !workday.isSoftDeleted() && workday.hidden === false);
-    });
-
-    it("sends all records to airtable", async () => {
-      await testAirtableUpdates(
-        new WorkdayEntity(),
-        workdays,
-        ({ uuid, collection, workdayableType, workdayableId }) => ({
-          fields: {
-            uuid,
-            collection,
-            projectReportUuid:
-              workdayableType === ProjectReport.LARAVEL_TYPE ? associationUuids[workdayableType] : undefined,
-            siteReportUuid:
-              workdayableType === SiteReport.LARAVEL_TYPE && workdayableId > 0
-                ? associationUuids[workdayableType]
-                : undefined
-          }
-        })
-      );
     });
   });
 });

@@ -1,20 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { User, LocalizationKey } from '@terramatch-microservices/database/entities';
-import { ResetPasswordResponseDto } from './dto/reset-password-response.dto';
-import { ResetPasswordResponseOperationDto } from "./dto/reset-password-response-operation.dto";
+import { User } from '@terramatch-microservices/database/entities';
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 @Injectable()
 export class ResetPasswordService {
-
   private readonly logger: Logger;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
-
+    private readonly localizationService: LocalizationService
   ) {
     this.logger = new Logger(ResetPasswordService.name);
   }
@@ -25,46 +23,59 @@ export class ResetPasswordService {
       throw new NotFoundException('User not found');
     }
 
-    const localizationKeys = await LocalizationKey.findOne({where: { key: 'reset-password.body'}});
+    const bodyKey = 'reset-password.body';
+    const subjectKey = 'reset-password.subject';
 
-    if (localizationKeys == null) {
+    const localizationKeys = await this.localizationService.getLocalizationKeys([bodyKey, subjectKey]);
+
+    if (!localizationKeys.length) {
+      throw new NotFoundException('Localizations not found');
+    }
+
+    const bodyLocalization = localizationKeys.find(x => x.key == bodyKey);
+    const subjectLocalization = localizationKeys.find(x => x.key == subjectKey);
+
+    if (bodyLocalization == null) {
       throw new NotFoundException('Localization body not found');
     }
 
-    const resetToken = await this.jwtService.signAsync(
-      { sub: user.uuid }, // user id as the subject
-      { expiresIn: '2h' } // token expires in 2 hour
-    );
+    if (subjectLocalization == null) {
+      throw new NotFoundException('Localization subject not found');
+    }
 
+    const resetToken = await this.jwtService.signAsync({ sub: user.uuid }, { expiresIn: "2h" });
+
+    const bodyEmailContent = await this.localizationService.translate(bodyLocalization.value, user.locale);
     const resetLink = `${callbackUrl}/${resetToken}`;
-    const bodyEmail = localizationKeys.value.replace('link', `<a href="${resetLink}" target="_blank">link</a>`);
-    await this.emailService.sendEmail(
-      user.emailAddress,
-      'Reset Password', // TODO add localization
-      bodyEmail,
-    );
+    const bodyEmail = this.formatBody(bodyEmailContent, resetLink);
+    await this.emailService.sendEmail(user.emailAddress, subjectLocalization.value, bodyEmail);
 
-    return {email: user.emailAddress, uuid: user.uuid, userId: user.id};
+    return { email: user.emailAddress, uuid: user.uuid, userId: user.id };
+  }
+
+  private formatBody(bodyEmailContent: string, resetLink: string) {
+    const anchor = `<a href="${resetLink}" target="_blank">link</a>`;
+    return bodyEmailContent.replace('link', anchor).replace('enlace', anchor).replace('lien', anchor);
   }
 
   async resetPassword(resetToken: string, newPassword: string) {
-    let userId;
+    let userGuid;
     try {
       const payload = await this.jwtService.verifyAsync(resetToken);
-      userId = payload.sub;
+      userGuid = payload.sub;
     } catch (error) {
       this.logger.error(error);
       throw new BadRequestException('Provided token is invalid or expired');
     }
 
-    const user = await User.findOne({ where: { uuid: userId } });
+    const user = await User.findOne({ where: { uuid: userGuid } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.update({ password: hashedPassword }, { where: { id: userId } });
+    await User.update({ password: hashedPassword }, { where: { id: user.id } });
 
-    return new ResetPasswordResponseOperationDto({ userId: user.id, message: 'Password successfully reset' });
+    return { email: user.emailAddress, uuid: user.uuid, userId: user.id };
   }
 }

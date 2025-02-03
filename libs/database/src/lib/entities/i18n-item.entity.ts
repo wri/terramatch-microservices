@@ -32,4 +32,8 @@ export class i18nItem extends Model<i18nItem> {
   @Column(STRING)
   longValue: string | null;
 
+  @AllowNull
+  @Column(STRING)
+  hash: string | null;
+
 }

@@ -16,10 +16,4 @@ export class ResetPasswordResponseDto extends JsonApiAttributes<ResetPasswordRes
     example: 'user@example.com',
   })
   emailAddress: string;
-
-  @ApiProperty({
-    description: 'User Id',
-    example: '12345',
-  })
-  userId: number;
 }

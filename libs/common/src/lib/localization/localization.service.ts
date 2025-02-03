@@ -7,10 +7,6 @@ import { Op } from "sequelize";
 @Injectable()
 export class LocalizationService {
 
-  async getLocalizationKey(key: string): Promise<LocalizationKey | null> {
-    return await LocalizationKey.findOne({where: { key }});
-  }
-
   async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
     return await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } });
   }

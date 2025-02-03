@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
-import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";;
+import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";
 import { Op } from "sequelize";
 
 

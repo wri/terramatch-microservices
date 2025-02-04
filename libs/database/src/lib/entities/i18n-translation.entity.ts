@@ -1,16 +1,8 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column,
-  Model,
-  PrimaryKey,
-  Table, Unique
-} from "sequelize-typescript";
-import { BIGINT, INTEGER, NUMBER, STRING } from "sequelize";
+import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { BIGINT, INTEGER, STRING, TEXT } from "sequelize";
 
-@Table({ tableName: "i18n_translations", underscored: true, paranoid: false })
+@Table({ tableName: "i18n_translations", underscored: true })
 export class i18nTranslation extends Model<i18nTranslation> {
-
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -30,7 +22,6 @@ export class i18nTranslation extends Model<i18nTranslation> {
   shortValue: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(TEXT)
   longValue: string | null;
-
 }

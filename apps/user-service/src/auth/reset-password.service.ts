@@ -1,24 +1,24 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, Logger, LoggerService } from "@nestjs/common";
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@terramatch-microservices/database/entities';
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 
 @Injectable()
 export class ResetPasswordService {
-  private readonly logger: Logger;
+
+  protected readonly logger: LoggerService = new TMLogService(ResetPasswordService.name);
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
     private readonly localizationService: LocalizationService
-  ) {
-    this.logger = new Logger(ResetPasswordService.name);
-  }
+  ) {}
 
   async sendResetPasswordEmail(emailAddress: string, callbackUrl: string) {
-    const user = await User.findOne({ where: { emailAddress } });
+    const user = await User.findOne({ where: { emailAddress }, attributes: ["id", "uuid", "locale"] });
     if (user == null) {
       throw new NotFoundException('User not found');
     }
@@ -50,7 +50,7 @@ export class ResetPasswordService {
     const bodyEmail = this.formatBody(bodyEmailContent, resetLink);
     await this.emailService.sendEmail(user.emailAddress, subjectLocalization.value, bodyEmail);
 
-    return { email: user.emailAddress, uuid: user.uuid, userId: user.id };
+    return { email: user.emailAddress, userId: user.id };
   }
 
   private formatBody(bodyEmailContent: string, resetLink: string) {
@@ -68,7 +68,7 @@ export class ResetPasswordService {
       throw new BadRequestException('Provided token is invalid or expired');
     }
 
-    const user = await User.findOne({ where: { uuid: userGuid } });
+    const user = await User.findOne({ where: { uuid: userGuid }, attributes: ["id", "uuid"] });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -76,6 +76,6 @@ export class ResetPasswordService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.update({ password: hashedPassword }, { where: { id: user.id } });
 
-    return { email: user.emailAddress, uuid: user.uuid, userId: user.id };
+    return { email: user.emailAddress, userId: user.id };
   }
 }

@@ -4,9 +4,9 @@ import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class TranslationService {
-  constructor(private readonly configService: ConfigService,) {
+  constructor(configService: ConfigService,) {
     tx.init({
-      token: this.configService.get('TRANSIFEX_TOKEN'),
+      token: configService.get('TRANSIFEX_TOKEN'),
     });
   }
 

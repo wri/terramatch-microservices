@@ -76,7 +76,7 @@ describe('ResetPasswordService', () => {
     const result = await service.sendResetPasswordEmail('user@gmail.com', 'https://example.com/auth/reset-password');
     expect(jwtService.signAsync).toHaveBeenCalled()
     expect(emailService.sendEmail).toHaveBeenCalled();
-    expect(result).toStrictEqual({ email: user.emailAddress, uuid: user.uuid, userId: user.id });
+    expect(result).toStrictEqual({ email: user.emailAddress, userId: user.id });
   });
 
   it('should an error when invalid token', async () => {
@@ -99,7 +99,7 @@ describe('ResetPasswordService', () => {
     const token = await jwtService.signAsync({ sub: user.uuid }, { expiresIn: "2h" })
     const result = await service.resetPassword(token, newPassword);
     expect(jwtService.verifyAsync).toHaveBeenCalled()
-    expect(result).toStrictEqual({ email: user.emailAddress, uuid: user.uuid, userId: user.id });
+    expect(result).toStrictEqual({ email: user.emailAddress, userId: user.id });
   });
 
 });

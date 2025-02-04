@@ -47,11 +47,15 @@ describe('ResetPasswordService', () => {
   });
 
   it('should throw when localizations not found', async () => {
+    const user = await UserFactory.create();
+    jest.spyOn(User, 'findOne').mockImplementation(() => Promise.resolve(user));
     localizationService.getLocalizationKeys.mockReturnValue(Promise.resolve([]))
     await expect(service.sendResetPasswordEmail('user@gmail.com', 'https://example.com/auth/reset-password')).rejects.toThrow(new NotFoundException("Localizations not found"));
   });
 
   it('should throw when localization body not found', async () => {
+    const user = await UserFactory.create();
+    jest.spyOn(User, 'findOne').mockImplementation(() => Promise.resolve(user));
     const localizationSubject = await LocalizationKeyFactory.create({ key: 'reset-password.subject', value: 'Reset Password' });
     localizationService.getLocalizationKeys.mockReturnValue(Promise.resolve([localizationSubject]))
     await expect(service.sendResetPasswordEmail('user@gmail.com', 'https://example.com/auth/reset-password')).rejects.toThrow(new NotFoundException("Localization body not found"));

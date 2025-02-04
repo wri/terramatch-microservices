@@ -7,16 +7,15 @@ import Airtable from "airtable";
 import {
   ApplicationEntity,
   DemographicEntity,
+  DemographicEntryEntity,
   NurseryEntity,
   NurseryReportEntity,
   OrganisationEntity,
   ProjectEntity,
   ProjectReportEntity,
-  RestorationPartnerEntity,
   SiteEntity,
   SiteReportEntity,
-  TreeSpeciesEntity,
-  WorkdayEntity
+  TreeSpeciesEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
 import { SlackService } from "nestjs-slack";
@@ -24,16 +23,15 @@ import { SlackService } from "nestjs-slack";
 export const AIRTABLE_ENTITIES = {
   application: ApplicationEntity,
   demographic: DemographicEntity,
+  "demographic-entry": DemographicEntryEntity,
   nursery: NurseryEntity,
   "nursery-report": NurseryReportEntity,
   organisation: OrganisationEntity,
   project: ProjectEntity,
   "project-report": ProjectReportEntity,
-  "restoration-partner": RestorationPartnerEntity,
   site: SiteEntity,
   "site-report": SiteReportEntity,
-  "tree-species": TreeSpeciesEntity,
-  workday: WorkdayEntity
+  "tree-species": TreeSpeciesEntity
 };
 
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;

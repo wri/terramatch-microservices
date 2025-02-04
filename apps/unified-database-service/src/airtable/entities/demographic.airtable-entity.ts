@@ -1,37 +1,36 @@
-import { Demographic, RestorationPartner, Workday } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associatedValueColumn, ColumnMapping, PolymorphicUuidAssociation } from "./airtable-entity";
+import { ProjectReport, SiteReport, Demographic } from "@terramatch-microservices/database/entities";
 
 const LARAVEL_TYPE_MAPPINGS: Record<string, PolymorphicUuidAssociation<DemographicAssociations>> = {
-  [Workday.LARAVEL_TYPE]: {
-    association: "workdayUuid",
-    model: Workday
+  [ProjectReport.LARAVEL_TYPE]: {
+    association: "projectReportUuid",
+    model: ProjectReport
   },
-  [RestorationPartner.LARAVEL_TYPE]: {
-    association: "restorationPartnerUuid",
-    model: RestorationPartner
+  [SiteReport.LARAVEL_TYPE]: {
+    association: "siteReportUuid",
+    model: SiteReport
   }
 };
 
 type DemographicAssociations = {
-  workdayUuid?: string;
-  restorationPartnerUuid?: string;
+  projectReportUuid?: string;
+  siteReportUuid?: string;
 };
 
 const COLUMNS: ColumnMapping<Demographic, DemographicAssociations>[] = [
-  "id",
+  "uuid",
   "type",
-  "subtype",
-  "name",
-  "amount",
-  associatedValueColumn("workdayUuid", ["demographicalType", "demographicalId"]),
-  associatedValueColumn("restorationPartnerUuid", ["demographicalType", "demographicalId"])
+  "collection",
+  "description",
+  associatedValueColumn("projectReportUuid", ["demographicalId", "demographicalType"]),
+  associatedValueColumn("siteReportUuid", ["demographicalId", "demographicalType"])
 ];
 
 export class DemographicEntity extends AirtableEntity<Demographic, DemographicAssociations> {
   readonly TABLE_NAME = "Demographics";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Demographic;
-  readonly IDENTITY_COLUMN = "id";
+  readonly FILTER_FLAGS = ["hidden"];
 
   protected async loadAssociations(demographics: Demographic[]) {
     return this.loadPolymorphicUuidAssociations(

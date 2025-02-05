@@ -2,6 +2,16 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
 import { i18nItem, i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { ConfigService } from "@nestjs/config";
+import { tx } from "@transifex/native";
+
+jest.mock("@transifex/native", () => ({
+  tx: {
+    init: jest.fn(),
+    setCurrentLocale: jest.fn(),
+    t: jest.fn()
+  },
+  normalizeLocale: jest.fn()
+}));
 
 describe("LocalizationService", () => {
   let service: LocalizationService;
@@ -59,5 +69,18 @@ describe("LocalizationService", () => {
     jest.spyOn(i18nTranslation, "findOne").mockImplementation(() => Promise.resolve(null));
     const result = await service.translate("content translate", "es-MX");
     expect(result).toBe("content translate");
+  });
+
+  it("should translate text correctly", async () => {
+    const text = "Hello";
+    const locale = "es_MX";
+    const translatedText = "Hola";
+
+    (tx.setCurrentLocale as jest.Mock).mockResolvedValue(undefined);
+    (tx.t as jest.Mock).mockReturnValue(translatedText);
+
+    const result = await service.localizeText(text, locale);
+    expect(tx.t).toHaveBeenCalledWith(text);
+    expect(result).toBe(translatedText);
   });
 });

@@ -3,7 +3,7 @@ import { i18nTranslation, LocalizationKey } from "@terramatch-microservices/data
 import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
-import { normalizeLocale, t, tx } from "@transifex/native";
+import { normalizeLocale, tx } from "@transifex/native";
 
 @Injectable()
 export class LocalizationService {
@@ -55,6 +55,6 @@ export class LocalizationService {
     await tx.setCurrentLocale(txLocale);
 
     // Translate the text
-    return t(text);
+    return tx.t(text);
   }
 }

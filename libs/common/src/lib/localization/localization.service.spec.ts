@@ -8,7 +8,15 @@ describe("LocalizationService", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LocalizationService, ConfigService]
+      providers: [
+        LocalizationService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue("mocked value")
+          }
+        }
+      ]
     }).compile();
 
     service = module.get<LocalizationService>(LocalizationService);

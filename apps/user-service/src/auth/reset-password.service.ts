@@ -17,7 +17,7 @@ export class ResetPasswordService {
   ) {}
 
   async sendResetPasswordEmail(emailAddress: string, callbackUrl: string) {
-    const user = await User.findOne({ where: { emailAddress }, attributes: ["id", "uuid", "locale"] });
+    const user = await User.findOne({ where: { emailAddress }, attributes: ["id", "uuid", "locale", "emailAddress"] });
     if (user == null) {
       throw new NotFoundException("User not found");
     }
@@ -47,9 +47,10 @@ export class ResetPasswordService {
     const bodyEmailContent = await this.localizationService.translate(bodyLocalization.value, user.locale);
     const resetLink = `${callbackUrl}/${resetToken}`;
     const bodyEmail = this.formatBody(bodyEmailContent, resetLink);
+    console.log(user.emailAddress);
     await this.emailService.sendEmail(user.emailAddress, subjectLocalization.value, bodyEmail);
 
-    return { email: user.emailAddress, userId: user.id };
+    return { email: user.emailAddress, uuid: user.uuid };
   }
 
   private formatBody(bodyEmailContent: string, resetLink: string) {
@@ -67,7 +68,7 @@ export class ResetPasswordService {
       throw new BadRequestException("Provided token is invalid or expired");
     }
 
-    const user = await User.findOne({ where: { uuid: userGuid }, attributes: ["id", "uuid"] });
+    const user = await User.findOne({ where: { uuid: userGuid }, attributes: ["id", "uuid", "emailAddress"] });
     if (!user) {
       throw new NotFoundException("User not found");
     }
@@ -75,6 +76,6 @@ export class ResetPasswordService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.update({ password: hashedPassword }, { where: { id: user.id } });
 
-    return { email: user.emailAddress, userId: user.id };
+    return { email: user.emailAddress, uuid: user.uuid };
   }
 }

@@ -3,6 +3,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ResetPasswordController } from "./reset-password.controller";
 import { ResetPasswordService } from "./reset-password.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { faker } from "@faker-js/faker/locale/ar";
 
 describe("ResetPasswordController", () => {
   let controller: ResetPasswordController;
@@ -25,12 +26,12 @@ describe("ResetPasswordController", () => {
 
   it("should send a password reset email", async () => {
     const email = "user1@example.com";
-    const userId = 19191;
-    resetPasswordService.sendResetPasswordEmail.mockResolvedValue({ userId, email });
+    const uuid = faker.string.uuid();
+    resetPasswordService.sendResetPasswordEmail.mockResolvedValue({ uuid, email });
 
     const result = await controller.requestReset({ emailAddress: email, callbackUrl: "http://example.com" });
     expect(result).toMatchObject({
-      data: { id: `${userId}`, type: "passwordResets", attributes: { emailAddress: email } }
+      data: { id: uuid, type: "passwordResets", attributes: { emailAddress: email } }
     });
   });
 
@@ -54,13 +55,13 @@ describe("ResetPasswordController", () => {
 
   it("should reset password", async () => {
     const email = "user1@example.com";
-    const userId = 19191;
-    resetPasswordService.resetPassword.mockResolvedValue({ userId, email });
+    const uuid = faker.string.uuid();
+    resetPasswordService.resetPassword.mockResolvedValue({ uuid, email });
     const token = "fake";
 
     const result = await controller.resetPassword(token, { newPassword: "superpassword" });
     expect(result).toMatchObject({
-      data: { id: `${userId}`, type: "passwordResets", attributes: { emailAddress: email } }
+      data: { id: uuid, type: "passwordResets", attributes: { emailAddress: email } }
     });
   });
 

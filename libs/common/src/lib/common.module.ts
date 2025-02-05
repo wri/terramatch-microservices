@@ -1,14 +1,13 @@
-import { Module } from '@nestjs/common';
-import { RequestContextModule } from 'nestjs-request-context';
-import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './guards';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PolicyService } from './policies/policy.service';
-import { TMLogService } from './util/tm-log.service';
-import { LocalizationService } from './localization/localization.service';
-import { TranslationService } from './localization/translation.service';
-import { EmailService } from './email/email.service';
+import { Module } from "@nestjs/common";
+import { RequestContextModule } from "nestjs-request-context";
+import { APP_GUARD } from "@nestjs/core";
+import { AuthGuard } from "./guards";
+import { JwtModule } from "@nestjs/jwt";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { PolicyService } from "./policies/policy.service";
+import { TMLogService } from "./util/tm-log.service";
+import { LocalizationService } from "./localization/localization.service";
+import { EmailService } from "./email/email.service";
 
 @Module({
   imports: [
@@ -17,18 +16,17 @@ import { EmailService } from './email/email.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-      }),
-    }),
+        secret: configService.get<string>("JWT_SECRET")
+      })
+    })
   ],
   providers: [
     PolicyService,
     { provide: APP_GUARD, useClass: AuthGuard },
     TMLogService,
     EmailService,
-    LocalizationService,
-    TranslationService,
+    LocalizationService
   ],
-  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, TranslationService],
+  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService]
 })
 export class CommonModule {}

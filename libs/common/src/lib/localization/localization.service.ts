@@ -2,9 +2,17 @@ import { Injectable } from "@nestjs/common";
 import { i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";
 import { Op } from "sequelize";
+import { ConfigService } from "@nestjs/config";
+import { normalizeLocale, t, tx } from "@transifex/native";
 
 @Injectable()
 export class LocalizationService {
+  constructor(configService: ConfigService) {
+    tx.init({
+      token: configService.get("TRANSIFEX_TOKEN")
+    });
+  }
+
   async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
     return await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } });
   }
@@ -31,5 +39,22 @@ export class LocalizationService {
       return content;
     }
     return translationResult.shortValue || translationResult.longValue;
+  }
+
+  /**
+   * Translate text to the target locale.
+   * @param text The text to translate.
+   * @param locale The target locale (e.g., 'es', 'fr').
+   * @returns The translated text.
+   */
+  async localizeText(text: string, locale: string): Promise<string> {
+    // Set the locale for the SDK
+
+    const txLocale = normalizeLocale(locale);
+
+    await tx.setCurrentLocale(txLocale);
+
+    // Translate the text
+    return t(text);
   }
 }

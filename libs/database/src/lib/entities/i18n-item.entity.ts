@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, DataTypes, STRING, TEXT } from "sequelize";
+import { BIGINT, STRING, TEXT } from "sequelize";
 
 @Table({ tableName: "i18n_items", underscored: true })
 export class i18nItem extends Model<i18nItem> {
@@ -13,7 +13,7 @@ export class i18nItem extends Model<i18nItem> {
   status: string | null;
 
   @AllowNull
-  @Column(DataTypes.STRING(255))
+  @Column(STRING)
   type: string | null;
 
   @AllowNull

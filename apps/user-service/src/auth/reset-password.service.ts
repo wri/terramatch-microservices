@@ -47,7 +47,6 @@ export class ResetPasswordService {
     const bodyEmailContent = await this.localizationService.translate(bodyLocalization.value, user.locale);
     const resetLink = `${callbackUrl}/${resetToken}`;
     const bodyEmail = this.formatBody(bodyEmailContent, resetLink);
-    console.log(user.emailAddress);
     await this.emailService.sendEmail(user.emailAddress, subjectLocalization.value, bodyEmail);
 
     return { email: user.emailAddress, uuid: user.uuid };

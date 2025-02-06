@@ -1,7 +1,7 @@
-import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, STRING } from "sequelize";
+import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, STRING, UUID } from "sequelize";
 
-// A quick stub to get the information needed for users/me
+// Incomplete stub
 @Table({ tableName: "frameworks", underscored: true })
 export class Framework extends Model<Framework> {
   @PrimaryKey
@@ -9,6 +9,11 @@ export class Framework extends Model<Framework> {
   @Column(BIGINT.UNSIGNED)
   override id: number;
 
+  @Index
+  @Column(UUID)
+  uuid: string;
+
+  @Index
   @Column(STRING(20))
   slug: string;
 

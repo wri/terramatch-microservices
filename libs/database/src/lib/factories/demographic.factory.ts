@@ -1,44 +1,37 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Demographic, RestorationPartner, Workday } from "../entities";
-import { WorkdayFactory } from "./workday.factory";
+import { ProjectReport, SiteReport, Demographic } from "../entities";
+import { ProjectReportFactory } from "./project-report.factory";
+import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
-import { RestorationPartnerFactory } from "./restoration-partner.factory";
 
-const TYPES = ["gender", "age", "ethnicity", "caste"];
-const NAMES: Record<string, (null | string)[]> = {
-  gender: ["male", "female", "non-binary"],
-  age: ["youth", "adult", "elder"],
-  ethnicity: ["Cuyono", "Tupiniquim", "Visaya"],
-  caste: ["marginalized"]
-};
-const SUBTYPES: Record<string, (null | string)[]> = {
-  gender: [null],
-  age: [null],
-  ethnicity: ["indigenous", "unknown", "other"],
-  caste: [null]
-};
-
-const defaultAttributesFactory = async () => {
-  const type = faker.helpers.arrayElement(TYPES);
-  return {
-    uuid: crypto.randomUUID(),
-    amount: faker.number.int({ min: 10, max: 100 }),
-    type,
-    subtype: faker.helpers.arrayElement(SUBTYPES[type] ?? [null]),
-    name: faker.helpers.arrayElement(NAMES[type] ?? [null])
-  };
-};
+const defaultAttributesFactory = async () => ({
+  uuid: crypto.randomUUID(),
+  description: null,
+  hidden: false
+});
 
 export const DemographicFactory = {
-  forWorkday: FactoryGirl.define(Demographic, async () => ({
+  forProjectReportWorkday: FactoryGirl.define(Demographic, async () => ({
     ...(await defaultAttributesFactory()),
-    demographicalType: Workday.LARAVEL_TYPE,
-    demographicalId: WorkdayFactory.forProjectReport.associate("id")
+    demographicalType: ProjectReport.LARAVEL_TYPE,
+    demographicalId: ProjectReportFactory.associate("id"),
+    type: "workdays",
+    collection: faker.helpers.arrayElement(ProjectReport.WORKDAY_COLLECTIONS)
   })),
 
-  forRestorationPartner: FactoryGirl.define(Demographic, async () => ({
+  forSiteReportWorkday: FactoryGirl.define(Demographic, async () => ({
     ...(await defaultAttributesFactory()),
-    demographicalType: RestorationPartner.LARAVEL_TYPE,
-    demographicalId: RestorationPartnerFactory.forProjectReport.associate("id")
+    demographicalType: SiteReport.LARAVEL_TYPE,
+    demographicalId: SiteReportFactory.associate("id"),
+    type: "workdays",
+    collection: faker.helpers.arrayElement(SiteReport.WORKDAY_COLLECTIONS)
+  })),
+
+  forProjectReportRestorationPartner: FactoryGirl.define(Demographic, async () => ({
+    ...(await defaultAttributesFactory()),
+    demographicalType: ProjectReport.LARAVEL_TYPE,
+    demographicalId: ProjectReportFactory.associate("id"),
+    type: "restoration-partners",
+    collection: faker.helpers.arrayElement(ProjectReport.RESTORATION_PARTNER_COLLECTIONS)
   }))
 };

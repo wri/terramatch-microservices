@@ -1,5 +1,6 @@
-import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING } from "sequelize";
+import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
+import { DemographicEntry } from "./demographic-entry.entity";
 
 @Table({
   tableName: "demographics",
@@ -16,23 +17,30 @@ export class Demographic extends Model<Demographic> {
   @Column(BIGINT.UNSIGNED)
   override id: number;
 
+  @Unique
+  @Column(UUID)
+  uuid: string;
+
   @Column(STRING)
   type: string;
 
   @AllowNull
   @Column(STRING)
-  subtype: string;
-
-  @AllowNull
-  @Column(STRING)
-  name: string;
-
-  @Column(INTEGER({ length: 10 }))
-  amount: number;
+  collection: string | null;
 
   @Column(STRING)
   demographicalType: string;
 
   @Column(BIGINT.UNSIGNED)
   demographicalId: number;
+
+  @AllowNull
+  @Column(TEXT)
+  description: string;
+
+  @Column({ type: BOOLEAN, defaultValue: false })
+  hidden: boolean;
+
+  @HasMany(() => DemographicEntry, { constraints: false })
+  entries: DemographicEntry[] | null;
 }

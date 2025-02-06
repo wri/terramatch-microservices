@@ -113,7 +113,7 @@ type DocumentBuilderOptions = {
   forceDataArray?: boolean;
 };
 
-class DocumentBuilder {
+export class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
 

@@ -1,7 +1,13 @@
-import { Application, Organisation, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Framework,
+  Organisation,
+  Project,
+  Site,
+  SitePolygon
+} from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { flatten, groupBy } from "lodash";
-import { FRAMEWORK_NAMES } from "@terramatch-microservices/database/constants/framework";
 
 const loadApprovedSites = async (projectIds: number[]) =>
   groupBy(
@@ -29,9 +35,10 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   ...commonEntityColumns<Project, ProjectAssociations>("project"),
   "name",
   {
+    airtableColumn: "framework",
     dbColumn: "frameworkKey",
-    airtableColumn: "cohort",
-    valueMap: async ({ frameworkKey }) => FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey
+    include: [{ model: Framework, attributes: ["name"] }],
+    valueMap: async ({ framework, frameworkKey }) => framework?.name ?? frameworkKey
   },
   {
     airtableColumn: "applicationUuid",
@@ -101,6 +108,7 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Project;
   readonly SUPPORTS_UPDATED_SINCE = false;
+  readonly FILTER_FLAGS = ["isTest"];
 
   async loadAssociations(projects: Project[]) {
     const projectIds = projects.map(({ id }) => id);

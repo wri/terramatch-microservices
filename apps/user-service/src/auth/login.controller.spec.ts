@@ -3,6 +3,7 @@ import { LoginController } from "./login.controller";
 import { AuthService } from "./auth.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
+import { faker } from "@faker-js/faker";
 
 describe("LoginController", () => {
   let controller: LoginController;
@@ -31,10 +32,10 @@ describe("LoginController", () => {
 
   it("returns a token if creds are valid", async () => {
     const token = "fake jwt token";
-    const userId = 123;
-    authService.login.mockResolvedValue({ token, userId });
+    const userUuid = faker.string.uuid();
+    authService.login.mockResolvedValue({ token, userUuid });
 
     const result = await controller.create({ emailAddress: "foo@bar.com", password: "asdfasdfasdf" });
-    expect(result).toMatchObject({ data: { id: `${userId}`, type: "logins", attributes: { token } } });
+    expect(result).toMatchObject({ data: { id: userUuid, type: "logins", attributes: { token } } });
   });
 });

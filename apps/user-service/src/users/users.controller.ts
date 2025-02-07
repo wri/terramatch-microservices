@@ -13,7 +13,8 @@ import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
-import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
+import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateBodyDto } from "./dto/user-update.dto";
 
@@ -41,11 +42,15 @@ export class UsersController {
   constructor(private readonly policyService: PolicyService) {}
 
   @Get(":uuid")
-  @ApiOperation({ operationId: "usersFind", description: "Fetch a user by ID, or with the 'me' identifier" })
-  @ApiParam({ name: "uuid", example: "me", description: 'A valid user uuid or "me"' })
+  @ApiOperation({ operationId: "usersFind", description: "Fetch a user by UUID, or with the 'me' identifier" })
+  @ApiParam({ name: "uuid", example: "me", description: 'A valid user UUID or "me"' })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
-  @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
-  @ExceptionResponse(NotFoundException, { description: "User with that ID not found" })
+  @ApiException(() => UnauthorizedException, {
+    description: "Authorization failed"
+  })
+  @ApiException(() => NotFoundException, {
+    description: "User with that UUID not found"
+  })
   async findOne(@Param("uuid") pathId: string, @Request() { authenticatedUserId }) {
     const userWhere = pathId === "me" ? { id: authenticatedUserId } : { uuid: pathId };
     const user = await User.findOne({
@@ -60,12 +65,16 @@ export class UsersController {
   }
 
   @Patch(":uuid")
-  @ApiOperation({ operationId: "userUpdate", description: "Update a user by ID" })
+  @ApiOperation({ operationId: "userUpdate", description: "Update a user by UUID" })
   @ApiParam({ name: "uuid", description: "A valid user uuid" })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
-  @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
-  @ExceptionResponse(NotFoundException, { description: "User with that ID not found" })
-  @ExceptionResponse(BadRequestException, { description: "Something is malformed about the request" })
+  @ApiException(() => UnauthorizedException, {
+    description: "Authorization failed"
+  })
+  @ApiException(() => NotFoundException, {
+    description: "User with that ID not found"
+  })
+  @ApiException(() => BadRequestException, { description: "Something is malformed about the request" })
   async update(@Param("uuid") uuid: string, @Body() updatePayload: UserUpdateBodyDto) {
     if (uuid !== updatePayload.data.id) {
       throw new BadRequestException(`Path uuid and payload id do not match`);

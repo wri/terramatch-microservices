@@ -8,8 +8,11 @@ export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
   async login(emailAddress: string, password: string) {
-    const { id, password: passwordHash } =
-      (await User.findOne({ where: { emailAddress }, attributes: ["id", "password"] })) ?? {};
+    const {
+      id,
+      uuid,
+      password: passwordHash
+    } = (await User.findOne({ where: { emailAddress }, attributes: ["id", "uuid", "password"] })) ?? {};
     if (passwordHash == null) return null;
 
     const passwordValid = await bcrypt.compare(password, passwordHash);
@@ -28,6 +31,6 @@ export class AuthService {
         expiresIn: "12h"
       }
     );
-    return { token, userId: id };
+    return { token, userUuid: uuid };
   }
 }

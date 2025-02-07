@@ -41,7 +41,7 @@ describe("AuthService", () => {
   });
 
   it("should return a token and id with a valid password", async () => {
-    const { id, emailAddress } = await UserFactory.create({
+    const { uuid, emailAddress } = await UserFactory.create({
       password: "fakepasswordhash"
     });
     jest.spyOn(bcrypt, "compare").mockImplementation(() => Promise.resolve(true));
@@ -53,7 +53,7 @@ describe("AuthService", () => {
 
     expect(jwtService.signAsync).toHaveBeenCalled();
     expect(result.token).toBe(token);
-    expect(result.userId).toBe(id);
+    expect(result.userUuid).toBe(uuid);
   });
 
   it("should update the last logged in date on the user", async () => {

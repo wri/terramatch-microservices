@@ -2,9 +2,10 @@ import { Body, Controller, HttpStatus, Post, UnauthorizedException } from "@nest
 import { AuthService } from "./auth.service";
 import { LoginRequest } from "./dto/login-request.dto";
 import { LoginDto } from "./dto/login.dto";
+import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { ApiOperation } from "@nestjs/swagger";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 
 @Controller("auth/v3/logins")
@@ -18,9 +19,9 @@ export class LoginController {
     description: "Receive a JWT Token in exchange for login credentials"
   })
   @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: LoginDto } })
-  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
   async create(@Body() { emailAddress, password }: LoginRequest): Promise<JsonApiDocument> {
-    const { token, userId } = (await this.authService.login(emailAddress, password)) ?? {};
+    const { token, userUuid } = (await this.authService.login(emailAddress, password)) ?? {};
     if (token == null) {
       // there are multiple reasons for the token to be null (bad email address, wrong password),
       // but we don't want to report on the specifics because it opens an attack vector: if we
@@ -29,6 +30,6 @@ export class LoginController {
       throw new UnauthorizedException();
     }
 
-    return buildJsonApi().addData(`${userId}`, new LoginDto({ token })).document.serialize();
+    return buildJsonApi().addData(userUuid, new LoginDto({ token })).document.serialize();
   }
 }

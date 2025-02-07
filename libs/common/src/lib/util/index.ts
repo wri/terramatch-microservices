@@ -1,1 +1,1 @@
-export * from './json-api-builder';
+export * from "./json-api-builder";

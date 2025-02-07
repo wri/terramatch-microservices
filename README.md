@@ -37,32 +37,33 @@ Once this project is live in production, we can explore continuous deployment to
 and main branches.
 
 # Creating a new service
- * In the root directory: `nx g @nx/nest:app apps/foo-service`
- * Set up the new `main.ts` similarly to existing services.
-   * Make sure swagger docs and the `/health` endpoint are implemented
-   * Pick a default local port that is unique from other services
-   * Make sure the top of `main.ts` has these two lines:
-    ```
-    // eslint-disable-next-line @nx/enforce-module-boundaries
-    import "../../../instrument-sentry";
-    ```
-   * Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
- * In your `.env` and `.env.local.sample`, add `_PORT` for the new service
- * In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
- * In your local web repo, follow directions in `README.md` for setting up a new service.
-   * This step can be skipped for services that will not be used by the FE website.
- * For deployment to AWS:
-   * Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
-   * Add the new service name to the "service" workflow input options in `deploy-service.yml`
-   * Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
-     * Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.
-   * In AWS:
-     * Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
-       * Set the repo to Immutable
-       * After creation, set a Lifecycle Policy. In lower envs, we retain the most recent 2 images, and in prod it's set to 5
-     * In CloudWatch, create a log group for each env (follow the naming scheme from user-service, e.g. `ecs/foo-service-staging`, etc).
-       * TODO: the log groups could be created as part of the stack. The ECR repository is needed before the stack runs, so that will
-         need to remain a manual process.
+
+- In the root directory: `nx g @nx/nest:app apps/foo-service`
+- Set up the new `main.ts` similarly to existing services.
+  - Make sure swagger docs and the `/health` endpoint are implemented
+  - Pick a default local port that is unique from other services
+  - Make sure the top of `main.ts` has these two lines:
+  ```
+  // eslint-disable-next-line @nx/enforce-module-boundaries
+  import "../../../instrument-sentry";
+  ```
+  - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
+- In your `.env` and `.env.local.sample`, add `_PORT` for the new service
+- In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
+- In your local web repo, follow directions in `README.md` for setting up a new service.
+  - This step can be skipped for services that will not be used by the FE website.
+- For deployment to AWS:
+  - Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
+  - Add the new service name to the "service" workflow input options in `deploy-service.yml`
+  - Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
+    - Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.
+  - In AWS:
+    - Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
+      - Set the repo to Immutable
+      - After creation, set a Lifecycle Policy. In lower envs, we retain the most recent 2 images, and in prod it's set to 5
+    - In CloudWatch, create a log group for each env (follow the naming scheme from user-service, e.g. `ecs/foo-service-staging`, etc).
+      - TODO: the log groups could be created as part of the stack. The ECR repository is needed before the stack runs, so that will
+        need to remain a manual process.
 
 # Database work
 

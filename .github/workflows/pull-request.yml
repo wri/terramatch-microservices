@@ -20,7 +20,7 @@ jobs:
 
       - uses: KengoTODA/actions-setup-docker-compose@v1
         with:
-          version: '2.29.1'
+          version: "2.29.1"
 
       # This enables task distribution via Nx Cloud
       # Run this command as early as possible, before dependencies are installed
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: "npm"
 
       - run: npm ci --legacy-peer-deps
 

@@ -42,14 +42,14 @@ export class UsersController {
   constructor(private readonly policyService: PolicyService) {}
 
   @Get(":uuid")
-  @ApiOperation({ operationId: "usersFind", description: "Fetch a user by ID, or with the 'me' identifier" })
-  @ApiParam({ name: "uuid", example: "me", description: 'A valid user uuid or "me"' })
+  @ApiOperation({ operationId: "usersFind", description: "Fetch a user by UUID, or with the 'me' identifier" })
+  @ApiParam({ name: "uuid", example: "me", description: 'A valid user UUID or "me"' })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ApiException(() => UnauthorizedException, {
     description: "Authorization failed"
   })
   @ApiException(() => NotFoundException, {
-    description: "User with that ID not found"
+    description: "User with that UUID not found"
   })
   async findOne(@Param("uuid") pathId: string, @Request() { authenticatedUserId }) {
     const userWhere = pathId === "me" ? { id: authenticatedUserId } : { uuid: pathId };
@@ -65,7 +65,7 @@ export class UsersController {
   }
 
   @Patch(":uuid")
-  @ApiOperation({ operationId: "userUpdate", description: "Update a user by ID" })
+  @ApiOperation({ operationId: "userUpdate", description: "Update a user by UUID" })
   @ApiParam({ name: "uuid", description: "A valid user uuid" })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ApiException(() => UnauthorizedException, {

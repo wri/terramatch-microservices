@@ -11,6 +11,7 @@ export function ExceptionResponse<T extends HttpException>(exception: Exception<
       status: instance.getStatus(),
       schema: {
         type: "object",
+        required: ["statusCode", "message"],
         properties: {
           statusCode: { type: "number", example: instance.getStatus() },
           message: { type: "string", example: instance.message }

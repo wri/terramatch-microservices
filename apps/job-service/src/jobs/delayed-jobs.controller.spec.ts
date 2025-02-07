@@ -3,9 +3,10 @@ import { DelayedJobsController } from "./delayed-jobs.controller";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto, DelayedJobData } from "./dto/delayed-job-update.dto";
 import { v4 as uuidv4 } from "uuid";
-import { Logger, NotFoundException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
+
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;
 

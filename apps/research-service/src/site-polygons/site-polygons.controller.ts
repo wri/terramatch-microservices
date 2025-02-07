@@ -10,8 +10,7 @@ import {
 } from "@nestjs/common";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
-import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SitePolygonDto } from "./dto/site-polygon.dto";
 import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
 import {
@@ -47,8 +46,8 @@ export class SitePolygonsController {
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
   @JsonApiResponse({ data: { type: SitePolygonDto }, pagination: true })
-  @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
-  @ApiException(() => BadRequestException, { description: "One or more query param values is invalid." })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
@@ -95,9 +94,9 @@ export class SitePolygonsController {
        off of the combination of site polygon ID, indicatorSlug, and yearOfAnalysis.`
   })
   @ApiOkResponse()
-  @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
-  @ApiException(() => BadRequestException, { description: "One or more of the data payload members has a problem." })
-  @ApiException(() => NotFoundException, { description: "A site polygon specified in the data was not found." })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "One or more of the data payload members has a problem." })
+  @ExceptionResponse(NotFoundException, { description: "A site polygon specified in the data was not found." })
   async bulkUpdate(@Body() updatePayload: SitePolygonBulkUpdateBodyDto): Promise<void> {
     await this.policyService.authorize("updateAll", SitePolygon);
 

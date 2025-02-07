@@ -1,9 +1,8 @@
 import { Controller, Body, Post, HttpStatus, BadRequestException, Param, Put } from "@nestjs/common";
 import { ResetPasswordService } from "./reset-password.service";
 import { ApiOperation } from "@nestjs/swagger";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
-import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { ResetPasswordRequest } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
@@ -20,7 +19,7 @@ export class ResetPasswordController {
     description: "Send password reset email with a token"
   })
   @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: ResetPasswordResponseDto } })
-  @ApiException(() => BadRequestException, { description: "Invalid request or email." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request or email." })
   async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
     return buildJsonApi()
@@ -35,7 +34,7 @@ export class ResetPasswordController {
     description: "Reset password using the provided token"
   })
   @JsonApiResponse({ status: HttpStatus.OK, data: { type: ResetPasswordResponseDto } })
-  @ApiException(() => BadRequestException, { description: "Invalid or expired token." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid or expired token." })
   async resetPassword(
     @Param("token") token: string,
     @Body() { newPassword }: ResetPasswordDto

@@ -1,0 +1,25 @@
+# Don't let sh -e kill the script if an exit code is non 0 from a command within the script
+set +e
+
+COMMIT_MSG_FILE=$1
+
+# get current branch
+branchName=`git rev-parse --abbrev-ref HEAD`
+
+# search jira issue id in a pattern such a "fix/TM-123-description"
+# regex tries to see if TM-#### is the branch name and extract that, otherwise return empty.
+jira_id=$(echo $branchName | sed -E 's~^([a-z]+/(TM\-[0-9]+).*)|(.+)$~\2~')
+
+# Test to see if jira_id is empty
+if [ -z $jira_id ]; then
+  exit 0
+fi
+
+# Test the commit message file to see if the Jira ID is already prepended. If so, exit.
+grep -Eq "^\[$jira_id\]" $COMMIT_MSG_FILE
+if [ $? -eq 0 ]; then
+  exit 0
+fi
+
+# only prepare commit message if pattern matched and jira_id was found
+sed -i.bak -e "1s|^|\[$jira_id\] |" $COMMIT_MSG_FILE

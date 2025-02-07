@@ -9,18 +9,9 @@ import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
 import { ResetPasswordController } from "./auth/reset-password.controller";
 import { ResetPasswordService } from "./auth/reset-password.service";
-import { ConfigModule } from "@nestjs/config";
 
 @Module({
-  imports: [
-    SentryModule.forRoot(),
-    DatabaseModule,
-    CommonModule,
-    HealthModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-  ],
+  imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
   controllers: [LoginController, UsersController, ResetPasswordController],
   providers: [
     {
@@ -28,7 +19,7 @@ import { ConfigModule } from "@nestjs/config";
       useClass: SentryGlobalFilter
     },
     AuthService,
-    ResetPasswordService,
+    ResetPasswordService
   ]
 })
 export class AppModule {}

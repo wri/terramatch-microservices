@@ -8,18 +8,18 @@
     "synth-local": "npx cdk synth --no-staging --quiet"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
-    "@types/node": "^20.14.9",
-    "aws-cdk": "2.163.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.13.1",
+    "aws-cdk": "2.178.1",
     "jest": "^29.7.0",
-    "ts-jest": "^29.1.5",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "~5.5.3"
+    "typescript": "~5.7.3"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.163.0",
-    "constructs": "^10.0.0",
-    "dotenv": "^16.4.5",
+    "aws-cdk-lib": "2.178.1",
+    "constructs": "^10.4.2",
+    "dotenv": "^16.4.7",
     "source-map-support": "^0.5.21"
   }
 }

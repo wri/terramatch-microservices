@@ -9,11 +9,11 @@ import {
 } from "@nestjs/common";
 import { AirtableService } from "../airtable/airtable.service";
 import { ApiOperation, ApiResponse } from "@nestjs/swagger";
-import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { UpdateRecordsQueryDto } from "./dto/update-records-query.dto";
 import { Permission } from "@terramatch-microservices/database/entities";
 import { DeleteRecordsQueryDto } from "./dto/delete-records-query.dto";
 import { UpdateAllQueryDto } from "./dto/update-all-query.dto";
+import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {
@@ -39,8 +39,8 @@ export class WebhookController {
     status: HttpStatus.OK,
     schema: { type: "object", properties: { status: { type: "string", example: "OK" } } }
   })
-  @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
-  @ApiException(() => BadRequestException, { description: "Query params were invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
+  @ExceptionResponse(BadRequestException, { description: "Query params were invalid" })
   async updateRecords(
     @Query() { entityType, startPage, updatedSince }: UpdateRecordsQueryDto,
     @Request() { authenticatedUserId }
@@ -61,8 +61,8 @@ export class WebhookController {
     status: HttpStatus.OK,
     schema: { type: "object", properties: { status: { type: "string", example: "OK" } } }
   })
-  @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
-  @ApiException(() => BadRequestException, { description: "Query params were invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
+  @ExceptionResponse(BadRequestException, { description: "Query params were invalid" })
   async removeDeletedRecords(
     @Query() { entityType, deletedSince }: DeleteRecordsQueryDto,
     @Request() { authenticatedUserId }
@@ -83,8 +83,8 @@ export class WebhookController {
     status: HttpStatus.OK,
     schema: { type: "object", properties: { status: { type: "string", example: "OK" } } }
   })
-  @ApiException(() => UnauthorizedException, { description: "Authorization failed" })
-  @ApiException(() => BadRequestException, { description: "Query params were invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
+  @ExceptionResponse(BadRequestException, { description: "Query params were invalid" })
   async updateAll(@Query() { updatedSince }: UpdateAllQueryDto, @Request() { authenticatedUserId }) {
     await this.authorize(authenticatedUserId);
     await this.airtableService.updateAll(updatedSince);

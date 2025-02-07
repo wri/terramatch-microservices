@@ -7,9 +7,11 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { NestExpressApplication } from "@nestjs/platform-express";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.set("query parser", "extended");
 
   const config = new DocumentBuilder()
     .setTitle("TerraMatch Research Service")

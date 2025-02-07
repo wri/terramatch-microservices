@@ -3,10 +3,9 @@ import { TreeService } from "./tree.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { isEmpty } from "lodash";
 import { EstablishmentsTreesParamsDto } from "./dto/establishments-trees-params.dto";
-import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { EstablishmentsTreesDto, PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
 
 @Controller("trees/v3")
@@ -37,8 +36,8 @@ export class TreesController {
     summary: "Get tree data related to the establishment of an entity"
   })
   @JsonApiResponse({ data: { type: EstablishmentsTreesDto } })
-  @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
-  @ApiException(() => BadRequestException, { description: "One or more path param values is invalid." })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "One or more path param values is invalid." })
   async getEstablishmentData(@Param() { entity, uuid }: EstablishmentsTreesParamsDto) {
     const establishmentTrees = await this.treeService.getEstablishmentTrees(entity, uuid);
     const previousPlantingCounts = await this.treeService.getPreviousPlanting(entity, uuid);

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ConsoleLogger, LogLevel } from '@nestjs/common';
+import { ConsoleLogger, LogLevel } from "@nestjs/common";
 
-const IS_PROD = process.env['NODE_ENV'] === 'production';
-const IS_TEST = process.env['NODE_ENV'] === 'test';
+const IS_PROD = process.env["NODE_ENV"] === "production";
+const IS_TEST = process.env["NODE_ENV"] === "test";
 
 export class TMLogService extends ConsoleLogger {
   override log(message: string | object, ...optionalParams: [...any, string?, string?]) {

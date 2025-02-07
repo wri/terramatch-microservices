@@ -12,9 +12,9 @@ import { SlackModule } from "nestjs-slack";
   imports: [
     DatabaseModule,
     CommonModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true })],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         connection: {
@@ -28,7 +28,7 @@ import { SlackModule } from "nestjs-slack";
     }),
     BullModule.registerQueue({ name: "airtable" }),
     SlackModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true })],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: "api",

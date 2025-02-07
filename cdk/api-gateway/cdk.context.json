@@ -48,9 +48,7 @@
     "loadBalancerCanonicalHostedZoneId": "Z32O12XQLNTSW2",
     "loadBalancerDnsName": "internal-user-service-test-1863479300.eu-west-1.elb.amazonaws.com",
     "vpcId": "vpc-0beac5973796d96b1",
-    "securityGroupIds": [
-      "sg-06a4b12aa14e529be"
-    ],
+    "securityGroupIds": ["sg-06a4b12aa14e529be"],
     "ipAddressType": "ipv4"
   },
   "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-06a4b12aa14e529be": {
@@ -64,8 +62,6 @@
   "load-balancer-listener:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=user-service-test:loadBalancerType=application:region=eu-west-1": {
     "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/user-service-test/e1ee1ce635080238/069ab4638dd50686",
     "listenerPort": 80,
-    "securityGroupIds": [
-      "sg-06a4b12aa14e529be"
-    ]
+    "securityGroupIds": ["sg-06a4b12aa14e529be"]
   }
 }

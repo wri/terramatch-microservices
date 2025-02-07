@@ -43,5 +43,12 @@
         "apps/entity-service-e2e/**/*"
       ]
     }
-  ]
+  ],
+  "targetDefaults": {
+    "lint": {
+      "options": {
+        "max-warnings": 0
+      }
+    }
+  }
 }

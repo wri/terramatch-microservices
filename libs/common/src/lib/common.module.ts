@@ -13,11 +13,14 @@ import { EmailService } from "./email/email.service";
   imports: [
     RequestContextModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true })],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>("JWT_SECRET")
       })
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true
     })
   ],
   providers: [

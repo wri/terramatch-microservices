@@ -6,7 +6,8 @@
     "research": "nx serve research-service",
     "unified-database": "nx serve unified-database-service",
     "fe-services": "nx run-many -t serve --projects user-service job-service entity-service",
-    "all": "nx run-many --parallel=100 -t serve"
+    "all": "nx run-many --parallel=100 -t serve",
+    "prepare": "husky"
   },
   "private": true,
   "dependencies": {
@@ -77,6 +78,7 @@
     "eslint": "~8.57.0",
     "eslint-config-prettier": "^9.0.0",
     "factory-girl-ts": "^2.3.1",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "jest-environment-node": "^29.7.0",
     "nx": "20.4.1",

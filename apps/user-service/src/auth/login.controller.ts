@@ -2,10 +2,9 @@ import { Body, Controller, HttpStatus, Post, UnauthorizedException } from "@nest
 import { AuthService } from "./auth.service";
 import { LoginRequest } from "./dto/login-request.dto";
 import { LoginDto } from "./dto/login.dto";
-import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { ApiOperation } from "@nestjs/swagger";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 
 @Controller("auth/v3/logins")
@@ -19,7 +18,7 @@ export class LoginController {
     description: "Receive a JWT Token in exchange for login credentials"
   })
   @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: LoginDto } })
-  @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async create(@Body() { emailAddress, password }: LoginRequest): Promise<JsonApiDocument> {
     const { token, userUuid } = (await this.authService.login(emailAddress, password)) ?? {};
     if (token == null) {

@@ -3,7 +3,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ResetPasswordController } from "./reset-password.controller";
 import { ResetPasswordService } from "./reset-password.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { faker } from "@faker-js/faker/locale/ar";
+import { faker } from "@faker-js/faker";
 
 describe("ResetPasswordController", () => {
   let controller: ResetPasswordController;

@@ -1,4 +1,4 @@
-import { AbilityBuilder, createMongoAbility } from '@casl/ability';
+import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 
 export type BuilderType = ReturnType<typeof createMongoAbility>;
 
@@ -14,7 +14,7 @@ export abstract class EntityPolicy {
   constructor(
     protected userId: number,
     protected permissions: string[],
-    protected builder: AbilityBuilder<BuilderType>,
+    protected builder: AbilityBuilder<BuilderType>
   ) {}
 
   public abstract addRules(): Promise<void>;

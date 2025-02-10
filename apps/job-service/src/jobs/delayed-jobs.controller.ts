@@ -1,19 +1,17 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
-  UnauthorizedException,
-  Request,
   Patch,
-  BadRequestException,
-  Body,
-  Logger
+  Request,
+  UnauthorizedException
 } from "@nestjs/common";
-import { ApiException } from "@nanogiants/nestjs-swagger-api-exception-decorator";
 import { ApiOperation } from "@nestjs/swagger";
 import { Op } from "sequelize";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "./dto/delayed-job.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
@@ -27,9 +25,7 @@ export class DelayedJobsController {
     description: "Retrieve a list of all delayed jobs."
   })
   @JsonApiResponse({ data: { type: DelayedJobDto } })
-  @ApiException(() => UnauthorizedException, {
-    description: "Authentication failed."
-  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async getRunningJobs(@Request() { authenticatedUserId }): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
       where: {
@@ -58,12 +54,8 @@ export class DelayedJobsController {
     description: "Get the current status and potentially payload or error from a delayed job."
   })
   @JsonApiResponse({ data: { type: DelayedJobDto } })
-  @ApiException(() => UnauthorizedException, {
-    description: "Authentication failed."
-  })
-  @ApiException(() => NotFoundException, {
-    description: "Job with that UUID not found."
-  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Job with that UUID not found." })
   // Note: Since jobs are very generic and we don't track which resources are related to a given
   // job, there is no effective way to make a policy for jobs until we expand the service to
   // include an owner ID on the job table.
@@ -81,9 +73,9 @@ export class DelayedJobsController {
     description: `Accepts a JSON:API-compliant payload to bulk update jobs, allowing each job's isAcknowledged attribute to be set to true or false.`
   })
   @JsonApiResponse({ data: { type: DelayedJobDto } })
-  @ApiException(() => UnauthorizedException, { description: "Authentication failed." })
-  @ApiException(() => BadRequestException, { description: "Invalid payload or IDs provided." })
-  @ApiException(() => NotFoundException, {
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid payload or IDs provided." })
+  @ExceptionResponse(NotFoundException, {
     description: "One or more jobs specified in the payload could not be found."
   })
   async bulkUpdateJobs(

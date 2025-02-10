@@ -1,11 +1,11 @@
 name: Services Deploy (all)
-run-name: 'Services Deploy (all) [env: ${{ inputs.env }}]'
+run-name: "Services Deploy (all) [env: ${{ inputs.env }}]"
 
 on:
   workflow_dispatch:
     inputs:
       env:
-        description: 'Deployment target environment'
+        description: "Deployment target environment"
         type: choice
         required: true
         options:

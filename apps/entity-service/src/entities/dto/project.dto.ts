@@ -77,12 +77,19 @@ export type AdditionalProjectFullProps = {
   totalJobsCreated: number;
   totalSites: number;
   totalNurseries: number;
-  totalReports: number;
+  totalProjectReports: number;
   totalOverdueReports: number;
-  migrated: boolean;
   treesRestoredPpc: number;
-  assistedNaturalRegenerationList: string;
+  assistedNaturalRegenerationList: ANRDto[];
 };
+
+export class ANRDto {
+  @ApiProperty({ description: "Site name" })
+  name: string;
+
+  @ApiProperty()
+  treeCount: number;
+}
 
 @JsonApiDto({ type: "projects" })
 export class ProjectFullDto extends ProjectDtoBase<ProjectFullDto> {
@@ -189,7 +196,7 @@ export class ProjectFullDto extends ProjectDtoBase<ProjectFullDto> {
   totalNurseries: number;
 
   @ApiProperty()
-  totalReports: number;
+  totalProjectReports: number;
 
   @ApiProperty()
   totalOverdueReports: number;
@@ -225,16 +232,17 @@ export class ProjectFullDto extends ProjectDtoBase<ProjectFullDto> {
   proposedGovPartners: string | null;
 
   @ApiProperty()
-  migrated: boolean;
-
-  @ApiProperty()
   treesRestoredPpc: number;
 
   @ApiProperty({ nullable: true })
   detailedInterventionTypes: string[] | null;
 
-  @ApiProperty()
-  assistedNaturalRegenerationList: string;
+  @ApiProperty({
+    type: () => ANRDto,
+    isArray: true,
+    description: "The list of tree counts regenerating naturally by site name"
+  })
+  assistedNaturalRegenerationList: ANRDto[];
 
   @ApiProperty({ nullable: true })
   goalTreesRestoredAnr: number | null;

@@ -10,7 +10,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, literal, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -25,6 +25,30 @@ export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = ["approved", "restoration-in-progress"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
+
+  static approvedIdsSubquery(projectIdReplacement = ":projectId") {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const deletedAt = Site.getAttributes().deletedAt!.field;
+    return literal(
+      `(SELECT ${Site.getAttributes().id.field} FROM ${Site.tableName}
+        WHERE ${deletedAt} IS NULL
+        AND ${Site.getAttributes().projectId.field} = ${projectIdReplacement}
+        AND ${Site.getAttributes().status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
+       )`
+    );
+  }
+
+  static approvedUuidsSubquery(projectIdReplacement = ":projectId") {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const deletedAt = Site.getAttributes().deletedAt!.field;
+    return literal(
+      `(SELECT ${Site.getAttributes().uuid.field} FROM ${Site.tableName}
+        WHERE ${deletedAt} IS NULL
+        AND ${Site.getAttributes().projectId.field} = ${projectIdReplacement}
+        AND ${Site.getAttributes().status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
+       )`
+    );
+  }
 
   @PrimaryKey
   @AutoIncrement

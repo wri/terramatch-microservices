@@ -6,12 +6,16 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, STRING, UUID } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 
+@Scopes(() => ({
+  visible: { where: { hidden: false } }
+}))
 @Table({
   tableName: "v2_tree_species",
   underscored: true,

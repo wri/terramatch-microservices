@@ -1,32 +1,21 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { EntityType } from "@terramatch-microservices/database/constants/entities";
-import {
-  Nursery,
-  NurseryReport,
-  Project,
-  ProjectReport,
-  Site,
-  SiteReport
-} from "@terramatch-microservices/database/entities";
-import { Dictionary } from "lodash";
-import { ModelCtor } from "sequelize-typescript";
+import { ProjectProcessor } from "./processors";
 
-type ReportModelType = ProjectReport | SiteReport | NurseryReport;
-type EntityModelType = ReportModelType | Project | Site | Nursery;
-
-const ENTITY_MODELS: Dictionary<ModelCtor<EntityModelType>> = {
-  projects: Project
+const ENTITY_PROCESSORS = {
+  projects: ProjectProcessor
 };
+
+export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
+export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
 
 @Injectable()
 export class EntitiesService {
-  async getEntity(entity: EntityType, uuid: string) {
-    const model = ENTITY_MODELS[entity];
-    if (model == null) {
+  createProcessor(entity: ProcessableEntity) {
+    const processorClass = ENTITY_PROCESSORS[entity];
+    if (processorClass == null) {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    // TODO: this code is specific to projects.
-    return await model.findOne({ where: { uuid }, include: [{ association: "framework" }] });
+    return new processorClass();
   }
 }

@@ -8,15 +8,19 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, UUID } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
-import { ReportStatus, UpdateRequestStatus } from "../constants/status";
+import { APPROVED_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../constants/status";
 import { FrameworkKey } from "../constants/framework";
 
 // Incomplete stub
+@Scopes(() => ({
+  incomplete: { where: { status: { [Op.notIn]: [APPROVED_REPORT_STATUSES] } } }
+}))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];

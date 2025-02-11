@@ -8,14 +8,26 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, literal, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
+import { APPROVED_REPORT_STATUSES } from "../constants/status";
+
+type ApprovedIdsSubqueryOptions = {
+  /** @default ":projectIdReplacement" */
+  projectIdReplacement?: string;
+  dueAfterReplacement?: string;
+  dueBeforeReplacement?: string;
+};
 
 // Incomplete stub
+@Scopes(() => ({
+  incomplete: { where: { status: { [Op.notIn]: [APPROVED_REPORT_STATUSES] } } }
+}))
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
@@ -55,6 +67,23 @@ export class ProjectReport extends Model<ProjectReport> {
     "indirect-other"
   ];
 
+  static approvedIdsSubquery(opts: ApprovedIdsSubqueryOptions = {}) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const deletedAt = ProjectReport.getAttributes().deletedAt!.field;
+    const projectIdReplacement = opts.projectIdReplacement ?? ":projectId";
+    const approvedStatuses = ProjectReport.APPROVED_STATUSES.map(s => `"${s}"`).join(",");
+    let where = `WHERE ${deletedAt} IS NULL
+      AND ${ProjectReport.getAttributes().projectId.field} = ${projectIdReplacement}
+      AND ${ProjectReport.getAttributes().status.field} IN (${approvedStatuses})`;
+    if (opts.dueAfterReplacement != null) {
+      where = `${where} AND ${ProjectReport.getAttributes().dueAt.field} >= ${opts.dueAfterReplacement}`;
+    }
+    if (opts.dueBeforeReplacement != null) {
+      where = `${where} AND ${ProjectReport.getAttributes().dueAt.field} < ${opts.dueBeforeReplacement}`;
+    }
+    return literal(`(SELECT ${ProjectReport.getAttributes().id.field} FROM ${ProjectReport.tableName} ${where})`);
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -90,6 +119,14 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysPaid: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysVolunteer: number | null;
 
   @AllowNull
   @Column(TEXT)

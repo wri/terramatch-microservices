@@ -9,6 +9,7 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, STRING, UUID } from "sequelize";
@@ -32,6 +33,9 @@ export type Indicator =
   | IndicatorOutputFieldMonitoring
   | IndicatorOutputMsuCarbon;
 
+@Scopes(() => ({
+  active: { where: { isActive: true } }
+}))
 @Table({ tableName: "site_polygon", underscored: true, paranoid: true })
 export class SitePolygon extends Model<SitePolygon> {
   @PrimaryKey

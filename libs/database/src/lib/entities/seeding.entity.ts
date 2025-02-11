@@ -1,7 +1,20 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  ForeignKey,
+  Model,
+  PrimaryKey,
+  Scopes,
+  Table,
+  Unique
+} from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DOUBLE, STRING, UUID } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 
+@Scopes(() => ({
+  visible: { where: { hidden: false } }
+}))
 @Table({
   tableName: "v2_seedings",
   underscored: true,

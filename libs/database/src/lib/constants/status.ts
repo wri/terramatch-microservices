@@ -9,6 +9,8 @@ export const DUE = "due";
 export const REPORT_STATUSES = [DUE, ...ENTITY_STATUSES] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
+export const APPROVED_REPORT_STATUSES = [APPROVED, AWAITING_APPROVAL] as const;
+
 export const DRAFT = "draft";
 export const UPDATE_REQUEST_STATUSES = [DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];

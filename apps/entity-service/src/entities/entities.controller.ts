@@ -6,16 +6,16 @@ import {
   Param,
   UnauthorizedException
 } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { AdditionalProjectFullProps, ProjectFullDto } from "./dto/project.dto";
+import { ANRDto, ProjectFullDto } from "./dto/project.dto";
 import { EntityGetParamsDto } from "./dto/entity-get-params.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { Project } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3")
+@ApiExtraModels(ANRDto)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 
@@ -34,14 +34,14 @@ export class EntitiesController {
       throw new NotImplementedException(`Entity type not yet implemented in this service: ${entity}`);
     }
 
-    const model = await this.entitiesService.getEntity(entity, uuid);
+    const processor = this.entitiesService.createProcessor(entity);
+    const model = await processor.findOne(uuid);
     if (model == null) throw new NotFoundException();
 
     await this.policyService.authorize("read", model);
 
-    // TODO: this code is specific to projects.
-    return buildJsonApi()
-      .addData(model.uuid, new ProjectFullDto(model as Project, {} as AdditionalProjectFullProps))
-      .document.serialize();
+    const document = buildJsonApi();
+    await processor.addFullDto(document, model);
+    return document.serialize();
   }
 }

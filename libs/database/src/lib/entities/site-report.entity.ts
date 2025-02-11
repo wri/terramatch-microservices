@@ -8,15 +8,26 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, literal, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
+import { Literal } from "sequelize/types/utils";
+import { APPROVED_REPORT_STATUSES } from "../constants/status";
+
+type ApprovedIdsSubqueryOptions = {
+  dueAfterReplacement?: string;
+  dueBeforeReplacement?: string;
+};
 
 // A quick stub for the research endpoints
+@Scopes(() => ({
+  incomplete: { where: { status: { [Op.notIn]: [APPROVED_REPORT_STATUSES] } } }
+}))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
@@ -35,6 +46,21 @@ export class SiteReport extends Model<SiteReport> {
     "volunteer-site-monitoring",
     "volunteer-other-activities"
   ];
+
+  static approvedIdsSubquery(siteIds: Literal, opts: ApprovedIdsSubqueryOptions = {}) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const deletedAt = SiteReport.getAttributes().deletedAt!.field;
+    let where = `WHERE ${deletedAt} IS NULL
+      AND ${SiteReport.getAttributes().siteId.field} IN ${siteIds.val}
+      AND ${SiteReport.getAttributes().status.field} IN (${SiteReport.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})`;
+    if (opts.dueAfterReplacement != null) {
+      where = `${where} AND ${SiteReport.getAttributes().dueAt.field} >= ${opts.dueAfterReplacement}`;
+    }
+    if (opts.dueBeforeReplacement != null) {
+      where = `${where} AND ${SiteReport.getAttributes().dueAt.field} < ${opts.dueBeforeReplacement}`;
+    }
+    return literal(`(SELECT ${SiteReport.getAttributes().id.field} FROM ${SiteReport.tableName} ${where})`);
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -75,6 +101,14 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysPaid: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysVolunteer: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

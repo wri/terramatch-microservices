@@ -159,7 +159,7 @@ export class User extends Model<User> {
   }
 
   @BelongsToMany(() => Project, () => ProjectUser)
-  projects: Project[];
+  projects: Array<Project & { ProjectUser: ProjectUser }>;
 
   async loadProjects() {
     if (this.projects == null) {

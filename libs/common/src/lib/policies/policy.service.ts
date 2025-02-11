@@ -2,11 +2,12 @@ import { Injectable, LoggerService, UnauthorizedException } from "@nestjs/common
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import { BuilderType, EntityPolicy } from "./entity.policy";
-import { Permission, SitePolygon, User } from "@terramatch-microservices/database/entities";
+import { Permission, Project, SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { TMLogService } from "../util/tm-log.service";
 import { SitePolygonPolicy } from "./site-polygon.policy";
+import { ProjectPolicy } from "./project.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,8 +20,9 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
-  [User, UserPolicy],
-  [SitePolygon, SitePolygonPolicy]
+  [Project, ProjectPolicy],
+  [SitePolygon, SitePolygonPolicy],
+  [User, UserPolicy]
 ];
 
 /**

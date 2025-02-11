@@ -21,6 +21,7 @@ import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
+import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -43,6 +44,10 @@ export class Project extends Model<Project> {
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
+  get frameworkUuid() {
+    return this.framework?.uuid;
+  }
+
   @Default(false)
   @Column(BOOLEAN)
   isTest: boolean;
@@ -63,20 +68,20 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  status: EntityStatus | null;
 
   @AllowNull
   @Default("no-update")
   @Column(STRING)
-  updateRequestStatus: string | null;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(TEXT)
   feedback: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  feedbackFields: string | null;
+  @JsonColumn()
+  feedbackFields: string[] | null;
 
   @AllowNull
   @Column(ENUM("new_project", "existing_expansion"))
@@ -104,11 +109,11 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(DATE)
-  plantingStartDate: Date;
+  plantingStartDate: Date | null;
 
   @AllowNull
   @Column(DATE)
-  plantingEndDate: Date;
+  plantingEndDate: Date | null;
 
   @AllowNull
   @Column(TEXT)

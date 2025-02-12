@@ -3,6 +3,7 @@ import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from "
 import { applyDecorators, HttpStatus } from "@nestjs/common";
 import { DTO_ID_METADATA, DTO_TYPE_METADATA, IdType } from "./json-api-dto.decorator";
 import { JsonApiAttributes } from "../dto/json-api-attributes";
+import { isArray, uniq } from "lodash";
 
 type TypeProperties = {
   type: "string";
@@ -53,17 +54,18 @@ type ConstructResourceOptions = {
   pagination?: boolean;
 };
 
-function constructResource(resource: Resource, options?: ConstructResourceOptions) {
+function constructResource(resource: Resource | ResourceType, options?: ConstructResourceOptions) {
+  const type = isResourceType(resource) ? resource : resource.type;
   const def: ResourceDef = {
-    type: getTypeProperties(resource.type),
-    id: getIdProperties(resource.type),
+    type: getTypeProperties(type),
+    id: getIdProperties(type),
     attributes: {
       type: "object",
-      $ref: getSchemaPath(resource.type)
+      $ref: getSchemaPath(type)
     }
   };
 
-  if (resource.relationships != null && resource.relationships.length > 0) {
+  if (!isResourceType(resource) && resource.relationships != null && resource.relationships.length > 0) {
     def.relationships = { type: "object", properties: {} };
     for (const { name, type, multiple, meta } of resource.relationships) {
       const relationship = {
@@ -103,6 +105,59 @@ function addMeta(def: Document | ResourceDef, name: string, definition: any) {
   def.meta.properties[name] = definition;
 }
 
+function buildSchema(options: JsonApiOptions) {
+  const { data, hasMany, pagination, included } = options;
+
+  const type = isResourceType(data) ? data : data.type;
+  const extraModels: ResourceType[] = [type];
+  const document = {
+    data:
+      hasMany || pagination
+        ? {
+            type: "array",
+            items: {
+              type: "object",
+              properties: constructResource(data, { pagination })
+            }
+          }
+        : {
+            type: "object",
+            properties: constructResource(data)
+          }
+  } as Document;
+
+  if (included != null && included.length > 0) {
+    for (const includedResource of included) {
+      const includedType = isResourceType(includedResource) ? includedResource : includedResource.type;
+      extraModels.push(includedType);
+      if (document.included == null) {
+        document.included = {
+          type: "array",
+          items: {
+            oneOf: []
+          }
+        };
+      }
+      document.included.items.oneOf.push({
+        type: "object",
+        properties: constructResource(includedResource)
+      });
+    }
+  }
+
+  if (pagination) {
+    addMeta(document, "page", {
+      type: "object",
+      properties: {
+        cursor: { type: "string", description: "The cursor for the first record on this page." },
+        total: { type: "number", description: "The total number of records on this page.", example: 42 }
+      }
+    });
+  }
+
+  return { document, extraModels };
+}
+
 type ResourceType = new (...props: any[]) => JsonApiAttributes<any>;
 
 type Relationship = {
@@ -132,8 +187,8 @@ type Resource = {
   relationships?: Relationship[];
 };
 
-type JsonApiResponseProps = {
-  data: Resource;
+type JsonApiOptions = {
+  data: Resource | ResourceType;
 
   /**
    * Set to true if this endpoint returns more than one resource in the main `data` member.
@@ -147,7 +202,7 @@ type JsonApiResponseProps = {
    */
   pagination?: boolean;
 
-  included?: Resource[];
+  included?: (Resource | ResourceType)[];
 };
 
 type Document = {
@@ -156,67 +211,45 @@ type Document = {
   included?: any;
 };
 
+type DocumentSchema = {
+  type: "object";
+  properties: Document;
+};
+
+const isResourceType = (data: Resource | ResourceType): data is ResourceType =>
+  Reflect.hasMetadata(DTO_TYPE_METADATA, data);
+const isJsonApiOptions = (data: ResourceType | JsonApiOptions): data is JsonApiOptions =>
+  !Reflect.hasMetadata(DTO_TYPE_METADATA, data);
+
 /**
  * Decorator to simplify wrapping the response type from a controller method with the JSON API
  * response structure. Builds the JSON:API document structure and applies the ApiExtraModels and
  * ApiResponse decorators.
  */
-export function JsonApiResponse(options: ApiResponseOptions & JsonApiResponseProps) {
-  const { data, hasMany, pagination, included, status, ...rest } = options;
+export function JsonApiResponse(
+  jsonApiOptions: ResourceType | JsonApiOptions | (ResourceType | JsonApiOptions)[],
+  apiResponseOptions: ApiResponseOptions = {}
+) {
+  const { status } = apiResponseOptions;
 
-  const extraModels: ResourceType[] = [data.type];
-  const document = {
-    data:
-      hasMany || pagination
-        ? {
-            type: "array",
-            items: {
-              type: "object",
-              properties: constructResource(data, { pagination })
-            }
-          }
-        : {
-            type: "object",
-            properties: constructResource(data)
-          }
-  } as Document;
+  const { documents, extraModels } = (isArray(jsonApiOptions) ? jsonApiOptions : [jsonApiOptions]).reduce(
+    ({ documents, extraModels }, options) => {
+      if (!isJsonApiOptions(options)) options = { data: options };
+      const { document, extraModels: models } = buildSchema(options);
 
-  if (included != null && included.length > 0) {
-    for (const includedResource of included) {
-      extraModels.push(includedResource.type);
-      if (document.included == null) {
-        document.included = {
-          type: "array",
-          items: {
-            oneOf: []
-          }
-        };
-      }
-      document.included.items.oneOf.push({
-        type: "object",
-        properties: constructResource(includedResource)
-      });
-    }
-  }
+      return {
+        documents: [...documents, { type: "object", properties: document } as DocumentSchema],
+        extraModels: [...extraModels, ...models]
+      };
+    },
+    { documents: [] as DocumentSchema[], extraModels: [] as ResourceType[] }
+  );
 
-  if (pagination) {
-    addMeta(document, "page", {
-      type: "object",
-      properties: {
-        cursor: { type: "string", description: "The cursor for the first record on this page." },
-        total: { type: "number", description: "The total number of records on this page.", example: 42 }
-      }
-    });
-  }
-
-  const apiResponseOptions = {
-    ...rest,
+  const fullOptions = {
+    ...apiResponseOptions,
     status: status ?? HttpStatus.OK,
-    schema: {
-      type: "object",
-      properties: document
-    }
+    schema: documents.length === 1 ? documents[0] : { oneOf: documents }
   } as ApiResponseOptions;
 
-  return applyDecorators(ApiResponse(apiResponseOptions), ApiExtraModels(...extraModels));
+  return applyDecorators(ApiResponse(fullOptions), ApiExtraModels(...uniq(extraModels)));
 }

@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { ProjectProcessor } from "./processors";
+import { SiteProcessor } from "./processors/site.processor";
 
+// The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
-  projects: ProjectProcessor
+  projects: ProjectProcessor,
+  sites: SiteProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;

@@ -52,7 +52,7 @@ class ProjectDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
 export class ProjectLightDto extends ProjectDtoBase<ProjectLightDto> {
   constructor(project: Project) {
     super({
-      ...pickApiProperties(project as Omit<Project, "lightResource">, ProjectFullDto),
+      ...pickApiProperties(project as Omit<Project, "lightResource">, ProjectLightDto),
       // these two are untyped and marked optional in the base model.
       createdAt: project.createdAt as Date,
       updatedAt: project.updatedAt as Date

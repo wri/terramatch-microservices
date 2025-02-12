@@ -45,7 +45,7 @@ export class SitePolygonsController {
 
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
-  @JsonApiResponse({ data: { type: SitePolygonDto }, pagination: true })
+  @JsonApiResponse({ data: SitePolygonDto, pagination: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {

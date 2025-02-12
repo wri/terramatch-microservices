@@ -1,11 +1,11 @@
-import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { IsIn, IsUUID } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { PROCESSABLE_ENTITIES, ProcessableEntity } from "../entities.service";
 
 export class EntityGetParamsDto {
-  @IsIn(ENTITY_TYPES)
-  @ApiProperty({ enum: ENTITY_TYPES, description: "Entity type to retrieve" })
-  entity: EntityType;
+  @IsIn(PROCESSABLE_ENTITIES)
+  @ApiProperty({ enum: PROCESSABLE_ENTITIES, description: "Entity type to retrieve" })
+  entity: ProcessableEntity;
 
   @IsUUID()
   @ApiProperty({ description: "Entity UUID for resource to retrieve" })

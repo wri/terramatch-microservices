@@ -18,6 +18,8 @@ import { SitePolygon } from "./site-polygon.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
+import { FrameworkKey } from "../constants/framework";
+import { Framework } from "./framework.entity";
 
 // Incomplete stub
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -68,6 +70,17 @@ export class Site extends Model<Site> {
   @Index
   @Column(UUID)
   uuid: string;
+
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
+  @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
+  framework: Framework | null;
+
+  get frameworkUuid() {
+    return this.framework?.uuid;
+  }
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)

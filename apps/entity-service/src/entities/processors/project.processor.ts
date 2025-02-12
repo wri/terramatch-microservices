@@ -14,26 +14,28 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
-import { CountOptions, Op } from "sequelize";
+import { Op } from "sequelize";
 import { AdditionalProjectFullProps, ANRDto, ProjectFullDto } from "../dto/project.dto";
 
 export class ProjectProcessor extends EntityProcessor<Project> {
   readonly MODEL = Project;
 
   async addFullDto(document: DocumentBuilder, project: Project) {
-    const approvedSites = await Site.findAll({
-      where: { projectId: project.id, status: Site.APPROVED_STATUSES },
-      attributes: ["id", "name"]
-    });
+    const projectId = project.id;
+    const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
+
+    const approvedSites = await Site.approved()
+      .project(projectId)
+      .findAll({ attributes: ["id", "name"] });
 
     const approvedSiteReports =
       approvedSites.length === 0
         ? ([] as unknown as Dictionary<SiteReport[]>)
         : groupBy(
-            await SiteReport.findAll({
-              where: { siteId: { [Op.in]: approvedSites.map(({ id }) => id) }, status: SiteReport.APPROVED_STATUSES },
-              attributes: ["id", "siteId", "numTreesRegenerating"]
-            }),
+            await SiteReport.approved()
+              .sites(approvedSitesQuery)
+              .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] }),
             "siteId"
           );
 
@@ -43,28 +45,14 @@ export class ProjectProcessor extends EntityProcessor<Project> {
     }));
     const regeneratedTreesCount = sumBy(assistedNaturalRegenerationList, "treeCount");
     const treesPlantedCount =
-      (await TreeSpecies.scope("visible").sum("amount", {
-        where: {
-          speciesableType: SiteReport.LARAVEL_TYPE,
-          speciesableId: { [Op.in]: SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery()) },
-          collection: "treesPlanted"
-        },
-        replacements: { projectId: project.id }
-      })) ?? 0;
-    const seedsPlantedCount =
-      (await Seeding.scope("visible").sum("amount", {
-        where: {
-          seedableType: SiteReport.LARAVEL_TYPE,
-          seedableId: { [Op.in]: SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery()) }
-        },
-        replacements: { projectId: project.id }
-      })) ?? 0;
+      (await TreeSpecies.visible().collection("treesPlanted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
     const props: AdditionalProjectFullProps = {
       totalSites: approvedSites.length,
-      totalNurseries: await Nursery.count({ where: { projectId: project.id, status: Nursery.APPROVED_STATUSES } }),
+      totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
-      totalProjectReports: await ProjectReport.count({ where: { projectId: project.id } }),
+      totalProjectReports: await ProjectReport.project(projectId).count(),
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
@@ -73,7 +61,8 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       treesRestoredPpc:
         regeneratedTreesCount + (treesPlantedCount + seedsPlantedCount) * ((project.survivalRate ?? 0) / 100),
 
-      totalHectaresRestoredSum: await this.getTotalHectaresRestored(project.id),
+      totalHectaresRestoredSum:
+        (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0,
 
       workdayCount: await this.getWorkdayCount(project.id),
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(project.id),
@@ -86,65 +75,48 @@ export class ProjectProcessor extends EntityProcessor<Project> {
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
-    const dueAfterReplacement = useDemographicsCutoff ? ":dueAfter" : undefined;
+    const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
-    const siteIds = Site.approvedIdsSubquery();
-    const siteReportIds = SiteReport.approvedIdsSubquery(siteIds, { dueAfterReplacement });
-    const siteReportWorkdays = Demographic.idsSubquery(siteReportIds, ":siteReportType", ":workdayType");
-    const projectReportIds = ProjectReport.approvedIdsSubquery({ dueAfterReplacement });
-    const projectReportWorkdays = Demographic.idsSubquery(projectReportIds, ":projectReportType", ":workdayType");
+    const siteIds = Site.approvedIdsSubquery(projectId);
+    const siteReportIds = SiteReport.approvedIdsSubquery(siteIds, { dueAfter });
+    const siteReportWorkdays = Demographic.idsSubquery(
+      siteReportIds,
+      SiteReport.LARAVEL_TYPE,
+      Demographic.WORKDAYS_TYPE
+    );
+    const projectReportIds = ProjectReport.approvedIdsSubquery(projectId, { dueAfter });
+    const projectReportWorkdays = Demographic.idsSubquery(
+      projectReportIds,
+      ProjectReport.LARAVEL_TYPE,
+      Demographic.WORKDAYS_TYPE
+    );
 
     return (
-      (await DemographicEntry.sum("amount", {
+      (await DemographicEntry.gender().sum("amount", {
         where: {
-          type: "gender",
           demographicId: {
             [Op.or]: [{ [Op.in]: siteReportWorkdays }, { [Op.in]: projectReportWorkdays }]
           }
-        },
-        replacements: {
-          projectId,
-          siteReportType: SiteReport.LARAVEL_TYPE,
-          projectReportType: ProjectReport.LARAVEL_TYPE,
-          workdayType: Demographic.WORKDAYS_TYPE,
-          // Will be ignored if the :dueAfter replacement isn't included in the queries above.
-          dueAfter: Demographic.DEMOGRAPHIC_COUNT_CUTOFF
         }
       })) ?? 0
     );
   }
 
   protected async getSelfReportedWorkdayCount(projectId: number, useDemographicsCutoff = false) {
-    const dueBeforeReplacement = useDemographicsCutoff ? ":dueBefore" : undefined;
+    let SR = SiteReport.approved().sites(Site.approvedIdsSubquery(projectId));
+    let PR = ProjectReport.approved().project(projectId);
+    if (useDemographicsCutoff) {
+      PR = PR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
+      SR = SR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
+    }
+
     const aggregates = [
       { func: "SUM", attr: "workdaysPaid" },
       { func: "SUM", attr: "workdaysVolunteer" }
     ];
-    const replacements = {
-      projectId,
-      // Will be ignored if the :dueBefore replacement isn't included in the queries above.
-      dueBefore: Demographic.DEMOGRAPHIC_COUNT_CUTOFF
-    };
-
-    const projectWhere = { id: { [Op.in]: ProjectReport.approvedIdsSubquery({ dueBeforeReplacement }) } };
-    const siteWhere = {
-      id: { [Op.in]: SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(), { dueBeforeReplacement }) }
-    };
-
-    const { workdaysPaid: sitePaid, workdaysVolunteer: siteVolunteer } = await aggregateColumns(
-      SiteReport,
-      aggregates as Aggregate<SiteReport>[],
-      siteWhere,
-      replacements
-    );
-    const { workdaysPaid: projectPaid, workdaysVolunteer: projectVolunteer } = await aggregateColumns(
-      ProjectReport,
-      aggregates as Aggregate<ProjectReport>[],
-      projectWhere,
-      replacements
-    );
-
-    return sitePaid + siteVolunteer + projectPaid + projectVolunteer;
+    const site = await aggregateColumns(SR, aggregates as Aggregate<SiteReport>[]);
+    const project = await aggregateColumns(PR, aggregates as Aggregate<ProjectReport>[]);
+    return site.workdaysPaid + site.workdaysVolunteer + project.workdaysPaid + project.workdaysVolunteer;
   }
 
   protected async getTotalJobs(projectId: number) {
@@ -152,45 +124,18 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       { func: "SUM", attr: "ftTotal" },
       { func: "SUM", attr: "ptTotal" }
     ];
-    const where = { id: { [Op.in]: ProjectReport.approvedIdsSubquery() } };
-    const { ftTotal, ptTotal } = await aggregateColumns(ProjectReport, aggregates, where, { projectId });
+    const { ftTotal, ptTotal } = await aggregateColumns(ProjectReport.approved().project(projectId), aggregates);
 
     return ftTotal + ptTotal;
   }
 
   protected async getTotalOverdueReports(projectId: number) {
-    const now = new Date();
-    const pTotal = await ProjectReport.scope("incomplete").count({
-      where: { projectId, dueAt: { [Op.lt]: now } }
-    });
-    const sTotal = await SiteReport.scope("incomplete").count({
-      where: {
-        siteId: { [Op.in]: Site.approvedIdsSubquery() },
-        dueAt: { [Op.lt]: now }
-      },
-      replacements: { projectId }
-    } as CountOptions);
-    const nTotal = await NurseryReport.scope("incomplete").count({
-      where: {
-        nurseryId: { [Op.in]: Nursery.approvedIdsSubquery() },
-        dueAt: { [Op.lt]: now }
-      },
-      replacements: { projectId }
-    } as CountOptions);
+    const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
+    const pTotal = await ProjectReport.incomplete().project(projectId).count(countOpts);
+    const sTotal = await SiteReport.incomplete().sites(Site.approvedIdsSubquery(projectId)).count(countOpts);
+    const nTotal = await NurseryReport.incomplete().nurseries(Nursery.approvedIdsSubquery(projectId)).count(countOpts);
 
     return pTotal + sTotal + nTotal;
-  }
-
-  protected async getTotalHectaresRestored(projectId: number) {
-    return (
-      (await SitePolygon.scope("active").sum("calcArea", {
-        where: {
-          siteUuid: { [Op.in]: Site.approvedUuidsSubquery() },
-          status: "approved"
-        },
-        replacements: { projectId }
-      })) ?? 0
-    );
   }
 
   protected findFullIncludes() {

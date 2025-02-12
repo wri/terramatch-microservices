@@ -8,29 +8,46 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, literal, STRING, UUID } from "sequelize";
+import { BIGINT, literal, Op, STRING, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { chainScope } from "../util/chainScope";
 
 // Incomplete stub
+@Scopes(() => ({
+  project: (id: number) => ({ where: { projectId: id } }),
+  approved: { where: { status: { [Op.in]: Nursery.APPROVED_STATUSES } } }
+}))
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
 export class Nursery extends Model<Nursery> {
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
 
-  static approvedIdsSubquery(projectIdReplacement = ":projectId") {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const deletedAt = Nursery.getAttributes().deletedAt!.field;
+  static approved() {
+    return chainScope(this, "approved") as typeof Nursery;
+  }
+
+  static project(id: number) {
+    return chainScope(this, { method: ["project", id] }) as typeof Nursery;
+  }
+
+  static approvedIdsSubquery(projectId: number) {
+    const attributes = Nursery.getAttributes();
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
+    const deletedAt = attributes.deletedAt!.field;
+    const sql = Nursery.sequelize!;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
     return literal(
-      `(SELECT ${Nursery.getAttributes().id.field} FROM ${Nursery.tableName}
+      `(SELECT ${attributes.id.field} FROM ${Nursery.tableName}
         WHERE ${deletedAt} IS NULL
-        AND ${Nursery.getAttributes().projectId.field} = ${projectIdReplacement}
-        AND ${Nursery.getAttributes().status.field} IN (${Nursery.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
+        AND ${attributes.projectId.field} = ${sql.escape(projectId)}
+        AND ${attributes.status.field} IN (${Nursery.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
        )`
     );
   }

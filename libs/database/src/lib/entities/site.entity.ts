@@ -8,9 +8,10 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, literal, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, literal, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -20,34 +21,52 @@ import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
+import { chainScope } from "../util/chainScope";
 
 // Incomplete stub
+@Scopes(() => ({
+  approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
+  project: (id: number) => ({ where: { projectId: id } })
+}))
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = ["approved", "restoration-in-progress"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
-  static approvedIdsSubquery(projectIdReplacement = ":projectId") {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  static approved() {
+    return chainScope(this, "approved") as typeof Site;
+  }
+
+  static project(id: number) {
+    return chainScope(this, { method: ["project", id] }) as typeof Site;
+  }
+
+  static approvedIdsSubquery(projectId: number) {
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
     const deletedAt = Site.getAttributes().deletedAt!.field;
+    const sql = Site.sequelize!;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
     return literal(
       `(SELECT ${Site.getAttributes().id.field} FROM ${Site.tableName}
         WHERE ${deletedAt} IS NULL
-        AND ${Site.getAttributes().projectId.field} = ${projectIdReplacement}
+        AND ${Site.getAttributes().projectId.field} = ${sql.escape(projectId)}
         AND ${Site.getAttributes().status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
        )`
     );
   }
 
-  static approvedUuidsSubquery(projectIdReplacement = ":projectId") {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const deletedAt = Site.getAttributes().deletedAt!.field;
+  static approvedUuidsSubquery(projectId: number) {
+    const attributes = Site.getAttributes();
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
+    const deletedAt = attributes.deletedAt!.field;
+    const sql = Site.sequelize!;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
     return literal(
-      `(SELECT ${Site.getAttributes().uuid.field} FROM ${Site.tableName}
+      `(SELECT ${attributes.uuid.field} FROM ${Site.tableName}
         WHERE ${deletedAt} IS NULL
-        AND ${Site.getAttributes().projectId.field} = ${projectIdReplacement}
-        AND ${Site.getAttributes().status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
+        AND ${attributes.projectId.field} = ${sql.escape(projectId)}
+        AND ${attributes.status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
        )`
     );
   }

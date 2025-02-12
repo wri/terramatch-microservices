@@ -17,16 +17,20 @@ export class Demographic extends Model<Demographic> {
   static readonly WORKDAYS_TYPE = "workdays";
   static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
 
-  static idsSubquery(demographicalIds: Literal, demographicalTypeReplacement: string, typeReplacement: string) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const deletedAt = Demographic.getAttributes().deletedAt!.field;
+  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: string) {
+    const attributes = Demographic.getAttributes();
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
+    const deletedAt = attributes.deletedAt!.field;
+    const sql = Demographic.sequelize!;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
+
     return literal(
-      `(SELECT ${Demographic.getAttributes().id.field} FROM ${Demographic.tableName}
-        WHERE ${Demographic.getAttributes().demographicalType.field} = ${demographicalTypeReplacement}
-        AND ${Demographic.getAttributes().demographicalId.field} IN ${demographicalIds.val}
+      `(SELECT ${attributes.id.field} FROM ${Demographic.tableName}
+        WHERE ${attributes.demographicalType.field} = ${sql.escape(demographicalType)}
+        AND ${attributes.demographicalId.field} IN ${demographicalIds.val}
         AND ${deletedAt} IS NULL
-        AND ${Demographic.getAttributes().hidden.field} = false
-        AND ${Demographic.getAttributes().type.field} = ${typeReplacement}
+        AND ${attributes.hidden.field} = false
+        AND ${attributes.type.field} = ${sql.escape(type)}
       )`
     );
   }

@@ -1,5 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, BindOrReplacements, col, fn, Includeable, WhereOptions } from "sequelize";
+import { Attributes, col, fn, Includeable, WhereOptions } from "sequelize";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 export type Aggregate<M extends Model<M>> = {
@@ -10,18 +10,13 @@ export type Aggregate<M extends Model<M>> = {
 export async function aggregateColumns<M extends Model<M>>(
   model: ModelCtor<M>,
   aggregates: Aggregate<M>[],
-  where: WhereOptions<M>,
-  replacements: BindOrReplacements
+  where?: WhereOptions<M>
 ) {
   return (
     await model.findAll({
       where,
       raw: true,
-      attributes: aggregates.map(({ func, attr }) => [
-        fn(func, col(model.getAttributes()[attr].field)),
-        attr as string
-      ]),
-      replacements
+      attributes: aggregates.map(({ func, attr }) => [fn(func, col(model.getAttributes()[attr].field)), attr as string])
     })
   )[0];
 }

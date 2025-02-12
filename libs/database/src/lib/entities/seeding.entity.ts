@@ -9,11 +9,20 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DOUBLE, Op, STRING, UUID } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
+import { Literal } from "sequelize/types/utils";
+import { SiteReport } from "./site-report.entity";
+import { chainScope } from "../util/chainScope";
 
 @Scopes(() => ({
-  visible: { where: { hidden: false } }
+  visible: { where: { hidden: false } },
+  siteReports: (ids: number[] | Literal) => ({
+    where: {
+      seedableType: SiteReport.LARAVEL_TYPE,
+      seedableId: { [Op.in]: ids }
+    }
+  })
 }))
 @Table({
   tableName: "v2_seedings",
@@ -23,6 +32,14 @@ import { TreeSpeciesResearch } from "./tree-species-research.entity";
   indexes: [{ name: "v2_seedings_morph_index", fields: ["seedable_id", "seedable_type"] }]
 })
 export class Seeding extends Model<Seeding> {
+  static visible() {
+    return chainScope(this, "visible") as typeof Seeding;
+  }
+
+  static siteReports(ids: number[] | Literal) {
+    return chainScope(this, { method: ["siteReports", ids] }) as typeof Seeding;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

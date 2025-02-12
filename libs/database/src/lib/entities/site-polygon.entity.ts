@@ -24,6 +24,8 @@ import { IndicatorOutputMsuCarbon } from "./indicator-output-msu-carbon.entity";
 import { IndicatorOutputTreeCount } from "./indicator-output-tree-count.entity";
 import { IndicatorOutputTreeCover } from "./indicator-output-tree-cover.entity";
 import { IndicatorOutputTreeCoverLoss } from "./indicator-output-tree-cover-loss.entity";
+import { Literal } from "sequelize/types/utils";
+import { chainScope } from "../util/chainScope";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -34,10 +36,24 @@ export type Indicator =
   | IndicatorOutputMsuCarbon;
 
 @Scopes(() => ({
-  active: { where: { isActive: true } }
+  active: { where: { isActive: true } },
+  approved: { where: { status: "approved" } },
+  sites: (uuids: string[] | Literal) => ({ where: { siteUuid: uuids } })
 }))
 @Table({ tableName: "site_polygon", underscored: true, paranoid: true })
 export class SitePolygon extends Model<SitePolygon> {
+  static active() {
+    return chainScope(this, "active") as typeof SitePolygon;
+  }
+
+  static approved() {
+    return chainScope(this, "approved") as typeof SitePolygon;
+  }
+
+  static sites(uuids: string[] | Literal) {
+    return chainScope(this, { method: ["sites", uuids] }) as typeof SitePolygon;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

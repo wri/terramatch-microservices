@@ -15,18 +15,20 @@ import { BIGINT, DATE, INTEGER, literal, Op, STRING, TEXT, TINYINT, UUID } from 
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
-import { APPROVED_REPORT_STATUSES } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { chainScope } from "../util/chainScope";
 
 type ApprovedIdsSubqueryOptions = {
-  /** @default ":projectIdReplacement" */
-  projectIdReplacement?: string;
-  dueAfterReplacement?: string;
-  dueBeforeReplacement?: string;
+  dueAfter?: string | Date;
+  dueBefore?: string | Date;
 };
 
 // Incomplete stub
 @Scopes(() => ({
-  incomplete: { where: { status: { [Op.notIn]: [APPROVED_REPORT_STATUSES] } } }
+  incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
+  approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
+  project: (id: number) => ({ where: { projectId: id } }),
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
 }))
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
@@ -67,21 +69,40 @@ export class ProjectReport extends Model<ProjectReport> {
     "indirect-other"
   ];
 
-  static approvedIdsSubquery(opts: ApprovedIdsSubqueryOptions = {}) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const deletedAt = ProjectReport.getAttributes().deletedAt!.field;
-    const projectIdReplacement = opts.projectIdReplacement ?? ":projectId";
+  static incomplete() {
+    return chainScope(this, "incomplete") as typeof ProjectReport;
+  }
+
+  static approved() {
+    return chainScope(this, "approved") as typeof ProjectReport;
+  }
+
+  static project(id: number) {
+    return chainScope(this, { method: ["project", id] }) as typeof ProjectReport;
+  }
+
+  static dueBefore(date: Date | string) {
+    return chainScope(this, { method: ["dueBefore", date] }) as typeof ProjectReport;
+  }
+
+  static approvedIdsSubquery(projectId: number, opts: ApprovedIdsSubqueryOptions = {}) {
+    const attributes = ProjectReport.getAttributes();
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
+    const deletedAt = attributes.deletedAt!.field;
+    const sql = ProjectReport.sequelize!;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
+
     const approvedStatuses = ProjectReport.APPROVED_STATUSES.map(s => `"${s}"`).join(",");
     let where = `WHERE ${deletedAt} IS NULL
-      AND ${ProjectReport.getAttributes().projectId.field} = ${projectIdReplacement}
-      AND ${ProjectReport.getAttributes().status.field} IN (${approvedStatuses})`;
-    if (opts.dueAfterReplacement != null) {
-      where = `${where} AND ${ProjectReport.getAttributes().dueAt.field} >= ${opts.dueAfterReplacement}`;
+      AND ${attributes.projectId.field} = ${sql.escape(projectId)}
+      AND ${attributes.status.field} IN (${approvedStatuses})`;
+    if (opts.dueAfter != null) {
+      where = `${where} AND ${attributes.dueAt.field} >= ${sql.escape(opts.dueAfter)}`;
     }
-    if (opts.dueBeforeReplacement != null) {
-      where = `${where} AND ${ProjectReport.getAttributes().dueAt.field} < ${opts.dueBeforeReplacement}`;
+    if (opts.dueBefore != null) {
+      where = `${where} AND ${attributes.dueAt.field} < ${sql.escape(opts.dueBefore)}`;
     }
-    return literal(`(SELECT ${ProjectReport.getAttributes().id.field} FROM ${ProjectReport.tableName} ${where})`);
+    return literal(`(SELECT ${attributes.id.field} FROM ${ProjectReport.tableName} ${where})`);
   }
 
   @PrimaryKey

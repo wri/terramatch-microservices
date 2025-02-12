@@ -13,15 +13,12 @@ export class VerificationUserController {
   @Post()
   @ApiOperation({
     operationId: "verifyUser",
-    description: "Receive a token to verify an user"
+    description: "Receive a token to verify a user"
   })
   @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: VerificationUserResponse } })
   @ExceptionResponse(BadRequestException, { description: "Invalid request" })
-  async verifyUser(
-    @Request() { authenticatedUserId },
-    @Body() { token }: VerificationUserRequest
-  ): Promise<JsonApiDocument> {
-    const { uuid, isVerified } = await this.verificationUserService.verify(authenticatedUserId, token);
+  async verifyUser(@Body() { token }: VerificationUserRequest): Promise<JsonApiDocument> {
+    const { uuid, isVerified } = await this.verificationUserService.verify(token);
     return buildJsonApi()
       .addData(uuid, new VerificationUserResponse({ verified: isVerified }))
       .document.serialize();

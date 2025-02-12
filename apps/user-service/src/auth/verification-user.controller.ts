@@ -1,4 +1,4 @@
-import { Controller, Body, Post, HttpStatus, BadRequestException, Request } from "@nestjs/common";
+import { Controller, Body, Post, HttpStatus, BadRequestException } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";

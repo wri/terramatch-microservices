@@ -11,6 +11,9 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 class ProjectDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
+  @ApiProperty()
+  uuid: string;
+
   @ApiProperty({ nullable: true, description: "Framework key for this project" })
   frameworkKey: FrameworkKey | null;
 
@@ -20,6 +23,12 @@ class ProjectDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
     deprecated: true
   })
   frameworkUuid: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated organisation name"
+  })
+  organisationName: string | null;
 
   @ApiProperty({
     nullable: true,

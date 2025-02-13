@@ -342,22 +342,12 @@ export class Project extends Model<Project> {
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 
-  async loadOrganisation() {
-    if (this.organisation == null && this.organisationId != null) {
-      this.organisation = await this.$get("organisation");
-    }
-    return this.organisation;
+  get organisationName() {
+    return this.organisation?.name;
   }
 
   @BelongsTo(() => Application)
   application: Application | null;
-
-  async loadApplication() {
-    if (this.application == null && this.applicationId != null) {
-      this.application = await this.$get("application");
-    }
-    return this.application;
-  }
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
@@ -365,11 +355,6 @@ export class Project extends Model<Project> {
     scope: { speciesableType: Project.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
-
-  async loadTreesPlanted() {
-    this.treesPlanted ??= await this.$get("treesPlanted");
-    return this.treesPlanted;
-  }
 
   @HasMany(() => ProjectReport)
   reports: ProjectReport[] | null;

@@ -139,6 +139,6 @@ export class ProjectProcessor extends EntityProcessor<Project> {
   }
 
   protected findFullIncludes() {
-    return [{ association: "framework" }];
+    return [{ association: "framework" }, { association: "organisation", attributes: ["name"] }];
   }
 }

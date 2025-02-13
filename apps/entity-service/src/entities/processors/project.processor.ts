@@ -7,6 +7,7 @@ import {
   NurseryReport,
   Project,
   ProjectReport,
+  ProjectUser,
   Seeding,
   Site,
   SitePolygon,
@@ -15,10 +16,30 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { Op } from "sequelize";
-import { AdditionalProjectFullProps, ANRDto, ProjectFullDto } from "../dto/project.dto";
+import { AdditionalProjectFullProps, ANRDto, ProjectFullDto, ProjectLightDto } from "../dto/project.dto";
+import { EntityQueryDto } from "../dto/entity-query.dto";
 
 export class ProjectProcessor extends EntityProcessor<Project> {
-  readonly MODEL = Project;
+  async findOne(uuid: string) {
+    return await Project.findOne({
+      where: { uuid },
+      include: [{ association: "framework" }, { association: "organisation", attributes: ["name"] }]
+    });
+  }
+
+  async findMany(query: EntityQueryDto, userId: number, permissions: string[]) {
+    const builder = await this.entitiesService.buildQuery(Project, query);
+
+    if (permissions.includes("manage-own")) {
+      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+    }
+
+    return await builder.execute();
+  }
+
+  async addLightDto(document: DocumentBuilder, project: Project) {
+    document.addData(project.uuid, new ProjectLightDto(project));
+  }
 
   async addFullDto(document: DocumentBuilder, project: Project) {
     const projectId = project.id;
@@ -71,7 +92,7 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       totalJobsCreated: await this.getTotalJobs(project.id)
     };
 
-    document.addData(project.uuid, new ProjectFullDto(project as Project, props));
+    document.addData(project.uuid, new ProjectFullDto(project, props));
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
@@ -136,9 +157,5 @@ export class ProjectProcessor extends EntityProcessor<Project> {
     const nTotal = await NurseryReport.incomplete().nurseries(Nursery.approvedIdsSubquery(projectId)).count(countOpts);
 
     return pTotal + sTotal + nTotal;
-  }
-
-  protected findFullIncludes() {
-    return [{ association: "framework" }, { association: "organisation", attributes: ["name"] }];
   }
 }

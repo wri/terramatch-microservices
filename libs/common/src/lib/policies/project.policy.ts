@@ -37,7 +37,7 @@ export class ProjectPolicy extends EntityPolicy {
     }
   }
 
-  protected _user?: User;
+  protected _user?: User | null;
   protected async getUser() {
     if (this._user != null) return this._user;
 

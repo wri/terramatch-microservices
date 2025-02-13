@@ -43,15 +43,16 @@ export class Site extends Model<Site> {
   }
 
   static approvedIdsSubquery(projectId: number) {
+    const attributes = Site.getAttributes();
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = Site.getAttributes().deletedAt!.field;
+    const deletedAt = attributes.deletedAt!.field;
     const sql = Site.sequelize!;
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
     return literal(
-      `(SELECT ${Site.getAttributes().id.field} FROM ${Site.tableName}
+      `(SELECT ${attributes.id.field} FROM ${Site.tableName}
         WHERE ${deletedAt} IS NULL
-        AND ${Site.getAttributes().projectId.field} = ${sql.escape(projectId)}
-        AND ${Site.getAttributes().status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
+        AND ${attributes.projectId.field} = ${sql.escape(projectId)}
+        AND ${attributes.status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
        )`
     );
   }

@@ -1,6 +1,8 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, col, fn, Includeable, WhereOptions } from "sequelize";
+import { Attributes, col, fn, WhereOptions } from "sequelize";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { EntitiesService } from "../entities.service";
+import { EntityQueryDto } from "../dto/entity-query.dto";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -22,20 +24,11 @@ export async function aggregateColumns<M extends Model<M>>(
 }
 
 export abstract class EntityProcessor<ModelType extends Model<ModelType>> {
-  abstract readonly MODEL: ModelCtor<ModelType>;
+  constructor(protected readonly entitiesService: EntitiesService) {}
 
-  async findOne(uuid: string): Promise<ModelType | undefined> {
-    const where = {} as WhereOptions<ModelType>;
-    where["uuid"] = uuid;
-    return await this.MODEL.findOne({ where, include: this.findFullIncludes() });
-  }
+  abstract findOne(uuid: string): Promise<ModelType | null>;
+  abstract findMany(query: EntityQueryDto, userId: number, permissions: string[]): Promise<ModelType[]>;
 
   abstract addFullDto(document: DocumentBuilder, model: ModelType): Promise<void>;
-
-  /**
-   * Override to include some associations in the initial find query
-   */
-  protected findFullIncludes(): Includeable[] {
-    return [];
-  }
+  abstract addLightDto(document: DocumentBuilder, model: ModelType): Promise<void>;
 }

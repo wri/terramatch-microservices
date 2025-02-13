@@ -1,4 +1,4 @@
-import { Injectable, LoggerService, UnauthorizedException } from "@nestjs/common";
+import { Injectable, LoggerService, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import { BuilderType, EntityPolicy } from "./entity.policy";
@@ -8,6 +8,7 @@ import { Model } from "sequelize-typescript";
 import { TMLogService } from "../util/tm-log.service";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
+import { isArray } from "lodash";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,27 +36,37 @@ const POLICIES: [EntityClass, PolicyClass][] = [
  * @throws UnauthorizedException if there is no authenticated user id, there's no policy defined for
  *   the subject, or if the requested action is not allowed against the subject for this user.
  */
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class PolicyService {
   private readonly log: LoggerService = new TMLogService(PolicyService.name);
+  private permissions?: string[];
 
-  async authorize(action: string, subject: Model | EntityClass): Promise<void> {
+  get userId() {
     // Added by AuthGuard
-    const userId = RequestContext.currentContext.req.authenticatedUserId;
-    if (userId == null) throw new UnauthorizedException();
+    return RequestContext.currentContext.req.authenticatedUserId;
+  }
 
+  async getPermissions() {
+    if (this.permissions != null) return this.permissions;
+
+    if (this.userId == null) throw new UnauthorizedException();
+    return (this.permissions = await Permission.getUserPermissionNames(this.userId));
+  }
+
+  async authorize(action: string, subject: Model | EntityClass | Model[]) {
+    const subjects = isArray(subject) ? subject : [subject];
     const [, PolicyClass] =
-      POLICIES.find(([entityClass]) => subject instanceof entityClass || subject === entityClass) ?? [];
+      POLICIES.find(([entityClass]) => subjects[0] instanceof entityClass || subjects[0] === entityClass) ?? [];
     if (PolicyClass == null) {
       this.log.error(`No policy found for subject type [${subject.constructor.name}]`);
       throw new UnauthorizedException();
     }
 
-    const permissions = await Permission.getUserPermissionNames(userId);
     const builder = new AbilityBuilder(createMongoAbility);
-    await new PolicyClass(userId, permissions, builder).addRules();
+    await new PolicyClass(this.userId, await this.getPermissions(), builder).addRules();
 
     const ability = builder.build();
-    if (!ability.can(action, subject)) throw new UnauthorizedException();
+    const hasUnauthorized = subjects.find(subject => !ability.can(action, subject)) != null;
+    if (hasUnauthorized) throw new UnauthorizedException();
   }
 }

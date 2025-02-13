@@ -1,19 +1,62 @@
-import { Controller, Get, NotFoundException, Param, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ANRDto, ProjectFullDto } from "./dto/project.dto";
+import { ANRDto, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
 import { EntityGetParamsDto } from "./dto/entity-get-params.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { SiteFullDto } from "./dto/site.dto";
+import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { Model } from "sequelize-typescript";
-import { EntityProcessor } from "./processors/entity-processor";
+import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
+import { EntityQueryDto } from "./dto/entity-query.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
+
+  @Get(":entity")
+  @ApiOperation({
+    operationId: "entityIndex",
+    summary: "Get a paginated and filtered list of light entity resources."
+  })
+  @JsonApiResponse([
+    { data: ProjectLightDto, pagination: true },
+    { data: SiteLightDto, pagination: true }
+  ])
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async entityIndex<T extends Model<T>>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
+    const processor = this.entitiesService.createProcessor<T>(entity);
+    const models = await processor.findMany(
+      query,
+      this.policyService.userId,
+      await this.policyService.getPermissions()
+    );
+
+    const document = buildJsonApi({ pagination: true });
+    if (models.length === 0) {
+      return document.serialize();
+    }
+
+    await this.policyService.authorize("read", models);
+
+    // Unfortunately, order matters on these returned documents, so we have to wait for each
+    // build individually. Typically, light DTO processing shouldn't require additional queries
+    // though, so this probably doesn't matter in the end.
+    for (const model of models) {
+      await processor.addLightDto(document, model);
+    }
+    return document.serialize();
+  }
 
   @Get(":entity/:uuid")
   @ApiOperation({
@@ -26,7 +69,7 @@ export class EntitiesController {
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async entityGet<T extends Model<T>>(@Param() { entity, uuid }: EntityGetParamsDto) {
-    const processor = this.entitiesService.createProcessor(entity) as unknown as EntityProcessor<T>;
+    const processor = this.entitiesService.createProcessor<T>(entity);
     const model = await processor.findOne(uuid);
     if (model == null) throw new NotFoundException();
 

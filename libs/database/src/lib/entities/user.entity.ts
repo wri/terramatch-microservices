@@ -161,13 +161,6 @@ export class User extends Model<User> {
   @BelongsToMany(() => Project, () => ProjectUser)
   projects: Array<Project & { ProjectUser: ProjectUser }>;
 
-  async loadProjects() {
-    if (this.projects == null) {
-      this.projects = await (this as User).$get("projects");
-    }
-    return this.projects;
-  }
-
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 
@@ -181,13 +174,6 @@ export class User extends Model<User> {
   @BelongsToMany(() => Organisation, () => OrganisationUser)
   organisations: Array<Organisation & { OrganisationUser: OrganisationUser }>;
 
-  async loadOrganisations() {
-    if (this.organisations == null) {
-      this.organisations = await (this as User).$get("organisations");
-    }
-    return this.organisations;
-  }
-
   @BelongsToMany(() => Organisation, {
     through: {
       model: () => OrganisationUser,
@@ -196,13 +182,6 @@ export class User extends Model<User> {
   })
   organisationsConfirmed: Array<Organisation & { OrganisationUser: OrganisationUser }>;
 
-  async loadOrganisationsConfirmed() {
-    if (this.organisationsConfirmed == null) {
-      this.organisationsConfirmed = await (this as User).$get("organisationsConfirmed");
-    }
-    return this.organisationsConfirmed;
-  }
-
   @BelongsToMany(() => Organisation, {
     through: {
       model: () => OrganisationUser,
@@ -210,13 +189,6 @@ export class User extends Model<User> {
     }
   })
   organisationsRequested: Array<Organisation & { OrganisationUser: OrganisationUser }>;
-
-  async loadOrganisationsRequested() {
-    if (this.organisationsRequested == null) {
-      this.organisationsRequested = await (this as User).$get("organisationsRequested");
-    }
-    return this.organisationsRequested;
-  }
 
   private _primaryOrganisation: (Organisation & { OrganisationUser?: OrganisationUser }) | false;
   async primaryOrganisation(): Promise<(Organisation & { OrganisationUser?: OrganisationUser }) | null> {

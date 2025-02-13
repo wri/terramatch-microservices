@@ -138,6 +138,9 @@ export class ProjectFullDto extends ProjectDtoBase<ProjectFullDto> {
   states: string[] | null;
 
   @ApiProperty({ nullable: true })
+  projectCountyDistrict: string | null;
+
+  @ApiProperty({ nullable: true })
   plantingEndDate: Date | null;
 
   @ApiProperty({ nullable: true })

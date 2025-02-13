@@ -3,7 +3,7 @@ import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api
 import { ApiProperty } from "@nestjs/swagger";
 
 @JsonApiDto({ type: "verifications", id: "uuid" })
-export class VerificationUserResponse extends JsonApiAttributes<VerificationUserResponse> {
+export class VerificationUserResponseDto extends JsonApiAttributes<VerificationUserResponseDto> {
   @ApiProperty()
   verified: boolean;
 }

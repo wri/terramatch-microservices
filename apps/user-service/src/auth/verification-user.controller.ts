@@ -4,7 +4,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { VerificationUserService } from "./verification-user.service";
 import { VerificationUserRequest } from "./dto/verification-user-request.dto";
-import { VerificationUserResponse } from "./dto/verification-user-response.dto";
+import { VerificationUserResponseDto } from "./dto/verification-user-response.dto";
 
 @Controller("auth/v3/verifications")
 export class VerificationUserController {
@@ -13,14 +13,14 @@ export class VerificationUserController {
   @Post()
   @ApiOperation({
     operationId: "verifyUser",
-    description: "Receive a token to verify a user"
+    description: "Receive a token to verify a user and return the verification status"
   })
-  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: VerificationUserResponse } })
+  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: VerificationUserResponseDto } })
   @ExceptionResponse(BadRequestException, { description: "Invalid request" })
   async verifyUser(@Body() { token }: VerificationUserRequest): Promise<JsonApiDocument> {
     const { uuid, isVerified } = await this.verificationUserService.verify(token);
     return buildJsonApi()
-      .addData(uuid, new VerificationUserResponse({ verified: isVerified }))
+      .addData(uuid, new VerificationUserResponseDto({ verified: isVerified }))
       .document.serialize();
   }
 }

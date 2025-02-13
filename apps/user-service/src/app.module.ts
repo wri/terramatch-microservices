@@ -9,17 +9,20 @@ import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
 import { ResetPasswordController } from "./auth/reset-password.controller";
 import { ResetPasswordService } from "./auth/reset-password.service";
+import { VerificationUserController } from "./auth/verification-user.controller";
+import { VerificationUserService } from "./auth/verification-user.service";
 
 @Module({
   imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
-  controllers: [LoginController, UsersController, ResetPasswordController],
+  controllers: [LoginController, UsersController, ResetPasswordController, VerificationUserController],
   providers: [
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter
     },
     AuthService,
-    ResetPasswordService
+    ResetPasswordService,
+    VerificationUserService
   ]
 })
 export class AppModule {}

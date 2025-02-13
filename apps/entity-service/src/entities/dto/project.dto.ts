@@ -8,14 +8,13 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 class ProjectDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
   @ApiProperty()
   uuid: string;
 
   @ApiProperty({ nullable: true, description: "Framework key for this project" })
-  frameworkKey: FrameworkKey | null;
+  frameworkKey: string | null;
 
   @ApiProperty({
     nullable: true,

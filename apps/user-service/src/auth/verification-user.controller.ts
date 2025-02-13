@@ -5,12 +5,14 @@ import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/
 import { VerificationUserService } from "./verification-user.service";
 import { VerificationUserRequest } from "./dto/verification-user-request.dto";
 import { VerificationUserResponseDto } from "./dto/verification-user-response.dto";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 
 @Controller("auth/v3/verifications")
 export class VerificationUserController {
   constructor(private readonly verificationUserService: VerificationUserService) {}
 
   @Post()
+  @NoBearerAuth
   @ApiOperation({
     operationId: "verifyUser",
     description: "Receive a token to verify a user and return the verification status"

@@ -16,7 +16,7 @@ export class VerificationUserService {
 
     const user = await User.findOne({
       where: { id: verification.userId },
-      attributes: ["uuid", "emailAddressVerifiedAt"]
+      attributes: ["id", "uuid", "emailAddressVerifiedAt"]
     });
     if (user == null) {
       throw new NotFoundException("User not found");

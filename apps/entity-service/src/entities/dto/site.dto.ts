@@ -59,6 +59,7 @@ export class SiteLightDto extends SiteDtoBase<SiteLightDto> {
   }
 
   @ApiProperty({
+    type: Boolean,
     example: true,
     description: "Indicates that this resource does not have the full resource definition."
   })
@@ -82,7 +83,11 @@ export class SiteFullDto extends SiteDtoBase<SiteFullDto> {
     });
   }
 
-  @ApiProperty({ example: false, description: "Indicates that this resource has the full resource definition." })
+  @ApiProperty({
+    type: Boolean,
+    example: false,
+    description: "Indicates that this resource has the full resource definition."
+  })
   lightResource = false;
 
   @ApiProperty()

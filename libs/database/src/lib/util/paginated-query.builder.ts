@@ -1,6 +1,33 @@
 import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes, Filterable, FindOptions, Op, WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
+import { flatten, isObject } from "lodash";
+
+// Some utilities copied from the un-exported bowels of Sequelize to help merge where clauses. Pulled
+// from model.js in the code paths where multiple scopes can be combined with a query's WhereOptions to
+// create a single WhereOptions.
+const operatorSet = new Set(Object.values(Op));
+function getComplexKeys(obj: object) {
+  const symbols = Object.getOwnPropertySymbols(obj).filter(s => operatorSet.has(s)) as (symbol | string)[];
+  return symbols.concat(Object.keys(obj));
+}
+
+function unpackAnd(where: WhereOptions) {
+  if (!isObject(where)) return where;
+
+  const keys = getComplexKeys(where);
+  if (keys.length === 0) return;
+  if (keys.length !== 1 || keys[0] !== Op.and) return where;
+  return where[Op.and];
+}
+
+function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions) {
+  const unpackedA = unpackAnd(whereA);
+  if (unpackedA === undefined) return whereB;
+  const unpackedB = unpackAnd(whereB);
+  if (unpackedB === undefined) return whereA;
+  return { [Op.and]: flatten([unpackedA, unpackedB]) };
+}
 
 export class PaginatedQueryBuilder<T extends Model<T>> {
   protected findOptions: FindOptions<Attributes<T>> = {
@@ -18,16 +45,7 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   where(options: WhereOptions, filterable: Filterable = this.findOptions) {
-    if (filterable.where == null) filterable.where = {};
-
-    const clauses = { ...options } as WhereOptions;
-    if (clauses[Op.and] != null && filterable.where[Op.and] != null) {
-      // For this builder, we only use arrays of literals with Op.and, so we can simply merge the arrays
-      clauses[Op.and] = [...filterable.where[Op.and], ...clauses[Op.and]];
-    }
-
-    Object.assign(filterable.where, clauses);
-
+    filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);
     return this;
   }
 

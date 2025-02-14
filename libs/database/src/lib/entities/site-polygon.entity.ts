@@ -12,7 +12,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, Op, STRING, UUID } from "sequelize";
 import { Site } from "./site.entity";
 import { PointGeometry } from "./point-geometry.entity";
 import { PolygonGeometry } from "./polygon-geometry.entity";
@@ -38,7 +38,7 @@ export type Indicator =
 @Scopes(() => ({
   active: { where: { isActive: true } },
   approved: { where: { status: "approved" } },
-  sites: (uuids: string[] | Literal) => ({ where: { siteUuid: uuids } })
+  sites: (uuids: string[] | Literal) => ({ where: { siteUuid: { [Op.in]: uuids } } })
 }))
 @Table({ tableName: "site_polygon", underscored: true, paranoid: true })
 export class SitePolygon extends Model<SitePolygon> {

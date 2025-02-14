@@ -1,4 +1,4 @@
-import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   ENTITY_STATUSES,
@@ -9,10 +9,25 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { EntityDto } from "./entity.dto";
 
 // TODO: THIS IS A STUB!
 
-class SiteDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
+@JsonApiDto({ type: "sites" })
+export class SiteLightDto extends EntityDto {
+  constructor(site?: Site) {
+    super();
+    if (site != null) {
+      this.populate(SiteLightDto, {
+        ...pickApiProperties(site, SiteLightDto),
+        lightResource: true,
+        // these two are untyped and marked optional in the base model.
+        createdAt: site.createdAt as Date,
+        updatedAt: site.createdAt as Date
+      });
+    }
+  }
+
   @ApiProperty({ nullable: true, description: "Framework key for this project" })
   frameworkKey: FrameworkKey | null;
 
@@ -47,35 +62,17 @@ class SiteDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
   updatedAt: Date;
 }
 
-@JsonApiDto({ type: "sites" })
-export class SiteLightDto extends SiteDtoBase<SiteLightDto> {
-  constructor(site: Site) {
-    super({
-      ...pickApiProperties(site as Omit<Site, "lightResource">, SiteLightDto),
-      // these two are untyped and marked optional in the base model.
-      createdAt: site.createdAt as Date,
-      updatedAt: site.updatedAt as Date
-    });
-  }
-
-  @ApiProperty({
-    type: Boolean,
-    example: true,
-    description: "Indicates that this resource does not have the full resource definition."
-  })
-  lightResource = true;
-}
-
 // Incomplete stub
 export type AdditionalSiteFullProps = {
   totalSiteReports: number;
 };
 
-@JsonApiDto({ type: "sites" })
-export class SiteFullDto extends SiteDtoBase<SiteFullDto> {
+export class SiteFullDto extends SiteLightDto {
   constructor(site: Site, props: AdditionalSiteFullProps) {
-    super({
-      ...pickApiProperties(site as Omit<Site, "lightResource" | keyof AdditionalSiteFullProps>, SiteFullDto),
+    super();
+    this.populate(SiteFullDto, {
+      ...pickApiProperties(site, SiteFullDto),
+      lightResource: false,
       // these two are untyped and marked optional in the base model.
       createdAt: site.createdAt as Date,
       updatedAt: site.updatedAt as Date,

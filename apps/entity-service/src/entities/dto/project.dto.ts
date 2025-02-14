@@ -1,4 +1,4 @@
-import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   ENTITY_STATUSES,
@@ -8,8 +8,23 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
+import { EntityDto } from "./entity.dto";
 
-class ProjectDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
+@JsonApiDto({ type: "projects" })
+export class ProjectLightDto extends EntityDto {
+  constructor(project?: Project) {
+    super();
+    if (project != null) {
+      this.populate(ProjectLightDto, {
+        ...pickApiProperties(project, ProjectLightDto),
+        lightResource: true,
+        // these two are untyped and marked optional in the base model.
+        createdAt: project.createdAt as Date,
+        updatedAt: project.updatedAt as Date
+      });
+    }
+  }
+
   @ApiProperty()
   uuid: string;
 
@@ -56,25 +71,6 @@ class ProjectDtoBase<T> extends JsonApiAttributes<Omit<T, "lightResource">> {
   updatedAt: Date;
 }
 
-@JsonApiDto({ type: "projects" })
-export class ProjectLightDto extends ProjectDtoBase<ProjectLightDto> {
-  constructor(project: Project) {
-    super({
-      ...pickApiProperties(project as Omit<Project, "lightResource">, ProjectLightDto),
-      // these two are untyped and marked optional in the base model.
-      createdAt: project.createdAt as Date,
-      updatedAt: project.updatedAt as Date
-    });
-  }
-
-  @ApiProperty({
-    type: Boolean,
-    example: true,
-    description: "Indicates that this resource does not have the full resource definition."
-  })
-  lightResource = true;
-}
-
 export type AdditionalProjectFullProps = {
   totalHectaresRestoredSum: number;
   treesPlantedCount: number;
@@ -100,27 +96,18 @@ export class ANRDto {
   treeCount: number;
 }
 
-@JsonApiDto({ type: "projects" })
-export class ProjectFullDto extends ProjectDtoBase<ProjectFullDto> {
+export class ProjectFullDto extends ProjectLightDto {
   constructor(project: Project, props: AdditionalProjectFullProps) {
-    super({
-      ...pickApiProperties(
-        project as Omit<Project, "lightResource" | keyof AdditionalProjectFullProps>,
-        ProjectFullDto
-      ),
+    super();
+    this.populate(ProjectFullDto, {
+      ...pickApiProperties(project, ProjectFullDto),
+      lightResource: false,
       // these two are untyped and marked optional in the base model.
       createdAt: project.createdAt as Date,
       updatedAt: project.updatedAt as Date,
       ...props
     });
   }
-
-  @ApiProperty({
-    type: Boolean,
-    example: false,
-    description: "Indicates that this resource has the full resource definition."
-  })
-  lightResource = false;
 
   @ApiProperty({
     description: "True for projects that are test data and do not represent actual planting on the ground."

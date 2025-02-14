@@ -262,4 +262,7 @@ export class ProjectFullDto extends ProjectDtoBase<ProjectFullDto> {
 
   @ApiProperty({ nullable: true })
   goalTreesRestoredAnr: number | null;
+
+  @ApiProperty({ nullable: true })
+  directSeedingSurvivalRate: number | null;
 }

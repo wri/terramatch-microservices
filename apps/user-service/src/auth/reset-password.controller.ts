@@ -18,7 +18,7 @@ export class ResetPasswordController {
     operationId: "requestPasswordReset",
     description: "Send password reset email with a token"
   })
-  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: ResetPasswordResponseDto } })
+  @JsonApiResponse(ResetPasswordResponseDto, { status: HttpStatus.CREATED })
   @ExceptionResponse(BadRequestException, { description: "Invalid request or email." })
   async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
@@ -33,7 +33,7 @@ export class ResetPasswordController {
     operationId: "resetPassword",
     description: "Reset password using the provided token"
   })
-  @JsonApiResponse({ status: HttpStatus.OK, data: { type: ResetPasswordResponseDto } })
+  @JsonApiResponse(ResetPasswordResponseDto)
   @ExceptionResponse(BadRequestException, { description: "Invalid or expired token." })
   async resetPassword(
     @Param("token") token: string,

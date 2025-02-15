@@ -15,7 +15,7 @@ export const DemographicFactory = {
     ...(await defaultAttributesFactory()),
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
-    type: "workdays",
+    type: Demographic.WORKDAYS_TYPE,
     collection: faker.helpers.arrayElement(ProjectReport.WORKDAY_COLLECTIONS)
   })),
 
@@ -23,7 +23,7 @@ export const DemographicFactory = {
     ...(await defaultAttributesFactory()),
     demographicalType: SiteReport.LARAVEL_TYPE,
     demographicalId: SiteReportFactory.associate("id"),
-    type: "workdays",
+    type: Demographic.WORKDAYS_TYPE,
     collection: faker.helpers.arrayElement(SiteReport.WORKDAY_COLLECTIONS)
   })),
 
@@ -31,7 +31,7 @@ export const DemographicFactory = {
     ...(await defaultAttributesFactory()),
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
-    type: "restoration-partners",
+    type: Demographic.RESTORATION_PARTNERS_TYPE,
     collection: faker.helpers.arrayElement(ProjectReport.RESTORATION_PARTNER_COLLECTIONS)
   }))
 };

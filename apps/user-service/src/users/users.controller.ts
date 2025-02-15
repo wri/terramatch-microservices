@@ -33,7 +33,7 @@ const USER_RESPONSE_SHAPE = {
       }
     ]
   },
-  included: [{ type: OrganisationDto }]
+  included: [OrganisationDto]
 };
 
 @Controller("users/v3/users")

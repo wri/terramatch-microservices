@@ -18,7 +18,7 @@ export class TreesController {
     operationId: "treeScientificNamesSearch",
     description: "Search scientific names of tree species. Returns up to 10 entries."
   })
-  @JsonApiResponse({ data: { type: ScientificNameDto }, hasMany: true })
+  @JsonApiResponse({ data: ScientificNameDto, hasMany: true })
   async searchScientificNames(@Query("search") search: string) {
     if (isEmpty(search)) throw new BadRequestException("search query param is required");
 
@@ -35,7 +35,7 @@ export class TreesController {
     operationId: "establishmentTreesFind",
     summary: "Get tree data related to the establishment of an entity"
   })
-  @JsonApiResponse({ data: { type: EstablishmentsTreesDto } })
+  @JsonApiResponse(EstablishmentsTreesDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more path param values is invalid." })
   async getEstablishmentData(@Param() { entity, uuid }: EstablishmentsTreesParamsDto) {

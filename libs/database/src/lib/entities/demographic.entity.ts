@@ -1,6 +1,7 @@
 import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, literal, STRING, TEXT, UUID } from "sequelize";
 import { DemographicEntry } from "./demographic-entry.entity";
+import { Literal } from "sequelize/types/utils";
 
 @Table({
   tableName: "demographics",
@@ -12,6 +13,28 @@ import { DemographicEntry } from "./demographic-entry.entity";
   ]
 })
 export class Demographic extends Model<Demographic> {
+  static readonly DEMOGRAPHIC_COUNT_CUTOFF = "2024-07-05";
+  static readonly WORKDAYS_TYPE = "workdays";
+  static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
+
+  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: string) {
+    const attributes = Demographic.getAttributes();
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
+    const deletedAt = attributes.deletedAt!.field;
+    const sql = Demographic.sequelize!;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
+
+    return literal(
+      `(SELECT ${attributes.id.field} FROM ${Demographic.tableName}
+        WHERE ${attributes.demographicalType.field} = ${sql.escape(demographicalType)}
+        AND ${attributes.demographicalId.field} IN ${demographicalIds.val}
+        AND ${deletedAt} IS NULL
+        AND ${attributes.hidden.field} = false
+        AND ${attributes.type.field} = ${sql.escape(type)}
+      )`
+    );
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

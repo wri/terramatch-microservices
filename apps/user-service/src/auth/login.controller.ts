@@ -17,7 +17,7 @@ export class LoginController {
     operationId: "authLogin",
     description: "Receive a JWT Token in exchange for login credentials"
   })
-  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: LoginDto } })
+  @JsonApiResponse(LoginDto, { status: HttpStatus.CREATED })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async create(@Body() { emailAddress, password }: LoginRequest): Promise<JsonApiDocument> {
     const { token, userUuid } = (await this.authService.login(emailAddress, password)) ?? {};

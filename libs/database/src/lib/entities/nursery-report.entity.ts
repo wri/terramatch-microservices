@@ -8,21 +8,36 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, UUID } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
-import { ReportStatus, UpdateRequestStatus } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../constants/status";
 import { FrameworkKey } from "../constants/framework";
+import { Literal } from "sequelize/types/utils";
+import { chainScope } from "../util/chain-scope";
 
 // Incomplete stub
+@Scopes(() => ({
+  incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
+  nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } })
+}))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly PARENT_ID = "nurseryId";
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\NurseryReport";
+
+  static incomplete() {
+    return chainScope(this, "incomplete") as typeof NurseryReport;
+  }
+
+  static nurseries(ids: number[] | Literal) {
+    return chainScope(this, "nurseries", ids) as typeof NurseryReport;
+  }
 
   @PrimaryKey
   @AutoIncrement

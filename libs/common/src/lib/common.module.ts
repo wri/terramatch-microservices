@@ -8,6 +8,7 @@ import { PolicyService } from "./policies/policy.service";
 import { TMLogService } from "./util/tm-log.service";
 import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
+import { MediaService } from "./media/media.service";
 
 @Module({
   imports: [
@@ -28,8 +29,9 @@ import { EmailService } from "./email/email.service";
     { provide: APP_GUARD, useClass: AuthGuard },
     TMLogService,
     EmailService,
-    LocalizationService
+    LocalizationService,
+    MediaService
   ],
-  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService]
+  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, MediaService]
 })
 export class CommonModule {}

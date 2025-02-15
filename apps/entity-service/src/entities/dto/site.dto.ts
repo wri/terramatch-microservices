@@ -9,7 +9,7 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { EntityDto } from "./entity.dto";
+import { AdditionalProps, EntityDto } from "./entity.dto";
 
 // TODO: THIS IS A STUB!
 
@@ -62,10 +62,7 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-// Incomplete stub
-export type AdditionalSiteFullProps = {
-  totalSiteReports: number;
-};
+export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
 
 export class SiteFullDto extends SiteLightDto {
   constructor(site: Site, props: AdditionalSiteFullProps) {

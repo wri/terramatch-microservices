@@ -2,6 +2,15 @@ import { Type } from "@nestjs/common";
 import { JsonApiAttributesInput, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 
+/**
+ * A utility type for constructing the "extra props" type of a full DTO based on what's in the
+ * full dto, the light dto and the model.
+ */
+export type AdditionalProps<FullDto, LightDto, Model> = Pick<
+  FullDto,
+  keyof Omit<FullDto, keyof Model | keyof LightDto>
+>;
+
 export abstract class EntityDto {
   protected populate<DTO extends EntityDto>(dtoClass: Type<DTO>, source: JsonApiAttributesInput<DTO>) {
     Object.assign(this, pickApiProperties(source, dtoClass));

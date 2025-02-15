@@ -22,14 +22,13 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
-import { MediaCollection } from "../types/media";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
-  static readonly MEDIA: MediaCollection = {
+  static readonly MEDIA = {
     media: { dbCollection: "media", multiple: true },
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
     file: { dbCollection: "file", multiple: true },

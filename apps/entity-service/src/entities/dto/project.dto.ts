@@ -8,7 +8,7 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
-import { EntityDto } from "./entity.dto";
+import { AdditionalProps, EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "projects" })
@@ -72,34 +72,8 @@ export class ProjectLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type ProjectMedia = {
-  media: MediaDto[];
-  socioeconomicBenefits: MediaDto[];
-  file: MediaDto[];
-  otherAdditionalDocuments: MediaDto[];
-  photos: MediaDto[];
-  documentFiles: MediaDto[];
-  programmeSubmission: MediaDto[];
-  detailedProjectBudget: MediaDto | null;
-  proofOfLandTenureMou: MediaDto[];
-};
-
-export type AdditionalProjectFullProps = ProjectMedia & {
-  totalHectaresRestoredSum: number;
-  treesPlantedCount: number;
-  seedsPlantedCount: number;
-  regeneratedTreesCount: number;
-  workdayCount: number;
-  selfReportedWorkdayCount: number;
-  combinedWorkdayCount: number;
-  totalJobsCreated: number;
-  totalSites: number;
-  totalNurseries: number;
-  totalProjectReports: number;
-  totalOverdueReports: number;
-  treesRestoredPpc: number;
-  assistedNaturalRegenerationList: ANRDto[];
-};
+export type AdditionalProjectFullProps = AdditionalProps<ProjectFullDto, ProjectLightDto, Project>;
+export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;
 
 export class ANRDto {
   @ApiProperty({ description: "Site name" })

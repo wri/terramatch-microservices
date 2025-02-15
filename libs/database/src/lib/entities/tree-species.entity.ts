@@ -42,11 +42,11 @@ export class TreeSpecies extends Model<TreeSpecies> {
   }
 
   static siteReports(ids: number[] | Literal) {
-    return chainScope(this, { method: ["siteReports", ids] }) as typeof TreeSpecies;
+    return chainScope(this, "siteReports", ids) as typeof TreeSpecies;
   }
 
   static collection(collection: string) {
-    return chainScope(this, { method: ["collection", collection] }) as typeof TreeSpecies;
+    return chainScope(this, "collection", collection) as typeof TreeSpecies;
   }
 
   @PrimaryKey

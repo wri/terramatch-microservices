@@ -78,11 +78,11 @@ export class ProjectReport extends Model<ProjectReport> {
   }
 
   static project(id: number) {
-    return chainScope(this, { method: ["project", id] }) as typeof ProjectReport;
+    return chainScope(this, "project", id) as typeof ProjectReport;
   }
 
   static dueBefore(date: Date | string) {
-    return chainScope(this, { method: ["dueBefore", date] }) as typeof ProjectReport;
+    return chainScope(this, "dueBefore", date) as typeof ProjectReport;
   }
 
   static approvedIdsSubquery(projectId: number, opts: ApprovedIdsSubqueryOptions = {}) {

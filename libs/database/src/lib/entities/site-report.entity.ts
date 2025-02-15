@@ -56,7 +56,7 @@ export class SiteReport extends Model<SiteReport> {
   }
 
   static sites(ids: number[] | Literal) {
-    return chainScope(this, { method: ["sites", ids] }) as typeof SiteReport;
+    return chainScope(this, "sites", ids) as typeof SiteReport;
   }
 
   static approved() {
@@ -64,7 +64,7 @@ export class SiteReport extends Model<SiteReport> {
   }
 
   static dueBefore(date: Date | string) {
-    return chainScope(this, { method: ["dueBefore", date] }) as typeof SiteReport;
+    return chainScope(this, "dueBefore", date) as typeof SiteReport;
   }
 
   static approvedIdsSubquery(siteIds: Literal, opts: ApprovedIdsSubqueryOptions = {}) {

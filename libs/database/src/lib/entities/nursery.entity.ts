@@ -34,7 +34,7 @@ export class Nursery extends Model<Nursery> {
   }
 
   static project(id: number) {
-    return chainScope(this, { method: ["project", id] }) as typeof Nursery;
+    return chainScope(this, "project", id) as typeof Nursery;
   }
 
   static approvedIdsSubquery(projectId: number) {

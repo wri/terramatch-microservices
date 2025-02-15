@@ -72,13 +72,18 @@ export class SitePolygonsController {
 
     const document = buildJsonApi({ pagination: true });
     for (const sitePolygon of await queryBuilder.execute()) {
-      const geometry = await sitePolygon.loadPolygon();
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
       const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
       document.addData(
         sitePolygon.uuid,
-        new SitePolygonDto(sitePolygon, geometry?.polygon, indicators, establishmentTreeSpecies, reportingPeriods)
+        new SitePolygonDto(
+          sitePolygon,
+          sitePolygon.polygon?.polygon,
+          indicators,
+          establishmentTreeSpecies,
+          reportingPeriods
+        )
       );
     }
 

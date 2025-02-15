@@ -51,7 +51,7 @@ export class SitePolygon extends Model<SitePolygon> {
   }
 
   static sites(uuids: string[] | Literal) {
-    return chainScope(this, { method: ["sites", uuids] }) as typeof SitePolygon;
+    return chainScope(this, "sites", uuids) as typeof SitePolygon;
   }
 
   @PrimaryKey
@@ -89,13 +89,6 @@ export class SitePolygon extends Model<SitePolygon> {
   @BelongsTo(() => PointGeometry, { foreignKey: "pointUuid", targetKey: "uuid" })
   point: PointGeometry | null;
 
-  async loadPoint() {
-    if (this.point == null && this.pointUuid != null) {
-      this.point = await this.$get("point");
-    }
-    return this.point;
-  }
-
   // This column got called poly_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull
   @Column({ type: UUID, field: "poly_id" })
@@ -103,13 +96,6 @@ export class SitePolygon extends Model<SitePolygon> {
 
   @BelongsTo(() => PolygonGeometry, { foreignKey: "polygonUuid", targetKey: "uuid" })
   polygon: PolygonGeometry | null;
-
-  async loadPolygon() {
-    if (this.polygon == null && this.polygonUuid != null) {
-      this.polygon = await this.$get("polygon");
-    }
-    return this.polygon;
-  }
 
   @AllowNull
   @Column(STRING)

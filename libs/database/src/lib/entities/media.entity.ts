@@ -2,6 +2,7 @@ import {
   AllowNull,
   AutoIncrement,
   Column,
+  DefaultScope,
   ForeignKey,
   Model,
   PrimaryKey,
@@ -15,6 +16,7 @@ import { User } from "./user.entity";
 import { Project } from "./project.entity";
 import { chainScope } from "../util/chainScope";
 
+@DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
   collection: (collectionName: string) => ({ where: { collectionName } }),
   project: (id: number) => ({
@@ -35,11 +37,11 @@ import { chainScope } from "../util/chainScope";
 })
 export class Media extends Model<Media> {
   static collection(collectionName: string) {
-    return chainScope(this, { method: ["collection", collectionName] }) as typeof Media;
+    return chainScope(this, "collection", collectionName) as typeof Media;
   }
 
   static project(id: number) {
-    return chainScope(this, { method: ["project", id] }) as typeof Media;
+    return chainScope(this, "project", id) as typeof Media;
   }
 
   @PrimaryKey

@@ -36,7 +36,7 @@ export class NurseryReport extends Model<NurseryReport> {
   }
 
   static nurseries(ids: number[] | Literal) {
-    return chainScope(this, { method: ["nurseries", ids] }) as typeof NurseryReport;
+    return chainScope(this, "nurseries", ids) as typeof NurseryReport;
   }
 
   @PrimaryKey

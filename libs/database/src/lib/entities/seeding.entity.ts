@@ -37,7 +37,7 @@ export class Seeding extends Model<Seeding> {
   }
 
   static siteReports(ids: number[] | Literal) {
-    return chainScope(this, { method: ["siteReports", ids] }) as typeof Seeding;
+    return chainScope(this, "siteReports", ids) as typeof Seeding;
   }
 
   @PrimaryKey

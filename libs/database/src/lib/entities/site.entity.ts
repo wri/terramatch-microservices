@@ -39,7 +39,7 @@ export class Site extends Model<Site> {
   }
 
   static project(id: number) {
-    return chainScope(this, { method: ["project", id] }) as typeof Site;
+    return chainScope(this, "project", id) as typeof Site;
   }
 
   static approvedIdsSubquery(projectId: number) {
@@ -136,22 +136,12 @@ export class Site extends Model<Site> {
   })
   nonTrees: TreeSpecies[] | null;
 
-  async loadNonTrees() {
-    this.nonTrees ??= await this.$get("nonTrees");
-    return this.nonTrees;
-  }
-
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
     scope: { seedableType: Site.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
-
-  async loadSeedsPlanted() {
-    this.seedsPlanted ??= await this.$get("seedsPlanted");
-    return this.seedsPlanted;
-  }
 
   @HasMany(() => SiteReport)
   reports: SiteReport[] | null;
@@ -163,9 +153,4 @@ export class Site extends Model<Site> {
 
   @HasMany(() => SitePolygon, { foreignKey: "siteUuid", sourceKey: "uuid" })
   sitePolygons: SitePolygon[] | null;
-
-  async loadSitePolygons() {
-    this.sitePolygons ??= await this.$get("sitePolygons");
-    return this.sitePolygons;
-  }
 }

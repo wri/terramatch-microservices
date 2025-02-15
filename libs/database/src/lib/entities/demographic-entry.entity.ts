@@ -1,7 +1,7 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING } from "sequelize";
 import { Demographic } from "./demographic.entity";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
   gender: { where: { type: "gender" } }

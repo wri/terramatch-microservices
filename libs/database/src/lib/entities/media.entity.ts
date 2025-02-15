@@ -14,15 +14,15 @@ import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID } from "sequelize"
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { Project } from "./project.entity";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
   collection: (collectionName: string) => ({ where: { collectionName } }),
   project: (id: number) => ({
     where: {
-      mediaType: Project.LARAVEL_TYPE,
-      mediaId: id
+      modelType: Project.LARAVEL_TYPE,
+      modelId: id
     }
   })
 }))
@@ -97,19 +97,19 @@ export class Media extends Model<Media> {
   customProperties: object;
 
   @JsonColumn()
-  generatedConversions: object;
+  generatedConversions: Record<string, boolean>;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  orderColumn: number;
+  orderColumn: number | null;
 
   @AllowNull
   @Column(STRING(100))
-  photographer: string;
+  photographer: string | null;
 
   @AllowNull
   @Column(STRING(500))
-  description: string;
+  description: string | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
@@ -145,5 +145,5 @@ export class Media extends Model<Media> {
    */
   @AllowNull
   @Column(STRING)
-  tag: string;
+  tag: string | null;
 }

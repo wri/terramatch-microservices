@@ -17,7 +17,7 @@ import { TreeSpecies } from "./tree-species.entity";
 import { COMPLETE_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../constants/status";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 // Incomplete stub
 @Scopes(() => ({

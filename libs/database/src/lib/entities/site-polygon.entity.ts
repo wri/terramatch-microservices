@@ -25,7 +25,7 @@ import { IndicatorOutputTreeCount } from "./indicator-output-tree-count.entity";
 import { IndicatorOutputTreeCover } from "./indicator-output-tree-cover.entity";
 import { IndicatorOutputTreeCoverLoss } from "./indicator-output-tree-cover-loss.entity";
 import { Literal } from "sequelize/types/utils";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss

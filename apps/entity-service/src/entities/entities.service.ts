@@ -5,6 +5,11 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { Media } from "@terramatch-microservices/database/entities";
+import { MediaDto } from "./dto/media.dto";
+import { MediaCollection } from "@terramatch-microservices/database/types/media";
+import { groupBy } from "lodash";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -19,6 +24,8 @@ const MAX_PAGE_SIZE = 100 as const;
 
 @Injectable()
 export class EntitiesService {
+  constructor(private readonly mediaService: MediaService) {}
+
   createProcessor<T extends Model<T>>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
     if (processorClass == null) {
@@ -40,5 +47,25 @@ export class EntitiesService {
     }
 
     return builder;
+  }
+
+  fullUrl = (media: Media) => this.mediaService.getUrl(media);
+  thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
+
+  mediaDto = (media: Media) => new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media));
+
+  mapMediaCollection(media: Media[], collection: MediaCollection) {
+    const grouped = groupBy(media, "collectionName");
+    return Object.entries(collection).reduce(
+      (dtoMap, [collection, { multiple, dbCollection }]) => ({
+        ...dtoMap,
+        [collection]: multiple
+          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media))
+          : grouped[dbCollection] == null
+          ? null
+          : this.mediaDto(grouped[dbCollection][0])
+      }),
+      {}
+    );
   }
 }

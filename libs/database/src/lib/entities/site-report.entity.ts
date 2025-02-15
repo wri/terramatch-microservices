@@ -18,7 +18,7 @@ import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;

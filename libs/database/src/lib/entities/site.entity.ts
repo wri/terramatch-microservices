@@ -21,7 +21,7 @@ import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 // Incomplete stub
 @Scopes(() => ({

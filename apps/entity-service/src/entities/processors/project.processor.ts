@@ -3,6 +3,7 @@ import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor
 import {
   Demographic,
   DemographicEntry,
+  Media,
   Nursery,
   NurseryReport,
   Project,
@@ -16,7 +17,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { Op } from "sequelize";
-import { AdditionalProjectFullProps, ANRDto, ProjectFullDto, ProjectLightDto } from "../dto/project.dto";
+import { AdditionalProjectFullProps, ANRDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 
 export class ProjectProcessor extends EntityProcessor<Project> {
@@ -62,7 +63,7 @@ export class ProjectProcessor extends EntityProcessor<Project> {
 
     const assistedNaturalRegenerationList: ANRDto[] = approvedSites.map(({ id, name }) => ({
       name,
-      treeCount: sumBy(approvedSiteReports[id], "numTreesRegenerating")
+      treeCount: sumBy(approvedSiteReports[id], "numTreesRegenerating") ?? 0
     }));
     const regeneratedTreesCount = sumBy(assistedNaturalRegenerationList, "treeCount");
     const treesPlantedCount =
@@ -89,7 +90,12 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(project.id),
       combinedWorkdayCount:
         (await this.getWorkdayCount(project.id, true)) + (await this.getSelfReportedWorkdayCount(project.id, true)),
-      totalJobsCreated: await this.getTotalJobs(project.id)
+      totalJobsCreated: await this.getTotalJobs(project.id),
+
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.project(project.id).findAll(),
+        Project.MEDIA
+      ) as ProjectMedia)
     };
 
     document.addData(project.uuid, new ProjectFullDto(project, props));

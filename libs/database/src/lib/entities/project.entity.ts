@@ -22,11 +22,24 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { MediaCollection } from "../types/media";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
+
+  static readonly MEDIA: MediaCollection = {
+    media: { dbCollection: "media", multiple: true },
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true },
+    documentFiles: { dbCollection: "document_files", multiple: true },
+    programmeSubmission: { dbCollection: "programme_submission", multiple: true },
+    detailedProjectBudget: { dbCollection: "detailed_project_budget", multiple: false },
+    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true }
+  } as const;
 
   @PrimaryKey
   @AutoIncrement

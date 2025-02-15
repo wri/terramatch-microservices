@@ -13,7 +13,7 @@ import { BIGINT, BOOLEAN, DOUBLE, Op, STRING, UUID } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
   visible: { where: { hidden: false } },

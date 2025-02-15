@@ -18,9 +18,10 @@ import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { Model } from "sequelize-typescript";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
+import { MediaDto } from "./dto/media.dto";
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto)
+@ApiExtraModels(ANRDto, MediaDto)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 

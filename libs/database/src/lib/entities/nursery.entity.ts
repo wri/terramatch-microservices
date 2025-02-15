@@ -16,7 +16,7 @@ import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
-import { chainScope } from "../util/chainScope";
+import { chainScope } from "../util/chain-scope";
 
 // Incomplete stub
 @Scopes(() => ({

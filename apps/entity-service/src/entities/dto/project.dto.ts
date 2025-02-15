@@ -9,6 +9,7 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
+import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "projects" })
 export class ProjectLightDto extends EntityDto {
@@ -71,7 +72,19 @@ export class ProjectLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalProjectFullProps = {
+export type ProjectMedia = {
+  media: MediaDto[];
+  socioeconomicBenefits: MediaDto[];
+  file: MediaDto[];
+  otherAdditionalDocuments: MediaDto[];
+  photos: MediaDto[];
+  documentFiles: MediaDto[];
+  programmeSubmission: MediaDto[];
+  detailedProjectBudget: MediaDto | null;
+  proofOfLandTenureMou: MediaDto[];
+};
+
+export type AdditionalProjectFullProps = ProjectMedia & {
   totalHectaresRestoredSum: number;
   treesPlantedCount: number;
   seedsPlantedCount: number;
@@ -252,4 +265,31 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true })
   directSeedingSurvivalRate: number | null;
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  socioeconomicBenefits: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  file: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  otherAdditionalDocuments: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  photos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  documentFiles: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  programmeSubmission: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, nullable: true })
+  detailedProjectBudget: MediaDto | null;
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  proofOfLandTenureMou: MediaDto[];
 }

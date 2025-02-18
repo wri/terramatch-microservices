@@ -27,6 +27,7 @@ import {
 } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { BadRequestException } from "@nestjs/common";
 
 export class ProjectProcessor extends EntityProcessor<Project> {
   async findOne(uuid: string) {
@@ -48,6 +49,16 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       { association: "organisation", attributes: ["name"] },
       { association: "framework" }
     ]);
+
+    if (query.sort != null) {
+      if (["name", "plantingStartDate"].includes(query.sort.field)) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organisationName") {
+        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+      } else {
+        throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
+      }
+    }
 
     const frameworkPermissions = permissions
       .filter(name => name.startsWith("framework-"))

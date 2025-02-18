@@ -1,5 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, Filterable, FindOptions, Includeable, Op, WhereOptions } from "sequelize";
+import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { flatten, isObject } from "lodash";
 
@@ -40,6 +40,11 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }
+  }
+
+  order(order: OrderItem) {
+    this.findOptions.order = [order];
+    return this;
   }
 
   async pageAfter(pageAfter: string) {

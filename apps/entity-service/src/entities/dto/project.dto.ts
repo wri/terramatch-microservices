@@ -248,7 +248,7 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true })
   directSeedingSurvivalRate: number | null;
 
-  @ApiProperty({ type: () => ProjectApplicationDto, nullable: true })
+  @ApiProperty({ nullable: true })
   application: ProjectApplicationDto | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
@@ -272,7 +272,7 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ type: () => MediaDto, isArray: true })
   programmeSubmission: MediaDto[];
 
-  @ApiProperty({ type: () => MediaDto, nullable: true })
+  @ApiProperty({ nullable: true })
   detailedProjectBudget: MediaDto | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

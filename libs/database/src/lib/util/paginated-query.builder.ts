@@ -1,5 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, Filterable, FindOptions, Op, WhereOptions } from "sequelize";
+import { Attributes, Filterable, FindOptions, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { flatten, isObject } from "lodash";
 
@@ -35,8 +35,11 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   };
   protected pageTotalFindOptions: FindOptions<Attributes<T>> = {};
 
-  constructor(private readonly MODEL: ModelCtor<T>, pageSize: number) {
+  constructor(private readonly MODEL: ModelCtor<T>, pageSize: number, include?: Includeable[]) {
     this.findOptions.limit = pageSize;
+    if (include != null && include.length > 0) {
+      this.findOptions.include = include;
+    }
   }
 
   async pageAfter(pageAfter: string) {

@@ -43,7 +43,10 @@ export class ProjectProcessor extends EntityProcessor<Project> {
   }
 
   async findMany(query: EntityQueryDto, userId: number, permissions: string[]) {
-    const builder = await this.entitiesService.buildQuery(Project, query);
+    const builder = await this.entitiesService.buildQuery(Project, query, [
+      { association: "organisation", attributes: ["name"] },
+      { association: "framework" }
+    ]);
 
     if (permissions.includes("manage-own")) {
       builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });

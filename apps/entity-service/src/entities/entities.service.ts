@@ -10,6 +10,7 @@ import { Media } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
+import { Includeable } from "sequelize";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -35,7 +36,7 @@ export class EntitiesService {
     return new processorClass(this) as unknown as EntityProcessor<T>;
   }
 
-  async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto) {
+  async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
     const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 0 } = query.page ?? {};
     if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException("Page size is invalid");
@@ -44,7 +45,7 @@ export class EntitiesService {
       throw new BadRequestException("Page number is invalid");
     }
 
-    const builder = new PaginatedQueryBuilder(modelClass, pageSize);
+    const builder = new PaginatedQueryBuilder(modelClass, pageSize, include);
     if (pageNumber > 0) {
       builder.pageNumber(pageNumber);
     }

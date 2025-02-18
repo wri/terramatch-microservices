@@ -66,7 +66,7 @@ export class PolicyService {
     await new PolicyClass(this.userId, await this.getPermissions(), builder).addRules();
 
     const ability = builder.build();
-    const hasUnauthorized = subjects.find(subject => !ability.can(action, subject)) != null;
+    const hasUnauthorized = subjects.find(subject => ability.cannot(action, subject)) != null;
     if (hasUnauthorized) throw new UnauthorizedException();
   }
 }

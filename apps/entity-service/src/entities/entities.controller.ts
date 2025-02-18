@@ -31,32 +31,31 @@ export class EntitiesController {
     summary: "Get a paginated and filtered list of light entity resources."
   })
   @JsonApiResponse([
-    { data: ProjectLightDto, pagination: true },
-    { data: SiteLightDto, pagination: true }
+    { data: ProjectLightDto, pagination: "number" },
+    { data: SiteLightDto, pagination: "number" }
   ])
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async entityIndex<T extends Model<T>>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
     const processor = this.entitiesService.createProcessor<T>(entity);
-    const models = await processor.findMany(
+    const { models, paginationTotal } = await processor.findMany(
       query,
       this.policyService.userId,
       await this.policyService.getPermissions()
     );
 
-    const document = buildJsonApi({ pagination: true });
-    if (models.length === 0) {
-      return document.serialize();
+    const document = buildJsonApi({ pagination: "number" });
+    if (models.length !== 0) {
+      await this.policyService.authorize("read", models);
+
+      // Unfortunately, order matters on these returned documents, so we have to wait for each
+      // build individually. Typically, light DTO processing shouldn't require additional queries
+      // though, so this probably doesn't matter in the end.
+      for (const model of models) {
+        await processor.addLightDto(document, model);
+      }
     }
 
-    await this.policyService.authorize("read", models);
-
-    // Unfortunately, order matters on these returned documents, so we have to wait for each
-    // build individually. Typically, light DTO processing shouldn't require additional queries
-    // though, so this probably doesn't matter in the end.
-    for (const model of models) {
-      await processor.addLightDto(document, model);
-    }
-    return document.serialize();
+    return document.serialize({ paginationTotal, pageNumber: query.page?.number });
   }
 
   @Get(":entity/:uuid")

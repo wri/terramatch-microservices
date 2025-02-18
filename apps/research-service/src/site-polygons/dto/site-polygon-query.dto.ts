@@ -6,7 +6,7 @@ import {
   POLYGON_STATUSES,
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
-import { Page } from "@terramatch-microservices/common/dto/page.dto";
+import { CursorPage } from "@terramatch-microservices/common/dto/page.dto";
 
 export class SitePolygonQueryDto {
   @ApiProperty({
@@ -67,5 +67,5 @@ export class SitePolygonQueryDto {
   @ApiProperty({ name: "page", required: false, description: "Pagination information" })
   @ValidateNested()
   @IsOptional()
-  page?: Page;
+  page?: CursorPage;
 }

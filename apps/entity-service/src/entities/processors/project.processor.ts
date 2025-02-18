@@ -49,7 +49,7 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
     }
 
-    return await builder.execute();
+    return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
   async addLightDto(document: DocumentBuilder, project: Project) {

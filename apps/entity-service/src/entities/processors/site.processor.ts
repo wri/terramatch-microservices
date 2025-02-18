@@ -1,5 +1,5 @@
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { EntityProcessor } from "./entity-processor";
+import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { Site } from "@terramatch-microservices/database/entities";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 
@@ -8,7 +8,7 @@ export class SiteProcessor extends EntityProcessor<Site> {
     throw new Error("Method not implemented.");
   }
 
-  findMany(query: EntityQueryDto, userId: number, permissions: string[]): Promise<Site[]> {
+  findMany(query: EntityQueryDto, userId: number, permissions: string[]): Promise<PaginatedResult<Site>> {
     throw new Error("Method not implemented.");
   }
 

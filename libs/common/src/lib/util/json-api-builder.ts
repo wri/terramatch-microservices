@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
 import { InternalServerErrorException } from "@nestjs/common";
+import { PaginationType } from "../decorators/json-api-response.decorator";
 
 type AttributeValue = string | number | boolean;
 type Attributes = {
@@ -28,7 +29,8 @@ export type Resource = {
 type DocumentMeta = {
   page?: {
     cursor?: string;
-    total: number;
+    number?: number;
+    total?: number;
   };
 };
 
@@ -92,7 +94,7 @@ export class ResourceBuilder {
       resource.relationships = this.relationships;
     }
 
-    if (this.documentBuilder.options?.pagination) {
+    if (this.documentBuilder.options?.pagination === "cursor") {
       resource.meta = {
         page: { cursor: this.id }
       };
@@ -105,12 +107,17 @@ export class ResourceBuilder {
 export class ApiBuilderException extends Error {}
 
 type DocumentBuilderOptions = {
-  pagination?: boolean;
+  pagination?: PaginationType;
   /**
    * If true, the `data` member of the resulting response will always be an array, even if there's
    * only one member
    **/
   forceDataArray?: boolean;
+};
+
+type SerializeOptions = {
+  paginationTotal?: number;
+  pageNumber?: number;
 };
 
 export class DocumentBuilder {
@@ -150,8 +157,8 @@ export class DocumentBuilder {
     return builder;
   }
 
-  serialize(): JsonApiDocument {
-    const singular = this.data.length === 1 && this.options.pagination !== true && this.options.forceDataArray !== true;
+  serialize({ paginationTotal, pageNumber }: SerializeOptions = {}): JsonApiDocument {
+    const singular = this.data.length === 1 && this.options.pagination == null && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
       // Data can either be a single object or an array
       data: singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize())
@@ -163,11 +170,15 @@ export class DocumentBuilder {
     }
 
     const meta: DocumentMeta = {};
-    if (this.options.pagination) {
+    if (this.options.pagination != null) {
       meta.page = {
-        cursor: this.data[0]?.id,
-        total: this.data.length
+        total: paginationTotal
       };
+      if (this.options.pagination === "cursor") {
+        meta.page.cursor = this.data[0]?.id;
+      } else if (this.options.pagination === "number") {
+        meta.page.number = pageNumber ?? 0;
+      }
     }
 
     if (Object.keys(meta).length > 0) {

@@ -23,11 +23,16 @@ export async function aggregateColumns<M extends Model<M>>(
   )[0];
 }
 
+export type PaginatedResult<ModelType extends Model<ModelType>> = {
+  models: ModelType[];
+  paginationTotal: number;
+};
+
 export abstract class EntityProcessor<ModelType extends Model<ModelType>> {
   constructor(protected readonly entitiesService: EntitiesService) {}
 
   abstract findOne(uuid: string): Promise<ModelType | null>;
-  abstract findMany(query: EntityQueryDto, userId: number, permissions: string[]): Promise<ModelType[]>;
+  abstract findMany(query: EntityQueryDto, userId: number, permissions: string[]): Promise<PaginatedResult<ModelType>>;
 
   abstract addFullDto(document: DocumentBuilder, model: ModelType): Promise<void>;
   abstract addLightDto(document: DocumentBuilder, model: ModelType): Promise<void>;

@@ -51,7 +51,7 @@ const getTypeProperties = (resourceType: ResourceType): TypeProperties => ({
 });
 
 type ConstructResourceOptions = {
-  pagination?: boolean;
+  pagination?: PaginationType;
 };
 
 function constructResource(resource: Resource | ResourceType, options?: ConstructResourceOptions) {
@@ -88,7 +88,7 @@ function constructResource(resource: Resource | ResourceType, options?: Construc
     }
   }
 
-  if (options?.pagination) {
+  if (options?.pagination === "cursor") {
     addMeta(def, "page", {
       type: "object",
       properties: {
@@ -112,7 +112,7 @@ function buildSchema(options: JsonApiOptions) {
   const extraModels: ResourceType[] = [type];
   const document = {
     data:
-      hasMany || pagination
+      hasMany || pagination != null
         ? {
             type: "array",
             items: {
@@ -145,14 +145,22 @@ function buildSchema(options: JsonApiOptions) {
     }
   }
 
-  if (pagination) {
-    addMeta(document, "page", {
-      type: "object",
-      properties: {
-        cursor: { type: "string", description: "The cursor for the first record on this page." },
-        total: { type: "number", description: "The total number of records on this page.", example: 42 }
-      }
-    });
+  if (pagination != null) {
+    const properties = {
+      total: { type: "number", description: "The total number of records available.", example: 42 }
+    } as { total: object; cursor?: object; number?: object };
+    if (pagination === "cursor") {
+      properties.cursor = {
+        type: "string",
+        description: "The cursor for the first record on this page."
+      };
+    } else if (pagination === "number") {
+      properties.number = {
+        type: "number",
+        description: "The current page number."
+      };
+    }
+    addMeta(document, "page", { type: "object", properties });
   }
 
   return { document, extraModels };
@@ -187,6 +195,8 @@ type Resource = {
   relationships?: Relationship[];
 };
 
+export type PaginationType = "cursor" | "number";
+
 type JsonApiOptions = {
   data: Resource | ResourceType;
 
@@ -197,10 +207,10 @@ type JsonApiOptions = {
   hasMany?: boolean;
 
   /**
-   * Set to true if this endpoint response documentation should include cursor pagination metadata.
-   * A true value for pagination forces a true value for hasMany.
+   * Supply the type of pagination used on this endpoint. Setting this value forces a true value
+   * for hasMany.
    */
-  pagination?: boolean;
+  pagination?: PaginationType;
 
   included?: (Resource | ResourceType)[];
 };

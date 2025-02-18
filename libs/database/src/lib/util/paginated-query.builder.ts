@@ -33,6 +33,7 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };
+  protected pageTotalFindOptions: FindOptions<Attributes<T>> = {};
 
   constructor(private readonly MODEL: ModelCtor<T>, pageSize: number) {
     this.findOptions.limit = pageSize;
@@ -41,15 +42,31 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   async pageAfter(pageAfter: string) {
     const instance = await this.MODEL.findOne({ where: { uuid: pageAfter } as WhereOptions, attributes: ["id"] });
     if (instance == null) throw new BadRequestException(`No ${this.MODEL.name} found for uuid: ${pageAfter}`);
-    return this.where({ id: { [Op.gt]: instance.id } });
+
+    // Avoid using this.where() so that we don't include this in the pageTotalFindOptions
+    this.findOptions.where = combineWheresWithAnd(this.findOptions.where ?? {}, { id: { [Op.gt]: instance.id } });
+    return this;
   }
 
-  where(options: WhereOptions, filterable: Filterable = this.findOptions) {
+  pageNumber(pageNumber: number) {
+    this.findOptions.offset = pageNumber;
+    return this;
+  }
+
+  where(options: WhereOptions, filterable?: Filterable) {
+    if (filterable == null) {
+      this.pageTotalFindOptions.where = combineWheresWithAnd(this.pageTotalFindOptions.where ?? {}, options);
+      filterable = this.findOptions;
+    }
     filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);
     return this;
   }
 
   async execute() {
     return await this.MODEL.findAll(this.findOptions);
+  }
+
+  async paginationTotal() {
+    return await this.MODEL.count(this.pageTotalFindOptions);
   }
 }

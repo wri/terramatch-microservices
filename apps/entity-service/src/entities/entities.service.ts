@@ -36,14 +36,17 @@ export class EntitiesService {
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto) {
-    const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
+    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 0 } = query.page ?? {};
     if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException("Page size is invalid");
     }
+    if (pageNumber < 0) {
+      throw new BadRequestException("Page number is invalid");
+    }
 
     const builder = new PaginatedQueryBuilder(modelClass, pageSize);
-    if (pageAfter != null) {
-      await builder.pageAfter(pageAfter);
+    if (pageNumber > 0) {
+      builder.pageNumber(pageNumber);
     }
 
     return builder;

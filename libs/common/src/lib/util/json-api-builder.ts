@@ -177,7 +177,7 @@ export class DocumentBuilder {
       if (this.options.pagination === "cursor") {
         meta.page.cursor = this.data[0]?.id;
       } else if (this.options.pagination === "number") {
-        meta.page.number = pageNumber ?? 0;
+        meta.page.number = pageNumber ?? 1;
       }
     }
 

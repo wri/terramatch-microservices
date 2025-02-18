@@ -52,7 +52,7 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   pageNumber(pageNumber: number) {
-    this.findOptions.offset = pageNumber;
+    this.findOptions.offset = pageNumber - 1;
     return this;
   }
 

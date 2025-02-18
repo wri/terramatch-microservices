@@ -7,4 +7,20 @@ export class EntityQueryDto {
   @ValidateNested()
   @IsOptional()
   page?: NumberPage;
+
+  @ApiProperty()
+  @IsOptional()
+  search?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  country?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  status?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  updateRequestStatus?: string;
 }

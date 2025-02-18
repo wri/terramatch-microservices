@@ -16,6 +16,18 @@ export class ProjectUser extends Model<ProjectUser> {
     );
   }
 
+  static projectsManageSubquery(userId: number) {
+    const attributes = ProjectUser.getAttributes();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const sql = ProjectUser.sequelize!;
+    return literal(
+      `(SELECT ${attributes.projectId.field} FROM ${ProjectUser.tableName}
+        WHERE ${attributes.userId.field} = ${sql.escape(userId)}
+        AND ${attributes.isManaging.field} = TRUE
+      )`
+    );
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -26,6 +26,7 @@ import {
   ProjectMedia
 } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
+import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 export class ProjectProcessor extends EntityProcessor<Project> {
   async findOne(uuid: string) {
@@ -48,8 +49,22 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       { association: "framework" }
     ]);
 
-    if (permissions.includes("manage-own")) {
+    const frameworkPermissions = permissions
+      .filter(name => name.startsWith("framework-"))
+      .map(name => name.substring("framework-".length) as FrameworkKey);
+    if (frameworkPermissions.length > 0) {
+      builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
+    } else if (permissions.includes("manage-own")) {
       builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+    } else if (permissions.includes("projects-manage")) {
+      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+    }
+
+    for (const term of ["country", "status", "updateRequestStatus"]) {
+      if (query[term] != null) builder.where({ [term]: query[term] });
+    }
+    if (query.search != null) {
+      builder.where({ name: { [Op.like]: `%${query.search}%` } });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

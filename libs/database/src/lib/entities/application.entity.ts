@@ -1,6 +1,19 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  ForeignKey,
+  HasMany,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { User } from "./user.entity";
+import { FormSubmission } from "./form-submission.entity";
+import { FundingProgramme } from "./funding-programme.entity";
 
 // Incomplete stub: not all indexes are specified
 @Table({
@@ -24,6 +37,13 @@ export class Application extends Model<Application> {
   @Column(UUID)
   fundingProgrammeUuid: string | null;
 
+  @BelongsTo(() => FundingProgramme, { foreignKey: "fundingProgrammeUuid", targetKey: "uuid" })
+  fundingProgramme: FundingProgramme | null;
+
+  get fundingProgrammeName() {
+    return this.fundingProgramme?.name ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   organisationUuid: string | null;
@@ -31,4 +51,11 @@ export class Application extends Model<Application> {
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   updatedBy: number | null;
+
+  @HasMany(() => FormSubmission)
+  formSubmissions: FormSubmission[] | null;
+
+  get projectPitchUuid() {
+    return this.formSubmissions?.[0]?.projectPitchUuid ?? null;
+  }
 }

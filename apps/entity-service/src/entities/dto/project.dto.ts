@@ -1,4 +1,4 @@
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   ENTITY_STATUSES,
@@ -72,7 +72,7 @@ export class ProjectLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalProjectFullProps = AdditionalProps<ProjectFullDto, ProjectLightDto, Project>;
+export type AdditionalProjectFullProps = AdditionalProps<ProjectFullDto, ProjectLightDto, Omit<Project, "application">>;
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;
 
 export class ANRDto {
@@ -81,6 +81,17 @@ export class ANRDto {
 
   @ApiProperty()
   treeCount: number;
+}
+
+export class ProjectApplicationDto extends JsonApiAttributes<ProjectApplicationDto> {
+  @ApiProperty()
+  uuid: string;
+
+  @ApiProperty()
+  fundingProgrammeName: string;
+
+  @ApiProperty()
+  projectPitchUuid: string;
 }
 
 export class ProjectFullDto extends ProjectLightDto {
@@ -239,6 +250,9 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true })
   directSeedingSurvivalRate: number | null;
+
+  @ApiProperty({ type: () => ProjectApplicationDto, nullable: true })
+  application: ProjectApplicationDto | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

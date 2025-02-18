@@ -17,14 +17,28 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { Op } from "sequelize";
-import { AdditionalProjectFullProps, ANRDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
+import {
+  AdditionalProjectFullProps,
+  ANRDto,
+  ProjectApplicationDto,
+  ProjectFullDto,
+  ProjectLightDto,
+  ProjectMedia
+} from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 
 export class ProjectProcessor extends EntityProcessor<Project> {
   async findOne(uuid: string) {
     return await Project.findOne({
       where: { uuid },
-      include: [{ association: "framework" }, { association: "organisation", attributes: ["name"] }]
+      include: [
+        { association: "framework" },
+        { association: "organisation", attributes: ["name"] },
+        {
+          association: "application",
+          include: [{ association: "fundingProgramme" }, { association: "formSubmissions" }]
+        }
+      ]
     });
   }
 
@@ -91,6 +105,8 @@ export class ProjectProcessor extends EntityProcessor<Project> {
       combinedWorkdayCount:
         (await this.getWorkdayCount(project.id, true)) + (await this.getSelfReportedWorkdayCount(project.id, true)),
       totalJobsCreated: await this.getTotalJobs(project.id),
+
+      application: project.application == null ? null : new ProjectApplicationDto(project.application),
 
       ...(this.entitiesService.mapMediaCollection(
         await Media.project(project.id).findAll(),

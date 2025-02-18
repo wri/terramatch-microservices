@@ -9,7 +9,7 @@ import {
 } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ANRDto, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
+import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
 import { EntityGetParamsDto } from "./dto/entity-get-params.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -21,7 +21,7 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto, MediaDto)
+@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 

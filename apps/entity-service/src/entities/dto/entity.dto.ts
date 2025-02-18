@@ -25,4 +25,11 @@ export abstract class EntityDto {
     description: "Indicates if this resource has the full resource definition."
   })
   lightResource: boolean;
+
+  /**
+   * All EntityDtos must include UUID in the attributes for use in the react-admin pagination
+   * code.
+   */
+  @ApiProperty()
+  uuid: string;
 }

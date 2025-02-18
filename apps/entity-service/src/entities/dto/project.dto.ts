@@ -26,9 +26,6 @@ export class ProjectLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty()
-  uuid: string;
-
   @ApiProperty({ nullable: true, description: "Framework key for this project" })
   frameworkKey: string | null;
 

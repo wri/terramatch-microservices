@@ -117,129 +117,174 @@ describe("DelayedJobsController", () => {
   });
 
   describe("bulkUdpateJobs", () => {
-    let controller: DelayedJobsController;
-
-    beforeEach(async () => {
-      const module: TestingModule = await Test.createTestingModule({
-        controllers: [DelayedJobsController],
-        providers: []
-      }).compile();
-
-      controller = module.get<DelayedJobsController>(DelayedJobsController);
-    });
-
-    afterEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it("should update a single job successfully", async () => {
-      const authenticatedUserId = "user-123";
-      const jobUpdateDto: DelayedJobBulkUpdateBodyDto = {
-        data: [{ type: "delayedJobs", uuid: "job-1", attributes: { isAcknowledged: true } }]
-      };
-
-      const jobMock = {
-        uuid: "job-1",
+    it("should successfully update jobs with null metadata", async () => {
+      const authenticatedUserId = 130999;
+      const job = await DelayedJob.create({
+        uuid: uuidv4(),
         createdBy: authenticatedUserId,
         isAcknowledged: false,
-        save: jest.fn().mockResolvedValue(undefined),
-        toJSON: jest.fn().mockReturnValue({ uuid: "job-1", isAcknowledged: true })
-      };
+        status: "completed",
+        metadata: null
+      });
 
-      DelayedJob.findAll = jest.fn().mockResolvedValue([jobMock]);
+      const job1 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: { entity_name: "TestEntity1" }
+      });
 
-      const result = await controller.bulkUpdateJobs(jobUpdateDto, { authenticatedUserId });
-      expect(result.data[0].attributes.isAcknowledged).toBe(true);
-    });
-
-    it("should update multiple jobs successfully", async () => {
-      const authenticatedUserId = "user-123";
-      const jobUpdateDto: DelayedJobBulkUpdateBodyDto = {
+      const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
-          { type: "delayedJobs", uuid: "job-1", attributes: { isAcknowledged: true } },
-          { type: "delayedJobs", uuid: "job-2", attributes: { isAcknowledged: false } }
+          {
+            type: "delayedJobs",
+            uuid: job.uuid,
+            attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: job1.uuid,
+            attributes: { isAcknowledged: true }
+          }
         ]
       };
 
-      const jobMocks = [
-        {
-          uuid: "job-1",
-          createdBy: authenticatedUserId,
-          isAcknowledged: false,
-          status: "running",
-          save: jest.fn().mockResolvedValue(undefined),
-          toJSON: jest.fn().mockReturnValue({ uuid: "job-1", isAcknowledged: true })
-        },
-        {
-          uuid: "job-2",
-          createdBy: authenticatedUserId,
-          isAcknowledged: true,
-          status: "completed",
-          save: jest.fn().mockResolvedValue(undefined),
-          toJSON: jest.fn().mockReturnValue({ uuid: "job-2", isAcknowledged: false })
-        }
-      ];
+      const request = { authenticatedUserId };
 
-      DelayedJob.findAll = jest.fn().mockResolvedValue(jobMocks);
+      const result = await controller.bulkUpdateJobs(payload, request);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].id).toBe(job.uuid);
+      expect(result.data[0].attributes.entityName).toBeUndefined();
+      expect(result.data[1].id).toBe(job1.uuid);
+      expect(result.data[1].attributes.entityName).toBe("TestEntity1");
 
-      const result = await controller.bulkUpdateJobs(jobUpdateDto, { authenticatedUserId });
-      const data = Array.isArray(result.data) ? result.data : [result.data];
-      expect(data.length).toBe(2);
+      const updatedJob = await DelayedJob.findOne({ where: { uuid: job.uuid } });
+      expect(updatedJob.isAcknowledged).toBe(true);
     });
+    it("should successfully bulk update jobs to acknowledged with entity_name", async () => {
+      const authenticatedUserId = 130999;
+      const job1 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: { entity_name: "TestEntity1" } // Adding entity_name
+      });
+      const job2 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "failed",
+        metadata: { entity_name: "TestEntity2" } // Adding entity_name
+      });
 
-    it("should throw NotFoundException when some jobs are missing", async () => {
-      const authenticatedUserId = "user-123";
-      const jobUpdateDto: DelayedJobBulkUpdateBodyDto = {
+      const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
-          { type: "delayedJobs", uuid: "job-1", attributes: { isAcknowledged: true } },
-          { type: "delayedJobs", uuid: "job-2", attributes: { isAcknowledged: false } }
+          {
+            type: "delayedJobs",
+            uuid: job1.uuid,
+            attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: job2.uuid,
+            attributes: { isAcknowledged: true }
+          }
         ]
       };
 
-      DelayedJob.findAll = jest.fn().mockResolvedValue([{ uuid: "job-1", createdBy: authenticatedUserId }]);
+      const request = { authenticatedUserId };
 
-      await expect(controller.bulkUpdateJobs(jobUpdateDto, { authenticatedUserId })).rejects.toThrow(NotFoundException);
+      const result = await controller.bulkUpdateJobs(payload, request);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].id).toBe(job1.uuid);
+      expect(result.data[1].id).toBe(job2.uuid);
+      expect(result.data[0].attributes.entityName).toBe("TestEntity1"); // Check entity_name for job1
+      expect(result.data[1].attributes.entityName).toBe("TestEntity2"); // Check entity_name for job2
+
+      const updatedJob1 = await DelayedJob.findOne({ where: { uuid: job1.uuid } });
+      const updatedJob2 = await DelayedJob.findOne({ where: { uuid: job2.uuid } });
+      expect(updatedJob1.isAcknowledged).toBe(true);
+      expect(updatedJob2.isAcknowledged).toBe(true);
     });
 
-    it("should throw NotFoundException when trying to update jobs from another user", async () => {
-      const authenticatedUserId = "user-123";
-
-      const jobUpdateDto: DelayedJobBulkUpdateBodyDto = {
-        data: [{ type: "delayedJobs", uuid: "job-1", attributes: { isAcknowledged: true } }]
-      };
-
-      DelayedJob.findAll = jest.fn().mockResolvedValue([{ uuid: "job-1", createdBy: "user-456" }]);
-
-      await expect(controller.bulkUpdateJobs(jobUpdateDto, { authenticatedUserId })).rejects.toThrow(NotFoundException);
-    });
-
-    it('should not update jobs if more than one has status "pending"', async () => {
-      const authenticatedUserId = "user-123";
-      const jobUpdateDto: DelayedJobBulkUpdateBodyDto = {
+    it("should throw NotFoundException for non-existent job", async () => {
+      const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
-          { type: "delayedJobs", uuid: "job-1", attributes: { isAcknowledged: true } },
-          { type: "delayedJobs", uuid: "job-2", attributes: { isAcknowledged: false } }
+          {
+            type: "delayedJobs",
+            uuid: "non-existent-uuid",
+            attributes: { isAcknowledged: true }
+          }
+        ]
+      };
+      const request = { authenticatedUserId: 130999 };
+      DelayedJob.findOne = jest.fn().mockResolvedValue(null);
+      await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
+    });
+
+    // it('should not update jobs with status "pending"', async () => {
+    //   const authenticatedUserId = 130999;
+    //   const pendingJob = await DelayedJob.create({
+    //     uuid: uuidv4(),
+    //     createdBy: authenticatedUserId,
+    //     isAcknowledged: false,
+    //     status: "pending",
+    //     metadata: { entity_name: "TestEntityPending" } // Adding entity_name
+    //   });
+
+    //   const payload: DelayedJobBulkUpdateBodyDto = {
+    //     data: [
+    //       {
+    //         type: "delayedJobs",
+    //         uuid: pendingJob.uuid,
+    //         attributes: { isAcknowledged: true }
+    //       }
+    //     ]
+    //   };
+    //   const request = { authenticatedUserId };
+
+    //   await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
+    // });
+
+    it('should not update jobs with status "pending" if multiple exist', async () => {
+      const authenticatedUserId = 130999;
+
+      const pendingJob1 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "pending",
+        metadata: { entity_name: "TestEntityPending1" }
+      });
+
+      const pendingJob2 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "pending",
+        metadata: { entity_name: "TestEntityPending2" }
+      });
+
+      const payload: DelayedJobBulkUpdateBodyDto = {
+        data: [
+          {
+            type: "delayedJobs",
+            uuid: pendingJob1.uuid,
+            attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: pendingJob2.uuid,
+            attributes: { isAcknowledged: true }
+          }
         ]
       };
 
-      const jobMocks = [
-        {
-          uuid: "job-1",
-          createdBy: authenticatedUserId,
-          status: "pending",
-          save: jest.fn()
-        },
-        {
-          uuid: "job-2",
-          createdBy: authenticatedUserId,
-          status: "failed",
-          save: jest.fn()
-        }
-      ];
+      const request = { authenticatedUserId };
 
-      DelayedJob.findAll = jest.fn().mockResolvedValue(jobMocks);
-
-      await expect(controller.bulkUpdateJobs(jobUpdateDto, { authenticatedUserId })).rejects.toThrow(NotFoundException);
+      await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
   });
 

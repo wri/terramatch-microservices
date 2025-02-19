@@ -85,20 +85,28 @@ export class DelayedJobsController {
     const jobUpdates = bulkUpdateJobsDto.data;
     const whereCondition: WhereOptions = {
       uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
-      createdBy: authenticatedUserId,
+      createdBy: authenticatedUserId
     };
-    
+
     if (jobUpdates.length > 1) {
       whereCondition.status = { [Op.ne]: "pending" };
     }
-    
+
     const jobs = await DelayedJob.findAll({
       where: whereCondition,
-      order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"]]
     });
+
+    if (jobs.length === 0) {
+      throw new NotFoundException("Some jobs in the request could not be updated");
+    }
 
     if (jobs.length !== jobUpdates.length && jobUpdates.length > 1) {
       throw new NotFoundException("Some jobs in the request could not be updated");
+    }
+
+    if (jobUpdates.length === 1 && jobs.length === 0) {
+      throw new NotFoundException("The job in the request could not be found");
     }
 
     const updatePromises = jobUpdates

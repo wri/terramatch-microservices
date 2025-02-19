@@ -22,7 +22,7 @@ describe("PolicyService", () => {
       providers: [PolicyService]
     }).compile();
 
-    service = module.get<PolicyService>(PolicyService);
+    service = await module.resolve<PolicyService>(PolicyService);
   });
 
   afterEach(async () => {

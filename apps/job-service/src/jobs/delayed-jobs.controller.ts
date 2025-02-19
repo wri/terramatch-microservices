@@ -97,10 +97,6 @@ export class DelayedJobsController {
       order: [["createdAt", "DESC"]]
     });
 
-    if (jobs.length === 0) {
-      throw new NotFoundException("Some jobs in the request could not be updated");
-    }
-
     if (jobs.length !== jobUpdates.length && jobUpdates.length > 1) {
       throw new NotFoundException("Some jobs in the request could not be updated");
     }

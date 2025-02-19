@@ -216,6 +216,11 @@ describe("DelayedJobsController", () => {
             type: "delayedJobs",
             uuid: "non-existent-uuid",
             attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: "another-non-existent-uuid",
+            attributes: { isAcknowledged: true }
           }
         ]
       };
@@ -224,14 +229,14 @@ describe("DelayedJobsController", () => {
       await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
 
-    it('should successfully update jobs with status "pending"', async () => {
+    it("should successfully update a single pending job", async () => {
       const authenticatedUserId = 130999;
       const pendingJob = await DelayedJob.create({
         uuid: uuidv4(),
         createdBy: authenticatedUserId,
         isAcknowledged: false,
         status: "pending",
-        metadata: { entity_name: "TestEntityPending" } // Adding entity_name
+        metadata: { entity_name: "TestEntityPending" }
       });
 
       const payload: DelayedJobBulkUpdateBodyDto = {
@@ -249,10 +254,48 @@ describe("DelayedJobsController", () => {
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].id).toBe(pendingJob.uuid);
-      expect(result.data[0].attributes.isAcknowledged).toBe(true);
+      expect(result.data[0].attributes.entityName).toBe("TestEntityPending");
 
-      const updatedJob = await DelayedJob.findOne({ where: { uuid: pendingJob.uuid } });
-      expect(updatedJob.isAcknowledged).toBe(true);
+      const updatedPendingJob = await DelayedJob.findOne({ where: { uuid: pendingJob.uuid } });
+      expect(updatedPendingJob.isAcknowledged).toBe(true);
+    });
+
+    it("should throw NotFoundException when trying to update multiple jobs including a pending job", async () => {
+      const authenticatedUserId = 130999;
+      const pendingJob = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "pending",
+        metadata: { entity_name: "TestEntityPending" }
+      });
+
+      const completedJob = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "completed",
+        metadata: { entity_name: "TestEntityCompleted" }
+      });
+
+      const payload: DelayedJobBulkUpdateBodyDto = {
+        data: [
+          {
+            type: "delayedJobs",
+            uuid: pendingJob.uuid,
+            attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: completedJob.uuid,
+            attributes: { isAcknowledged: true }
+          }
+        ]
+      };
+
+      const request = { authenticatedUserId };
+
+      await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
   });
 

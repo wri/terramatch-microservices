@@ -11,6 +11,7 @@ import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
 import { Includeable } from "sequelize";
+import { EntityDto } from "./dto/entity.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -33,7 +34,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this) as unknown as EntityProcessor<T>;
+    return new processorClass(this) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {

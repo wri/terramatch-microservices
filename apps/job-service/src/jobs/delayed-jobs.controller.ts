@@ -42,7 +42,7 @@ export class DelayedJobsController {
       })
     );
 
-    const document = buildJsonApi();
+    const document = buildJsonApi(DelayedJobDto);
     jobsWithEntityNames.forEach(job => {
       document.addData(job.uuid, new DelayedJobDto(job));
     });
@@ -63,7 +63,7 @@ export class DelayedJobsController {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();
 
-    return buildJsonApi().addData(pathUUID, new DelayedJobDto(job)).document.serialize();
+    return buildJsonApi(DelayedJobDto).addData(pathUUID, new DelayedJobDto(job)).document.serialize();
   }
 
   @Patch("bulk-update")
@@ -110,7 +110,7 @@ export class DelayedJobsController {
 
     const updatedJobs = await Promise.all(updatePromises);
 
-    const jsonApiBuilder = buildJsonApi();
+    const jsonApiBuilder = buildJsonApi(DelayedJobDto);
     updatedJobs.forEach(job => {
       jsonApiBuilder.addData(job.uuid, new DelayedJobDto(job));
     });

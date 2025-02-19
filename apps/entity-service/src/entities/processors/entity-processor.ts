@@ -3,6 +3,8 @@ import { Attributes, col, fn, WhereOptions } from "sequelize";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { EntitiesService } from "../entities.service";
 import { EntityQueryDto } from "../dto/entity-query.dto";
+import { Type } from "@nestjs/common";
+import { EntityDto } from "../dto/entity.dto";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -28,7 +30,14 @@ export type PaginatedResult<ModelType extends Model<ModelType>> = {
   paginationTotal: number;
 };
 
-export abstract class EntityProcessor<ModelType extends Model<ModelType>> {
+export abstract class EntityProcessor<
+  ModelType extends Model<ModelType>,
+  LightDto extends EntityDto,
+  FullDto extends EntityDto
+> {
+  abstract readonly LIGHT_DTO: Type<LightDto>;
+  abstract readonly FULL_DTO: Type<FullDto>;
+
   constructor(protected readonly entitiesService: EntitiesService) {}
 
   abstract findOne(uuid: string): Promise<ModelType | null>;

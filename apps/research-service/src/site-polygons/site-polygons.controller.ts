@@ -70,7 +70,7 @@ export class SitePolygonsController {
       await queryBuilder.excludeTestProjects();
     }
 
-    const document = buildJsonApi({ pagination: "cursor" });
+    const document = buildJsonApi(SitePolygonDto, { pagination: "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);

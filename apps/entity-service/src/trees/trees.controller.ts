@@ -22,7 +22,7 @@ export class TreesController {
   async searchScientificNames(@Query("search") search: string) {
     if (isEmpty(search)) throw new BadRequestException("search query param is required");
 
-    const document = buildJsonApi({ forceDataArray: true });
+    const document = buildJsonApi(ScientificNameDto, { forceDataArray: true });
     for (const treeSpecies of await this.treeService.searchScientificNames(search)) {
       document.addData(treeSpecies.taxonId, new ScientificNameDto(treeSpecies));
     }
@@ -44,7 +44,7 @@ export class TreesController {
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
-    return buildJsonApi()
+    return buildJsonApi(EstablishmentsTreesDto)
       .addData(`${entity}|${uuid}`, new EstablishmentsTreesDto({ establishmentTrees, previousPlantingCounts }))
       .document.serialize();
   }

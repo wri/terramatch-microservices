@@ -29,6 +29,6 @@ export class LoginController {
       throw new UnauthorizedException();
     }
 
-    return buildJsonApi().addData(userUuid, new LoginDto({ token })).document.serialize();
+    return buildJsonApi(LoginDto).addData(userUuid, new LoginDto({ token })).document.serialize();
   }
 }

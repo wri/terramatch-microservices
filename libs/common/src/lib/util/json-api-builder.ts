@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
-import { InternalServerErrorException } from "@nestjs/common";
+import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
 
 type AttributeValue = string | number | boolean;
@@ -27,6 +27,7 @@ export type Resource = {
 };
 
 type DocumentMeta = {
+  resourceType: string;
   page?: {
     cursor?: string;
     number?: number;
@@ -43,7 +44,7 @@ type ResourceMeta = {
 export type JsonApiDocument = {
   data: Resource | Resource[];
   included?: Resource | Resource[];
-  meta?: DocumentMeta;
+  meta: DocumentMeta;
 };
 
 export class ResourceBuilder {
@@ -124,15 +125,14 @@ export class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
 
-  constructor(public readonly options: DocumentBuilderOptions = {}) {}
+  constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
 
   addData(id: string, attributes: any): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes, this);
 
-    const matchesType = this.data.length == 0 || this.data[0].type === builder.type;
-    if (!matchesType) {
+    if (builder.type !== this.resourceType) {
       throw new ApiBuilderException(
-        `This resource does not match the data type [${builder.type}, ${this.data[0].type}]`
+        `This resource does not match the data type [${builder.type}, ${this.resourceType}]`
       );
     }
 
@@ -160,6 +160,7 @@ export class DocumentBuilder {
   serialize({ paginationTotal, pageNumber }: SerializeOptions = {}): JsonApiDocument {
     const singular = this.data.length === 1 && this.options.pagination == null && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
+      meta: { resourceType: this.resourceType },
       // Data can either be a single object or an array
       data: singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize())
     };
@@ -169,24 +170,20 @@ export class DocumentBuilder {
       doc.included = this.included.map(resource => resource.serialize());
     }
 
-    const meta: DocumentMeta = {};
     if (this.options.pagination != null) {
-      meta.page = {
+      doc.meta.page = {
         total: paginationTotal
       };
       if (this.options.pagination === "cursor") {
-        meta.page.cursor = this.data[0]?.id;
+        doc.meta.page.cursor = this.data[0]?.id;
       } else if (this.options.pagination === "number") {
-        meta.page.number = pageNumber ?? 1;
+        doc.meta.page.number = pageNumber ?? 1;
       }
-    }
-
-    if (Object.keys(meta).length > 0) {
-      doc.meta = meta;
     }
 
     return doc;
   }
 }
 
-export const buildJsonApi = (options?: DocumentBuilderOptions) => new DocumentBuilder(options);
+export const buildJsonApi = <DTO>(dtoClass: Type<DTO>, options?: DocumentBuilderOptions) =>
+  new DocumentBuilder(Reflect.getMetadata(DTO_TYPE_METADATA, dtoClass), options);

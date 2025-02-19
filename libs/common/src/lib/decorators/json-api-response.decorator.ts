@@ -111,6 +111,12 @@ function buildSchema(options: JsonApiOptions) {
   const type = isResourceType(data) ? data : data.type;
   const extraModels: ResourceType[] = [type];
   const document = {
+    meta: {
+      type: "object",
+      properties: {
+        type: getTypeProperties(type)
+      }
+    },
     data:
       hasMany || pagination != null
         ? {
@@ -216,8 +222,14 @@ type JsonApiOptions = {
 };
 
 type Document = {
+  meta: {
+    type: "object";
+    properties: {
+      type: TypeProperties;
+      [key: string]: object;
+    };
+  };
   data: any;
-  meta?: any;
   included?: any;
 };
 

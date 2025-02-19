@@ -43,7 +43,7 @@ export class EntitiesController {
       await this.policyService.getPermissions()
     );
 
-    const document = buildJsonApi({ pagination: "number" });
+    const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
     if (models.length !== 0) {
       await this.policyService.authorize("read", models);
 
@@ -75,7 +75,7 @@ export class EntitiesController {
 
     await this.policyService.authorize("read", model);
 
-    const document = buildJsonApi();
+    const document = buildJsonApi(processor.FULL_DTO);
     await processor.addFullDto(document, model);
     return document.serialize();
   }

@@ -2,8 +2,12 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { Site } from "@terramatch-microservices/database/entities";
 import { EntityQueryDto } from "../dto/entity-query.dto";
+import { SiteFullDto, SiteLightDto } from "../dto/site.dto";
 
-export class SiteProcessor extends EntityProcessor<Site> {
+export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
+  readonly LIGHT_DTO = SiteLightDto;
+  readonly FULL_DTO = SiteFullDto;
+
   findOne(uuid: string): Promise<Site> {
     throw new Error("Method not implemented.");
   }

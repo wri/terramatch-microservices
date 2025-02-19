@@ -29,7 +29,10 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { BadRequestException } from "@nestjs/common";
 
-export class ProjectProcessor extends EntityProcessor<Project> {
+export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
+  readonly LIGHT_DTO = ProjectLightDto;
+  readonly FULL_DTO = ProjectFullDto;
+
   async findOne(uuid: string) {
     return await Project.findOne({
       where: { uuid },

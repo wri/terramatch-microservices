@@ -22,7 +22,7 @@ export class ResetPasswordController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request or email." })
   async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
-    return buildJsonApi()
+    return buildJsonApi(ResetPasswordResponseDto)
       .addData(uuid, new ResetPasswordResponseDto({ emailAddress: email }))
       .document.serialize();
   }
@@ -40,7 +40,7 @@ export class ResetPasswordController {
     @Body() { newPassword }: ResetPasswordDto
   ): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.resetPassword(token, newPassword);
-    return buildJsonApi()
+    return buildJsonApi(ResetPasswordResponseDto)
       .addData(uuid, new ResetPasswordResponseDto({ emailAddress: email }))
       .document.serialize();
   }

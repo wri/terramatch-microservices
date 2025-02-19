@@ -10,7 +10,7 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
-import { Op } from "sequelize";
+import { Op, WhereOptions } from "sequelize";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "./dto/delayed-job.dto";
@@ -83,7 +83,7 @@ export class DelayedJobsController {
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
     const jobUpdates = bulkUpdateJobsDto.data;
-    const whereCondition: any = {
+    const whereCondition: WhereOptions = {
       uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
       createdBy: authenticatedUserId,
     };

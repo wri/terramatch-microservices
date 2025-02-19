@@ -224,7 +224,7 @@ describe("DelayedJobsController", () => {
       await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
 
-    it('should not update jobs with status "pending"', async () => {
+    it('should successfully update jobs with status "pending"', async () => {
       const authenticatedUserId = 130999;
       const pendingJob = await DelayedJob.create({
         uuid: uuidv4(),
@@ -245,7 +245,14 @@ describe("DelayedJobsController", () => {
       };
       const request = { authenticatedUserId };
 
-      await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
+      const result = await controller.bulkUpdateJobs(payload, request);
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].id).toBe(pendingJob.uuid);
+      expect(result.data[0].attributes.isAcknowledged).toBe(true);
+
+      const updatedJob = await DelayedJob.findOne({ where: { uuid: pendingJob.uuid } });
+      expect(updatedJob.isAcknowledged).toBe(true);
     });
   });
 

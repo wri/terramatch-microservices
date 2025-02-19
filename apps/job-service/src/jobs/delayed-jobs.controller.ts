@@ -83,16 +83,21 @@ export class DelayedJobsController {
     @Request() { authenticatedUserId }
   ): Promise<JsonApiDocument> {
     const jobUpdates = bulkUpdateJobsDto.data;
+    const whereCondition: any = {
+      uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
+      createdBy: authenticatedUserId,
+    };
+    
+    if (jobUpdates.length > 1) {
+      whereCondition.status = { [Op.ne]: "pending" };
+    }
+    
     const jobs = await DelayedJob.findAll({
-      where: {
-        uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
-        createdBy: authenticatedUserId,
-        status: { [Op.ne]: "pending" }
-      },
-      order: [["createdAt", "DESC"]]
+      where: whereCondition,
+      order: [["createdAt", "DESC"]],
     });
 
-    if (jobs.length !== jobUpdates.length) {
+    if (jobs.length !== jobUpdates.length && jobUpdates.length > 1) {
       throw new NotFoundException("Some jobs in the request could not be updated");
     }
 

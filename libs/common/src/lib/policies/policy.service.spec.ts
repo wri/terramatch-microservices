@@ -14,6 +14,15 @@ export function mockPermissions(...permissions: string[]) {
   Permission.getUserPermissionNames = jest.fn().mockResolvedValue(permissions);
 }
 
+type Subject = Parameters<PolicyService["authorize"]>[1];
+export async function expectCan(service: PolicyService, action: string, subject: Subject) {
+  await expect(service.authorize(action, subject)).resolves.toBeUndefined();
+}
+
+export async function expectCannot(service: PolicyService, action: string, subject: Subject) {
+  await expect(service.authorize(action, subject)).rejects.toThrow(UnauthorizedException);
+}
+
 describe("PolicyService", () => {
   let service: PolicyService;
 

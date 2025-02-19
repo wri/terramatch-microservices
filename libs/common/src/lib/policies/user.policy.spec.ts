@@ -1,19 +1,20 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
-import { mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { User } from "@terramatch-microservices/database/entities";
-import { UnauthorizedException } from "@nestjs/common";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("UserPolicy", () => {
   let service: PolicyService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module = await Test.createTestingModule({
       providers: [PolicyService]
     }).compile();
 
-    service = await module.resolve<PolicyService>(PolicyService);
+    service = await module.resolve(PolicyService);
+
+    mockUserId(123);
   });
 
   afterEach(async () => {
@@ -21,38 +22,32 @@ describe("UserPolicy", () => {
   });
 
   it("allows reading any user as admin", async () => {
-    mockUserId(123);
     mockPermissions("users-manage");
-    await expect(service.authorize("read", new User())).resolves.toBeUndefined();
+    await expectCan(service, "read", new User());
   });
 
   it("disallows reading other users as non-admin", async () => {
-    mockUserId(123);
     mockPermissions();
-    await expect(service.authorize("read", new User())).rejects.toThrow(UnauthorizedException);
+    await expectCannot(service, "read", new User());
   });
 
   it("allows reading own user as non-admin", async () => {
-    mockUserId(123);
     mockPermissions();
-    await expect(service.authorize("read", await UserFactory.build({ id: 123 }))).resolves.toBeUndefined();
+    await expectCan(service, "read", await UserFactory.build({ id: 123 }));
   });
 
   it("allows updating any user as admin", async () => {
-    mockUserId(123);
     mockPermissions("users-manage");
-    await expect(service.authorize("update", new User())).resolves.toBeUndefined();
+    await expectCan(service, "update", new User());
   });
 
   it("disallows updating other users as non-admin", async () => {
-    mockUserId(123);
     mockPermissions();
-    await expect(service.authorize("update", new User())).rejects.toThrow(UnauthorizedException);
+    await expectCannot(service, "update", new User());
   });
 
   it("allows updating own user as non-admin", async () => {
-    mockUserId(123);
     mockPermissions();
-    await expect(service.authorize("update", await UserFactory.build({ id: 123 }))).resolves.toBeUndefined();
+    await expectCan(service, "update", await UserFactory.build({ id: 123 }));
   });
 });

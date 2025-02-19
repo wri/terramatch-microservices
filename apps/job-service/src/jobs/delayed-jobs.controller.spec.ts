@@ -220,7 +220,7 @@ describe("DelayedJobsController", () => {
         ]
       };
       const request = { authenticatedUserId: 130999 };
-      DelayedJob.findOne = jest.fn().mockResolvedValue(null);
+
       await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
 

@@ -20,12 +20,13 @@ export class UserNewRequest {
 
   @IsNotEmpty()
   @ApiProperty()
-  phone: string;
+  phoneNumber: string;
 
   @IsNotEmpty()
   @ApiProperty()
   jobRole: string;
 
+  // TODO allow enum values
   @IsNotEmpty()
   @ApiProperty()
   role: string;

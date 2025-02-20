@@ -1,4 +1,4 @@
-import { Attributes, Filterable, FindOptions, IncludeOptions, literal, Op, WhereOptions } from "sequelize";
+import { IncludeOptions, literal, Op } from "sequelize";
 import {
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,
@@ -15,6 +15,7 @@ import {
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 
 type IndicatorModelClass =
   | typeof IndicatorOutputTreeCover
@@ -39,7 +40,7 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorModelC
 
 const INDICATOR_EXCLUDE_COLUMNS = ["id", "sitePolygonId", "createdAt", "updatedAt", "deletedAt"];
 
-export class SitePolygonQueryBuilder {
+export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   private siteJoin: IncludeOptions = {
     model: Site,
     include: [
@@ -54,8 +55,10 @@ export class SitePolygonQueryBuilder {
     required: true
   };
 
-  private findOptions: FindOptions<Attributes<SitePolygon>> = {
-    include: [
+  constructor(pageSize: number) {
+    super(SitePolygon, pageSize);
+
+    this.findOptions.include = [
       { model: IndicatorOutputFieldMonitoring, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
       { model: IndicatorOutputHectares, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
       { model: IndicatorOutputMsuCarbon, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
@@ -64,18 +67,13 @@ export class SitePolygonQueryBuilder {
       { model: IndicatorOutputTreeCoverLoss, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
       { model: PolygonGeometry, attributes: ["polygon"], required: true },
       this.siteJoin
-    ]
-  };
-
-  constructor(pageSize: number) {
-    this.findOptions.limit = pageSize;
+    ];
   }
 
   async excludeTestProjects() {
     // avoid joining against the entire project table by doing a quick query first. The number of test projects is small
     const testProjects = await Project.findAll({ where: { isTest: true }, attributes: ["id"] });
-    this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
-    return this;
+    return this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
   }
 
   async filterProjectUuids(projectUuids: string[]) {
@@ -83,8 +81,7 @@ export class SitePolygonQueryBuilder {
       where: { uuid: { [Op.in]: projectUuids } },
       attributes: ["id"]
     });
-    this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
-    return this;
+    return this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {
@@ -130,31 +127,5 @@ export class SitePolygonQueryBuilder {
       });
     }
     return this;
-  }
-
-  async pageAfter(pageAfter: string) {
-    const sitePolygon = await SitePolygon.findOne({
-      where: { uuid: pageAfter },
-      attributes: ["id"]
-    });
-    if (sitePolygon == null) throw new BadRequestException("pageAfter polygon not found");
-    this.where({ id: { [Op.gt]: sitePolygon.id } });
-    return this;
-  }
-
-  async execute(): Promise<SitePolygon[]> {
-    return await SitePolygon.findAll(this.findOptions);
-  }
-
-  private where(options: WhereOptions, filterable: Filterable = this.findOptions) {
-    if (filterable.where == null) filterable.where = {};
-
-    const clauses = { ...options };
-    if (clauses[Op.and] != null && filterable.where[Op.and] != null) {
-      // For this builder, we only use arrays of literals with Op.and, so we can simply merge the arrays
-      clauses[Op.and] = [...filterable.where[Op.and], ...clauses[Op.and]];
-    }
-
-    Object.assign(filterable.where, clauses);
   }
 }

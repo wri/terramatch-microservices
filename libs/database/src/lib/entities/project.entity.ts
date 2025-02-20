@@ -21,11 +21,24 @@ import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
+import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
+
+  static readonly MEDIA = {
+    media: { dbCollection: "media", multiple: true },
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true },
+    documentFiles: { dbCollection: "document_files", multiple: true },
+    programmeSubmission: { dbCollection: "programme_submission", multiple: true },
+    detailedProjectBudget: { dbCollection: "detailed_project_budget", multiple: false },
+    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true }
+  } as const;
 
   @PrimaryKey
   @AutoIncrement
@@ -42,6 +55,10 @@ export class Project extends Model<Project> {
 
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
+
+  get frameworkUuid() {
+    return this.framework?.uuid;
+  }
 
   @Default(false)
   @Column(BOOLEAN)
@@ -63,20 +80,20 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  status: EntityStatus | null;
 
   @AllowNull
   @Default("no-update")
   @Column(STRING)
-  updateRequestStatus: string | null;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(TEXT)
   feedback: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  feedbackFields: string | null;
+  @JsonColumn()
+  feedbackFields: string[] | null;
 
   @AllowNull
   @Column(ENUM("new_project", "existing_expansion"))
@@ -104,11 +121,11 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(DATE)
-  plantingStartDate: Date;
+  plantingStartDate: Date | null;
 
   @AllowNull
   @Column(DATE)
-  plantingEndDate: Date;
+  plantingEndDate: Date | null;
 
   @AllowNull
   @Column(TEXT)
@@ -337,22 +354,12 @@ export class Project extends Model<Project> {
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 
-  async loadOrganisation() {
-    if (this.organisation == null && this.organisationId != null) {
-      this.organisation = await this.$get("organisation");
-    }
-    return this.organisation;
+  get organisationName() {
+    return this.organisation?.name;
   }
 
   @BelongsTo(() => Application)
   application: Application | null;
-
-  async loadApplication() {
-    if (this.application == null && this.applicationId != null) {
-      this.application = await this.$get("application");
-    }
-    return this.application;
-  }
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
@@ -360,11 +367,6 @@ export class Project extends Model<Project> {
     scope: { speciesableType: Project.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
-
-  async loadTreesPlanted() {
-    this.treesPlanted ??= await this.$get("treesPlanted");
-    return this.treesPlanted;
-  }
 
   @HasMany(() => ProjectReport)
   reports: ProjectReport[] | null;

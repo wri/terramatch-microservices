@@ -13,7 +13,8 @@ const defaultAttributesFactory = async () => ({
   name: faker.lorem.words(2),
   taxonId: null,
   amount: faker.number.int({ min: 10, max: 1000 }),
-  collection: "tree-planted"
+  collection: "tree-planted",
+  hidden: false
 });
 
 export const TreeSpeciesFactory = {

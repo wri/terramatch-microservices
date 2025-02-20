@@ -55,5 +55,11 @@ jobs:
       - name: Unified DB Test
         run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test unified-database-service --coverage
 
+      # Run the UDB service tests in isolation because they require clearing out DB tables and ensuring
+      # they know exactly what's in them, which is not conducive to parallel runs with other test
+      # suites.
+      - name: Entity Service Test
+        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test entity-service --coverage --runInBand
+
       - name: Test all
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests --exclude unified-database-service database
+        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests --exclude unified-database-service database entity-service

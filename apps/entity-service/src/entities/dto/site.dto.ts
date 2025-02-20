@@ -1,8 +1,8 @@
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
-  ENTITY_STATUSES,
-  EntityStatus,
+  SITE_STATUSES,
+  SiteStatus,
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
@@ -41,9 +41,9 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty({
     nullable: true,
     description: "Entity status for this project",
-    enum: ENTITY_STATUSES
+    enum: SITE_STATUSES
   })
-  status: EntityStatus | null;
+  status: SiteStatus | null;
 
   @ApiProperty({
     nullable: true,

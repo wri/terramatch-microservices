@@ -113,7 +113,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     }));
     const regeneratedTreesCount = sumBy(assistedNaturalRegenerationList, "treeCount");
     const treesPlantedCount =
-      (await TreeSpecies.visible().collection("treesPlanted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
     const props: AdditionalProjectFullProps = {

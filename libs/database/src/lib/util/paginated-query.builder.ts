@@ -35,8 +35,8 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   };
   protected pageTotalFindOptions: FindOptions<Attributes<T>> = {};
 
-  constructor(private readonly MODEL: ModelCtor<T>, pageSize: number, include?: Includeable[]) {
-    this.findOptions.limit = pageSize;
+  constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize: number, include?: Includeable[]) {
+    this.findOptions.limit = this.pageSize;
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }
@@ -57,7 +57,7 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   pageNumber(pageNumber: number) {
-    this.findOptions.offset = pageNumber - 1;
+    this.findOptions.offset = (pageNumber - 1) * this.pageSize;
     return this;
   }
 

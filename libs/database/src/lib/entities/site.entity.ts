@@ -16,7 +16,7 @@ import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
-import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { APPROVED, RESTORATION_IN_PROGRESS, SiteStatus, UpdateRequestStatus } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
@@ -31,7 +31,7 @@ import { chainScope } from "../util/chain-scope";
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
-  static readonly APPROVED_STATUSES = ["approved", "restoration-in-progress"];
+  static readonly APPROVED_STATUSES = [APPROVED, RESTORATION_IN_PROGRESS];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
   static approved() {
@@ -81,7 +81,7 @@ export class Site extends Model<Site> {
   name: string;
 
   @Column(STRING)
-  status: EntityStatus;
+  status: SiteStatus;
 
   @AllowNull
   @Column(STRING)

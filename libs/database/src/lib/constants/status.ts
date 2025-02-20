@@ -1,9 +1,12 @@
 export const STARTED = "started";
 export const AWAITING_APPROVAL = "awaiting-approval";
 export const APPROVED = "approved";
+export const RESTORATION_IN_PROGRESS = "restoration-in-progress";
 export const NEEDS_MORE_INFORMATION = "needs-more-information";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
+export const SITE_STATUSES = [...ENTITY_STATUSES, RESTORATION_IN_PROGRESS] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
+export type SiteStatus = (typeof SITE_STATUSES)[number];
 
 export const DUE = "due";
 export const REPORT_STATUSES = [DUE, ...ENTITY_STATUSES] as const;

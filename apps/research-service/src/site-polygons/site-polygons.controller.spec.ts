@@ -1,7 +1,7 @@
 import { SitePolygonsController } from "./site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
@@ -36,7 +36,7 @@ describe("SitePolygonsController", () => {
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module = await Test.createTestingModule({
       controllers: [SitePolygonsController],
       providers: [
         { provide: SitePolygonsService, useValue: (sitePolygonService = createMock<SitePolygonsService>()) },
@@ -44,7 +44,7 @@ describe("SitePolygonsController", () => {
       ]
     }).compile();
 
-    controller = module.get<SitePolygonsController>(SitePolygonsController);
+    controller = module.get(SitePolygonsController);
   });
 
   afterEach(() => {

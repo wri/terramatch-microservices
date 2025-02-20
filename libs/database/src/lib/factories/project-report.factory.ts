@@ -14,6 +14,10 @@ export const ProjectReportFactory = FactoryGirl.define(ProjectReport, async () =
     dueAt,
     submittedAt: faker.date.between({ from: dueAt, to: DateTime.fromJSDate(dueAt).plus({ days: 14 }).toJSDate() }),
     status: faker.helpers.arrayElement(REPORT_STATUSES),
-    updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES)
+    updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES),
+    workdaysPaid: faker.number.int({ min: 10, max: 50 }),
+    workdaysVolunteer: faker.number.int({ min: 10, max: 50 }),
+    ftTotal: faker.number.int({ min: 10, max: 50 }),
+    ptTotal: faker.number.int({ min: 10, max: 50 })
   };
 });

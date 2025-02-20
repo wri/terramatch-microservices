@@ -43,7 +43,7 @@ export class PolicyService {
 
   get userId() {
     // Added by AuthGuard
-    return RequestContext.currentContext.req.authenticatedUserId;
+    return RequestContext.currentContext.req.authenticatedUserId as number | undefined | null;
   }
 
   async getPermissions() {
@@ -54,6 +54,8 @@ export class PolicyService {
   }
 
   async authorize(action: string, subject: Model | EntityClass | Model[]) {
+    if (this.userId == null) throw new UnauthorizedException();
+
     const subjects = isArray(subject) ? subject : [subject];
     const [, PolicyClass] =
       POLICIES.find(([entityClass]) => subjects[0] instanceof entityClass || subjects[0] === entityClass) ?? [];

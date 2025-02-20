@@ -14,6 +14,9 @@ export const SiteReportFactory = FactoryGirl.define(SiteReport, async () => {
     dueAt,
     submittedAt: faker.date.between({ from: dueAt, to: DateTime.fromJSDate(dueAt).plus({ days: 14 }).toJSDate() }),
     status: faker.helpers.arrayElement(REPORT_STATUSES),
-    updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES)
+    updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES),
+    numTreesRegenerating: faker.number.int({ min: 10, max: 500 }),
+    workdaysPaid: faker.number.int({ min: 10, max: 50 }),
+    workdaysVolunteer: faker.number.int({ min: 10, max: 50 })
   };
 });

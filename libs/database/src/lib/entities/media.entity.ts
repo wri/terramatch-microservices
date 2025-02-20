@@ -111,9 +111,10 @@ export class Media extends Model<Media> {
   @Column(STRING(500))
   description: string | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored

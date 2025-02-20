@@ -6,19 +6,19 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
 
-  findOne(): Promise<Site> {
+  async findOne(): Promise<Site> {
     throw new Error("Method not implemented.");
   }
 
-  findMany(): Promise<PaginatedResult<Site>> {
+  async findMany(): Promise<PaginatedResult<Site>> {
     throw new Error("Method not implemented.");
   }
 
-  addFullDto(): Promise<void> {
+  async addFullDto(): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
-  addLightDto(): Promise<void> {
+  async addLightDto(): Promise<void> {
     throw new Error("Method not implemented.");
   }
 }

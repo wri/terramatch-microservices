@@ -17,7 +17,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateBodyDto } from "./dto/user-update.dto";
 
-const USER_RESPONSE_SHAPE = {
+export const USER_RESPONSE_SHAPE = {
   data: {
     type: UserDto,
     relationships: [

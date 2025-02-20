@@ -1,5 +1,5 @@
 name: Service Deploy
-run-name: 'Service Deploy [service: ${{ inputs.service }}, env: ${{ inputs.env }}]'
+run-name: "Service Deploy [service: ${{ inputs.service }}, env: ${{ inputs.env }}]"
 
 on:
   workflow_call:
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       service:
-        description: 'Service to deploy'
+        description: "Service to deploy"
         type: choice
         required: true
         options:
@@ -23,7 +23,7 @@ on:
           - research-service
           - unified-database-service
       env:
-        description: 'Deployment target environment'
+        description: "Deployment target environment"
         type: choice
         required: true
         options:
@@ -37,6 +37,7 @@ permissions:
   contents: read
 
 env:
+  HUSKY: 0
   AWS_REGION: eu-west-1
   AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
   AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.service }}
@@ -81,4 +82,3 @@ jobs:
           cd cdk/service-stack
           npm i
           IMAGE_TAG=$IMAGE_TAG TM_SERVICE=${{ inputs.service }} TM_ENV=${{ inputs.env }} npx --yes cdk deploy --require-approval never
-

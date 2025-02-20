@@ -223,30 +223,6 @@ describe("DelayedJobsController", () => {
 
       await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
-
-    // it('should not update jobs with status "pending"', async () => {
-    //   const authenticatedUserId = 130999;
-    //   const pendingJob = await DelayedJob.create({
-    //     uuid: uuidv4(),
-    //     createdBy: authenticatedUserId,
-    //     isAcknowledged: false,
-    //     status: "pending",
-    //     metadata: { entity_name: "TestEntityPending" } // Adding entity_name
-    //   });
-
-    //   const payload: DelayedJobBulkUpdateBodyDto = {
-    //     data: [
-    //       {
-    //         type: "delayedJobs",
-    //         uuid: pendingJob.uuid,
-    //         attributes: { isAcknowledged: true }
-    //       }
-    //     ]
-    //   };
-    //   const request = { authenticatedUserId };
-
-    //   await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
-    // });
   });
 
   describe("DelayedJobAttributes", () => {

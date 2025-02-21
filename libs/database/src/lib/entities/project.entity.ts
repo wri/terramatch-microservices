@@ -60,6 +60,10 @@ export class Project extends Model<Project> {
     return this.framework?.uuid;
   }
 
+  @AllowNull
+  @Column(STRING)
+  cohort: string;
+
   @Default(false)
   @Column(BOOLEAN)
   isTest: boolean;

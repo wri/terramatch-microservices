@@ -40,6 +40,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
     include: [{ model: Framework, attributes: ["name"] }],
     valueMap: async ({ framework, frameworkKey }) => framework?.name ?? frameworkKey
   },
+  "cohort",
   {
     airtableColumn: "applicationUuid",
     include: [{ model: Application, attributes: ["uuid"] }],

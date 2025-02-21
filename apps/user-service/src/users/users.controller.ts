@@ -16,6 +16,7 @@ import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateBodyDto } from "./dto/user-update.dto";
+import { addUserResource } from "./util";
 
 export const USER_RESPONSE_SHAPE = {
   data: {
@@ -56,7 +57,7 @@ export class UsersController {
 
     await this.policyService.authorize("read", user);
 
-    return (await this.addUserResource(buildJsonApi(), user)).serialize();
+    return (await addUserResource(buildJsonApi(), user)).serialize();
   }
 
   @Patch(":uuid")
@@ -86,19 +87,6 @@ export class UsersController {
       await user.save();
     }
 
-    return (await this.addUserResource(buildJsonApi(), user)).serialize();
-  }
-
-  private async addUserResource(document: DocumentBuilder, user: User) {
-    const userResource = document.addData(user.uuid, new UserDto(user, await user.myFrameworks()));
-
-    const org = await user.primaryOrganisation();
-    if (org != null) {
-      const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
-      const userStatus = org.OrganisationUser?.status ?? "na";
-      userResource.relateTo("org", orgResource, { userStatus });
-    }
-
-    return document;
+    return (await addUserResource(buildJsonApi(), user)).serialize();
   }
 }

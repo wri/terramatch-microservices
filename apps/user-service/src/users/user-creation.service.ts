@@ -29,8 +29,14 @@ export class UserCreationService {
     const bodyKey = "user-verification.body";
     const subjectKey = "user-verification.subject";
     const titleKey = "user-verification.title";
+    const ctaKey = "user-verification.cta";
 
-    const localizationKeys = await this.localizationService.getLocalizationKeys([bodyKey, subjectKey, titleKey]);
+    const localizationKeys = await this.localizationService.getLocalizationKeys([
+      bodyKey,
+      subjectKey,
+      titleKey,
+      ctaKey
+    ]);
 
     if (!localizationKeys.length) {
       throw new NotFoundException("Localizations not found");
@@ -38,6 +44,8 @@ export class UserCreationService {
 
     const bodyLocalization = localizationKeys.find(x => x.key == bodyKey);
     const subjectLocalization = localizationKeys.find(x => x.key == subjectKey);
+    const titleLocalization = localizationKeys.find(x => x.key == titleKey);
+    const ctaLocalization = localizationKeys.find(x => x.key == ctaKey);
 
     if (bodyLocalization == null) {
       throw new NotFoundException("Localization body not found");
@@ -52,18 +60,34 @@ export class UserCreationService {
     await user.save();
     await user.reload();
 
-    const body = await this.formatBody(user, bodyLocalization.value, request.callbackUrl);
-    // await this.sendEmailVerification(user, subjectLocalization.value, body);
+    const body = await this.formatBody(
+      user,
+      bodyLocalization.value,
+      titleLocalization.value,
+      ctaLocalization.value,
+      request.callbackUrl
+    );
+    console.log(body);
+    await this.sendEmailVerification(user, subjectLocalization.value, body);
     return user;
   }
 
-  private async formatBody(user: User, body: string, callbackUrl: string) {
+  private async formatBody(user: User, body: string, title: string, cta: string, callbackUrl: string) {
     const token = this.jwtService.sign({ userId: user.uuid });
     const resetLink = `${callbackUrl}?token=${token}`;
-    console.log(user);
-    const bodyEmailContent = await this.localizationService.translate(body, user.locale);
-    const anchor = `<a href="${resetLink}" target="_blank">link</a>`;
-    return bodyEmailContent.replace("link", anchor).replace("enlace", anchor).replace("lien", anchor);
+    const bodyEmail = await this.localizationService.translate(body, user.locale);
+    const titleEmail = await this.localizationService.translate(title, user.locale);
+    const ctaEmail = await this.localizationService.translate(cta, user.locale);
+    const emailData = {
+      backend_url: null,
+      banner: null,
+      title: titleEmail,
+      body: bodyEmail,
+      link: resetLink,
+      cta: ctaEmail,
+      year: new Date().getFullYear()
+    };
+    return this.emailService.renderTemplate(emailData);
   }
 
   private async sendEmailVerification(user: User, subject: string, body: string) {

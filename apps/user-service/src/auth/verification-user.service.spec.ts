@@ -34,8 +34,8 @@ describe("VerificationUserService", () => {
 
   it("should verify an user", async () => {
     const user = await UserFactory.create();
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
     const verification = await VerificationFactory.create({ userId: user.id });
+    verification.user = user;
     jest.spyOn(Verification, "findOne").mockImplementation(() => Promise.resolve(verification));
     const destroySpy = jest.spyOn(verification, "destroy").mockResolvedValue();
 

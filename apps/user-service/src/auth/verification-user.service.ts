@@ -8,19 +8,13 @@ export class VerificationUserService {
   protected readonly logger: LoggerService = new TMLogService(VerificationUserService.name);
 
   async verify(token: string) {
-    const verification = await Verification.findOne({ where: { token } });
-
-    if (verification == null) {
-      throw new NotFoundException("Verification token not found");
-    }
-
-    const user = await User.findOne({
-      where: { id: verification.userId },
-      attributes: ["id", "uuid", "emailAddressVerifiedAt"]
+    const verification = await Verification.findOne({
+      where: { token },
+      include: [{ association: "user", attributes: ["id", "uuid", "emailAddressVerifiedAt"] }]
     });
-    if (user == null) {
-      throw new NotFoundException("User not found");
-    }
+
+    if (verification?.user == null) throw new NotFoundException("Verification token invalid");
+    const user = verification.user;
     try {
       user.emailAddressVerifiedAt = new Date();
       await user.save();

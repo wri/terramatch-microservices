@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException, LoggerService } from "@nestjs/common";
-import { User } from "@terramatch-microservices/database/entities";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { Verification } from "@terramatch-microservices/database/entities/verification.entity";
 

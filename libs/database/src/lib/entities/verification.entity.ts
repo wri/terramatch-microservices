@@ -1,6 +1,6 @@
 import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, STRING } from "sequelize";
-import { User } from "@terramatch-microservices/database/entities/user.entity";
+import { User } from "./user.entity";
 
 @Table({ tableName: "verifications", underscored: true })
 export class Verification extends Model<Verification> {

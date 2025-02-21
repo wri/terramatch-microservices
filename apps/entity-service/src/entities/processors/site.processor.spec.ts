@@ -25,7 +25,7 @@ describe("SiteProcessor", () => {
       providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
     }).compile();
 
-    processor = module.get(EntitiesService).createProcessor("sites") as SiteProcessor;
+    processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
   });
 
   describe("findMany", () => {

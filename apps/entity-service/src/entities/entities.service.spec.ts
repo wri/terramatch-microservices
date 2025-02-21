@@ -39,7 +39,7 @@ describe("EntitiesService", () => {
 
   describe("createProcessor", () => {
     it("throws with an unknown entity type", async () => {
-      expect(() => service.createProcessor("foo" as ProcessableEntity)).toThrow(BadRequestException);
+      expect(() => service.createEntityProcessor("foo" as ProcessableEntity)).toThrow(BadRequestException);
     });
   });
 

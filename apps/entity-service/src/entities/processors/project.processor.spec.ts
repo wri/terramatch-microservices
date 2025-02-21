@@ -51,7 +51,7 @@ describe("ProjectProcessor", () => {
       providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
     }).compile();
 
-    processor = module.get(EntitiesService).createProcessor("projects") as ProjectProcessor;
+    processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
   describe("findMany", () => {

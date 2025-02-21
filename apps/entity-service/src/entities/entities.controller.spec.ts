@@ -36,7 +36,7 @@ describe("EntitiesController", () => {
 
     controller = module.get(EntitiesController);
     processor = new StubProcessor(entitiesService);
-    entitiesService.createProcessor.mockImplementation(() => processor);
+    entitiesService.createEntityProcessor.mockImplementation(() => processor);
   });
 
   afterEach(() => {

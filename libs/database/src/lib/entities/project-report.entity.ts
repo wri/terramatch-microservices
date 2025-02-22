@@ -11,12 +11,13 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, literal, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -86,23 +87,12 @@ export class ProjectReport extends Model<ProjectReport> {
   }
 
   static approvedIdsSubquery(projectId: number, opts: ApprovedIdsSubqueryOptions = {}) {
-    const attributes = ProjectReport.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = ProjectReport.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-
-    const approvedStatuses = ProjectReport.APPROVED_STATUSES.map(s => `"${s}"`).join(",");
-    let where = `WHERE ${deletedAt} IS NULL
-      AND ${attributes.projectId.field} = ${sql.escape(projectId)}
-      AND ${attributes.status.field} IN (${approvedStatuses})`;
-    if (opts.dueAfter != null) {
-      where = `${where} AND ${attributes.dueAt.field} >= ${sql.escape(opts.dueAfter)}`;
-    }
-    if (opts.dueBefore != null) {
-      where = `${where} AND ${attributes.dueAt.field} < ${sql.escape(opts.dueBefore)}`;
-    }
-    return literal(`(SELECT ${attributes.id.field} FROM ${ProjectReport.tableName} ${where})`);
+    const builder = Subquery.select(ProjectReport, "id")
+      .eq("projectId", projectId)
+      .in("status", ProjectReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
   }
 
   @PrimaryKey

@@ -1,14 +1,15 @@
 import { Injectable, LoggerService, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
-import { BuilderType, EntityPolicy } from "./entity.policy";
-import { Permission, Project, SitePolygon, User } from "@terramatch-microservices/database/entities";
+import { Permission, Project, ProjectReport, SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { TMLogService } from "../util/tm-log.service";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
 import { isArray } from "lodash";
+import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
+import { ProjectReportPolicy } from "./project-report.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,11 +18,12 @@ type EntityClass = {
 };
 
 type PolicyClass = {
-  new (userId: number, permissions: string[], builder: AbilityBuilder<BuilderType>): EntityPolicy;
+  new (userId: number, permissions: string[], builder: AbilityBuilder<BuilderType>): UserPermissionsPolicy;
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
   [Project, ProjectPolicy],
+  [ProjectReport, ProjectReportPolicy],
   [SitePolygon, SitePolygonPolicy],
   [User, UserPolicy]
 ];

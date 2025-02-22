@@ -68,7 +68,6 @@ export class SitePolygonsService {
     }
 
     const model =
-      // @ts-expect-error The compiler is getting confused here; this is legal.
       (await IndicatorClass.findOne({
         where: { sitePolygonId, indicatorSlug, yearOfAnalysis }
       })) ?? new IndicatorClass();

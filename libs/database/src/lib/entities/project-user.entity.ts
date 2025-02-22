@@ -1,31 +1,17 @@
 import { AllowNull, AutoIncrement, Column, Default, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { Project } from "./project.entity";
 import { User } from "./user.entity";
-import { BIGINT, BOOLEAN, literal, STRING } from "sequelize";
+import { BIGINT, BOOLEAN, STRING } from "sequelize";
+import { Subquery } from "../util/subquery.builder";
 
 @Table({ tableName: "v2_project_users", underscored: true })
 export class ProjectUser extends Model<ProjectUser> {
   static userProjectsSubquery(userId: number) {
-    const attributes = ProjectUser.getAttributes();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const sql = ProjectUser.sequelize!;
-    return literal(
-      `(SELECT ${attributes.projectId.field} FROM ${ProjectUser.tableName}
-        WHERE ${attributes.userId.field} = ${sql.escape(userId)}
-      )`
-    );
+    return Subquery.select(ProjectUser, "projectId").eq("userId", userId).literal;
   }
 
   static projectsManageSubquery(userId: number) {
-    const attributes = ProjectUser.getAttributes();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const sql = ProjectUser.sequelize!;
-    return literal(
-      `(SELECT ${attributes.projectId.field} FROM ${ProjectUser.tableName}
-        WHERE ${attributes.userId.field} = ${sql.escape(userId)}
-        AND ${attributes.isManaging.field} = TRUE
-      )`
-    );
+    return Subquery.select(ProjectUser, "projectId").eq("userId", userId).eq("isManaging", true).literal;
   }
 
   @PrimaryKey

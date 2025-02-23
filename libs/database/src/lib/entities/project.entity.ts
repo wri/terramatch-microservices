@@ -22,6 +22,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { Subquery } from "../util/subquery.builder";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -39,6 +40,10 @@ export class Project extends Model<Project> {
     detailedProjectBudget: { dbCollection: "detailed_project_budget", multiple: false },
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true }
   } as const;
+
+  static forOrganisation(organisationId: number) {
+    return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;
+  }
 
   @PrimaryKey
   @AutoIncrement

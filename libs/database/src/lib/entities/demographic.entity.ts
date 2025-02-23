@@ -24,9 +24,16 @@ import { Subquery } from "../util/subquery.builder";
 })
 export class Demographic extends Model<Demographic> {
   static readonly DEMOGRAPHIC_COUNT_CUTOFF = "2024-07-05";
+
   static readonly WORKDAYS_TYPE = "workdays";
   static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
   static readonly JOBS_TYPE = "jobs";
+  static readonly VALID_TYPES = [
+    Demographic.WORKDAYS_TYPE,
+    Demographic.RESTORATION_PARTNERS_TYPE,
+    Demographic.JOBS_TYPE
+  ] as const;
+
   static readonly COLLECTION_MAPPING: Dictionary<Dictionary<Dictionary<string>>> = {
     [ProjectReport.LARAVEL_TYPE]: {
       [Demographic.WORKDAYS_TYPE]: WORKDAYS_PROJECT_COLLECTIONS,

@@ -38,6 +38,9 @@ export class DemographicDto extends AssociationDto<DemographicDto> {
   @ApiProperty()
   uuid: string;
 
+  @ApiProperty({ enum: Demographic.VALID_TYPES })
+  type: string;
+
   @ApiProperty()
   collection: string;
 

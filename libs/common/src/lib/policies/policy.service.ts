@@ -1,7 +1,14 @@
 import { Injectable, LoggerService, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
-import { Permission, Project, ProjectReport, SitePolygon, User } from "@terramatch-microservices/database/entities";
+import {
+  Permission,
+  Project,
+  ProjectReport,
+  SitePolygon,
+  SiteReport,
+  User
+} from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { TMLogService } from "../util/tm-log.service";
@@ -10,6 +17,7 @@ import { ProjectPolicy } from "./project.policy";
 import { isArray } from "lodash";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
+import { SiteReportPolicy } from "./site-report.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +33,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Project, ProjectPolicy],
   [ProjectReport, ProjectReportPolicy],
   [SitePolygon, SitePolygonPolicy],
+  [SiteReport, SiteReportPolicy],
   [User, UserPolicy]
 ];
 

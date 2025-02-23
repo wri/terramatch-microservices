@@ -5,6 +5,7 @@ export class ProjectPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("projects-read") || this.permissions.includes("view-dashboard")) {
       this.builder.can("read", Project);
+      return;
     }
 
     if (this.frameworks.length > 0) {

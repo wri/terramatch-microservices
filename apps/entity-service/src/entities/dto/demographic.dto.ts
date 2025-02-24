@@ -5,19 +5,23 @@ import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import {
+  CONVERGENCE,
+  DIRECT,
   DIRECT_OTHER,
   JOBS_PROJECT_COLLECTIONS,
   PAID_OTHER,
   RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  VOLUNTEER,
   WORKDAYS_PROJECT_COLLECTIONS,
   WORKDAYS_SITE_COLLECTIONS
 } from "@terramatch-microservices/database/constants/demographic-collections";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
+import { pull } from "lodash";
 
 @JsonApiConstants
 export class DemographicCollections {
-  @ApiProperty({ enum: Object.keys(WORKDAYS_PROJECT_COLLECTIONS) })
-  WORKDAYS_PROJECT: string[];
+  @ApiProperty({ enum: pull(Object.keys(WORKDAYS_PROJECT_COLLECTIONS), DIRECT, CONVERGENCE) })
+  WORKDAYS_PROJECT_PPC: string[];
 
   @ApiProperty({ example: PAID_OTHER })
   WORKDAYS_PROJECT_OTHER: string;
@@ -34,8 +38,11 @@ export class DemographicCollections {
   @ApiProperty({ example: DIRECT_OTHER })
   RESTORATION_PARTNERS_PROJECT_OTHER: string;
 
-  @ApiProperty({ enum: Object.keys(JOBS_PROJECT_COLLECTIONS) })
-  JOBS_PROJECT: string[];
+  @ApiProperty({ enum: pull(Object.keys(JOBS_PROJECT_COLLECTIONS), VOLUNTEER) })
+  JOBS_PAID_PROJECT: string[];
+
+  @ApiProperty({ enum: [VOLUNTEER] })
+  JOBS_VOLUNTEER_PROJECT: string[];
 }
 
 export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> {

@@ -4,11 +4,11 @@ import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
-import { DemographicDto, DemographicEntryDto } from "./dto/demographic.dto";
+import { DemographicCollections, DemographicDto, DemographicEntryDto } from "./dto/demographic.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 
 @Controller("entities/v3/:entity/:uuid")
-@ApiExtraModels(DemographicEntryDto)
+@ApiExtraModels(DemographicEntryDto, DemographicCollections)
 export class EntityAssociationsController {
   constructor(private readonly entitiesService: EntitiesService, private readonly policyService: PolicyService) {}
 

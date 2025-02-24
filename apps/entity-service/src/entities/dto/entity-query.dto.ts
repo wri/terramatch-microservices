@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, IntersectionType } from "@nestjs/swagger";
 import { IsEnum, IsOptional, ValidateNested } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
@@ -12,13 +12,11 @@ class QuerySort {
   direction?: "ASC" | "DESC";
 }
 
-export class EntityQueryDto {
-  @ApiProperty({ name: "page", required: false })
+export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ValidateNested()
   @IsOptional()
   page?: NumberPage;
 
-  @ApiProperty({ name: "sort", required: false })
   @ValidateNested()
   @IsOptional()
   sort?: QuerySort;

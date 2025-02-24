@@ -4,6 +4,39 @@ import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import {
+  DIRECT_OTHER,
+  JOBS_PROJECT_COLLECTIONS,
+  PAID_OTHER,
+  RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  WORKDAYS_PROJECT_COLLECTIONS,
+  WORKDAYS_SITE_COLLECTIONS
+} from "@terramatch-microservices/database/constants/demographic-collections";
+import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
+
+@JsonApiConstants
+export class DemographicCollections {
+  @ApiProperty({ enum: Object.keys(WORKDAYS_PROJECT_COLLECTIONS) })
+  WORKDAYS_PROJECT: string[];
+
+  @ApiProperty({ example: PAID_OTHER })
+  WORKDAYS_PROJECT_OTHER: string;
+
+  @ApiProperty({ enum: Object.keys(WORKDAYS_SITE_COLLECTIONS) })
+  WORKDAYS_SITE: string[];
+
+  @ApiProperty({ example: PAID_OTHER })
+  WORKDAYS_SITE_OTHER: string;
+
+  @ApiProperty({ enum: Object.keys(RESTORATION_PARTNERS_PROJECT_COLLECTIONS) })
+  RESTORATION_PARTNERS_PROJECT: string[];
+
+  @ApiProperty({ example: DIRECT_OTHER })
+  RESTORATION_PARTNERS_PROJECT_OTHER: string;
+
+  @ApiProperty({ enum: Object.keys(JOBS_PROJECT_COLLECTIONS) })
+  JOBS_PROJECT: string[];
+}
 
 export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> {
   @ApiProperty()

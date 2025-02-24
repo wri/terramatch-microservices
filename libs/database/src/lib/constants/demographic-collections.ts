@@ -15,12 +15,13 @@ export const VOLUNTEER_PLANTING = "volunteer-planting";
 export const VOLUNTEER_SITE_MAINTENANCE = "volunteer-site-maintenance";
 export const VOLUNTEER_SITE_MONITORING = "volunteer-site-monitoring";
 
+// The order of these mappings dictates the order of display in the PD views.
 export const WORKDAYS_PROJECT_COLLECTIONS = {
-  [PAID_NURSERY_OPERATIONS]: "Paid Nursery Operations",
   [PAID_PROJECT_MANAGEMENT]: "Paid Project Management",
-  [PAID_OTHER]: "Paid Other Activities",
-  [VOLUNTEER_NURSERY_OPERATIONS]: "Volunteer Nursery Operations",
   [VOLUNTEER_PROJECT_MANAGEMENT]: "Volunteer Project Management",
+  [PAID_NURSERY_OPERATIONS]: "Paid Nursery Operations",
+  [VOLUNTEER_NURSERY_OPERATIONS]: "Volunteer Nursery Operations",
+  [PAID_OTHER]: "Paid Other Activities",
   [VOLUNTEER_OTHER]: "Volunteer Other Activities",
   [DIRECT]: "Direct Workdays",
   [CONVERGENCE]: "Convergence Workdays"
@@ -28,14 +29,14 @@ export const WORKDAYS_PROJECT_COLLECTIONS = {
 
 export const WORKDAYS_SITE_COLLECTIONS = {
   [PAID_SITE_ESTABLISHMENT]: "Paid Site Establishment",
-  [PAID_PLANTING]: "Paid Planting",
-  [PAID_SITE_MAINTENANCE]: "Paid Site Maintenance",
-  [PAID_SITE_MONITORING]: "Paid Site Monitoring",
-  [PAID_OTHER]: "Paid Other Activities",
   [VOLUNTEER_SITE_ESTABLISHMENT]: "Volunteer Site Establishment",
+  [PAID_PLANTING]: "Paid Planting",
   [VOLUNTEER_PLANTING]: "Volunteer Planting",
+  [PAID_SITE_MAINTENANCE]: "Paid Site Maintenance",
   [VOLUNTEER_SITE_MAINTENANCE]: "Volunteer Site Maintenance",
+  [PAID_SITE_MONITORING]: "Paid Site Monitoring",
   [VOLUNTEER_SITE_MONITORING]: "Volunteer Site Monitoring",
+  [PAID_OTHER]: "Paid Other Activities",
   [VOLUNTEER_OTHER]: "Volunteer Other Activities"
 };
 

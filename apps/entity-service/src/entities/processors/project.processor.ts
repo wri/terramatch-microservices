@@ -58,7 +58,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
-      } else {
+      } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }

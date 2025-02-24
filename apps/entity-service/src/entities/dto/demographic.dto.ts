@@ -71,7 +71,7 @@ export class DemographicDto extends AssociationDto<DemographicDto> {
     super({
       ...pickApiProperties(demographic as Omit<Demographic, "entities">, DemographicDto),
       ...additional,
-      entries: demographic.entries.map(entry => new DemographicEntryDto(entry))
+      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
     });
   }
 

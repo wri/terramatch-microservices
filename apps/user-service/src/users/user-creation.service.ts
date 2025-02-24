@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, LoggerService } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { User } from "@terramatch-microservices/database/entities";
+import { User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
@@ -17,15 +17,7 @@ export class UserCreationService {
     private readonly localizationService: LocalizationService
   ) {}
 
-  //public const DEFAULT_USER_ROLE = 'project-developer';
-  // public const USER_SELECTABLE_ROLES = [self::DEFAULT_USER_ROLE, 'funder', 'government'];
-
   async createNewUser(request: UserNewRequest): Promise<User> {
-    // receive a callback_url from the request
-    // perform the validation for payload of the user
-    // save the user, assign the rol passing on the payload, if the rol is invalid, will assign a default rol 'project-developer'
-    // send the email verification using te callback_url and user
-
     const bodyKey = "user-verification.body";
     const subjectKey = "user-verification.subject";
     const titleKey = "user-verification.title";
@@ -55,29 +47,42 @@ export class UserCreationService {
       throw new NotFoundException("Localization subject not found");
     }
 
-    const user = await User.create(request);
-    user.uuid = crypto.randomUUID();
-    await user.save();
-    await user.reload();
+    try {
+      const user = await User.create(request);
+      user.uuid = crypto.randomUUID();
+      await user.save();
+      await user.reload();
 
-    const body = await this.formatBody(
-      user,
-      bodyLocalization.value,
-      titleLocalization.value,
-      ctaLocalization.value,
-      request.callbackUrl
-    );
-    console.log(body);
-    await this.sendEmailVerification(user, subjectLocalization.value, body);
-    return user;
+      const token = this.jwtService.sign({ userId: user.uuid });
+      const body = await this.formatEmail(
+        user.locale,
+        token,
+        bodyLocalization.value,
+        titleLocalization.value,
+        ctaLocalization.value,
+        request.callbackUrl
+      );
+      await this.saveUserVerification(user.id, token);
+      await this.sendEmailVerification(user, subjectLocalization.value, body);
+      return user;
+    } catch (error) {
+      this.logger.error(error);
+      return null;
+    }
   }
 
-  private async formatBody(user: User, body: string, title: string, cta: string, callbackUrl: string) {
-    const token = this.jwtService.sign({ userId: user.uuid });
+  private async formatEmail(
+    locale: string,
+    token: string,
+    body: string,
+    title: string,
+    cta: string,
+    callbackUrl: string
+  ) {
     const resetLink = `${callbackUrl}?token=${token}`;
-    const bodyEmail = await this.localizationService.translate(body, user.locale);
-    const titleEmail = await this.localizationService.translate(title, user.locale);
-    const ctaEmail = await this.localizationService.translate(cta, user.locale);
+    const bodyEmail = await this.localizationService.translate(body, locale);
+    const titleEmail = await this.localizationService.translate(title, locale);
+    const ctaEmail = await this.localizationService.translate(cta, locale);
     const emailData = {
       backend_url: null,
       banner: null,
@@ -92,5 +97,12 @@ export class UserCreationService {
 
   private async sendEmailVerification(user: User, subject: string, body: string) {
     await this.emailService.sendEmail(user.emailAddress, subject, body);
+  }
+
+  private async saveUserVerification(userId: number, token: string) {
+    await Verification.findOrCreate({
+      where: { userId },
+      defaults: { token }
+    });
   }
 }

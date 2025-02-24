@@ -26,10 +26,9 @@ export class UserNewRequest {
   @ApiProperty()
   jobRole: string;
 
-  // TODO allow enum values
   @IsNotEmpty()
-  @ApiProperty()
-  role: string;
+  @ApiProperty({ enum: ["project-developer", "funder", "government"] })
+  role: "project-developer" | "funder" | "government";
 
   @IsNotEmpty()
   @ApiProperty()

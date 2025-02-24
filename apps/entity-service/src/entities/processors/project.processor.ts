@@ -74,7 +74,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 
-    for (const term of ["country", "status", "updateRequestStatus"]) {
+    for (const term of ["country", "status", "updateRequestStatus", "frameworkKey"]) {
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
     if (query.search != null) {

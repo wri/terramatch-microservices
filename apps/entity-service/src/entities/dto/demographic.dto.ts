@@ -11,7 +11,7 @@ import {
   JOBS_PROJECT_COLLECTIONS,
   PAID_OTHER,
   RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
-  VOLUNTEER,
+  VOLUNTEERS_PROJECT_COLLECTIONS,
   WORKDAYS_PROJECT_COLLECTIONS,
   WORKDAYS_SITE_COLLECTIONS
 } from "@terramatch-microservices/database/constants/demographic-collections";
@@ -38,11 +38,11 @@ export class DemographicCollections {
   @ApiProperty({ example: DIRECT_OTHER })
   RESTORATION_PARTNERS_PROJECT_OTHER: string;
 
-  @ApiProperty({ enum: pull(Object.keys(JOBS_PROJECT_COLLECTIONS), VOLUNTEER) })
-  JOBS_PAID_PROJECT: string[];
+  @ApiProperty({ enum: Object.keys(JOBS_PROJECT_COLLECTIONS) })
+  JOBS_PROJECT: string[];
 
-  @ApiProperty({ enum: [VOLUNTEER] })
-  JOBS_VOLUNTEER_PROJECT: string[];
+  @ApiProperty({ enum: Object.keys(VOLUNTEERS_PROJECT_COLLECTIONS) })
+  VOLUNTEERS_PROJECT: string[];
 }
 
 export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> {

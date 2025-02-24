@@ -1,5 +1,3 @@
-import { omit } from "lodash";
-
 export const PAID_NURSERY_OPERATIONS = "paid-nursery-operations";
 export const PAID_PROJECT_MANAGEMENT = "paid-project-management";
 export const PAID_OTHER = "paid-other-activities";
@@ -88,10 +86,14 @@ export const RESTORATION_PARTNERS_PROJECT_COLLECTIONS = {
 
 export const FULL_TIME = "full-time";
 export const PART_TIME = "part-time";
-export const VOLUNTEER = "volunteer";
 
 export const JOBS_PROJECT_COLLECTIONS = {
   [FULL_TIME]: "Full-time",
-  [PART_TIME]: "Part-time",
+  [PART_TIME]: "Part-time"
+};
+
+export const VOLUNTEER = "volunteer";
+
+export const VOLUNTEERS_PROJECT_COLLECTIONS = {
   [VOLUNTEER]: "Volunteer"
 };

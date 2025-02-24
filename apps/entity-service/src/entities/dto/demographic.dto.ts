@@ -12,8 +12,8 @@ export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> 
   @ApiProperty()
   subtype: string;
 
-  @ApiProperty()
-  name: string;
+  @ApiProperty({ required: false })
+  name?: string;
 
   @ApiProperty()
   amount: number;

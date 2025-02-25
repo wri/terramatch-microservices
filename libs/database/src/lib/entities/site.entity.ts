@@ -36,14 +36,14 @@ export class Site extends Model<Site> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
   static readonly MEDIA = {
-    // media: { dbCollection: "media", multiple: true },
-    // socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
-    // file: { dbCollection: "file", multiple: true },
-    // otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    // photos: { dbCollection: "photos", multiple: true },
-    // treeSpecies: { dbCollection: "tree_species", multiple: true },
-    // documentFiles: { dbCollection: "document_files", multiple: true },
-    // stratificationForHeterogeneity: { dbCollection: "stratification_for_heterogeneity", multiple: false }
+    media: { dbCollection: "media", multiple: true },
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true },
+    treeSpecies: { dbCollection: "tree_species", multiple: true },
+    documentFiles: { dbCollection: "document_files", multiple: true },
+    stratificationForHeterogeneity: { dbCollection: "stratification_for_heterogeneity", multiple: false }
   } as const;
 
   static approved() {
@@ -215,9 +215,9 @@ export class Site extends Model<Site> {
   @Column(STRING)
   plantingPattern: string | null;
 
-  // @AllowNull
-  // @JsonColumn()
-  // soilCondition: string | null;
+  @AllowNull
+  @Column(TEXT)
+  soilCondition: string | null;
 
   @AllowNull
   @Column(INTEGER)

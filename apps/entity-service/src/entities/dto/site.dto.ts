@@ -10,7 +10,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
-// import { MediaDto } from "./media.dto";
+import { MediaDto } from "./media.dto";
 
 // TODO: THIS IS A STUB!
 
@@ -98,27 +98,27 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty()
   workdayCount: number;
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // media: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // socioeconomicBenefits: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  socioeconomicBenefits: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // file: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  file: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // otherAdditionalDocuments: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  otherAdditionalDocuments: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // photos: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  photos: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // treeSpecies: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  treeSpecies: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: true })
-  // documentFiles: MediaDto[];
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  documentFiles: MediaDto[];
 
-  // @ApiProperty({ type: () => MediaDto, isArray: false })
-  // stratificationForHeterogeneity: MediaDto;
+  @ApiProperty({ type: () => MediaDto, isArray: false })
+  stratificationForHeterogeneity: MediaDto;
 }

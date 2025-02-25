@@ -3,8 +3,7 @@ import { Aggregate, aggregateColumns, EntityProcessor, PaginatedResult } from ".
 import {
   Demographic,
   DemographicEntry,
-  // Media,
-  // ProjectReport,
+  Media,
   ProjectUser,
   Site,
   SitePolygon,
@@ -20,7 +19,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
 
-  async findOne(uuid: string): Promise<Site> {
+  async findOne(uuid: string) {
     return await Site.findOne({
       where: { uuid },
       include: [{ association: "framework" }]
@@ -73,11 +72,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       workdayCount: (await this.getWorkdayCount(siteId)) ?? 0,
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),
-      siteReportsTotal: await this.getTotalSiteReports(siteId)
-      // ...(this.entitiesService.mapMediaCollection(
-      //   await Media.site(siteId).findAll(),
-      //   Site.MEDIA
-      // ) as SiteMedia)
+      siteReportsTotal: await this.getTotalSiteReports(siteId),
+
+      ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };
 
     document.addData(site.uuid, new SiteFullDto(site, props));

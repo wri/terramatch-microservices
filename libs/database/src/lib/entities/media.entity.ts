@@ -15,6 +15,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { Project } from "./project.entity";
 import { chainScope } from "../util/chain-scope";
+import { Site } from "./site.entity";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
@@ -22,6 +23,12 @@ import { chainScope } from "../util/chain-scope";
   project: (id: number) => ({
     where: {
       modelType: Project.LARAVEL_TYPE,
+      modelId: id
+    }
+  }),
+  site: (id: number) => ({
+    where: {
+      modelType: Site.LARAVEL_TYPE,
       modelId: id
     }
   })

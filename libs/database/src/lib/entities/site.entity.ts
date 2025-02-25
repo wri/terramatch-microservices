@@ -172,7 +172,7 @@ export class Site extends Model<Site> {
   controlSite: boolean | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(TEXT)
   history: string | null;
 
   @AllowNull
@@ -196,7 +196,7 @@ export class Site extends Model<Site> {
   directSeedingSurvivalRate: number | null;
 
   @AllowNull
-  @Column(INTEGER)
+  @Column(INTEGER.UNSIGNED)
   aNatRegenerationTreesPerHectare: number | null;
 
   @AllowNull
@@ -204,27 +204,27 @@ export class Site extends Model<Site> {
   aNatRegeneration: number | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(TEXT)
   landscapeCommunityContribution: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(TEXT)
   technicalNarrative: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(TEXT)
   plantingPattern: string | null;
 
   @AllowNull
-  @Column(TEXT)
+  @Column(STRING)
   soilCondition: string | null;
 
   @AllowNull
-  @Column(INTEGER)
+  @Column(INTEGER.UNSIGNED)
   aimYearFiveCrownCover: number | null;
 
   @AllowNull
-  @Column(INTEGER)
+  @Column(INTEGER.UNSIGNED)
   aimNumberOfMatureTrees: number | null;
 
   @AllowNull
@@ -280,6 +280,10 @@ export class Site extends Model<Site> {
     scope: { seedableType: Site.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
+
+  get projectName() {
+    return this.project?.name;
+  }
 
   @HasMany(() => SiteReport)
   reports: SiteReport[] | null;

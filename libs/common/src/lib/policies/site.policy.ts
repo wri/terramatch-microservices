@@ -1,6 +1,7 @@
 import { EntityPolicy } from "./entity.policy";
 import { Project, Site, User } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { Op } from "sequelize";
 
 export class SitePolicy extends EntityPolicy {
   async addRules() {
@@ -36,13 +37,18 @@ export class SitePolicy extends EntityPolicy {
     if (this.permissions.includes("projects-manage")) {
       const user = await this.getUser();
       if (user != null) {
-        const sitesIds = user.projects
-          .filter(({ ProjectUser }) => ProjectUser.isManaging)
-          .flatMap(project => project.sites?.map(site => site.id))
-          .filter((id): id is number => id !== undefined);
-
-        if (sitesIds.length > 0) {
-          this.builder.can("read", Site, { id: { $in: sitesIds } });
+        const projectsId = user.projects.filter(project => project.ProjectUser.isManaging).map(project => project.id);
+        const projects = Project.findAll({
+          where: {
+            id: { [Op.in]: projectsId }
+          },
+          include: {
+            association: "sites"
+          }
+        });
+        const sites = (await projects).map(project => project.sites?.map(site => site.id) ?? []).flat();
+        if (sites.length > 0) {
+          this.builder.can("read", Site, { id: { $in: sites } });
         }
       }
     }

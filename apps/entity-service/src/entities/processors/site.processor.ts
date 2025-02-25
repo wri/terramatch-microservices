@@ -22,7 +22,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async findOne(uuid: string) {
     return await Site.findOne({
       where: { uuid },
-      include: [{ association: "framework" }]
+      include: [
+        { association: "framework" },
+        { association: "project", attributes: ["name"], include: [{ association: "organisation" }] }
+      ]
     });
   }
 
@@ -48,12 +51,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) }
+      });
     }
 
-    for (const term of ["name", "status", "updateRequestStatus"]) {
+    for (const term of ["name", "projectName"]) {
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
     if (query.search != null) {

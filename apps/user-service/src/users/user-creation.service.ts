@@ -87,18 +87,11 @@ export class UserCreationService {
     cta: string,
     callbackUrl: string
   ) {
-    const resetLink = `${callbackUrl}?token=${token}`;
-    const bodyEmail = await this.localizationService.translate(body, locale);
-    const titleEmail = await this.localizationService.translate(title, locale);
-    const ctaEmail = await this.localizationService.translate(cta, locale);
     const emailData = {
-      backend_url: null,
-      banner: null,
-      title: titleEmail,
-      body: bodyEmail,
-      link: resetLink,
-      cta: ctaEmail,
-      year: new Date().getFullYear()
+      title: await this.localizationService.translate(title, locale),
+      body: await this.localizationService.translate(body, locale),
+      link: `${callbackUrl}?token=${token}`,
+      cta: await this.localizationService.translate(cta, locale)
     };
     return this.templateService.render(emailData);
   }

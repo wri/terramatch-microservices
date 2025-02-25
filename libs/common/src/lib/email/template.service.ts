@@ -19,6 +19,12 @@ export class TemplateService {
   }
 
   render(data: any): string {
-    return this.template(data);
+    const params = {
+      ...data,
+      backend_url: null, // TODO add backend url
+      banner: null,
+      year: new Date().getFullYear()
+    };
+    return this.template(params);
   }
 }

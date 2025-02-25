@@ -371,7 +371,9 @@ describe("ProjectProcessor", () => {
         treesPlantedCount,
         seedsPlantedCount,
         treesRestoredPpc:
-          regeneratedTreesCount + (treesPlantedCount + seedsPlantedCount) * (project.survivalRate / 100),
+          regeneratedTreesCount +
+          (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
+            (seedsPlantedCount * (project.directSeedingSurvivalRate ?? 0)) / 100),
         totalHectaresRestoredSum: sumBy(sitePolygons, "calcArea"),
         workdayCount: workdayCountAfterCutoff + workdayCountBeforeCutoff,
         selfReportedWorkdayCount: selfReportedWorkdayCount([...approvedSiteReports, ...approvedProjectReports]),

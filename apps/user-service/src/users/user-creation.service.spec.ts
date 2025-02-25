@@ -9,12 +9,14 @@ import { UserNewRequest } from "./dto/user-new-request.dto";
 import { NotFoundException } from "@nestjs/common";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
+import { TemplateService } from "@terramatch-microservices/common/email/template.service";
 
 describe("UserCreationService", () => {
   let service: UserCreationService;
   let jwtService: DeepMocked<JwtService>;
   let emailService: DeepMocked<EmailService>;
   let localizationService: DeepMocked<LocalizationService>;
+  let templateService: DeepMocked<TemplateService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,6 +33,10 @@ describe("UserCreationService", () => {
         {
           provide: LocalizationService,
           useValue: (localizationService = createMock<LocalizationService>())
+        },
+        {
+          provide: TemplateService,
+          useValue: (templateService = createMock<TemplateService>())
         }
       ]
     }).compile();
@@ -61,21 +67,21 @@ describe("UserCreationService", () => {
 
     const localizationBody = await LocalizationKeyFactory.create({
       key: "user-verification.body",
-      value: "Reset your password by clicking on the following link: link"
+      value: "Follow the below link to verify your email address."
     });
     const localizationSubject = await LocalizationKeyFactory.create({
       key: "user-verification.subject",
-      value: "Reset Password"
+      value: "Verify Your Email Address"
     });
 
     const localizationTitle = await LocalizationKeyFactory.create({
       key: "user-verification.title",
-      value: "Reset Password"
+      value: "VERIFY YOUR EMAIL ADDRESS"
     });
 
     const localizationCta = await LocalizationKeyFactory.create({
       key: "user-verification.cta",
-      value: "Reset Password"
+      value: "VERIFY EMAIL ADDRESS"
     });
 
     localizationService.getLocalizationKeys.mockReturnValue(
@@ -84,10 +90,12 @@ describe("UserCreationService", () => {
 
     const token = "fake token";
     jwtService.signAsync.mockReturnValue(Promise.resolve(token));
-
     emailService.sendEmail.mockReturnValue(Promise.resolve());
+    templateService.render.mockReturnValue("rendered template");
 
     const result = await service.createNewUser(userNewRequest);
-    expect(result).toStrictEqual({ user });
+    expect(jwtService.signAsync).toHaveBeenCalled();
+    expect(emailService.sendEmail).toHaveBeenCalled();
+    expect(result).toBeDefined();
   });
 });

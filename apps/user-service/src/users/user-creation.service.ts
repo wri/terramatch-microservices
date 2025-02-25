@@ -6,6 +6,8 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import crypto from "node:crypto";
+import { TemplateService } from "@terramatch-microservices/common/email/template.service";
+import { omit } from "lodash";
 
 @Injectable()
 export class UserCreationService {
@@ -14,6 +16,7 @@ export class UserCreationService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
+    private readonly templateService: TemplateService,
     private readonly localizationService: LocalizationService
   ) {}
 
@@ -48,19 +51,24 @@ export class UserCreationService {
     }
 
     try {
-      const user = await User.create(request);
-      user.uuid = crypto.randomUUID();
-      await user.save();
+      const callbackUrl = request.callbackUrl;
+      const role = request.role; // TODO: Implement assign role
+      const requestUser = omit(request, ["callbackUrl", "role"]);
+      const [user] = await User.findOrCreate({
+        where: { emailAddress: request.emailAddress },
+        defaults: { ...requestUser, uuid: crypto.randomUUID() }
+      });
+
       await user.reload();
 
-      const token = this.jwtService.sign({ userId: user.uuid });
+      const token = await this.jwtService.signAsync({ userId: user.uuid });
       const body = await this.formatEmail(
         user.locale,
         token,
         bodyLocalization.value,
         titleLocalization.value,
         ctaLocalization.value,
-        request.callbackUrl
+        callbackUrl
       );
       await this.saveUserVerification(user.id, token);
       await this.sendEmailVerification(user, subjectLocalization.value, body);
@@ -92,7 +100,7 @@ export class UserCreationService {
       cta: ctaEmail,
       year: new Date().getFullYear()
     };
-    return this.emailService.renderTemplate(emailData);
+    return this.templateService.render(emailData);
   }
 
   private async sendEmailVerification(user: User, subject: string, body: string) {

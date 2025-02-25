@@ -7,6 +7,7 @@ import { Media, Project } from "@terramatch-microservices/database/entities";
 import { MediaFactory } from "@terramatch-microservices/database/factories";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MediaDto } from "./dto/media.dto";
+import { EntityQueryDto } from "./dto/entity-query.dto";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -45,9 +46,15 @@ describe("EntitiesService", () => {
 
   describe("buildQuery", () => {
     it("throws with invalid page info", async () => {
-      await expect(service.buildQuery(Project, { page: { size: 10000 } })).rejects.toThrow(BadRequestException);
-      await expect(service.buildQuery(Project, { page: { size: 0 } })).rejects.toThrow(BadRequestException);
-      await expect(service.buildQuery(Project, { page: { number: 0 } })).rejects.toThrow(BadRequestException);
+      await expect(service.buildQuery(Project, { page: { size: 10000 } } as EntityQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(service.buildQuery(Project, { page: { size: 0 } } as EntityQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(service.buildQuery(Project, { page: { number: 0 } } as EntityQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 

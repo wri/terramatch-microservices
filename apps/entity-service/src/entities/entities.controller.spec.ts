@@ -8,6 +8,7 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { EntityQueryDto } from "./dto/entity-query.dto";
 
 class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
   LIGHT_DTO = ProjectLightDto;
@@ -46,7 +47,7 @@ describe("EntitiesController", () => {
   describe("entityIndex", () => {
     it("should call findMany", async () => {
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
-      const query = { page: { number: 2 }, sort: { field: "name" }, status: "approved" };
+      const query = { page: { number: 2 }, sort: { field: "name" }, status: "approved" } as EntityQueryDto;
       await controller.entityIndex({ entity: "projects" }, query);
       expect(processor.findMany).toHaveBeenCalledWith(query, 123, ["projects-read"]);
     });
@@ -56,7 +57,9 @@ describe("EntitiesController", () => {
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.entityIndex({ entity: "projects" }, {})).rejects.toThrow(UnauthorizedException);
+      await expect(controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto)).rejects.toThrow(
+        UnauthorizedException
+      );
     });
 
     it("should add DTOs to the document", async () => {
@@ -64,7 +67,7 @@ describe("EntitiesController", () => {
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       policyService.authorize.mockResolvedValue();
 
-      const result = await controller.entityIndex({ entity: "projects" }, {});
+      const result = await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto);
       expect(processor.addLightDto).toHaveBeenCalledTimes(2);
       expect(result.meta.page.number).toBe(1);
       expect(result.meta.page.total).toBe(2);

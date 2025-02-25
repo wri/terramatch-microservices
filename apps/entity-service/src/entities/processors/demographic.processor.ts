@@ -3,8 +3,7 @@ import { Demographic } from "@terramatch-microservices/database/entities";
 import { DemographicDto } from "../dto/demographic.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
-
-type DemographicType = (typeof Demographic.VALID_TYPES)[number];
+import { DemographicType } from "@terramatch-microservices/database/types/demographic";
 
 const ensureDemographic =
   (demographicalType: string, type: DemographicType) => (demographics: Demographic[], collection: string) => {

@@ -39,18 +39,6 @@ export class SiteReport extends Model<SiteReport> {
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
-  static readonly WORKDAY_COLLECTIONS = [
-    "paid-site-establishment",
-    "paid-planting",
-    "paid-site-maintenance",
-    "paid-site-monitoring",
-    "paid-other-activities",
-    "volunteer-site-establishment",
-    "volunteer-planting",
-    "volunteer-site-maintenance",
-    "volunteer-site-monitoring",
-    "volunteer-other-activities"
-  ];
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof SiteReport;

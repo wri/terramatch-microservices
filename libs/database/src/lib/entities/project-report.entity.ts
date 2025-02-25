@@ -37,38 +37,6 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
-  static readonly WORKDAY_COLLECTIONS = [
-    "paid-nursery-operations",
-    "paid-project-management",
-    "paid-other-activities",
-    "volunteer-nursery-operations",
-    "volunteer-project-management",
-    "volunteer-other-activities",
-    "direct",
-    "convergence"
-  ];
-  static readonly RESTORATION_PARTNER_COLLECTIONS = [
-    "direct-income",
-    "indirect-income",
-    "direct-benefits",
-    "indirect-benefits",
-    "direct-conservation-payments",
-    "indirect-conservation-payments",
-    "direct-market-access",
-    "indirect-market-access",
-    "direct-capacity",
-    "indirect-capacity",
-    "direct-training",
-    "indirect-training",
-    "direct-land-title",
-    "indirect-land-title",
-    "direct-livelihoods",
-    "indirect-livelihoods",
-    "direct-productivity",
-    "indirect-productivity",
-    "direct-other",
-    "indirect-other"
-  ];
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof ProjectReport;
@@ -180,81 +148,8 @@ export class ProjectReport extends Model<ProjectReport> {
   newJobsDescription: string | null;
 
   @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftOther: number | null;
-
-  @AllowNull
-  // There is also an `ft_jobs_youth` field, but it appears to be unused.
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftYouth: number | null;
-
-  @AllowNull
-  @Column({ type: INTEGER({ unsigned: true, length: 10 }), field: "ft_jobs_non_youth" })
-  ftNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerNonYouth: number | null;
-
-  @AllowNull
   @Column(TEXT)
   volunteersWorkDescription: string | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -375,10 +270,6 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   convergenceSchemes: string | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  volunteerScstobc: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

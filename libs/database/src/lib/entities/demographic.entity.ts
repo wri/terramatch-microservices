@@ -13,6 +13,7 @@ import {
   WORKDAYS_SITE_COLLECTIONS
 } from "../constants/demographic-collections";
 import { Subquery } from "../util/subquery.builder";
+import { DemographicType } from "../types/demographic";
 
 @Table({
   tableName: "demographics",
@@ -49,7 +50,7 @@ export class Demographic extends Model<Demographic> {
     }
   };
 
-  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: string) {
+  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: DemographicType) {
     return Subquery.select(Demographic, "id")
       .eq("demographicalType", demographicalType)
       .in("demographicalId", demographicalIds)

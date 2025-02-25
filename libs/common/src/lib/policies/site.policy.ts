@@ -43,12 +43,14 @@ export class SitePolicy extends EntityPolicy {
             id: { [Op.in]: projectsId }
           },
           include: {
-            association: "sites"
-          }
+            association: "sites",
+            attributes: ["id"]
+          },
+          attributes: ["id"]
         });
-        const sites = (await projects).map(project => project.sites?.map(site => site.id) ?? []).flat();
-        if (sites.length > 0) {
-          this.builder.can("read", Site, { id: { $in: sites } });
+        const siteIds = (await projects).flatMap(project => project.sites?.map(site => site.id) ?? []);
+        if (siteIds.length > 0) {
+          this.builder.can("read", Site, { id: { $in: siteIds } });
         }
       }
     }

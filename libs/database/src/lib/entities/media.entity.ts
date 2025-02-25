@@ -44,6 +44,10 @@ export class Media extends Model<Media> {
     return chainScope(this, "project", id) as typeof Media;
   }
 
+  static site(id: number) {
+    return chainScope(this, "site", id) as typeof Media;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

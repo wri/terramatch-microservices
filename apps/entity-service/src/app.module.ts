@@ -8,10 +8,11 @@ import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
 import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
+import { EntityAssociationsController } from "./entities/entity-associations.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
-  controllers: [EntitiesController, TreesController],
+  controllers: [EntitiesController, EntityAssociationsController, TreesController],
   providers: [
     {
       provide: APP_FILTER,

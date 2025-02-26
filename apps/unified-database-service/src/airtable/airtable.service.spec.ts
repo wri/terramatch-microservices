@@ -25,16 +25,20 @@ describe("AirtableService", () => {
   describe("updateAirtableJob", () => {
     it("adds the job to the queue", async () => {
       const updatedSince = new Date();
-      await service.updateAirtable("nursery", 10, updatedSince);
-      expect(queue.add).toHaveBeenCalledWith("updateEntities", { entityType: "nursery", startPage: 10, updatedSince });
+      await service.updateAirtable("nurseries", 10, updatedSince);
+      expect(queue.add).toHaveBeenCalledWith("updateEntities", {
+        entityType: "nurseries",
+        startPage: 10,
+        updatedSince
+      });
     });
   });
 
   describe("deleteAirtableJob", () => {
     it("adds the job to the queue", async () => {
       const deletedSince = new Date();
-      await service.deleteFromAirtable("project", deletedSince);
-      expect(queue.add).toHaveBeenCalledWith("deleteEntities", { entityType: "project", deletedSince });
+      await service.deleteFromAirtable("projects", deletedSince);
+      expect(queue.add).toHaveBeenCalledWith("deleteEntities", { entityType: "projects", deletedSince });
     });
   });
 

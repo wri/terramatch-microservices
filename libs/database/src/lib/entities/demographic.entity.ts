@@ -1,7 +1,19 @@
 import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, literal, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
 import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
+import { ProjectReport } from "./project-report.entity";
+import { SiteReport } from "./site-report.entity";
+import { Dictionary } from "lodash";
+import {
+  JOBS_PROJECT_COLLECTIONS,
+  RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  VOLUNTEERS_PROJECT_COLLECTIONS,
+  WORKDAYS_PROJECT_COLLECTIONS,
+  WORKDAYS_SITE_COLLECTIONS
+} from "../constants/demographic-collections";
+import { Subquery } from "../util/subquery.builder";
+import { DemographicType } from "../types/demographic";
 
 @Table({
   tableName: "demographics",
@@ -14,25 +26,36 @@ import { Literal } from "sequelize/types/utils";
 })
 export class Demographic extends Model<Demographic> {
   static readonly DEMOGRAPHIC_COUNT_CUTOFF = "2024-07-05";
+
   static readonly WORKDAYS_TYPE = "workdays";
   static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
+  static readonly JOBS_TYPE = "jobs";
+  static readonly VOLUNTEERS_TYPE = "volunteers";
+  static readonly VALID_TYPES = [
+    Demographic.WORKDAYS_TYPE,
+    Demographic.RESTORATION_PARTNERS_TYPE,
+    Demographic.JOBS_TYPE,
+    Demographic.VOLUNTEERS_TYPE
+  ] as const;
 
-  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: string) {
-    const attributes = Demographic.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = Demographic.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
+  static readonly COLLECTION_MAPPING: Dictionary<Dictionary<Dictionary<string>>> = {
+    [ProjectReport.LARAVEL_TYPE]: {
+      [Demographic.WORKDAYS_TYPE]: WORKDAYS_PROJECT_COLLECTIONS,
+      [Demographic.RESTORATION_PARTNERS_TYPE]: RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+      [Demographic.JOBS_TYPE]: JOBS_PROJECT_COLLECTIONS,
+      [Demographic.VOLUNTEERS_TYPE]: VOLUNTEERS_PROJECT_COLLECTIONS
+    },
+    [SiteReport.LARAVEL_TYPE]: {
+      [Demographic.WORKDAYS_TYPE]: WORKDAYS_SITE_COLLECTIONS
+    }
+  };
 
-    return literal(
-      `(SELECT ${attributes.id.field} FROM ${Demographic.tableName}
-        WHERE ${attributes.demographicalType.field} = ${sql.escape(demographicalType)}
-        AND ${attributes.demographicalId.field} IN ${demographicalIds.val}
-        AND ${deletedAt} IS NULL
-        AND ${attributes.hidden.field} = false
-        AND ${attributes.type.field} = ${sql.escape(type)}
-      )`
-    );
+  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: DemographicType) {
+    return Subquery.select(Demographic, "id")
+      .eq("demographicalType", demographicalType)
+      .in("demographicalId", demographicalIds)
+      .eq("hidden", false)
+      .eq("type", type).literal;
   }
 
   @PrimaryKey
@@ -50,6 +73,13 @@ export class Demographic extends Model<Demographic> {
   @AllowNull
   @Column(STRING)
   collection: string | null;
+
+  get collectionTitle(): string {
+    return (
+      (this.collection && Demographic.COLLECTION_MAPPING[this.demographicalType]?.[this.type]?.[this.collection]) ??
+      "Unknown"
+    );
+  }
 
   @Column(STRING)
   demographicalType: string;

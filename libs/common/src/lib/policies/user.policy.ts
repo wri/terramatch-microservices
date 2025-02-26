@@ -1,7 +1,7 @@
 import { User } from "@terramatch-microservices/database/entities";
-import { EntityPolicy } from "./entity.policy";
+import { UserPermissionsPolicy } from "./user-permissions.policy";
 
-export class UserPolicy extends EntityPolicy {
+export class UserPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("users-manage")) {
       this.builder.can("read", User);

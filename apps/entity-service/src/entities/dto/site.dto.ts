@@ -11,7 +11,7 @@ import { Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
-
+import { ProjectLightDto } from "./project.dto";
 // TODO: THIS IS A STUB!
 
 @JsonApiDto({ type: "sites" })
@@ -21,8 +21,9 @@ export class SiteLightDto extends EntityDto {
     if (site != null) {
       this.populate(SiteLightDto, {
         ...pickApiProperties(site, SiteLightDto),
+        project: site.project ? new ProjectLightDto(site.project) : undefined,
+        ppcExternalId: site.ppcExternalId?.toString(),
         lightResource: true,
-        // these two are untyped and marked optional in the base model.
         createdAt: site.createdAt as Date,
         updatedAt: site.createdAt as Date
       });
@@ -38,6 +39,9 @@ export class SiteLightDto extends EntityDto {
     deprecated: true
   })
   frameworkUuid: string | null;
+
+  @ApiProperty({ nullable: false, description: "Project" })
+  project: ProjectLightDto;
 
   @ApiProperty({
     nullable: true,
@@ -67,6 +71,9 @@ export class SiteLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty()
+  ppcExternalId: string;
 }
 
 export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
@@ -77,8 +84,9 @@ export class SiteFullDto extends SiteLightDto {
     super();
     this.populate(SiteFullDto, {
       ...pickApiProperties(site, SiteFullDto),
+      project: site.project ? new ProjectLightDto(site.project) : undefined,
+      ppcExternalId: site.ppcExternalId?.toString(),
       lightResource: false,
-      // these two are untyped and marked optional in the base model.
       createdAt: site.createdAt as Date,
       updatedAt: site.updatedAt as Date,
       ...props
@@ -145,4 +153,7 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: false })
   stratificationForHeterogeneity: MediaDto;
+
+  @ApiProperty()
+  ppcExternalId: string;
 }

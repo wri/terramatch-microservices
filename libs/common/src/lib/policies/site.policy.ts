@@ -1,7 +1,6 @@
 import { EntityPolicy } from "./entity.policy";
-import { Project, Site, User } from "@terramatch-microservices/database/entities";
+import { Site, User } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Op } from "sequelize";
 
 export class SitePolicy extends EntityPolicy {
   async addRules() {
@@ -19,17 +18,9 @@ export class SitePolicy extends EntityPolicy {
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
-        this.builder.can("read", Site);
-        const sitesIds = user.projects.reduce((acc: number[], project) => {
-          if (Array.isArray(project.sites)) {
-            acc.push(
-              ...project.sites.filter(site => site.project?.organisationId == user.organisationId).map(site => site.id)
-            );
-          }
-          return acc;
-        }, []);
-        if (sitesIds.length > 0) {
-          this.builder.can("read", Site, { id: { $in: sitesIds } });
+        const projectIds = user.projects.map(({ id }) => id);
+        if (projectIds.length > 0) {
+          this.builder.can("read", Site, { projectId: { $in: projectIds } });
         }
       }
     }
@@ -37,20 +28,9 @@ export class SitePolicy extends EntityPolicy {
     if (this.permissions.includes("projects-manage")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectsId = user.projects.filter(project => project.ProjectUser.isManaging).map(project => project.id);
-        const projects = Project.findAll({
-          where: {
-            id: { [Op.in]: projectsId }
-          },
-          include: {
-            association: "sites",
-            attributes: ["id"]
-          },
-          attributes: ["id"]
-        });
-        const siteIds = (await projects).flatMap(project => project.sites?.map(site => site.id) ?? []);
-        if (siteIds.length > 0) {
-          this.builder.can("read", Site, { id: { $in: siteIds } });
+        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        if (projectIds.length > 0) {
+          this.builder.can("read", Site, { projectId: { $in: projectIds } });
         }
       }
     }

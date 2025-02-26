@@ -35,6 +35,7 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ProjectFullDto, ProjectLightDto } from "../dto/project.dto";
 import { BadRequestException } from "@nestjs/common";
+import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
@@ -51,13 +52,13 @@ describe("ProjectProcessor", () => {
       providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
     }).compile();
 
-    processor = module.get(EntitiesService).createProcessor("projects") as ProjectProcessor;
+    processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
   describe("findMany", () => {
     async function expectProjects(
       expected: Project[],
-      query: EntityQueryDto,
+      query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
       {
         permissions = ["projects-read"],
         sortField = "id",
@@ -65,7 +66,7 @@ describe("ProjectProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query, userId, permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -185,9 +186,9 @@ describe("ProjectProcessor", () => {
         { sortField: "organisationName", sortUp: false }
       );
 
-      await expect(processor.findMany({ sort: { field: "uuid" } }, userId, ["projects-read"])).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        processor.findMany({ sort: { field: "uuid" } } as EntityQueryDto, userId, ["projects-read"])
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("paginates", async () => {
@@ -218,7 +219,7 @@ describe("ProjectProcessor", () => {
         frameworkKey: "foofund" as FrameworkKey
       });
 
-      const { models } = await processor.findMany({}, userId, ["projects-read"]);
+      const { models } = await processor.findMany({} as EntityQueryDto, userId, ["projects-read"]);
       const document = buildJsonApi(ProjectLightDto, { forceDataArray: true });
       await processor.addLightDto(document, models[0]);
       const attributes = document.serialize().data[0].attributes as ProjectLightDto;
@@ -344,6 +345,30 @@ describe("ProjectProcessor", () => {
       const selfReportedWorkdayCount = (reports: (SiteReport | ProjectReport)[]) =>
         sumBy(reports, "workdaysPaid") + sumBy(reports, "workdaysVolunteer");
 
+      const totalJobsCreated = sum(
+        await Promise.all(
+          approvedProjectReports.map(async ({ id }) => {
+            const fullTime = await DemographicFactory.forProjectReportJobs.create({
+              demographicalId: id,
+              collection: FULL_TIME
+            });
+            const partTime = await DemographicFactory.forProjectReportJobs.create({
+              demographicalId: id,
+              collection: PART_TIME
+            });
+            const { amount: fullTimeAmount } = await DemographicEntryFactory.create({
+              demographicId: fullTime.id,
+              type: "gender"
+            });
+            const { amount: partTimeAmount } = await DemographicEntryFactory.create({
+              demographicId: partTime.id,
+              type: "gender"
+            });
+            return fullTimeAmount + partTimeAmount;
+          })
+        )
+      );
+
       const project = await processor.findOne(uuid);
       const document = buildJsonApi(ProjectFullDto, { forceDataArray: true });
       await processor.addFullDto(document, project);
@@ -379,7 +404,7 @@ describe("ProjectProcessor", () => {
         selfReportedWorkdayCount: selfReportedWorkdayCount([...approvedSiteReports, ...approvedProjectReports]),
         combinedWorkdayCount:
           workdayCountAfterCutoff + selfReportedWorkdayCount([approvedSiteReports[2], approvedProjectReports[1]]),
-        totalJobsCreated: sumBy(approvedProjectReports, "ftTotal") + sumBy(approvedProjectReports, "ptTotal"),
+        totalJobsCreated,
         application: {
           uuid: application.uuid,
           fundingProgrammeName: (await application.$get("fundingProgramme")).name,

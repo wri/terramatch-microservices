@@ -36,7 +36,7 @@ export class EntitiesController {
   ])
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async entityIndex<T extends Model<T>>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
-    const processor = this.entitiesService.createProcessor<T>(entity);
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const { models, paginationTotal } = await processor.findMany(
       query,
       this.policyService.userId,
@@ -69,7 +69,7 @@ export class EntitiesController {
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async entityGet<T extends Model<T>>(@Param() { entity, uuid }: EntityGetParamsDto) {
-    const processor = this.entitiesService.createProcessor<T>(entity);
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const model = await processor.findOne(uuid);
     if (model == null) throw new NotFoundException();
 

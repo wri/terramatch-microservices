@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, literal, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
@@ -19,6 +19,7 @@ import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -38,18 +39,6 @@ export class SiteReport extends Model<SiteReport> {
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
-  static readonly WORKDAY_COLLECTIONS = [
-    "paid-site-establishment",
-    "paid-planting",
-    "paid-site-maintenance",
-    "paid-site-monitoring",
-    "paid-other-activities",
-    "volunteer-site-establishment",
-    "volunteer-planting",
-    "volunteer-site-maintenance",
-    "volunteer-site-monitoring",
-    "volunteer-other-activities"
-  ];
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof SiteReport;
@@ -68,21 +57,10 @@ export class SiteReport extends Model<SiteReport> {
   }
 
   static approvedIdsSubquery(siteIds: Literal, opts: ApprovedIdsSubqueryOptions = {}) {
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = SiteReport.getAttributes().deletedAt!.field;
-    const sql = SiteReport.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-
-    let where = `WHERE ${deletedAt} IS NULL
-      AND ${SiteReport.getAttributes().siteId.field} IN ${siteIds.val}
-      AND ${SiteReport.getAttributes().status.field} IN (${SiteReport.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})`;
-    if (opts.dueAfter != null) {
-      where = `${where} AND ${SiteReport.getAttributes().dueAt.field} >= ${sql.escape(opts.dueAfter)}`;
-    }
-    if (opts.dueBefore != null) {
-      where = `${where} AND ${SiteReport.getAttributes().dueAt.field} < ${sql.escape(opts.dueBefore)}`;
-    }
-    return literal(`(SELECT ${SiteReport.getAttributes().id.field} FROM ${SiteReport.tableName} ${where})`);
+    const builder = Subquery.select(SiteReport, "id").in("siteId", siteIds).in("status", SiteReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
   }
 
   @PrimaryKey

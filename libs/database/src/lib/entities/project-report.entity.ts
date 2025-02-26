@@ -11,12 +11,13 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, literal, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -36,38 +37,6 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
-  static readonly WORKDAY_COLLECTIONS = [
-    "paid-nursery-operations",
-    "paid-project-management",
-    "paid-other-activities",
-    "volunteer-nursery-operations",
-    "volunteer-project-management",
-    "volunteer-other-activities",
-    "direct",
-    "convergence"
-  ];
-  static readonly RESTORATION_PARTNER_COLLECTIONS = [
-    "direct-income",
-    "indirect-income",
-    "direct-benefits",
-    "indirect-benefits",
-    "direct-conservation-payments",
-    "indirect-conservation-payments",
-    "direct-market-access",
-    "indirect-market-access",
-    "direct-capacity",
-    "indirect-capacity",
-    "direct-training",
-    "indirect-training",
-    "direct-land-title",
-    "indirect-land-title",
-    "direct-livelihoods",
-    "indirect-livelihoods",
-    "direct-productivity",
-    "indirect-productivity",
-    "direct-other",
-    "indirect-other"
-  ];
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof ProjectReport;
@@ -86,23 +55,12 @@ export class ProjectReport extends Model<ProjectReport> {
   }
 
   static approvedIdsSubquery(projectId: number, opts: ApprovedIdsSubqueryOptions = {}) {
-    const attributes = ProjectReport.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = ProjectReport.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-
-    const approvedStatuses = ProjectReport.APPROVED_STATUSES.map(s => `"${s}"`).join(",");
-    let where = `WHERE ${deletedAt} IS NULL
-      AND ${attributes.projectId.field} = ${sql.escape(projectId)}
-      AND ${attributes.status.field} IN (${approvedStatuses})`;
-    if (opts.dueAfter != null) {
-      where = `${where} AND ${attributes.dueAt.field} >= ${sql.escape(opts.dueAfter)}`;
-    }
-    if (opts.dueBefore != null) {
-      where = `${where} AND ${attributes.dueAt.field} < ${sql.escape(opts.dueBefore)}`;
-    }
-    return literal(`(SELECT ${attributes.id.field} FROM ${ProjectReport.tableName} ${where})`);
+    const builder = Subquery.select(ProjectReport, "id")
+      .eq("projectId", projectId)
+      .in("status", ProjectReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
   }
 
   @PrimaryKey
@@ -190,81 +148,8 @@ export class ProjectReport extends Model<ProjectReport> {
   newJobsDescription: string | null;
 
   @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftOther: number | null;
-
-  @AllowNull
-  // There is also an `ft_jobs_youth` field, but it appears to be unused.
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftYouth: number | null;
-
-  @AllowNull
-  @Column({ type: INTEGER({ unsigned: true, length: 10 }), field: "ft_jobs_non_youth" })
-  ftNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerNonYouth: number | null;
-
-  @AllowNull
   @Column(TEXT)
   volunteersWorkDescription: string | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -385,10 +270,6 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   convergenceSchemes: string | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  volunteerScstobc: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

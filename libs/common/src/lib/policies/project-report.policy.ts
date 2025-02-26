@@ -1,24 +1,29 @@
-import { Project, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
+import { Project, ProjectReport, User } from "@terramatch-microservices/database/entities";
 
-export class ProjectPolicy extends UserPermissionsPolicy {
+export class ProjectReportPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.includes("projects-read") || this.permissions.includes("view-dashboard")) {
-      this.builder.can("read", Project);
+    if (this.permissions.includes("view-dashboard")) {
+      this.builder.can("read", ProjectReport);
       return;
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can("read", Project, { frameworkKey: { $in: this.frameworks } });
+      this.builder.can("read", ProjectReport, { frameworkKey: { $in: this.frameworks } });
     }
 
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
-        this.builder.can("read", Project, { organisationId: user.organisationId });
-        const projectIds = user.projects.map(({ id }) => id);
+        const projectIds = [
+          ...(user.organisationId == null
+            ? []
+            : await Project.findAll({ where: { organisationId: user.organisationId }, attributes: ["id"] })
+          ).map(({ id }) => id),
+          ...user.projects.map(({ id }) => id)
+        ];
         if (projectIds.length > 0) {
-          this.builder.can("read", Project, { id: { $in: projectIds } });
+          this.builder.can("read", ProjectReport, { projectId: { $in: projectIds } });
         }
       }
     }
@@ -28,14 +33,14 @@ export class ProjectPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can("read", Project, { id: { $in: projectIds } });
+          this.builder.can("read", ProjectReport, { projectId: { $in: projectIds } });
         }
       }
     }
   }
 
-  protected _user?: User | null;
-  protected async getUser() {
+  private _user?: User | null;
+  private async getUser() {
     if (this._user != null) return this._user;
 
     return (this._user = await User.findOne({

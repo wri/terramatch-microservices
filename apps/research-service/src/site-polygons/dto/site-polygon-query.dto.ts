@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, IntersectionType } from "@nestjs/swagger";
 import { IsArray, IsDate, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
@@ -8,7 +8,7 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { CursorPage } from "@terramatch-microservices/common/dto/page.dto";
 
-export class SitePolygonQueryDto {
+export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",
@@ -64,7 +64,6 @@ export class SitePolygonQueryDto {
   })
   includeTestProjects?: boolean;
 
-  @ApiProperty({ name: "page", required: false, description: "Pagination information" })
   @ValidateNested()
   @IsOptional()
   page?: CursorPage;

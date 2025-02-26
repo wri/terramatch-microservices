@@ -127,7 +127,9 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       treesPlantedCount,
       seedsPlantedCount,
       treesRestoredPpc:
-        regeneratedTreesCount + (treesPlantedCount + seedsPlantedCount) * ((project.survivalRate ?? 0) / 100),
+        regeneratedTreesCount +
+        (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
+          (seedsPlantedCount * (project.directSeedingSurvivalRate ?? 0)) / 100),
 
       totalHectaresRestoredSum:
         (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0,

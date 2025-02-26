@@ -1,12 +1,12 @@
-import { Project, Site } from "@terramatch-microservices/database/entities";
+import { Site } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { SiteProcessor } from "./site.processor";
-import { flatten, reverse, sortBy, sum, sumBy } from "lodash";
+import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { OrganisationFactory, ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteLightDto } from "../dto/site.dto";
 

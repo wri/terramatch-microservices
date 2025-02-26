@@ -97,3 +97,11 @@ export const VOLUNTEER = "volunteer";
 export const VOLUNTEERS_PROJECT_COLLECTIONS = {
   [VOLUNTEER]: "Volunteer"
 };
+
+export const ALL = "all";
+export const TRAINING = "training";
+
+export const BENEFICIARIES_PROJECT_COLLECTIONS = {
+  [ALL]: "All Beneficiaries",
+  [TRAINING]: "Training Beneficiaries"
+};

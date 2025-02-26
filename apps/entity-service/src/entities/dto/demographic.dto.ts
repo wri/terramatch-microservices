@@ -5,6 +5,7 @@ import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import {
+  BENEFICIARIES_PROJECT_COLLECTIONS,
   CONVERGENCE,
   DIRECT,
   DIRECT_OTHER,
@@ -43,6 +44,9 @@ export class DemographicCollections {
 
   @ApiProperty({ enum: Object.keys(VOLUNTEERS_PROJECT_COLLECTIONS) })
   VOLUNTEERS_PROJECT: string[];
+
+  @ApiProperty({ enum: Object.keys(BENEFICIARIES_PROJECT_COLLECTIONS) })
+  BENEFICIARIES_PROJECT: string[];
 }
 
 export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> {

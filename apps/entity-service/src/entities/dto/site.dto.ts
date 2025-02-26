@@ -99,6 +99,24 @@ export class SiteFullDto extends SiteLightDto {
   totalHectaresRestoredSum: number;
 
   @ApiProperty()
+  seedsPlantedCount: number;
+
+  @ApiProperty()
+  overdueSiteReportsTotal: number;
+
+  @ApiProperty()
+  selfReportedWorkdayCount: number;
+
+  @ApiProperty()
+  treesPlantedCount: number;
+
+  @ApiProperty()
+  regeneratedTreesCount: number;
+
+  @ApiProperty()
+  approvedRegeneratedTreesCount: number;
+
+  @ApiProperty()
   combinedWorkdayCount: number;
 
   @ApiProperty()

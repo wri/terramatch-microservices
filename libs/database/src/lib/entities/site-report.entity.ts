@@ -30,13 +30,15 @@ type ApprovedIdsSubqueryOptions = {
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
-  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
+  hasBeenSubmitted: { where: { status: { [Op.notIn]: SiteReport.UNSUBMITTED_STATUSES } } }
 }))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
+  static readonly UNSUBMITTED_STATUSES = ["due", "started"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
   static readonly WORKDAY_COLLECTIONS = [
     "paid-site-establishment",
@@ -61,6 +63,10 @@ export class SiteReport extends Model<SiteReport> {
 
   static approved() {
     return chainScope(this, "approved") as typeof SiteReport;
+  }
+
+  static hasBeenSubmitted() {
+    return chainScope(this, "hasBeenSubmitted") as typeof SiteReport;
   }
 
   static dueBefore(date: Date | string) {

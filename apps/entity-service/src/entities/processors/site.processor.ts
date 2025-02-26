@@ -5,15 +5,18 @@ import {
   DemographicEntry,
   Media,
   ProjectUser,
+  Seeding,
   Site,
   SitePolygon,
-  SiteReport
+  SiteReport,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Op } from "sequelize";
+import { sumBy } from "lodash";
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
   readonly LIGHT_DTO = SiteLightDto;
@@ -73,6 +76,24 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async addFullDto(document: DocumentBuilder, site: Site): Promise<void> {
     const siteId = site.id;
     const approvedUuidsSiteSubquery = Site.approvedUuidsSiteSubquery(siteId);
+    const approvedSitesQuery = Site.approvedIdsSiteSubquery(siteId);
+
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
+    const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const treesPlantedCount =
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+
+    const hasBeenSubmittedSiteReports = await SiteReport.hasBeenSubmitted()
+      .sites(approvedSitesQuery)
+      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
+
+    const approvedSiteReports = await SiteReport.approved()
+      .sites(approvedSitesQuery)
+      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
+
+    const regeneratedTreesCount = sumBy(hasBeenSubmittedSiteReports, "numTreesRegenerating");
+    const approvedRegeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
+
     const props: AdditionalSiteFullProps = {
       totalHectaresRestoredSum:
         (await SitePolygon.active().approved().sites(approvedUuidsSiteSubquery).sum("calcArea")) ?? 0,
@@ -80,6 +101,12 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),
       siteReportsTotal: await this.getTotalSiteReports(siteId),
+      seedsPlantedCount,
+      overdueSiteReportsTotal: await this.getTotalOverdueReports(siteId),
+      selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
+      treesPlantedCount,
+      regeneratedTreesCount,
+      approvedRegeneratedTreesCount,
 
       ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };
@@ -129,5 +156,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
   protected async getTotalSiteReports(siteId: number) {
     return await SiteReport.sites(Site.approvedIdsSiteSubquery(siteId)).count();
+  }
+
+  protected async getTotalOverdueReports(siteId: number) {
+    const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
+    return await SiteReport.incomplete().sites(Site.approvedIdsSiteSubquery(siteId)).count(countOpts);
   }
 }

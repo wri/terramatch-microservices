@@ -17,11 +17,11 @@ export class VerificationUserController {
     operationId: "verifyUser",
     description: "Receive a token to verify a user and return the verification status"
   })
-  @JsonApiResponse({ status: HttpStatus.CREATED, data: { type: VerificationUserResponseDto } })
+  @JsonApiResponse(VerificationUserResponseDto, { status: HttpStatus.CREATED })
   @ExceptionResponse(BadRequestException, { description: "Invalid request" })
   async verifyUser(@Body() { token }: VerificationUserRequest): Promise<JsonApiDocument> {
     const { uuid, isVerified } = await this.verificationUserService.verify(token);
-    return buildJsonApi()
+    return buildJsonApi(VerificationUserResponseDto)
       .addData(uuid, new VerificationUserResponseDto({ verified: isVerified }))
       .document.serialize();
   }

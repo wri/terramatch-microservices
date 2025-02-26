@@ -1,7 +1,7 @@
 import { SitePolygonsController } from "./site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
@@ -15,10 +15,11 @@ describe("SitePolygonsController", () => {
   let sitePolygonService: DeepMocked<SitePolygonsService>;
   let policyService: DeepMocked<PolicyService>;
 
-  const mockQueryBuilder = (executeResult: SitePolygon[] = []) => {
+  const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const builder: any = {
       execute: jest.fn(),
+      paginationTotal: jest.fn(),
       hasStatuses: jest.fn().mockReturnThis(),
       modifiedSince: jest.fn().mockReturnThis(),
       isMissingIndicators: jest.fn().mockReturnThis()
@@ -28,13 +29,14 @@ describe("SitePolygonsController", () => {
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
+    builder.paginationTotal.mockResolvedValue(totalResult);
     sitePolygonService.buildQuery.mockResolvedValue(builder);
 
     return builder;
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module = await Test.createTestingModule({
       controllers: [SitePolygonsController],
       providers: [
         { provide: SitePolygonsService, useValue: (sitePolygonService = createMock<SitePolygonsService>()) },
@@ -42,7 +44,7 @@ describe("SitePolygonsController", () => {
       ]
     }).compile();
 
-    controller = module.get<SitePolygonsController>(SitePolygonsController);
+    controller = module.get(SitePolygonsController);
   });
 
   afterEach(() => {
@@ -70,7 +72,7 @@ describe("SitePolygonsController", () => {
     it("Returns a valid value if the request is valid", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
-      mockQueryBuilder([sitePolygon]);
+      mockQueryBuilder([sitePolygon], 1);
       const result = await controller.findMany({});
       expect(result.meta).not.toBe(null);
       expect(result.meta.page.total).toBe(1);

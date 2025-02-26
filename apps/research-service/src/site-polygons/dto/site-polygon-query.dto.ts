@@ -1,34 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsDate, IsInt, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
   POLYGON_STATUSES,
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
-
-class Page {
-  @ApiProperty({
-    name: "page[size]",
-    description: "The size of page being requested",
-    minimum: 1,
-    maximum: 100,
-    default: 100,
-    required: false
-  })
-  @IsOptional()
-  @IsInt()
-  size?: number;
-
-  @ApiProperty({
-    name: "page[after]",
-    required: false,
-    description:
-      "The last record before the page being requested. The value is a polygon UUID. If not provided, the first page is returned."
-  })
-  @IsOptional()
-  after?: string;
-}
+import { CursorPage } from "@terramatch-microservices/common/dto/page.dto";
 
 export class SitePolygonQueryDto {
   @ApiProperty({
@@ -89,5 +67,5 @@ export class SitePolygonQueryDto {
   @ApiProperty({ name: "page", required: false, description: "Pagination information" })
   @ValidateNested()
   @IsOptional()
-  page?: Page;
+  page?: CursorPage;
 }

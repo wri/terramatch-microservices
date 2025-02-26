@@ -33,7 +33,7 @@ const USER_RESPONSE_SHAPE = {
       }
     ]
   },
-  included: [{ type: OrganisationDto }]
+  included: [OrganisationDto]
 };
 
 @Controller("users/v3/users")
@@ -56,7 +56,7 @@ export class UsersController {
 
     await this.policyService.authorize("read", user);
 
-    return (await this.addUserResource(buildJsonApi(), user)).serialize();
+    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
   }
 
   @Patch(":uuid")
@@ -86,7 +86,7 @@ export class UsersController {
       await user.save();
     }
 
-    return (await this.addUserResource(buildJsonApi(), user)).serialize();
+    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {

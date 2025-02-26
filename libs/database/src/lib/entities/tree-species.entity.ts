@@ -6,12 +6,26 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, Op, STRING, UUID } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
+import { Literal } from "sequelize/types/utils";
+import { SiteReport } from "./site-report.entity";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  visible: { where: { hidden: false } },
+  siteReports: (ids: number[] | Literal) => ({
+    where: {
+      speciesableType: SiteReport.LARAVEL_TYPE,
+      speciesableId: { [Op.in]: ids }
+    }
+  }),
+  collection: (collection: string) => ({ where: { collection } })
+}))
 @Table({
   tableName: "v2_tree_species",
   underscored: true,
@@ -23,6 +37,18 @@ import { TreeSpeciesResearch } from "./tree-species-research.entity";
   ]
 })
 export class TreeSpecies extends Model<TreeSpecies> {
+  static visible() {
+    return chainScope(this, "visible") as typeof TreeSpecies;
+  }
+
+  static siteReports(ids: number[] | Literal) {
+    return chainScope(this, "siteReports", ids) as typeof TreeSpecies;
+  }
+
+  static collection(collection: string) {
+    return chainScope(this, "collection", collection) as typeof TreeSpecies;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

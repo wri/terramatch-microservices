@@ -9,7 +9,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, CHAR, STRING, UUID } from "sequelize";
 import { Application } from "./application.entity";
 import { FormSubmissionStatus } from "../constants/status";
 
@@ -35,4 +35,8 @@ export class FormSubmission extends Model<FormSubmission> {
 
   @BelongsTo(() => Application)
   application: Application | null;
+
+  @AllowNull
+  @Column(CHAR(36))
+  projectPitchUuid: string | null;
 }

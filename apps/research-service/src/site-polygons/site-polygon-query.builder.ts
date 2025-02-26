@@ -16,16 +16,18 @@ import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database
 import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { ModelCtor, ModelStatic } from "sequelize-typescript";
 
-type IndicatorModelClass =
-  | typeof IndicatorOutputTreeCover
-  | typeof IndicatorOutputTreeCoverLoss
-  | typeof IndicatorOutputHectares
-  | typeof IndicatorOutputTreeCount
-  | typeof IndicatorOutputFieldMonitoring
-  | typeof IndicatorOutputMsuCarbon;
+type IndicatorModel =
+  | IndicatorOutputTreeCover
+  | IndicatorOutputTreeCoverLoss
+  | IndicatorOutputHectares
+  | IndicatorOutputTreeCount
+  | IndicatorOutputFieldMonitoring
+  | IndicatorOutputMsuCarbon;
 
-export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorModelClass } = {
+type IndicatorClass<T extends IndicatorModel> = ModelCtor<T> & ModelStatic<T>;
+export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<IndicatorModel> } = {
   treeCover: IndicatorOutputTreeCover,
   treeCoverLoss: IndicatorOutputTreeCoverLoss,
   treeCoverLossFires: IndicatorOutputTreeCoverLoss,

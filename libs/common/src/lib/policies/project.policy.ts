@@ -1,18 +1,14 @@
-import { EntityPolicy } from "./entity.policy";
 import { Project, User } from "@terramatch-microservices/database/entities";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { UserPermissionsPolicy } from "./user-permissions.policy";
 
-export class ProjectPolicy extends EntityPolicy {
+export class ProjectPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("projects-read") || this.permissions.includes("view-dashboard")) {
       this.builder.can("read", Project);
     }
 
-    const frameworks = this.permissions
-      .filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworks.length > 0) {
-      this.builder.can("read", Project, { frameworkKey: { $in: frameworks } });
+    if (this.frameworks.length > 0) {
+      this.builder.can("read", Project, { frameworkKey: { $in: this.frameworks } });
     }
 
     if (this.permissions.includes("manage-own")) {

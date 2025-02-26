@@ -11,12 +11,13 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, literal, Op, STRING, UUID } from "sequelize";
+import { BIGINT, Op, STRING, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -38,18 +39,7 @@ export class Nursery extends Model<Nursery> {
   }
 
   static approvedIdsSubquery(projectId: number) {
-    const attributes = Nursery.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = Nursery.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-    return literal(
-      `(SELECT ${attributes.id.field} FROM ${Nursery.tableName}
-        WHERE ${deletedAt} IS NULL
-        AND ${attributes.projectId.field} = ${sql.escape(projectId)}
-        AND ${attributes.status.field} IN (${Nursery.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
-       )`
-    );
+    return Subquery.select(Nursery, "id").eq("projectId", projectId).in("status", Nursery.APPROVED_STATUSES).literal;
   }
 
   @PrimaryKey

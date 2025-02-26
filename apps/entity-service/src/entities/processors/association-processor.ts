@@ -2,7 +2,7 @@ import { Model } from "sequelize-typescript";
 import { NotFoundException, Type } from "@nestjs/common";
 import { AssociationDto } from "../dto/association.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { EntityCtor, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 
 export abstract class AssociationProcessor<M extends Model<M>, D extends AssociationDto<D>, E extends EntityModel> {
   abstract readonly DTO: Type<D>;
@@ -10,7 +10,7 @@ export abstract class AssociationProcessor<M extends Model<M>, D extends Associa
   constructor(
     protected readonly entityType: EntityType,
     protected readonly entityUuid: string,
-    protected readonly entityModelClass: EntityCtor<E>
+    protected readonly entityModelClass: EntityClass<E>
   ) {}
 
   private _baseEntity: E;

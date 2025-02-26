@@ -1,4 +1,4 @@
-import { EntitiesService, ProcessableEntity } from "./entities.service";
+import { EntitiesService, ProcessableAssociation, ProcessableEntity } from "./entities.service";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -8,6 +8,7 @@ import { MediaFactory } from "@terramatch-microservices/database/factories";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MediaDto } from "./dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -41,6 +42,20 @@ describe("EntitiesService", () => {
   describe("createProcessor", () => {
     it("throws with an unknown entity type", async () => {
       expect(() => service.createEntityProcessor("foo" as ProcessableEntity)).toThrow(BadRequestException);
+    });
+  });
+
+  describe("createAssociationProcessor", () => {
+    it("throws with an unknown association type", async () => {
+      expect(() => service.createAssociationProcessor("project-reports", "", "bar" as ProcessableAssociation)).toThrow(
+        BadRequestException
+      );
+    });
+
+    it("throws with an unknown entity type", async () => {
+      expect(() => service.createAssociationProcessor("foo" as EntityType, "", "demographics")).toThrow(
+        BadRequestException
+      );
     });
   });
 

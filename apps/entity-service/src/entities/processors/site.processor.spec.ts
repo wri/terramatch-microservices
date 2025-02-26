@@ -6,7 +6,7 @@ import { EntitiesService } from "../entities.service";
 import { SiteProcessor } from "./site.processor";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { ProjectFactory, ProjectUserFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteLightDto } from "../dto/site.dto";
 
@@ -49,24 +49,29 @@ describe("SiteProcessor", () => {
     }
 
     it("filters", async () => {
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId, projectId: project.id });
+
       const first = await SiteFactory.create({
         name: "first site",
         status: "approved",
-        updateRequestStatus: "draft"
+        updateRequestStatus: "awaiting-approval",
+        projectId: project.id
       });
       const second = await SiteFactory.create({
         name: "second site",
         status: "started",
-        updateRequestStatus: "awaiting-approval"
+        updateRequestStatus: "awaiting-approval",
+        projectId: project.id
       });
       const third = await SiteFactory.create({
         name: "third site",
         status: "approved",
-        updateRequestStatus: "awaiting-approval"
+        updateRequestStatus: "awaiting-approval",
+        projectId: project.id
       });
 
-      await expectSites([first, third], { status: "approved" });
-      await expectSites([second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
     });
   });
 

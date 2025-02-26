@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, literal, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -61,36 +61,6 @@ export class Site extends Model<Site> {
 
   static approvedUuidsSubquery(projectId: number) {
     return Subquery.select(Site, "uuid").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
-  }
-
-  static approvedIdsSiteSubquery(siteId: number) {
-    const attributes = Site.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = Site.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-    return literal(
-      `(SELECT ${attributes.id.field} FROM ${Site.tableName}
-        WHERE ${deletedAt} IS NULL
-        AND ${attributes.id.field} = ${sql.escape(siteId)}
-        AND ${attributes.status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
-       )`
-    );
-  }
-
-  static approvedUuidsSiteSubquery(siteId: number) {
-    const attributes = Site.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = Site.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-    return literal(
-      `(SELECT ${attributes.uuid.field} FROM ${Site.tableName}
-        WHERE ${deletedAt} IS NULL
-        AND ${attributes.id.field} = ${sql.escape(siteId)}
-        AND ${attributes.status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
-       )`
-    );
   }
 
   @PrimaryKey

@@ -1,8 +1,8 @@
-import { EntityPolicy } from "./entity.policy";
 import { Site, User } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { UserPermissionsPolicy } from "./user-permissions.policy";
 
-export class SitePolicy extends EntityPolicy {
+export class SitePolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("sites-read") || this.permissions.includes("view-dashboard")) {
       this.builder.can("read", Site);

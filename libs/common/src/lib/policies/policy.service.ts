@@ -1,13 +1,13 @@
 import { Injectable, LoggerService, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
-import { BuilderType } from "./entity.policy";
 import {
   Permission,
   Project,
   ProjectReport,
   Site,
   SitePolygon,
+  SiteReport,
   User
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
@@ -16,9 +16,10 @@ import { TMLogService } from "../util/tm-log.service";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
 import { isArray } from "lodash";
-import { ProjectReportPolicy } from "./project-report.policy";
-import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { SitePolicy } from "./site.policy";
+import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
+import { ProjectReportPolicy } from "./project-report.policy";
+import { SiteReportPolicy } from "./site-report.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +36,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Site, SitePolicy],
   [ProjectReport, ProjectReportPolicy],
   [SitePolygon, SitePolygonPolicy],
+  [SiteReport, SiteReportPolicy],
   [User, UserPolicy]
 ];
 

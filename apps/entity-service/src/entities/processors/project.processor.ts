@@ -197,13 +197,19 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
   }
 
   protected async getTotalJobs(projectId: number) {
-    const aggregates: Aggregate<ProjectReport>[] = [
-      { func: "SUM", attr: "ftTotal" },
-      { func: "SUM", attr: "ptTotal" }
-    ];
-    const { ftTotal, ptTotal } = await aggregateColumns(ProjectReport.approved().project(projectId), aggregates);
-
-    return ftTotal + ptTotal;
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.in]: Demographic.idsSubquery(
+              ProjectReport.approvedIdsSubquery(projectId),
+              ProjectReport.LARAVEL_TYPE,
+              Demographic.JOBS_TYPE
+            )
+          }
+        }
+      })) ?? 0
+    );
   }
 
   protected async getTotalOverdueReports(projectId: number) {

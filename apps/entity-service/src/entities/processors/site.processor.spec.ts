@@ -6,7 +6,12 @@ import { EntitiesService } from "../entities.service";
 import { SiteProcessor } from "./site.processor";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { ProjectFactory, ProjectUserFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import {
+  ProjectFactory,
+  ProjectUserFactory,
+  SiteFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteLightDto } from "../dto/site.dto";
 

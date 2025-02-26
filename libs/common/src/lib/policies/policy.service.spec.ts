@@ -41,6 +41,7 @@ describe("PolicyService", () => {
   it("should throw an error if no authed user is found", async () => {
     mockUserId();
     await expect(service.authorize("foo", new User())).rejects.toThrow(UnauthorizedException);
+    await expect(service.getPermissions()).rejects.toThrow(UnauthorizedException);
   });
 
   it("should throw an error if there is no policy defined", async () => {

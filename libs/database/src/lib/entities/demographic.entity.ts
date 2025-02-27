@@ -6,9 +6,10 @@ import { ProjectReport } from "./project-report.entity";
 import { SiteReport } from "./site-report.entity";
 import { Dictionary } from "lodash";
 import {
-  BENEFICIARIES_PROJECT_COLLECTIONS,
+  ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
   JOBS_PROJECT_COLLECTIONS,
   RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS,
   VOLUNTEERS_PROJECT_COLLECTIONS,
   WORKDAYS_PROJECT_COLLECTIONS,
   WORKDAYS_SITE_COLLECTIONS
@@ -32,13 +33,15 @@ export class Demographic extends Model<Demographic> {
   static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
   static readonly JOBS_TYPE = "jobs";
   static readonly VOLUNTEERS_TYPE = "volunteers";
-  static readonly BENEFICIARIES_TYPE = "beneficiaries";
+  static readonly ALL_BENEFICIARIES_TYPE = "all-beneficiaries";
+  static readonly TRAINING_BENEFICIARIES_TYPE = "training-beneficiaries";
   static readonly VALID_TYPES = [
     Demographic.WORKDAYS_TYPE,
     Demographic.RESTORATION_PARTNERS_TYPE,
     Demographic.JOBS_TYPE,
     Demographic.VOLUNTEERS_TYPE,
-    Demographic.BENEFICIARIES_TYPE
+    Demographic.ALL_BENEFICIARIES_TYPE,
+    Demographic.TRAINING_BENEFICIARIES_TYPE
   ] as const;
 
   static readonly COLLECTION_MAPPING: Dictionary<Dictionary<Dictionary<string>>> = {
@@ -47,7 +50,8 @@ export class Demographic extends Model<Demographic> {
       [Demographic.RESTORATION_PARTNERS_TYPE]: RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
       [Demographic.JOBS_TYPE]: JOBS_PROJECT_COLLECTIONS,
       [Demographic.VOLUNTEERS_TYPE]: VOLUNTEERS_PROJECT_COLLECTIONS,
-      [Demographic.BENEFICIARIES_TYPE]: BENEFICIARIES_PROJECT_COLLECTIONS
+      [Demographic.ALL_BENEFICIARIES_TYPE]: ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
+      [Demographic.TRAINING_BENEFICIARIES_TYPE]: TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS
     },
     [SiteReport.LARAVEL_TYPE]: {
       [Demographic.WORKDAYS_TYPE]: WORKDAYS_SITE_COLLECTIONS

@@ -5,13 +5,14 @@ import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import {
-  BENEFICIARIES_PROJECT_COLLECTIONS,
+  ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
   CONVERGENCE,
   DIRECT,
   DIRECT_OTHER,
   JOBS_PROJECT_COLLECTIONS,
   PAID_OTHER,
   RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS,
   VOLUNTEERS_PROJECT_COLLECTIONS,
   WORKDAYS_PROJECT_COLLECTIONS,
   WORKDAYS_SITE_COLLECTIONS
@@ -45,8 +46,11 @@ export class DemographicCollections {
   @ApiProperty({ enum: Object.keys(VOLUNTEERS_PROJECT_COLLECTIONS) })
   VOLUNTEERS_PROJECT: string[];
 
-  @ApiProperty({ enum: Object.keys(BENEFICIARIES_PROJECT_COLLECTIONS) })
-  BENEFICIARIES_PROJECT: string[];
+  @ApiProperty({ enum: Object.keys(ALL_BENEFICIARIES_PROJECT_COLLECTIONS) })
+  BENEFICIARIES_PROJECT_ALL: string[];
+
+  @ApiProperty({ enum: Object.keys(TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS) })
+  BENEFICIARIES_PROJECT_TRAINING: string[];
 }
 
 export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> {

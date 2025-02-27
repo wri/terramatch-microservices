@@ -99,9 +99,13 @@ export const VOLUNTEERS_PROJECT_COLLECTIONS = {
 };
 
 export const ALL = "all";
+
+export const ALL_BENEFICIARIES_PROJECT_COLLECTIONS = {
+  [ALL]: "All Beneficiaries"
+};
+
 export const TRAINING = "training";
 
-export const BENEFICIARIES_PROJECT_COLLECTIONS = {
-  [ALL]: "All Beneficiaries",
+export const TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS = {
   [TRAINING]: "Training Beneficiaries"
 };

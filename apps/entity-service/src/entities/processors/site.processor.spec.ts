@@ -55,9 +55,9 @@ describe("SiteProcessor", () => {
     it("returns sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
-      const sites = await SiteFactory.createMany(3, { projectId: project.id });
-      await SiteFactory.createMany(5, { projectId: project.id });
-      await expectSites(sites, {}, { permissions: ["manage-own"] });
+      const managedSites = await SiteFactory.createMany(3, { projectId: project.id });
+      await SiteFactory.createMany(5);
+      await expectSites(managedSites, {}, { permissions: ["manage-own"] });
     });
 
     it("returns managed sites", async () => {

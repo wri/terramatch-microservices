@@ -36,7 +36,7 @@ describe("SiteProcessor", () => {
   describe("findMany", () => {
     async function expectSites(
       expected: Site[],
-      query: EntityQueryDto,
+      query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
       {
         permissions = ["sites-read"],
         sortField = "id",
@@ -44,7 +44,7 @@ describe("SiteProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query, userId, permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -52,6 +52,32 @@ describe("SiteProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
+    it("returns sites", async () => {
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId, projectId: project.id });
+      const sites = await SiteFactory.createMany(3, { projectId: project.id });
+      await SiteFactory.createMany(5, { projectId: project.id });
+      await expectSites(sites, {}, { permissions: ["manage-own"] });
+    });
+
+    it("returns managed sites", async () => {
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectFactory.create();
+      const sites = await SiteFactory.createMany(3, { projectId: project.id });
+      await SiteFactory.createMany(5);
+      await expectSites(sites, {}, { permissions: ["projects-manage"] });
+    });
+
+    it("returns framework sites", async () => {
+      const sites = await SiteFactory.createMany(3, { frameworkKey: "hbf" });
+      await SiteFactory.createMany(3, { frameworkKey: "ppc" });
+      for (const p of await SiteFactory.createMany(3, { frameworkKey: "terrafund" })) {
+        sites.push(p);
+      }
+
+      await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+    });
 
     it("filters", async () => {
       const project = await ProjectFactory.create();
@@ -96,7 +122,13 @@ describe("SiteProcessor", () => {
         projectId: project.id
       });
 
-      const { models } = await processor.findMany({}, userId, ["sites-read"]);
+      const { models } = await processor.findMany(
+        {
+          field: "name"
+        },
+        userId,
+        ["sites-read"]
+      );
       const document = buildJsonApi(SiteLightDto, { forceDataArray: true });
       await processor.addLightDto(document, models[0]);
       const attributes = document.serialize().data[0].attributes as SiteLightDto;

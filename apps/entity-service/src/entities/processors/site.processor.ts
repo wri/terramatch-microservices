@@ -75,27 +75,25 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
   async addFullDto(document: DocumentBuilder, site: Site): Promise<void> {
     const siteId = site.id;
-    const approvedUuidsSiteSubquery = Site.approvedUuidsSiteSubquery(siteId);
-    const approvedSitesQuery = Site.approvedIdsSiteSubquery(siteId);
 
-    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery({ val: siteId });
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
     const hasBeenSubmittedSiteReports = await SiteReport.hasBeenSubmitted()
-      .sites(approvedSitesQuery)
+      .sites([siteId])
       .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
 
     const approvedSiteReports = await SiteReport.approved()
-      .sites(approvedSitesQuery)
+      .sites([siteId])
       .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
 
     const regeneratedTreesCount = sumBy(hasBeenSubmittedSiteReports, "numTreesRegenerating");
     const approvedRegeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
     const props: AdditionalSiteFullProps = {
-      totalHectaresRestoredSum: (await SitePolygon.approved().sites(approvedUuidsSiteSubquery).sum("calcArea")) ?? 0,
+      totalHectaresRestoredSum: (await SitePolygon.approved().sites([site.uuid]).sum("calcArea")) ?? 0,
       workdayCount: (await this.getWorkdayCount(siteId)) ?? 0,
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),
@@ -120,8 +118,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
     const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
-    const siteIds = Site.approvedIdsSiteSubquery(siteId);
-    const siteReportIds = SiteReport.approvedIdsSubquery(siteIds, { dueAfter });
+    const siteReportIds = SiteReport.approvedIdsSubquery({ val: siteId }, { dueAfter });
     const siteReportWorkdays = Demographic.idsSubquery(
       siteReportIds,
       SiteReport.LARAVEL_TYPE,
@@ -140,7 +137,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   protected async getSelfReportedWorkdayCount(siteId: number, useDemographicsCutoff = false) {
-    let SR = SiteReport.approved().sites(Site.approvedIdsSiteSubquery(siteId));
+    let SR = SiteReport.approved().sites([siteId]);
     if (useDemographicsCutoff) {
       SR = SR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
     }
@@ -154,11 +151,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   protected async getTotalSiteReports(siteId: number) {
-    return await SiteReport.sites(Site.approvedIdsSiteSubquery(siteId)).count();
+    return await SiteReport.sites([siteId]).count();
   }
 
   protected async getTotalOverdueReports(siteId: number) {
     const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
-    return await SiteReport.incomplete().sites(Site.approvedIdsSiteSubquery(siteId)).count(countOpts);
+    return await SiteReport.incomplete().sites([siteId]).count(countOpts);
   }
 }

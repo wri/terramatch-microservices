@@ -2,18 +2,6 @@ import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Un
 import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
 import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
-import { ProjectReport } from "./project-report.entity";
-import { SiteReport } from "./site-report.entity";
-import { Dictionary } from "lodash";
-import {
-  ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
-  JOBS_PROJECT_COLLECTIONS,
-  RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
-  TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS,
-  VOLUNTEERS_PROJECT_COLLECTIONS,
-  WORKDAYS_PROJECT_COLLECTIONS,
-  WORKDAYS_SITE_COLLECTIONS
-} from "../constants/demographic-collections";
 import { Subquery } from "../util/subquery.builder";
 import { DemographicType } from "../types/demographic";
 
@@ -44,20 +32,6 @@ export class Demographic extends Model<Demographic> {
     Demographic.TRAINING_BENEFICIARIES_TYPE
   ] as const;
 
-  static readonly COLLECTION_MAPPING: Dictionary<Dictionary<Dictionary<string>>> = {
-    [ProjectReport.LARAVEL_TYPE]: {
-      [Demographic.WORKDAYS_TYPE]: WORKDAYS_PROJECT_COLLECTIONS,
-      [Demographic.RESTORATION_PARTNERS_TYPE]: RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
-      [Demographic.JOBS_TYPE]: JOBS_PROJECT_COLLECTIONS,
-      [Demographic.VOLUNTEERS_TYPE]: VOLUNTEERS_PROJECT_COLLECTIONS,
-      [Demographic.ALL_BENEFICIARIES_TYPE]: ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
-      [Demographic.TRAINING_BENEFICIARIES_TYPE]: TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS
-    },
-    [SiteReport.LARAVEL_TYPE]: {
-      [Demographic.WORKDAYS_TYPE]: WORKDAYS_SITE_COLLECTIONS
-    }
-  };
-
   static idsSubquery(demographicalIds: Literal, demographicalType: string, type: DemographicType) {
     return Subquery.select(Demographic, "id")
       .eq("demographicalType", demographicalType)
@@ -81,13 +55,6 @@ export class Demographic extends Model<Demographic> {
   @AllowNull
   @Column(STRING)
   collection: string | null;
-
-  get collectionTitle(): string {
-    return (
-      (this.collection && Demographic.COLLECTION_MAPPING[this.demographicalType]?.[this.type]?.[this.collection]) ??
-      "Unknown"
-    );
-  }
 
   @Column(STRING)
   demographicalType: string;

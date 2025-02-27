@@ -22,7 +22,7 @@ export const DemographicFactory = {
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
     type: Demographic.WORKDAYS_TYPE,
-    collection: faker.helpers.arrayElement(Object.keys(WORKDAYS_PROJECT_COLLECTIONS))
+    collection: faker.helpers.arrayElement(WORKDAYS_PROJECT_COLLECTIONS)
   })),
 
   forSiteReportWorkday: FactoryGirl.define(Demographic, async () => ({
@@ -30,7 +30,7 @@ export const DemographicFactory = {
     demographicalType: SiteReport.LARAVEL_TYPE,
     demographicalId: SiteReportFactory.associate("id"),
     type: Demographic.WORKDAYS_TYPE,
-    collection: faker.helpers.arrayElement(Object.keys(WORKDAYS_SITE_COLLECTIONS))
+    collection: faker.helpers.arrayElement(WORKDAYS_SITE_COLLECTIONS)
   })),
 
   forProjectReportRestorationPartner: FactoryGirl.define(Demographic, async () => ({
@@ -38,7 +38,7 @@ export const DemographicFactory = {
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
     type: Demographic.RESTORATION_PARTNERS_TYPE,
-    collection: faker.helpers.arrayElement(Object.keys(RESTORATION_PARTNERS_PROJECT_COLLECTIONS))
+    collection: faker.helpers.arrayElement(RESTORATION_PARTNERS_PROJECT_COLLECTIONS)
   })),
 
   forProjectReportJobs: FactoryGirl.define(Demographic, async () => ({
@@ -46,6 +46,6 @@ export const DemographicFactory = {
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
     type: Demographic.JOBS_TYPE,
-    collection: faker.helpers.arrayElement(Object.keys(JOBS_PROJECT_COLLECTIONS))
+    collection: faker.helpers.arrayElement(JOBS_PROJECT_COLLECTIONS)
   }))
 };

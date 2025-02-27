@@ -7,11 +7,10 @@ import {
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
-import { Site } from "@terramatch-microservices/database/entities";
+import { Project, Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
-import { ProjectLightDto } from "./project.dto";
 // TODO: THIS IS A STUB!
 
 @JsonApiDto({ type: "sites" })
@@ -21,8 +20,6 @@ export class SiteLightDto extends EntityDto {
     if (site != null) {
       this.populate(SiteLightDto, {
         ...pickApiProperties(site, SiteLightDto),
-        project: site.project ? new ProjectLightDto(site.project) : undefined,
-        ppcExternalId: site.ppcExternalId?.toString(),
         lightResource: true,
         createdAt: site.createdAt as Date,
         updatedAt: site.createdAt as Date
@@ -39,9 +36,6 @@ export class SiteLightDto extends EntityDto {
     deprecated: true
   })
   frameworkUuid: string | null;
-
-  @ApiProperty({ nullable: false, description: "Project" })
-  project: ProjectLightDto;
 
   @ApiProperty({
     nullable: true,
@@ -71,9 +65,6 @@ export class SiteLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
-
-  @ApiProperty()
-  ppcExternalId: string;
 }
 
 export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
@@ -84,8 +75,6 @@ export class SiteFullDto extends SiteLightDto {
     super();
     this.populate(SiteFullDto, {
       ...pickApiProperties(site, SiteFullDto),
-      project: site.project ? new ProjectLightDto(site.project) : undefined,
-      ppcExternalId: site.ppcExternalId?.toString(),
       lightResource: false,
       createdAt: site.createdAt as Date,
       updatedAt: site.updatedAt as Date,
@@ -130,6 +119,84 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty()
   workdayCount: number;
 
+  @ApiProperty({ nullable: true })
+  ppcExternalId: number | null;
+
+  @ApiProperty({ nullable: true })
+  project: Project;
+
+  @ApiProperty({ nullable: true })
+  sitingStrategy: string;
+
+  @ApiProperty({ nullable: true })
+  descriptionSitingStrategy: string | null;
+
+  @ApiProperty({ nullable: true })
+  hectaresToRestoreGoal: number;
+
+  @ApiProperty({ nullable: true })
+  description: string | null;
+
+  @ApiProperty({ nullable: true })
+  controlSite: boolean | null;
+
+  @ApiProperty({ nullable: true })
+  history: string | null;
+
+  @ApiProperty({ nullable: true })
+  startDate: Date | null;
+
+  @ApiProperty({ nullable: true })
+  endDate: Date | null;
+
+  @ApiProperty({ nullable: true })
+  landTenures: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  survivalRatePlanted: number | null;
+
+  @ApiProperty({ nullable: true })
+  directSeedingSurvivalRate: number | null;
+
+  @ApiProperty({ nullable: true })
+  aNatRegenerationTreesPerHectare: number | null;
+
+  @ApiProperty({ nullable: true })
+  aNatRegeneration: number | null;
+
+  @ApiProperty({ nullable: true })
+  landscapeCommunityContribution: string | null;
+
+  @ApiProperty({ nullable: true })
+  technicalNarrative: string | null;
+
+  @ApiProperty({ nullable: true })
+  plantingPattern: string | null;
+
+  @ApiProperty({ nullable: true })
+  soilCondition: string | null;
+
+  @ApiProperty({ nullable: true })
+  aimYearFiveCrownCover: number | null;
+
+  @ApiProperty({ nullable: true })
+  aimNumberOfMatureTrees: number | null;
+
+  @ApiProperty({ nullable: true })
+  landUseTypes: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  restorationStrategy: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  feedback: string | null;
+
+  @ApiProperty({ nullable: true })
+  feedbackFields: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  detailedInterventionTypes: string[] | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 
@@ -153,7 +220,4 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: false })
   stratificationForHeterogeneity: MediaDto;
-
-  @ApiProperty()
-  ppcExternalId: string;
 }

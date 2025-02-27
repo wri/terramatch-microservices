@@ -18,14 +18,14 @@ import {
   WORKDAYS_SITE_COLLECTIONS
 } from "@terramatch-microservices/database/constants/demographic-collections";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
-import { pull } from "lodash";
+import { without } from "lodash";
 
 @JsonApiConstants
 export class DemographicCollections {
   @ApiProperty({ example: WORKDAYS_PROJECT_COLLECTIONS })
   WORKDAYS_PROJECT: string[];
 
-  @ApiProperty({ example: pull(WORKDAYS_PROJECT_COLLECTIONS, DIRECT, CONVERGENCE) })
+  @ApiProperty({ example: without(WORKDAYS_PROJECT_COLLECTIONS, DIRECT, CONVERGENCE) })
   WORKDAYS_PROJECT_PPC: string[];
 
   @ApiProperty({ example: PAID_OTHER })

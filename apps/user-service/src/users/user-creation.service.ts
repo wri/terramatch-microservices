@@ -51,6 +51,14 @@ export class UserCreationService {
       throw new NotFoundException("Localization subject not found");
     }
 
+    if (titleLocalization == null) {
+      throw new NotFoundException("Localization title not found");
+    }
+
+    if (ctaLocalization == null) {
+      throw new NotFoundException("Localization CTA not found");
+    }
+
     const role = request.role;
     const roleEntity = await Role.findOne({ where: { name: role } });
 

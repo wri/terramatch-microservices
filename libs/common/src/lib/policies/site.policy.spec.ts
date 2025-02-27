@@ -1,7 +1,7 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
-import { Project, Site } from "@terramatch-microservices/database/entities";
+import { Site } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
   ProjectFactory,

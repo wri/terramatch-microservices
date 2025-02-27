@@ -8,7 +8,7 @@ import * as path from "path";
 export class TemplateService {
   private readonly template: Handlebars.TemplateDelegate;
 
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     this.template = this.compileTemplate("default-email.hbs");
   }
 
@@ -20,10 +20,13 @@ export class TemplateService {
 
   render(data: any): string {
     const params = {
-      ...data,
-      backend_url: null, // TODO add backend url
+      backend_url: this.configService.get<string>("APP_BACKEND_URL"),
       banner: null,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      monitoring: null,
+      invite: null,
+      transactional: null,
+      ...data
     };
     return this.template(params);
   }

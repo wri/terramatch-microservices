@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, LoggerService } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { User, Verification } from "@terramatch-microservices/database/entities";
+import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
@@ -8,6 +8,7 @@ import { UserNewRequest } from "./dto/user-new-request.dto";
 import crypto from "node:crypto";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
 import { omit } from "lodash";
+import bcrypt from "bcryptjs";
 
 @Injectable()
 export class UserCreationService {
@@ -50,13 +51,25 @@ export class UserCreationService {
       throw new NotFoundException("Localization subject not found");
     }
 
+    const role = request.role;
+    const roleEntity = await Role.findOne({ where: { name: role } });
+
+    if (roleEntity == null) {
+      throw new NotFoundException("Role not found");
+    }
+
     try {
+      const hashPassword = await bcrypt.hash(request.password, 10);
       const callbackUrl = request.callbackUrl;
-      const role = request.role; // TODO: Implement assign role
-      const requestUser = omit(request, ["callbackUrl", "role"]);
+      const requestUser = omit(request, ["callbackUrl", "role", "password"]);
       const [user] = await User.findOrCreate({
         where: { emailAddress: request.emailAddress },
-        defaults: { ...requestUser, uuid: crypto.randomUUID() }
+        defaults: { ...requestUser, uuid: crypto.randomUUID(), password: hashPassword }
+      });
+
+      await ModelHasRole.findOrCreate({
+        where: { modelId: user.id, roleId: roleEntity.id },
+        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE }
       });
 
       await user.reload();
@@ -91,7 +104,8 @@ export class UserCreationService {
       title: await this.localizationService.translate(title, locale),
       body: await this.localizationService.translate(body, locale),
       link: `${callbackUrl}?token=${token}`,
-      cta: await this.localizationService.translate(cta, locale)
+      cta: await this.localizationService.translate(cta, locale),
+      monitoring: "monitoring"
     };
     return this.templateService.render(emailData);
   }

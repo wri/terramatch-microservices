@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty } from "class-validator";
+import { IsEmail, IsIn, IsNotEmpty } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class UserNewRequest {
@@ -27,8 +27,9 @@ export class UserNewRequest {
   jobRole: string;
 
   @IsNotEmpty()
-  @ApiProperty({ enum: ["project-developer", "funder", "government"] })
-  role: "project-developer" | "funder" | "government";
+  @IsIn(["project-developer", "funder", "government"])
+  @ApiProperty()
+  role: string;
 
   @IsNotEmpty()
   @ApiProperty()

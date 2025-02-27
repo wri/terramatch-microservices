@@ -6,7 +6,6 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import {
   ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
-  COLLECTION_TITLES,
   CONVERGENCE,
   DIRECT,
   DIRECT_OTHER,
@@ -23,8 +22,8 @@ import { pull } from "lodash";
 
 @JsonApiConstants
 export class DemographicCollections {
-  @ApiProperty({ example: COLLECTION_TITLES })
-  COLLECTION_TITLES: object;
+  @ApiProperty({ example: WORKDAYS_PROJECT_COLLECTIONS })
+  WORKDAYS_PROJECT: string[];
 
   @ApiProperty({ example: pull(WORKDAYS_PROJECT_COLLECTIONS, DIRECT, CONVERGENCE) })
   WORKDAYS_PROJECT_PPC: string[];

@@ -119,7 +119,7 @@ describe("SiteProcessor", () => {
       const siteA = await SiteFactory.create({ name: "A Site" });
       const siteB = await SiteFactory.create({ name: "B Site" });
       const siteC = await SiteFactory.create({ name: "C Site" });
-      await expectSites([siteA, siteB, siteC], { sort: { field: "name" } }, { sortField: "name" });
+      await expectSites([siteA, siteB, siteC], { sort: { field: "name", direction: "ASC" } }, { sortField: "name" });
       await expectSites([siteC, siteB, siteA], { sort: { field: "name", direction: "DESC" } }, { sortField: "name" });
     });
 

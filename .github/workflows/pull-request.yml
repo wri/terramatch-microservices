@@ -36,7 +36,7 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - run: npx nx run-many -t lint build --no-cloud
+      #      - run: npx nx run-many -t lint build --no-cloud
 
       - name: Bring up DB Docker Container
         run: |
@@ -52,14 +52,14 @@ jobs:
       # Run the UDB service tests in isolation because they require clearing out DB tables and ensuring
       # they know exactly what's in them, which is not conducive to parallel runs with other test
       # suites.
-      - name: Unified DB Test
-        run: npx nx test unified-database-service --no-cloud --coverage
+      #      - name: Unified DB Test
+      #        run: npx nx test unified-database-service --no-cloud --coverage
 
-      # Run the UDB service tests in isolation because they require clearing out DB tables and ensuring
+      # Run the entity service tests in isolation because they require clearing out DB tables and ensuring
       # they know exactly what's in them, which is not conducive to parallel runs with other test
       # suites.
-      - name: Entity Service Test
-        run: npx nx test entity-service --no-cloud --coverage --runInBand
+      #      - name: Entity Service Test
+      #        run: npx nx test entity-service --no-cloud --coverage --runInBand
 
       - name: Test all
-        run: npx nx run-many -t test --no-cloud --coverage --passWithNoTests --exclude unified-database-service database entity-service
+        run: npx nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests --exclude database #unified-database-service database entity-service

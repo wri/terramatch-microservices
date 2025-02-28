@@ -139,9 +139,9 @@ describe("SiteProcessor", () => {
     });
 
     it("should not sort by status", async () => {
-      const siteA = await SiteFactory.create({ status: "approved" });
-      const siteB = await SiteFactory.create({ status: "started" });
-      const siteC = await SiteFactory.create({ status: "awaiting-approval" });
+      await SiteFactory.create({ status: "approved" });
+      await SiteFactory.create({ status: "started" });
+      await SiteFactory.create({ status: "awaiting-approval" });
       await expect(processor.findMany({ sort: { field: "status" } } as EntityQueryDto)).rejects.toThrow(
         BadRequestException
       );

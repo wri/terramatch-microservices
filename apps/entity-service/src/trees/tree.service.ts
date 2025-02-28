@@ -10,7 +10,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Dictionary, filter, flatten, flattenDeep, groupBy, uniq } from "lodash";
+import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
 import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
 
 export const ESTABLISHMENT_REPORTS = ["project-reports", "site-reports", "nursery-reports"] as const;
@@ -120,7 +120,7 @@ export class TreeService {
       // for these we simply pull the project's trees
       const whereOptions = {
         where: { uuid },
-        attributes: [],
+        attributes: ["frameworkKey"],
         include: [
           {
             model: Project,
@@ -139,9 +139,21 @@ export class TreeService {
         : ProjectReport.findOne(whereOptions));
       if (entityModel == null) throw new NotFoundException();
 
-      return uniqueTreeNames(
+      const uniqueTrees = uniqueTreeNames(
         groupBy(flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project[association])), "collection")
       );
+      if (entity === "project-reports" && entityModel.frameworkKey === "ppc") {
+        // For PPC Project reports, we have to pretend the establishment species are "nursery-seedling" because
+        // that's the collection used at the report level, but "tree-planted" is used at the establishment level.
+        // The FE depends on the collection returned here to match what's being used in the tree species input
+        // or view table.
+        return {
+          ...omit(uniqueTrees, ["tree-planted"]),
+          ["nursery-seedling"]: uniqueTrees["tree-planted"]
+        };
+      }
+
+      return uniqueTrees;
     } else {
       throw new BadRequestException(`Entity type not supported: [${entity}]`);
     }

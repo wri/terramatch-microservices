@@ -18,7 +18,6 @@ beforeAll(async () => {
     logging: false
   });
 
-  await sequelize.sync();
   FactoryGirl.setAdapter(new SequelizeAdapter());
 });
 

@@ -15,5 +15,6 @@ export default {
       lines: 0,
       statements: 0
     }
-  }
+  },
+  setupFilesAfterEnv: ["./jest/setup-jest.ts", "./jest/sync-sequelize.ts"]
 };

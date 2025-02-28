@@ -15,30 +15,30 @@ export const VOLUNTEER_PLANTING = "volunteer-planting";
 export const VOLUNTEER_SITE_MAINTENANCE = "volunteer-site-maintenance";
 export const VOLUNTEER_SITE_MONITORING = "volunteer-site-monitoring";
 
-// The order of these mappings dictates the order of display in the PD views.
-export const WORKDAYS_PROJECT_COLLECTIONS = {
-  [PAID_PROJECT_MANAGEMENT]: "Paid Project Management",
-  [VOLUNTEER_PROJECT_MANAGEMENT]: "Volunteer Project Management",
-  [PAID_NURSERY_OPERATIONS]: "Paid Nursery Operations",
-  [VOLUNTEER_NURSERY_OPERATIONS]: "Volunteer Nursery Operations",
-  [PAID_OTHER]: "Paid Other Activities",
-  [VOLUNTEER_OTHER]: "Volunteer Other Activities",
-  [DIRECT]: "Direct Workdays",
-  [CONVERGENCE]: "Convergence Workdays"
-};
+// The order of these arrays dictates the order of display in the PD views.
+export const WORKDAYS_PROJECT_COLLECTIONS = [
+  PAID_PROJECT_MANAGEMENT,
+  VOLUNTEER_PROJECT_MANAGEMENT,
+  PAID_NURSERY_OPERATIONS,
+  VOLUNTEER_NURSERY_OPERATIONS,
+  PAID_OTHER,
+  VOLUNTEER_OTHER,
+  DIRECT,
+  CONVERGENCE
+] as const;
 
-export const WORKDAYS_SITE_COLLECTIONS = {
-  [PAID_SITE_ESTABLISHMENT]: "Paid Site Establishment",
-  [VOLUNTEER_SITE_ESTABLISHMENT]: "Volunteer Site Establishment",
-  [PAID_PLANTING]: "Paid Planting",
-  [VOLUNTEER_PLANTING]: "Volunteer Planting",
-  [PAID_SITE_MAINTENANCE]: "Paid Site Maintenance",
-  [VOLUNTEER_SITE_MAINTENANCE]: "Volunteer Site Maintenance",
-  [PAID_SITE_MONITORING]: "Paid Site Monitoring",
-  [VOLUNTEER_SITE_MONITORING]: "Volunteer Site Monitoring",
-  [PAID_OTHER]: "Paid Other Activities",
-  [VOLUNTEER_OTHER]: "Volunteer Other Activities"
-};
+export const WORKDAYS_SITE_COLLECTIONS = [
+  PAID_SITE_ESTABLISHMENT,
+  VOLUNTEER_SITE_ESTABLISHMENT,
+  PAID_PLANTING,
+  VOLUNTEER_PLANTING,
+  PAID_SITE_MAINTENANCE,
+  VOLUNTEER_SITE_MAINTENANCE,
+  PAID_SITE_MONITORING,
+  VOLUNTEER_SITE_MONITORING,
+  PAID_OTHER,
+  VOLUNTEER_OTHER
+] as const;
 
 export const DIRECT_INCOME = "direct-income";
 export const INDIRECT_INCOME = "indirect-income";
@@ -60,40 +60,38 @@ export const DIRECT_PRODUCTIVITY = "direct-productivity";
 export const INDIRECT_PRODUCTIVITY = "indirect-productivity";
 export const DIRECT_OTHER = "direct-other";
 export const INDIRECT_OTHER = "indirect-other";
-
-export const RESTORATION_PARTNERS_PROJECT_COLLECTIONS = {
-  [DIRECT_INCOME]: "Direct Income",
-  [INDIRECT_INCOME]: "Indirect Income",
-  [DIRECT_BENEFITS]: "Direct In-kind Benefits",
-  [INDIRECT_BENEFITS]: "Indirect In-kind Benefits",
-  [DIRECT_CONSERVATION_PAYMENTS]: "Direct Conservation Agreement Payments",
-  [INDIRECT_CONSERVATION_PAYMENTS]: "Indirect Conservation Agreement Payments",
-  [DIRECT_MARKET_ACCESS]: "Direct Increased Market Access",
-  [INDIRECT_MARKET_ACCESS]: "Indirect Increased Market Access",
-  [DIRECT_CAPACITY]: "Direct Increased Capacity",
-  [INDIRECT_CAPACITY]: "Indirect Increased Capacity",
-  [DIRECT_TRAINING]: "Direct Training",
-  [INDIRECT_TRAINING]: "Indirect Training",
-  [DIRECT_LAND_TITLE]: "Direct Newly Secured Land Title",
-  [INDIRECT_LAND_TITLE]: "Indirect Newly Secured Land Title",
-  [DIRECT_LIVELIHOODS]: "Direct Traditional Livelihoods or Customer Rights",
-  [INDIRECT_LIVELIHOODS]: "Indirect Traditional Livelihoods or Customer Rights",
-  [DIRECT_PRODUCTIVITY]: "Direct Increased Productivity",
-  [INDIRECT_PRODUCTIVITY]: "Indirect Increased Productivity",
-  [DIRECT_OTHER]: "Direct Other",
-  [INDIRECT_OTHER]: "Indirect Other"
-};
+export const RESTORATION_PARTNERS_PROJECT_COLLECTIONS = [
+  DIRECT_INCOME,
+  INDIRECT_INCOME,
+  DIRECT_BENEFITS,
+  INDIRECT_BENEFITS,
+  DIRECT_CONSERVATION_PAYMENTS,
+  INDIRECT_CONSERVATION_PAYMENTS,
+  DIRECT_MARKET_ACCESS,
+  INDIRECT_MARKET_ACCESS,
+  DIRECT_CAPACITY,
+  INDIRECT_CAPACITY,
+  DIRECT_TRAINING,
+  INDIRECT_TRAINING,
+  DIRECT_LAND_TITLE,
+  INDIRECT_LAND_TITLE,
+  DIRECT_LIVELIHOODS,
+  INDIRECT_LIVELIHOODS,
+  DIRECT_PRODUCTIVITY,
+  INDIRECT_PRODUCTIVITY,
+  DIRECT_OTHER,
+  INDIRECT_OTHER
+] as const;
 
 export const FULL_TIME = "full-time";
 export const PART_TIME = "part-time";
-
-export const JOBS_PROJECT_COLLECTIONS = {
-  [FULL_TIME]: "Full-time",
-  [PART_TIME]: "Part-time"
-};
+export const JOBS_PROJECT_COLLECTIONS = [FULL_TIME, PART_TIME] as const;
 
 export const VOLUNTEER = "volunteer";
+export const VOLUNTEERS_PROJECT_COLLECTIONS = [VOLUNTEER] as const;
 
-export const VOLUNTEERS_PROJECT_COLLECTIONS = {
-  [VOLUNTEER]: "Volunteer"
-};
+export const ALL = "all";
+export const ALL_BENEFICIARIES_PROJECT_COLLECTIONS = [ALL] as const;
+
+export const TRAINING = "training";
+export const TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS = [TRAINING] as const;

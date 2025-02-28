@@ -1,4 +1,4 @@
-import { Demographic, ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 import { Test, TestingModule } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock } from "@golevelup/ts-jest";
@@ -11,7 +11,6 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, DocumentBuilder, Resource } from "@terramatch-microservices/common/util";
 import { DemographicDto, DemographicEntryDto } from "../dto/demographic.dto";
-import { BadRequestException } from "@nestjs/common";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 describe("DemographicProcessor", () => {
@@ -42,30 +41,6 @@ describe("DemographicProcessor", () => {
       document = buildJsonApi(DemographicDto, { forceDataArray: true });
     });
 
-    it("should throw if the entity type does not support demographics", async () => {
-      processor = module.get(EntitiesService).createAssociationProcessor("projects", "fake-uuid", "demographics");
-      await expect(processor.addDtos(document)).rejects.toThrow(BadRequestException);
-    });
-
-    it("should return a full compliment of empty demographics if the PR has no demographics", async () => {
-      await processor.addDtos(document);
-      const result = document.serialize();
-      const data = result.data as Resource[];
-      const expectedDemographics = Demographic.COLLECTION_MAPPING[ProjectReport.LARAVEL_TYPE];
-
-      let expectedTotal = 0;
-      for (const collections of Object.values(expectedDemographics)) {
-        for (const collection of Object.keys(collections)) {
-          expectedTotal++;
-          expect(
-            data.find(({ attributes }) => (attributes as unknown as DemographicDto).collection === collection)
-          ).not.toBeNull();
-        }
-      }
-
-      expect(data.length).toEqual(expectedTotal);
-    });
-
     it("should include demographic entries", async () => {
       const { id: demographicId, uuid } = await DemographicFactory.forProjectReportJobs.create({
         demographicalId: projectReportId
@@ -85,13 +60,9 @@ describe("DemographicProcessor", () => {
 
       await processor.addDtos(document);
       const result = document.serialize();
-      const expectedTotal = Object.values(Demographic.COLLECTION_MAPPING[ProjectReport.LARAVEL_TYPE]).reduce(
-        (total, collections) => total + Object.keys(collections).length,
-        0
-      );
 
       const data = result.data as Resource[];
-      expect(data.length).toEqual(expectedTotal);
+      expect(data.length).toEqual(1);
 
       const dto = data.find(({ id }) => id === uuid)?.attributes as unknown as DemographicDto;
       expect(dto).not.toBeNull();

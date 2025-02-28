@@ -5,44 +5,55 @@ import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import {
+  ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
   CONVERGENCE,
   DIRECT,
   DIRECT_OTHER,
   JOBS_PROJECT_COLLECTIONS,
   PAID_OTHER,
   RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS,
   VOLUNTEERS_PROJECT_COLLECTIONS,
   WORKDAYS_PROJECT_COLLECTIONS,
   WORKDAYS_SITE_COLLECTIONS
 } from "@terramatch-microservices/database/constants/demographic-collections";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
-import { pull } from "lodash";
+import { without } from "lodash";
 
 @JsonApiConstants
 export class DemographicCollections {
-  @ApiProperty({ enum: pull(Object.keys(WORKDAYS_PROJECT_COLLECTIONS), DIRECT, CONVERGENCE) })
+  @ApiProperty({ example: WORKDAYS_PROJECT_COLLECTIONS })
+  WORKDAYS_PROJECT: string[];
+
+  @ApiProperty({ example: without(WORKDAYS_PROJECT_COLLECTIONS, DIRECT, CONVERGENCE) })
   WORKDAYS_PROJECT_PPC: string[];
 
   @ApiProperty({ example: PAID_OTHER })
   WORKDAYS_PROJECT_OTHER: string;
 
-  @ApiProperty({ enum: Object.keys(WORKDAYS_SITE_COLLECTIONS) })
+  @ApiProperty({ example: WORKDAYS_SITE_COLLECTIONS })
   WORKDAYS_SITE: string[];
 
   @ApiProperty({ example: PAID_OTHER })
   WORKDAYS_SITE_OTHER: string;
 
-  @ApiProperty({ enum: Object.keys(RESTORATION_PARTNERS_PROJECT_COLLECTIONS) })
+  @ApiProperty({ example: RESTORATION_PARTNERS_PROJECT_COLLECTIONS })
   RESTORATION_PARTNERS_PROJECT: string[];
 
   @ApiProperty({ example: DIRECT_OTHER })
   RESTORATION_PARTNERS_PROJECT_OTHER: string;
 
-  @ApiProperty({ enum: Object.keys(JOBS_PROJECT_COLLECTIONS) })
+  @ApiProperty({ example: JOBS_PROJECT_COLLECTIONS })
   JOBS_PROJECT: string[];
 
-  @ApiProperty({ enum: Object.keys(VOLUNTEERS_PROJECT_COLLECTIONS) })
+  @ApiProperty({ example: VOLUNTEERS_PROJECT_COLLECTIONS })
   VOLUNTEERS_PROJECT: string[];
+
+  @ApiProperty({ example: ALL_BENEFICIARIES_PROJECT_COLLECTIONS })
+  BENEFICIARIES_PROJECT_ALL: string[];
+
+  @ApiProperty({ example: TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS })
+  BENEFICIARIES_PROJECT_TRAINING: string[];
 }
 
 export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> {
@@ -62,7 +73,6 @@ export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> 
 type DemographicDtoAdditionalProps = {
   entityType: EntityType;
   entityUuid: string;
-  collectionTitle: string;
 };
 
 @JsonApiDto({ type: "demographics" })
@@ -83,9 +93,6 @@ export class DemographicDto extends AssociationDto<DemographicDto> {
 
   @ApiProperty()
   collection: string;
-
-  @ApiProperty({ description: "The English human-readable title for this collection" })
-  collectionTitle: string;
 
   @ApiProperty({ type: () => DemographicEntryDto, isArray: true })
   entries: DemographicEntryDto[];

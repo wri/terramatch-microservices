@@ -152,60 +152,8 @@ export class ProjectReport extends Model<ProjectReport> {
   volunteersWorkDescription: string | null;
 
   @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiaries: number | null;
-
-  @AllowNull
   @Column(TEXT)
   beneficiariesDescription: string | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesLargeScale: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesSmallholder: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -214,10 +162,6 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   beneficiariesIncomeIncreaseDescription: string | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesSkillsKnowledgeIncrease: number | null;
 
   @AllowNull
   @Column(TEXT)

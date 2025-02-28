@@ -24,7 +24,7 @@ export class DelayedJobsController {
     operationId: "listDelayedJobs",
     description: "Retrieve a list of all delayed jobs."
   })
-  @JsonApiResponse({ data: { type: DelayedJobDto } })
+  @JsonApiResponse(DelayedJobDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async getRunningJobs(@Request() { authenticatedUserId }): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
@@ -42,7 +42,7 @@ export class DelayedJobsController {
       })
     );
 
-    const document = buildJsonApi();
+    const document = buildJsonApi(DelayedJobDto);
     jobsWithEntityNames.forEach(job => {
       document.addData(job.uuid, new DelayedJobDto(job));
     });
@@ -53,7 +53,7 @@ export class DelayedJobsController {
     operationId: "delayedJobsFind",
     description: "Get the current status and potentially payload or error from a delayed job."
   })
-  @JsonApiResponse({ data: { type: DelayedJobDto } })
+  @JsonApiResponse(DelayedJobDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Job with that UUID not found." })
   // Note: Since jobs are very generic and we don't track which resources are related to a given
@@ -63,7 +63,7 @@ export class DelayedJobsController {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();
 
-    return buildJsonApi().addData(pathUUID, new DelayedJobDto(job)).document.serialize();
+    return buildJsonApi(DelayedJobDto).addData(pathUUID, new DelayedJobDto(job)).document.serialize();
   }
 
   @Patch("bulk-update")
@@ -72,7 +72,7 @@ export class DelayedJobsController {
     summary: "Bulk update jobs to modify isAcknowledged for specified job IDs",
     description: `Accepts a JSON:API-compliant payload to bulk update jobs, allowing each job's isAcknowledged attribute to be set to true or false.`
   })
-  @JsonApiResponse({ data: { type: DelayedJobDto } })
+  @JsonApiResponse(DelayedJobDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid payload or IDs provided." })
   @ExceptionResponse(NotFoundException, {
@@ -110,7 +110,7 @@ export class DelayedJobsController {
 
     const updatedJobs = await Promise.all(updatePromises);
 
-    const jsonApiBuilder = buildJsonApi();
+    const jsonApiBuilder = buildJsonApi(DelayedJobDto);
     updatedJobs.forEach(job => {
       jsonApiBuilder.addData(job.uuid, new DelayedJobDto(job));
     });

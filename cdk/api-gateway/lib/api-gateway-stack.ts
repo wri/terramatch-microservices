@@ -17,7 +17,7 @@ import { Stack, StackProps } from "aws-cdk-lib";
 const V3_SERVICES = {
   "user-service": ["auth", "users"],
   "job-service": ["jobs"],
-  "entity-service": ["trees"],
+  "entity-service": ["entities", "trees"],
   "research-service": ["research"],
   "unified-database-service": ["unified-database"]
 };
@@ -92,6 +92,7 @@ export class ApiGatewayStack extends Stack {
       if (!enabledServices.includes(service)) continue;
 
       this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, { service });
+      this.addProxy(`API Images [${service}]`, `/${service}/images/V2/`, { service });
 
       for (const namespace of namespaces) {
         this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });
@@ -103,6 +104,7 @@ export class ApiGatewayStack extends Stack {
     // consumers (like Greenhouse and the web TM frontend) as we migrate to this API Gateway.
     this.addProxy("PHP Monolith", "/api/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
     this.addProxy("PHP OpenAPI Docs", "/documentation/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
+    this.addProxy("PHP Images V2", "/images/V2/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
   }
 
   private addProxy(name: string, path: string, { targetHost, service }: AddProxyProps) {

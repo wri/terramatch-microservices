@@ -34,7 +34,7 @@ export const USER_RESPONSE_SHAPE = {
       }
     ]
   },
-  included: [{ type: OrganisationDto }]
+  included: [OrganisationDto]
 };
 
 @Controller("users/v3/users")
@@ -57,7 +57,7 @@ export class UsersController {
 
     await this.policyService.authorize("read", user);
 
-    return (await addUserResource(buildJsonApi(), user)).serialize();
+    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
   }
 
   @Patch(":uuid")
@@ -87,6 +87,19 @@ export class UsersController {
       await user.save();
     }
 
-    return (await addUserResource(buildJsonApi(), user)).serialize();
+    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
+  }
+
+  private async addUserResource(document: DocumentBuilder, user: User) {
+    const userResource = document.addData(user.uuid, new UserDto(user, await user.myFrameworks()));
+
+    const org = await user.primaryOrganisation();
+    if (org != null) {
+      const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
+      const userStatus = org.OrganisationUser?.status ?? "na";
+      userResource.relateTo("org", orgResource, { userStatus });
+    }
+
+    return document;
   }
 }

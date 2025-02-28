@@ -8,6 +8,7 @@ import { PolicyService } from "./policies/policy.service";
 import { TMLogService } from "./util/tm-log.service";
 import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
+import { MediaService } from "./media/media.service";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
 
 @Module({
@@ -30,8 +31,9 @@ import { TemplateService } from "@terramatch-microservices/common/email/template
     TMLogService,
     EmailService,
     LocalizationService,
+    MediaService,
     TemplateService
   ],
-  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, TemplateService]
+  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, MediaService, TemplateService]
 })
 export class CommonModule {}

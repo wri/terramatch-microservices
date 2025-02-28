@@ -8,23 +8,48 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
-import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { APPROVED, RESTORATION_IN_PROGRESS, SiteStatus, UpdateRequestStatus } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
+import { FrameworkKey } from "../constants/framework";
+import { Framework } from "./framework.entity";
+import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 // Incomplete stub
+@Scopes(() => ({
+  approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
+  project: (id: number) => ({ where: { projectId: id } })
+}))
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
-  static readonly APPROVED_STATUSES = ["approved", "restoration-in-progress"];
+  static readonly APPROVED_STATUSES = [APPROVED, RESTORATION_IN_PROGRESS];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
+
+  static approved() {
+    return chainScope(this, "approved") as typeof Site;
+  }
+
+  static project(id: number) {
+    return chainScope(this, "project", id) as typeof Site;
+  }
+
+  static approvedIdsSubquery(projectId: number) {
+    return Subquery.select(Site, "id").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
+  }
+
+  static approvedUuidsSubquery(projectId: number) {
+    return Subquery.select(Site, "uuid").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -35,7 +60,7 @@ export class Site extends Model<Site> {
   name: string;
 
   @Column(STRING)
-  status: EntityStatus;
+  status: SiteStatus;
 
   @AllowNull
   @Column(STRING)
@@ -44,6 +69,17 @@ export class Site extends Model<Site> {
   @Index
   @Column(UUID)
   uuid: string;
+
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
+
+  @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
+  framework: Framework | null;
+
+  get frameworkUuid() {
+    return this.framework?.uuid;
+  }
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
@@ -79,22 +115,12 @@ export class Site extends Model<Site> {
   })
   nonTrees: TreeSpecies[] | null;
 
-  async loadNonTrees() {
-    this.nonTrees ??= await this.$get("nonTrees");
-    return this.nonTrees;
-  }
-
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
     scope: { seedableType: Site.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
-
-  async loadSeedsPlanted() {
-    this.seedsPlanted ??= await this.$get("seedsPlanted");
-    return this.seedsPlanted;
-  }
 
   @HasMany(() => SiteReport)
   reports: SiteReport[] | null;
@@ -106,9 +132,4 @@ export class Site extends Model<Site> {
 
   @HasMany(() => SitePolygon, { foreignKey: "siteUuid", sourceKey: "uuid" })
   sitePolygons: SitePolygon[] | null;
-
-  async loadSitePolygons() {
-    this.sitePolygons ??= await this.$get("sitePolygons");
-    return this.sitePolygons;
-  }
 }

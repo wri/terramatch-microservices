@@ -1,8 +1,7 @@
 import { PolicyService } from "./policy.service";
 import { Test, TestingModule } from "@nestjs/testing";
-import { mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { UnauthorizedException } from "@nestjs/common";
 
 describe("SitePolygonPolicy", () => {
   let service: PolicyService;
@@ -12,7 +11,9 @@ describe("SitePolygonPolicy", () => {
       providers: [PolicyService]
     }).compile();
 
-    service = module.get<PolicyService>(PolicyService);
+    service = await module.resolve<PolicyService>(PolicyService);
+
+    mockUserId(123);
   });
 
   afterEach(async () => {
@@ -20,14 +21,12 @@ describe("SitePolygonPolicy", () => {
   });
 
   it("allows reading any polygon with polygons-manage", async () => {
-    mockUserId(123);
     mockPermissions("polygons-manage");
-    await expect(service.authorize("readAll", SitePolygon)).resolves.toBeUndefined();
+    await expectCan(service, "readAll", SitePolygon);
   });
 
   it("disallows reading polygons without polygons-manage", async () => {
-    mockUserId(123);
     mockPermissions();
-    await expect(service.authorize("readAll", SitePolygon)).rejects.toThrow(UnauthorizedException);
+    await expectCannot(service, "readAll", SitePolygon);
   });
 });

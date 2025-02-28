@@ -3,6 +3,12 @@ import { ProjectReport, SiteReport, Demographic } from "../entities";
 import { ProjectReportFactory } from "./project-report.factory";
 import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
+import {
+  JOBS_PROJECT_COLLECTIONS,
+  RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
+  WORKDAYS_PROJECT_COLLECTIONS,
+  WORKDAYS_SITE_COLLECTIONS
+} from "../constants/demographic-collections";
 
 const defaultAttributesFactory = async () => ({
   uuid: crypto.randomUUID(),
@@ -15,23 +21,31 @@ export const DemographicFactory = {
     ...(await defaultAttributesFactory()),
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
-    type: "workdays",
-    collection: faker.helpers.arrayElement(ProjectReport.WORKDAY_COLLECTIONS)
+    type: Demographic.WORKDAYS_TYPE,
+    collection: faker.helpers.arrayElement(Object.keys(WORKDAYS_PROJECT_COLLECTIONS))
   })),
 
   forSiteReportWorkday: FactoryGirl.define(Demographic, async () => ({
     ...(await defaultAttributesFactory()),
     demographicalType: SiteReport.LARAVEL_TYPE,
     demographicalId: SiteReportFactory.associate("id"),
-    type: "workdays",
-    collection: faker.helpers.arrayElement(SiteReport.WORKDAY_COLLECTIONS)
+    type: Demographic.WORKDAYS_TYPE,
+    collection: faker.helpers.arrayElement(Object.keys(WORKDAYS_SITE_COLLECTIONS))
   })),
 
   forProjectReportRestorationPartner: FactoryGirl.define(Demographic, async () => ({
     ...(await defaultAttributesFactory()),
     demographicalType: ProjectReport.LARAVEL_TYPE,
     demographicalId: ProjectReportFactory.associate("id"),
-    type: "restoration-partners",
-    collection: faker.helpers.arrayElement(ProjectReport.RESTORATION_PARTNER_COLLECTIONS)
+    type: Demographic.RESTORATION_PARTNERS_TYPE,
+    collection: faker.helpers.arrayElement(Object.keys(RESTORATION_PARTNERS_PROJECT_COLLECTIONS))
+  })),
+
+  forProjectReportJobs: FactoryGirl.define(Demographic, async () => ({
+    ...(await defaultAttributesFactory()),
+    demographicalType: ProjectReport.LARAVEL_TYPE,
+    demographicalId: ProjectReportFactory.associate("id"),
+    type: Demographic.JOBS_TYPE,
+    collection: faker.helpers.arrayElement(Object.keys(JOBS_PROJECT_COLLECTIONS))
   }))
 };

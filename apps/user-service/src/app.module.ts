@@ -9,12 +9,20 @@ import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
 import { ResetPasswordController } from "./auth/reset-password.controller";
 import { ResetPasswordService } from "./auth/reset-password.service";
+import { VerificationUserController } from "./auth/verification-user.controller";
+import { VerificationUserService } from "./auth/verification-user.service";
 import { UserCreationController } from "./users/user-creation.controller";
 import { UserCreationService } from "./users/user-creation.service";
 
 @Module({
   imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
-  controllers: [LoginController, UsersController, ResetPasswordController, UserCreationController],
+  controllers: [
+    LoginController,
+    UsersController,
+    ResetPasswordController,
+    VerificationUserController,
+    UserCreationController
+  ],
   providers: [
     {
       provide: APP_FILTER,
@@ -22,6 +30,7 @@ import { UserCreationService } from "./users/user-creation.service";
     },
     AuthService,
     ResetPasswordService,
+    VerificationUserService,
     UserCreationService
   ]
 })

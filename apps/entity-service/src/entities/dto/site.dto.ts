@@ -7,7 +7,7 @@ import {
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
-import { Project, Site } from "@terramatch-microservices/database/entities";
+import { Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
@@ -59,15 +59,6 @@ export class SiteLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
-
-  @ApiProperty({ type: Project })
-  project: Project;
-
-  @ApiProperty({
-    nullable: true,
-    description: "The associated project uuid"
-  })
-  projectUuid: string;
 }
 
 export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
@@ -121,9 +112,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true })
   ppcExternalId: number | null;
-
-  @ApiProperty()
-  project: Project;
 
   @ApiProperty({ nullable: true })
   sitingStrategy: string;
@@ -220,4 +208,16 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: false })
   stratificationForHeterogeneity: MediaDto;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project uuid"
+  })
+  projectUuid: string;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project name"
+  })
+  projectName: string | null;
 }

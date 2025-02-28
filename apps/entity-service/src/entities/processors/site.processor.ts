@@ -60,7 +60,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       });
     }
 
-    for (const term of ["name", "projectName"]) {
+    for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
 

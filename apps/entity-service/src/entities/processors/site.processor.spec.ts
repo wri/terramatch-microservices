@@ -13,7 +13,8 @@ import {
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { SiteLightDto } from "../dto/site.dto";
+import { SiteFullDto, SiteLightDto } from "../dto/site.dto";
+import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
@@ -79,6 +80,14 @@ describe("SiteProcessor", () => {
       await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
     });
 
+    it("searches", async () => {
+      const s1 = await SiteFactory.create({ name: "Foo Bar" });
+      const s2 = await SiteFactory.create({ name: "Baz Foo" });
+      await SiteFactory.createMany(3);
+
+      await expectSites([s1, s2], { search: "foo" });
+    });
+
     it("filters", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
@@ -103,6 +112,39 @@ describe("SiteProcessor", () => {
       });
 
       await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
+    });
+
+    it("sorts by name", async () => {
+      const siteA = await SiteFactory.create({ name: "A Site" });
+      const siteB = await SiteFactory.create({ name: "B Site" });
+      const siteC = await SiteFactory.create({ name: "C Site" });
+      await expectSites([siteA, siteB, siteC], { sort: { field: "name" } }, { sortField: "name" });
+      await expectSites([siteC, siteB, siteA], { sort: { field: "name", direction: "DESC" } }, { sortField: "name" });
+    });
+
+    it("sorts by project name", async () => {
+      const projectA = await ProjectFactory.create({ name: "A Project" });
+      const projectB = await ProjectFactory.create({ name: "B Project" });
+      const projectC = await ProjectFactory.create({ name: "C Project" });
+      const siteA = await SiteFactory.create({ projectId: projectA.id });
+      const siteB = await SiteFactory.create({ projectId: projectB.id });
+      const siteC = await SiteFactory.create({ projectId: projectC.id });
+      await expectSites([siteA, siteB, siteC], { sort: { field: "projectName" } }, { sortField: "projectName" });
+      await expectSites(
+        [siteC, siteB, siteA],
+        { sort: { field: "projectName", direction: "DESC" } },
+        { sortField: "projectName" }
+      );
+    });
+
+    it("should not sort by status", async () => {
+      const siteA = await SiteFactory.create({ status: "approved" });
+      const siteB = await SiteFactory.create({ status: "started" });
+      const siteC = await SiteFactory.create({ status: "awaiting-approval" });
+      await expect(processor.findMany({ sort: { field: "status" } } as EntityQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 
@@ -115,27 +157,32 @@ describe("SiteProcessor", () => {
   });
 
   describe("DTOs", () => {
-    it("includes calculated fields in SiteLightDto", async () => {
+    it("SiteLightDto is a light resource", async () => {
+      const { uuid } = await SiteFactory.create();
+      const site = await processor.findOne(uuid);
+      const document = buildJsonApi(SiteLightDto, { forceDataArray: true });
+      await processor.addLightDto(document, site);
+      const attributes = document.serialize().data[0].attributes as SiteLightDto;
+      expect(attributes).toMatchObject({
+        uuid,
+        lightResource: true
+      });
+    });
+    it("includes calculated fields in SiteFullDto", async () => {
       const project = await ProjectFactory.create();
 
       const { uuid } = await SiteFactory.create({
         projectId: project.id
       });
 
-      const { models } = await processor.findMany(
-        {
-          field: "name"
-        },
-        userId,
-        ["sites-read"]
-      );
-      const document = buildJsonApi(SiteLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, models[0]);
-      const attributes = document.serialize().data[0].attributes as SiteLightDto;
+      const site = await processor.findOne(uuid);
+      const document = buildJsonApi(SiteFullDto, { forceDataArray: true });
+      await processor.addFullDto(document, site);
+      const attributes = document.serialize().data[0].attributes as SiteFullDto;
       expect(attributes).toMatchObject({
         uuid,
-        lightResource: true,
-        projectName: project.name
+        lightResource: false,
+        projectUuid: project.uuid
       });
     });
   });

@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, literal, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -22,6 +22,7 @@ import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -43,33 +44,11 @@ export class Site extends Model<Site> {
   }
 
   static approvedIdsSubquery(projectId: number) {
-    const attributes = Site.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = Site.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-    return literal(
-      `(SELECT ${attributes.id.field} FROM ${Site.tableName}
-        WHERE ${deletedAt} IS NULL
-        AND ${attributes.projectId.field} = ${sql.escape(projectId)}
-        AND ${attributes.status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
-       )`
-    );
+    return Subquery.select(Site, "id").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
   }
 
   static approvedUuidsSubquery(projectId: number) {
-    const attributes = Site.getAttributes();
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const deletedAt = attributes.deletedAt!.field;
-    const sql = Site.sequelize!;
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-    return literal(
-      `(SELECT ${attributes.uuid.field} FROM ${Site.tableName}
-        WHERE ${deletedAt} IS NULL
-        AND ${attributes.projectId.field} = ${sql.escape(projectId)}
-        AND ${attributes.status.field} IN (${Site.APPROVED_STATUSES.map(s => `"${s}"`).join(",")})
-       )`
-    );
+    return Subquery.select(Site, "uuid").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
   }
 
   @PrimaryKey

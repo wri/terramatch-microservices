@@ -21,16 +21,16 @@ import * as Sentry from "@sentry/node";
 import { SlackService } from "nestjs-slack";
 
 export const AIRTABLE_ENTITIES = {
-  application: ApplicationEntity,
-  demographic: DemographicEntity,
-  "demographic-entry": DemographicEntryEntity,
-  nursery: NurseryEntity,
-  "nursery-report": NurseryReportEntity,
-  organisation: OrganisationEntity,
-  project: ProjectEntity,
-  "project-report": ProjectReportEntity,
-  site: SiteEntity,
-  "site-report": SiteReportEntity,
+  applications: ApplicationEntity,
+  demographics: DemographicEntity,
+  "demographic-entries": DemographicEntryEntity,
+  nurseries: NurseryEntity,
+  "nursery-reports": NurseryReportEntity,
+  organisations: OrganisationEntity,
+  projects: ProjectEntity,
+  "project-reports": ProjectReportEntity,
+  sites: SiteEntity,
+  "site-reports": SiteReportEntity,
   "tree-species": TreeSpeciesEntity
 };
 

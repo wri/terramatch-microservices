@@ -58,7 +58,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
-      } else {
+      } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
@@ -74,7 +74,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 
-    for (const term of ["country", "status", "updateRequestStatus"]) {
+    for (const term of ["country", "status", "updateRequestStatus", "frameworkKey"]) {
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
     if (query.search != null) {
@@ -127,7 +127,9 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       treesPlantedCount,
       seedsPlantedCount,
       treesRestoredPpc:
-        regeneratedTreesCount + (treesPlantedCount + seedsPlantedCount) * ((project.survivalRate ?? 0) / 100),
+        regeneratedTreesCount +
+        (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
+          (seedsPlantedCount * (project.directSeedingSurvivalRate ?? 0)) / 100),
 
       totalHectaresRestoredSum:
         (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0,
@@ -195,13 +197,19 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
   }
 
   protected async getTotalJobs(projectId: number) {
-    const aggregates: Aggregate<ProjectReport>[] = [
-      { func: "SUM", attr: "ftTotal" },
-      { func: "SUM", attr: "ptTotal" }
-    ];
-    const { ftTotal, ptTotal } = await aggregateColumns(ProjectReport.approved().project(projectId), aggregates);
-
-    return ftTotal + ptTotal;
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.in]: Demographic.idsSubquery(
+              ProjectReport.approvedIdsSubquery(projectId),
+              ProjectReport.LARAVEL_TYPE,
+              Demographic.JOBS_TYPE
+            )
+          }
+        }
+      })) ?? 0
+    );
   }
 
   protected async getTotalOverdueReports(projectId: number) {

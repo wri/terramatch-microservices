@@ -60,13 +60,6 @@ describe("UserCreationController", () => {
     await expect(controller.create(request)).rejects.toThrow(NotFoundException);
   });
 
-  it("should throw NotFoundException if Role is not found", async () => {
-    const request = new UserNewRequest();
-    userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Role not found"));
-
-    await expect(controller.create(request)).rejects.toThrow(NotFoundException);
-  });
-
   it("should return a error because body localization is not found", async () => {
     const request = new UserNewRequest();
     userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Localization body not found"));
@@ -93,5 +86,12 @@ describe("UserCreationController", () => {
     userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Localization CTA not found"));
 
     await expect(controller.create(request)).rejects.toThrow(NotFoundException);
+  });
+
+  it("should return a error because some error happen", async () => {
+    const request = new UserNewRequest();
+    userCreationService.createNewUser.mockRejectedValue(null);
+
+    await expect(controller.create(request)).rejects.toBeNull();
   });
 });

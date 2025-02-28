@@ -74,9 +74,9 @@ export class UserCreationService {
     try {
       const hashPassword = await bcrypt.hash(request.password, 10);
       const callbackUrl = request.callbackUrl;
-      const requestUser = omit(request, ["callbackUrl", "role", "password"]);
+      const newUser = omit(request, ["callbackUrl", "role", "password"]);
 
-      const user = await User.create({ ...requestUser, uuid: crypto.randomUUID(), password: hashPassword });
+      const user = await User.create({ ...newUser, uuid: crypto.randomUUID(), password: hashPassword });
 
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },

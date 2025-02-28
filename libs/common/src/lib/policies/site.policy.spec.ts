@@ -57,6 +57,7 @@ describe("SitePolicy", () => {
     const p3 = await ProjectFactory.create();
     const p4 = await ProjectFactory.create();
 
+    await ProjectUserFactory.create({ userId: user.id, projectId: p1.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
 

@@ -112,8 +112,9 @@ describe("UserCreationService", () => {
     expect(result).toBeDefined();
   });
 
-  it("should generate a error because role not exist", async () => {
+  it("should generate a error because user already exist", async () => {
     const user = await UserFactory.create();
+    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
 
     const localizationBody = await LocalizationKeyFactory.create({
@@ -139,6 +140,38 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    expect(service.createNewUser(userNewRequest)).rejects.toThrow(new NotFoundException("Role not found"));
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(new NotFoundException("User already exist"));
+  });
+
+  it("should generate a error because role not exist", async () => {
+    const user = await UserFactory.create();
+    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(null));
+    const userNewRequest = getRequest(user.emailAddress, "project-developer");
+
+    const localizationBody = await LocalizationKeyFactory.create({
+      key: "user-verification.body",
+      value: "Follow the below link to verify your email address."
+    });
+    const localizationSubject = await LocalizationKeyFactory.create({
+      key: "user-verification.subject",
+      value: "Verify Your Email Address"
+    });
+
+    const localizationTitle = await LocalizationKeyFactory.create({
+      key: "user-verification.title",
+      value: "VERIFY YOUR EMAIL ADDRESS"
+    });
+
+    const localizationCta = await LocalizationKeyFactory.create({
+      key: "user-verification.cta",
+      value: "VERIFY EMAIL ADDRESS"
+    });
+
+    localizationService.getLocalizationKeys.mockReturnValue(
+      Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
+    );
+
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(new NotFoundException("Role not found"));
   });
 });

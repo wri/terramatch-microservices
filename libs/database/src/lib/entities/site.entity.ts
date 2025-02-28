@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -108,8 +108,12 @@ export class Site extends Model<Site> {
   @Column(TEXT)
   descriptionSitingStrategy: string | null;
 
+  get projectUuid() {
+    return this.project?.uuid;
+  }
+
   @AllowNull
-  @Column(INTEGER.UNSIGNED)
+  @Column(DECIMAL(15, 1))
   hectaresToRestoreGoal: number | null;
 
   @AllowNull

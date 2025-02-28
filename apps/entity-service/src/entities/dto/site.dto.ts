@@ -11,7 +11,6 @@ import { Project, Site } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
-// TODO: THIS IS A STUB!
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
@@ -21,6 +20,7 @@ export class SiteLightDto extends EntityDto {
       this.populate(SiteLightDto, {
         ...pickApiProperties(site, SiteLightDto),
         lightResource: true,
+        // these two are untyped and marked optional in the base model.
         createdAt: site.createdAt as Date,
         updatedAt: site.createdAt as Date
       });
@@ -54,17 +54,20 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty({ nullable: true })
   name: string | null;
 
-  @ApiProperty({
-    nullable: true,
-    description: "The associated project name"
-  })
-  projectName: string | null;
-
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ type: Project })
+  project: Project;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project uuid"
+  })
+  projectUuid: string;
 }
 
 export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
@@ -90,7 +93,7 @@ export class SiteFullDto extends SiteLightDto {
   lightResource = false;
 
   @ApiProperty()
-  siteReportsTotal: number;
+  totalSiteReports: number;
 
   @ApiProperty()
   totalHectaresRestoredSum: number;
@@ -111,9 +114,6 @@ export class SiteFullDto extends SiteLightDto {
   regeneratedTreesCount: number;
 
   @ApiProperty()
-  approvedRegeneratedTreesCount: number;
-
-  @ApiProperty()
   combinedWorkdayCount: number;
 
   @ApiProperty()
@@ -122,7 +122,7 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ nullable: true })
   ppcExternalId: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty()
   project: Project;
 
   @ApiProperty({ nullable: true })

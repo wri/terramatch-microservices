@@ -25,10 +25,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async findOne(uuid: string) {
     return await Site.findOne({
       where: { uuid },
-      include: [
-        { association: "framework" },
-        { association: "project", attributes: ["name"], include: [{ association: "organisation" }] }
-      ]
+      include: [{ association: "framework" }, { association: "project", attributes: ["uuid"] }]
     });
   }
 
@@ -39,7 +36,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     ]);
 
     if (query.sort != null) {
-      if (["name"].includes(query.sort.field)) {
+      if (query.sort.field === "name") {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
         builder.order(["project", "name", query.sort.direction ?? "ASC"]);
@@ -66,8 +63,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     for (const term of ["name", "projectName"]) {
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
+
     if (query.search != null) {
-      builder.where({ name: { [Op.like]: `%${query.search}%` } });
+      builder.where({
+        [Op.or]: [{ name: { [Op.like]: `%${query.search}%` } }, { $projectName$: { [Op.like]: `%${query.search}%` } }]
+      });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
@@ -81,29 +81,24 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
-    const hasBeenSubmittedSiteReports = await SiteReport.hasBeenSubmitted()
-      .sites([siteId])
-      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
-
     const approvedSiteReports = await SiteReport.approved()
       .sites([siteId])
       .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
 
-    const regeneratedTreesCount = sumBy(hasBeenSubmittedSiteReports, "numTreesRegenerating");
-    const approvedRegeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
+    const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
     const props: AdditionalSiteFullProps = {
       totalHectaresRestoredSum: (await SitePolygon.approved().sites([site.uuid]).sum("calcArea")) ?? 0,
       workdayCount: (await this.getWorkdayCount(siteId)) ?? 0,
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),
-      siteReportsTotal: await this.getTotalSiteReports(siteId),
+      totalSiteReports: await this.getTotalSiteReports(siteId),
       seedsPlantedCount,
       overdueSiteReportsTotal: await this.getTotalOverdueReports(siteId),
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
       treesPlantedCount,
       regeneratedTreesCount,
-      approvedRegeneratedTreesCount,
+      // projectUuid: site.project.uuid,
 
       ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };
@@ -128,9 +123,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return (
       (await DemographicEntry.gender().sum("amount", {
         where: {
-          demographicId: {
-            [Op.or]: [{ [Op.in]: siteReportWorkdays }]
-          }
+          demographicId: { [Op.in]: siteReportWorkdays }
         }
       })) ?? 0
     );

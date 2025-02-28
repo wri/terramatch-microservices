@@ -1,4 +1,4 @@
-import { Site, User } from "@terramatch-microservices/database/entities";
+import { Project, Site, User } from "@terramatch-microservices/database/entities";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
@@ -18,7 +18,13 @@ export class SitePolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectIds = user.projects.map(({ id }) => id);
+        const projectIds = [
+          ...(user.organisationId === null
+            ? []
+            : await Project.findAll({ where: { organisationId: user.organisationId }, attributes: ["id"] })
+          ).map(({ id }) => id),
+          ...user.projects.map(({ id }) => id)
+        ];
         if (projectIds.length > 0) {
           this.builder.can("read", Site, { projectId: { $in: projectIds } });
         }

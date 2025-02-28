@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import * as Handlebars from "handlebars";
 import * as fs from "fs";
 import * as path from "path";
+import { TemplateParams } from "./TemplateParams";
 
 @Injectable()
 export class TemplateService {
@@ -18,15 +19,15 @@ export class TemplateService {
     return Handlebars.compile(templateSource);
   }
 
-  render(data: any): string {
+  render(data: TemplateParams): string {
     const params = {
-      backend_url: this.configService.get<string>("APP_BACKEND_URL"),
+      ...data,
+      backendUrl: this.configService.get<string>("APP_BACKEND_URL"),
       banner: null,
-      year: new Date().getFullYear(),
-      monitoring: null,
       invite: null,
-      transactional: null,
-      ...data
+      monitoring: null,
+      transactional: data.transactional || null,
+      year: new Date().getFullYear()
     };
     return this.template(params);
   }

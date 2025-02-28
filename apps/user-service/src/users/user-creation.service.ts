@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, LoggerService } from "@nestjs/common";
+import { Injectable, NotFoundException, LoggerService, UnprocessableEntityException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
@@ -66,33 +66,34 @@ export class UserCreationService {
       throw new NotFoundException("Role not found");
     }
 
+    const userExist = await User.findOne({ where: { emailAddress: request.emailAddress } });
+    if (userExist != null) {
+      throw new UnprocessableEntityException("User already exist");
+    }
+
     try {
       const hashPassword = await bcrypt.hash(request.password, 10);
       const callbackUrl = request.callbackUrl;
       const requestUser = omit(request, ["callbackUrl", "role", "password"]);
-      const [user] = await User.findOrCreate({
-        where: { emailAddress: request.emailAddress },
-        defaults: { ...requestUser, uuid: crypto.randomUUID(), password: hashPassword }
-      });
+
+      const user = await User.create({ ...requestUser, uuid: crypto.randomUUID(), password: hashPassword });
 
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE }
       });
 
-      await user.reload();
-
       const token = await this.jwtService.signAsync({ userId: user.uuid });
-      const body = await this.formatEmail(
-        user.locale,
+      await this.saveUserVerification(user.id, token);
+      await this.sendEmailVerification(
+        user,
         token,
+        subjectLocalization.value,
         bodyLocalization.value,
         titleLocalization.value,
         ctaLocalization.value,
         callbackUrl
       );
-      await this.saveUserVerification(user.id, token);
-      await this.sendEmailVerification(user, subjectLocalization.value, body);
       return user;
     } catch (error) {
       this.logger.error(error);
@@ -118,7 +119,23 @@ export class UserCreationService {
     return this.templateService.render(emailData);
   }
 
-  private async sendEmailVerification(user: User, subject: string, body: string) {
+  private async sendEmailVerification(
+    user: User,
+    token: string,
+    subject: string,
+    bodyLocalization: string,
+    titleLocalization: string,
+    ctaLocalization: string,
+    callbackUrl: string
+  ) {
+    const body = await this.formatEmail(
+      user.locale,
+      token,
+      bodyLocalization,
+      titleLocalization,
+      ctaLocalization,
+      callbackUrl
+    );
     await this.emailService.sendEmail(user.emailAddress, subject, body);
   }
 

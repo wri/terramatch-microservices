@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { Role, User } from "@terramatch-microservices/database/entities";
+import { ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
@@ -92,7 +92,10 @@ describe("UserCreationService", () => {
       value: "VERIFY EMAIL ADDRESS"
     });
 
+    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
+    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
+    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     localizationService.getLocalizationKeys.mockReturnValue(
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])

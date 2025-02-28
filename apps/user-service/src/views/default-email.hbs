@@ -24,7 +24,7 @@
                     <td width="32"></td>
                     <td width="436" style="font-family: sans-serif; font-size: 22px; color: #000000;">
                       <img
-                        src="{{backend_url}}/images/email_logo.gif"
+                        src="{{backendUrl}}/images/email_logo.gif"
                         width="118"
                         height="32"
                         style="display: block; border: 0;"
@@ -46,7 +46,7 @@
               <tr>
                 <td>
                   <img
-                    src="{{backend_url}}/images/email_banner_{{banner}}_1.jpg"
+                    src="{{backendUrl}}/images/email_banner_{{banner}}_1.jpg"
                     width="500"
                     height="170"
                     style="display: block; border: 0;"
@@ -147,7 +147,7 @@
                           {{else}}
                             You are receiving this email because you have an account with TerraMatch. This is not a
                             required email.
-                            <a href="{!! $backend_url !!}{!! $unsubscribe !!}" style="color: #6E6E6E;">Click here</a>
+                            <a href="{{{backendUrl}}}{{{unsubscribe}}}" style="color: #6E6E6E;">Click here</a>
                             to unsubscribe.
                             <br /><br />
                           {{/if}}

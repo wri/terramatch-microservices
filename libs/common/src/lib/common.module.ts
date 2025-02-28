@@ -9,7 +9,7 @@ import { TMLogService } from "./util/tm-log.service";
 import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
-import { TemplateService } from "@terramatch-microservices/common/email/template.service";
+import { TemplateService } from "./email/template.service";
 
 @Module({
   imports: [

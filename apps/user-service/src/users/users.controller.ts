@@ -16,7 +16,6 @@ import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateBodyDto } from "./dto/user-update.dto";
-import { addUserResource } from "./util";
 
 export const USER_RESPONSE_SHAPE = {
   data: {

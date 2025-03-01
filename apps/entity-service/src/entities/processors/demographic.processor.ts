@@ -26,7 +26,7 @@ export class DemographicProcessor<EntityModelType extends EntityModel> extends A
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     for (const demographic of demographics) {
-      document.addData(demographic.uuid, new DemographicDto(demographic, { ...additionalProps }));
+      document.addData(demographic.uuid, new DemographicDto(demographic, additionalProps));
     }
   }
 }

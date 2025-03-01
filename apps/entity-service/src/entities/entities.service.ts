@@ -14,6 +14,7 @@ import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { SeedingProcessor } from "./processors/seeding.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -25,7 +26,8 @@ export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
 
 const ASSOCIATION_PROCESSORS = {
-  demographics: DemographicProcessor
+  demographics: DemographicProcessor,
+  seedings: SeedingProcessor
 };
 
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;

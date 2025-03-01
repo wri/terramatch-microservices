@@ -15,7 +15,7 @@ import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from ".
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import { sumBy } from "lodash";
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
@@ -30,11 +30,24 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
-    const builder = await this.entitiesService.buildQuery(Site, query, [
-      { association: "project", attributes: ["name"] },
-      { association: "framework" }
-    ]);
+    const projectAssociation: Includeable = {
+      association: "project",
+      attributes: ["name"]
+    };
+    const frameworkAssociation: Includeable = {
+      association: "framework",
+      attributes: ["name"]
+    };
+    if (query.search != null) {
+      // This is they way that sequelize supports for searching in a joined table
+      projectAssociation.where = { name: { [Op.like]: `%${query.search}%` } };
+      // This is to ensure that the project is not required to be joined (simulating an OR)
+      projectAssociation.required = false;
+    }
 
+    const associations = [projectAssociation, frameworkAssociation];
+
+    const builder = await this.entitiesService.buildQuery(Site, query, associations);
     if (query.sort != null) {
       if (query.sort.field === "name") {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
@@ -66,7 +79,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     if (query.search != null) {
       builder.where({
-        [Op.or]: [{ name: { [Op.like]: `%${query.search}%` } }, { $projectName$: { [Op.like]: `%${query.search}%` } }]
+        name: { [Op.like]: `%${query.search}%` }
       });
     }
 

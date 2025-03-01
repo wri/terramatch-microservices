@@ -4,6 +4,7 @@ import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { LoggerService } from "@nestjs/common";
 import Airtable from "airtable";
+import { UuidModel } from "@terramatch-microservices/database/types/util";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -319,7 +320,6 @@ const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =
     return mapping.include.reduce(mergeInclude, includes);
   }, [] as Include[]);
 
-type UuidModel<T> = Model<T> & { uuid: string };
 export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>
   [
     "uuid",

@@ -15,6 +15,8 @@ import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { SeedingProcessor } from "./processors/seeding.processor";
+import { TreeSpeciesProcessor } from "./processors/tree-species.processor";
+import { UuidModel } from "@terramatch-microservices/database/types/util";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -27,7 +29,8 @@ export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as Processabl
 
 const ASSOCIATION_PROCESSORS = {
   demographics: DemographicProcessor,
-  seedings: SeedingProcessor
+  seedings: SeedingProcessor,
+  treeSpecies: TreeSpeciesProcessor
 };
 
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
@@ -48,7 +51,7 @@ export class EntitiesService {
     return new processorClass(this) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
   }
 
-  createAssociationProcessor<T extends Model<T>, D extends AssociationDto<D>, E extends EntityModel>(
+  createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>, E extends EntityModel>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation

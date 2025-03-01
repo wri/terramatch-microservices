@@ -1,11 +1,11 @@
-import { Model } from "sequelize-typescript";
-import { NotFoundException, Type } from "@nestjs/common";
+import { InternalServerErrorException, NotFoundException, Type } from "@nestjs/common";
 import { AssociationDto } from "../dto/association.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { intersection } from "lodash";
+import { UuidModel } from "@terramatch-microservices/database/types/util";
 
-export abstract class AssociationProcessor<M extends Model<M>, D extends AssociationDto<D>, E extends EntityModel> {
+export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>, E extends EntityModel> {
   abstract readonly DTO: Type<D>;
 
   constructor(
@@ -32,5 +32,16 @@ export abstract class AssociationProcessor<M extends Model<M>, D extends Associa
     return this._baseEntity;
   }
 
-  abstract addDtos(document: DocumentBuilder): Promise<void>;
+  async addDtos(document: DocumentBuilder): Promise<void> {
+    const associations = await this.getAssociations(await this.getBaseEntity());
+
+    const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
+    for (const association of associations) {
+      document.addData(association.uuid, new this.DTO(association, additionalProps));
+    }
+  }
+
+  async getAssociations(baseEntity: E): Promise<M[]> {
+    throw new InternalServerErrorException(`getAssociations not implemented [${this.DTO.name}, ${baseEntity.uuid}]`);
+  }
 }

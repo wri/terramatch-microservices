@@ -13,6 +13,11 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.set("query parser", "extended");
 
+  if (process.env.NODE_ENV === "development") {
+    // CORS is handled by the Api Gateway in AWS
+    app.enableCors();
+  }
+
   const config = new DocumentBuilder()
     .setTitle("TerraMatch Research Service")
     .setDescription("APIs related to needs for the data research team.")

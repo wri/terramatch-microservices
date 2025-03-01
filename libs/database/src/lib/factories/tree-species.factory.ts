@@ -39,11 +39,11 @@ export const TreeSpeciesFactory = {
     collection: "tree-planted"
   })),
 
-  forProjectReportTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({
+  forProjectReportNurserySeedling: FactoryGirl.define(TreeSpecies, async () => ({
     ...(await defaultAttributesFactory()),
     speciesableType: ProjectReport.LARAVEL_TYPE,
     speciesableId: ProjectReportFactory.associate("id"),
-    collection: "tree-planted"
+    collection: "nursery-seedling"
   })),
 
   forSiteTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({

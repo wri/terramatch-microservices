@@ -33,7 +33,7 @@ type ApprovedIdsSubqueryOptions = {
 }))
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
+  static readonly TREE_ASSOCIATIONS = ["nurserySeedlings"];
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
@@ -250,7 +250,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "tree-planted" }
+    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
-  treesPlanted: TreeSpecies[] | null;
+  nurserySeedlings: TreeSpecies[] | null;
 }

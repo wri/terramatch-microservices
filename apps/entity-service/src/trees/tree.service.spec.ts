@@ -68,23 +68,31 @@ describe("TreeService", () => {
 
   describe("getEstablishmentTrees", () => {
     it("should return establishment trees", async () => {
-      const project = await ProjectFactory.create();
-      const projectReport = await ProjectReportFactory.create({ projectId: project.id });
-      const site = await SiteFactory.create({ projectId: project.id });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
+      const tfProjectReport = await ProjectReportFactory.create({ projectId: tfProject.id, frameworkKey: "terrafund" });
+      const site = await SiteFactory.create({ projectId: tfProject.id });
       const siteReport = await SiteReportFactory.create({ siteId: site.id });
-      const nursery = await NurseryFactory.create({ projectId: project.id });
+      const nursery = await NurseryFactory.create({ projectId: tfProject.id });
       const nurseryReport = await NurseryReportFactory.create({ nurseryId: nursery.id });
 
-      const projectTreesPlanted = (
-        await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: project.id })
+      const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
+      const ppcProjectReport = await ProjectReportFactory.create({ projectId: ppcProject.id, frameworkKey: "ppc" });
+
+      const tfProjectTrees = (
+        await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: tfProject.id })
       )
         .map(({ name }) => name)
         .sort();
       // hidden trees are ignored
       await TreeSpeciesFactory.forProjectTreePlanted.create({
-        speciesableId: project.id,
+        speciesableId: tfProject.id,
         hidden: true
       });
+      const ppcProjectTrees = (
+        await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: ppcProject.id })
+      )
+        .map(({ name }) => name)
+        .sort();
       const siteTreesPlanted = (await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, { speciesableId: site.id }))
         .map(({ name }) => name)
         .sort();
@@ -106,25 +114,31 @@ describe("TreeService", () => {
         hidden: true
       });
 
-      let result = await service.getEstablishmentTrees("project-reports", projectReport.uuid);
+      let result = await service.getEstablishmentTrees("project-reports", tfProjectReport.uuid);
       expect(Object.keys(result).length).toBe(1);
-      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
+      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
+      result = await service.getEstablishmentTrees("project-reports", ppcProjectReport.uuid);
+      expect(Object.keys(result).length).toBe(1);
+      // for PPC Project Reports, we fake out the FE by changing the establishment collection from tree-planted to
+      // nursery seedling. This is to support the strange situation where project report trees are only ever
+      // nursery seedlings in PPC, but the establishment data is always tree-planted.
+      expect(result["nursery-seedling"].sort()).toEqual(ppcProjectTrees);
       result = await service.getEstablishmentTrees("sites", site.uuid);
       expect(Object.keys(result).length).toBe(1);
-      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
+      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
       result = await service.getEstablishmentTrees("nurseries", nursery.uuid);
       expect(Object.keys(result).length).toBe(1);
-      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
+      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
 
       result = await service.getEstablishmentTrees("site-reports", siteReport.uuid);
       expect(Object.keys(result).length).toBe(3);
-      expect(result["tree-planted"].sort()).toEqual(uniq([...siteTreesPlanted, ...projectTreesPlanted]).sort());
+      expect(result["tree-planted"].sort()).toEqual(uniq([...siteTreesPlanted, ...tfProjectTrees]).sort());
       expect(result["non-tree"].sort()).toEqual(siteNonTrees);
       expect(result["seeds"].sort()).toEqual(siteSeedings);
 
       result = await service.getEstablishmentTrees("nursery-reports", nurseryReport.uuid);
       expect(Object.keys(result).length).toBe(2);
-      expect(result["tree-planted"].sort()).toEqual(projectTreesPlanted);
+      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
       expect(result["nursery-seedling"].sort()).toEqual(nurserySeedlings);
     });
 
@@ -168,25 +182,25 @@ describe("TreeService", () => {
           amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
         }
       });
-      const projectReportTreesPlanted = await TreeSpeciesFactory.forProjectReportTreePlanted.createMany(3, {
+      const projectReportTreesPlanted = await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, {
         speciesableId: projectReport1.id
       });
       projectReportTreesPlanted.push(
-        await TreeSpeciesFactory.forProjectReportTreePlanted.create({
+        await TreeSpeciesFactory.forProjectReportNurserySeedling.create({
           speciesableId: projectReport1.id,
           taxonId: "wfo-projectreporttree"
         })
       );
       // hidden trees should be ignored
-      let hidden = await TreeSpeciesFactory.forProjectReportTreePlanted.create({
+      let hidden = await TreeSpeciesFactory.forProjectReportNurserySeedling.create({
         speciesableId: projectReport1.id,
         hidden: true
       });
 
       let result = await service.getPreviousPlanting("project-reports", projectReport2.uuid);
-      expect(Object.keys(result)).toMatchObject(["tree-planted"]);
-      expect(result).toMatchObject({ "tree-planted": projectReportTreesPlanted.reduce(reduceTreeCounts, {}) });
-      expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
+      expect(Object.keys(result)).toMatchObject(["nursery-seedling"]);
+      expect(result).toMatchObject({ "nursery-seedling": projectReportTreesPlanted.reduce(reduceTreeCounts, {}) });
+      expect(Object.keys(result["nursery-seedling"])).not.toContain(hidden.name);
 
       const siteReport1TreesPlanted = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, {
         speciesableId: siteReport1.id

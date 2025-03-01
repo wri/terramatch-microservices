@@ -603,10 +603,10 @@ describe("AirtableEntity", () => {
       });
       allReports.push(ppcReport);
       const ppcSeedlings = (
-        await TreeSpeciesFactory.forProjectReportTreePlanted.createMany(3, { speciesableId: ppcReport.id })
+        await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, { speciesableId: ppcReport.id })
       ).reduce((total, { amount }) => total + amount, 0);
       // make sure hidden is ignored
-      await TreeSpeciesFactory.forProjectReportTreePlanted.create({ speciesableId: ppcReport.id, hidden: true });
+      await TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: ppcReport.id, hidden: true });
 
       // TODO this might start causing problems when Task is implemented in this codebase and we have a factory
       // that's generating real records
@@ -749,7 +749,7 @@ describe("AirtableEntity", () => {
         () => TreeSpeciesFactory.forNurserySeedling.create({ speciesableId: nursery.id }),
         () => TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: nurseryReport.id }),
         () => TreeSpeciesFactory.forProjectTreePlanted.create({ speciesableId: project.id }),
-        () => TreeSpeciesFactory.forProjectReportTreePlanted.create({ speciesableId: projectReport.id }),
+        () => TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: projectReport.id }),
         () => TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id }),
         () => TreeSpeciesFactory.forSiteNonTree.create({ speciesableId: site.id }),
         () => TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport.id }),

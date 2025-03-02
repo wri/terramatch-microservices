@@ -18,6 +18,7 @@ import { NurseryReport } from "./nursery-report.entity";
 import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
+import { FrameworkKey } from "../constants/framework";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -61,6 +62,10 @@ export class Nursery extends Model<Nursery> {
   @AllowNull
   @Column(STRING)
   name: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  frameworkKey: FrameworkKey | null;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)

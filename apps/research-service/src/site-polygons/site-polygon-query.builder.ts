@@ -70,6 +70,8 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
       { model: PolygonGeometry, attributes: ["polygon"], required: true },
       this.siteJoin
     ];
+
+    this.where({ isActive: true });
   }
 
   async excludeTestProjects() {

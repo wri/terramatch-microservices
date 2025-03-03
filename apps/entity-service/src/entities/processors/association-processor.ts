@@ -5,17 +5,36 @@ import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/
 import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 
-export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>, E extends EntityModel> {
+export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
   constructor(
     protected readonly entityType: EntityType,
     protected readonly entityUuid: string,
-    protected readonly entityModelClass: EntityClass<E>
+    protected readonly entityModelClass: EntityClass<EntityModel>
   ) {}
 
-  private _baseEntity: E;
-  async getBaseEntity(): Promise<E> {
+  /**
+   * The AssociationProcessor base class may be extended for more complicated cases, but many of our associations
+   * are simple enough that providing a reference to the DTO class, and a getter of associations based on the
+   * base entity is enough.
+   */
+  static buildSimpleProcessor<M extends UuidModel<M>, D extends AssociationDto<D>>(
+    dtoClass: Type<D>,
+    associationGetter: (entity: EntityModel, entityLaravelType: string) => Promise<M[]>
+  ) {
+    class SimpleProcessor extends AssociationProcessor<M, D> {
+      readonly DTO = dtoClass;
+
+      async getAssociations(entity: EntityModel) {
+        return await associationGetter(entity, this.entityModelClass.LARAVEL_TYPE);
+      }
+    }
+    return SimpleProcessor;
+  }
+
+  private _baseEntity: EntityModel;
+  async getBaseEntity(): Promise<EntityModel> {
     if (this._baseEntity != null) return this._baseEntity;
 
     // Only pull the attributes that are needed by the entity policies.
@@ -24,7 +43,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
       Object.keys(this.entityModelClass.getAttributes())
     );
 
-    this._baseEntity = (await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes })) as E;
+    this._baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
     if (this._baseEntity == null) {
       throw new NotFoundException(`Base entity not found: [${this.entityModelClass.name}, ${this.entityUuid}]`);
     }
@@ -41,7 +60,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     }
   }
 
-  async getAssociations(baseEntity: E): Promise<M[]> {
+  async getAssociations(baseEntity: EntityModel): Promise<M[]> {
     throw new InternalServerErrorException(`getAssociations not implemented [${this.DTO.name}, ${baseEntity.uuid}]`);
   }
 }

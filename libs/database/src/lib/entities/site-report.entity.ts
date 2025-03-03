@@ -62,7 +62,7 @@ export class SiteReport extends Model<SiteReport> {
     return chainScope(this, "dueBefore", date) as typeof SiteReport;
   }
 
-  static approvedIdsSubquery(siteIds: Literal, opts: ApprovedIdsSubqueryOptions = {}) {
+  static approvedIdsSubquery(siteIds: number[] | Literal, opts: ApprovedIdsSubqueryOptions = {}) {
     const builder = Subquery.select(SiteReport, "id").in("siteId", siteIds).in("status", SiteReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);

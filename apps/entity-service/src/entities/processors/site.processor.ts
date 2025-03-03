@@ -105,7 +105,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async addFullDto(document: DocumentBuilder, site: Site): Promise<void> {
     const siteId = site.id;
 
-    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery({ val: siteId });
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
     const seedsPlantedCount = await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount");
     const treesPlantedCount = await TreeSpecies.visible()
       .collection("tree-planted")

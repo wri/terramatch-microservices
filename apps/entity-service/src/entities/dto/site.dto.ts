@@ -59,12 +59,6 @@ export class SiteLightDto extends EntityDto {
   })
   projectName: string | null;
 
-  @ApiProperty({
-    nullable: true,
-    description: "The associated project organisation name"
-  })
-  organisationName: string | null;
-
   @ApiProperty()
   createdAt: Date;
 

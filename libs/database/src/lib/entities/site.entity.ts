@@ -112,6 +112,10 @@ export class Site extends Model<Site> {
     return this.project?.uuid;
   }
 
+  get organisationName() {
+    return this.project?.organisationName;
+  }
+
   @AllowNull
   @Column(DECIMAL(15, 1))
   hectaresToRestoreGoal: number | null;

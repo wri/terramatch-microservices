@@ -55,13 +55,13 @@ describe("TreesController", () => {
       treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": ["Coffee", "Banana"] });
       treeService.getPreviousPlanting.mockResolvedValue(stubData);
       const result = await controller.getEstablishmentData({
-        entity: "site-reports",
+        entity: "siteReports",
         uuid: "fakeuuid"
       });
-      expect(treeService.getEstablishmentTrees).toHaveBeenCalledWith("site-reports", "fakeuuid");
-      expect(treeService.getPreviousPlanting).toHaveBeenCalledWith("site-reports", "fakeuuid");
+      expect(treeService.getEstablishmentTrees).toHaveBeenCalledWith("siteReports", "fakeuuid");
+      expect(treeService.getPreviousPlanting).toHaveBeenCalledWith("siteReports", "fakeuuid");
       const resource = result.data as Resource;
-      expect(resource.id).toBe("site-reports|fakeuuid");
+      expect(resource.id).toBe("siteReports|fakeuuid");
       expect(resource.attributes.establishmentTrees).toMatchObject({ "non-tree": ["Coffee", "Banana"] });
       expect(resource.attributes.previousPlantingCounts).toMatchObject(stubData);
     });

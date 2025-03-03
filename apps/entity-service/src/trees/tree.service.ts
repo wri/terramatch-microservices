@@ -114,7 +114,7 @@ export class TreeService {
         treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name));
       }
       return treeNames;
-    } else if (["sites", "nurseries", "project-reports"].includes(entity)) {
+    } else if (["sites", "nurseries", "projectReports"].includes(entity)) {
       // for these we simply pull the project's trees
       const whereOptions = {
         where: { uuid },

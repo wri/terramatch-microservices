@@ -47,7 +47,7 @@ describe("EntitiesService", () => {
 
   describe("createAssociationProcessor", () => {
     it("throws with an unknown association type", async () => {
-      expect(() => service.createAssociationProcessor("project-reports", "", "bar" as ProcessableAssociation)).toThrow(
+      expect(() => service.createAssociationProcessor("projectReports", "", "bar" as ProcessableAssociation)).toThrow(
         BadRequestException
       );
     });

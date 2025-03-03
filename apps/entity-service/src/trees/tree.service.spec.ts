@@ -114,10 +114,10 @@ describe("TreeService", () => {
         hidden: true
       });
 
-      let result = await service.getEstablishmentTrees("project-reports", tfProjectReport.uuid);
+      let result = await service.getEstablishmentTrees("projectReports", tfProjectReport.uuid);
       expect(Object.keys(result).length).toBe(1);
       expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
-      result = await service.getEstablishmentTrees("project-reports", ppcProjectReport.uuid);
+      result = await service.getEstablishmentTrees("projectReports", ppcProjectReport.uuid);
       expect(Object.keys(result).length).toBe(1);
       // for PPC Project Reports, we fake out the FE by changing the establishment collection from tree-planted to
       // nursery seedling. This is to support the strange situation where project report trees are only ever
@@ -130,13 +130,13 @@ describe("TreeService", () => {
       expect(Object.keys(result).length).toBe(1);
       expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
 
-      result = await service.getEstablishmentTrees("site-reports", siteReport.uuid);
+      result = await service.getEstablishmentTrees("siteReports", siteReport.uuid);
       expect(Object.keys(result).length).toBe(3);
       expect(result["tree-planted"].sort()).toEqual(uniq([...siteTreesPlanted, ...tfProjectTrees]).sort());
       expect(result["non-tree"].sort()).toEqual(siteNonTrees);
       expect(result["seeds"].sort()).toEqual(siteSeedings);
 
-      result = await service.getEstablishmentTrees("nursery-reports", nurseryReport.uuid);
+      result = await service.getEstablishmentTrees("nurseryReports", nurseryReport.uuid);
       expect(Object.keys(result).length).toBe(2);
       expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
       expect(result["nursery-seedling"].sort()).toEqual(nurserySeedlings);
@@ -144,7 +144,7 @@ describe("TreeService", () => {
 
     it("throws with bad inputs to establishment trees", async () => {
       await expect(service.getEstablishmentTrees("sites", "fakeuuid")).rejects.toThrow(NotFoundException);
-      await expect(service.getEstablishmentTrees("site-reports", "fakeuuid")).rejects.toThrow(NotFoundException);
+      await expect(service.getEstablishmentTrees("siteReports", "fakeuuid")).rejects.toThrow(NotFoundException);
       // @ts-expect-error intentionally sneaking in a bad entity type
       await expect(service.getEstablishmentTrees("nothing-burgers", "fakeuuid")).rejects.toThrow(BadRequestException);
     });
@@ -197,7 +197,7 @@ describe("TreeService", () => {
         hidden: true
       });
 
-      let result = await service.getPreviousPlanting("project-reports", projectReport2.uuid);
+      let result = await service.getPreviousPlanting("projectReports", projectReport2.uuid);
       expect(Object.keys(result)).toMatchObject(["nursery-seedling"]);
       expect(result).toMatchObject({ "nursery-seedling": projectReportTreesPlanted.reduce(reduceTreeCounts, {}) });
       expect(Object.keys(result["nursery-seedling"])).not.toContain(hidden.name);
@@ -225,14 +225,14 @@ describe("TreeService", () => {
       const siteReport2Seedings = await SeedingFactory.forSiteReport.createMany(2, { seedableId: siteReport2.id });
       await SeedingFactory.forSiteReport.create({ seedableId: siteReport2.id, hidden: true });
 
-      result = await service.getPreviousPlanting("site-reports", siteReport1.uuid);
+      result = await service.getPreviousPlanting("siteReports", siteReport1.uuid);
       expect(result).toMatchObject({});
-      result = await service.getPreviousPlanting("site-reports", siteReport2.uuid);
+      result = await service.getPreviousPlanting("siteReports", siteReport2.uuid);
       const siteReport1TreesPlantedReduced = siteReport1TreesPlanted.reduce(reduceTreeCounts, {});
       expect(Object.keys(result).sort()).toMatchObject(["seeds", "tree-planted"]);
       expect(result).toMatchObject({ "tree-planted": siteReport1TreesPlantedReduced, seeds: {} });
       expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
-      result = await service.getPreviousPlanting("site-reports", siteReport3.uuid);
+      result = await service.getPreviousPlanting("siteReports", siteReport3.uuid);
       expect(Object.keys(result).sort()).toMatchObject(["non-tree", "seeds", "tree-planted"]);
       expect(result).toMatchObject({
         "tree-planted": siteReport2TreesPlanted.reduce(reduceTreeCounts, siteReport1TreesPlantedReduced),
@@ -241,7 +241,7 @@ describe("TreeService", () => {
       });
       expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
 
-      result = await service.getPreviousPlanting("nursery-reports", nurseryReport2.uuid);
+      result = await service.getPreviousPlanting("nurseryReports", nurseryReport2.uuid);
       expect(result).toMatchObject({});
       const nurseryReportSeedlings = await TreeSpeciesFactory.forNurseryReportSeedling.createMany(5, {
         speciesableId: nurseryReport1.id
@@ -252,7 +252,7 @@ describe("TreeService", () => {
         hidden: true
       });
 
-      result = await service.getPreviousPlanting("nursery-reports", nurseryReport2.uuid);
+      result = await service.getPreviousPlanting("nurseryReports", nurseryReport2.uuid);
       expect(Object.keys(result)).toMatchObject(["nursery-seedling"]);
       expect(result).toMatchObject({ "nursery-seedling": nurseryReportSeedlings.reduce(reduceTreeCounts, {}) });
       expect(Object.keys(result["nursery-seedling"])).not.toContain(hidden.name);
@@ -260,11 +260,11 @@ describe("TreeService", () => {
 
     it("handles bad input to get previous planting with undefined or an exception", async () => {
       expect(await service.getPreviousPlanting("sites", "fakeuuid")).toBeUndefined();
-      await expect(service.getPreviousPlanting("project-reports", "fakeuuid")).rejects.toThrow(NotFoundException);
-      await expect(service.getPreviousPlanting("site-reports", "fakeuuid")).rejects.toThrow(NotFoundException);
-      await expect(service.getPreviousPlanting("nursery-reports", "fakeuuid")).rejects.toThrow(NotFoundException);
+      await expect(service.getPreviousPlanting("projectReports", "fakeuuid")).rejects.toThrow(NotFoundException);
+      await expect(service.getPreviousPlanting("siteReports", "fakeuuid")).rejects.toThrow(NotFoundException);
+      await expect(service.getPreviousPlanting("nurseryReports", "fakeuuid")).rejects.toThrow(NotFoundException);
       // @ts-expect-error intentionally bad report type
-      await expect(service.getPreviousPlanting("nothing-burger-reports", "fakeuuid")).rejects.toThrow(
+      await expect(service.getPreviousPlanting("nothing-burgerReports", "fakeuuid")).rejects.toThrow(
         BadRequestException
       );
     });

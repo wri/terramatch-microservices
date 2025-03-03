@@ -1,4 +1,4 @@
-import { InternalServerErrorException, NotFoundException, Type } from "@nestjs/common";
+import { NotFoundException, Type } from "@nestjs/common";
 import { AssociationDto } from "../dto/association.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
@@ -33,6 +33,8 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     return SimpleProcessor;
   }
 
+  protected abstract getAssociations(baseEntity: EntityModel): Promise<M[]>;
+
   private _baseEntity: EntityModel;
   async getBaseEntity(): Promise<EntityModel> {
     if (this._baseEntity != null) return this._baseEntity;
@@ -58,9 +60,5 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     for (const association of associations) {
       document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
-  }
-
-  async getAssociations(baseEntity: EntityModel): Promise<M[]> {
-    throw new InternalServerErrorException(`getAssociations not implemented [${this.DTO.name}, ${baseEntity.uuid}]`);
   }
 }

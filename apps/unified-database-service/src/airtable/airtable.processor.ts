@@ -23,15 +23,15 @@ import { SlackService } from "nestjs-slack";
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
   demographics: DemographicEntity,
-  "demographic-entries": DemographicEntryEntity,
+  demographicEntries: DemographicEntryEntity,
   nurseries: NurseryEntity,
-  "nursery-reports": NurseryReportEntity,
+  nurseryReports: NurseryReportEntity,
   organisations: OrganisationEntity,
   projects: ProjectEntity,
-  "project-reports": ProjectReportEntity,
+  projectReports: ProjectReportEntity,
   sites: SiteEntity,
-  "site-reports": SiteReportEntity,
-  "tree-species": TreeSpeciesEntity
+  siteReports: SiteReportEntity,
+  treeSpecies: TreeSpeciesEntity
 };
 
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;

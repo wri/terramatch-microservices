@@ -19,7 +19,13 @@ describe("SitePolygonPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows reading any polygon with polygons-manage and frameworks", async () => {
+  it("allows managing any polygon with polygons-manage", async () => {
+    mockUserId(123);
+    mockPermissions("polygons-manage");
+    await expectCan(service, "manage", SitePolygon);
+  });
+
+  it("allows managing polygons within frameworks", async () => {
     const site = await SiteFactory.create({ frameworkKey: "ppc" });
 
     mockUserId(123);
@@ -27,7 +33,6 @@ describe("SitePolygonPolicy", () => {
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
-    await expectCan(service, "readAll", SitePolygon);
     await expectCan(service, "manage", sitePolygon);
   });
 
@@ -35,12 +40,5 @@ describe("SitePolygonPolicy", () => {
     mockUserId(123);
     mockPermissions();
     await expectCannot(service, "readAll", SitePolygon);
-  });
-
-  it("disallows managing polygons with polygons-manage but no frameworks", async () => {
-    mockUserId(123);
-    mockPermissions("polygons-manage");
-    const sitePolygon = new SitePolygon();
-    await expectCannot(service, "manage", sitePolygon);
   });
 });

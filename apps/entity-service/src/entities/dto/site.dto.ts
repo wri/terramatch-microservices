@@ -59,6 +59,12 @@ export class SiteLightDto extends EntityDto {
   })
   projectName: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project organisation name"
+  })
+  organisationName: string | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -220,4 +226,10 @@ export class SiteFullDto extends SiteLightDto {
     description: "The associated project uuid"
   })
   projectUuid: string;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project organisation name"
+  })
+  organisationName: string;
 }

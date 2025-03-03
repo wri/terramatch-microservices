@@ -25,7 +25,14 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async findOne(uuid: string) {
     return await Site.findOne({
       where: { uuid },
-      include: [{ association: "framework" }, { association: "project", attributes: ["uuid", "name"] }]
+      include: [
+        { association: "framework" },
+        {
+          association: "project",
+          attributes: ["uuid", "name"],
+          include: [{ association: "organisation", attributes: ["name"] }]
+        }
+      ]
     });
   }
 

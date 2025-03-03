@@ -106,11 +106,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const siteId = site.id;
 
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
-    const seedsPlantedCount = await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount");
-    const treesPlantedCount = await TreeSpecies.visible()
-      .collection("tree-planted")
-      .siteReports(approvedSiteReportsQuery)
-      .sum("amount");
+    const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const treesPlantedCount =
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
     const approvedSiteReports = await SiteReport.approved()
       .sites([siteId])
@@ -150,11 +148,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       Demographic.WORKDAYS_TYPE
     );
 
-    return await DemographicEntry.gender().sum("amount", {
-      where: {
-        demographicId: { [Op.in]: siteReportWorkdays }
-      }
-    });
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: { [Op.in]: siteReportWorkdays }
+        }
+      })) ?? 0
+    );
   }
 
   protected async getSelfReportedWorkdayCount(siteId: number, useDemographicsCutoff = false) {

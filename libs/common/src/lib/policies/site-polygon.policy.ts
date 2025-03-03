@@ -5,9 +5,10 @@ import { Op } from "sequelize";
 export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("polygons-manage")) {
-      if (this.frameworks.length === 0) {
-        return;
-      }
+      this.builder.can("manage", SitePolygon);
+    }
+
+    if (this.frameworks.length > 0) {
       const sites = await Site.findAll({
         where: {
           frameworkKey: {

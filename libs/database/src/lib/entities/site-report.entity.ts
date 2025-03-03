@@ -31,8 +31,7 @@ type ApprovedIdsSubqueryOptions = {
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
-  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
-  hasBeenSubmitted: { where: { status: { [Op.notIn]: SiteReport.UNSUBMITTED_STATUSES } } }
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
 }))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
@@ -52,10 +51,6 @@ export class SiteReport extends Model<SiteReport> {
 
   static approved() {
     return chainScope(this, "approved") as typeof SiteReport;
-  }
-
-  static hasBeenSubmitted() {
-    return chainScope(this, "hasBeenSubmitted") as typeof SiteReport;
   }
 
   static dueBefore(date: Date | string) {

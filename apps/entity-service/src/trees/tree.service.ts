@@ -12,17 +12,15 @@ import { Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
 import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
+import { REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 
-export const ESTABLISHMENT_REPORTS = ["project-reports", "site-reports", "nursery-reports"] as const;
-export type EstablishmentReport = (typeof ESTABLISHMENT_REPORTS)[number];
-
-export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...ESTABLISHMENT_REPORTS] as const;
+export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
 
 type TreeReportModelType = typeof ProjectReport | typeof SiteReport | typeof NurseryReport;
 type TreeModelType = TreeReportModelType | typeof Project | typeof Site | typeof Nursery;
 
-const isReport = (type: EstablishmentEntity): type is EstablishmentReport => type.endsWith("-reports");
+const isReport = (type: EstablishmentEntity): type is ReportType => type.endsWith("Reports");
 
 const treeAssociations = (model: TreeModelType, attributes: string[], where?: WhereOptions) =>
   model.TREE_ASSOCIATIONS.map(association => ({
@@ -61,10 +59,10 @@ export class TreeService {
   }
 
   async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<Dictionary<string[]>> {
-    if (entity === "site-reports" || entity === "nursery-reports") {
+    if (entity === "siteReports" || entity === "nurseryReports") {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
-      const parentModel = entity === "site-reports" ? Site : Nursery;
+      const parentModel = entity === "siteReports" ? Site : Nursery;
       const include = {
         model: parentModel,
         // This id isn't necessary for the data we want to fetch, but sequelize requires it for
@@ -82,7 +80,7 @@ export class TreeService {
         ]
       };
 
-      if (entity === "site-reports") {
+      if (entity === "siteReports") {
         include.include.push({
           required: false,
           association: "seedsPlanted",
@@ -97,7 +95,7 @@ export class TreeService {
         include: [include]
       };
 
-      const report = await (entity === "site-reports"
+      const report = await (entity === "siteReports"
         ? SiteReport.findOne(whereOptions)
         : NurseryReport.findOne(whereOptions));
       if (report == null) throw new NotFoundException();
@@ -112,7 +110,7 @@ export class TreeService {
       );
 
       const treeNames = uniqueTreeNames(trees);
-      if (entity === "site-reports") {
+      if (entity === "siteReports") {
         treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name));
       }
       return treeNames;
@@ -142,7 +140,7 @@ export class TreeService {
       const uniqueTrees = uniqueTreeNames(
         groupBy(flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project[association])), "collection")
       );
-      if (entity === "project-reports" && entityModel.frameworkKey === "ppc") {
+      if (entity === "projectReports" && entityModel.frameworkKey === "ppc") {
         // For PPC Project reports, we have to pretend the establishment species are "nursery-seedling" because
         // that's the collection used at the report level, but "tree-planted" is used at the establishment level.
         // The FE depends on the collection returned here to match what's being used in the tree species input
@@ -167,15 +165,15 @@ export class TreeService {
 
     let model: TreeReportModelType;
     switch (entity) {
-      case "project-reports":
+      case "projectReports":
         model = ProjectReport;
         break;
 
-      case "site-reports":
+      case "siteReports":
         model = SiteReport;
         break;
 
-      case "nursery-reports":
+      case "nurseryReports":
         model = NurseryReport;
         break;
 
@@ -193,7 +191,7 @@ export class TreeService {
     const modelIncludes: Includeable[] = treeAssociations(model, ["taxonId", "name", "collection", "amount"], {
       amount: { [Op.gt]: 0 }
     });
-    if (entity === "site-reports") {
+    if (entity === "siteReports") {
       modelIncludes.push({
         required: false,
         association: "seedsPlanted",
@@ -236,7 +234,7 @@ export class TreeService {
       {} as Dictionary<Dictionary<PreviousPlantingCountDto>>
     );
 
-    if (entity === "site-reports") {
+    if (entity === "siteReports") {
       planting["seeds"] = flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)).reduce(
         (counts, seeding) => ({
           ...counts,

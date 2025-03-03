@@ -25,14 +25,14 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async findOne(uuid: string) {
     return await Site.findOne({
       where: { uuid },
-      include: [{ association: "framework" }, { association: "project", attributes: ["uuid"] }]
+      include: [{ association: "framework" }, { association: "project", attributes: ["uuid", "name"] }]
     });
   }
 
   async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
     const projectAssociation: Includeable = {
       association: "project",
-      attributes: ["name"]
+      attributes: ["uuid", "name"]
     };
     const frameworkAssociation: Includeable = {
       association: "framework",
@@ -111,7 +111,6 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
       treesPlantedCount,
       regeneratedTreesCount,
-      // projectUuid: site.project.uuid,
 
       ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };

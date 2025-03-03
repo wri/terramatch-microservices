@@ -8,7 +8,6 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
 
@@ -28,7 +27,7 @@ export class SiteLightDto extends EntityDto {
   }
 
   @ApiProperty({ nullable: true, description: "Framework key for this project" })
-  frameworkKey: FrameworkKey | null;
+  frameworkKey: string | null;
 
   @ApiProperty({
     nullable: true,
@@ -39,14 +38,14 @@ export class SiteLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
-    description: "Entity status for this project",
+    description: "Entity status for this site",
     enum: SITE_STATUSES
   })
   status: SiteStatus | null;
 
   @ApiProperty({
     nullable: true,
-    description: "Update request status for this project",
+    description: "Update request status for this site",
     enum: UPDATE_REQUEST_STATUSES
   })
   updateRequestStatus: UpdateRequestStatus | null;
@@ -67,7 +66,7 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
+export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Omit<Site, "project">>;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
@@ -76,6 +75,7 @@ export class SiteFullDto extends SiteLightDto {
     this.populate(SiteFullDto, {
       ...pickApiProperties(site, SiteFullDto),
       lightResource: false,
+      // these two are untyped and marked optional in the base model.
       createdAt: site.createdAt as Date,
       updatedAt: site.updatedAt as Date,
       ...props

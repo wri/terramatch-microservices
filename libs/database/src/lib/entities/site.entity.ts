@@ -100,13 +100,9 @@ export class Site extends Model<Site> {
   @BelongsTo(() => Project)
   project: Project | null;
 
-  @AllowNull
-  @Column(STRING)
-  sitingStrategy: SitingStrategy | null;
-
-  @AllowNull
-  @Column(TEXT)
-  descriptionSitingStrategy: string | null;
+  get projectName() {
+    return this.project?.name;
+  }
 
   get projectUuid() {
     return this.project?.uuid;
@@ -115,6 +111,14 @@ export class Site extends Model<Site> {
   get organisationName() {
     return this.project?.organisationName;
   }
+
+  @AllowNull
+  @Column(STRING)
+  sitingStrategy: SitingStrategy | null;
+
+  @AllowNull
+  @Column(TEXT)
+  descriptionSitingStrategy: string | null;
 
   @AllowNull
   @Column(DECIMAL(15, 1))
@@ -237,10 +241,6 @@ export class Site extends Model<Site> {
     scope: { seedableType: Site.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
-
-  get projectName() {
-    return this.project?.name;
-  }
 
   @HasMany(() => SiteReport)
   reports: SiteReport[] | null;

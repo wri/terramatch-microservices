@@ -4,6 +4,7 @@ import {
   Demographic,
   DemographicEntry,
   Media,
+  Project,
   ProjectUser,
   Seeding,
   Site,
@@ -12,7 +13,7 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { SiteQueryDto } from "../dto/site-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
@@ -36,7 +37,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
+  async findMany(query: SiteQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"]
@@ -88,6 +89,14 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       builder.where({
         name: { [Op.like]: `%${query.search}%` }
       });
+    }
+
+    if (query.projectUuid != null) {
+      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
+      if (project == null) {
+        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
+      }
+      builder.where({ projectId: project.id });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

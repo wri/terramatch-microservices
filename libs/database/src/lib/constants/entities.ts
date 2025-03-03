@@ -2,15 +2,15 @@ import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 
-export const REPORT_TYPES = ["project-reports", "site-reports", "nursery-reports"] as const;
+export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
 export type ReportModel = ProjectReport | SiteReport | NurseryReport;
 export type ReportClass<T extends ReportModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
-  "project-reports": ProjectReport,
-  "site-reports": SiteReport,
-  "nursery-reports": NurseryReport
+  projectReports: ProjectReport,
+  siteReports: SiteReport,
+  nurseryReports: NurseryReport
 };
 
 export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] as const;

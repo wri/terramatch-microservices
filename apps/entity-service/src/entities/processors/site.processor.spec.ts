@@ -15,6 +15,7 @@ import {
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "../dto/site.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { SiteQueryDto } from "../dto/site-query.dto";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
@@ -37,7 +38,7 @@ describe("SiteProcessor", () => {
   describe("findMany", () => {
     async function expectSites(
       expected: Site[],
-      query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
+      query: Omit<SiteQueryDto, "field" | "direction" | "size" | "number">,
       {
         permissions = ["sites-read"],
         sortField = "id",
@@ -89,30 +90,43 @@ describe("SiteProcessor", () => {
     });
 
     it("filters", async () => {
-      const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      const p1 = await ProjectFactory.create();
+      const p2 = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId, projectId: p2.id });
 
       const first = await SiteFactory.create({
         name: "first site",
         status: "approved",
         updateRequestStatus: "awaiting-approval",
-        projectId: project.id
+        projectId: p1.id
       });
       const second = await SiteFactory.create({
         name: "second site",
         status: "started",
         updateRequestStatus: "awaiting-approval",
-        projectId: project.id
+        projectId: p1.id
       });
       const third = await SiteFactory.create({
         name: "third site",
         status: "approved",
         updateRequestStatus: "awaiting-approval",
-        projectId: project.id
+        projectId: p1.id
+      });
+      const fourth = await SiteFactory.create({
+        name: "fourth site",
+        status: "approved",
+        updateRequestStatus: "approved",
+        projectId: p2.id
       });
 
       await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
-      await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
+
+      await expectSites([fourth], { projectUuid: p2.uuid });
+    });
+
+    it("throws an error if the project uuid is not found", async () => {
+      await expect(processor.findMany({ projectUuid: "123" } as SiteQueryDto)).rejects.toThrow(BadRequestException);
     });
 
     it("sorts by name", async () => {

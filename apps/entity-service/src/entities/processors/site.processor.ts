@@ -106,9 +106,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const siteId = site.id;
 
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery({ val: siteId });
-    const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
-    const treesPlantedCount =
-      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const seedsPlantedCount = await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount");
+    const treesPlantedCount = await TreeSpecies.visible()
+      .collection("tree-planted")
+      .siteReports(approvedSiteReportsQuery)
+      .sum("amount");
 
     const approvedSiteReports = await SiteReport.approved()
       .sites([siteId])
@@ -117,8 +119,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
     const props: AdditionalSiteFullProps = {
-      totalHectaresRestoredSum: (await SitePolygon.approved().sites([site.uuid]).sum("calcArea")) ?? 0,
-      workdayCount: (await this.getWorkdayCount(siteId)) ?? 0,
+      totalHectaresRestoredSum: await SitePolygon.approved().sites([site.uuid]).sum("calcArea"),
+      workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),
       totalSiteReports: await this.getTotalSiteReports(siteId),
@@ -148,13 +150,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       Demographic.WORKDAYS_TYPE
     );
 
-    return (
-      (await DemographicEntry.gender().sum("amount", {
-        where: {
-          demographicId: { [Op.in]: siteReportWorkdays }
-        }
-      })) ?? 0
-    );
+    return await DemographicEntry.gender().sum("amount", {
+      where: {
+        demographicId: { [Op.in]: siteReportWorkdays }
+      }
+    });
   }
 
   protected async getSelfReportedWorkdayCount(siteId: number, useDemographicsCutoff = false) {

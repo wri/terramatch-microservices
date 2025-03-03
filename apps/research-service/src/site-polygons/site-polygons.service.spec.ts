@@ -159,7 +159,27 @@ describe("SitePolygonsService", () => {
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
   });
+  it("Should only include polygons belonging to the given siteId", async () => {
+    await SitePolygon.truncate();
 
+    const site1 = await SiteFactory.create();
+    const site2 = await SiteFactory.create();
+
+    const poly1 = await SitePolygonFactory.create({ siteUuid: site1.uuid });
+    const poly2 = await SitePolygonFactory.create({ siteUuid: site2.uuid });
+
+    let query = await service.buildQuery(20);
+    let result = await query.execute();
+
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly1.id);
+
+    query = await service.buildQuery(20);
+    result = await query.execute();
+
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly2.id);
+  });
   it("Should only include given projects", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();

@@ -63,8 +63,9 @@ export class SitePolygonsController {
 
     await queryBuilder.touchesBoundary(query.boundaryPolygon);
 
-    // If projectIds are sent, ignore filtering on project is_test flag.
-    if (query.projectId != null) {
+    if (query.siteId != null) {
+      await queryBuilder.filterSiteUuids(query.siteId);
+    } else if (query.projectId != null) {
       await queryBuilder.filterProjectUuids(query.projectId);
     } else if (query.includeTestProjects !== true) {
       await queryBuilder.excludeTestProjects();

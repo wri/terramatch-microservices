@@ -31,6 +31,16 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
   projectId?: string[];
 
   @ApiProperty({
+    name: "siteId[]",
+    isArray: true,
+    required: false,
+    description: "Filter results by site UUID(s). If specified, the includeTestProjects param is ignored"
+  })
+  @IsOptional()
+  @IsArray()
+  siteId?: string[];
+
+  @ApiProperty({
     enum: INDICATOR_SLUGS,
     name: "missingIndicator[]",
     isArray: true,

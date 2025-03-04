@@ -6,7 +6,7 @@ import { EmailService } from "@terramatch-microservices/common/email/email.servi
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
 import { UserNewRequest } from "./dto/user-new-request.dto";
-import { NotFoundException } from "@nestjs/common";
+import { NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { RoleFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
@@ -240,7 +240,9 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(new NotFoundException("User already exist"));
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
+      new UnprocessableEntityException("User already exist")
+    );
   });
 
   it("should generate a error because role not exist", async () => {

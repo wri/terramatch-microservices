@@ -41,7 +41,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
 
     // Only pull the attributes that are needed by the entity policies.
     const attributes = intersection(
-      ["id", "frameworkKey", "projectId", "siteId"],
+      ["id", "frameworkKey", "projectId", "siteId", "nurseryId"],
       Object.keys(this.entityModelClass.getAttributes())
     );
 

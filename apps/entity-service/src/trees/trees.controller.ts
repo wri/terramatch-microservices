@@ -4,18 +4,20 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { isEmpty } from "lodash";
+import { intersection, isEmpty } from "lodash";
 import { EstablishmentsTreesParamsDto } from "./dto/establishments-trees-params.dto";
 import { EstablishmentsTreesDto } from "./dto/establishment-trees.dto";
 import { TreeReportCountsParamsDto } from "./dto/tree-report-counts-params.dto";
 import { TreeReportCountsDto } from "./dto/tree-report-counts.dto";
 import { TreeEntityTypes } from "./dto/tree-entity-types.dto";
 import { PlantingCountDto } from "./dto/planting-count.dto";
+import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { PolicyService } from "@terramatch-microservices/common";
 
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, TreeEntityTypes)
 export class TreesController {
-  constructor(private readonly treeService: TreeService) {}
+  constructor(private readonly treeService: TreeService, private readonly policyService: PolicyService) {}
 
   @Get("scientific-names")
   @ApiOperation({
@@ -43,6 +45,8 @@ export class TreesController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more path param values is invalid." })
   async getEstablishmentData(@Param() { entity, uuid }: EstablishmentsTreesParamsDto) {
+    await this.authorizeRead(entity, uuid);
+
     const establishmentTrees = await this.treeService.getEstablishmentTrees(entity, uuid);
     const previousPlantingCounts = await this.treeService.getPreviousPlanting(entity, uuid);
 
@@ -62,6 +66,8 @@ export class TreesController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more path param values is invalid." })
   async getReportCounts(@Param() { entity, uuid }: TreeReportCountsParamsDto) {
+    await this.authorizeRead(entity, uuid);
+
     const reportCounts = await this.treeService.getAssociatedReportCounts(entity, uuid);
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
@@ -69,5 +75,19 @@ export class TreesController {
     return buildJsonApi(TreeReportCountsDto)
       .addData(`${entity}|${uuid}`, new TreeReportCountsDto({ reportCounts }))
       .document.serialize();
+  }
+
+  private async authorizeRead(entity: EntityType, uuid: string) {
+    const modelClass = ENTITY_MODELS[entity];
+    const attributes = intersection(
+      // The list of attributes that might be needed by a given entity policy to determine if
+      // this user has access
+      ["id", "frameworkKey", "projectId", "siteId", "nurseryId"],
+      Object.keys(modelClass.getAttributes())
+    );
+    const entityModel = await modelClass.findOne({ where: { uuid }, attributes });
+    // For this controller, the data about a given entity may be calculated and read if the base
+    // entity may be read.
+    await this.policyService.authorize("read", entityModel);
   }
 }

@@ -40,8 +40,7 @@ async function getLocalizationCta() {
 }
 
 async function getUser() {
-  const user = await UserFactory.create();
-  return user;
+  return await UserFactory.create();
 }
 
 describe("UserCreationService", () => {

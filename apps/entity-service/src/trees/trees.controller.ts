@@ -68,12 +68,14 @@ export class TreesController {
   async getReportCounts(@Param() { entity, uuid }: TreeReportCountsParamsDto) {
     await this.authorizeRead(entity, uuid);
 
+    const establishmentTrees =
+      entity === "projects" ? null : await this.treeService.getEstablishmentTrees(entity, uuid);
     const reportCounts = await this.treeService.getAssociatedReportCounts(entity, uuid);
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
     return buildJsonApi(TreeReportCountsDto)
-      .addData(`${entity}|${uuid}`, new TreeReportCountsDto({ reportCounts }))
+      .addData(`${entity}|${uuid}`, new TreeReportCountsDto({ establishmentTrees, reportCounts }))
       .document.serialize();
   }
 

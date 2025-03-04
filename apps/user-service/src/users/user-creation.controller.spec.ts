@@ -4,7 +4,7 @@ import { UserCreationController } from "./user-creation.controller";
 import { UserCreationService } from "./user-creation.service";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import { UserFactory } from "@terramatch-microservices/database/factories";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 
 describe("UserCreationController", () => {
   let controller: UserCreationController;
@@ -93,5 +93,26 @@ describe("UserCreationController", () => {
     userCreationService.createNewUser.mockRejectedValue(null);
 
     await expect(controller.create(request)).rejects.toBeNull();
+  });
+
+  it("should return a BadRequestException for invalid payload", async () => {
+    const request = new UserNewRequest(); // Assuming this is an invalid payload
+    userCreationService.createNewUser.mockRejectedValue(new BadRequestException("Invalid payload"));
+
+    await expect(controller.create(request)).rejects.toThrow(BadRequestException);
+  });
+
+  it("should return an UnauthorizedException for unauthorized access", async () => {
+    const request = new UserNewRequest();
+    userCreationService.createNewUser.mockRejectedValue(new UnauthorizedException("Unauthorized access"));
+
+    await expect(controller.create(request)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it("should handle unexpected errors gracefully", async () => {
+    const request = new UserNewRequest();
+    userCreationService.createNewUser.mockRejectedValue(new Error("Unexpected error"));
+
+    await expect(controller.create(request)).rejects.toThrow(Error);
   });
 });

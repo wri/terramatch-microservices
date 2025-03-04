@@ -16,7 +16,8 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
-import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
+
+import { PlantingCountDto } from "./dto/planting-count.dto";
 
 describe("TreeService", () => {
   let service: TreeService;
@@ -175,7 +176,7 @@ describe("TreeService", () => {
         dueAt: DateTime.fromJSDate(nurseryReport1.dueAt).plus({ months: 3 }).toJSDate()
       });
 
-      const reduceTreeCounts = (counts: Record<string, PreviousPlantingCountDto>, tree: TreeSpecies | Seeding) => ({
+      const reduceTreeCounts = (counts: Record<string, PlantingCountDto>, tree: TreeSpecies | Seeding) => ({
         ...counts,
         [tree.name]: {
           taxonId: counts[tree.name]?.taxonId ?? tree.taxonId,

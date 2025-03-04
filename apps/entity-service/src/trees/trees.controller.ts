@@ -6,10 +6,14 @@ import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { isEmpty } from "lodash";
 import { EstablishmentsTreesParamsDto } from "./dto/establishments-trees-params.dto";
-import { EstablishmentsTreesDto, PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
+import { EstablishmentsTreesDto } from "./dto/establishment-trees.dto";
+import { TreeReportCountsParamsDto } from "./dto/tree-report-counts-params.dto";
+import { TreeReportCountsDto } from "./dto/tree-report-counts.dto";
+import { TreeEntityTypes } from "./dto/tree-entity-types.dto";
+import { PlantingCountDto } from "./dto/planting-count.dto";
 
 @Controller("trees/v3")
-@ApiExtraModels(PreviousPlantingCountDto)
+@ApiExtraModels(PlantingCountDto, TreeEntityTypes)
 export class TreesController {
   constructor(private readonly treeService: TreeService) {}
 
@@ -46,6 +50,24 @@ export class TreesController {
     // backed by a single DB table.
     return buildJsonApi(EstablishmentsTreesDto)
       .addData(`${entity}|${uuid}`, new EstablishmentsTreesDto({ establishmentTrees, previousPlantingCounts }))
+      .document.serialize();
+  }
+
+  @Get("reportCounts/:entity/:uuid")
+  @ApiOperation({
+    operationId: "treeReportCountsFind",
+    summary: "Get tree species counts from reports related to the entity"
+  })
+  @JsonApiResponse(TreeReportCountsDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "One or more path param values is invalid." })
+  async getReportCounts(@Param() { entity, uuid }: TreeReportCountsParamsDto) {
+    const reportCounts = await this.treeService.getAssociatedReportCounts(entity, uuid);
+
+    // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
+    // backed by a single DB table.
+    return buildJsonApi(TreeReportCountsDto)
+      .addData(`${entity}|${uuid}`, new TreeReportCountsDto({ reportCounts }))
       .document.serialize();
   }
 }

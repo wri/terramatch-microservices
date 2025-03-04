@@ -3,6 +3,7 @@ import {
   NurseryReport,
   Project,
   ProjectReport,
+  Seeding,
   Site,
   SiteReport,
   TreeSpecies,
@@ -11,11 +12,14 @@ import {
 import { Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
-import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
 import { REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
+import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
+
+export const REPORT_COUNT_ENTITIES = ["projects", "projectReports", "sites"] as const;
+export type ReportCountEntity = (typeof REPORT_COUNT_ENTITIES)[number];
 
 type TreeReportModelType = typeof ProjectReport | typeof SiteReport | typeof NurseryReport;
 type TreeModelType = TreeReportModelType | typeof Project | typeof Site | typeof Nursery;
@@ -37,6 +41,24 @@ const uniqueTreeNames = (trees: Dictionary<TreeSpecies[]>) =>
       [collection]: uniq(filter(trees[collection].map(({ name }) => name)))
     }),
     {} as Dictionary<string[]>
+  );
+
+const countPlants = (trees: TreeSpecies[] | Seeding[]) =>
+  trees.reduce(
+    (counts, { name, taxonId, amount }) => ({
+      ...counts,
+      [name]: {
+        taxonId: counts[name]?.taxonId ?? taxonId,
+        amount: (counts[name]?.amount ?? 0) + (amount ?? 0)
+      }
+    }),
+    {} as Dictionary<PlantingCountDto>
+  );
+
+const countTreeCollection = (trees: Dictionary<TreeSpecies[]>) =>
+  Object.keys(trees).reduce(
+    (map, collection) => ({ ...map, [collection]: countPlants(trees[collection]) }),
+    {} as PlantingCountMap
   );
 
 @Injectable()
@@ -157,10 +179,7 @@ export class TreeService {
     }
   }
 
-  async getPreviousPlanting(
-    entity: EstablishmentEntity,
-    uuid: string
-  ): Promise<Dictionary<Dictionary<PreviousPlantingCountDto>>> {
+  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<PlantingCountMap> {
     if (!isReport(entity)) return undefined;
 
     let model: TreeReportModelType;
@@ -217,36 +236,38 @@ export class TreeService {
       "collection"
     );
 
-    const planting = Object.keys(trees).reduce(
-      (dict, collection) => ({
-        ...dict,
-        [collection]: trees[collection].reduce(
-          (counts, tree) => ({
-            ...counts,
-            [tree.name]: {
-              taxonId: counts[tree.name]?.taxonId ?? tree.taxonId,
-              amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
-            }
-          }),
-          {} as Dictionary<PreviousPlantingCountDto>
-        )
-      }),
-      {} as Dictionary<Dictionary<PreviousPlantingCountDto>>
-    );
-
+    const planting = countTreeCollection(trees);
     if (entity === "siteReports") {
-      planting["seeds"] = flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)).reduce(
-        (counts, seeding) => ({
-          ...counts,
-          [seeding.name]: {
-            taxonId: undefined,
-            amount: (counts[seeding.name]?.amount ?? 0) + (seeding.amount ?? 0)
-          }
-        }),
-        {} as Dictionary<PreviousPlantingCountDto>
-      );
+      planting["seeds"] = countPlants(flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)));
     }
 
     return planting;
+  }
+
+  async getAssociatedReportCounts(entity: ReportCountEntity, uuid: string): Promise<PlantingCountMap> {
+    const siteReportIds = await this.getAssociatedSiteReportIds(entity, uuid);
+    if (siteReportIds == null) return {};
+
+    const planting = countTreeCollection(
+      groupBy(await TreeSpecies.visible().siteReports(siteReportIds).findAll(), "collection")
+    );
+    planting["seeds"] = countPlants(await Seeding.visible().siteReports(siteReportIds).findAll());
+
+    return planting;
+  }
+
+  private async getAssociatedSiteReportIds(entity: ReportCountEntity, uuid: string) {
+    if (entity === "projects") {
+      const { id } = await Project.findOne({ where: { uuid }, attributes: ["id"] });
+      return SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(id));
+    } else if (entity === "sites") {
+      const { id } = await Site.findOne({ where: { uuid }, attributes: ["id"] });
+      return SiteReport.approvedIdsSubquery([id]);
+    } else if (entity === "projectReports") {
+      const { taskId } = await ProjectReport.findOne({ where: { uuid }, attributes: ["taskId"] });
+      return taskId == null ? undefined : SiteReport.approvedIdsForTaskSubquery(taskId);
+    } else {
+      throw new BadRequestException(`Invalid entity type [${entity}]`);
+    }
   }
 }

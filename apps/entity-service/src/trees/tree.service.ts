@@ -9,7 +9,7 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Includeable, Op, WhereOptions } from "sequelize";
+import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
 import { REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
@@ -249,7 +249,16 @@ export class TreeService {
     if (siteReportIds == null) return {};
 
     const planting = countTreeCollection(
-      groupBy(await TreeSpecies.visible().siteReports(siteReportIds).findAll(), "collection")
+      groupBy(
+        await TreeSpecies.visible()
+          .siteReports(siteReportIds)
+          .findAll({
+            raw: true,
+            attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
+            group: ["taxonId", "name", "collection"]
+          }),
+        "collection"
+      )
     );
     planting["seeds"] = countPlants(await Seeding.visible().siteReports(siteReportIds).findAll());
 

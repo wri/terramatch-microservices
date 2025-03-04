@@ -9,7 +9,7 @@ import { Demographic, Media, Seeding, TreeSpecies } from "@terramatch-microservi
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
-import { Includeable } from "sequelize";
+import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
@@ -41,7 +41,12 @@ const ASSOCIATION_PROCESSORS = {
     Seeding.findAll({ where: { seedableType, seedableId, hidden: false } })
   ),
   treeSpecies: AssociationProcessor.buildSimpleProcessor(TreeSpeciesDto, ({ id: speciesableId }, speciesableType) =>
-    TreeSpecies.findAll({ where: { speciesableType, speciesableId, hidden: false } })
+    TreeSpecies.findAll({
+      where: { speciesableType, speciesableId, hidden: false },
+      raw: true,
+      attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
+      group: ["taxonId", "name", "collection"]
+    })
   )
 };
 

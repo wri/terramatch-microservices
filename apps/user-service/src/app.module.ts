@@ -11,18 +11,11 @@ import { ResetPasswordController } from "./auth/reset-password.controller";
 import { ResetPasswordService } from "./auth/reset-password.service";
 import { VerificationUserController } from "./auth/verification-user.controller";
 import { VerificationUserService } from "./auth/verification-user.service";
-import { UserCreationController } from "./users/user-creation.controller";
 import { UserCreationService } from "./users/user-creation.service";
 
 @Module({
   imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
-  controllers: [
-    LoginController,
-    UsersController,
-    ResetPasswordController,
-    VerificationUserController,
-    UserCreationController
-  ],
+  controllers: [LoginController, UsersController, ResetPasswordController, VerificationUserController],
   providers: [
     {
       provide: APP_FILTER,

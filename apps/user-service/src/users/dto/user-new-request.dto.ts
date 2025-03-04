@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsNotEmpty } from "class-validator";
+import { IsEmail, IsIn, IsNotEmpty, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class UserNewRequest {
@@ -31,11 +31,11 @@ export class UserNewRequest {
   @ApiProperty()
   role: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty()
   country: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty()
   program: string;
 

@@ -78,6 +78,8 @@ export class UserCreationService {
 
       const user = await User.create({ ...newUser, uuid: crypto.randomUUID(), password: hashPassword });
 
+      await user.reload();
+
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE }

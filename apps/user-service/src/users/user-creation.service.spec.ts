@@ -11,38 +11,6 @@ import { RoleFactory, UserFactory } from "@terramatch-microservices/database/fac
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
 
-async function getLocalizationBody() {
-  return await LocalizationKeyFactory.create({
-    key: "user-verification.body",
-    value: "Follow the below link to verify your email address."
-  });
-}
-
-async function getLocalizationSubject() {
-  return await LocalizationKeyFactory.create({
-    key: "user-verification.subject",
-    value: "Verify Your Email Address"
-  });
-}
-
-async function getLocalizationTitle() {
-  return await LocalizationKeyFactory.create({
-    key: "user-verification.title",
-    value: "VERIFY YOUR EMAIL ADDRESS"
-  });
-}
-
-async function getLocalizationCta() {
-  return await LocalizationKeyFactory.create({
-    key: "user-verification.cta",
-    value: "VERIFY EMAIL ADDRESS"
-  });
-}
-
-async function getUser() {
-  return await UserFactory.create();
-}
-
 describe("UserCreationService", () => {
   let service: UserCreationService;
   let jwtService: DeepMocked<JwtService>;
@@ -63,6 +31,38 @@ describe("UserCreationService", () => {
     userNewRequest.callbackUrl = "https://localhost:3000";
     return userNewRequest;
   };
+
+  async function getLocalizationBody() {
+    return await LocalizationKeyFactory.create({
+      key: "user-verification.body",
+      value: "Follow the below link to verify your email address."
+    });
+  }
+
+  async function getLocalizationSubject() {
+    return await LocalizationKeyFactory.create({
+      key: "user-verification.subject",
+      value: "Verify Your Email Address"
+    });
+  }
+
+  async function getLocalizationTitle() {
+    return await LocalizationKeyFactory.create({
+      key: "user-verification.title",
+      value: "VERIFY YOUR EMAIL ADDRESS"
+    });
+  }
+
+  async function getLocalizationCta() {
+    return await LocalizationKeyFactory.create({
+      key: "user-verification.cta",
+      value: "VERIFY EMAIL ADDRESS"
+    });
+  }
+
+  async function getUser() {
+    return await UserFactory.create();
+  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -110,6 +110,8 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
+    const reloadSpy = jest.spyOn(user, "reload").mockResolvedValue(user);
+
     localizationService.getLocalizationKeys.mockReturnValue(
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
@@ -120,6 +122,7 @@ describe("UserCreationService", () => {
     templateService.render.mockReturnValue("rendered template");
 
     const result = await service.createNewUser(userNewRequest);
+    expect(reloadSpy).toHaveBeenCalled();
     expect(jwtService.signAsync).toHaveBeenCalled();
     expect(emailService.sendEmail).toHaveBeenCalled();
     expect(result).toBeDefined();

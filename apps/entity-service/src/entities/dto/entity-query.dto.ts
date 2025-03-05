@@ -36,4 +36,8 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ApiProperty({ required: false })
   @IsOptional()
   updateRequestStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  projectUuid?: string;
 }

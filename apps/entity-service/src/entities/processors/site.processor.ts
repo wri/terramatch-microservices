@@ -13,11 +13,11 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { SiteQueryDto } from "../dto/site-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
 import { sumBy } from "lodash";
+import { EntityQueryDto } from "../dto/entity-query.dto";
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
   readonly LIGHT_DTO = SiteLightDto;
@@ -37,7 +37,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     });
   }
 
-  async findMany(query: SiteQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
+  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"]

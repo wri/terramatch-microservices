@@ -15,7 +15,6 @@ import {
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "../dto/site.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { SiteQueryDto } from "../dto/site-query.dto";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
@@ -38,7 +37,7 @@ describe("SiteProcessor", () => {
   describe("findMany", () => {
     async function expectSites(
       expected: Site[],
-      query: Omit<SiteQueryDto, "field" | "direction" | "size" | "number">,
+      query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
       {
         permissions = ["sites-read"],
         sortField = "id",
@@ -126,7 +125,7 @@ describe("SiteProcessor", () => {
     });
 
     it("throws an error if the project uuid is not found", async () => {
-      await expect(processor.findMany({ projectUuid: "123" } as SiteQueryDto)).rejects.toThrow(BadRequestException);
+      await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
     it("sorts by name", async () => {

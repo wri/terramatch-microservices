@@ -117,6 +117,15 @@ export class NurseryFullDto extends NurseryLightDto {
   @ApiProperty({ nullable: true })
   overdueNurseryReportsTotal: number | null;
 
+  @ApiProperty({ nullable: true })
+  organisationName: string | null;
+
+  @ApiProperty({ nullable: true })
+  projectName: string | null;
+
+  @ApiProperty({ nullable: true })
+  projectUuid: string | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   file: MediaDto[];
 

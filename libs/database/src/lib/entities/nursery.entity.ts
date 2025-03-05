@@ -117,6 +117,10 @@ export class Nursery extends Model<Nursery> {
     return this.project?.name;
   }
 
+  get projectUuid() {
+    return this.project?.uuid;
+  }
+
   get organisationName() {
     return this.project?.organisationName;
   }

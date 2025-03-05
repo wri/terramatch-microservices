@@ -10,7 +10,16 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
   readonly FULL_DTO = NurseryFullDto;
 
   async findOne(uuid: string): Promise<Nursery> {
-    return await Nursery.findOne({ where: { uuid } });
+    return await Nursery.findOne({
+      where: { uuid },
+      include: [
+        {
+          association: "project",
+          attributes: ["uuid", "name"],
+          include: [{ association: "organisation", attributes: ["name"] }]
+        }
+      ]
+    });
   }
 
   async findMany(query: EntityQueryDto): Promise<PaginatedResult<Nursery>> {

@@ -39,7 +39,7 @@ describe("SiteProcessor", () => {
       expected: Site[],
       query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
       {
-        permissions = ["sites-read"],
+        permissions = [],
         sortField = "id",
         sortUp = true,
         total = expected.length

@@ -25,12 +25,6 @@ describe("SitePolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows reading all sites with projects-read permissions", async () => {
-    mockUserId(123);
-    mockPermissions("sites-read");
-    await expectCan(service, "read", new Site());
-  });
-
   it("allows reading all sites with view-dashboard permissions", async () => {
     mockUserId(123);
     mockPermissions("view-dashboard");

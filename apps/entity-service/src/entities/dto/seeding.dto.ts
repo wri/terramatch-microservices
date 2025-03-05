@@ -23,6 +23,9 @@ export class SeedingDto extends AssociationDto<SeedingDto> {
   amount: number | null;
 
   @ApiProperty({ required: false })
+  taxonId: string | null;
+
+  @ApiProperty({ required: false })
   weightOfSample: number | null;
 
   @ApiProperty({ required: false })

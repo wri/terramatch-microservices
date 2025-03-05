@@ -11,6 +11,8 @@ export type AdditionalProps<FullDto, LightDto, Model> = Pick<
   keyof Omit<FullDto, keyof Model | keyof LightDto>
 >;
 
+export type AdditionalLightProps<LightDto, Model> = Pick<LightDto, keyof Omit<LightDto, keyof Model>>;
+
 export abstract class EntityDto {
   protected populate<DTO extends EntityDto>(dtoClass: Type<DTO>, source: JsonApiAttributesInput<DTO>) {
     Object.assign(this, pickApiProperties(source, dtoClass));

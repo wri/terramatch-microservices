@@ -12,7 +12,13 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
+import {
+  AdditionalSiteCombinedProps,
+  AdditionalSiteLightProps,
+  SiteFullDto,
+  SiteLightDto,
+  SiteMedia
+} from "../dto/site.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
@@ -116,7 +122,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
-    const props: AdditionalSiteFullProps = {
+    const props: AdditionalSiteCombinedProps = {
       totalHectaresRestoredSum: await SitePolygon.approved().sites([site.uuid]).sum("calcArea"),
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
@@ -125,8 +131,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       seedsPlantedCount,
       overdueSiteReportsTotal: await this.getTotalOverdueReports(siteId),
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
-      treesPlantedCount,
       regeneratedTreesCount,
+      treesPlantedCount,
 
       ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };
@@ -135,7 +141,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   async addLightDto(document: DocumentBuilder, site: Site) {
-    document.addData(site.uuid, new SiteLightDto(site));
+    const siteId = site.id;
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
+    const treesPlantedCount =
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+
+    const props: AdditionalSiteLightProps = {
+      treesPlantedCount
+    };
+
+    document.addData(site.uuid, new SiteLightDto(site, props));
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {

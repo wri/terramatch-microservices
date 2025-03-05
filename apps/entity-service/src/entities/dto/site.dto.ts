@@ -13,7 +13,7 @@ import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
-  constructor(site?: Site) {
+  constructor(site?: Site, props?: AdditionalSiteLightProps) {
     super();
     if (site != null) {
       this.populate(SiteLightDto, {
@@ -21,7 +21,8 @@ export class SiteLightDto extends EntityDto {
         lightResource: true,
         // these two are untyped and marked optional in the base model.
         createdAt: site.createdAt as Date,
-        updatedAt: site.createdAt as Date
+        updatedAt: site.createdAt as Date,
+        ...props
       });
     }
   }
@@ -60,6 +61,9 @@ export class SiteLightDto extends EntityDto {
   projectName: string | null;
 
   @ApiProperty()
+  treesPlantedCount: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -67,10 +71,13 @@ export class SiteLightDto extends EntityDto {
 }
 
 export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Omit<Site, "project">>;
+export type AdditionalSiteLightProps = Pick<SiteFullDto, "treesPlantedCount">;
+
+export type AdditionalSiteCombinedProps = AdditionalSiteFullProps & AdditionalSiteLightProps;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
-  constructor(site: Site, props: AdditionalSiteFullProps) {
+  constructor(site: Site, props: AdditionalSiteCombinedProps) {
     super();
     this.populate(SiteFullDto, {
       ...pickApiProperties(site, SiteFullDto),
@@ -103,9 +110,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty()
   selfReportedWorkdayCount: number;
-
-  @ApiProperty()
-  treesPlantedCount: number;
 
   @ApiProperty()
   regeneratedTreesCount: number;

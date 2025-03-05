@@ -28,6 +28,9 @@ export class NurseryLightDto extends EntityDto {
   @ApiProperty({ nullable: true })
   name: string | null;
 
+  @ApiProperty({ nullable: true, description: "Framework key for this nursery" })
+  frameworkKey: string | null;
+
   @ApiProperty({
     nullable: true,
     description: "Entity status for this nursery",
@@ -37,10 +40,28 @@ export class NurseryLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
-    description: "Update request status for this project",
+    description: "Update request status for this nursery",
     enum: UPDATE_REQUEST_STATUSES
   })
   updateRequestStatus: UpdateRequestStatus | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project name"
+  })
+  projectName: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project organisation name"
+  })
+  organisationName: string | null;
+
+  @ApiProperty({ nullable: true })
+  startDate: Date | null;
+
+  @ApiProperty({ nullable: true })
+  endDate: Date | null;
 
   @ApiProperty()
   createdAt: Date;

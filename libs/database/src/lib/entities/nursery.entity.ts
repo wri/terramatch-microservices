@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, Op, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, Op, STRING, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -71,8 +71,24 @@ export class Nursery extends Model<Nursery> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @AllowNull
+  @Column(DATE)
+  startDate: Date | null;
+
+  @AllowNull
+  @Column(DATE)
+  endDate: Date | null;
+
   @BelongsTo(() => Project)
   project: Project | null;
+
+  get projectName() {
+    return this.project?.name;
+  }
+
+  get organisationName() {
+    return this.project?.organisationName;
+  }
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

@@ -141,7 +141,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
     const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
-    const siteReportIds = SiteReport.approvedIdsSubquery({ val: siteId }, { dueAfter });
+    const siteReportIds = SiteReport.approvedIdsSubquery([siteId], { dueAfter });
     const siteReportWorkdays = Demographic.idsSubquery(
       siteReportIds,
       SiteReport.LARAVEL_TYPE,

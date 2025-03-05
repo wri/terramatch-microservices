@@ -9,6 +9,7 @@ import {
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
+import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "nurseries" })
 export class NurseryLightDto extends EntityDto {
@@ -71,6 +72,7 @@ export class NurseryLightDto extends EntityDto {
 }
 
 export type AdditionalNurseryFullProps = AdditionalProps<NurseryFullDto, NurseryLightDto, Nursery>;
+export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
 
 export class NurseryFullDto extends NurseryLightDto {
   constructor(nursery: Nursery, props: AdditionalNurseryFullProps) {
@@ -84,4 +86,40 @@ export class NurseryFullDto extends NurseryLightDto {
       ...props
     });
   }
+
+  @ApiProperty({ nullable: true })
+  feedback: string | null;
+
+  @ApiProperty({ nullable: true })
+  feedbackFields: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  type: string | null;
+
+  @ApiProperty({ nullable: true })
+  seedlingGrown: number | null;
+
+  @ApiProperty({ nullable: true })
+  plantingContribution: string | null;
+
+  @ApiProperty({ nullable: true })
+  oldModel: string | null;
+
+  @ApiProperty({ nullable: true })
+  seedlingsGrownCount: number | null;
+
+  @ApiProperty({ nullable: true })
+  nuseryReportsTotal: number | null;
+
+  @ApiProperty({ nullable: true })
+  overdueNurseryReportsTotal: number | null;
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  file: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  otherAdditionalDocuments: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  photos: MediaDto[];
 }

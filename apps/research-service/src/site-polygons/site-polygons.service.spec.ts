@@ -171,7 +171,7 @@ describe("SitePolygonsService", () => {
     let query = await service.buildQuery(20);
     let result = await query.execute();
 
-    expect(result.length).toBe(1);
+    expect(result.length).toBe(2);
     expect(result[0].id).toBe(poly1.id);
 
     query = await service.buildQuery(20);

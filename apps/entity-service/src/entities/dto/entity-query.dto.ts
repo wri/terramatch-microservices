@@ -4,7 +4,7 @@ import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })
-  field: string;
+  field?: string;
 
   @ApiProperty({ name: "sort[direction]", required: false, enum: ["ASC", "DESC"], default: "ASC" })
   @IsEnum(["ASC", "DESC"])

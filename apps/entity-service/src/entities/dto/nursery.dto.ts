@@ -3,6 +3,12 @@ import { AdditionalProps, EntityDto } from "./entity.dto";
 import { Nursery } from "@terramatch-microservices/database/entities";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
+import {
+  ENTITY_STATUSES,
+  EntityStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "nurseries" })
 export class NurseryLightDto extends EntityDto {
@@ -18,6 +24,23 @@ export class NurseryLightDto extends EntityDto {
       });
     }
   }
+
+  @ApiProperty({ nullable: true })
+  name: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Entity status for this nursery",
+    enum: ENTITY_STATUSES
+  })
+  status: EntityStatus | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this project",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty()
   createdAt: Date;

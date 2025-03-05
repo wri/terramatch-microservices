@@ -4,15 +4,12 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class SitePolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.includes("sites-read") || this.permissions.includes("view-dashboard")) {
+    if (this.permissions.includes("view-dashboard")) {
       this.builder.can("read", Site);
     }
 
-    const frameworks = this.permissions
-      .filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworks.length > 0) {
-      this.builder.can("read", Site, { frameworkKey: { $in: frameworks } });
+    if (this.frameworks.length > 0) {
+      this.builder.can("read", Site, { frameworkKey: { $in: this.frameworks } });
     }
 
     if (this.permissions.includes("manage-own")) {

@@ -168,17 +168,29 @@ describe("SitePolygonsService", () => {
     const poly1 = await SitePolygonFactory.create({ siteUuid: site1.uuid });
     const poly2 = await SitePolygonFactory.create({ siteUuid: site2.uuid });
 
-    let query = await service.buildQuery(20);
-    let result = await query.execute();
+    const queryWithSite1 = {
+      page: { size: 20 },
+      siteId: [site1.uuid]
+    };
 
-    expect(result.length).toBe(2);
-    expect(result[0].id).toBe(poly1.id);
+    const queryWithSite2 = {
+      page: { size: 20 },
+      siteId: [site2.uuid]
+    };
 
-    query = await service.buildQuery(20);
-    result = await query.execute();
+    const queryBuilder1 = await service.buildQuery(queryWithSite1.page.size);
+    await queryBuilder1.filterSiteUuids(queryWithSite1.siteId);
+    const result1 = await queryBuilder1.execute();
 
-    expect(result.length).toBe(1);
-    expect(result[0].id).toBe(poly2.id);
+    expect(result1.length).toBe(1);
+    expect(result1[0].id).toBe(poly1.id);
+
+    const queryBuilder2 = await service.buildQuery(queryWithSite2.page.size);
+    await queryBuilder2.filterSiteUuids(queryWithSite2.siteId);
+    const result2 = await queryBuilder2.execute();
+
+    expect(result2.length).toBe(1);
+    expect(result2[0].id).toBe(poly2.id);
   });
   it("Should only include given projects", async () => {
     await SitePolygon.truncate();

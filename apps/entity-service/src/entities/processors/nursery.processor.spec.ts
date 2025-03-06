@@ -7,6 +7,7 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   NurseryFactory,
+  OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
   UserFactory
@@ -161,6 +162,73 @@ describe("NuseryProcessor", () => {
         [nurseryC, nurseryB, nurseryA],
         { sort: { field: "projectName", direction: "DESC" } },
         { sortField: "projectName" }
+      );
+    });
+
+    it("sorts by startDate", async () => {
+      const org1 = await OrganisationFactory.create({ name: "A Org" });
+      const org2 = await OrganisationFactory.create({ name: "B Org" });
+      const org3 = await OrganisationFactory.create({ name: "C Org" });
+      const projectA = await ProjectFactory.create({ name: "A Project", organisationId: org1.id });
+      const projectB = await ProjectFactory.create({ name: "B Project", organisationId: org2.id });
+      const projectC = await ProjectFactory.create({ name: "C Project", organisationId: org3.id });
+      const nurseries = [
+        await NurseryFactory.create({
+          name: "A Nursery",
+          projectId: projectA.id
+        })
+      ];
+      nurseries.push(
+        await NurseryFactory.create({
+          name: "Z Nursery",
+          projectId: projectB.id
+        })
+      );
+      nurseries.push(
+        await NurseryFactory.create({
+          name: "M Nursery",
+          projectId: projectC.id
+        })
+      );
+      await expectNurseries(nurseries, { sort: { field: "startDate" } }, { sortField: "startDate", sortUp: false });
+      await expectNurseries(nurseries, { sort: { field: "startDate", direction: "DESC" } }, { sortField: "startDate" });
+    });
+
+    it("sorts by organisation name", async () => {
+      const org1 = await OrganisationFactory.create({ name: "A Org" });
+      const org2 = await OrganisationFactory.create({ name: "B Org" });
+      const org3 = await OrganisationFactory.create({ name: "C Org" });
+      const projectA = await ProjectFactory.create({ name: "A Project", organisationId: org1.id });
+      const projectB = await ProjectFactory.create({ name: "B Project", organisationId: org2.id });
+      const projectC = await ProjectFactory.create({ name: "C Project", organisationId: org3.id });
+      const nurseries = [
+        await NurseryFactory.create({
+          name: "A Nursery",
+          projectId: projectA.id
+        })
+      ];
+      nurseries.push(
+        await NurseryFactory.create({
+          name: "Z Nursery",
+          projectId: projectB.id
+        })
+      );
+      nurseries.push(
+        await NurseryFactory.create({
+          name: "M Nursery",
+          projectId: projectC.id
+        })
+      );
+
+      await expectNurseries(
+        nurseries,
+        { sort: { field: "organisationName" } },
+        { sortField: "organisationName", sortUp: false }
+      );
+      await expectNurseries(
+        nurseries,
+        { sort: { field: "organisationName", direction: "DESC" } },
+        { sortField: "organisationName" }
       );
     });
 

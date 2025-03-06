@@ -51,6 +51,15 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
+    const { siteId, projectId, includeTestProjects } = query;
+    const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
+
+    if (countSelectedParams > 1) {
+      throw new BadRequestException(
+        "Only one of siteId, projectId, and includeTestProjects may be used in a single request."
+      );
+    }
+
     const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
     if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException("Page size is invalid");

@@ -11,6 +11,11 @@ permissions:
   actions: read
   contents: read
 
+# Note: we're disabling usage of NX Cloud. This does mean that all tests run every time, even
+# if none of their dependent code changes, but it also means we don't have to pay for NX Cloud
+# or go to NX Cloud to see test failures (they show on Github instead). If we get to a point
+# where the full test suite is taking too long to run, we can explore paying for NX Cloud, but
+# for now, this is fine.
 jobs:
   build-lint-test:
     runs-on: ubuntu-latest
@@ -23,11 +28,6 @@ jobs:
         with:
           version: "2.29.1"
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
-
       # Cache node_modules
       - uses: actions/setup-node@v4
         with:
@@ -36,7 +36,7 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t lint build
+      - run: npx nx run-many -t lint build --no-cloud
 
       - name: Bring up DB Docker Container
         run: |
@@ -44,16 +44,11 @@ jobs:
           ./docker/test-connection.sh
 
       # First run just the small database test to get the test database synced to the current schema
-      # in a clean way. For some reason, the `run-many` is necessary here. If this line simply uses
-      # nx test database, the connection to the DB gets cut off before the sync is complete.
+      # in a clean way.
       - name: Sync DB Schema
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test database --skip-nx-cache
+        run: npx nx test database --no-cloud --skip-nx-cache
 
-      # Run the UDB service tests in isolation because they require clearing out DB tables and ensuring
-      # they know exactly what's in them, which is not conducive to parallel runs with other test
-      # suites.
-      - name: Unified DB Test
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx test unified-database-service --coverage
-
+      # All tests are run in band so that wipes of database tables from one test doesn't interfere
+      # with other tests.
       - name: Test all
-        run: NX_CLOUD_DISTRIBUTED_EXECUTION=false npx nx run-many -t test --coverage --passWithNoTests --exclude unified-database-service database
+        run: npx nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests --exclude database

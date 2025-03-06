@@ -8,33 +8,60 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
+import { Literal } from "sequelize/types/utils";
+import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
+
+type ApprovedIdsSubqueryOptions = {
+  dueAfter?: string | Date;
+  dueBefore?: string | Date;
+};
 
 // A quick stub for the research endpoints
+@Scopes(() => ({
+  incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
+  sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
+  approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
+}))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
-  static readonly WORKDAY_COLLECTIONS = [
-    "paid-site-establishment",
-    "paid-planting",
-    "paid-site-maintenance",
-    "paid-site-monitoring",
-    "paid-other-activities",
-    "volunteer-site-establishment",
-    "volunteer-planting",
-    "volunteer-site-maintenance",
-    "volunteer-site-monitoring",
-    "volunteer-other-activities"
-  ];
+
+  static incomplete() {
+    return chainScope(this, "incomplete") as typeof SiteReport;
+  }
+
+  static sites(ids: number[] | Literal) {
+    return chainScope(this, "sites", ids) as typeof SiteReport;
+  }
+
+  static approved() {
+    return chainScope(this, "approved") as typeof SiteReport;
+  }
+
+  static dueBefore(date: Date | string) {
+    return chainScope(this, "dueBefore", date) as typeof SiteReport;
+  }
+
+  static approvedIdsSubquery(siteIds: Literal, opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("siteId", siteIds).in("status", SiteReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -75,6 +102,14 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysPaid: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysVolunteer: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -135,20 +170,10 @@ export class SiteReport extends Model<SiteReport> {
   })
   nonTrees: TreeSpecies[] | null;
 
-  async loadNonTrees() {
-    this.nonTrees ??= await this.$get("nonTrees");
-    return this.nonTrees;
-  }
-
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
     scope: { seedableType: SiteReport.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
-
-  async loadSeedsPlanted() {
-    this.seedsPlanted ??= await this.$get("seedsPlanted");
-    return this.seedsPlanted;
-  }
 }

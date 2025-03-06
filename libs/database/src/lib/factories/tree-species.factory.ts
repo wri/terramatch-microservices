@@ -13,7 +13,8 @@ const defaultAttributesFactory = async () => ({
   name: faker.lorem.words(2),
   taxonId: null,
   amount: faker.number.int({ min: 10, max: 1000 }),
-  collection: "tree-planted"
+  collection: "tree-planted",
+  hidden: false
 });
 
 export const TreeSpeciesFactory = {
@@ -38,11 +39,11 @@ export const TreeSpeciesFactory = {
     collection: "tree-planted"
   })),
 
-  forProjectReportTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({
+  forProjectReportNurserySeedling: FactoryGirl.define(TreeSpecies, async () => ({
     ...(await defaultAttributesFactory()),
     speciesableType: ProjectReport.LARAVEL_TYPE,
     speciesableId: ProjectReportFactory.associate("id"),
-    collection: "tree-planted"
+    collection: "nursery-seedling"
   })),
 
   forSiteTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({

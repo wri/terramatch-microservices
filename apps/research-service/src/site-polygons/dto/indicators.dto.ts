@@ -13,6 +13,7 @@ export class IndicatorTreeCoverLossDto {
   @IsNotEmpty()
   @ApiProperty({
     type: "object",
+    additionalProperties: false,
     description: "Mapping of year of analysis to value.",
     example: { 2024: "0.6", 2023: "0.5" }
   })
@@ -30,6 +31,7 @@ export class IndicatorHectaresDto {
   @IsNotEmpty()
   @ApiProperty({
     type: "object",
+    additionalProperties: false,
     description: "Mapping of area type (eco region, land use, etc) to hectares",
     example: { "Northern Acacia-Commiphora bushlands and thickets": 0.104 }
   })
@@ -70,7 +72,7 @@ export class IndicatorTreeCountDto {
 
   @IsString()
   @IsOptional()
-  @ApiProperty({ type: "url" })
+  @ApiProperty({ type: "string" })
   imageryId: string | null;
 
   @IsString()

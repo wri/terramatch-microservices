@@ -8,52 +8,60 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
+import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
+
+type ApprovedIdsSubqueryOptions = {
+  dueAfter?: string | Date;
+  dueBefore?: string | Date;
+};
 
 // Incomplete stub
+@Scopes(() => ({
+  incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
+  approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
+  project: (id: number) => ({ where: { projectId: id } }),
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
+}))
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
+  static readonly TREE_ASSOCIATIONS = ["nurserySeedlings"];
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
-  static readonly WORKDAY_COLLECTIONS = [
-    "paid-nursery-operations",
-    "paid-project-management",
-    "paid-other-activities",
-    "volunteer-nursery-operations",
-    "volunteer-project-management",
-    "volunteer-other-activities",
-    "direct",
-    "convergence"
-  ];
-  static readonly RESTORATION_PARTNER_COLLECTIONS = [
-    "direct-income",
-    "indirect-income",
-    "direct-benefits",
-    "indirect-benefits",
-    "direct-conservation-payments",
-    "indirect-conservation-payments",
-    "direct-market-access",
-    "indirect-market-access",
-    "direct-capacity",
-    "indirect-capacity",
-    "direct-training",
-    "indirect-training",
-    "direct-land-title",
-    "indirect-land-title",
-    "direct-livelihoods",
-    "indirect-livelihoods",
-    "direct-productivity",
-    "indirect-productivity",
-    "direct-other",
-    "indirect-other"
-  ];
+
+  static incomplete() {
+    return chainScope(this, "incomplete") as typeof ProjectReport;
+  }
+
+  static approved() {
+    return chainScope(this, "approved") as typeof ProjectReport;
+  }
+
+  static project(id: number) {
+    return chainScope(this, "project", id) as typeof ProjectReport;
+  }
+
+  static dueBefore(date: Date | string) {
+    return chainScope(this, "dueBefore", date) as typeof ProjectReport;
+  }
+
+  static approvedIdsSubquery(projectId: number, opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(ProjectReport, "id")
+      .eq("projectId", projectId)
+      .in("status", ProjectReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -90,6 +98,14 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysPaid: number | null;
+
+  @AllowNull
+  @Column(INTEGER({ unsigned: true, length: 10 }))
+  workdaysVolunteer: number | null;
 
   @AllowNull
   @Column(TEXT)
@@ -132,137 +148,12 @@ export class ProjectReport extends Model<ProjectReport> {
   newJobsDescription: string | null;
 
   @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftOther: number | null;
-
-  @AllowNull
-  // There is also an `ft_jobs_youth` field, but it appears to be unused.
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ftYouth: number | null;
-
-  @AllowNull
-  @Column({ type: INTEGER({ unsigned: true, length: 10 }), field: "ft_jobs_non_youth" })
-  ftNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  ptOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerTotal: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerNonYouth: number | null;
-
-  @AllowNull
   @Column(TEXT)
   volunteersWorkDescription: string | null;
 
   @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  volunteerOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiaries: number | null;
-
-  @AllowNull
   @Column(TEXT)
   beneficiariesDescription: string | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesLargeScale: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesSmallholder: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesNonYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingOther: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ unsigned: true, length: 10 }))
-  beneficiariesTrainingNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -271,10 +162,6 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   beneficiariesIncomeIncreaseDescription: string | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesSkillsKnowledgeIncrease: number | null;
 
   @AllowNull
   @Column(TEXT)
@@ -330,10 +217,6 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerScstobc: number | null;
-
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
   beneficiariesScstobc: number | null;
 
   @AllowNull
@@ -367,7 +250,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "tree-planted" }
+    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
-  treesPlanted: TreeSpecies[] | null;
+  nurserySeedlings: TreeSpecies[] | null;
 }

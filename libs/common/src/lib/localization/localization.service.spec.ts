@@ -3,6 +3,7 @@ import { LocalizationService } from "./localization.service";
 import { i18nItem, i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { ConfigService } from "@nestjs/config";
 import { tx } from "@transifex/native";
+import { createMock } from "@golevelup/ts-jest";
 
 jest.mock("@transifex/native", () => ({
   tx: {
@@ -18,15 +19,7 @@ describe("LocalizationService", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LocalizationService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue("mocked value")
-          }
-        }
-      ]
+      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
     }).compile();
 
     service = module.get<LocalizationService>(LocalizationService);

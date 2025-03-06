@@ -14,6 +14,15 @@ export function mockPermissions(...permissions: string[]) {
   Permission.getUserPermissionNames = jest.fn().mockResolvedValue(permissions);
 }
 
+type Subject = Parameters<PolicyService["authorize"]>[1];
+export async function expectCan(service: PolicyService, action: string, subject: Subject) {
+  await expect(service.authorize(action, subject)).resolves.toBeUndefined();
+}
+
+export async function expectCannot(service: PolicyService, action: string, subject: Subject) {
+  await expect(service.authorize(action, subject)).rejects.toThrow(UnauthorizedException);
+}
+
 describe("PolicyService", () => {
   let service: PolicyService;
 
@@ -22,7 +31,7 @@ describe("PolicyService", () => {
       providers: [PolicyService]
     }).compile();
 
-    service = module.get<PolicyService>(PolicyService);
+    service = await module.resolve<PolicyService>(PolicyService);
   });
 
   afterEach(async () => {
@@ -32,6 +41,7 @@ describe("PolicyService", () => {
   it("should throw an error if no authed user is found", async () => {
     mockUserId();
     await expect(service.authorize("foo", new User())).rejects.toThrow(UnauthorizedException);
+    await expect(service.getPermissions()).rejects.toThrow(UnauthorizedException);
   });
 
   it("should throw an error if there is no policy defined", async () => {

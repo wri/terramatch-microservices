@@ -16,5 +16,6 @@ export const ProjectFactory = FactoryGirl.define(Project, async () => ({
   updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES),
   applicationId: ApplicationFactory.associate("id"),
   organisationId: OrganisationFactory.associate("id"),
-  continent: faker.helpers.arrayElement(CONTINENTS)
+  continent: faker.helpers.arrayElement(CONTINENTS),
+  survivalRate: faker.number.int({ min: 20, max: 80 })
 }));

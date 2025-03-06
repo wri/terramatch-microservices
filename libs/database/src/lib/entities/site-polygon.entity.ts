@@ -9,9 +9,10 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, Op, STRING, UUID } from "sequelize";
 import { Site } from "./site.entity";
 import { PointGeometry } from "./point-geometry.entity";
 import { PolygonGeometry } from "./polygon-geometry.entity";
@@ -23,6 +24,8 @@ import { IndicatorOutputMsuCarbon } from "./indicator-output-msu-carbon.entity";
 import { IndicatorOutputTreeCount } from "./indicator-output-tree-count.entity";
 import { IndicatorOutputTreeCover } from "./indicator-output-tree-cover.entity";
 import { IndicatorOutputTreeCoverLoss } from "./indicator-output-tree-cover-loss.entity";
+import { Literal } from "sequelize/types/utils";
+import { chainScope } from "../util/chain-scope";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -32,8 +35,25 @@ export type Indicator =
   | IndicatorOutputFieldMonitoring
   | IndicatorOutputMsuCarbon;
 
+@Scopes(() => ({
+  active: { where: { isActive: true } },
+  approved: { where: { status: "approved" } },
+  sites: (uuids: string[] | Literal) => ({ where: { siteUuid: { [Op.in]: uuids } } })
+}))
 @Table({ tableName: "site_polygon", underscored: true, paranoid: true })
 export class SitePolygon extends Model<SitePolygon> {
+  static active() {
+    return chainScope(this, "active") as typeof SitePolygon;
+  }
+
+  static approved() {
+    return chainScope(this, "approved") as typeof SitePolygon;
+  }
+
+  static sites(uuids: string[] | Literal) {
+    return chainScope(this, "sites", uuids) as typeof SitePolygon;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -69,13 +89,6 @@ export class SitePolygon extends Model<SitePolygon> {
   @BelongsTo(() => PointGeometry, { foreignKey: "pointUuid", targetKey: "uuid" })
   point: PointGeometry | null;
 
-  async loadPoint() {
-    if (this.point == null && this.pointUuid != null) {
-      this.point = await this.$get("point");
-    }
-    return this.point;
-  }
-
   // This column got called poly_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull
   @Column({ type: UUID, field: "poly_id" })
@@ -83,13 +96,6 @@ export class SitePolygon extends Model<SitePolygon> {
 
   @BelongsTo(() => PolygonGeometry, { foreignKey: "polygonUuid", targetKey: "uuid" })
   polygon: PolygonGeometry | null;
-
-  async loadPolygon() {
-    if (this.polygon == null && this.polygonUuid != null) {
-      this.polygon = await this.$get("polygon");
-    }
-    return this.polygon;
-  }
 
   @AllowNull
   @Column(STRING)

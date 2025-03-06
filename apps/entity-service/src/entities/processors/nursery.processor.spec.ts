@@ -7,6 +7,7 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   NurseryFactory,
+  OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
   UserFactory
@@ -187,6 +188,29 @@ describe("NuseryProcessor", () => {
       await NurseryFactory.create({ status: "awaiting-approval" });
       await expect(processor.findMany({ sort: { field: "status" } } as EntityQueryDto)).rejects.toThrow(
         BadRequestException
+      );
+    });
+
+    it("sorts by organisation name", async () => {
+      const org1 = await OrganisationFactory.create({ name: "A Org" });
+      const org2 = await OrganisationFactory.create({ name: "B Org" });
+      const org3 = await OrganisationFactory.create({ name: "C Org" });
+      const projectA = await ProjectFactory.create({ organisationId: org1.id });
+      const projectB = await ProjectFactory.create({ organisationId: org2.id });
+      const projectC = await ProjectFactory.create({ organisationId: org3.id });
+      const nurseryA = await NurseryFactory.create({ projectId: projectA.id });
+      const nurseryB = await NurseryFactory.create({ projectId: projectB.id });
+      const nurseryC = await NurseryFactory.create({ projectId: projectC.id });
+
+      await expectNurseries(
+        [nurseryA, nurseryC, nurseryB],
+        { sort: { field: "organisationName", direction: "DESC" } },
+        { sortField: "organisationName", sortUp: false }
+      );
+      await expectNurseries(
+        [nurseryB, nurseryC, nurseryA],
+        { sort: { field: "organisationName", direction: "ASC" } },
+        { sortField: "organisationName", sortUp: true }
       );
     });
   });

@@ -56,7 +56,6 @@ export class SitePolygonsService {
 
   async getSiteName(sitePolygon: SitePolygon): Promise<string> {
     const site = await sitePolygon.loadSite();
-    console.log("site aaaa", site.dataValues);
     return site.name;
   }
 

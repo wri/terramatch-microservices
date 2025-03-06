@@ -86,8 +86,6 @@ export class SitePolygonsController {
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
       const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
       const siteName = await this.sitePolygonService.getSiteName(sitePolygon);
-      console.log("aaaaaa", siteName);
-      // const siteName = "aaaaaa";
       document.addData(
         sitePolygon.uuid,
         new SitePolygonDto(

@@ -53,7 +53,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         attributes: ["dueAt", "submittedAt"]
       }
     ],
-    attributes: ["projectId"],
+    attributes: ["projectId", "name"],
     required: true
   };
 

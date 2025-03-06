@@ -54,6 +54,12 @@ export class SitePolygonsService {
     return reportingPeriods;
   }
 
+  async getSiteName(sitePolygon: SitePolygon): Promise<string> {
+    const site = await sitePolygon.loadSite();
+    console.log("site aaaa", site.dataValues);
+    return site.name;
+  }
+
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
     const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } = (await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } })) ?? {};

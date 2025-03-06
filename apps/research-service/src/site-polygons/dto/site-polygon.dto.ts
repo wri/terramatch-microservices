@@ -10,7 +10,7 @@ import {
   IndicatorTreeCoverLossDto
 } from "./indicators.dto";
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 
 export type IndicatorDto =
@@ -51,7 +51,8 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     geometry: Polygon,
     indicators: IndicatorDto[],
     establishmentTreeSpecies: TreeSpeciesDto[],
-    reportingPeriods: ReportingPeriodDto[]
+    reportingPeriods: ReportingPeriodDto[],
+    siteName: string
   ) {
     super({
       ...pickApiProperties(sitePolygon, SitePolygonDto),
@@ -60,7 +61,8 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
       geometry,
       indicators,
       establishmentTreeSpecies,
-      reportingPeriods
+      reportingPeriods,
+      siteName
     });
   }
 
@@ -128,4 +130,9 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     description: "Access to reported trees planted for each approved report on this site."
   })
   reportingPeriods: ReportingPeriodDto[];
+
+  @ApiProperty({
+    description: "If this ID points to a deleted site, the tree species and reporting period will be empty."
+  })
+  siteName: string;
 }

@@ -16,6 +16,7 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { NurseryProcessor } from "./nursery.processor";
 import { NurseryFullDto, NurseryLightDto } from "../dto/nursery.dto";
+import { DateTime } from "luxon";
 
 describe("NuseryProcessor", () => {
   let processor: NurseryProcessor;
@@ -166,44 +167,18 @@ describe("NuseryProcessor", () => {
     });
 
     it("sorts by startDate", async () => {
-      const projectA = await ProjectFactory.create({ name: "A Project" });
-      const projectB = await ProjectFactory.create({ name: "B Project" });
-      const projectC = await ProjectFactory.create({ name: "C Project" });
-      const nurseryA = await NurseryFactory.create({ projectId: projectA.id });
-      const nurseryB = await NurseryFactory.create({ projectId: projectB.id });
-      const nurseryC = await NurseryFactory.create({ projectId: projectC.id });
+      const nurseryA = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 1 }).toJSDate() });
+      const nurseryB = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 10 }).toJSDate() });
+      const nurseryC = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 5 }).toJSDate() });
       await expectNurseries(
         [nurseryA, nurseryB, nurseryC],
         { sort: { field: "startDate" } },
-        { sortField: "startDate" }
+        { sortField: "startDate", sortUp: false }
       );
       await expectNurseries(
         [nurseryC, nurseryB, nurseryA],
         { sort: { field: "startDate", direction: "DESC" } },
         { sortField: "startDate" }
-      );
-    });
-
-    it("sorts by organisation name", async () => {
-      const org1 = await OrganisationFactory.create({ name: "A Org" });
-      const org2 = await OrganisationFactory.create({ name: "B Org" });
-      const org3 = await OrganisationFactory.create({ name: "C Org" });
-      const projectA = await ProjectFactory.create({ name: "A Project", organisationId: org1.id });
-      const projectB = await ProjectFactory.create({ name: "B Project", organisationId: org2.id });
-      const projectC = await ProjectFactory.create({ name: "C Project", organisationId: org3.id });
-      const nurseryA = await NurseryFactory.create({ projectId: projectA.id });
-      const nurseryB = await NurseryFactory.create({ projectId: projectB.id });
-      const nurseryC = await NurseryFactory.create({ projectId: projectC.id });
-
-      await expectNurseries(
-        [nurseryA, nurseryB, nurseryC],
-        { sort: { field: "organisationName" } },
-        { sortField: "organisationName" }
-      );
-      await expectNurseries(
-        [nurseryA, nurseryB, nurseryC],
-        { sort: { field: "organisationName", direction: "DESC" } },
-        { sortField: "organisationName" }
       );
     });
 

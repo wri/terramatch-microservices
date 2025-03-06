@@ -9,6 +9,7 @@ import { TMLogService } from "./util/tm-log.service";
 import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
+import { TemplateService } from "./email/template.service";
 
 @Module({
   imports: [
@@ -30,8 +31,9 @@ import { MediaService } from "./media/media.service";
     TMLogService,
     EmailService,
     LocalizationService,
-    MediaService
+    MediaService,
+    TemplateService
   ],
-  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, MediaService]
+  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, MediaService, TemplateService]
 })
 export class CommonModule {}

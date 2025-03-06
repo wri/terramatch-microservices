@@ -18,6 +18,7 @@ export * from "./polygon-geometry.factory";
 export * from "./project.factory";
 export * from "./project-report.factory";
 export * from "./project-user.factory";
+export * from "./role.factory";
 export * from "./seeding.factory";
 export * from "./site.factory";
 export * from "./site-polygon.factory";

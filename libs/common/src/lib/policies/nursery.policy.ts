@@ -1,9 +1,44 @@
-import { Nursery, User } from "@terramatch-microservices/database/entities";
+import { Nursery, Project, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class NurseryPolicy extends UserPermissionsPolicy {
   async addRules(): Promise<void> {
-    this.builder.can("read", Nursery);
+    if (this.permissions.includes("view-dashboard")) {
+      this.builder.can("read", Nursery);
+    }
+
+    if (this.frameworks.length > 0) {
+      this.builder.can("read", Nursery, { frameworkKey: { $in: this.frameworks } });
+    }
+
+    if (this.permissions.includes("manage-own")) {
+      const user = await this.getUser();
+      if (user != null) {
+        const projectIds = [
+          ...(user.organisationId === null
+            ? []
+            : await Project.findAll({
+                where: { organisationId: user.organisationId },
+                attributes: ["id"]
+              })
+          ).map(({ id }) => id),
+          ...user.projects.map(({ id }) => id)
+        ];
+        if (projectIds.length > 0) {
+          this.builder.can("read", Nursery, { projectId: { $in: projectIds } });
+        }
+      }
+    }
+
+    if (this.permissions.includes("projects-manage")) {
+      const user = await this.getUser();
+      if (user != null) {
+        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        if (projectIds.length > 0) {
+          this.builder.can("read", Nursery, { projectId: { $in: projectIds } });
+        }
+      }
+    }
   }
 
   protected _user?: User | null;

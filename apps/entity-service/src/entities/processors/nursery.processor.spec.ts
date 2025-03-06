@@ -198,19 +198,34 @@ describe("NuseryProcessor", () => {
       const projectA = await ProjectFactory.create({ organisationId: org1.id });
       const projectB = await ProjectFactory.create({ organisationId: org2.id });
       const projectC = await ProjectFactory.create({ organisationId: org3.id });
-      const nurseryA = await NurseryFactory.create({ projectId: projectA.id });
-      const nurseryB = await NurseryFactory.create({ projectId: projectB.id });
-      const nurseryC = await NurseryFactory.create({ projectId: projectC.id });
+      projectA.organisation = await projectA.$get("organisation");
+      projectB.organisation = await projectB.$get("organisation");
+      projectC.organisation = await projectC.$get("organisation");
 
+      const nurseries = [
+        await NurseryFactory.create({
+          projectId: projectA.id
+        })
+      ];
+      nurseries.push(
+        await NurseryFactory.create({
+          projectId: projectB.id
+        })
+      );
+      nurseries.push(
+        await NurseryFactory.create({
+          projectId: projectC.id
+        })
+      );
+      for (const n of nurseries) {
+        n.project = await n.$get("project");
+      }
+
+      await expectNurseries(nurseries, { sort: { field: "organisationName" } }, { sortField: "organisationName" });
       await expectNurseries(
-        [nurseryA, nurseryC, nurseryB],
+        nurseries,
         { sort: { field: "organisationName", direction: "DESC" } },
         { sortField: "organisationName", sortUp: false }
-      );
-      await expectNurseries(
-        [nurseryB, nurseryC, nurseryA],
-        { sort: { field: "organisationName", direction: "ASC" } },
-        { sortField: "organisationName", sortUp: true }
       );
     });
   });

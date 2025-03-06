@@ -45,11 +45,11 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       return sum + (seedlingsYoungTrees ?? 0);
     }, 0);
 
-    const nuseryReportsTotal = nurseriesReports.length;
+    const nurseryReportsTotal = nurseriesReports.length;
     const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nuseryId);
     const props: AdditionalNurseryFullProps = {
       seedlingsGrownCount,
-      nuseryReportsTotal,
+      nurseryReportsTotal,
       overdueNurseryReportsTotal,
 
       ...(this.entitiesService.mapMediaCollection(

@@ -112,7 +112,7 @@ export class NurseryFullDto extends NurseryLightDto {
   seedlingsGrownCount: number | null;
 
   @ApiProperty({ nullable: true })
-  nuseryReportsTotal: number | null;
+  nurseryReportsTotal: number | null;
 
   @ApiProperty({ nullable: true })
   overdueNurseryReportsTotal: number | null;

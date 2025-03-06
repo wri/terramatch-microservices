@@ -18,7 +18,7 @@ import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
 
-export const REPORT_COUNT_ENTITIES = ["projects", "projectReports", "sites"] as const;
+export const REPORT_COUNT_ENTITIES = ["projects", "projectReports", "sites", "nurseries"] as const;
 export type ReportCountEntity = (typeof REPORT_COUNT_ENTITIES)[number];
 
 type TreeReportModelType = typeof ProjectReport | typeof SiteReport | typeof NurseryReport;
@@ -259,36 +259,47 @@ export class TreeService {
   }
 
   async getAssociatedReportCounts(entity: ReportCountEntity, uuid: string): Promise<PlantingCountMap> {
-    const siteReportIds = await this.getAssociatedSiteReportIds(entity, uuid);
-    if (siteReportIds == null) return {};
+    const { TS, reportIds } = await this.getAssociatedReportTreeSpecies(entity, uuid);
+    if (TS == null) return {};
 
     const planting = countTreeCollection(
       groupBy(
-        await TreeSpecies.visible()
-          .siteReports(siteReportIds)
-          .findAll({
-            raw: true,
-            attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
-            group: ["taxonId", "name", "collection"]
-          }),
+        await TS.findAll({
+          raw: true,
+          attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
+          group: ["taxonId", "name", "collection"]
+        }),
         "collection"
       )
     );
-    planting["seeds"] = countPlants(await Seeding.visible().siteReports(siteReportIds).findAll());
+
+    if (entity !== "nurseries") {
+      planting["seeds"] = countPlants(await Seeding.visible().siteReports(reportIds).findAll());
+    }
 
     return planting;
   }
 
-  private async getAssociatedSiteReportIds(entity: ReportCountEntity, uuid: string) {
+  private async getAssociatedReportTreeSpecies(entity: ReportCountEntity, uuid: string) {
+    const TS = TreeSpecies.visible();
     if (entity === "projects") {
       const { id } = await Project.findOne({ where: { uuid }, attributes: ["id"] });
-      return SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(id));
+      const reportIds = SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(id));
+      return { TS: TS.siteReports(reportIds), reportIds };
     } else if (entity === "sites") {
       const { id } = await Site.findOne({ where: { uuid }, attributes: ["id"] });
-      return SiteReport.approvedIdsSubquery([id]);
+      const reportIds = SiteReport.approvedIdsSubquery([id]);
+      return { TS: TS.siteReports(reportIds), reportIds };
     } else if (entity === "projectReports") {
       const { taskId } = await ProjectReport.findOne({ where: { uuid }, attributes: ["taskId"] });
-      return taskId == null ? undefined : SiteReport.approvedIdsForTaskSubquery(taskId);
+      if (taskId == null) return {};
+
+      const reportIds = SiteReport.approvedIdsForTaskSubquery(taskId);
+      return { TS: TS.siteReports(reportIds), reportIds };
+    } else if (entity === "nurseries") {
+      const { id } = await Nursery.findOne({ where: { uuid }, attributes: ["id"] });
+      const reportIds = NurseryReport.approvedIdsSubquery([id]);
+      return { TS: TS.nurseryReports(reportIds), reportIds };
     } else {
       throw new BadRequestException(`Invalid entity type [${entity}]`);
     }

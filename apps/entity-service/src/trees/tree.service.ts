@@ -137,19 +137,29 @@ export class TreeService {
       }
       return treeNames;
     } else if (["sites", "nurseries", "projectReports"].includes(entity)) {
-      // for these we simply pull the project's trees
+      const include = [
+        {
+          model: Project,
+          // This id isn't necessary for the data we want to fetch, but sequelize requires it for
+          // the nested includes
+          attributes: ["id"],
+          include: treeAssociations(Project, ["name", "collection"])
+        }
+      ] as Includeable[];
+
+      if (entity === "sites") {
+        include.push({
+          required: false,
+          association: "seedsPlanted",
+          attributes: ["name"],
+          where: { hidden: false }
+        });
+      }
+
       const whereOptions = {
         where: { uuid },
         attributes: ["frameworkKey"],
-        include: [
-          {
-            model: Project,
-            // This id isn't necessary for the data we want to fetch, but sequelize requires it for
-            // the nested includes
-            attributes: ["id"],
-            include: treeAssociations(Project, ["name", "collection"])
-          }
-        ]
+        include
       };
 
       const entityModel = await (entity === "sites"
@@ -171,6 +181,10 @@ export class TreeService {
           ...omit(uniqueTrees, ["tree-planted"]),
           ["nursery-seedling"]: uniqueTrees["tree-planted"]
         };
+      }
+
+      if (entity === "sites") {
+        uniqueTrees["seeds"] = uniq(((entityModel as Site).seedsPlanted ?? []).map(({ name }) => name));
       }
 
       return uniqueTrees;

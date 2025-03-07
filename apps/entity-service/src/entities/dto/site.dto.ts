@@ -206,6 +206,9 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ type: () => MediaDto, isArray: true })
   treeSpecies: MediaDto[];
 
+  @ApiProperty()
+  treesPlantedCount: number;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   documentFiles: MediaDto[];
 

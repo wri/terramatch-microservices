@@ -12,13 +12,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import {
-  AdditionalSiteFullProps,
-  AdditionalSiteLightProps,
-  SiteFullDto,
-  SiteLightDto,
-  SiteMedia
-} from "../dto/site.dto";
+import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
@@ -143,14 +137,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async addLightDto(document: DocumentBuilder, site: Site) {
     const siteId = site.id;
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
-    const treesPlantedCount =
-      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
-    const props: AdditionalSiteLightProps = {
-      treesPlantedCount
-    };
-
-    document.addData(site.uuid, new SiteLightDto(site, props));
+    document.addData(site.uuid, new SiteLightDto(site));
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {

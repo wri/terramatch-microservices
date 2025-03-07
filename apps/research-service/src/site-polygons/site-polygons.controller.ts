@@ -85,7 +85,6 @@ export class SitePolygonsController {
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
       const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
-      const siteName = await this.sitePolygonService.getSiteName(sitePolygon);
       document.addData(
         sitePolygon.uuid,
         new SitePolygonDto(
@@ -94,7 +93,7 @@ export class SitePolygonsController {
           indicators,
           establishmentTreeSpecies,
           reportingPeriods,
-          siteName
+          sitePolygon.site?.name
         )
       );
     }

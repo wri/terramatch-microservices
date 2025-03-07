@@ -69,7 +69,10 @@ export class ProjectLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalProjectFullProps = AdditionalProps<ProjectFullDto, ProjectLightDto, Omit<Project, "application">>;
+export type AdditionalProjectFullProps = AdditionalProps<
+  ProjectFullDto,
+  ProjectLightDto & Omit<Project, "application">
+>;
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;
 
 export class ANRDto {

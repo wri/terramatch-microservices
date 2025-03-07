@@ -8,10 +8,8 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalProps, EntityDto } from "./entity.dto";
-
-// TODO: THIS IS A STUB!
+import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
@@ -29,7 +27,7 @@ export class SiteLightDto extends EntityDto {
   }
 
   @ApiProperty({ nullable: true, description: "Framework key for this project" })
-  frameworkKey: FrameworkKey | null;
+  frameworkKey: string | null;
 
   @ApiProperty({
     nullable: true,
@@ -40,20 +38,26 @@ export class SiteLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
-    description: "Entity status for this project",
+    description: "Entity status for this site",
     enum: SITE_STATUSES
   })
   status: SiteStatus | null;
 
   @ApiProperty({
     nullable: true,
-    description: "Update request status for this project",
+    description: "Update request status for this site",
     enum: UPDATE_REQUEST_STATUSES
   })
   updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({ nullable: true })
   name: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project name"
+  })
+  projectName: string | null;
 
   @ApiProperty()
   createdAt: Date;
@@ -62,7 +66,8 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Site>;
+export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto & Omit<Site, "project">>;
+export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
   constructor(site: Site, props: AdditionalSiteFullProps) {
@@ -86,4 +91,139 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty()
   totalSiteReports: number;
+
+  @ApiProperty()
+  totalHectaresRestoredSum: number;
+
+  @ApiProperty()
+  seedsPlantedCount: number;
+
+  @ApiProperty()
+  overdueSiteReportsTotal: number;
+
+  @ApiProperty()
+  selfReportedWorkdayCount: number;
+
+  @ApiProperty()
+  regeneratedTreesCount: number;
+
+  @ApiProperty()
+  combinedWorkdayCount: number;
+
+  @ApiProperty()
+  workdayCount: number;
+
+  @ApiProperty({ nullable: true })
+  ppcExternalId: number | null;
+
+  @ApiProperty({ nullable: true })
+  sitingStrategy: string;
+
+  @ApiProperty({ nullable: true })
+  descriptionSitingStrategy: string | null;
+
+  @ApiProperty({ nullable: true })
+  hectaresToRestoreGoal: number;
+
+  @ApiProperty({ nullable: true })
+  description: string | null;
+
+  @ApiProperty({ nullable: true })
+  controlSite: boolean | null;
+
+  @ApiProperty({ nullable: true })
+  history: string | null;
+
+  @ApiProperty({ nullable: true })
+  startDate: Date | null;
+
+  @ApiProperty({ nullable: true })
+  endDate: Date | null;
+
+  @ApiProperty({ nullable: true })
+  landTenures: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  survivalRatePlanted: number | null;
+
+  @ApiProperty({ nullable: true })
+  directSeedingSurvivalRate: number | null;
+
+  @ApiProperty({ nullable: true })
+  aNatRegenerationTreesPerHectare: number | null;
+
+  @ApiProperty({ nullable: true })
+  aNatRegeneration: number | null;
+
+  @ApiProperty({ nullable: true })
+  landscapeCommunityContribution: string | null;
+
+  @ApiProperty({ nullable: true })
+  technicalNarrative: string | null;
+
+  @ApiProperty({ nullable: true })
+  plantingPattern: string | null;
+
+  @ApiProperty({ nullable: true })
+  soilCondition: string | null;
+
+  @ApiProperty({ nullable: true })
+  aimYearFiveCrownCover: number | null;
+
+  @ApiProperty({ nullable: true })
+  aimNumberOfMatureTrees: number | null;
+
+  @ApiProperty({ nullable: true })
+  landUseTypes: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  restorationStrategy: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  feedback: string | null;
+
+  @ApiProperty({ nullable: true })
+  feedbackFields: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  detailedInterventionTypes: string[] | null;
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  socioeconomicBenefits: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  file: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  otherAdditionalDocuments: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  photos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  treeSpecies: MediaDto[];
+
+  @ApiProperty()
+  treesPlantedCount: number;
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  documentFiles: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: false })
+  stratificationForHeterogeneity: MediaDto;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project uuid"
+  })
+  projectUuid: string;
+
+  @ApiProperty({
+    nullable: true,
+    description: "The associated project organisation name"
+  })
+  organisationName: string;
 }

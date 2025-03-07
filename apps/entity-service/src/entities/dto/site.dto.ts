@@ -70,14 +70,13 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto, Omit<Site, "project">>;
 export type AdditionalSiteLightProps = Pick<SiteFullDto, "treesPlantedCount">;
-
-export type AdditionalSiteCombinedProps = AdditionalSiteFullProps & AdditionalSiteLightProps;
+export type AdditionalSiteFullProps = AdditionalSiteLightProps &
+  AdditionalProps<SiteFullDto, SiteLightDto, Omit<Site, "project">>;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
-  constructor(site: Site, props: AdditionalSiteCombinedProps) {
+  constructor(site: Site, props: AdditionalSiteFullProps) {
     super();
     this.populate(SiteFullDto, {
       ...pickApiProperties(site, SiteFullDto),

@@ -13,7 +13,7 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import {
-  AdditionalSiteCombinedProps,
+  AdditionalSiteFullProps,
   AdditionalSiteLightProps,
   SiteFullDto,
   SiteLightDto,
@@ -122,7 +122,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
-    const props: AdditionalSiteCombinedProps = {
+    const props: AdditionalSiteFullProps = {
       totalHectaresRestoredSum: await SitePolygon.approved().sites([site.uuid]).sum("calcArea"),
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:

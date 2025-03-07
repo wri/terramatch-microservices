@@ -135,9 +135,6 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   async addLightDto(document: DocumentBuilder, site: Site) {
-    const siteId = site.id;
-    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
-
     document.addData(site.uuid, new SiteLightDto(site));
   }
 

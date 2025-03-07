@@ -53,7 +53,6 @@ export class SitePolygonsService {
 
     return reportingPeriods;
   }
-
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
     const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } = (await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } })) ?? {};

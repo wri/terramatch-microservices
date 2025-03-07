@@ -53,7 +53,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         attributes: ["dueAt", "submittedAt"]
       }
     ],
-    attributes: ["projectId"],
+    attributes: ["projectId", "name"],
     required: true
   };
 
@@ -80,6 +80,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
   }
 
+  async filterSiteUuids(siteUuids: string[]) {
+    return this.where({ siteUuid: { [Op.in]: siteUuids } });
+  }
   async filterProjectUuids(projectUuids: string[]) {
     const filterProjects = await Project.findAll({
       where: { uuid: { [Op.in]: projectUuids } },

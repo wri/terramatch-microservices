@@ -182,12 +182,20 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("should not sort by status", async () => {
-      await NurseryFactory.create({ status: "approved" });
-      await NurseryFactory.create({ status: "started" });
-      await NurseryFactory.create({ status: "awaiting-approval" });
-      await expect(processor.findMany({ sort: { field: "status" } } as EntityQueryDto)).rejects.toThrow(
-        BadRequestException
+    it("sort by status", async () => {
+      const nurseryA = await NurseryFactory.create({ status: "started" });
+      const nurseryB = await NurseryFactory.create({ status: "approved" });
+      const nurseryC = await NurseryFactory.create({ status: "approved" });
+      await expectNurseries([nurseryA, nurseryB, nurseryC], { sort: { field: "status" } }, { sortField: "status" });
+      await expectNurseries(
+        [nurseryA, nurseryB, nurseryC],
+        { sort: { field: "status", direction: "ASC" } },
+        { sortField: "status" }
+      );
+      await expectNurseries(
+        [nurseryC, nurseryB, nurseryA],
+        { sort: { field: "status", direction: "DESC" } },
+        { sortField: "status", sortUp: false }
       );
     });
 

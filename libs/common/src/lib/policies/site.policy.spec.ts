@@ -40,7 +40,7 @@ describe("SitePolicy", () => {
     await expectCannot(service, "read", tf);
   });
 
-  it("should allows reading own sites", async () => {
+  it("should allow reading own sites", async () => {
     mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
@@ -65,7 +65,7 @@ describe("SitePolicy", () => {
     await expectCan(service, "read", s4);
   });
 
-  it("should allows reading managed sites", async () => {
+  it("should allow reading managed sites", async () => {
     mockPermissions("projects-manage");
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();

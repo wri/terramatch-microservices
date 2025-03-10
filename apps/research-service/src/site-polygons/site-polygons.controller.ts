@@ -51,6 +51,15 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
+    const { siteId, projectId, includeTestProjects } = query;
+    const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
+
+    if (countSelectedParams > 1) {
+      throw new BadRequestException(
+        "Only one of siteId, projectId, and includeTestProjects may be used in a single request."
+      );
+    }
+
     const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
     if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException("Page size is invalid");
@@ -63,13 +72,18 @@ export class SitePolygonsController {
 
     await queryBuilder.touchesBoundary(query.boundaryPolygon);
 
-    // If projectIds are sent, ignore filtering on project is_test flag.
-    if (query.projectId != null) {
-      await queryBuilder.filterProjectUuids(query.projectId);
-    } else if (query.includeTestProjects !== true) {
-      await queryBuilder.excludeTestProjects();
+    if (query.siteId != null) {
+      await queryBuilder.filterSiteUuids(query.siteId);
     }
 
+    if (query.projectId != null) {
+      await queryBuilder.filterProjectUuids(query.projectId);
+    }
+
+    // Ensure test projects are excluded only if not included explicitly
+    if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
+      await queryBuilder.excludeTestProjects();
+    }
     const document = buildJsonApi(SitePolygonDto, { pagination: "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
@@ -82,7 +96,8 @@ export class SitePolygonsController {
           sitePolygon.polygon?.polygon,
           indicators,
           establishmentTreeSpecies,
-          reportingPeriods
+          reportingPeriods,
+          sitePolygon.site?.name
         )
       );
     }

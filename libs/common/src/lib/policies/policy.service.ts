@@ -39,6 +39,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],
   [Project, ProjectPolicy],
+  [Site, SitePolicy],
   [ProjectReport, ProjectReportPolicy],
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],

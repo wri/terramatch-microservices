@@ -38,6 +38,7 @@ export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
+  static readonly UNSUBMITTED_STATUSES = ["due", "started"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
   static incomplete() {

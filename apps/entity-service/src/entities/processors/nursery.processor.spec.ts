@@ -166,7 +166,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sorts by startDate and createdAt", async () => {
+    it("sorts by startDate", async () => {
       const nurseryA = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 1 }).toJSDate() });
       const nurseryB = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 10 }).toJSDate() });
       const nurseryC = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 5 }).toJSDate() });
@@ -180,6 +180,22 @@ describe("NuseryProcessor", () => {
         { sort: { field: "startDate", direction: "ASC" } },
         { sortField: "startDate", sortUp: true }
       );
+    });
+
+    it("sorts by createdAt", async () => {
+      const now = DateTime.now();
+      const nurseryA = await NurseryFactory.create({
+        startDate: now.minus({ days: 1 }).toJSDate(),
+        createdAt: now.minus({ minutes: 1 }).toJSDate()
+      });
+      const nurseryB = await NurseryFactory.create({
+        startDate: now.minus({ days: 10 }).toJSDate(),
+        createdAt: now.minus({ minutes: 10 }).toJSDate()
+      });
+      const nurseryC = await NurseryFactory.create({
+        startDate: now.minus({ days: 5 }).toJSDate(),
+        createdAt: now.minus({ minutes: 5 }).toJSDate()
+      });
       await expectNurseries(
         [nurseryA, nurseryC, nurseryB],
         { sort: { field: "createdAt", direction: "DESC" } },

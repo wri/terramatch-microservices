@@ -105,7 +105,7 @@ describe("UserCreationService", () => {
     const localizationTitle = await getLocalizationTitle();
     const localizationCta = await getLocalizationCta();
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
@@ -277,7 +277,7 @@ describe("UserCreationService", () => {
     const localizationTitle = await getLocalizationTitle();
     const localizationCta = await getLocalizationCta();
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
@@ -307,7 +307,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.reject());
 
@@ -330,7 +330,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
@@ -354,7 +354,7 @@ describe("UserCreationService", () => {
     const localizationTitle = await getLocalizationTitle();
     const localizationCta = await getLocalizationCta();
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
@@ -372,28 +372,6 @@ describe("UserCreationService", () => {
     expect(result).toBeNull();
   });
 
-  /*it("should return an error when bcrypt.hash fails", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationBody = await getLocalizationBody();
-    const localizationSubject = await getLocalizationSubject();
-    const localizationTitle = await getLocalizationTitle();
-    const localizationCta = await getLocalizationCta();
-
-    localizationService.getLocalizationKeys.mockReturnValue(
-      Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
-    );
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(bcrypt, "hash").mockRejectedValue(new Error("Hashing failed"));
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow("Hashing failed");
-  });*/
-
   it("should return an error when User.create fails", async () => {
     const user = await UserFactory.create();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
@@ -409,7 +387,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockRejectedValue(new Error("User creation failed"));
 
@@ -431,7 +409,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockRejectedValue(new Error("ModelHasRole creation failed"));
@@ -454,7 +432,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);

@@ -21,7 +21,7 @@ import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import { UserCreationService } from "./user-creation.service";
 
-export const USER_RESPONSE_SHAPE = {
+const USER_RESPONSE_SHAPE = {
   data: {
     type: UserDto,
     relationships: [

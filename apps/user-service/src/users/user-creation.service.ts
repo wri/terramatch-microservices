@@ -13,6 +13,7 @@ import bcrypt from "bcryptjs";
 @Injectable()
 export class UserCreationService {
   protected readonly logger: LoggerService = new TMLogService(UserCreationService.name);
+  private roles = ["project-developer", "funder", "government"];
 
   constructor(
     private readonly jwtService: JwtService,
@@ -60,14 +61,19 @@ export class UserCreationService {
     }
 
     const role = request.role;
+
+    if (!this.roles.includes(role)) {
+      throw new UnprocessableEntityException("Role not valid");
+    }
+
     const roleEntity = await Role.findOne({ where: { name: role } });
 
     if (roleEntity == null) {
       throw new NotFoundException("Role not found");
     }
 
-    const userExist = await User.findOne({ where: { emailAddress: request.emailAddress } });
-    if (userExist != null) {
+    const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
+    if (userExists) {
       throw new UnprocessableEntityException("User already exist");
     }
 

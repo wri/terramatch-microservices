@@ -5,6 +5,7 @@ import {
   Permission,
   Project,
   ProjectReport,
+  Site,
   SitePolygon,
   SiteReport,
   User
@@ -15,6 +16,7 @@ import { TMLogService } from "../util/tm-log.service";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
 import { isArray } from "lodash";
+import { SitePolicy } from "./site.policy";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
 import { SiteReportPolicy } from "./site-report.policy";
@@ -31,6 +33,7 @@ type PolicyClass = {
 
 const POLICIES: [EntityClass, PolicyClass][] = [
   [Project, ProjectPolicy],
+  [Site, SitePolicy],
   [ProjectReport, ProjectReportPolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],

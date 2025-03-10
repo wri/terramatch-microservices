@@ -57,7 +57,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const builder = await this.entitiesService.buildQuery(Site, query, associations);
     if (query.sort != null) {
-      if (query.sort.field === "name") {
+      if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
         builder.order(["project", "name", query.sort.direction ?? "ASC"]);
@@ -135,7 +135,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   async addLightDto(document: DocumentBuilder, site: Site) {
-    document.addData(site.uuid, new SiteLightDto(site));
+    const siteId = site.id;
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
+    const treesPlantedCount =
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    document.addData(site.uuid, new SiteLightDto(site, { treesPlantedCount }));
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {

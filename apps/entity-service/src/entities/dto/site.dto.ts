@@ -13,12 +13,13 @@ import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
-  constructor(site?: Site) {
+  constructor(site?: Site, props?: AdditionalSiteLightProps) {
     super();
     if (site != null) {
       this.populate(SiteLightDto, {
         ...pickApiProperties(site, SiteLightDto),
         lightResource: true,
+        ...props,
         // these two are untyped and marked optional in the base model.
         createdAt: site.createdAt as Date,
         updatedAt: site.createdAt as Date
@@ -60,13 +61,18 @@ export class SiteLightDto extends EntityDto {
   projectName: string | null;
 
   @ApiProperty()
+  treesPlantedCount: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
 }
 
-export type AdditionalSiteFullProps = AdditionalProps<SiteFullDto, SiteLightDto & Omit<Site, "project">>;
+export type AdditionalSiteLightProps = Pick<SiteLightDto, "treesPlantedCount">;
+export type AdditionalSiteFullProps = AdditionalSiteLightProps &
+  AdditionalProps<SiteFullDto, SiteLightDto & Omit<Site, "project">>;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
@@ -205,9 +211,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   treeSpecies: MediaDto[];
-
-  @ApiProperty()
-  treesPlantedCount: number;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   documentFiles: MediaDto[];

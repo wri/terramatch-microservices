@@ -4,7 +4,8 @@ import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })
-  field: string;
+  @IsOptional()
+  field?: string;
 
   @ApiProperty({ name: "sort[direction]", required: false, enum: ["ASC", "DESC"], default: "ASC" })
   @IsEnum(["ASC", "DESC"])
@@ -36,4 +37,8 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ApiProperty({ required: false })
   @IsOptional()
   updateRequestStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  projectUuid?: string;
 }

@@ -1,4 +1,4 @@
-import { Media, Nursery, NurseryReport, ProjectUser } from "@terramatch-microservices/database/entities";
+import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
 import { NurseryLightDto, NurseryFullDto, AdditionalNurseryFullProps, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -64,14 +64,13 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       builder.where({ name: { [Op.like]: `%${query.search}%` } });
     }
 
-    //filter to projectUuid
-    // if (query.projectUuid != null) {
-    //   const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
-    //   if (project == null) {
-    //     throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
-    //   }
-    //   builder.where({ projectId: project.id });
-    // }
+    if (query.projectUuid != null) {
+      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
+      if (project == null) {
+        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
+      }
+      builder.where({ projectId: project.id });
+    }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }

@@ -114,21 +114,21 @@ describe("NuseryProcessor", () => {
         updateRequestStatus: "awaiting-approval",
         projectId: p1.id
       });
-      //   const fourth = await NurseryFactory.create({
-      //     name: "fourth nursery",
-      //     status: "approved",
-      //     updateRequestStatus: "approved",
-      //     projectId: p2.id
-      //   });
+      const fourth = await NurseryFactory.create({
+        name: "fourth nursery",
+        status: "approved",
+        updateRequestStatus: "approved",
+        projectId: p2.id
+      });
 
       await expectNurseries([first, second, third], { updateRequestStatus: "awaiting-approval" });
 
-      //   await expectNurseries([fourth], { projectUuid: p2.uuid });
+      await expectNurseries([fourth], { projectUuid: p2.uuid });
     });
 
-    // it("throws an error if the project uuid is not found", async () => {
-    //   await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
-    // });
+    it("throws an error if the project uuid is not found", async () => {
+      await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
+    });
 
     it("sorts by name", async () => {
       const nurseryA = await NurseryFactory.create({ name: "A Nursery" });

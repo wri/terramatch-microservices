@@ -166,7 +166,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sorts by startDate", async () => {
+    it("sorts by startDate and createdAt", async () => {
       const nurseryA = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 1 }).toJSDate() });
       const nurseryB = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 10 }).toJSDate() });
       const nurseryC = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 5 }).toJSDate() });
@@ -179,6 +179,16 @@ describe("NuseryProcessor", () => {
         [nurseryB, nurseryC, nurseryA],
         { sort: { field: "startDate", direction: "ASC" } },
         { sortField: "startDate", sortUp: true }
+      );
+      await expectNurseries(
+        [nurseryA, nurseryC, nurseryB],
+        { sort: { field: "createdAt", direction: "DESC" } },
+        { sortField: "createdAt", sortUp: false }
+      );
+      await expectNurseries(
+        [nurseryB, nurseryC, nurseryA],
+        { sort: { field: "createdAt", direction: "ASC" } },
+        { sortField: "createdAt", sortUp: true }
       );
     });
 

@@ -23,7 +23,6 @@ export class EntityAssociationsController {
   async associationIndex(@Param() { entity, uuid, association }: EntityAssociationIndexParamsDto) {
     const processor = this.entitiesService.createAssociationProcessor(entity, uuid, association);
     const baseEntity = await processor.getBaseEntity();
-
     await this.policyService.authorize("read", baseEntity);
 
     const document = buildJsonApi(processor.DTO, { forceDataArray: true });

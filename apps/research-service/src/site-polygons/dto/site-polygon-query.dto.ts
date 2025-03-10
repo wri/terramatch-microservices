@@ -24,11 +24,23 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
     name: "projectId[]",
     isArray: true,
     required: false,
-    description: "Filter results by project UUID(s). If specified, the includeTestProjects param is ignored"
+    description:
+      "Filter results by project UUID(s). Only one of siteId, projectId and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   @IsArray()
   projectId?: string[];
+
+  @ApiProperty({
+    name: "siteId[]",
+    isArray: true,
+    required: false,
+    description:
+      "Filter results by site UUID(s). Only one of siteId, projectId and includeTestProjects may be used in a single request"
+  })
+  @IsOptional()
+  @IsArray()
+  siteId?: string[];
 
   @ApiProperty({
     enum: INDICATOR_SLUGS,
@@ -60,7 +72,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
     required: false,
     default: false,
     description:
-      "Include polygons for test projects in the results. If an explicit list of project UUIDs is included in projectId[], this parameter is ignored."
+      "Include polygons for test projects in the results. Only one of siteId, projectId and includeTestProjects may be used in a single request"
   })
   includeTestProjects?: boolean;
 

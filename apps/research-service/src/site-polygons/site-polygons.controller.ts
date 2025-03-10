@@ -81,7 +81,7 @@ export class SitePolygonsController {
     }
 
     // Ensure test projects are excluded only if not included explicitly
-    if (!query.includeTestProjects) {
+    if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
     const document = buildJsonApi(SitePolygonDto, { pagination: "cursor" });

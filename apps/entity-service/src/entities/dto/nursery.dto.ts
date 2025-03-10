@@ -13,12 +13,13 @@ import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "nurseries" })
 export class NurseryLightDto extends EntityDto {
-  constructor(nursery?: Nursery) {
+  constructor(nursery?: Nursery, props?: AdditionalNurseryLightProps) {
     super();
     if (nursery != null) {
       this.populate(NurseryLightDto, {
         ...pickApiProperties(nursery, NurseryLightDto),
         lightResource: true,
+        ...props,
         // these two are untyped and marked optional in the base model.
         createdAt: nursery.createdAt as Date,
         updatedAt: nursery.updatedAt as Date
@@ -67,6 +68,9 @@ export class NurseryLightDto extends EntityDto {
   @ApiProperty({ nullable: true })
   endDate: Date | null;
 
+  @ApiProperty({ nullable: true })
+  seedlingsGrownCount: number | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -74,7 +78,9 @@ export class NurseryLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalNurseryFullProps = AdditionalProps<NurseryFullDto, NurseryLightDto & Omit<Nursery, "project">>;
+export type AdditionalNurseryLightProps = Pick<NurseryLightDto, "seedlingsGrownCount">;
+export type AdditionalNurseryFullProps = AdditionalNurseryLightProps &
+  AdditionalProps<NurseryFullDto, NurseryLightDto & Omit<Nursery, "project">>;
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
 
 export class NurseryFullDto extends NurseryLightDto {
@@ -107,9 +113,6 @@ export class NurseryFullDto extends NurseryLightDto {
 
   @ApiProperty({ nullable: true })
   oldModel: string | null;
-
-  @ApiProperty({ nullable: true })
-  seedlingsGrownCount: number | null;
 
   @ApiProperty({ nullable: true })
   nurseryReportsTotal: number | null;

@@ -26,6 +26,7 @@ export class TreeReportCountsDto extends JsonApiAttributes<TreeReportCountsDto> 
       type: "object",
       additionalProperties: { $ref: "#/components/schemas/PlantingCountDto" }
     },
+    nullable: true,
     description:
       "Returns the planting counts of all species on reports associated with this entity, grouped by collection." +
       "If the entity is a project or site, it returns data for all site reports under that Project or Site. " +
@@ -41,5 +42,5 @@ export class TreeReportCountsDto extends JsonApiAttributes<TreeReportCountsDto> 
       }
     }
   })
-  reportCounts: PlantingCountMap;
+  reportCounts?: PlantingCountMap;
 }

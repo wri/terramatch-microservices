@@ -1,5 +1,5 @@
 import { BadRequestException, Controller, Get, Param, Query, UnauthorizedException } from "@nestjs/common";
-import { TreeService } from "./tree.service";
+import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
@@ -68,9 +68,12 @@ export class TreesController {
   async getReportCounts(@Param() { entity, uuid }: TreeReportCountsParamsDto) {
     await this.authorizeRead(entity, uuid);
 
-    const establishmentTrees =
-      entity === "projects" ? null : await this.treeService.getEstablishmentTrees(entity, uuid);
-    const reportCounts = await this.treeService.getAssociatedReportCounts(entity, uuid);
+    const establishmentTrees = !isEstablishmentEntity(entity)
+      ? null
+      : await this.treeService.getEstablishmentTrees(entity, uuid);
+    const reportCounts = !isReportCountEntity(entity)
+      ? null
+      : await this.treeService.getAssociatedReportCounts(entity, uuid);
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.

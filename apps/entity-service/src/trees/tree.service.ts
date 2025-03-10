@@ -12,7 +12,7 @@ import {
 import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
-import { REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
+import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
@@ -20,6 +20,11 @@ export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
 
 export const REPORT_COUNT_ENTITIES = ["projects", "projectReports", "sites", "nurseries"] as const;
 export type ReportCountEntity = (typeof REPORT_COUNT_ENTITIES)[number];
+
+export const isEstablishmentEntity = (entity: EntityType): entity is EstablishmentEntity =>
+  ESTABLISHMENT_ENTITIES.includes(entity as EstablishmentEntity);
+export const isReportCountEntity = (entity: EntityType): entity is ReportCountEntity =>
+  REPORT_COUNT_ENTITIES.includes(entity as ReportCountEntity);
 
 type TreeReportModelType = typeof ProjectReport | typeof SiteReport | typeof NurseryReport;
 type TreeModelType = TreeReportModelType | typeof Project | typeof Site | typeof Nursery;

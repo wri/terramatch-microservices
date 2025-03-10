@@ -1,14 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsUUID } from "class-validator";
-import { REPORT_COUNT_ENTITIES, ReportCountEntity } from "../tree.service";
+import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
 
 export class TreeReportCountsParamsDto {
-  @IsIn(REPORT_COUNT_ENTITIES)
+  @IsIn(ENTITY_TYPES)
   @ApiProperty({
-    enum: REPORT_COUNT_ENTITIES,
+    enum: ENTITY_TYPES,
     description: "Entity type for which to retrieve the associated report count data."
   })
-  entity: ReportCountEntity;
+  entity: EntityType;
 
   @IsUUID()
   @ApiProperty({ description: "Entity UUID for which to retrieve the associated report count data." })

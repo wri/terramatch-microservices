@@ -74,7 +74,7 @@ export class NurseryLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalNurseryFullProps = AdditionalProps<NurseryFullDto, NurseryLightDto, Nursery>;
+export type AdditionalNurseryFullProps = AdditionalProps<NurseryFullDto, NurseryLightDto & Omit<Nursery, "project">>;
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
 
 export class NurseryFullDto extends NurseryLightDto {

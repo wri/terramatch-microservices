@@ -51,7 +51,8 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     geometry: Polygon,
     indicators: IndicatorDto[],
     establishmentTreeSpecies: TreeSpeciesDto[],
-    reportingPeriods: ReportingPeriodDto[]
+    reportingPeriods: ReportingPeriodDto[],
+    siteName: string
   ) {
     super({
       ...pickApiProperties(sitePolygon, SitePolygonDto),
@@ -60,7 +61,8 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
       geometry,
       indicators,
       establishmentTreeSpecies,
-      reportingPeriods
+      reportingPeriods,
+      siteName
     });
   }
 
@@ -128,4 +130,9 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     description: "Access to reported trees planted for each approved report on this site."
   })
   reportingPeriods: ReportingPeriodDto[];
+
+  @ApiProperty({
+    description: "The name of the associated Site."
+  })
+  siteName: string;
 }

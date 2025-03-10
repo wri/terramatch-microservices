@@ -34,7 +34,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     const associations = [projectAssociation];
     const builder = await this.entitiesService.buildQuery(Nursery, query, associations);
     if (query.sort != null) {
-      if (["name", "startDate"].includes(query.sort.field)) {
+      if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
@@ -103,7 +103,16 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
   }
 
   async addLightDto(document: DocumentBuilder, nursery: Nursery): Promise<void> {
-    document.addData(nursery.uuid, new NurseryLightDto(nursery));
+    const nuseryId = nursery.id;
+
+    const nurseriesReports = await NurseryReport.nurseries([nuseryId]).findAll({
+      attributes: ["id", "seedlingsYoungTrees"]
+    });
+
+    const seedlingsGrownCount = nurseriesReports.reduce((sum, { seedlingsYoungTrees }) => {
+      return sum + (seedlingsYoungTrees ?? 0);
+    }, 0);
+    document.addData(nursery.uuid, new NurseryLightDto(nursery, { seedlingsGrownCount }));
   }
 
   protected async getTotalOverdueReports(nuseryId: number) {

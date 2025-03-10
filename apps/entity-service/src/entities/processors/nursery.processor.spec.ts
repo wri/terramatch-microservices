@@ -225,6 +225,27 @@ describe("NuseryProcessor", () => {
       );
     });
 
+    it("sort by updateRequestStatus", async () => {
+      const nurseryA = await NurseryFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const nurseryB = await NurseryFactory.create({ updateRequestStatus: "approved" });
+      const nurseryC = await NurseryFactory.create({ updateRequestStatus: "approved" });
+      await expectNurseries(
+        [nurseryA, nurseryB, nurseryC],
+        { sort: { field: "updateRequestStatus" } },
+        { sortField: "updateRequestStatus" }
+      );
+      await expectNurseries(
+        [nurseryA, nurseryB, nurseryC],
+        { sort: { field: "updateRequestStatus", direction: "ASC" } },
+        { sortField: "updateRequestStatus" }
+      );
+      await expectNurseries(
+        [nurseryC, nurseryB, nurseryA],
+        { sort: { field: "updateRequestStatus", direction: "DESC" } },
+        { sortField: "updateRequestStatus", sortUp: false }
+      );
+    });
+
     it("sorts by organisation name", async () => {
       const org1 = await OrganisationFactory.create({ name: "A Org" });
       const org2 = await OrganisationFactory.create({ name: "B Org" });

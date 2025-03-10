@@ -126,7 +126,7 @@ describe("NuseryProcessor", () => {
       await expectNurseries([fourth], { projectUuid: p2.uuid });
     });
 
-    it("throws an error if the project uuid is not found", async () => {
+    it("should throw an error if the project uuid is not found", async () => {
       await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 

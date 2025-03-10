@@ -46,7 +46,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     }
 
     const frameworkPermissions = permissions
-      .filter(name => name.startsWith("framework-"))
+      ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);
     if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });

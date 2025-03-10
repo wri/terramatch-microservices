@@ -1,7 +1,14 @@
-import { TreeService } from "./tree.service";
+import { ReportCountEntity, TreeService } from "./tree.service";
 import { Test } from "@nestjs/testing";
-import { Seeding, TreeSpecies, TreeSpeciesResearch } from "@terramatch-microservices/database/entities";
-import { pick, uniq } from "lodash";
+import {
+  ProjectReport,
+  Seeding,
+  Site,
+  SiteReport,
+  TreeSpecies,
+  TreeSpeciesResearch
+} from "@terramatch-microservices/database/entities";
+import { flatten, pick, sumBy, uniq } from "lodash";
 import { faker } from "@faker-js/faker";
 import {
   NurseryFactory,
@@ -18,6 +25,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 
 import { PlantingCountDto } from "./dto/planting-count.dto";
+import { Op } from "sequelize";
 
 describe("TreeService", () => {
   let service: TreeService;
@@ -125,7 +133,7 @@ describe("TreeService", () => {
       // nursery seedlings in PPC, but the establishment data is always tree-planted.
       expect(result["nursery-seedling"].sort()).toEqual(ppcProjectTrees);
       result = await service.getEstablishmentTrees("sites", site.uuid);
-      expect(Object.keys(result).length).toBe(1);
+      expect(Object.keys(result)).toEqual(["tree-planted", "seeds"]);
       expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
       result = await service.getEstablishmentTrees("nurseries", nursery.uuid);
       expect(Object.keys(result).length).toBe(1);
@@ -179,7 +187,7 @@ describe("TreeService", () => {
       const reduceTreeCounts = (counts: Record<string, PlantingCountDto>, tree: TreeSpecies | Seeding) => ({
         ...counts,
         [tree.name]: {
-          taxonId: counts[tree.name]?.taxonId ?? tree.taxonId,
+          taxonId: counts[tree.name]?.taxonId ?? tree.taxonId ?? null,
           amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
         }
       });
@@ -259,7 +267,7 @@ describe("TreeService", () => {
       expect(Object.keys(result["nursery-seedling"])).not.toContain(hidden.name);
     });
 
-    it("handles bad input to get previous planting with undefined or an exception", async () => {
+    it("handles bad input with undefined or an exception", async () => {
       expect(await service.getPreviousPlanting("sites", "fakeuuid")).toBeUndefined();
       await expect(service.getPreviousPlanting("projectReports", "fakeuuid")).rejects.toThrow(NotFoundException);
       await expect(service.getPreviousPlanting("siteReports", "fakeuuid")).rejects.toThrow(NotFoundException);
@@ -268,6 +276,140 @@ describe("TreeService", () => {
       await expect(service.getPreviousPlanting("nothing-burgerReports", "fakeuuid")).rejects.toThrow(
         BadRequestException
       );
+    });
+  });
+
+  describe("getAssociatedReportCounts", () => {
+    it("throws if the entity type is invalid", async () => {
+      await expect(service.getAssociatedReportCounts("siteReports" as ReportCountEntity, "fakeUuid")).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    // Tests all entity types of getAssociationReportCounts in a single test because the data requirements
+    // are so robust for each one that it makes sense to set them all up at once. Additionally, it helps
+    // make sure that each entity type is only returning the data it's really supposed to.
+    it("returns associated counts", async () => {
+      const taskIds = [faker.number.int({ min: 100, max: 500 }), faker.number.int({ min: 100, max: 500 })];
+      await ProjectReport.destroy({ where: { taskId: { [Op.in]: taskIds } } });
+      await SiteReport.destroy({ where: { taskId: { [Op.in]: taskIds } } });
+
+      const project = await ProjectFactory.create();
+      const projectReport = await ProjectReportFactory.create({
+        projectId: project.id,
+        taskId: taskIds[0],
+        status: "approved"
+      });
+
+      const sites = await Promise.all(
+        Site.APPROVED_STATUSES.map(status => SiteFactory.create({ status, projectId: project.id }))
+      );
+      const siteReports = await Promise.all(
+        flatten(
+          sites.map(({ id: siteId }) =>
+            taskIds.map(taskId => SiteReportFactory.create({ siteId, taskId, status: "approved" }))
+          )
+        )
+      );
+      const task1SiteReports = siteReports.filter(({ taskId }) => taskId === taskIds[0]);
+      const task2SiteReports = siteReports.filter(({ taskId }) => taskId === taskIds[1]);
+      const coffeeTrees = await Promise.all(
+        [...task1SiteReports, ...task2SiteReports].map(({ id }) =>
+          TreeSpeciesFactory.forSiteReportTreePlanted.create({
+            speciesableId: id,
+            name: "Coffee"
+          })
+        )
+      );
+      const seeds = await Promise.all(
+        [...task1SiteReports, ...task2SiteReports].map(({ id }) =>
+          SeedingFactory.forSiteReport.create({
+            seedableId: id,
+            name: "Acacia"
+          })
+        )
+      );
+      await TreeSpeciesFactory.forSiteReportTreePlanted.create({
+        speciesableId: (
+          await SiteReportFactory.create({
+            siteId: sites[0].id,
+            status: "needs-more-information"
+          })
+        ).id,
+        name: "Coffee"
+      });
+      await TreeSpeciesFactory.forSiteReportTreePlanted.create({
+        speciesableId: task1SiteReports[0].id,
+        name: "Coffee",
+        hidden: true
+      });
+      const polymorphicId = (plant: TreeSpecies | Seeding) =>
+        plant instanceof TreeSpecies ? plant.speciesableId : plant.seedableId;
+      const plantsInReports = <P extends TreeSpecies | Seeding>(reports: SiteReport[], plants: P[]) =>
+        plants.filter(plant => reports.find(({ id }) => id === polymorphicId(plant)) != null);
+      const task1SiteCoffee = sumBy(plantsInReports(task1SiteReports, coffeeTrees), "amount");
+      const task2SiteCoffee = sumBy(plantsInReports(task2SiteReports, coffeeTrees), "amount");
+      const task1SiteAcacia = sumBy(plantsInReports(task1SiteReports, seeds), "amount");
+      const task2SiteAcacia = sumBy(plantsInReports(task2SiteReports, seeds), "amount");
+      const site1Reports = [...task1SiteReports, ...task2SiteReports].filter(({ siteId }) => siteId === sites[0].id);
+      const site1Coffee = sumBy(plantsInReports(site1Reports, coffeeTrees), "amount");
+      const site1Acacia = sumBy(plantsInReports(site1Reports, seeds), "amount");
+
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+      const nurseryReports = await NurseryReportFactory.createMany(2, { nurseryId: nursery.id, status: "approved" });
+      const nurseryCoffee = sumBy(
+        await Promise.all(
+          nurseryReports.map(({ id }, index) =>
+            TreeSpeciesFactory.forNurseryReportSeedling.create({
+              speciesableId: id,
+              name: "Coffee",
+              taxonId: index === 1 ? "wfo-nurseryreporttree" : undefined
+            })
+          )
+        ),
+        "amount"
+      );
+      const { amount: nurseryAcacia } = await TreeSpeciesFactory.forNurseryReportSeedling.create({
+        speciesableId: nurseryReports[0].id,
+        name: "Acacia"
+      });
+      await TreeSpeciesFactory.forNurseryReportSeedling.create({
+        speciesableId: (
+          await NurseryReportFactory.create({
+            nurseryId: nursery.id,
+            status: "awaiting-approval"
+          })
+        ).id,
+        name: "Coffee"
+      });
+
+      let result = await service.getAssociatedReportCounts("nurseries", nursery.uuid);
+      expect(Object.keys(result)).toEqual(["nursery-seedling"]);
+      expect(result["nursery-seedling"]).toMatchObject({
+        Coffee: { taxonId: "wfo-nurseryreporttree", amount: nurseryCoffee },
+        Acacia: { amount: nurseryAcacia }
+      });
+
+      result = await service.getAssociatedReportCounts("sites", sites[0].uuid);
+      expect(Object.keys(result).length).toBe(2);
+      expect(result).toMatchObject({
+        "tree-planted": { Coffee: { amount: site1Coffee } },
+        seeds: { Acacia: { amount: site1Acacia } }
+      });
+
+      result = await service.getAssociatedReportCounts("projects", project.uuid);
+      expect(Object.keys(result).length).toBe(2);
+      expect(result).toMatchObject({
+        "tree-planted": { Coffee: { amount: task1SiteCoffee + task2SiteCoffee } },
+        seeds: { Acacia: { amount: task1SiteAcacia + task2SiteAcacia } }
+      });
+
+      result = await service.getAssociatedReportCounts("projectReports", projectReport.uuid);
+      expect(Object.keys(result).length).toBe(2);
+      expect(result).toMatchObject({
+        "tree-planted": { Coffee: { amount: task1SiteCoffee } },
+        seeds: { Acacia: { amount: task1SiteAcacia } }
+      });
     });
   });
 });

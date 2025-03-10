@@ -97,7 +97,9 @@ describe("AssociationProcessor", () => {
         expect(seedingData).not.toBeNull();
 
         const seeding = seedings.find(({ uuid }) => uuid === seedingData.uuid);
-        expect(seedingData).toMatchObject(pickApiProperties(seeding, SeedingDto));
+        const data = pickApiProperties(seeding, SeedingDto);
+        if (data.taxonId === undefined) data.taxonId = null;
+        expect(seedingData).toMatchObject(data);
       }
     });
   });

@@ -74,12 +74,16 @@ export class SitePolygonsController {
 
     if (query.siteId != null) {
       await queryBuilder.filterSiteUuids(query.siteId);
-    } else if (query.projectId != null) {
-      await queryBuilder.filterProjectUuids(query.projectId);
-    } else if (query.includeTestProjects !== true) {
-      await queryBuilder.excludeTestProjects();
     }
 
+    if (query.projectId != null) {
+      await queryBuilder.filterProjectUuids(query.projectId);
+    }
+
+    // Ensure test projects are excluded only if not included explicitly
+    if (!query.includeTestProjects) {
+      await queryBuilder.excludeTestProjects();
+    }
     const document = buildJsonApi(SitePolygonDto, { pagination: "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);

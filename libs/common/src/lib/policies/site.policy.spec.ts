@@ -25,13 +25,13 @@ describe("SitePolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows reading all sites with view-dashboard permissions", async () => {
+  it("should allow reading all sites with view-dashboard permissions", async () => {
     mockUserId(123);
     mockPermissions("view-dashboard");
     await expectCan(service, "read", new Site());
   });
 
-  it("allows reading sites in your framework", async () => {
+  it("should allow reading sites in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
     const ppc = await SiteFactory.create({ frameworkKey: "ppc" });
@@ -40,7 +40,7 @@ describe("SitePolicy", () => {
     await expectCannot(service, "read", tf);
   });
 
-  it("allows reading own sites", async () => {
+  it("should allows reading own sites", async () => {
     mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
@@ -65,7 +65,7 @@ describe("SitePolicy", () => {
     await expectCan(service, "read", s4);
   });
 
-  it("allows reading managed sites", async () => {
+  it("should allows reading managed sites", async () => {
     mockPermissions("projects-manage");
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();

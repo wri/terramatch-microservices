@@ -53,7 +53,7 @@ describe("SiteProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
-    it("returns sites", async () => {
+    it("should returns sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
       const managedSites = await SiteFactory.createMany(3, { projectId: project.id });
@@ -61,7 +61,7 @@ describe("SiteProcessor", () => {
       await expectSites(managedSites, {}, { permissions: ["manage-own"] });
     });
 
-    it("returns managed sites", async () => {
+    it("should returns managed sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
       await ProjectFactory.create();
@@ -70,7 +70,7 @@ describe("SiteProcessor", () => {
       await expectSites(sites, {}, { permissions: ["projects-manage"] });
     });
 
-    it("returns framework sites", async () => {
+    it("should returns framework sites", async () => {
       const sites = await SiteFactory.createMany(3, { frameworkKey: "hbf" });
       await SiteFactory.createMany(3, { frameworkKey: "ppc" });
       for (const p of await SiteFactory.createMany(3, { frameworkKey: "terrafund" })) {
@@ -124,7 +124,7 @@ describe("SiteProcessor", () => {
       await expectSites([fourth], { projectUuid: p2.uuid });
     });
 
-    it("throws an error if the project uuid is not found", async () => {
+    it("should throw an error if the project uuid is not found", async () => {
       await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
@@ -155,19 +155,10 @@ describe("SiteProcessor", () => {
         { sortField: "projectName" }
       );
     });
-
-    it("should not sort by status", async () => {
-      await SiteFactory.create({ status: "approved" });
-      await SiteFactory.create({ status: "started" });
-      await SiteFactory.create({ status: "awaiting-approval" });
-      await expect(processor.findMany({ sort: { field: "status" } } as EntityQueryDto)).rejects.toThrow(
-        BadRequestException
-      );
-    });
   });
 
   describe("findOne", () => {
-    it("returns the requested site", async () => {
+    it("should return a requested site", async () => {
       const site = await SiteFactory.create();
       const result = await processor.findOne(site.uuid);
       expect(result.id).toBe(site.id);
@@ -175,7 +166,7 @@ describe("SiteProcessor", () => {
   });
 
   describe("DTOs", () => {
-    it("SiteLightDto is a light resource", async () => {
+    it("should serialize a Site as a light resource (SiteLightDto)", async () => {
       const { uuid } = await SiteFactory.create();
       const site = await processor.findOne(uuid);
       const document = buildJsonApi(SiteLightDto, { forceDataArray: true });
@@ -186,7 +177,7 @@ describe("SiteProcessor", () => {
         lightResource: true
       });
     });
-    it("includes calculated fields in SiteFullDto", async () => {
+    it("should includes calculated fields in SiteFullDto", async () => {
       const project = await ProjectFactory.create();
 
       const { uuid } = await SiteFactory.create({

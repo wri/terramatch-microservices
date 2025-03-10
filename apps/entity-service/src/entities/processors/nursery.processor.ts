@@ -50,9 +50,9 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       .map(name => name.substring("framework-".length) as FrameworkKey);
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
-    } else if (permissions.includes("manage-own")) {
+    } else if (permissions?.includes("manage-own")) {
       builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
-    } else if (permissions.includes("projects-manage")) {
+    } else if (permissions?.includes("projects-manage")) {
       builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 

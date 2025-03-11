@@ -299,9 +299,10 @@ describe("NuseryProcessor", () => {
       expect(result.id).toBe(nursery.id);
     });
 
-    it("should throw an error when uuid does not exist", async () => {
+    it("should return null when uuid does not exist", async () => {
       const uuid = "non-existing-uuid";
-      await expect(processor.findOne(uuid)).rejects.toThrow(BadRequestException);
+      const result = await processor.findOne(uuid);
+      expect(result).toBeNull();
     });
   });
 

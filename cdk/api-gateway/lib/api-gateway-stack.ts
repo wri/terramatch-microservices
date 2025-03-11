@@ -96,7 +96,6 @@ export class ApiGatewayStack extends Stack {
 
       for (const namespace of namespaces) {
         this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });
-        this.addProxy("PHP Images V2", `/images/`, { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
       }
     }
 
@@ -105,7 +104,7 @@ export class ApiGatewayStack extends Stack {
     // consumers (like Greenhouse and the web TM frontend) as we migrate to this API Gateway.
     this.addProxy("PHP Monolith", "/api/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
     this.addProxy("PHP OpenAPI Docs", "/documentation/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
-    this.addProxy("PHP Images V2", "/images/V2/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
+    this.addProxy("PHP Images", "/images/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
   }
 
   private addProxy(name: string, path: string, { targetHost, service }: AddProxyProps) {

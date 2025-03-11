@@ -13,7 +13,7 @@ import { EstablishmentsTreesDto, PreviousPlantingCountDto } from "./dto/establis
 export class TreesController {
   constructor(private readonly treeService: TreeService) {}
 
-  @Get("scientific-names")
+  @Get("scientificNames")
   @ApiOperation({
     operationId: "treeScientificNamesSearch",
     description: "Search scientific names of tree species. Returns up to 10 entries."

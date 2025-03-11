@@ -326,7 +326,6 @@ describe("NuseryProcessor", () => {
       const project = await ProjectFactory.create();
 
       const { uuid } = await NurseryFactory.create({
-        id: 1,
         projectId: project.id
       });
 

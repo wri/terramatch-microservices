@@ -13,6 +13,7 @@ import { HttpAlbIntegration, HttpUrlIntegration } from "aws-cdk-lib/aws-apigatew
 import { ApplicationListener, IApplicationListener } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Stack, StackProps } from "aws-cdk-lib";
+import * as process from "node:process";
 
 const V3_SERVICES = {
   "user-service": ["auth", "users"],
@@ -92,10 +93,10 @@ export class ApiGatewayStack extends Stack {
       if (!enabledServices.includes(service)) continue;
 
       this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, { service });
-      this.addProxy(`API Images [${service}]`, `/${service}/images/`, { service });
 
       for (const namespace of namespaces) {
         this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });
+        this.addProxy("PHP Images V2", `/images/`, { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
       }
     }
 

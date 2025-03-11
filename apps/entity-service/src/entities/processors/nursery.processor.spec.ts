@@ -298,10 +298,11 @@ describe("NuseryProcessor", () => {
       const result = await processor.findOne(nursery.uuid);
       expect(result.id).toBe(nursery.id);
     });
-    
-    it('should throw an error when uuid does not exist', async () => {
-      const uuid = 'non-existing-uuid';
-      expect((await processor.findOne(uuid)).id).rejects.toThrow(BadRequestException);
+
+    it("should throw an error when uuid does not exist", async () => {
+      const uuid = "non-existing-uuid";
+      jest.spyOn(Nursery, "findOne").mockResolvedValue(null);
+      await expect(processor.findOne(uuid)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -321,6 +322,7 @@ describe("NuseryProcessor", () => {
       const project = await ProjectFactory.create();
 
       const { uuid } = await NurseryFactory.create({
+        id: 1,
         projectId: project.id
       });
 

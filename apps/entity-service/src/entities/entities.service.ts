@@ -37,7 +37,7 @@ const MAX_PAGE_SIZE = 100 as const;
 export class EntitiesService {
   constructor(private readonly mediaService: MediaService) {}
 
-  createEntityProcessor<T extends Model<T>>(entity: ProcessableEntity) {
+  createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
     if (processorClass == null) {
       throw new BadRequestException(`Entity type invalid: ${entity}`);

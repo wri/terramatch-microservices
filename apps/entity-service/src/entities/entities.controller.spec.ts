@@ -18,6 +18,7 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
   findMany = jest.fn(() => Promise.resolve({ models: [], paginationTotal: 0 }));
   addFullDto = jest.fn(() => Promise.resolve());
   addLightDto = jest.fn(() => Promise.resolve());
+  delete = jest.fn(() => Promise.resolve());
 }
 
 describe("EntitiesController", () => {
@@ -82,7 +83,7 @@ describe("EntitiesController", () => {
     });
 
     it("should throw an error if the policy does not authorize", async () => {
-      processor.findOne.mockResolvedValue(await ProjectFactory.create());
+      processor.findOne.mockResolvedValue(new Project());
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       await expect(controller.entityGet({ entity: "projects", uuid: "asdf" })).rejects.toThrow(UnauthorizedException);
     });
@@ -94,6 +95,29 @@ describe("EntitiesController", () => {
       const result = await controller.entityGet({ entity: "projects", uuid: "asdf" });
       expect(processor.addFullDto).toHaveBeenCalledWith(expect.anything(), project);
       expect(result.meta.resourceType).toBe("projects");
+    });
+  });
+
+  describe("entityDelete", () => {
+    it("should call findOne", async () => {
+      await expect(controller.entityDelete({ entity: "projects", uuid: "asdf" })).rejects.toThrow(NotFoundException);
+      expect(processor.findOne).toHaveBeenCalledWith("asdf");
+    });
+
+    it("should throw if the policy does not authorize", async () => {
+      processor.findOne.mockResolvedValue(new Project());
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.entityDelete({ entity: "projects", uuid: "asdf" })).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should call delete on the processor", async () => {
+      const project = new Project();
+      processor.findOne.mockResolvedValue(project);
+      policyService.authorize.mockResolvedValue();
+      await controller.entityDelete({ entity: "projects", uuid: "asdf" });
+      expect(processor.delete).toHaveBeenCalledWith(project);
     });
   });
 });

@@ -284,6 +284,10 @@ describe("NuseryProcessor", () => {
       );
     });
 
+    it("should throw an error when sorts by a field that does not exist", async () => {
+      await expect(processor.findMany({ sort: { field: "non-existing-field" } })).rejects.toThrow(BadRequestException);
+    });
+
     it("paginates", async () => {
       const nurseries = sortBy(await NurseryFactory.createMany(25), "id");
       await expectNurseries(nurseries.slice(0, 10), { page: { size: 10 } }, { total: nurseries.length });

@@ -331,6 +331,7 @@ describe("NuseryProcessor", () => {
       });
 
       const nursery = await processor.findOne(uuid);
+      nursery.project = await nursery.$get("project");
       const document = buildJsonApi(NurseryFullDto, { forceDataArray: true });
       await processor.addFullDto(document, nursery);
       const attributes = document.serialize().data[0].attributes as NurseryFullDto;

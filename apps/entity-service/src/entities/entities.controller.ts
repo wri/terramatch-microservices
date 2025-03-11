@@ -19,7 +19,7 @@ import { Model } from "sequelize-typescript";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
-
+import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto)
 export class EntitiesController {
@@ -32,7 +32,8 @@ export class EntitiesController {
   })
   @JsonApiResponse([
     { data: ProjectLightDto, pagination: "number" },
-    { data: SiteLightDto, pagination: "number" }
+    { data: SiteLightDto, pagination: "number" },
+    { data: ProjectReportLightDto, pagination: "number" }
   ])
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async entityIndex<T extends Model<T>>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
@@ -63,7 +64,7 @@ export class EntitiesController {
     operationId: "entityGet",
     summary: "Get a single full entity resource by UUID"
   })
-  @JsonApiResponse([ProjectFullDto, SiteFullDto])
+  @JsonApiResponse([ProjectFullDto, SiteFullDto, ProjectReportFullDto])
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })

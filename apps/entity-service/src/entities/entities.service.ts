@@ -14,11 +14,13 @@ import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { ProjectReportProcessor } from "./processors/project-report.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
-  sites: SiteProcessor
+  sites: SiteProcessor,
+  projectReports: ProjectReportProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;

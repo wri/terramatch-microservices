@@ -18,6 +18,7 @@ import { FrameworkKey } from "../constants/framework";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
+import { Framework } from "./framework.entity";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -76,12 +77,35 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
+  @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
+  framework: Framework | null;
+
+  get frameworkUuid() {
+    return this.framework?.uuid;
+  }
+
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  get projectName() {
+    return this.project?.name;
+  }
+
+  get projectUuid() {
+    return this.project?.uuid;
+  }
+
+  get organisationName() {
+    return this.project?.organisationName;
+  }
+
+  @AllowNull
+  @Column(STRING)
+  title: string | null;
 
   // TODO foreign key for task
   @AllowNull
@@ -98,6 +122,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(DATE)
+  submittedAt: Date | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))

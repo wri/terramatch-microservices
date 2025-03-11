@@ -4,6 +4,7 @@ import { AdditionalProjectReportFullProps, ProjectReportFullDto } from "../dto/p
 import { ProjectReportLightDto } from "../dto/project-report.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util/json-api-builder";
+import { Includeable } from "sequelize";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
@@ -20,7 +21,12 @@ export class ProjectReportProcessor extends EntityProcessor<
   }
 
   async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]) {
-    const associations = [];
+    const projectAssociation: Includeable = {
+      association: "project",
+      attributes: ["uuid", "name"],
+      include: [{ association: "organisation", attributes: ["name"] }]
+    };
+    const associations = [projectAssociation];
     const builder = await this.entitiesService.buildQuery(ProjectReport, query, associations);
     if (query.sort != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {

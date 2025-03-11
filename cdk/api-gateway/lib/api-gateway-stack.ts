@@ -92,7 +92,7 @@ export class ApiGatewayStack extends Stack {
       if (!enabledServices.includes(service)) continue;
 
       this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, { service });
-      this.addProxy(`API Images [${service}]`, `/${service}/images/V2/`, { service });
+      this.addProxy(`API Images [${service}]`, `/${service}/images/`, { service });
 
       for (const namespace of namespaces) {
         this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });

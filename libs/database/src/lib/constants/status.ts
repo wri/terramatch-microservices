@@ -15,7 +15,8 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number];
 export const COMPLETE_REPORT_STATUSES = [APPROVED, AWAITING_APPROVAL] as const;
 
 export const DRAFT = "draft";
-export const UPDATE_REQUEST_STATUSES = [DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
+export const NO_UPDATE = "no-update";
+export const UPDATE_REQUEST_STATUSES = [NO_UPDATE, DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
 
 export const REJECTED = "rejected";

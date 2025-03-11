@@ -6,9 +6,10 @@ import {
   POLYGON_STATUSES,
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
-import { CursorPage } from "@terramatch-microservices/common/dto/page.dto";
+import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
+import { Type } from "class-transformer";
 
-export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
+export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",
@@ -77,6 +78,13 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
   includeTestProjects?: boolean;
 
   @ValidateNested()
+  @Type(({ object }) => {
+    // Surprisingly, the object here is the whole query DTO.
+    const keys = Object.keys(object.page ?? {});
+    if (keys.includes("after")) return CursorPage;
+    if (keys.includes("number")) return NumberPage;
+    return Page;
+  })
   @IsOptional()
-  page?: CursorPage;
+  page?: CursorPage | NumberPage;
 }

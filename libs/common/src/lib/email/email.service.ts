@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
+import * as Mail from "nodemailer/lib/mailer";
 
 @Injectable()
 export class EmailService {
@@ -18,13 +19,24 @@ export class EmailService {
     });
   }
 
-  async sendEmail(to: string, subject: string, body: string): Promise<void> {
-    const mailOptions = {
+  async sendEmail(to: string, subject: string, body: string) {
+    const headers = {} as { [p: string]: string };
+    const mailOptions: Mail.Options = {
       from: this.configService.get<string>("MAIL_FROM_ADDRESS"),
       to,
       subject,
-      html: body
+      html: body,
+      headers
     };
+
+    const mailRecipients = (this.configService.get<string>("MAIL_RECIPIENTS") ?? "").split(",");
+    if (mailRecipients[0] !== "") {
+      // This will likely expand to include multiple to / cc / bcc addresses, so preparing for that now
+      // with a more complex structure than a simple string
+      headers["X-Original-Recipients"] = JSON.stringify({ to });
+
+      mailOptions.to = mailRecipients;
+    }
 
     await this.transporter.sendMail(mailOptions);
   }

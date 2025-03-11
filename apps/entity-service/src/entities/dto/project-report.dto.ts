@@ -4,7 +4,7 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 
-@JsonApiDto({ type: "project-reports" })
+@JsonApiDto({ type: "projectReports" })
 export class ProjectReportLightDto extends EntityDto {
   constructor(projectReport?: ProjectReport) {
     super();

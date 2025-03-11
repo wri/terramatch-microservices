@@ -22,7 +22,7 @@ export class TemplateService {
   render(data: TemplateParams): string {
     const params = {
       ...data,
-      backendUrl: this.configService.get<string>("APP_BACKEND_URL"),
+      backendUrl: this.configService.get<string>("EMAIL_IMAGE_BASE_URL"),
       banner: null,
       invite: null,
       monitoring: null,

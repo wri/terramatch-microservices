@@ -5,9 +5,14 @@ import { DTO_ID_METADATA, DTO_TYPE_METADATA, IdType } from "./json-api-dto.decor
 import { JsonApiAttributes } from "../dto/json-api-attributes";
 import { isArray, uniq } from "lodash";
 
-type TypeProperties = {
+type ExampleTypeProperty = {
   type: "string";
   example: string;
+};
+
+type EnumTypeProperty = {
+  type: "string";
+  enum: string[];
 };
 
 type IdProperties = {
@@ -17,7 +22,7 @@ type IdProperties = {
 };
 
 type ResourceDef = {
-  type: TypeProperties;
+  type: ExampleTypeProperty;
   id: IdProperties;
   attributes: object;
   relationships?: {
@@ -45,7 +50,7 @@ function getIdProperties(resourceType: ResourceType): IdProperties {
   return id;
 }
 
-const getTypeProperties = (resourceType: ResourceType): TypeProperties => ({
+const getTypeProperties = (resourceType: ResourceType): ExampleTypeProperty => ({
   type: "string",
   example: Reflect.getMetadata(DTO_TYPE_METADATA, resourceType)
 });
@@ -225,7 +230,7 @@ type DocumentMeta = {
   meta: {
     type: "object";
     properties: {
-      resourceType: TypeProperties;
+      resourceType: ExampleTypeProperty | EnumTypeProperty;
       [key: string]: object;
     };
   };
@@ -283,29 +288,23 @@ export function JsonApiResponse(
 }
 
 export function JsonApiDeletedResponse(types: string | string[], apiResponseOptions: ApiResponseOptions = {}) {
-  const documents = (isArray(types) ? types : [types]).reduce(
-    (documents, type) => [
-      ...documents,
-      {
+  const schema: DocumentMetaSchema = {
+    type: "object",
+    properties: {
+      meta: {
         type: "object",
         properties: {
-          meta: {
-            type: "object",
-            properties: {
-              resourceType: { type: "string", example: type },
-              resourceId: { type: "string", format: "uuid" }
-            }
-          }
+          resourceType: { type: "string", ...(isArray(types) ? { enum: types } : { example: types }) },
+          resourceId: { type: "string", format: "uuid" }
         }
-      } as DocumentMetaSchema
-    ],
-    [] as DocumentMetaSchema[]
-  );
+      }
+    }
+  };
 
   const fullOptions = {
     status: HttpStatus.OK,
     ...apiResponseOptions,
-    schema: documents.length === 1 ? documents[0] : { oneOf: documents }
+    schema
   } as ApiResponseOptions;
 
   return applyDecorators(ApiResponse(fullOptions));

@@ -298,6 +298,12 @@ describe("NuseryProcessor", () => {
       const result = await processor.findOne(nursery.uuid);
       expect(result.id).toBe(nursery.id);
     });
+    
+    it('should throw an error when uuid does not exist', async () => {
+      const uuid = 'non-existing-uuid';
+      jest.spyOn(Nursery, 'findOne').mockResolvedValue(null);
+      expect(processor.findOne(uuid)).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe("DTOs", () => {

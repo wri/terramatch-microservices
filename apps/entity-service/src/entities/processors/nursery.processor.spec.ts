@@ -283,6 +283,13 @@ describe("NuseryProcessor", () => {
         { sortField: "organisationName", sortUp: false }
       );
     });
+
+    it("paginates", async () => {
+      const nurseries = sortBy(await NurseryFactory.createMany(25), "id");
+      await expectNurseries(nurseries.slice(0, 10), { page: { size: 10 } }, { total: nurseries.length });
+      await expectNurseries(nurseries.slice(10, 20), { page: { size: 10, number: 2 } }, { total: nurseries.length });
+      await expectNurseries(nurseries.slice(20), { page: { size: 10, number: 3 } }, { total: nurseries.length });
+    });
   });
 
   describe("findOne", () => {

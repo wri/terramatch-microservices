@@ -301,8 +301,7 @@ describe("NuseryProcessor", () => {
     
     it('should throw an error when uuid does not exist', async () => {
       const uuid = 'non-existing-uuid';
-      jest.spyOn(Nursery, 'findOne').mockResolvedValue(null);
-      expect(processor.findOne(uuid)).rejects.toThrow(BadRequestException);
+      expect((await processor.findOne(uuid)).id).rejects.toThrow(BadRequestException);
     });
   });
 

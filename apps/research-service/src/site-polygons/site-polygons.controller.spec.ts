@@ -69,6 +69,12 @@ describe("SitePolygonsController", () => {
       await expect(controller.findMany({ page: { after: "asdfasdf" } })).rejects.toThrow(BadRequestException);
     });
 
+    it("should throw an error if the page number is invalid", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.buildQuery.mockRejectedValue(new BadRequestException());
+      await expect(controller.findMany({ page: { size: 5, number: 0 } })).rejects.toThrow(BadRequestException);
+    });
+
     it("Returns a valid value if the request is valid", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
@@ -77,6 +83,20 @@ describe("SitePolygonsController", () => {
       expect(result.meta).not.toBe(null);
       expect(result.meta.page.total).toBe(1);
       expect(result.meta.page.cursor).toBe(sitePolygon.uuid);
+
+      const resources = result.data as Resource[];
+      expect(resources.length).toBe(1);
+      expect(resources[0].id).toBe(sitePolygon.uuid);
+    });
+
+    it("returns a number page document shape if a number page is requested", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const sitePolygon = await SitePolygonFactory.build();
+      mockQueryBuilder([sitePolygon], 1);
+      const result = await controller.findMany({ page: { size: 5, number: 1 } });
+      expect(result.meta).not.toBe(null);
+      expect(result.meta.page.total).toBe(1);
+      expect(result.meta.page.number).toBe(1);
 
       const resources = result.data as Resource[];
       expect(resources.length).toBe(1);

@@ -6,12 +6,18 @@ import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-pro
 import { pick } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Transaction } from "sequelize";
+import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
 @Injectable()
 export class SitePolygonsService {
-  async buildQuery(pageSize: number, pageAfter?: string) {
-    const builder = new SitePolygonQueryBuilder(pageSize);
-    if (pageAfter != null) await builder.pageAfter(pageAfter);
+  async buildQuery(page: CursorPage | NumberPage) {
+    const builder = new SitePolygonQueryBuilder(page.size);
+    if ((page as CursorPage).after != null && (page as NumberPage).number != null) {
+      throw new BadRequestException("page[after] or page[number] may be provided, but not both.");
+    }
+
+    if (isNumberPage(page) && page.number != null) builder.pageNumber(page.number);
+    else if (isCursorPage(page) && page.after != null) await builder.pageAfter(page.after);
     return builder;
   }
 

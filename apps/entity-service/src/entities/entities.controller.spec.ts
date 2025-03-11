@@ -113,11 +113,14 @@ describe("EntitiesController", () => {
     });
 
     it("should call delete on the processor", async () => {
-      const project = new Project();
+      const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       policyService.authorize.mockResolvedValue();
-      await controller.entityDelete({ entity: "projects", uuid: "asdf" });
+      const result = await controller.entityDelete({ entity: "projects", uuid: project.uuid });
       expect(processor.delete).toHaveBeenCalledWith(project);
+      expect(result.meta.resourceType).toBe("projects");
+      expect(result.meta.resourceId).toBe(project.uuid);
+      expect(result.data).toBeUndefined();
     });
   });
 });

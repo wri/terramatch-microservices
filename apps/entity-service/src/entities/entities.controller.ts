@@ -8,18 +8,19 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto)
@@ -88,7 +89,9 @@ export class EntitiesController {
       "Soft delete entity resource by UUID. For non-admins / project managers, only entities with " +
       '"started" status may be deleted. Additionally, reports may only be deleted by admins.'
   })
-  @ApiOkResponse({ description: "Associated entity was deleted" })
+  @JsonApiDeletedResponse([getDtoType(ProjectFullDto), getDtoType(SiteFullDto)], {
+    description: "Associated entity was deleted"
+  })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
@@ -101,5 +104,7 @@ export class EntitiesController {
     await this.policyService.authorize("delete", model);
 
     await processor.delete(model);
+
+    return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
   }
 }

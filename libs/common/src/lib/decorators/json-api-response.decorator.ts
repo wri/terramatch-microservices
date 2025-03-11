@@ -114,7 +114,7 @@ function buildSchema(options: JsonApiOptions) {
     meta: {
       type: "object",
       properties: {
-        type: getTypeProperties(type)
+        resourceType: getTypeProperties(type)
       }
     },
     data:
@@ -221,16 +221,24 @@ type JsonApiOptions = {
   included?: (Resource | ResourceType)[];
 };
 
-type Document = {
+type DocumentMeta = {
   meta: {
     type: "object";
     properties: {
-      type: TypeProperties;
+      resourceType: TypeProperties;
       [key: string]: object;
     };
   };
+};
+
+type Document = DocumentMeta & {
   data: any;
   included?: any;
+};
+
+type DocumentMetaSchema = {
+  type: "object";
+  properties: DocumentMeta;
 };
 
 type DocumentSchema = {
@@ -252,8 +260,6 @@ export function JsonApiResponse(
   jsonApiOptions: ResourceType | JsonApiOptions | (ResourceType | JsonApiOptions)[],
   apiResponseOptions: ApiResponseOptions = {}
 ) {
-  const { status } = apiResponseOptions;
-
   const { documents, extraModels } = (isArray(jsonApiOptions) ? jsonApiOptions : [jsonApiOptions]).reduce(
     ({ documents, extraModels }, options) => {
       if (!isJsonApiOptions(options)) options = { data: options };
@@ -268,10 +274,39 @@ export function JsonApiResponse(
   );
 
   const fullOptions = {
+    status: HttpStatus.OK,
     ...apiResponseOptions,
-    status: status ?? HttpStatus.OK,
     schema: documents.length === 1 ? documents[0] : { oneOf: documents }
   } as ApiResponseOptions;
 
   return applyDecorators(ApiResponse(fullOptions), ApiExtraModels(...uniq(extraModels)));
+}
+
+export function JsonApiDeletedResponse(types: string | string[], apiResponseOptions: ApiResponseOptions = {}) {
+  const documents = (isArray(types) ? types : [types]).reduce(
+    (documents, type) => [
+      ...documents,
+      {
+        type: "object",
+        properties: {
+          meta: {
+            type: "object",
+            properties: {
+              resourceType: { type: "string", example: type },
+              resourceId: { type: "string", format: "uuid" }
+            }
+          }
+        }
+      } as DocumentMetaSchema
+    ],
+    [] as DocumentMetaSchema[]
+  );
+
+  const fullOptions = {
+    status: HttpStatus.OK,
+    ...apiResponseOptions,
+    schema: documents.length === 1 ? documents[0] : { oneOf: documents }
+  } as ApiResponseOptions;
+
+  return applyDecorators(ApiResponse(fullOptions));
 }

@@ -58,7 +58,7 @@ describe("EmailService", () => {
         subject: "Subject",
         html: "Body",
         headers: {
-          "X-Original-Recipients": JSON.stringify({ to: "foo@bar.com" })
+          "X-Original-Recipients": { prepared: true, value: JSON.stringify({ to: "foo@bar.com" }) }
         }
       })
     );

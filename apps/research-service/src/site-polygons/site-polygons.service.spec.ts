@@ -321,20 +321,20 @@ describe("SitePolygonsService", () => {
   });
   it("should only return polys with all specified indicators present", async () => {
     await SitePolygon.truncate();
-
     const poly1 = await SitePolygonFactory.create();
     await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: poly1.id });
-    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "treeCover" });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "restorationByStrategy" });
 
     const poly2 = await SitePolygonFactory.create();
     await IndicatorOutputMsuCarbonFactory.create({ sitePolygonId: poly2.id });
     await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly2.id, indicatorSlug: "restorationByLandUse" });
 
     const poly3 = await SitePolygonFactory.create();
-    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly3.id, indicatorSlug: "restorationByStrategy" });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly3.id, indicatorSlug: "treeCover" });
 
-    let query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["treeCover"]);
+    let query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["restorationByStrategy"]);
     let result = await query.execute();
+
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(poly1.id);
 

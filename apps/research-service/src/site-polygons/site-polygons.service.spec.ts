@@ -319,6 +319,39 @@ describe("SitePolygonsService", () => {
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
   });
+  it("should only return polys with all specified indicators present", async () => {
+    await SitePolygon.truncate();
+
+    const poly1 = await SitePolygonFactory.create();
+    await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: poly1.id });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "treeCover" });
+
+    const poly2 = await SitePolygonFactory.create();
+    await IndicatorOutputMsuCarbonFactory.create({ sitePolygonId: poly2.id });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly2.id, indicatorSlug: "restorationByLandUse" });
+
+    const poly3 = await SitePolygonFactory.create();
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly3.id, indicatorSlug: "restorationByStrategy" });
+
+    let query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["treeCover"]);
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly1.id);
+
+    query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["msuCarbon", "restorationByLandUse"]);
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly2.id);
+
+    query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["restorationByEcoRegion"]);
+    result = await query.execute();
+    expect(result.length).toBe(0);
+
+    query = await service.buildQuery({ size: 20 });
+    result = await query.execute();
+    expect(result.length).toBe(3);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+  });
 
   it("throws when an indicator slug is invalid", async () => {
     const query = await service.buildQuery({ size: 20 });

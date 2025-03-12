@@ -4,22 +4,23 @@ import * as Handlebars from "handlebars";
 import * as fs from "fs";
 import * as path from "path";
 import { TemplateParams } from "./TemplateParams";
+import { Dictionary } from "factory-girl-ts";
 
 @Injectable()
 export class TemplateService {
-  private readonly template: Handlebars.TemplateDelegate;
+  private templates: Dictionary<Handlebars.TemplateDelegate> = {};
 
-  constructor(private readonly configService: ConfigService) {
-    this.template = this.compileTemplate("default-email.hbs");
-  }
+  constructor(private readonly configService: ConfigService) {}
 
-  private compileTemplate(template: string) {
-    const templatePath = path.join(__dirname, "..", "user-service/views", template);
+  private getCompiledTemplate(template: string) {
+    if (this.templates[template] != null) return this.templates[template];
+
+    const templatePath = path.join(__dirname, "..", template);
     const templateSource = fs.readFileSync(templatePath, "utf-8");
-    return Handlebars.compile(templateSource);
+    return (this.templates[template] = Handlebars.compile(templateSource));
   }
 
-  render(data: TemplateParams): string {
+  render(templatePath: string, data: TemplateParams): string {
     const params = {
       ...data,
       backendUrl: this.configService.get<string>("EMAIL_IMAGE_BASE_URL"),
@@ -29,6 +30,6 @@ export class TemplateService {
       transactional: data.transactional || null,
       year: new Date().getFullYear()
     };
-    return this.template(params);
+    return this.getCompiledTemplate(templatePath)(params);
   }
 }

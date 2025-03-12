@@ -115,6 +115,20 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
     return this;
   }
+  hasPresentIndicators(indicatorSlugs?: IndicatorSlug[]) {
+    if (indicatorSlugs != null) {
+      const literals = uniq(indicatorSlugs).map(slug => {
+        const table = INDICATOR_MODEL_CLASSES[slug]?.tableName;
+        if (table == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+
+        return literal(
+          `(SELECT COUNT(*) > 0 from ${table} WHERE indicator_slug = "${slug}" AND site_polygon_id = SitePolygon.id)`
+        );
+      });
+      this.where({ [Op.and]: literals });
+    }
+    return this;
+  }
 
   async touchesBoundary(polygonUuid?: string) {
     if (polygonUuid != null) {

@@ -74,13 +74,17 @@ jobs:
           echo "${{ vars.ENV }}" > .env
           echo "DB_PASSWORD=\"${{ secrets.DB_PASSWORD }}\"" >> .env
           echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> .env
+          echo "JWT_SECRET=\"${{ secrets.JWT_SECRET }}\"" >> .env
+          echo "AIRTABLE_API_KEY=\"${{ secrets.AIRTABLE_API_KEY }}\"" >> .env
+          echo "SENTRY_DSN=\"${{ secrets.SENTRY_DSN }}\"" >> .env
+          echo "SLACK_API_KEY=\"${{ secrets.SLACK_API_KEY }}\"" >> .env
           : # Don't build the base image with NODE_ENV because it'll limit the packages that are installed
           docker build -t terramatch-microservices-base:nx-base .
           SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:${{ env.IMAGE_TAG }}
           docker build \
             --build-arg NODE_ENV=production \
             --build-arg DEPLOY_ENV=${{ inputs.env }} \
-            --build-arg SENTRY_DSN="${{ vars.SENTRY_DSN }}" \
+            --build-arg SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
             --build-arg BUILD_FLAG='--prod --verbose --no-cloud' \
             -f apps/${{ inputs.service }}/Dockerfile \
             -t $SERVICE_IMAGE .

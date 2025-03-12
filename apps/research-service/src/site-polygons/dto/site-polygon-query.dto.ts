@@ -55,6 +55,17 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   missingIndicator?: IndicatorSlug[];
 
   @ApiProperty({
+    enum: INDICATOR_SLUGS,
+    name: "presentIndicator[]",
+    isArray: true,
+    required: false,
+    description: "Filter results by polygons that have all of the indicators listed"
+  })
+  @IsOptional()
+  @IsArray()
+  presentIndicator?: IndicatorSlug[];
+
+  @ApiProperty({
     required: false,
     description: "Filter results by polygons that have been modified since the date provided"
   })

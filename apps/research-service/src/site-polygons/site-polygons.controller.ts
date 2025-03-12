@@ -52,12 +52,17 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
-    const { siteId, projectId, includeTestProjects } = query;
+    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator } = query;
     const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
 
     if (countSelectedParams > 1) {
       throw new BadRequestException(
         "Only one of siteId, projectId, and includeTestProjects may be used in a single request."
+      );
+    }
+    if (missingIndicator != null && presentIndicator != null) {
+      throw new BadRequestException(
+        "Only one of missingIndicator[] or presentIndicator[] may be used in a single request."
       );
     }
 
@@ -73,9 +78,13 @@ export class SitePolygonsController {
 
     const queryBuilder = (await this.sitePolygonService.buildQuery(page))
       .hasStatuses(query.polygonStatus)
-      .modifiedSince(query.lastModifiedDate)
-      .isMissingIndicators(query.missingIndicator);
+      .modifiedSince(query.lastModifiedDate);
 
+    if (missingIndicator) {
+      queryBuilder.isMissingIndicators(missingIndicator);
+    } else if (presentIndicator) {
+      queryBuilder.hasPresentIndicators(presentIndicator);
+    }
     await queryBuilder.touchesBoundary(query.boundaryPolygon);
 
     if (query.siteId != null) {

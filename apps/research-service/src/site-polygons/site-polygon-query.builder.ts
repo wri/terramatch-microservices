@@ -104,11 +104,35 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   isMissingIndicators(indicatorSlugs?: IndicatorSlug[]) {
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {
-        const table = INDICATOR_MODEL_CLASSES[slug]?.tableName;
-        if (table == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+        const model = INDICATOR_MODEL_CLASSES[slug];
+        if (!model) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const sequelize = model.sequelize!;
+        const tableName = model.tableName;
         return literal(
-          `(SELECT COUNT(*) = 0 from ${table} WHERE indicator_slug = "${slug}" AND site_polygon_id = SitePolygon.id)`
+          `(SELECT COUNT(*) = 0 FROM ${tableName} WHERE indicator_slug = ${sequelize.escape(
+            slug
+          )} AND site_polygon_id = SitePolygon.id)`
+        );
+      });
+      this.where({ [Op.and]: literals });
+    }
+    return this;
+  }
+  hasPresentIndicators(indicatorSlugs?: IndicatorSlug[]) {
+    if (indicatorSlugs != null) {
+      const literals = uniq(indicatorSlugs).map(slug => {
+        const model = INDICATOR_MODEL_CLASSES[slug];
+        if (!model) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const sequelize = model.sequelize!;
+        const tableName = model.tableName;
+        return literal(
+          `(SELECT COUNT(*) > 0 from ${tableName} WHERE indicator_slug = ${sequelize.escape(
+            slug
+          )} AND site_polygon_id = SitePolygon.id)`
         );
       });
       this.where({ [Op.and]: literals });

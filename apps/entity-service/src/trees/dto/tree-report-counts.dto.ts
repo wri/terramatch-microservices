@@ -1,22 +1,24 @@
 import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { PlantingCountMap } from "./planting-count.dto";
 import { ApiProperty } from "@nestjs/swagger";
 import { Dictionary } from "lodash";
-import { PlantingCountMap } from "./planting-count.dto";
 
 // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
 // backed by a single DB table.
-@JsonApiDto({ type: "establishmentTrees", id: "string" })
-export class EstablishmentsTreesDto extends JsonApiAttributes<EstablishmentsTreesDto> {
+@JsonApiDto({ type: "treeReportCounts", id: "string" })
+export class TreeReportCountsDto extends JsonApiAttributes<TreeReportCountsDto> {
   @ApiProperty({
     type: "object",
     additionalProperties: { type: "array", items: { type: "string" } },
+    nullable: true,
     description:
-      "The species that were specified at the establishment of the parent entity keyed by collection. " +
+      "The species that were specified at the establishment of the parent entity grouped by collection. " +
+      "This will be null for projects because projects don't have a parent entity. " +
       'Note that for site reports, the seeds on the site establishment are included under the collection name "seeds"',
     example: { "tree-planted": ["Aster Peraliens", "Circium carniolicum"], "non-tree": ["Coffee"] }
   })
-  establishmentTrees: Dictionary<string[]>;
+  establishmentTrees?: Dictionary<string[]>;
 
   @ApiProperty({
     type: "object",
@@ -26,9 +28,10 @@ export class EstablishmentsTreesDto extends JsonApiAttributes<EstablishmentsTree
     },
     nullable: true,
     description:
-      "If the entity in this request is a report, the sum totals of previous planting by species by collection. " +
-      "Note that for site reports, the seeds planted under previous site reports are included under the collection " +
-      'name "seeds"',
+      "Returns the planting counts of all species on reports associated with this entity, grouped by collection." +
+      "If the entity is a project or site, it returns data for all site reports under that Project or Site. " +
+      "If the entity is a project report, it returns data for all site reports within the same reporting task. " +
+      'Note that seeding data is returned on this same endpoint under the collection name "seeds"',
     example: {
       "tree-planted": {
         "Aster persaliens": { amount: 256 },
@@ -39,5 +42,5 @@ export class EstablishmentsTreesDto extends JsonApiAttributes<EstablishmentsTree
       }
     }
   })
-  previousPlantingCounts?: PlantingCountMap;
+  reportCounts?: PlantingCountMap;
 }

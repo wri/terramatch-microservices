@@ -10,13 +10,14 @@ import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservi
 import { EntityAssociationIndexParamsDto } from "./dto/entity-association-index-params.dto";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 
-class StubProcessor extends AssociationProcessor<Demographic, DemographicDto, ProjectReport> {
+class StubProcessor extends AssociationProcessor<Demographic, DemographicDto> {
   DTO = DemographicDto;
 
   addDtos = jest.fn(() => Promise.resolve());
+  getAssociations = jest.fn(() => Promise.resolve([] as Demographic[]));
 }
 
-describe("EntitiesController", () => {
+describe("EntityAssociationsController", () => {
   let controller: EntityAssociationsController;
   let entitiesService: DeepMocked<EntitiesService>;
   let policyService: DeepMocked<PolicyService>;
@@ -34,9 +35,10 @@ describe("EntitiesController", () => {
     }).compile();
 
     controller = module.get(EntityAssociationsController);
-    entitiesService.createAssociationProcessor.mockImplementation(
-      (entity, uuid) => new StubProcessor(entity, uuid, ProjectReport)
-    );
+    // @ts-expect-error union type complexity
+    entitiesService.createAssociationProcessor.mockImplementation((entity, uuid) => {
+      return new StubProcessor(entity, uuid, ProjectReport);
+    });
   });
 
   afterEach(() => {
@@ -47,11 +49,12 @@ describe("EntitiesController", () => {
     it("should call getBaseEntity", async () => {
       policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
       const pr = await ProjectReportFactory.create();
-      const processor = new StubProcessor("project-reports", pr.uuid, ProjectReport);
+      const processor = new StubProcessor("projectReports", pr.uuid, ProjectReport);
+      // @ts-expect-error union type complexity
       entitiesService.createAssociationProcessor.mockImplementation(() => processor);
       const spy = jest.spyOn(processor, "getBaseEntity");
       await controller.associationIndex({
-        entity: "project-reports",
+        entity: "projectReports",
         uuid: pr.uuid,
         association: "demographics"
       } as EntityAssociationIndexParamsDto);
@@ -63,7 +66,7 @@ describe("EntitiesController", () => {
       const pr = await ProjectReportFactory.create();
       await expect(
         controller.associationIndex({
-          entity: "project-reports",
+          entity: "projectReports",
           uuid: pr.uuid,
           association: "demographics"
         })
@@ -74,7 +77,7 @@ describe("EntitiesController", () => {
       policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
       await expect(
         controller.associationIndex({
-          entity: "project-reports",
+          entity: "projectReports",
           uuid: "fake uuid",
           association: "demographics"
         })
@@ -86,7 +89,7 @@ describe("EntitiesController", () => {
       await DemographicFactory.forProjectReportWorkday.create({ demographicalId: pr.id });
       await DemographicFactory.forProjectReportJobs.create({ demographicalId: pr.id });
       const result = await controller.associationIndex({
-        entity: "project-reports",
+        entity: "projectReports",
         uuid: pr.uuid,
         association: "demographics"
       });

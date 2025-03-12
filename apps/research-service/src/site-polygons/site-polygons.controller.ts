@@ -76,14 +76,14 @@ export class SitePolygonsController {
       throw new BadRequestException("Page number is invalid");
     }
 
-    let queryBuilder = (await this.sitePolygonService.buildQuery(page))
+    const queryBuilder = (await this.sitePolygonService.buildQuery(page))
       .hasStatuses(query.polygonStatus)
       .modifiedSince(query.lastModifiedDate);
 
     if (missingIndicator) {
-      queryBuilder = queryBuilder.isMissingIndicators(missingIndicator);
+      queryBuilder.isMissingIndicators(missingIndicator);
     } else if (presentIndicator) {
-      queryBuilder = queryBuilder.hasPresentIndicators(presentIndicator);
+      queryBuilder.hasPresentIndicators(presentIndicator);
     }
     await queryBuilder.touchesBoundary(query.boundaryPolygon);
 

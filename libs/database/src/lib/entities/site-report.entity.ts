@@ -64,6 +64,10 @@ export class SiteReport extends Model<SiteReport> {
     return builder.literal;
   }
 
+  static approvedIdsForTaskSubquery(taskId: number) {
+    return Subquery.select(SiteReport, "id").eq("taskId", taskId).in("status", SiteReport.APPROVED_STATUSES).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

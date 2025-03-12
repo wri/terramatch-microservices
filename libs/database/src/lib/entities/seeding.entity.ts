@@ -67,11 +67,11 @@ export class Seeding extends Model<Seeding> {
 
   @AllowNull
   @Column(DOUBLE)
-  weightOfSample: number;
+  weightOfSample: number | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  seedsInSample: number;
+  seedsInSample: number | null;
 
   @Column(STRING)
   seedableType: string;

@@ -36,7 +36,7 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - run: npx nx run-many -t lint build --no-cloud
+      - run: npx run lint-build
 
       - name: Bring up DB Docker Container
         run: |
@@ -51,4 +51,4 @@ jobs:
       # All tests are run in band so that wipes of database tables from one test doesn't interfere
       # with other tests.
       - name: Test all
-        run: npx nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests --exclude database
+        run: npm run test:ci

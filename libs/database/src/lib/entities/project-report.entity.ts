@@ -39,6 +39,14 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
 
+  static readonly MEDIA = {
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    media: { dbCollection: "media", multiple: true },
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true }
+  } as const;
+
   static incomplete() {
     return chainScope(this, "incomplete") as typeof ProjectReport;
   }

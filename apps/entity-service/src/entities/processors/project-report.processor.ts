@@ -1,13 +1,13 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
 import { EntityProcessor } from "./entity-processor";
-import { AdditionalProjectReportFullProps, ProjectReportFullDto } from "../dto/project-report.dto";
+import { AdditionalProjectReportFullProps, ProjectReportFullDto, ProjectReportMedia } from "../dto/project-report.dto";
 import { ProjectReportLightDto } from "../dto/project-report.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util/json-api-builder";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Project, ProjectUser } from "@terramatch-microservices/database/entities";
+import { Media, Project, ProjectUser } from "@terramatch-microservices/database/entities";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
@@ -78,12 +78,18 @@ export class ProjectReportProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, model: ProjectReport) {
-    const props: AdditionalProjectReportFullProps = {};
-    document.addData(model.uuid, new ProjectReportFullDto(model, props));
+  async addFullDto(document: DocumentBuilder, projectReport: ProjectReport) {
+    const projectReportId = projectReport.id;
+    const props: AdditionalProjectReportFullProps = {
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.projectReport(projectReportId).findAll(),
+        ProjectReport.MEDIA
+      ) as ProjectReportMedia)
+    };
+    document.addData(projectReport.uuid, new ProjectReportFullDto(projectReport, props));
   }
 
-  async addLightDto(document: DocumentBuilder, model: ProjectReport) {
-    document.addData(model.uuid, new ProjectReportLightDto(model));
+  async addLightDto(document: DocumentBuilder, projectReport: ProjectReport) {
+    document.addData(projectReport.uuid, new ProjectReportLightDto(projectReport));
   }
 }

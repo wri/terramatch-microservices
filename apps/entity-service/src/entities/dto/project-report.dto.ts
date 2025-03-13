@@ -3,6 +3,7 @@ import { EntityDto, AdditionalProps } from "./entity.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
+import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "projectReports" })
 export class ProjectReportLightDto extends EntityDto {
@@ -69,6 +70,7 @@ export class ProjectReportLightDto extends EntityDto {
 export type AdditionalProjectReportFullProps =
   /*AdditionalProjectReportLightProps &*/
   AdditionalProps<ProjectReportFullDto, ProjectReportLightDto & Omit<ProjectReport, "project">>;
+export type ProjectReportMedia = Pick<ProjectReportFullDto, keyof typeof ProjectReport.MEDIA>;
 
 export class ProjectReportFullDto extends ProjectReportLightDto {
   constructor(projectReport: ProjectReport, props: AdditionalProjectReportFullProps) {
@@ -82,4 +84,19 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
       ...props
     });
   }
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  socioeconomicBenefits: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  file: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  otherAdditionalDocuments: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  photos: MediaDto[];
 }

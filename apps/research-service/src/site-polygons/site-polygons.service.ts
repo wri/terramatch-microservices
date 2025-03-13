@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
+import {
+  IndicatorDto,
+  ReportingPeriodDto,
+  SitePolygonFullDto,
+  SitePolygonLightDto,
+  TreeSpeciesDto
+} from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
@@ -94,5 +100,16 @@ export class SitePolygonsService {
       await transaction.rollback();
       throw e;
     }
+  }
+  async buildLightDto(sitePolygon: SitePolygon): Promise<SitePolygonLightDto> {
+    const indicators = await this.getIndicators(sitePolygon);
+    return new SitePolygonLightDto(sitePolygon, indicators);
+  }
+
+  async buildFullDto(sitePolygon: SitePolygon): Promise<SitePolygonFullDto> {
+    const indicators = await this.getIndicators(sitePolygon);
+    const establishmentTreeSpecies = await this.getEstablishmentTreeSpecies(sitePolygon);
+    const reportingPeriods = await this.getReportingPeriods(sitePolygon);
+    return new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods);
   }
 }

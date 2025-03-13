@@ -3,7 +3,7 @@ import { NurseryLightDto, NurseryFullDto, AdditionalNurseryFullProps, NurseryMed
 import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { Includeable, Op } from "sequelize";
+import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
@@ -76,25 +76,26 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
   }
 
   async addFullDto(document: DocumentBuilder, nursery: Nursery): Promise<void> {
-    const nuseryId = nursery.id;
+    const nurseryId = nursery.id;
 
-    const nurseriesReports = await NurseryReport.nurseries([nuseryId]).findAll({
-      attributes: ["id", "seedlingsYoungTrees"]
-    });
-
-    const seedlingsGrownCount = nurseriesReports.reduce((sum, { seedlingsYoungTrees }) => {
-      return sum + (seedlingsYoungTrees ?? 0);
-    }, 0);
-
-    const nurseryReportsTotal = nurseriesReports.length;
-    const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nuseryId);
+    const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
+    const seedlingsGrownCount =
+      (
+        await NurseryReport.nurseries([nurseryId])
+          .approved()
+          .findAll({
+            raw: true,
+            attributes: [[fn("SUM", col("seedlings_young_trees")), "seedlingsYoungTrees"]]
+          })
+      )[0].seedlingsYoungTrees ?? 0;
+    const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
     const props: AdditionalNurseryFullProps = {
       seedlingsGrownCount,
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
 
       ...(this.entitiesService.mapMediaCollection(
-        await Media.nursery(nuseryId).findAll(),
+        await Media.nursery(nurseryId).findAll(),
         Nursery.MEDIA
       ) as NurseryMedia)
     };
@@ -103,20 +104,22 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
   }
 
   async addLightDto(document: DocumentBuilder, nursery: Nursery): Promise<void> {
-    const nuseryId = nursery.id;
+    const nurseryId = nursery.id;
 
-    const nurseriesReports = await NurseryReport.nurseries([nuseryId]).findAll({
-      attributes: ["id", "seedlingsYoungTrees"]
-    });
-
-    const seedlingsGrownCount = nurseriesReports.reduce((sum, { seedlingsYoungTrees }) => {
-      return sum + (seedlingsYoungTrees ?? 0);
-    }, 0);
+    const seedlingsGrownCount =
+      (
+        await NurseryReport.nurseries([nurseryId])
+          .approved()
+          .findAll({
+            raw: true,
+            attributes: [[fn("SUM", col("seedlings_young_trees")), "seedlingsYoungTrees"]]
+          })
+      )[0].seedlingsYoungTrees ?? 0;
     document.addData(nursery.uuid, new NurseryLightDto(nursery, { seedlingsGrownCount }));
   }
 
-  protected async getTotalOverdueReports(nuseryId: number) {
+  protected async getTotalOverdueReports(nurseryId: number) {
     const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
-    return await NurseryReport.incomplete().nurseries([nuseryId]).count(countOpts);
+    return await NurseryReport.incomplete().nurseries([nurseryId]).count(countOpts);
   }
 }

@@ -2,7 +2,7 @@ import { Nursery, Project, User } from "@terramatch-microservices/database/entit
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class NurseryPolicy extends UserPermissionsPolicy {
-  async addRules(): Promise<void> {
+  async addRules() {
     if (this.permissions.includes("view-dashboard")) {
       this.builder.can("read", Nursery);
     }
@@ -17,10 +17,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
         const projectIds = [
           ...(user.organisationId === null
             ? []
-            : await Project.findAll({
-                where: { organisationId: user.organisationId },
-                attributes: ["id"]
-              })
+            : await Project.findAll({ where: { organisationId: user.organisationId }, attributes: ["id"] })
           ).map(({ id }) => id),
           ...user.projects.map(({ id }) => id)
         ];

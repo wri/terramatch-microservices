@@ -8,7 +8,7 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, JsonApiDocument, SerializeOptions } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SitePolygonDto } from "./dto/site-polygon.dto";
@@ -25,6 +25,7 @@ import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -51,7 +52,7 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
-    const { siteId, projectId, includeTestProjects } = query;
+    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator } = query;
     const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
 
     if (countSelectedParams > 1) {
@@ -59,17 +60,31 @@ export class SitePolygonsController {
         "Only one of siteId, projectId, and includeTestProjects may be used in a single request."
       );
     }
+    if (missingIndicator != null && presentIndicator != null) {
+      throw new BadRequestException(
+        "Only one of missingIndicator[] or presentIndicator[] may be used in a single request."
+      );
+    }
 
-    const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+    const page = query.page ?? {};
+    page.size ??= MAX_PAGE_SIZE;
+    if (page.size > MAX_PAGE_SIZE || page.size < 1) {
       throw new BadRequestException("Page size is invalid");
     }
 
-    const queryBuilder = (await this.sitePolygonService.buildQuery(pageSize, pageAfter))
-      .hasStatuses(query.polygonStatus)
-      .modifiedSince(query.lastModifiedDate)
-      .isMissingIndicators(query.missingIndicator);
+    if (isNumberPage(page) && page.number < 1) {
+      throw new BadRequestException("Page number is invalid");
+    }
 
+    const queryBuilder = (await this.sitePolygonService.buildQuery(page))
+      .hasStatuses(query.polygonStatus)
+      .modifiedSince(query.lastModifiedDate);
+
+    if (missingIndicator) {
+      queryBuilder.isMissingIndicators(missingIndicator);
+    } else if (presentIndicator) {
+      queryBuilder.hasPresentIndicators(presentIndicator);
+    }
     await queryBuilder.touchesBoundary(query.boundaryPolygon);
 
     if (query.siteId != null) {
@@ -84,7 +99,7 @@ export class SitePolygonsController {
     if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
-    const document = buildJsonApi(SitePolygonDto, { pagination: "cursor" });
+    const document = buildJsonApi(SitePolygonDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
       const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
@@ -102,7 +117,9 @@ export class SitePolygonsController {
       );
     }
 
-    return document.serialize({ paginationTotal: await queryBuilder.paginationTotal() });
+    const serializeOptions: SerializeOptions = { paginationTotal: await queryBuilder.paginationTotal() };
+    if (isNumberPage(query.page)) serializeOptions.pageNumber = query.page.number;
+    return document.serialize(serializeOptions);
   }
 
   @Patch()

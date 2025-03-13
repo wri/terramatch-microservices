@@ -33,7 +33,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
-  static readonly APPROVED_STATUSES = [APPROVED, RESTORATION_IN_PROGRESS];
+  static readonly APPROVED_STATUSES = [APPROVED, RESTORATION_IN_PROGRESS] as SiteStatus[];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
   static readonly MEDIA = {

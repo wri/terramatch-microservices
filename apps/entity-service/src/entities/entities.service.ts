@@ -1,20 +1,24 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { DemographicProcessor, ProjectProcessor, SiteProcessor } from "./processors";
+import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { Media } from "@terramatch-microservices/database/entities";
+import { Demographic, Media, Seeding, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
-import { Includeable } from "sequelize";
+import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
-import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { NurseryProcessor } from "./processors/nursery.processor";
+import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { UuidModel } from "@terramatch-microservices/database/types/util";
+import { SeedingDto } from "./dto/seeding.dto";
+import { TreeSpeciesDto } from "./dto/tree-species.dto";
+import { DemographicDto } from "./dto/demographic.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -27,7 +31,25 @@ export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
 
 const ASSOCIATION_PROCESSORS = {
-  demographics: DemographicProcessor
+  demographics: AssociationProcessor.buildSimpleProcessor(
+    DemographicDto,
+    ({ id: demographicalId }, demographicalType) =>
+      Demographic.findAll({
+        where: { demographicalType, demographicalId, hidden: false },
+        include: [{ association: "entries" }]
+      })
+  ),
+  seedings: AssociationProcessor.buildSimpleProcessor(SeedingDto, ({ id: seedableId }, seedableType) =>
+    Seeding.findAll({ where: { seedableType, seedableId, hidden: false } })
+  ),
+  treeSpecies: AssociationProcessor.buildSimpleProcessor(TreeSpeciesDto, ({ id: speciesableId }, speciesableType) =>
+    TreeSpecies.findAll({
+      where: { speciesableType, speciesableId, hidden: false },
+      raw: true,
+      attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
+      group: ["taxonId", "name", "collection"]
+    })
+  )
 };
 
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
@@ -48,7 +70,7 @@ export class EntitiesService {
     return new processorClass(this) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
   }
 
-  createAssociationProcessor<T extends Model<T>, D extends AssociationDto<D>, E extends EntityModel>(
+  createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation
@@ -63,7 +85,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entityType}`);
     }
 
-    return new processorClass(entityType, uuid, entityModelClass) as unknown as AssociationProcessor<T, D, E>;
+    return new processorClass(entityType, uuid, entityModelClass) as unknown as AssociationProcessor<T, D>;
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {

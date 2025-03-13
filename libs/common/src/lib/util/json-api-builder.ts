@@ -116,7 +116,7 @@ type DocumentBuilderOptions = {
   forceDataArray?: boolean;
 };
 
-type SerializeOptions = {
+export type SerializeOptions = {
   paginationTotal?: number;
   pageNumber?: number;
 };

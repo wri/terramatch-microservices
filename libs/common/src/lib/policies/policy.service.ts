@@ -3,6 +3,7 @@ import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
   Nursery,
+  NurseryReport,
   Permission,
   Project,
   ProjectReport,
@@ -17,10 +18,11 @@ import { TMLogService } from "../util/tm-log.service";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
 import { isArray } from "lodash";
-import { SitePolicy } from "./site.policy";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
 import { SiteReportPolicy } from "./site-report.policy";
+import { SitePolicy } from "./site.policy";
+import { NurseryReportPolicy } from "./nursery-report.policy";
 import { NurseryPolicy } from "./nursery.policy";
 
 type EntityClass = {
@@ -34,9 +36,12 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [Nursery, NurseryPolicy],
+  [NurseryReport, NurseryReportPolicy],
   [Project, ProjectPolicy],
   [Site, SitePolicy],
   [ProjectReport, ProjectReportPolicy],
+  [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
   [User, UserPolicy],

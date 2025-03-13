@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsInt, IsOptional } from "class-validator";
+import { IsInt, IsOptional, IsUUID } from "class-validator";
 
-class Page {
+export class Page {
   @ApiProperty({
     name: "page[size]",
     description: "The size of page being requested",
@@ -21,9 +21,10 @@ export class CursorPage extends Page {
     required: false,
     description:
       "The last record before the page being requested. The value is a UUID. " +
-      "If neither page[after] nor page[number] is provided, the first page is returned."
+      "If page[after] is not provided, the first page is returned."
   })
   @IsOptional()
+  @IsUUID()
   after?: string;
 }
 
@@ -31,10 +32,14 @@ export class NumberPage extends Page {
   @ApiProperty({
     name: "page[number]",
     required: false,
-    description:
-      "The page number to return. If neither page[after] nor page[number] is provided, the first " +
-      "page is returned. If page[number] is provided, page[size] is required."
+    description: "The page number to return. If page[number] is not provided, the first page is returned."
   })
   @IsOptional()
+  @IsInt()
   number?: number;
 }
+
+export const isCursorPage = (page?: CursorPage | NumberPage): page is CursorPage =>
+  page != null && (page as CursorPage).after != null;
+export const isNumberPage = (page?: CursorPage | NumberPage): page is NumberPage =>
+  page != null && (page as NumberPage).number != null;

@@ -1,5 +1,5 @@
-import { Test } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
+import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { Nursery } from "@terramatch-microservices/database/entities";
 import {
@@ -25,7 +25,7 @@ describe("NurseryPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows reading all Nursery with view-dashboard permissions", async () => {
+  it("allows reading all nurseries with view-dashboard permissions", async () => {
     mockUserId(123);
     mockPermissions("view-dashboard");
     await expectCan(service, "read", new Nursery());
@@ -33,11 +33,11 @@ describe("NurseryPolicy", () => {
 
   it("allows reading nurseries in your framework", async () => {
     mockUserId(123);
-    mockPermissions("framework-terrafund");
+    mockPermissions("framework-ppc");
     const ppc = await NurseryFactory.create({ frameworkKey: "ppc" });
     const tf = await NurseryFactory.create({ frameworkKey: "terrafund" });
-    await expectCan(service, "read", tf);
-    await expectCannot(service, "read", ppc);
+    await expectCan(service, "read", ppc);
+    await expectCannot(service, "read", tf);
   });
 
   it("allows reading own nurseries", async () => {
@@ -55,14 +55,14 @@ describe("NurseryPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
 
-    const n1 = await NurseryFactory.create({ projectId: p1.id });
-    const n2 = await NurseryFactory.create({ projectId: p2.id });
-    const n3 = await NurseryFactory.create({ projectId: p3.id });
-    const n4 = await NurseryFactory.create({ projectId: p4.id });
-    await expectCan(service, "read", n1);
-    await expectCannot(service, "read", n2);
-    await expectCan(service, "read", n3);
-    await expectCan(service, "read", n4);
+    const s1 = await NurseryFactory.create({ projectId: p1.id });
+    const s2 = await NurseryFactory.create({ projectId: p2.id });
+    const s3 = await NurseryFactory.create({ projectId: p3.id });
+    const s4 = await NurseryFactory.create({ projectId: p4.id });
+    await expectCan(service, "read", s1);
+    await expectCannot(service, "read", s2);
+    await expectCan(service, "read", s3);
+    await expectCan(service, "read", s4);
   });
 
   it("allows reading managed nurseries", async () => {
@@ -71,9 +71,9 @@ describe("NurseryPolicy", () => {
     const project = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
     mockUserId(user.id);
-    const n1 = await NurseryFactory.create({ projectId: project.id });
-    const n2 = await NurseryFactory.create();
-    await expectCan(service, "read", n1);
-    await expectCannot(service, "read", n2);
+    const s1 = await NurseryFactory.create({ projectId: project.id });
+    const s2 = await NurseryFactory.create();
+    await expectCan(service, "read", s1);
+    await expectCannot(service, "read", s2);
   });
 });

@@ -95,11 +95,17 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
 
     return this.where(
       Sequelize.or(
-        Sequelize.where(Sequelize.fn("LOWER", Sequelize.col("site.name")), {
-          [Op.like]: `%${searchTerm.toLowerCase()}%`
+        Sequelize.where(Sequelize.col("site.name"), {
+          [Op.like]: `${searchTerm}%`
         }),
-        Sequelize.where(Sequelize.fn("LOWER", Sequelize.col("poly_name")), {
-          [Op.like]: `%${searchTerm.toLowerCase()}%`
+        Sequelize.where(Sequelize.col("site.name"), {
+          [Op.like]: `% ${searchTerm}%`
+        }),
+        Sequelize.where(Sequelize.col("poly_name"), {
+          [Op.like]: `${searchTerm}%`
+        }),
+        Sequelize.where(Sequelize.col("poly_name"), {
+          [Op.like]: `% ${searchTerm}%`
         })
       ),
       this.siteJoin

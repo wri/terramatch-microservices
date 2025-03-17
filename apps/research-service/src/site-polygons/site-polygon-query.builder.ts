@@ -106,23 +106,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   async addSearch(searchTerm: string) {
     if (!searchTerm) return this;
 
-    return this.where(
-      Sequelize.or(
-        Sequelize.where(Sequelize.col("site.name"), {
-          [Op.like]: `${searchTerm}%`
-        }),
-        Sequelize.where(Sequelize.col("site.name"), {
-          [Op.like]: `% ${searchTerm}%`
-        }),
-        Sequelize.where(Sequelize.col("poly_name"), {
-          [Op.like]: `${searchTerm}%`
-        }),
-        Sequelize.where(Sequelize.col("poly_name"), {
-          [Op.like]: `% ${searchTerm}%`
-        })
-      ),
-      this.siteJoin
-    );
+    return this.where({
+      [Op.or]: [{ "$site.name$": { [Op.like]: `%${searchTerm}%` } }, { polyName: { [Op.like]: `%${searchTerm}%` } }]
+    });
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {

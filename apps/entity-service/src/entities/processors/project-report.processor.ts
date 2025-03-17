@@ -7,7 +7,7 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util/json-api-
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Media, Project, ProjectUser } from "@terramatch-microservices/database/entities";
+import { Media, Project, ProjectUser, Seeding, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
@@ -81,8 +81,22 @@ export class ProjectReportProcessor extends EntityProcessor<
   async addFullDto(document: DocumentBuilder, projectReport: ProjectReport) {
     const projectReportId = projectReport.id;
     const reportTitle = await this.getReportTitle(projectReport);
+    const totalJobsCreated = await this.getTotalJobsCreated(projectReport);
+
+    const siteReportsIdsTaks = ProjectReport.siteReportIdsTaksSubquery(projectReport.taskId)
+    const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTaks).sum("amount")) ?? 0;
+    const treesPlantedCount =
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTaks).sum("amount")) ?? 0;
+    const approvedSiteReportsFromTask = await SiteReport.approved()
+      .task(projectReport.taskId)
+      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
+    const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
+      totalJobsCreated,
+      seedsPlantedCount,
+      treesPlantedCount,
+      regeneratedTreesCount,
       ...(this.entitiesService.mapMediaCollection(
         await Media.projectReport(projectReportId).findAll(),
         ProjectReport.MEDIA
@@ -109,4 +123,16 @@ export class ProjectReportProcessor extends EntityProcessor<
       return `Project Report  for ${wStart} - ${wEnd}`;
     }
   }
+
+  protected async getTotalJobsCreated(projectReport: ProjectReport) {
+    const ptTotal = projectReport.ptTotal ?? 0;
+    const ftTotal = projectReport.ftTotal ?? 0;
+
+    return ptTotal + ftTotal;
+  }
+  
 }
+function sumBy(approvedSiteReportsFromTask: any, arg1: string) {
+  throw new Error("Function not implemented.");
+}
+

@@ -19,6 +19,7 @@ import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
+import { SiteReport } from "./site-report.entity";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -67,6 +68,20 @@ export class ProjectReport extends Model<ProjectReport> {
     const builder = Subquery.select(ProjectReport, "id")
       .eq("projectId", projectId)
       .in("status", ProjectReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static siteReportIdsTaksSubquery(taskId: number, opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("taskId", taskId);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static approvedSiteReportIdsSubquery(taskId: number | Literal, opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("taskId", taskId).in("status", SiteReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
     return builder.literal;

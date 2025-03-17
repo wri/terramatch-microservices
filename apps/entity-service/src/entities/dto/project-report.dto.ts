@@ -154,6 +154,18 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty({ nullable: true })
   reportTitle: string | null;
 
+  @ApiProperty({ nullable: true })
+  totalJobsCreated: number | null;
+
+  @ApiProperty({ nullable: true })
+  seedsPlantedCount: number | null;
+
+  @ApiProperty({ nullable: true })
+  treesPlantedCount: number | null;
+
+  @ApiProperty()
+  regeneratedTreesCount: number;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 

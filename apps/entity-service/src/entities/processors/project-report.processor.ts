@@ -80,7 +80,9 @@ export class ProjectReportProcessor extends EntityProcessor<
 
   async addFullDto(document: DocumentBuilder, projectReport: ProjectReport) {
     const projectReportId = projectReport.id;
+    const reportTitle = await this.getReportTitle(projectReport);
     const props: AdditionalProjectReportFullProps = {
+      reportTitle,
       ...(this.entitiesService.mapMediaCollection(
         await Media.projectReport(projectReportId).findAll(),
         ProjectReport.MEDIA
@@ -91,5 +93,20 @@ export class ProjectReportProcessor extends EntityProcessor<
 
   async addLightDto(document: DocumentBuilder, projectReport: ProjectReport) {
     document.addData(projectReport.uuid, new ProjectReportLightDto(projectReport));
+  }
+
+  protected async getReportTitle(projectReport: ProjectReport) {
+    if (projectReport.frameworkKey == "ppc" || !projectReport.dueAt) {
+      return projectReport.title ?? "";
+    } else {
+      const dueAt = new Date(projectReport.dueAt);
+      dueAt.setMonth(dueAt.getMonth() - 1);
+      const wEnd = dueAt.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+      dueAt.setMonth(dueAt.getMonth() - 5);
+      const wStart = dueAt.toLocaleString("en-US", { month: "long" });
+
+      return `Project Report  for ${wStart} - ${wEnd}`;
+    }
   }
 }

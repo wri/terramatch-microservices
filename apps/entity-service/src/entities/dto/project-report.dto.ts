@@ -85,6 +85,75 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
     });
   }
 
+  @ApiProperty({ nullable: true })
+  status: string | null;
+
+  @ApiProperty()
+  updateRequestStatus: string;
+
+  @ApiProperty({ nullable: true })
+  feedback: string | null;
+
+  @ApiProperty({ nullable: true })
+  feedbackFields: string[] | null;
+
+  @ApiProperty({ nullable: true })
+  completion: number | null;
+
+  @ApiProperty({ nullable: true })
+  localEngagementDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  equitableOpportunities: string | null;
+  
+  @ApiProperty({ nullable: true })
+  resilienceProgress: string | null;
+
+  @ApiProperty({ nullable: true })
+  localGovernance: string | null;
+
+  @ApiProperty({ nullable: true })
+  adaptiveManagement: string | null;
+
+  @ApiProperty({ nullable: true })
+  scalabilityReplicability: string | null;
+
+  @ApiProperty({ nullable: true })
+  convergenceJobsDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  convergenceSchemes: string | null;
+
+  @ApiProperty({ nullable: true })
+  beneficiariesScstobc: number | null;
+
+  @ApiProperty({ nullable: true })
+  beneficiariesScstobcFarmers: number | null;
+
+  @ApiProperty({ nullable: true })
+  communityPartnersAssetsDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  peopleKnowledgeSkillsIncreased: number | null;
+
+  @ApiProperty({ nullable: true })
+  technicalNarrative: string | null;
+
+  @ApiProperty({ nullable: true })
+  publicNarrative: string | null;
+
+  @ApiProperty({ nullable: true })
+  totalUniqueRestorationPartners: number | null;
+
+  @ApiProperty({ nullable: true })
+  businessMilestones: string | null;
+
+  @ApiProperty({ nullable: true })
+  landscapeCommunityContribution: string | null;
+
+  @ApiProperty({ nullable: true })
+  reportTitle: string | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 

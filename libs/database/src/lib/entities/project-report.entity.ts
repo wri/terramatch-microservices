@@ -128,6 +128,18 @@ export class ProjectReport extends Model<ProjectReport> {
   updateRequestStatus: string;
 
   @AllowNull
+  @Column(TEXT)
+  feedback: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  feedbackFields: string[] | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  completion: number | null;
+
+  @AllowNull
   @Column(DATE)
   dueAt: Date | null;
 

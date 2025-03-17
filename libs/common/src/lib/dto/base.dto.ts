@@ -1,11 +1,11 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "@nestjs/common";
 
-export abstract class BaseDto {
+export abstract class HybridSupportDto {
   /**
-   * All DTOs must include a "lightResource" boolean to indicate if the resource that the
-   * client currently has cached is a full version of that resource or not.
-   **/
+   * Indicates whether this DTO represents a light version of the resource.
+   * This property is only relevant for DTOs that have both light and full versions.
+   */
   @ApiProperty({
     type: Boolean,
     description: "Indicates if this resource has the full resource definition."

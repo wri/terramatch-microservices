@@ -1,7 +1,7 @@
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { BaseDto } from "@terramatch-microservices/common/dto/base.dto";
+import { HybridSupportDto } from "@terramatch-microservices/common/dto/base.dto";
 import {
   IndicatorFieldMonitoringDto,
   IndicatorHectaresDto,
@@ -44,8 +44,7 @@ export class ReportingPeriodDto {
   treeSpecies: TreeSpeciesDto[];
 }
 @JsonApiDto({ type: "sitePolygons" })
-@JsonApiDto({ type: "sitePolygons" })
-export class SitePolygonLightDto extends BaseDto {
+export class SitePolygonLightDto extends HybridSupportDto {
   constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
     super();
     if (sitePolygon != null) {

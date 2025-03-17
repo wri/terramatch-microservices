@@ -101,6 +101,7 @@ export class SitePolygonsService {
       throw e;
     }
   }
+
   async buildLightDto(sitePolygon: SitePolygon): Promise<SitePolygonLightDto> {
     const indicators = await this.getIndicators(sitePolygon);
     return new SitePolygonLightDto(sitePolygon, indicators);

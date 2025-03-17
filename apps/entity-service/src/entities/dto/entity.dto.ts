@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { BaseDto } from "@terramatch-microservices/common/dto/base.dto";
+import { HybridSupportDto } from "@terramatch-microservices/common/dto/base.dto";
 
 /**
  * A utility type for constructing the "extra props" type of a DTO based on what's in the dto, the
@@ -7,7 +7,7 @@ import { BaseDto } from "@terramatch-microservices/common/dto/base.dto";
  */
 export type AdditionalProps<DTO, BaseType> = Pick<DTO, keyof Omit<DTO, keyof BaseType>>;
 
-export abstract class EntityDto extends BaseDto {
+export abstract class EntityDto extends HybridSupportDto {
   /**
    * All EntityDtos must include UUID in the attributes for use in the react-admin pagination
    * code.

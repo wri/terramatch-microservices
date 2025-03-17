@@ -540,4 +540,13 @@ describe("SitePolygonsService", () => {
 
     expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
   });
+  it("should return SitePolygonLightDto when lightResource is true", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+    expect(lightDto.name).toBe(sitePolygon.polyName);
+  });
 });

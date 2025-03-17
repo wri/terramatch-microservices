@@ -1,4 +1,4 @@
-import { IncludeOptions, literal, Op } from "sequelize";
+import { IncludeOptions, literal, Op, Sequelize } from "sequelize";
 import {
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,
@@ -89,6 +89,21 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
       attributes: ["id"]
     });
     return this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
+  }
+  async addSearch(searchTerm: string) {
+    if (!searchTerm) return this;
+
+    return this.where(
+      Sequelize.or(
+        Sequelize.where(Sequelize.fn("LOWER", Sequelize.col("site.name")), {
+          [Op.like]: `%${searchTerm.toLowerCase()}%`
+        }),
+        Sequelize.where(Sequelize.fn("LOWER", Sequelize.col("poly_name")), {
+          [Op.like]: `%${searchTerm.toLowerCase()}%`
+        })
+      ),
+      this.siteJoin
+    );
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {

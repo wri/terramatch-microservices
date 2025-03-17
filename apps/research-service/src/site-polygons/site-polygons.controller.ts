@@ -51,7 +51,6 @@ export class SitePolygonsController {
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
-
     const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator } = query;
     const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
 
@@ -98,6 +97,9 @@ export class SitePolygonsController {
     // Ensure test projects are excluded only if not included explicitly
     if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
       await queryBuilder.excludeTestProjects();
+    }
+    if (query.search) {
+      await queryBuilder.addSearch(query.search);
     }
     const document = buildJsonApi(SitePolygonDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {

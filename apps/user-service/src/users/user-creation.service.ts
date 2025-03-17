@@ -124,7 +124,7 @@ export class UserCreationService {
       cta: await this.localizationService.translate(cta, locale),
       monitoring: "monitoring"
     };
-    return this.templateService.render("user-services/views/default-email.hbs", emailData);
+    return this.templateService.render("user-service/views/default-email.hbs", emailData);
   }
 
   private async sendEmailVerification(

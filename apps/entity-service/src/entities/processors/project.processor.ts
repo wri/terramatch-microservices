@@ -54,7 +54,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     ]);
 
     if (query.sort != null) {
-      if (["name", "plantingStartDate"].includes(query.sort.field)) {
+      if (["name", "plantingStartDate", "country"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
@@ -85,7 +85,10 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
   }
 
   async addLightDto(document: DocumentBuilder, project: Project) {
-    document.addData(project.uuid, new ProjectLightDto(project));
+    const projectId = project.id;
+    const totalHectaresRestoredSum =
+      (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
+    document.addData(project.uuid, new ProjectLightDto(project, { totalHectaresRestoredSum }));
   }
 
   async addFullDto(document: DocumentBuilder, project: Project) {

@@ -13,7 +13,7 @@ import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "projects" })
 export class ProjectLightDto extends EntityDto {
-  constructor(project?: Project) {
+  constructor(project?: Project, props?: AdditionalProjectLightProps) {
     super();
     if (project != null) {
       this.populate(ProjectLightDto, {
@@ -21,7 +21,8 @@ export class ProjectLightDto extends EntityDto {
         lightResource: true,
         // these two are untyped and marked optional in the base model.
         createdAt: project.createdAt as Date,
-        updatedAt: project.updatedAt as Date
+        updatedAt: project.updatedAt as Date,
+        ...props
       });
     }
   }
@@ -62,6 +63,12 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({ nullable: true })
   plantingStartDate: Date | null;
 
+  @ApiProperty({ nullable: true })
+  country: string | null;
+
+  @ApiProperty()
+  totalHectaresRestoredSum: number;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -69,10 +76,9 @@ export class ProjectLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalProjectFullProps = AdditionalProps<
-  ProjectFullDto,
-  ProjectLightDto & Omit<Project, "application">
->;
+export type AdditionalProjectLightProps = Pick<ProjectLightDto, "totalHectaresRestoredSum">;
+export type AdditionalProjectFullProps = AdditionalProjectLightProps &
+  AdditionalProps<ProjectFullDto, ProjectLightDto & Omit<Project, "application">>;
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;
 
 export class ANRDto {
@@ -153,9 +159,6 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true })
   totalHectaresRestoredGoal: number | null;
-
-  @ApiProperty()
-  totalHectaresRestoredSum: number;
 
   @ApiProperty({ nullable: true })
   treesGrownGoal: number | null;

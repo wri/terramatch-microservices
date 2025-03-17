@@ -46,15 +46,22 @@ export class SitePolygonsController {
 
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
-  @JsonApiResponse({ data: SitePolygonFullDto, pagination: "cursor" })
+  @JsonApiResponse([
+    { data: SitePolygonFullDto, pagination: "cursor" },
+    { data: SitePolygonLightDto, pagination: "number" }
+  ])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
-    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, isLightData } = query;
+    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, lightResource } = query;
 
     const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
+
+    if (lightResource && !isNumberPage(query.page)) {
+      throw new BadRequestException("Light resources must use number pagination.");
+    }
 
     if (countSelectedParams > 1) {
       throw new BadRequestException(
@@ -103,7 +110,7 @@ export class SitePolygonsController {
     const document = buildJsonApi(SitePolygonFullDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
       const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
-      if (isLightData) {
+      if (lightResource) {
         document.addData(sitePolygon.uuid, new SitePolygonLightDto(sitePolygon, indicators));
       } else {
         const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);

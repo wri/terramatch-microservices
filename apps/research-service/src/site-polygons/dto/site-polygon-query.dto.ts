@@ -104,5 +104,5 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     default: false,
     description: "Wheter to include the complete sitePolygon Dto or not"
   })
-  isLightData?: boolean;
+  lightResource?: boolean;
 }

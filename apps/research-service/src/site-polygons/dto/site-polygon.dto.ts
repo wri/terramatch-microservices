@@ -1,6 +1,7 @@
-import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
+import { BaseDto } from "@terramatch-microservices/common/dto/base.dto";
 import {
   IndicatorFieldMonitoringDto,
   IndicatorHectaresDto,
@@ -12,7 +13,6 @@ import {
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
-
 export type IndicatorDto =
   | IndicatorTreeCoverLossDto
   | IndicatorHectaresDto
@@ -43,11 +43,12 @@ export class ReportingPeriodDto {
   })
   treeSpecies: TreeSpeciesDto[];
 }
-
 @JsonApiDto({ type: "sitePolygons" })
-export class SitePolygonLightDto {
-  constructor(sitePolygon: SitePolygon, indicators: IndicatorDto[]) {
-    if (sitePolygon) {
+@JsonApiDto({ type: "sitePolygons" })
+export class SitePolygonLightDto extends BaseDto {
+  constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
+    super();
+    if (sitePolygon != null) {
       this.populate(SitePolygonLightDto, {
         ...pickApiProperties(sitePolygon, SitePolygonLightDto),
         name: sitePolygon.polyName,
@@ -56,10 +57,6 @@ export class SitePolygonLightDto {
         siteName: sitePolygon.site?.name
       });
     }
-  }
-
-  protected populate<T>(dtoClass: new (...args: any[]) => T, values: Partial<T>) {
-    Object.assign(this, values);
   }
 
   @ApiProperty()
@@ -96,7 +93,6 @@ export class SitePolygonLightDto {
   @ApiProperty({ description: "The name of the associated Site." })
   siteName: string;
 }
-
 export class SitePolygonFullDto extends SitePolygonLightDto {
   constructor(
     sitePolygon: SitePolygon,
@@ -104,13 +100,22 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     establishmentTreeSpecies: TreeSpeciesDto[],
     reportingPeriods: ReportingPeriodDto[]
   ) {
-    super(sitePolygon, indicators);
-    this.populate(SitePolygonFullDto, {
-      ...pickApiProperties(sitePolygon, SitePolygonFullDto),
-      geometry: sitePolygon.polygon?.polygon,
-      establishmentTreeSpecies,
-      reportingPeriods
-    });
+    // Call super() without arguments
+    super();
+
+    if (sitePolygon != null) {
+      this.populate(SitePolygonFullDto, {
+        ...pickApiProperties(sitePolygon, SitePolygonFullDto),
+        name: sitePolygon.polyName,
+        siteId: sitePolygon.siteUuid,
+        indicators: indicators,
+        siteName: sitePolygon.site?.name,
+        geometry: sitePolygon.polygon?.polygon,
+        establishmentTreeSpecies,
+        reportingPeriods,
+        lightResource: false // This is a full resource
+      });
+    }
   }
 
   @ApiProperty({ nullable: true })

@@ -110,15 +110,16 @@ export class SitePolygonsController {
     if (query.search != null) {
       await queryBuilder.addSearch(query.search);
     }
-    const document = buildJsonApi(SitePolygonFullDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
+    const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
+
+    const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
       if (lightResource) {
-        document.addData(sitePolygon.uuid, this.sitePolygonService.buildLightDto(sitePolygon));
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon));
       } else {
-        document.addData(sitePolygon.uuid, this.sitePolygonService.buildFullDto(sitePolygon));
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildFullDto(sitePolygon));
       }
     }
-
     const serializeOptions: SerializeOptions = { paginationTotal: await queryBuilder.paginationTotal() };
     if (isNumberPage(query.page)) serializeOptions.pageNumber = query.page.number;
     return document.serialize(serializeOptions);

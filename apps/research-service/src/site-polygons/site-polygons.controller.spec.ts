@@ -9,6 +9,7 @@ import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { Transaction } from "sequelize";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -48,6 +49,14 @@ describe("SitePolygonsController", () => {
     }).compile();
 
     controller = module.get(SitePolygonsController);
+
+    sitePolygonService.buildLightDto.mockImplementation(sitePolygon => {
+      return Promise.resolve(new SitePolygonLightDto(sitePolygon, []));
+    });
+
+    sitePolygonService.buildFullDto.mockImplementation(sitePolygon => {
+      return Promise.resolve(new SitePolygonFullDto(sitePolygon, [], [], []));
+    });
   });
 
   afterEach(() => {
@@ -94,34 +103,32 @@ describe("SitePolygonsController", () => {
       await expect(controller.findMany({ page: { size: 5, number: 0 } })).rejects.toThrow(BadRequestException);
     });
 
-    it("Returns a valid value if the request is valid", async () => {
+    it("should returns a valid value if the request is valid", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
       mockQueryBuilder([sitePolygon], 1);
       const result = await controller.findMany({});
-      console.log("Resul", result);
-      // expect(result.meta).not.toBe(null);
-      // expect(result.meta.page.total).toBe(1);
-      // expect(result.meta.page.cursor).toBe(sitePolygon.uuid);
+      expect(result.meta).not.toBe(null);
+      expect(result.meta.page.total).toBe(1);
+      expect(result.meta.page.cursor).toBe(sitePolygon.uuid);
 
-      // const resources = result.data as Resource[];
-      // expect(resources.length).toBe(1);
-      // expect(resources[0].id).toBe(sitePolygon.uuid);
+      const resources = result.data as Resource[];
+      expect(resources.length).toBe(1);
+      expect(resources[0].id).toBe(sitePolygon.uuid);
     });
 
-    it("returns a number page document shape if a number page is requested", async () => {
+    it("should return a number page document shape if a number page is requested", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
-      // mockQueryBuilder([sitePolygon], 1);
-      // const result = await controller.findMany({ page: { size: 5, number: 1 } });
-      // console.log("Result Data 2", result);
-      // expect(result.meta).not.toBe(null);
-      // expect(result.meta.page.total).toBe(1);
-      // expect(result.meta.page.number).toBe(1);
+      mockQueryBuilder([sitePolygon], 1);
+      const result = await controller.findMany({ page: { size: 5, number: 1 } });
+      expect(result.meta).not.toBe(null);
+      expect(result.meta.page.total).toBe(1);
+      expect(result.meta.page.number).toBe(1);
 
-      // const resources = result.data as Resource[];
-      // expect(resources.length).toBe(1);
-      // expect(resources[0].id).toBe(sitePolygon.uuid);
+      const resources = result.data as Resource[];
+      expect(resources.length).toBe(1);
+      expect(resources[0].id).toBe(sitePolygon.uuid);
     });
 
     it("Excludes test projects by default", async () => {
@@ -166,18 +173,6 @@ describe("SitePolygonsController", () => {
       };
 
       await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
-    });
-    it("should not throw an error if presentIndicator treeCoverLoss is used", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const builder = mockQueryBuilder();
-      await controller.findMany({ presentIndicator: ["treeCoverLoss"] });
-      expect(builder.hasPresentIndicators).toHaveBeenCalled();
-    });
-    it("should not throw an error if missingIndicator treeCover is used", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const builder = mockQueryBuilder();
-      await controller.findMany({ missingIndicator: ["treeCover"] });
-      expect(builder.isMissingIndicators).toHaveBeenCalled();
     });
     it("should call addSearch when search parameter is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);

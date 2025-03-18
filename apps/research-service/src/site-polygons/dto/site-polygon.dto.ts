@@ -94,6 +94,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
   siteName: string;
 }
 
+@JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonFullDto extends SitePolygonLightDto {
   constructor(
     sitePolygon: SitePolygon,

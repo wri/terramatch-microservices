@@ -9,6 +9,7 @@ import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { Transaction } from "sequelize";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("SitePolygonsController", () => {
@@ -23,10 +24,13 @@ describe("SitePolygonsController", () => {
       paginationTotal: jest.fn(),
       hasStatuses: jest.fn().mockReturnThis(),
       modifiedSince: jest.fn().mockReturnThis(),
-      isMissingIndicators: jest.fn().mockReturnThis()
+      isMissingIndicators: jest.fn().mockReturnThis(),
+      hasPresentIndicators: jest.fn().mockReturnThis(),
+      lightResource: jest.fn().mockReturnThis()
     };
     builder.touchesBoundary = jest.fn().mockResolvedValue(builder);
     builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
+    builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
@@ -48,6 +52,14 @@ describe("SitePolygonsController", () => {
       .compile();
 
     controller = module.get(SitePolygonsController);
+
+    sitePolygonService.buildLightDto.mockImplementation(sitePolygon => {
+      return Promise.resolve(new SitePolygonLightDto(sitePolygon, []));
+    });
+
+    sitePolygonService.buildFullDto.mockImplementation(sitePolygon => {
+      return Promise.resolve(new SitePolygonFullDto(sitePolygon, [], [], []));
+    });
   });
 
   afterEach(() => {
@@ -58,6 +70,22 @@ describe("SitePolygonsController", () => {
     it("should should throw an error if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       await expect(controller.findMany({})).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw an error if siteId and projectId are both provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(controller.findMany({ siteId: ["123"], projectId: ["456"] })).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw an error if presentIndicator and missingIndicator are both provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(
+        controller.findMany({
+          siteId: ["123"],
+          presentIndicator: ["treeCoverLoss"],
+          missingIndicator: ["treeCover"]
+        })
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw an error if the page size is invalid", async () => {
@@ -78,7 +106,7 @@ describe("SitePolygonsController", () => {
       await expect(controller.findMany({ page: { size: 5, number: 0 } })).rejects.toThrow(BadRequestException);
     });
 
-    it("Returns a valid value if the request is valid", async () => {
+    it("should returns a valid value if the request is valid", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
       mockQueryBuilder([sitePolygon], 1);
@@ -92,7 +120,7 @@ describe("SitePolygonsController", () => {
       expect(resources[0].id).toBe(sitePolygon.uuid);
     });
 
-    it("returns a number page document shape if a number page is requested", async () => {
+    it("should return a number page document shape if a number page is requested", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
       mockQueryBuilder([sitePolygon], 1);
@@ -106,7 +134,7 @@ describe("SitePolygonsController", () => {
       expect(resources[0].id).toBe(sitePolygon.uuid);
     });
 
-    it("Excludes test projects by default", async () => {
+    it("should exclude test projects by default", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
       const result = await controller.findMany({});
@@ -115,7 +143,7 @@ describe("SitePolygonsController", () => {
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
 
-    it("will either honor projectIds or includeTestProjects", async () => {
+    it("should honor projectIds, siteIds, includeTestProjects when provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
 
@@ -131,7 +159,11 @@ describe("SitePolygonsController", () => {
       await controller.findMany({});
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();
       expect(builder.excludeTestProjects).toHaveBeenCalled();
+
+      await controller.findMany({ siteId: ["asdf"] });
+      expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
     });
+
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,
@@ -139,6 +171,16 @@ describe("SitePolygonsController", () => {
       };
 
       await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+    });
+    it("should call addSearch when search parameter is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      builder.addSearch = jest.fn().mockResolvedValue(builder);
+
+      const searchTerm = "forest site";
+      await controller.findMany({ search: searchTerm });
+
+      expect(builder.addSearch).toHaveBeenCalledWith(searchTerm);
     });
   });
 

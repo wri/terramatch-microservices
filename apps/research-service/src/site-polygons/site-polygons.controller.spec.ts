@@ -140,7 +140,7 @@ describe("SitePolygonsController", () => {
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
 
-    it("should honor projectIds, siteIds, includeTestProjects", async () => {
+    it("should honor projectIds, siteIds, includeTestProjects when provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
 

@@ -513,7 +513,7 @@ describe("SitePolygonsService", () => {
     expect(treeCount[0]).toMatchObject(dto);
   });
 
-  it("Can build LightDto correctly", async () => {
+  it("should build LightDto correctly when lightResource is true", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
@@ -528,7 +528,7 @@ describe("SitePolygonsService", () => {
     expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
   });
 
-  it("Can build FullDto correctly", async () => {
+  it("should build FullDto correctly when lightResource is false", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
@@ -570,7 +570,7 @@ describe("SitePolygonsService", () => {
     expect(callOptions.include[0].required).toBe(true);
   });
 
-  it("should add search filters for site name and polygon name", async () => {
+  it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {
     await SitePolygon.truncate();
     await PolygonGeometry.truncate();
 

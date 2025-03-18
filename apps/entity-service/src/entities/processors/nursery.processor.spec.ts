@@ -36,7 +36,7 @@ describe("NuseryProcessor", () => {
     processor = module.get(EntitiesService).createEntityProcessor("nurseries") as NurseryProcessor;
   });
 
-  describe("findMany", () => {
+  describe("should return a list of nurseries when findMany is called with valid parameters", () => {
     async function expectNurseries(
       expected: Nursery[],
       query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
@@ -55,7 +55,7 @@ describe("NuseryProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
-    it("returns nurseries", async () => {
+    it("should return nurseries the user is allowed to manage", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
       const managedNurseries = await NurseryFactory.createMany(3, { projectId: project.id });
@@ -63,7 +63,7 @@ describe("NuseryProcessor", () => {
       await expectNurseries(managedNurseries, {}, { permissions: ["manage-own"] });
     });
 
-    it("returns managed nurseries", async () => {
+    it("should return nurseries managed by the user for the project", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
       await ProjectFactory.create();
@@ -72,7 +72,7 @@ describe("NuseryProcessor", () => {
       await expectNurseries(nurseries, {}, { permissions: ["projects-manage"] });
     });
 
-    it("returns framework nurseries", async () => {
+    it("should return nurseries associated with specific frameworks", async () => {
       const nurseries = await NurseryFactory.createMany(3, { frameworkKey: "hbf" });
       await NurseryFactory.createMany(3, { frameworkKey: "ppc" });
       for (const p of await NurseryFactory.createMany(3, { frameworkKey: "terrafund" })) {
@@ -82,7 +82,7 @@ describe("NuseryProcessor", () => {
       await expectNurseries(nurseries, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
     });
 
-    it("searches", async () => {
+    it("should return nurseries that match the search term", async () => {
       const n1 = await NurseryFactory.create({ name: "Foo Bar" });
       const n2 = await NurseryFactory.create({ name: "Baz Foo" });
       await NurseryFactory.createMany(3);
@@ -90,7 +90,7 @@ describe("NuseryProcessor", () => {
       await expectNurseries([n1, n2], { search: "foo" });
     });
 
-    it("filters", async () => {
+    it("should return nurseries filtered by the update request status or project", async () => {
       const p1 = await ProjectFactory.create();
       const p2 = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: p1.id });
@@ -130,7 +130,7 @@ describe("NuseryProcessor", () => {
       await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
-    it("sorts by name", async () => {
+    it("should sort nurseries by name in ascending and descending order", async () => {
       const nurseryA = await NurseryFactory.create({ name: "A Nursery" });
       const nurseryB = await NurseryFactory.create({ name: "B Nursery" });
       const nurseryC = await NurseryFactory.create({ name: "C Nursery" });
@@ -147,7 +147,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sorts by project name", async () => {
+    it("should sort nurseries by project name in ascending and descending order", async () => {
       const projectA = await ProjectFactory.create({ name: "A Project" });
       const projectB = await ProjectFactory.create({ name: "B Project" });
       const projectC = await ProjectFactory.create({ name: "C Project" });
@@ -166,7 +166,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sorts by startDate", async () => {
+    it("should sort nurseries by start date in ascending and descending order", async () => {
       const nurseryA = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 1 }).toJSDate() });
       const nurseryB = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 10 }).toJSDate() });
       const nurseryC = await NurseryFactory.create({ startDate: DateTime.now().minus({ days: 5 }).toJSDate() });
@@ -182,7 +182,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sorts by createdAt", async () => {
+    it("should sort nurseries by created date in ascending and descending order", async () => {
       const now = DateTime.now();
       const nurseryA = await NurseryFactory.create({
         startDate: now.minus({ days: 1 }).toJSDate(),
@@ -208,7 +208,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sort by status", async () => {
+    it("should sort nurseries by status in ascending and descending order", async () => {
       const nurseryA = await NurseryFactory.create({ status: "started" });
       const nurseryB = await NurseryFactory.create({ status: "approved" });
       const nurseryC = await NurseryFactory.create({ status: "approved" });
@@ -225,7 +225,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sort by updateRequestStatus", async () => {
+    it("should sort nurseries by update request status in ascending and descending order", async () => {
       const nurseryA = await NurseryFactory.create({ updateRequestStatus: "awaiting-approval" });
       const nurseryB = await NurseryFactory.create({ updateRequestStatus: "approved" });
       const nurseryC = await NurseryFactory.create({ updateRequestStatus: "approved" });
@@ -246,7 +246,7 @@ describe("NuseryProcessor", () => {
       );
     });
 
-    it("sorts by organisation name", async () => {
+    it("should sort nurseries by organisation name in ascending and descending order", async () => {
       const org1 = await OrganisationFactory.create({ name: "A Org" });
       const org2 = await OrganisationFactory.create({ name: "B Org" });
       const org3 = await OrganisationFactory.create({ name: "C Org" });
@@ -296,8 +296,8 @@ describe("NuseryProcessor", () => {
     });
   });
 
-  describe("findOne", () => {
-    it("returns the requested nursery", async () => {
+  describe("Should return a single nursery when searching by UUID", () => {
+    it("should return the nursery with the specified UUID", async () => {
       const nursery = await NurseryFactory.create();
       const result = await processor.findOne(nursery.uuid);
       expect(result.id).toBe(nursery.id);
@@ -310,8 +310,8 @@ describe("NuseryProcessor", () => {
     });
   });
 
-  describe("DTOs", () => {
-    it("NurseryLightDto is a light resource", async () => {
+  describe("Should properly map the nursery data into its respective DTOs", () => {
+    it("should return a light resource representation of the nursery in NurseryLightDto", async () => {
       const { uuid } = await NurseryFactory.create();
       const nursery = await processor.findOne(uuid);
       const document = buildJsonApi(NurseryLightDto, { forceDataArray: true });
@@ -322,7 +322,7 @@ describe("NuseryProcessor", () => {
         lightResource: true
       });
     });
-    it("includes calculated fields in NurseryFullDto", async () => {
+    it("should include the projectUuid and lightResource flag as calculated fields in the full NurseryFullDto representation", async () => {
       const project = await ProjectFactory.create();
 
       const { uuid } = await NurseryFactory.create({

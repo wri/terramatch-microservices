@@ -131,7 +131,7 @@ describe("SitePolygonsController", () => {
       expect(resources[0].id).toBe(sitePolygon.uuid);
     });
 
-    it("Excludes test projects by default", async () => {
+    it("should exclude test projects by default", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
       const result = await controller.findMany({});
@@ -140,7 +140,7 @@ describe("SitePolygonsController", () => {
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
 
-    it("will either honor projectIds or includeTestProjects", async () => {
+    it("should honor projectIds, siteIds, includeTestProjects", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
 
@@ -156,16 +156,11 @@ describe("SitePolygonsController", () => {
       await controller.findMany({});
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();
       expect(builder.excludeTestProjects).toHaveBeenCalled();
-    });
-
-    it("will honor siteId", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const builder = mockQueryBuilder();
 
       await controller.findMany({ siteId: ["asdf"] });
       expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
-      builder.filterSiteUuids.mockClear();
     });
+
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,

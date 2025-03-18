@@ -60,9 +60,26 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
 
-    if (query.search != null) {
-      builder.where({ name: { [Op.like]: `%${query.search}%` } });
-    }
+    // const options = {
+    //   projectAssociation: {
+    //     where: { name: { [Op.like]: `%${query.search}%` } }
+    //   }
+    // };
+
+    // const options = {
+    //   organisationAssociation: {
+    //     where: { name: { [Op.like]: `%${query.search}%` } }
+    //   }
+    // };
+
+    // if (query.search != null) {
+    //   builder.where({
+    //     [Op.and]: [
+    //       { name: { [Op.like]: `%${query.search}%` } }, // Filtra por nombre en el modelo 'Nursery'
+    //       // { '$project.name$': { [Op.like]: `%${query.search}%` } } // Filtra por nombre en el modelo asociado 'Project'
+    //     ]
+    //   });
+    // }
 
     if (query.projectUuid != null) {
       const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
@@ -79,15 +96,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     const nurseryId = nursery.id;
 
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
-    const seedlingsGrownCount =
-      (
-        await NurseryReport.nurseries([nurseryId])
-          .approved()
-          .findAll({
-            raw: true,
-            attributes: [[fn("SUM", col("seedlings_young_trees")), "seedlingsYoungTrees"]]
-          })
-      )[0].seedlingsYoungTrees ?? 0;
+    const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
     const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
     const props: AdditionalNurseryFullProps = {
       seedlingsGrownCount,
@@ -106,7 +115,17 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
   async addLightDto(document: DocumentBuilder, nursery: Nursery): Promise<void> {
     const nurseryId = nursery.id;
 
-    const seedlingsGrownCount =
+    const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
+    document.addData(nursery.uuid, new NurseryLightDto(nursery, { seedlingsGrownCount }));
+  }
+
+  protected async getTotalOverdueReports(nurseryId: number) {
+    const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
+    return await NurseryReport.incomplete().nurseries([nurseryId]).count(countOpts);
+  }
+
+  private async getSeedlingsGrownCount(nurseryId: number) {
+    return (
       (
         await NurseryReport.nurseries([nurseryId])
           .approved()
@@ -114,12 +133,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
             raw: true,
             attributes: [[fn("SUM", col("seedlings_young_trees")), "seedlingsYoungTrees"]]
           })
-      )[0].seedlingsYoungTrees ?? 0;
-    document.addData(nursery.uuid, new NurseryLightDto(nursery, { seedlingsGrownCount }));
-  }
-
-  protected async getTotalOverdueReports(nurseryId: number) {
-    const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
-    return await NurseryReport.incomplete().nurseries([nurseryId]).count(countOpts);
+      )[0].seedlingsYoungTrees ?? 0
+    );
   }
 }

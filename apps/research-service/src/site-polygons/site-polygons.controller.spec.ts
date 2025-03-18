@@ -129,6 +129,14 @@ describe("SitePolygonsController", () => {
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
+    it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
+      const query = {
+        lightResource: true,
+        page: { after: "cursor" }
+      };
+
+      await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe("bulkUpdate", () => {

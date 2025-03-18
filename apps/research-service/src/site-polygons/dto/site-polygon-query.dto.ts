@@ -98,4 +98,11 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   })
   @IsOptional()
   page?: CursorPage | NumberPage;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description: "Wheter to include the complete sitePolygon Dto or not"
+  })
+  lightResource?: boolean;
 }

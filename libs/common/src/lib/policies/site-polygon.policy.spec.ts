@@ -3,7 +3,6 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { SiteFactory } from "@terramatch-microservices/database/factories";
-import { TMLogger } from "../util/tm-logger";
 
 describe("SitePolygonPolicy", () => {
   let service: PolicyService;
@@ -11,9 +10,7 @@ describe("SitePolygonPolicy", () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [PolicyService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = await module.resolve<PolicyService>(PolicyService);
   });

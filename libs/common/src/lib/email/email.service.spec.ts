@@ -3,7 +3,6 @@ import { EmailService } from "./email.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
 import * as nodemailer from "nodemailer";
-import { TMLogger } from "../util/tm-logger";
 
 jest.mock("nodemailer");
 
@@ -18,9 +17,7 @@ describe("EmailService", () => {
 
     const module = await Test.createTestingModule({
       providers: [EmailService, { provide: ConfigService, useValue: (configService = createMock<ConfigService>()) }]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get(EmailService);
     transporter = (service as unknown as { transporter: nodemailer.Transporter }).transporter;

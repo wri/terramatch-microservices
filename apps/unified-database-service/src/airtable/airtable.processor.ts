@@ -1,5 +1,5 @@
 import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
-import { InternalServerErrorException, Logger, NotImplementedException } from "@nestjs/common";
+import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { Job } from "bullmq";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
@@ -18,6 +18,7 @@ import {
 } from "./entities";
 import * as Sentry from "@sentry/node";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
@@ -58,7 +59,7 @@ export type UpdateAllData = {
  */
 @Processor("airtable")
 export class AirtableProcessor extends WorkerHost {
-  private readonly logger = new Logger(AirtableProcessor.name);
+  private readonly logger = new TMLogger(AirtableProcessor.name);
   private readonly base: Airtable.Base;
 
   constructor(private readonly config: ConfigService, private readonly slack: SlackService) {

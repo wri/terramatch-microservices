@@ -3,14 +3,13 @@ import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { NurseryReport } from "@terramatch-microservices/database/entities";
 import {
+  NurseryFactory,
+  NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
-  NurseryFactory,
-  NurseryReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { TMLogger } from "../util/tm-logger";
 
 describe("NurseryReportPolicy", () => {
   let service: PolicyService;
@@ -18,9 +17,7 @@ describe("NurseryReportPolicy", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [PolicyService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = await module.resolve(PolicyService);
   });

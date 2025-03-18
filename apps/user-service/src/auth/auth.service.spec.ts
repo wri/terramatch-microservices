@@ -5,7 +5,6 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import bcrypt from "bcryptjs";
 import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("AuthService", () => {
   let service: AuthService;
@@ -20,9 +19,7 @@ describe("AuthService", () => {
           useValue: (jwtService = createMock<JwtService>())
         }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get<AuthService>(AuthService);
   });

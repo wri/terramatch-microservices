@@ -26,7 +26,6 @@ import { DateTime } from "luxon";
 
 import { PlantingCountDto } from "./dto/planting-count.dto";
 import { Op } from "sequelize";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("TreeService", () => {
   let service: TreeService;
@@ -38,9 +37,7 @@ describe("TreeService", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [TreeService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get(TreeService);
   });

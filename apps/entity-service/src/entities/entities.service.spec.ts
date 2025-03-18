@@ -9,7 +9,6 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 import { MediaDto } from "./dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -27,9 +26,7 @@ describe("EntitiesService", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [{ provide: MediaService, useValue: (mediaService = createMock<MediaService>()) }, EntitiesService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get(EntitiesService);
 

@@ -7,7 +7,6 @@ import { OrganisationFactory, UserFactory } from "@terramatch-microservices/data
 import { Relationship, Resource } from "@terramatch-microservices/common/util";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import { UserCreationService } from "./user-creation.service";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("UsersController", () => {
   let controller: UsersController;
@@ -21,9 +20,7 @@ describe("UsersController", () => {
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     controller = module.get<UsersController>(UsersController);
   });

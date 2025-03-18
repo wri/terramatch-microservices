@@ -1,4 +1,4 @@
-import { Injectable, Logger, Scope, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
@@ -23,6 +23,7 @@ import { SiteReportPolicy } from "./site-report.policy";
 import { SitePolicy } from "./site.policy";
 import { NurseryReportPolicy } from "./nursery-report.policy";
 import { NurseryPolicy } from "./nursery.policy";
+import { TMLogger } from "../util/tm-logger";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,7 +59,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
  */
 @Injectable({ scope: Scope.REQUEST })
 export class PolicyService {
-  private readonly log = new Logger(PolicyService.name);
+  private readonly log = new TMLogger(PolicyService.name);
   private permissions?: string[];
 
   get userId() {

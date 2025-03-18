@@ -10,7 +10,6 @@ import {
   SiteReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { TMLogger } from "../util/tm-logger";
 
 describe("SiteReportPolicy", () => {
   let service: PolicyService;
@@ -18,9 +17,7 @@ describe("SiteReportPolicy", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [PolicyService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = await module.resolve(PolicyService);
   });

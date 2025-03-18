@@ -10,7 +10,6 @@ import { SitePolygonFactory } from "@terramatch-microservices/database/factories
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -47,9 +46,7 @@ describe("SitePolygonsController", () => {
         { provide: SitePolygonsService, useValue: (sitePolygonService = createMock<SitePolygonsService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     controller = module.get(SitePolygonsController);
 

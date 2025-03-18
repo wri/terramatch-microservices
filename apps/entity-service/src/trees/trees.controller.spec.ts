@@ -5,7 +5,6 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("TreesController", () => {
   let controller: TreesController;
@@ -19,9 +18,7 @@ describe("TreesController", () => {
         { provide: TreeService, useValue: (treeService = createMock<TreeService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     controller = module.get(TreesController);
   });

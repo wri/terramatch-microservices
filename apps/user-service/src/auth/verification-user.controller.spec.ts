@@ -4,7 +4,6 @@ import { NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
 import { VerificationUserController } from "./verification-user.controller";
 import { VerificationUserService } from "./verification-user.service";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("VerificationUserController", () => {
   let controller: VerificationUserController;
@@ -19,9 +18,7 @@ describe("VerificationUserController", () => {
           useValue: (verificationUserService = createMock<VerificationUserService>())
         }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     controller = module.get<VerificationUserController>(VerificationUserController);
   });

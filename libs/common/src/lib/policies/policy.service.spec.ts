@@ -3,7 +3,6 @@ import { PolicyService } from "./policy.service";
 import { UnauthorizedException } from "@nestjs/common";
 import { ModelHasRole, Permission, User } from "@terramatch-microservices/database/entities";
 import { RequestContext } from "nestjs-request-context";
-import { TMLogger } from "../util/tm-logger";
 
 export function mockUserId(userId?: number) {
   jest
@@ -30,9 +29,7 @@ describe("PolicyService", () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [PolicyService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = await module.resolve<PolicyService>(PolicyService);
   });

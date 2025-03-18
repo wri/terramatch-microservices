@@ -1,13 +1,14 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DeleteEntitiesData, EntityType, UpdateAllData, UpdateEntitiesData } from "./airtable.processor";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { DateTime } from "luxon";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 @Injectable()
 export class AirtableService {
-  private readonly logger = new Logger(AirtableService.name);
+  private readonly logger = new TMLogger(AirtableService.name);
 
   constructor(@InjectQueue("airtable") private readonly airtableQueue: Queue) {}
 

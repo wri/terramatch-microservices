@@ -23,7 +23,6 @@ import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -31,9 +30,7 @@ describe("SitePolygonsService", () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [SitePolygonsService]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get<SitePolygonsService>(SitePolygonsService);
   });

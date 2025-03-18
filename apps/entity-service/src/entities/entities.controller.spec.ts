@@ -9,7 +9,6 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { EntityQueryDto } from "./dto/entity-query.dto";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
   LIGHT_DTO = ProjectLightDto;
@@ -35,9 +34,7 @@ describe("EntitiesController", () => {
         { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId: 123 })) }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     controller = module.get(EntitiesController);
     processor = new StubProcessor(entitiesService);

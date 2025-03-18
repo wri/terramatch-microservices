@@ -6,7 +6,6 @@ import { v4 as uuidv4 } from "uuid";
 import { NotFoundException } from "@nestjs/common";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;
@@ -19,9 +18,7 @@ describe("DelayedJobsController", () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DelayedJobsController]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     controller = module.get<DelayedJobsController>(DelayedJobsController);
   });

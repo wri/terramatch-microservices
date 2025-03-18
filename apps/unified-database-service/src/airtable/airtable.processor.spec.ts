@@ -5,7 +5,6 @@ import { createMock } from "@golevelup/ts-jest";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { Job } from "bullmq";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 jest.mock("airtable", () =>
   jest.fn(() => ({
@@ -23,9 +22,7 @@ describe("AirtableProcessor", () => {
         { provide: ConfigService, useValue: createMock<ConfigService>() },
         { provide: SlackService, useValue: createMock<SlackService>() }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     processor = await module.resolve(AirtableProcessor);
   });

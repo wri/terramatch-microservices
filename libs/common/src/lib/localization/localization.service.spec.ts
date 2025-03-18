@@ -4,7 +4,6 @@ import { i18nItem, i18nTranslation, LocalizationKey } from "@terramatch-microser
 import { ConfigService } from "@nestjs/config";
 import { tx } from "@transifex/native";
 import { createMock } from "@golevelup/ts-jest";
-import { TMLogger } from "../util/tm-logger";
 
 jest.mock("@transifex/native", () => ({
   tx: {
@@ -21,9 +20,7 @@ describe("LocalizationService", () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get<LocalizationService>(LocalizationService);
   });

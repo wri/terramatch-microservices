@@ -10,7 +10,6 @@ import { NotFoundException, UnprocessableEntityException } from "@nestjs/common"
 import { RoleFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("UserCreationService", () => {
   let service: UserCreationService;
@@ -86,9 +85,7 @@ describe("UserCreationService", () => {
           useValue: (templateService = createMock<TemplateService>())
         }
       ]
-    })
-      .setLogger(new TMLogger())
-      .compile();
+    }).compile();
 
     service = module.get<UserCreationService>(UserCreationService);
   });

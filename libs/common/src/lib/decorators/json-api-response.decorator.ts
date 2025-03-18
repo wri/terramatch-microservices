@@ -5,9 +5,14 @@ import { DTO_ID_METADATA, DTO_TYPE_METADATA, IdType } from "./json-api-dto.decor
 import { JsonApiAttributes } from "../dto/json-api-attributes";
 import { isArray, uniq } from "lodash";
 
-type TypeProperties = {
+type ExampleTypeProperty = {
   type: "string";
   example: string;
+};
+
+type EnumTypeProperty = {
+  type: "string";
+  enum: string[];
 };
 
 type IdProperties = {
@@ -17,7 +22,7 @@ type IdProperties = {
 };
 
 type ResourceDef = {
-  type: TypeProperties;
+  type: ExampleTypeProperty;
   id: IdProperties;
   attributes: object;
   relationships?: {
@@ -45,7 +50,7 @@ function getIdProperties(resourceType: ResourceType): IdProperties {
   return id;
 }
 
-const getTypeProperties = (resourceType: ResourceType): TypeProperties => ({
+const getTypeProperties = (resourceType: ResourceType): ExampleTypeProperty => ({
   type: "string",
   example: Reflect.getMetadata(DTO_TYPE_METADATA, resourceType)
 });
@@ -114,7 +119,7 @@ function buildSchema(options: JsonApiOptions) {
     meta: {
       type: "object",
       properties: {
-        type: getTypeProperties(type)
+        resourceType: getTypeProperties(type)
       }
     },
     data:
@@ -221,16 +226,24 @@ type JsonApiOptions = {
   included?: (Resource | ResourceType)[];
 };
 
-type Document = {
+type DocumentMeta = {
   meta: {
     type: "object";
     properties: {
-      type: TypeProperties;
+      resourceType: ExampleTypeProperty | EnumTypeProperty;
       [key: string]: object;
     };
   };
+};
+
+type Document = DocumentMeta & {
   data: any;
   included?: any;
+};
+
+type DocumentMetaSchema = {
+  type: "object";
+  properties: DocumentMeta;
 };
 
 type DocumentSchema = {
@@ -252,8 +265,6 @@ export function JsonApiResponse(
   jsonApiOptions: ResourceType | JsonApiOptions | (ResourceType | JsonApiOptions)[],
   apiResponseOptions: ApiResponseOptions = {}
 ) {
-  const { status } = apiResponseOptions;
-
   const { documents, extraModels } = (isArray(jsonApiOptions) ? jsonApiOptions : [jsonApiOptions]).reduce(
     ({ documents, extraModels }, options) => {
       if (!isJsonApiOptions(options)) options = { data: options };
@@ -268,10 +279,33 @@ export function JsonApiResponse(
   );
 
   const fullOptions = {
+    status: HttpStatus.OK,
     ...apiResponseOptions,
-    status: status ?? HttpStatus.OK,
     schema: documents.length === 1 ? documents[0] : { oneOf: documents }
   } as ApiResponseOptions;
 
   return applyDecorators(ApiResponse(fullOptions), ApiExtraModels(...uniq(extraModels)));
+}
+
+export function JsonApiDeletedResponse(types: string | string[], apiResponseOptions: ApiResponseOptions = {}) {
+  const schema: DocumentMetaSchema = {
+    type: "object",
+    properties: {
+      meta: {
+        type: "object",
+        properties: {
+          resourceType: { type: "string", ...(isArray(types) ? { enum: types } : { example: types }) },
+          resourceId: { type: "string", format: "uuid" }
+        }
+      }
+    }
+  };
+
+  const fullOptions = {
+    status: HttpStatus.OK,
+    ...apiResponseOptions,
+    schema
+  } as ApiResponseOptions;
+
+  return applyDecorators(ApiResponse(fullOptions));
 }

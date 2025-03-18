@@ -5,6 +5,8 @@ import { EntitiesService } from "../entities.service";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
+import { EntityClass, EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { Action } from "@terramatch-microservices/database/entities/action.entity";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -25,13 +27,13 @@ export async function aggregateColumns<M extends Model<M>>(
   )[0];
 }
 
-export type PaginatedResult<ModelType extends Model<ModelType>> = {
+export type PaginatedResult<ModelType extends EntityModel> = {
   models: ModelType[];
   paginationTotal: number;
 };
 
 export abstract class EntityProcessor<
-  ModelType extends Model<ModelType>,
+  ModelType extends EntityModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto
 > {
@@ -45,4 +47,9 @@ export abstract class EntityProcessor<
 
   abstract addFullDto(document: DocumentBuilder, model: ModelType): Promise<void>;
   abstract addLightDto(document: DocumentBuilder, model: ModelType): Promise<void>;
+
+  async delete(model: ModelType) {
+    await Action.targetable((model.constructor as EntityClass<ModelType>).LARAVEL_TYPE, model.id).destroy();
+    await model.destroy();
+  }
 }

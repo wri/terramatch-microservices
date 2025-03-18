@@ -22,6 +22,7 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -509,5 +510,43 @@ describe("SitePolygonsService", () => {
     const treeCount = await sitePolygon.$get("indicatorsTreeCount");
     expect(treeCount.length).toBe(1);
     expect(treeCount[0]).toMatchObject(dto);
+  });
+
+  it("Can build LightDto correctly", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+  });
+
+  it("Can build FullDto correctly", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+    const fullDto = await service.buildFullDto(sitePolygon);
+
+    expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
+  });
+  it("should return SitePolygonLightDto when lightResource is true", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+    expect(lightDto.name).toBe(sitePolygon.polyName);
   });
 });

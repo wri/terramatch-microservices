@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -10,16 +11,17 @@ import {
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
-import { EntityGetParamsDto } from "./dto/entity-get-params.dto";
+import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
-import { Model } from "sequelize-typescript";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
+import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto)
@@ -37,7 +39,7 @@ export class EntitiesController {
     { data: NurseryLightDto, pagination: "number" }
   ])
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
-  async entityIndex<T extends Model<T>>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
+  async entityIndex<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const { models, paginationTotal } = await processor.findMany(
       query,
@@ -70,7 +72,7 @@ export class EntitiesController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async entityGet<T extends Model<T>>(@Param() { entity, uuid }: EntityGetParamsDto) {
+  async entityGet<T extends EntityModel>(@Param() { entity, uuid }: SpecificEntityDto) {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const model = await processor.findOne(uuid);
     if (model == null) throw new NotFoundException();
@@ -80,5 +82,31 @@ export class EntitiesController {
     const document = buildJsonApi(processor.FULL_DTO);
     await processor.addFullDto(document, model);
     return document.serialize();
+  }
+
+  @Delete(":entity/:uuid")
+  @ApiOperation({
+    operationId: "entityDelete",
+    summary:
+      "Soft delete entity resource by UUID. For non-admins / project managers, only entities with " +
+      '"started" status may be deleted. Additionally, reports may only be deleted by admins.'
+  })
+  @JsonApiDeletedResponse([getDtoType(ProjectFullDto), getDtoType(SiteFullDto)], {
+    description: "Associated entity was deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async entityDelete<T extends EntityModel>(@Param() { entity, uuid }: SpecificEntityDto) {
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    const model = await processor.findOne(uuid);
+    if (model == null) throw new NotFoundException();
+
+    await this.policyService.authorize("delete", model);
+
+    await processor.delete(model);
+
+    return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
   }
 }

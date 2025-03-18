@@ -55,6 +55,10 @@ describe("ProjectProcessor", () => {
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
+  afterEach(async () => {
+    jest.resetAllMocks();
+  });
+
   describe("findMany", () => {
     async function expectProjects(
       expected: Project[],

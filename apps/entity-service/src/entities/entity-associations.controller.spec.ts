@@ -9,6 +9,7 @@ import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import { EntityAssociationIndexParamsDto } from "./dto/entity-association-index-params.dto";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 class StubProcessor extends AssociationProcessor<Demographic, DemographicDto> {
   DTO = DemographicDto;
@@ -32,7 +33,9 @@ describe("EntityAssociationsController", () => {
           useValue: (policyService = createMock<PolicyService>({ userId: 123 }))
         }
       ]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     controller = module.get(EntityAssociationsController);
     // @ts-expect-error union type complexity

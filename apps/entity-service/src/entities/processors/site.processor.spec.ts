@@ -15,6 +15,7 @@ import {
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "../dto/site.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
@@ -29,7 +30,9 @@ describe("SiteProcessor", () => {
 
     const module = await Test.createTestingModule({
       providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
   });

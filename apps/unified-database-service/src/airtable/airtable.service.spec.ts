@@ -3,6 +3,7 @@ import { AirtableService } from "./airtable.service";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("AirtableService", () => {
   let service: AirtableService;
@@ -17,7 +18,9 @@ describe("AirtableService", () => {
           useValue: (queue = createMock<Queue>())
         }
       ]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     service = module.get(AirtableService);
   });

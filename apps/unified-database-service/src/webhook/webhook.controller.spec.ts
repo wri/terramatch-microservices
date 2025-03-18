@@ -4,6 +4,7 @@ import { AirtableService } from "../airtable/airtable.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
 import { Permission } from "@terramatch-microservices/database/entities";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("WebhookController", () => {
   let controller: WebhookController;
@@ -14,7 +15,9 @@ describe("WebhookController", () => {
     const module = await Test.createTestingModule({
       controllers: [WebhookController],
       providers: [{ provide: AirtableService, useValue: (service = createMock<AirtableService>()) }]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     controller = module.get(WebhookController);
     permissionSpy = jest.spyOn(Permission, "getUserPermissionNames");

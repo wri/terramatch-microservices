@@ -15,6 +15,7 @@ import { DemographicDto, DemographicEntryDto } from "../dto/demographic.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { TreeSpeciesDto } from "../dto/tree-species.dto";
 import { SeedingDto } from "../dto/seeding.dto";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("AssociationProcessor", () => {
   let service: EntitiesService;
@@ -22,7 +23,9 @@ describe("AssociationProcessor", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     service = module.get(EntitiesService);
   });

@@ -1,9 +1,8 @@
-import { Injectable, NotFoundException, LoggerService, UnprocessableEntityException } from "@nestjs/common";
+import { Injectable, NotFoundException, UnprocessableEntityException, Logger } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import crypto from "node:crypto";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
@@ -12,7 +11,7 @@ import bcrypt from "bcryptjs";
 
 @Injectable()
 export class UserCreationService {
-  protected readonly logger: LoggerService = new TMLogService(UserCreationService.name);
+  protected readonly logger = new Logger(UserCreationService.name);
   private roles = ["project-developer", "funder", "government"];
 
   constructor(

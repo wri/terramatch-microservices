@@ -6,6 +6,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Controller, Get, HttpStatus, INestApplication } from "@nestjs/common";
 import * as request from "supertest";
 import { UserFactory } from "@terramatch-microservices/database/factories";
+import { TMLogger } from "../util/tm-logger";
 
 @Controller("test")
 class TestController {
@@ -33,7 +34,9 @@ describe("AuthGuard", () => {
           { provide: JwtService, useValue: (jwtService = createMock<JwtService>()) },
           { provide: APP_GUARD, useClass: AuthGuard }
         ]
-      }).compile()
+      })
+        .setLogger(new TMLogger())
+        .compile()
     ).createNestApplication();
     await app.init();
   });

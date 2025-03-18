@@ -10,6 +10,7 @@ import {
   NurseryReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
+import { TMLogger } from "../util/tm-logger";
 
 describe("NurseryReportPolicy", () => {
   let service: PolicyService;
@@ -17,7 +18,9 @@ describe("NurseryReportPolicy", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [PolicyService]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     service = await module.resolve(PolicyService);
   });

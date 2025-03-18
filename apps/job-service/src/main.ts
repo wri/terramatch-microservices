@@ -5,12 +5,14 @@ import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { AppModule } from "./app.module";
 import { NestExpressApplication } from "@nestjs/platform-express";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: new TMLogger()
+  });
   app.set("query parser", "extended");
 
   if (process.env.NODE_ENV === "development") {
@@ -28,7 +30,6 @@ async function bootstrap() {
   SwaggerModule.setup("job-service/documentation/api", app, document);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, transformOptions: { enableImplicitConversion: true } }));
-  app.useLogger(app.get(TMLogService));
 
   const port = process.env.NODE_ENV === "production" ? 80 : process.env.JOB_SERVICE_PORT ?? 4020;
   await app.listen(port);

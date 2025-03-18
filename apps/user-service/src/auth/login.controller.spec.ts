@@ -4,6 +4,7 @@ import { AuthService } from "./auth.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("LoginController", () => {
   let controller: LoginController;
@@ -13,7 +14,9 @@ describe("LoginController", () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LoginController],
       providers: [{ provide: AuthService, useValue: (authService = createMock<AuthService>()) }]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     controller = module.get<LoginController>(LoginController);
   });

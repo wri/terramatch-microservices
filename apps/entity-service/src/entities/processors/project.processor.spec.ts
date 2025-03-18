@@ -36,6 +36,7 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ProjectFullDto, ProjectLightDto } from "../dto/project.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
@@ -50,7 +51,9 @@ describe("ProjectProcessor", () => {
 
     const module = await Test.createTestingModule({
       providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });

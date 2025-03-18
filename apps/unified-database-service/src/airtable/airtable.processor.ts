@@ -1,6 +1,5 @@
 import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
-import { InternalServerErrorException, LoggerService, NotImplementedException } from "@nestjs/common";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { InternalServerErrorException, Logger, NotImplementedException } from "@nestjs/common";
 import { Job } from "bullmq";
 import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
@@ -59,7 +58,7 @@ export type UpdateAllData = {
  */
 @Processor("airtable")
 export class AirtableProcessor extends WorkerHost {
-  private readonly logger: LoggerService = new TMLogService(AirtableProcessor.name);
+  private readonly logger = new Logger(AirtableProcessor.name);
   private readonly base: Airtable.Base;
 
   constructor(private readonly config: ConfigService, private readonly slack: SlackService) {

@@ -4,6 +4,7 @@ import { NotFoundException } from "@nestjs/common";
 import { VerificationUserService } from "./verification-user.service";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import { VerificationFactory } from "@terramatch-microservices/database/factories/verification.factory";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("VerificationUserService", () => {
   let service: VerificationUserService;
@@ -11,7 +12,9 @@ describe("VerificationUserService", () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [VerificationUserService]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     service = module.get<VerificationUserService>(VerificationUserService);
   });

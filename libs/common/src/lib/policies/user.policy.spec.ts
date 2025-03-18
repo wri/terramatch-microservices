@@ -3,6 +3,7 @@ import { PolicyService } from "./policy.service";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
+import { TMLogger } from "../util/tm-logger";
 
 describe("UserPolicy", () => {
   let service: PolicyService;
@@ -10,7 +11,9 @@ describe("UserPolicy", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [PolicyService]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     service = await module.resolve(PolicyService);
 

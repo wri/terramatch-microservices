@@ -5,7 +5,6 @@ import { AuthGuard } from "./guards";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { PolicyService } from "./policies/policy.service";
-import { TMLogService } from "./util/tm-log.service";
 import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
@@ -29,22 +28,12 @@ import { SlackService } from "./slack/slack.service";
   providers: [
     PolicyService,
     { provide: APP_GUARD, useClass: AuthGuard },
-    TMLogService,
     EmailService,
     LocalizationService,
     MediaService,
     TemplateService,
     SlackService
   ],
-  exports: [
-    PolicyService,
-    JwtModule,
-    TMLogService,
-    EmailService,
-    LocalizationService,
-    MediaService,
-    TemplateService,
-    SlackService
-  ]
+  exports: [PolicyService, JwtModule, EmailService, LocalizationService, MediaService, TemplateService, SlackService]
 })
 export class CommonModule {}

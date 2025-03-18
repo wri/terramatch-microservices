@@ -8,6 +8,7 @@ import { ResetPasswordService } from "./reset-password.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("ResetPasswordService", () => {
   let service: ResetPasswordService;
@@ -32,7 +33,9 @@ describe("ResetPasswordService", () => {
           useValue: (localizationService = createMock<LocalizationService>())
         }
       ]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     service = module.get<ResetPasswordService>(ResetPasswordService);
   });

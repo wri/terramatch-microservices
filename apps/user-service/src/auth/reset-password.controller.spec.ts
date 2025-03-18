@@ -4,6 +4,7 @@ import { ResetPasswordController } from "./reset-password.controller";
 import { ResetPasswordService } from "./reset-password.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 describe("ResetPasswordController", () => {
   let controller: ResetPasswordController;
@@ -15,7 +16,9 @@ describe("ResetPasswordController", () => {
       providers: [
         { provide: ResetPasswordService, useValue: (resetPasswordService = createMock<ResetPasswordService>()) }
       ]
-    }).compile();
+    })
+      .setLogger(new TMLogger())
+      .compile();
 
     controller = module.get<ResetPasswordController>(ResetPasswordController);
   });

@@ -6,7 +6,6 @@ import { Module } from "@nestjs/common";
 import { AirtableService } from "./airtable.service";
 import { AirtableProcessor } from "./airtable.processor";
 import { QueueHealthService } from "./queue-health.service";
-import { SlackModule } from "nestjs-slack";
 
 @Module({
   imports: [
@@ -26,15 +25,7 @@ import { SlackModule } from "nestjs-slack";
         }
       })
     }),
-    BullModule.registerQueue({ name: "airtable" }),
-    SlackModule.forRootAsync({
-      imports: [ConfigModule.forRoot({ isGlobal: true })],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: "api",
-        token: configService.get("SLACK_API_KEY")
-      })
-    })
+    BullModule.registerQueue({ name: "airtable" })
   ],
   providers: [AirtableService, AirtableProcessor, QueueHealthService],
   exports: [AirtableService, QueueHealthService]

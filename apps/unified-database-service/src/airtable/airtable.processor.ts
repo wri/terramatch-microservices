@@ -18,7 +18,7 @@ import {
   TreeSpeciesEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
-import { SlackService } from "nestjs-slack";
+import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
 
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
@@ -137,12 +137,12 @@ export class AirtableProcessor extends WorkerHost {
     const channel = this.config.get("UDB_SLACK_CHANNEL");
     if (channel == null) return;
 
-    await this.slack
-      .sendText(`[${process.env.DEPLOY_ENV}]: ${message}`, { channel })
+    try {
+      await this.slack.sendTextToChannel(`[${process.env.DEPLOY_ENV}]: ${message}`, channel);
+    } catch (error) {
       // Don't allow a failure in slack sending to hose our process, but do log it and send it to Sentry
-      .catch(error => {
-        Sentry.captureException(error);
-        this.logger.error("Send to slack failed", error.stack);
-      });
+      Sentry.captureException(error);
+      this.logger.error("Send to slack failed", error.stack);
+    }
   }
 }

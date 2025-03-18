@@ -10,6 +10,7 @@ import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
 import { TemplateService } from "./email/template.service";
+import { SlackService } from "./slack/slack.service";
 
 @Module({
   imports: [
@@ -32,8 +33,18 @@ import { TemplateService } from "./email/template.service";
     EmailService,
     LocalizationService,
     MediaService,
-    TemplateService
+    TemplateService,
+    SlackService
   ],
-  exports: [PolicyService, JwtModule, TMLogService, EmailService, LocalizationService, MediaService, TemplateService]
+  exports: [
+    PolicyService,
+    JwtModule,
+    TMLogService,
+    EmailService,
+    LocalizationService,
+    MediaService,
+    TemplateService,
+    SlackService
+  ]
 })
 export class CommonModule {}

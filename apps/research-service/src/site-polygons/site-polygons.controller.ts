@@ -107,22 +107,19 @@ export class SitePolygonsController {
     if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
-    const document = buildJsonApi(SitePolygonFullDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
-    for (const sitePolygon of await queryBuilder.execute()) {
-      const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
-      if (lightResource) {
-        document.addData(sitePolygon.uuid, new SitePolygonLightDto(sitePolygon, indicators));
-      } else {
-        const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
-        const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
+    if (query.search != null) {
+      await queryBuilder.addSearch(query.search);
+    }
+    const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
 
-        document.addData(
-          sitePolygon.uuid,
-          new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods)
-        );
+    const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
+    for (const sitePolygon of await queryBuilder.execute()) {
+      if (lightResource) {
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon));
+      } else {
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildFullDto(sitePolygon));
       }
     }
-
     const serializeOptions: SerializeOptions = { paginationTotal: await queryBuilder.paginationTotal() };
     if (isNumberPage(query.page)) serializeOptions.pageNumber = query.page.number;
     return document.serialize(serializeOptions);

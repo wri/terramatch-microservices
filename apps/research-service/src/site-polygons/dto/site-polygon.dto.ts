@@ -1,7 +1,7 @@
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybridSupport.dto";
+import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import {
   IndicatorFieldMonitoringDto,
   IndicatorHectaresDto,

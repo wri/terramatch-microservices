@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybridSupport.dto";
+import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 /**
  * A utility type for constructing the "extra props" type of a DTO based on what's in the dto, the

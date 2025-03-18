@@ -108,6 +108,10 @@ export class Site extends Model<Site> {
     return this.project?.uuid;
   }
 
+  get projectCountry() {
+    return this.project?.country;
+  }
+
   get organisationName() {
     return this.project?.organisationName;
   }

@@ -1,3 +1,4 @@
+export * from "./action.entity";
 export * from "./application.entity";
 export * from "./delayed-job.entity";
 export * from "./demographic.entity";

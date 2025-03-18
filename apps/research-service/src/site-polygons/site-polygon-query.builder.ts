@@ -104,10 +104,13 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   async addSearch(searchTerm: string) {
-    if (!searchTerm) return this;
-
     return this.where({
-      [Op.or]: [{ "$site.name$": { [Op.like]: `%${searchTerm}%` } }, { polyName: { [Op.like]: `%${searchTerm}%` } }]
+      [Op.or]: [
+        { "$site.name$": { [Op.like]: `${searchTerm}%` } },
+        { polyName: { [Op.like]: `% ${searchTerm}%` } },
+        { "$site.name$": { [Op.like]: `${searchTerm}%` } },
+        { polyName: { [Op.like]: `% ${searchTerm}%` } }
+      ]
     });
   }
 

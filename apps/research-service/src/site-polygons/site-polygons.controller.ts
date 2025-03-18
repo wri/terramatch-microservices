@@ -98,7 +98,7 @@ export class SitePolygonsController {
     if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
-    if (query.search) {
+    if (query.search != null) {
       await queryBuilder.addSearch(query.search);
     }
     const document = buildJsonApi(SitePolygonDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });

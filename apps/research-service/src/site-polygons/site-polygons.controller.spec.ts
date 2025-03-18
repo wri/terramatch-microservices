@@ -22,10 +22,13 @@ describe("SitePolygonsController", () => {
       paginationTotal: jest.fn(),
       hasStatuses: jest.fn().mockReturnThis(),
       modifiedSince: jest.fn().mockReturnThis(),
-      isMissingIndicators: jest.fn().mockReturnThis()
+      isMissingIndicators: jest.fn().mockReturnThis(),
+      hasPresentIndicators: jest.fn().mockReturnThis(),
+      lightResource: jest.fn().mockReturnThis()
     };
     builder.touchesBoundary = jest.fn().mockResolvedValue(builder);
     builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
+    builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
@@ -55,6 +58,22 @@ describe("SitePolygonsController", () => {
     it("should should throw an error if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       await expect(controller.findMany({})).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw an error if the countrselectedparams error is thrown", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(controller.findMany({ siteId: ["123"], projectId: ["456"] })).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw an error if the countrselectedparams error is thrown", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(
+        controller.findMany({
+          siteId: ["123"],
+          presentIndicator: ["treeCoverLoss"],
+          missingIndicator: ["treeCover"]
+        })
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw an error if the page size is invalid", async () => {
@@ -129,6 +148,15 @@ describe("SitePolygonsController", () => {
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
+
+    it("will honor siteId", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ siteId: ["asdf"] });
+      expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
+      builder.filterSiteUuids.mockClear();
+    });
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,
@@ -136,6 +164,28 @@ describe("SitePolygonsController", () => {
       };
 
       await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+    });
+    it("should not throw an error if presentIndicator treeCoverLoss is used", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      await controller.findMany({ presentIndicator: ["treeCoverLoss"] });
+      expect(builder.hasPresentIndicators).toHaveBeenCalled();
+    });
+    it("should not throw an error if missingIndicator treeCover is used", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      await controller.findMany({ missingIndicator: ["treeCover"] });
+      expect(builder.isMissingIndicators).toHaveBeenCalled();
+    });
+    it("should call addSearch when search parameter is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      builder.addSearch = jest.fn().mockResolvedValue(builder);
+
+      const searchTerm = "forest site";
+      await controller.findMany({ search: searchTerm });
+
+      expect(builder.addSearch).toHaveBeenCalledWith(searchTerm);
     });
   });
 

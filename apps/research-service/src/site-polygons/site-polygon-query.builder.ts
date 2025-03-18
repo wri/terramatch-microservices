@@ -107,8 +107,8 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({
       [Op.or]: [
         { "$site.name$": { [Op.like]: `${searchTerm}%` } },
-        { polyName: { [Op.like]: `% ${searchTerm}%` } },
-        { "$site.name$": { [Op.like]: `${searchTerm}%` } },
+        { "$site.name$": { [Op.like]: `% ${searchTerm}%` } },
+        { polyName: { [Op.like]: `${searchTerm}%` } },
         { polyName: { [Op.like]: `% ${searchTerm}%` } }
       ]
     });

@@ -43,6 +43,7 @@ export class ReportingPeriodDto {
   })
   treeSpecies: TreeSpeciesDto[];
 }
+
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonLightDto extends HybridSupportDto {
   constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
@@ -92,6 +93,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
   @ApiProperty({ description: "The name of the associated Site." })
   siteName: string;
 }
+
 export class SitePolygonFullDto extends SitePolygonLightDto {
   constructor(
     sitePolygon: SitePolygon,

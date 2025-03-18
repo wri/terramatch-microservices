@@ -112,17 +112,10 @@ export class SitePolygonsController {
     }
     const document = buildJsonApi(SitePolygonFullDto, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
-      const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
       if (lightResource) {
-        document.addData(sitePolygon.uuid, new SitePolygonLightDto(sitePolygon, indicators));
+        document.addData(sitePolygon.uuid, this.sitePolygonService.buildLightDto(sitePolygon));
       } else {
-        const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
-        const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
-
-        document.addData(
-          sitePolygon.uuid,
-          new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods)
-        );
+        document.addData(sitePolygon.uuid, this.sitePolygonService.buildFullDto(sitePolygon));
       }
     }
 

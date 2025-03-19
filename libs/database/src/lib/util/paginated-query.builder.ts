@@ -1,7 +1,16 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
+import {
+  Attributes,
+  Filterable,
+  FindOptions,
+  Includeable,
+  IncludeOptions,
+  Op,
+  OrderItem,
+  WhereOptions
+} from "sequelize";
 import { BadRequestException } from "@nestjs/common";
-import { flatten, isObject } from "lodash";
+import { cloneDeep, flatten, isArray, isObject, omit } from "lodash";
 
 // Some utilities copied from the un-exported bowels of Sequelize to help merge where clauses. Pulled
 // from model.js in the code paths where multiple scopes can be combined with a query's WhereOptions to
@@ -29,11 +38,20 @@ function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions) {
   return { [Op.and]: flatten([unpackedA, unpackedB]) };
 }
 
+const isRequiredInclude = (include: Includeable): include is IncludeOptions =>
+  isObject(include) && Object.hasOwn(include, "required") && (include as IncludeOptions).required === true;
+
+const filterRequiredIncludes = (includes?: Includeable | Includeable[]): IncludeOptions[] =>
+  (isArray(includes) ? includes : includes == null ? [] : [includes]).filter(isRequiredInclude).map(include => ({
+    ...omit(include, ["attributes", "include"]),
+    include: filterRequiredIncludes(include.include)
+  }));
+
 export class PaginatedQueryBuilder<T extends Model<T>> {
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };
-  protected pageTotalFindOptions: FindOptions<Attributes<T>> = {};
+  protected pageAfterId: number | undefined;
 
   constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize: number, include?: Includeable[]) {
     this.findOptions.limit = this.pageSize;
@@ -51,8 +69,9 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
     const instance = await this.MODEL.findOne({ where: { uuid: pageAfter } as WhereOptions, attributes: ["id"] });
     if (instance == null) throw new BadRequestException(`No ${this.MODEL.name} found for uuid: ${pageAfter}`);
 
-    // Avoid using this.where() so that we don't include this in the pageTotalFindOptions
-    this.findOptions.where = combineWheresWithAnd(this.findOptions.where ?? {}, { id: { [Op.gt]: instance.id } });
+    // This gets combined into only the `execute` query, and ignored for the `paginationTotal` query,
+    // so we don't combine it into find options now.
+    this.pageAfterId = instance.id;
     return this;
   }
 
@@ -62,19 +81,24 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   where(options: WhereOptions, filterable?: Filterable) {
-    if (filterable == null) {
-      this.pageTotalFindOptions.where = combineWheresWithAnd(this.pageTotalFindOptions.where ?? {}, options);
-      filterable = this.findOptions;
-    }
+    if (filterable == null) filterable = this.findOptions;
     filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);
     return this;
   }
 
   async execute() {
-    return await this.MODEL.findAll(this.findOptions);
+    const findOptions = cloneDeep(this.findOptions);
+    if (this.pageAfterId != null) {
+      findOptions.where = combineWheresWithAnd(findOptions.where ?? {}, { id: { [Op.gt]: this.pageAfterId } });
+    }
+    return await this.MODEL.findAll(findOptions);
   }
 
   async paginationTotal() {
-    return await this.MODEL.count(this.pageTotalFindOptions);
+    const findOptions = {
+      where: this.findOptions.where,
+      include: filterRequiredIncludes(this.findOptions.include)
+    };
+    return await this.MODEL.count(findOptions);
   }
 }

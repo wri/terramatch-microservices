@@ -34,8 +34,6 @@ jobs:
           node-version: 20
           cache: "npm"
 
-      - run: npm ci --legacy-peer-deps
-
       - run: npm run lint-build
 
       - name: Bring up DB Docker Container

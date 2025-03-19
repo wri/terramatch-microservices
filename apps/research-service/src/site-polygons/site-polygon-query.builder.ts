@@ -60,7 +60,6 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   constructor(pageSize: number) {
     super(SitePolygon, pageSize);
 
-    // Note: all required includes must be accounted for in the paginationTotal method override.
     this.findOptions.include = [
       { model: IndicatorOutputFieldMonitoring, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
       { model: IndicatorOutputHectares, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },

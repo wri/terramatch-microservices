@@ -31,8 +31,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       include: [{ association: "organisation", attributes: ["name"] }]
     };
 
-    const associations = [projectAssociation];
-    const builder = await this.entitiesService.buildQuery(Nursery, query, associations);
+    const builder = await this.entitiesService.buildQuery(Nursery, query, [projectAssociation]);
     if (query.sort != null) {
       if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
@@ -61,7 +60,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     }
 
     if (query.search != null) {
-      builder.withAssociations(associations).where({
+      builder.where({
         [Op.or]: [
           { name: { [Op.like]: `%${query.search}%` } },
           { "$project.name$": { [Op.like]: `%${query.search}%` } },

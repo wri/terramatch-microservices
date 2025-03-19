@@ -88,7 +88,8 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   })
   @IsBoolean()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
-  includeTestProjects = false;
+  @IsOptional()
+  includeTestProjects? = false;
 
   @ValidateNested()
   @Type(({ object }) => {
@@ -112,5 +113,6 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   })
   @IsBoolean()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
-  lightResource = false;
+  @IsOptional()
+  lightResource? = false;
 }

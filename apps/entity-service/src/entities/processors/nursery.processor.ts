@@ -60,26 +60,15 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
 
-    // const options = {
-    //   projectAssociation: {
-    //     where: { name: { [Op.like]: `%${query.search}%` } }
-    //   }
-    // };
-
-    // const options = {
-    //   organisationAssociation: {
-    //     where: { name: { [Op.like]: `%${query.search}%` } }
-    //   }
-    // };
-
-    // if (query.search != null) {
-    //   builder.where({
-    //     [Op.and]: [
-    //       { name: { [Op.like]: `%${query.search}%` } }, // Filtra por nombre en el modelo 'Nursery'
-    //       // { '$project.name$': { [Op.like]: `%${query.search}%` } } // Filtra por nombre en el modelo asociado 'Project'
-    //     ]
-    //   });
-    // }
+    if (query.search != null) {
+      builder.withAssociations(associations).where({
+        [Op.or]: [
+          { name: { [Op.like]: `%${query.search}%` } },
+          { "$project.name$": { [Op.like]: `%${query.search}%` } },
+          { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } }
+        ]
+      });
+    }
 
     if (query.projectUuid != null) {
       const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });

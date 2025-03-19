@@ -14,7 +14,6 @@ import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
-import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";

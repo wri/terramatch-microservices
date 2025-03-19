@@ -70,6 +70,18 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
     return this;
   }
 
+  // Adds associations to the query, enabling filtering on related model fields.
+  withAssociations(include: Includeable[]) {
+    if (!include || include.length === 0) {
+      throw new BadRequestException("requires at least one association in include");
+    }
+
+    this.findOptions.include = include;
+    this.pageTotalFindOptions.include = include;
+
+    return this;
+  }
+
   async execute() {
     return await this.MODEL.findAll(this.findOptions);
   }

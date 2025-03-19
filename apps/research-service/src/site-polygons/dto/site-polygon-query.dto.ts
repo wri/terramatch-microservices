@@ -1,5 +1,5 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsDate, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -7,7 +7,7 @@ import {
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
 import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 
 export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
@@ -86,7 +86,9 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     description:
       "Include polygons for test projects in the results. Only one of siteId, projectId and includeTestProjects may be used in a single request"
   })
-  includeTestProjects?: boolean;
+  @IsBoolean()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
+  includeTestProjects? = false;
 
   @ValidateNested()
   @Type(({ object }) => {
@@ -108,5 +110,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     default: false,
     description: "Wheter to include the complete sitePolygon Dto or not"
   })
-  lightResource?: boolean;
+  @IsBoolean()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
+  lightResource? = false;
 }

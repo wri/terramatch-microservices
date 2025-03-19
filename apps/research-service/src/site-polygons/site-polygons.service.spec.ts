@@ -357,6 +357,7 @@ describe("SitePolygonsService", () => {
   it("throws when an indicator slug is invalid", async () => {
     const query = await service.buildQuery({ size: 20 });
     expect(() => query.isMissingIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
+    expect(() => query.hasPresentIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
   });
 
   it("filters polygons by boundary polygon", async () => {
@@ -512,7 +513,7 @@ describe("SitePolygonsService", () => {
     expect(treeCount[0]).toMatchObject(dto);
   });
 
-  it("Can build LightDto correctly", async () => {
+  it("should build LightDto correctly when lightResource is true", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
@@ -527,7 +528,7 @@ describe("SitePolygonsService", () => {
     expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
   });
 
-  it("Can build FullDto correctly", async () => {
+  it("should build FullDto correctly when lightResource is false", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
@@ -548,5 +549,69 @@ describe("SitePolygonsService", () => {
     const lightDto = await service.buildLightDto(sitePolygon);
     expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
     expect(lightDto.name).toBe(sitePolygon.polyName);
+  });
+  it("should correctly calculate pagination total with required includes", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+
+    await SitePolygonFactory.createMany(5);
+
+    const query = await service.buildQuery({ size: 3 });
+
+    const countSpy = jest.spyOn(SitePolygon, "count");
+
+    await query.paginationTotal();
+
+    expect(countSpy).toHaveBeenCalled();
+    const callOptions = countSpy.mock.calls[0][0];
+
+    expect(callOptions.include).toHaveLength(2);
+    expect(callOptions.include[0].model).toBe(PolygonGeometry);
+    expect(callOptions.include[0].required).toBe(true);
+  });
+
+  it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+
+    const project = await ProjectFactory.create();
+    const site1 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Alpha Site"
+    });
+    const site2 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Beta Location"
+    });
+    const site3 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Gamma Zone"
+    });
+
+    await SitePolygonFactory.create({
+      siteUuid: site1.uuid,
+      polyName: "First Polygon"
+    });
+    await SitePolygonFactory.create({
+      siteUuid: site2.uuid,
+      polyName: "Alphabetical Order"
+    });
+    await SitePolygonFactory.create({
+      siteUuid: site3.uuid,
+      polyName: "Zone Polygon"
+    });
+
+    let query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Alpha");
+    let results = await query.execute();
+    expect(results.length).toBe(2);
+    expect(results[0].siteUuid).toBe(site1.uuid);
+
+    query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Zone");
+    results = await query.execute();
+    expect(results.length).toBe(1);
+    expect(results[0].siteUuid).toBe(site3.uuid);
+    expect(results[0].polyName).toBe("Zone Polygon");
   });
 });

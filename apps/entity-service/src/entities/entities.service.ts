@@ -13,6 +13,7 @@ import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
+import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";
@@ -22,7 +23,8 @@ import { DemographicDto } from "./dto/demographic.dto";
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
-  sites: SiteProcessor
+  sites: SiteProcessor,
+  nurseries: NurseryProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;

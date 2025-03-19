@@ -15,6 +15,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { Project } from "./project.entity";
 import { chainScope } from "../util/chain-scope";
+import { Nursery } from "./nursery.entity";
 import { Site } from "./site.entity";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
@@ -23,6 +24,12 @@ import { Site } from "./site.entity";
   project: (id: number) => ({
     where: {
       modelType: Project.LARAVEL_TYPE,
+      modelId: id
+    }
+  }),
+  nursery: (id: number) => ({
+    where: {
+      modelType: Nursery.LARAVEL_TYPE,
       modelId: id
     }
   }),
@@ -53,6 +60,10 @@ export class Media extends Model<Media> {
 
   static site(id: number) {
     return chainScope(this, "site", id) as typeof Media;
+  }
+
+  static nursery(id: number) {
+    return chainScope(this, "nursery", id) as typeof Media;
   }
 
   @PrimaryKey

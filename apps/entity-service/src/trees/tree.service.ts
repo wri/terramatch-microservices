@@ -3,26 +3,33 @@ import {
   NurseryReport,
   Project,
   ProjectReport,
+  Seeding,
   Site,
   SiteReport,
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Includeable, Op, WhereOptions } from "sequelize";
+import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
-import { PreviousPlantingCountDto } from "./dto/establishment-trees.dto";
+import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
+import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 
-export const ESTABLISHMENT_REPORTS = ["project-reports", "site-reports", "nursery-reports"] as const;
-export type EstablishmentReport = (typeof ESTABLISHMENT_REPORTS)[number];
-
-export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...ESTABLISHMENT_REPORTS] as const;
+export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
+
+export const REPORT_COUNT_ENTITIES = ["projects", "projectReports", "sites", "nurseries"] as const;
+export type ReportCountEntity = (typeof REPORT_COUNT_ENTITIES)[number];
+
+export const isEstablishmentEntity = (entity: EntityType): entity is EstablishmentEntity =>
+  ESTABLISHMENT_ENTITIES.includes(entity as EstablishmentEntity);
+export const isReportCountEntity = (entity: EntityType): entity is ReportCountEntity =>
+  REPORT_COUNT_ENTITIES.includes(entity as ReportCountEntity);
 
 type TreeReportModelType = typeof ProjectReport | typeof SiteReport | typeof NurseryReport;
 type TreeModelType = TreeReportModelType | typeof Project | typeof Site | typeof Nursery;
 
-const isReport = (type: EstablishmentEntity): type is EstablishmentReport => type.endsWith("-reports");
+const isReport = (type: EstablishmentEntity): type is ReportType => type.endsWith("Reports");
 
 const treeAssociations = (model: TreeModelType, attributes: string[], where?: WhereOptions) =>
   model.TREE_ASSOCIATIONS.map(association => ({
@@ -39,6 +46,24 @@ const uniqueTreeNames = (trees: Dictionary<TreeSpecies[]>) =>
       [collection]: uniq(filter(trees[collection].map(({ name }) => name)))
     }),
     {} as Dictionary<string[]>
+  );
+
+const countPlants = (trees: TreeSpecies[] | Seeding[]) =>
+  trees.reduce(
+    (counts, { name, taxonId, amount }) => ({
+      ...counts,
+      [name]: {
+        taxonId: counts[name]?.taxonId ?? taxonId,
+        amount: (counts[name]?.amount ?? 0) + (amount ?? 0)
+      }
+    }),
+    {} as Dictionary<PlantingCountDto>
+  );
+
+const countTreeCollection = (trees: Dictionary<TreeSpecies[]>) =>
+  Object.keys(trees).reduce(
+    (map, collection) => ({ ...map, [collection]: countPlants(trees[collection]) }),
+    {} as PlantingCountMap
   );
 
 @Injectable()
@@ -61,10 +86,10 @@ export class TreeService {
   }
 
   async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<Dictionary<string[]>> {
-    if (entity === "site-reports" || entity === "nursery-reports") {
+    if (entity === "siteReports" || entity === "nurseryReports") {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
-      const parentModel = entity === "site-reports" ? Site : Nursery;
+      const parentModel = entity === "siteReports" ? Site : Nursery;
       const include = {
         model: parentModel,
         // This id isn't necessary for the data we want to fetch, but sequelize requires it for
@@ -82,7 +107,7 @@ export class TreeService {
         ]
       };
 
-      if (entity === "site-reports") {
+      if (entity === "siteReports") {
         include.include.push({
           required: false,
           association: "seedsPlanted",
@@ -97,7 +122,7 @@ export class TreeService {
         include: [include]
       };
 
-      const report = await (entity === "site-reports"
+      const report = await (entity === "siteReports"
         ? SiteReport.findOne(whereOptions)
         : NurseryReport.findOne(whereOptions));
       if (report == null) throw new NotFoundException();
@@ -112,24 +137,34 @@ export class TreeService {
       );
 
       const treeNames = uniqueTreeNames(trees);
-      if (entity === "site-reports") {
+      if (entity === "siteReports") {
         treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name));
       }
       return treeNames;
-    } else if (["sites", "nurseries", "project-reports"].includes(entity)) {
-      // for these we simply pull the project's trees
+    } else if (["sites", "nurseries", "projectReports"].includes(entity)) {
+      const include = [
+        {
+          model: Project,
+          // This id isn't necessary for the data we want to fetch, but sequelize requires it for
+          // the nested includes
+          attributes: ["id"],
+          include: treeAssociations(Project, ["name", "collection"])
+        }
+      ] as Includeable[];
+
+      if (entity === "sites") {
+        include.push({
+          required: false,
+          association: "seedsPlanted",
+          attributes: ["name"],
+          where: { hidden: false }
+        });
+      }
+
       const whereOptions = {
         where: { uuid },
         attributes: ["frameworkKey"],
-        include: [
-          {
-            model: Project,
-            // This id isn't necessary for the data we want to fetch, but sequelize requires it for
-            // the nested includes
-            attributes: ["id"],
-            include: treeAssociations(Project, ["name", "collection"])
-          }
-        ]
+        include
       };
 
       const entityModel = await (entity === "sites"
@@ -142,7 +177,7 @@ export class TreeService {
       const uniqueTrees = uniqueTreeNames(
         groupBy(flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project[association])), "collection")
       );
-      if (entity === "project-reports" && entityModel.frameworkKey === "ppc") {
+      if (entity === "projectReports" && entityModel.frameworkKey === "ppc") {
         // For PPC Project reports, we have to pretend the establishment species are "nursery-seedling" because
         // that's the collection used at the report level, but "tree-planted" is used at the establishment level.
         // The FE depends on the collection returned here to match what's being used in the tree species input
@@ -153,29 +188,30 @@ export class TreeService {
         };
       }
 
+      if (entity === "sites") {
+        uniqueTrees["seeds"] = uniq(((entityModel as Site).seedsPlanted ?? []).map(({ name }) => name));
+      }
+
       return uniqueTrees;
     } else {
       throw new BadRequestException(`Entity type not supported: [${entity}]`);
     }
   }
 
-  async getPreviousPlanting(
-    entity: EstablishmentEntity,
-    uuid: string
-  ): Promise<Dictionary<Dictionary<PreviousPlantingCountDto>>> {
+  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<PlantingCountMap> {
     if (!isReport(entity)) return undefined;
 
     let model: TreeReportModelType;
     switch (entity) {
-      case "project-reports":
+      case "projectReports":
         model = ProjectReport;
         break;
 
-      case "site-reports":
+      case "siteReports":
         model = SiteReport;
         break;
 
-      case "nursery-reports":
+      case "nurseryReports":
         model = NurseryReport;
         break;
 
@@ -193,7 +229,7 @@ export class TreeService {
     const modelIncludes: Includeable[] = treeAssociations(model, ["taxonId", "name", "collection", "amount"], {
       amount: { [Op.gt]: 0 }
     });
-    if (entity === "site-reports") {
+    if (entity === "siteReports") {
       modelIncludes.push({
         required: false,
         association: "seedsPlanted",
@@ -219,36 +255,58 @@ export class TreeService {
       "collection"
     );
 
-    const planting = Object.keys(trees).reduce(
-      (dict, collection) => ({
-        ...dict,
-        [collection]: trees[collection].reduce(
-          (counts, tree) => ({
-            ...counts,
-            [tree.name]: {
-              taxonId: counts[tree.name]?.taxonId ?? tree.taxonId,
-              amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
-            }
-          }),
-          {} as Dictionary<PreviousPlantingCountDto>
-        )
-      }),
-      {} as Dictionary<Dictionary<PreviousPlantingCountDto>>
-    );
-
-    if (entity === "site-reports") {
-      planting["seeds"] = flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)).reduce(
-        (counts, seeding) => ({
-          ...counts,
-          [seeding.name]: {
-            taxonId: undefined,
-            amount: (counts[seeding.name]?.amount ?? 0) + (seeding.amount ?? 0)
-          }
-        }),
-        {} as Dictionary<PreviousPlantingCountDto>
-      );
+    const planting = countTreeCollection(trees);
+    if (entity === "siteReports") {
+      planting["seeds"] = countPlants(flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)));
     }
 
     return planting;
+  }
+
+  async getAssociatedReportCounts(entity: ReportCountEntity, uuid: string): Promise<PlantingCountMap> {
+    const { TS, reportIds } = await this.getAssociatedReportTreeSpecies(entity, uuid);
+    if (TS == null) return {};
+
+    const planting = countTreeCollection(
+      groupBy(
+        await TS.findAll({
+          raw: true,
+          attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
+          group: ["taxonId", "name", "collection"]
+        }),
+        "collection"
+      )
+    );
+
+    if (entity !== "nurseries") {
+      planting["seeds"] = countPlants(await Seeding.visible().siteReports(reportIds).findAll());
+    }
+
+    return planting;
+  }
+
+  private async getAssociatedReportTreeSpecies(entity: ReportCountEntity, uuid: string) {
+    const TS = TreeSpecies.visible();
+    if (entity === "projects") {
+      const { id } = await Project.findOne({ where: { uuid }, attributes: ["id"] });
+      const reportIds = SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(id));
+      return { TS: TS.siteReports(reportIds), reportIds };
+    } else if (entity === "sites") {
+      const { id } = await Site.findOne({ where: { uuid }, attributes: ["id"] });
+      const reportIds = SiteReport.approvedIdsSubquery([id]);
+      return { TS: TS.siteReports(reportIds), reportIds };
+    } else if (entity === "projectReports") {
+      const { taskId } = await ProjectReport.findOne({ where: { uuid }, attributes: ["taskId"] });
+      if (taskId == null) return {};
+
+      const reportIds = SiteReport.approvedIdsForTaskSubquery(taskId);
+      return { TS: TS.siteReports(reportIds), reportIds };
+    } else if (entity === "nurseries") {
+      const { id } = await Nursery.findOne({ where: { uuid }, attributes: ["id"] });
+      const reportIds = NurseryReport.approvedIdsSubquery([id]);
+      return { TS: TS.nurseryReports(reportIds), reportIds };
+    } else {
+      throw new BadRequestException(`Invalid entity type [${entity}]`);
+    }
   }
 }

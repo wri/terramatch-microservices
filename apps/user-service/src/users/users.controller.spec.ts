@@ -5,15 +5,21 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { Relationship, Resource } from "@terramatch-microservices/common/util";
+import { UserNewRequest } from "./dto/user-new-request.dto";
+import { UserCreationService } from "./user-creation.service";
 
 describe("UsersController", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
+  let userCreationService: DeepMocked<UserCreationService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [{ provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }]
+      providers: [
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) }
+      ]
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
@@ -123,6 +129,96 @@ describe("UsersController", () => {
       expect((result.data as Resource).attributes.locale).toEqual("es-MX");
       await user.reload();
       expect(user.locale).toEqual("es-MX");
+    });
+  });
+
+  describe("create", () => {
+    it("should create a new user", async () => {
+      const user = await UserFactory.create();
+      const request = new UserNewRequest();
+      request.emailAddress = user.emailAddress;
+      request.firstName = user.firstName;
+      request.lastName = user.lastName;
+      userCreationService.createNewUser.mockResolvedValue(user);
+
+      const result = await controller.create(request);
+      expect(result).toMatchObject({
+        data: {
+          id: user.uuid,
+          type: "users",
+          attributes: {
+            uuid: user.uuid,
+            emailAddress: request.emailAddress,
+            firstName: user.firstName,
+            lastName: user.lastName
+          }
+        }
+      });
+    });
+
+    it("should return null when an error occur when trying to create a new user", async () => {
+      const request = new UserNewRequest();
+      userCreationService.createNewUser.mockRejectedValue(null);
+
+      await expect(controller.create(request)).rejects.toBeNull();
+    });
+
+    it("should throw NotFoundException if Role is not found", async () => {
+      const request = new UserNewRequest();
+      userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Role not found"));
+
+      await expect(controller.create(request)).rejects.toThrow(NotFoundException);
+    });
+
+    describe("Localizations errors", () => {
+      it("should return a error because body localization is not found", async () => {
+        const request = new UserNewRequest();
+        userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Localization body not found"));
+
+        await expect(controller.create(request)).rejects.toThrow(NotFoundException);
+      });
+
+      it("should return a error because subject localization is not found", async () => {
+        const request = new UserNewRequest();
+        userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Localization subject not found"));
+
+        await expect(controller.create(request)).rejects.toThrow(NotFoundException);
+      });
+
+      it("should return a error because title localization is not found", async () => {
+        const request = new UserNewRequest();
+        userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Localization title not found"));
+
+        await expect(controller.create(request)).rejects.toThrow(NotFoundException);
+      });
+
+      it("should return a error because CTA localization is not found", async () => {
+        const request = new UserNewRequest();
+        userCreationService.createNewUser.mockRejectedValue(new NotFoundException("Localization CTA not found"));
+
+        await expect(controller.create(request)).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    it("should return a error because some error happen", async () => {
+      const request = new UserNewRequest();
+      userCreationService.createNewUser.mockRejectedValue(null);
+
+      await expect(controller.create(request)).rejects.toBeNull();
+    });
+
+    it("should return a BadRequestException for invalid payload", async () => {
+      const request = new UserNewRequest(); // Assuming this is an invalid payload
+      userCreationService.createNewUser.mockRejectedValue(new BadRequestException("Invalid payload"));
+
+      await expect(controller.create(request)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should handle unexpected errors gracefully", async () => {
+      const request = new UserNewRequest();
+      userCreationService.createNewUser.mockRejectedValue(new Error("Unexpected error"));
+
+      await expect(controller.create(request)).rejects.toThrow(Error);
     });
   });
 });

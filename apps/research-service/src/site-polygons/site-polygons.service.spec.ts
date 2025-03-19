@@ -22,6 +22,7 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -36,6 +37,15 @@ describe("SitePolygonsService", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it("should throw with invalid page parameters", async () => {
+    await expect(service.buildQuery({ size: 3, number: 5, after: "asdf" })).rejects.toThrow(BadRequestException);
+  });
+
+  it("should respect a number page", async () => {
+    const result = await service.buildQuery({ size: 3, number: 5 });
+    expect((result as unknown as { findOptions: { offset: number } }).findOptions.offset).toBe(12);
   });
 
   it("should return all indicators", async () => {
@@ -105,7 +115,7 @@ describe("SitePolygonsService", () => {
     await SitePolygon.truncate();
     await PolygonGeometry.truncate();
     await SitePolygonFactory.createMany(15);
-    const query = await service.buildQuery(20);
+    const query = await service.buildQuery({ size: 20 });
     const result = await query.execute();
     expect(result.length).toBe(15);
   });
@@ -114,7 +124,7 @@ describe("SitePolygonsService", () => {
     await SitePolygon.truncate();
     await PolygonGeometry.truncate();
     await SitePolygonFactory.createMany(15);
-    const query = await service.buildQuery(10);
+    const query = await service.buildQuery({ size: 10 });
     const result = await query.execute();
     expect(result.length).toBe(10);
   });
@@ -124,13 +134,13 @@ describe("SitePolygonsService", () => {
     await PolygonGeometry.truncate();
     await SitePolygonFactory.createMany(15);
     const first = await SitePolygon.findOne();
-    const query = await service.buildQuery(20, first.uuid);
+    const query = await service.buildQuery({ size: 20, after: first.uuid });
     const result = await query.execute();
     expect(result.length).toBe(14);
   });
 
   it("Should throw when pageAfter polygon not found", async () => {
-    await expect(service.buildQuery(20, "asdfasdf")).rejects.toThrow(BadRequestException);
+    await expect(service.buildQuery({ size: 20, after: "asdfasdf" })).rejects.toThrow(BadRequestException);
   });
 
   it("Should return empty arrays from utility methods if no associated records exist", async () => {
@@ -148,13 +158,13 @@ describe("SitePolygonsService", () => {
     const poly1 = await SitePolygonFactory.create({ siteUuid: site1.uuid });
     const poly2 = await SitePolygonFactory.create({ siteUuid: site2.uuid });
 
-    let query = await service.buildQuery(20);
+    let query = await service.buildQuery({ size: 20 });
     await query.excludeTestProjects();
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(poly2.id);
 
-    query = await service.buildQuery(20);
+    query = await service.buildQuery({ size: 20 });
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
@@ -178,14 +188,14 @@ describe("SitePolygonsService", () => {
       siteId: [site2.uuid]
     };
 
-    const queryBuilder1 = await service.buildQuery(queryWithSite1.page.size);
+    const queryBuilder1 = await service.buildQuery({ size: queryWithSite1.page.size });
     await queryBuilder1.filterSiteUuids(queryWithSite1.siteId);
     const result1 = await queryBuilder1.execute();
 
     expect(result1.length).toBe(1);
     expect(result1[0].id).toBe(poly1.id);
 
-    const queryBuilder2 = await service.buildQuery(queryWithSite2.page.size);
+    const queryBuilder2 = await service.buildQuery({ size: queryWithSite2.page.size });
     await queryBuilder2.filterSiteUuids(queryWithSite2.siteId);
     const result2 = await queryBuilder2.execute();
 
@@ -199,13 +209,13 @@ describe("SitePolygonsService", () => {
     const poly1 = await SitePolygonFactory.create({ siteUuid: site.uuid });
     const poly2 = await SitePolygonFactory.create();
 
-    let query = await service.buildQuery(20);
+    let query = await service.buildQuery({ size: 20 });
     await query.filterProjectUuids([project.uuid]);
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(poly1.id);
 
-    query = await service.buildQuery(20);
+    query = await service.buildQuery({ size: 20 });
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
@@ -217,17 +227,17 @@ describe("SitePolygonsService", () => {
     const submittedPoly = await SitePolygonFactory.create({ status: "submitted" });
     const approvedPoly = await SitePolygonFactory.create({ status: "approved" });
 
-    let query = (await service.buildQuery(20)).hasStatuses(["draft"]);
+    let query = (await service.buildQuery({ size: 20 })).hasStatuses(["draft"]);
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(draftPoly.id);
 
-    query = (await service.buildQuery(20)).hasStatuses(["draft", "approved"]);
+    query = (await service.buildQuery({ size: 20 })).hasStatuses(["draft", "approved"]);
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([draftPoly.id, approvedPoly.id].sort());
 
-    query = await service.buildQuery(20);
+    query = await service.buildQuery({ size: 20 });
     result = await query.execute();
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([draftPoly.id, submittedPoly.id, approvedPoly.id].sort());
@@ -246,7 +256,7 @@ describe("SitePolygonsService", () => {
       clock.setSystemTime(newDate);
       const poly2 = await SitePolygonFactory.create();
 
-      let query = (await service.buildQuery(20)).modifiedSince(
+      let query = (await service.buildQuery({ size: 20 })).modifiedSince(
         DateTime.fromJSDate(oldDate).plus({ days: 5 }).toJSDate()
       );
       let result = await query.execute();
@@ -258,14 +268,14 @@ describe("SitePolygonsService", () => {
       await poly1.update({ status: "submitted" });
       // The SQL query uses greater than or equal, but in order to get around weirdness with
       // truncated date precision, we test with a slightly older date time.
-      query = (await service.buildQuery(20)).modifiedSince(
+      query = (await service.buildQuery({ size: 20 })).modifiedSince(
         DateTime.fromJSDate(updateDate).minus({ minutes: 1 }).toJSDate()
       );
       result = await query.execute();
       expect(result.length).toBe(1);
       expect(result[0].id).toBe(poly1.id);
 
-      query = await service.buildQuery(20);
+      query = await service.buildQuery({ size: 20 });
       result = await query.execute();
       expect(result.length).toBe(2);
       expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
@@ -285,35 +295,69 @@ describe("SitePolygonsService", () => {
     const poly3 = await SitePolygonFactory.create();
     await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly3.id, indicatorSlug: "restorationByStrategy" });
 
-    let query = (await service.buildQuery(20)).isMissingIndicators(["fieldMonitoring"]);
+    let query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["fieldMonitoring"]);
     let result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly2.id, poly3.id].sort());
 
-    query = (await service.buildQuery(20)).isMissingIndicators(["restorationByLandUse"]);
+    query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["restorationByLandUse"]);
     result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(poly3.id);
 
-    query = (await service.buildQuery(20)).isMissingIndicators(["restorationByStrategy", "msuCarbon"]);
+    query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["restorationByStrategy", "msuCarbon"]);
     result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(poly1.id);
 
-    query = (await service.buildQuery(20)).isMissingIndicators(["restorationByEcoRegion"]);
+    query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["restorationByEcoRegion"]);
     result = await query.execute();
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
 
-    query = await service.buildQuery(20);
+    query = await service.buildQuery({ size: 20 });
+    result = await query.execute();
+    expect(result.length).toBe(3);
+    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+  });
+  it("should only return polys with all specified indicators present", async () => {
+    await SitePolygon.truncate();
+    const poly1 = await SitePolygonFactory.create();
+    await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: poly1.id });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "restorationByStrategy" });
+
+    const poly2 = await SitePolygonFactory.create();
+    await IndicatorOutputMsuCarbonFactory.create({ sitePolygonId: poly2.id });
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly2.id, indicatorSlug: "restorationByLandUse" });
+
+    const poly3 = await SitePolygonFactory.create();
+    await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly3.id, indicatorSlug: "treeCover" });
+
+    let query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["restorationByStrategy"]);
+    let result = await query.execute();
+
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly1.id);
+
+    query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["msuCarbon", "restorationByLandUse"]);
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(poly2.id);
+
+    query = (await service.buildQuery({ size: 20 })).hasPresentIndicators(["restorationByEcoRegion"]);
+    result = await query.execute();
+    expect(result.length).toBe(0);
+
+    query = await service.buildQuery({ size: 20 });
     result = await query.execute();
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
   });
 
   it("throws when an indicator slug is invalid", async () => {
-    const query = await service.buildQuery(20);
+    const query = await service.buildQuery({ size: 20 });
     expect(() => query.isMissingIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
+    expect(() => query.hasPresentIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
   });
 
   it("filters polygons by boundary polygon", async () => {
@@ -325,20 +369,20 @@ describe("SitePolygonsService", () => {
     });
     const sitePoly2 = await SitePolygonFactory.create({ polygonUuid: poly2.uuid });
 
-    let query = await service.buildQuery(20);
+    let query = await service.buildQuery({ size: 20 });
     await query.touchesBoundary(poly2.uuid);
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(sitePoly2.id);
 
-    query = await service.buildQuery(20);
+    query = await service.buildQuery({ size: 20 });
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([sitePoly1.id, sitePoly2.id].sort());
   });
 
   it("throws when a boundary poly uuid doesn't exist", async () => {
-    const query = await service.buildQuery(20);
+    const query = await service.buildQuery({ size: 20 });
     await expect(query.touchesBoundary("asdf")).rejects.toThrow(BadRequestException);
   });
 
@@ -361,7 +405,7 @@ describe("SitePolygonsService", () => {
       indicatorSlug: "restorationByStrategy"
     });
 
-    const query = (await service.buildQuery(20))
+    const query = (await service.buildQuery({ size: 20 }))
       .isMissingIndicators(["restorationByStrategy"])
       .hasStatuses(["draft", "approved"]);
     await query.filterProjectUuids([project2.uuid]);
@@ -467,5 +511,107 @@ describe("SitePolygonsService", () => {
     const treeCount = await sitePolygon.$get("indicatorsTreeCount");
     expect(treeCount.length).toBe(1);
     expect(treeCount[0]).toMatchObject(dto);
+  });
+
+  it("should build LightDto correctly when lightResource is true", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+  });
+
+  it("should build FullDto correctly when lightResource is false", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+    const fullDto = await service.buildFullDto(sitePolygon);
+
+    expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
+  });
+  it("should return SitePolygonLightDto when lightResource is true", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+    expect(lightDto.name).toBe(sitePolygon.polyName);
+  });
+  it("should correctly calculate pagination total with required includes", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+
+    await SitePolygonFactory.createMany(5);
+
+    const query = await service.buildQuery({ size: 3 });
+
+    const countSpy = jest.spyOn(SitePolygon, "count");
+
+    await query.paginationTotal();
+
+    expect(countSpy).toHaveBeenCalled();
+    const callOptions = countSpy.mock.calls[0][0];
+
+    expect(callOptions.include).toHaveLength(2);
+    expect(callOptions.include[0].model).toBe(PolygonGeometry);
+    expect(callOptions.include[0].required).toBe(true);
+  });
+
+  it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+
+    const project = await ProjectFactory.create();
+    const site1 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Alpha Site"
+    });
+    const site2 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Beta Location"
+    });
+    const site3 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Gamma Zone"
+    });
+
+    await SitePolygonFactory.create({
+      siteUuid: site1.uuid,
+      polyName: "First Polygon"
+    });
+    await SitePolygonFactory.create({
+      siteUuid: site2.uuid,
+      polyName: "Alphabetical Order"
+    });
+    await SitePolygonFactory.create({
+      siteUuid: site3.uuid,
+      polyName: "Zone Polygon"
+    });
+
+    let query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Alpha");
+    let results = await query.execute();
+    expect(results.length).toBe(2);
+    expect(results[0].siteUuid).toBe(site1.uuid);
+
+    query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Zone");
+    results = await query.execute();
+    expect(results.length).toBe(1);
+    expect(results[0].siteUuid).toBe(site3.uuid);
+    expect(results[0].polyName).toBe("Zone Polygon");
   });
 });

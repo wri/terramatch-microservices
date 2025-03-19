@@ -18,6 +18,7 @@ import { COMPLETE_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -37,6 +38,12 @@ export class NurseryReport extends Model<NurseryReport> {
 
   static nurseries(ids: number[] | Literal) {
     return chainScope(this, "nurseries", ids) as typeof NurseryReport;
+  }
+
+  static approvedIdsSubquery(nurseryIds: number[] | Literal) {
+    return Subquery.select(NurseryReport, "id")
+      .in("nurseryId", nurseryIds)
+      .in("status", NurseryReport.APPROVED_STATUSES).literal;
   }
 
   @PrimaryKey

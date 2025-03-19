@@ -1,4 +1,3 @@
-// The entities that are able to ask for what their establishment tree data was.
 import { ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsUUID } from "class-validator";
 import { ESTABLISHMENT_ENTITIES, EstablishmentEntity } from "../tree.service";

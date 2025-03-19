@@ -1,17 +1,29 @@
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { IndicatorDto, ReportingPeriodDto, TreeSpeciesDto } from "./dto/site-polygon.dto";
+import {
+  IndicatorDto,
+  ReportingPeriodDto,
+  SitePolygonFullDto,
+  SitePolygonLightDto,
+  TreeSpeciesDto
+} from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Transaction } from "sequelize";
+import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
 @Injectable()
 export class SitePolygonsService {
-  async buildQuery(pageSize: number, pageAfter?: string) {
-    const builder = new SitePolygonQueryBuilder(pageSize);
-    if (pageAfter != null) await builder.pageAfter(pageAfter);
+  async buildQuery(page: CursorPage | NumberPage) {
+    const builder = new SitePolygonQueryBuilder(page.size);
+    if ((page as CursorPage).after != null && (page as NumberPage).number != null) {
+      throw new BadRequestException("page[after] or page[number] may be provided, but not both.");
+    }
+
+    if (isNumberPage(page) && page.number != null) builder.pageNumber(page.number);
+    else if (isCursorPage(page) && page.after != null) await builder.pageAfter(page.after);
     return builder;
   }
 
@@ -88,5 +100,17 @@ export class SitePolygonsService {
       await transaction.rollback();
       throw e;
     }
+  }
+
+  async buildLightDto(sitePolygon: SitePolygon): Promise<SitePolygonLightDto> {
+    const indicators = await this.getIndicators(sitePolygon);
+    return new SitePolygonLightDto(sitePolygon, indicators);
+  }
+
+  async buildFullDto(sitePolygon: SitePolygon): Promise<SitePolygonFullDto> {
+    const indicators = await this.getIndicators(sitePolygon);
+    const establishmentTreeSpecies = await this.getEstablishmentTreeSpecies(sitePolygon);
+    const reportingPeriods = await this.getReportingPeriods(sitePolygon);
+    return new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods);
   }
 }

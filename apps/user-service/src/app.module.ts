@@ -11,6 +11,7 @@ import { ResetPasswordController } from "./auth/reset-password.controller";
 import { ResetPasswordService } from "./auth/reset-password.service";
 import { VerificationUserController } from "./auth/verification-user.controller";
 import { VerificationUserService } from "./auth/verification-user.service";
+import { UserCreationService } from "./users/user-creation.service";
 
 @Module({
   imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
@@ -22,7 +23,8 @@ import { VerificationUserService } from "./auth/verification-user.service";
     },
     AuthService,
     ResetPasswordService,
-    VerificationUserService
+    VerificationUserService,
+    UserCreationService
   ]
 })
 export class AppModule {}

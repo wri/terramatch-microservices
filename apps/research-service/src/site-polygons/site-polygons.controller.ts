@@ -8,10 +8,10 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, JsonApiDocument, SerializeOptions } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { SitePolygonDto } from "./dto/site-polygon.dto";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
 import {
   IndicatorFieldMonitoringDto,
@@ -25,6 +25,7 @@ import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -45,31 +46,53 @@ export class SitePolygonsController {
 
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
-  @JsonApiResponse({ data: SitePolygonDto, pagination: "cursor" })
+  @JsonApiResponse([
+    { data: SitePolygonFullDto, pagination: "cursor" },
+    { data: SitePolygonLightDto, pagination: "number" }
+  ])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
-    const { siteId, projectId, includeTestProjects } = query;
+    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, lightResource } = query;
+
     const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
+
+    if (lightResource && !isNumberPage(query.page)) {
+      throw new BadRequestException("Light resources must use number pagination.");
+    }
 
     if (countSelectedParams > 1) {
       throw new BadRequestException(
         "Only one of siteId, projectId, and includeTestProjects may be used in a single request."
       );
     }
+    if (missingIndicator != null && presentIndicator != null) {
+      throw new BadRequestException(
+        "Only one of missingIndicator[] or presentIndicator[] may be used in a single request."
+      );
+    }
 
-    const { size: pageSize = MAX_PAGE_SIZE, after: pageAfter } = query.page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+    const page = query.page ?? {};
+    page.size ??= MAX_PAGE_SIZE;
+    if (page.size > MAX_PAGE_SIZE || page.size < 1) {
       throw new BadRequestException("Page size is invalid");
     }
 
-    const queryBuilder = (await this.sitePolygonService.buildQuery(pageSize, pageAfter))
-      .hasStatuses(query.polygonStatus)
-      .modifiedSince(query.lastModifiedDate)
-      .isMissingIndicators(query.missingIndicator);
+    if (isNumberPage(page) && page.number < 1) {
+      throw new BadRequestException("Page number is invalid");
+    }
 
+    const queryBuilder = (await this.sitePolygonService.buildQuery(page))
+      .hasStatuses(query.polygonStatus)
+      .modifiedSince(query.lastModifiedDate);
+
+    if (missingIndicator) {
+      queryBuilder.isMissingIndicators(missingIndicator);
+    } else if (presentIndicator) {
+      queryBuilder.hasPresentIndicators(presentIndicator);
+    }
     await queryBuilder.touchesBoundary(query.boundaryPolygon);
 
     if (query.siteId != null) {
@@ -84,25 +107,22 @@ export class SitePolygonsController {
     if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
-    const document = buildJsonApi(SitePolygonDto, { pagination: "cursor" });
-    for (const sitePolygon of await queryBuilder.execute()) {
-      const indicators = await this.sitePolygonService.getIndicators(sitePolygon);
-      const establishmentTreeSpecies = await this.sitePolygonService.getEstablishmentTreeSpecies(sitePolygon);
-      const reportingPeriods = await this.sitePolygonService.getReportingPeriods(sitePolygon);
-      document.addData(
-        sitePolygon.uuid,
-        new SitePolygonDto(
-          sitePolygon,
-          sitePolygon.polygon?.polygon,
-          indicators,
-          establishmentTreeSpecies,
-          reportingPeriods,
-          sitePolygon.site?.name
-        )
-      );
+    if (query.search != null) {
+      await queryBuilder.addSearch(query.search);
     }
+    const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
 
-    return document.serialize({ paginationTotal: await queryBuilder.paginationTotal() });
+    const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
+    for (const sitePolygon of await queryBuilder.execute()) {
+      if (lightResource) {
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon));
+      } else {
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildFullDto(sitePolygon));
+      }
+    }
+    const serializeOptions: SerializeOptions = { paginationTotal: await queryBuilder.paginationTotal() };
+    if (isNumberPage(query.page)) serializeOptions.pageNumber = query.page.number;
+    return document.serialize(serializeOptions);
   }
 
   @Patch()

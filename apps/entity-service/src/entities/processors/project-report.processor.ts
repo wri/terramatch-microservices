@@ -133,6 +133,7 @@ export class ProjectReportProcessor extends EntityProcessor<
     const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
     const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
     const readableCompletionStatus = await this.getReadableCompletionStatus(projectReport.completion);
+    const createdBy = await this.getCreatedBy(projectReport);
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
       seedsPlantedCount,
@@ -144,8 +145,7 @@ export class ProjectReportProcessor extends EntityProcessor<
       seedlingsGrown,
       nonTreeTotal,
       readableCompletionStatus,
-      directRestorationPartners: 0,
-      indirectRestorationPartners: 0,
+      createdBy,
       ...(this.entitiesService.mapMediaCollection(
         await Media.projectReport(projectReportId).findAll(),
         ProjectReport.MEDIA
@@ -187,5 +187,13 @@ export class ProjectReportProcessor extends EntityProcessor<
 
   protected async getReadableCompletionStatus(completion: number) {
     return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
+  }
+
+  protected async getCreatedBy(projectReport: ProjectReport) {
+    if (projectReport.user !== null) {
+      return `${projectReport.user?.firstName || ""} ${projectReport.user?.lastName || ""}`.trim();
+    }
+
+    return null;
   }
 }

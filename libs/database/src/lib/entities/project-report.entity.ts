@@ -21,6 +21,7 @@ import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
 import { SiteReport } from "./site-report.entity";
 import { Literal } from "sequelize/types/utils";
+import { User } from "./user.entity";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -121,6 +122,9 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @BelongsTo(() => Project)
   project: Project | null;
+
+  @BelongsTo(() => User)
+  user: User | null;
 
   get projectName() {
     return this.project?.name;

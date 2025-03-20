@@ -172,12 +172,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty()
   regeneratedTreesCount: number;
 
-  @ApiProperty()
-  directRestorationPartners: number;
-
-  @ApiProperty()
-  indirectRestorationPartners: number;
-
   @ApiProperty({ nullable: true })
   topThreeSuccesses: string | null;
 
@@ -285,6 +279,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty()
   readableCompletionStatus: string;
+
+  @ApiProperty({ nullable: true })
+  createdBy: string | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

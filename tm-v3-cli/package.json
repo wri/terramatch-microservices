@@ -1,5 +1,5 @@
 {
-  "name": "@terramatch-microservices/cli",
+  "name": "@terramatch-microservices/tm-v3-cli",
   "version": "0.0.1",
   "private": true,
   "type": "commonjs",

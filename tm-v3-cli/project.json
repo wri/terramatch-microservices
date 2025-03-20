@@ -1,7 +1,7 @@
 {
-  "name": "cli",
+  "name": "tm-v3-cli",
   "$schema": "../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "cli/src",
+  "sourceRoot": "tm-v3-cli/src",
   "projectType": "library",
   "tags": [],
   "targets": {
@@ -11,11 +11,11 @@
       "updateBuildableProjectDepsInPackageJson": true,
       "buildableProjectDepsInPackageJsonType": "dependencies",
       "options": {
-        "outputPath": "dist/cli",
-        "tsConfig": "cli/tsconfig.lib.json",
-        "packageJson": "cli/package.json",
-        "main": "cli/src/index.ts",
-        "assets": ["cli/*.md"]
+        "outputPath": "dist/tm-v3-cli",
+        "tsConfig": "tm-v3-cli/tsconfig.lib.json",
+        "packageJson": "tm-v3-cli/package.json",
+        "main": "tm-v3-cli/src/index.ts",
+        "assets": ["tm-v3-cli/*.md"]
       }
     }
   }

@@ -17,7 +17,6 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
-import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
@@ -34,7 +33,7 @@ export class ProjectReportProcessor extends EntityProcessor<
         {
           association: "project",
           attributes: ["uuid", "name", "country"],
-          include: [{ association: "organisation", attributes: ["name"] }]
+          include: [{ association: "organisation", attributes: ["uuid", "name"] }]
         }
       ]
     });
@@ -44,7 +43,7 @@ export class ProjectReportProcessor extends EntityProcessor<
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"],
-      include: [{ association: "organisation", attributes: ["name"] }]
+      include: [{ association: "organisation", attributes: ["uuid", "name"] }]
     };
     const associations = [projectAssociation];
     const builder = await this.entitiesService.buildQuery(ProjectReport, query, associations);
@@ -75,8 +74,16 @@ export class ProjectReportProcessor extends EntityProcessor<
       builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 
-    for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
-      if (query[term] != null) builder.where({ [term]: query[term] });
+    const associationFieldMap = {
+      organisationUuid: "$project.organisation.uuid$",
+      country: "$project.country$"
+    };
+
+    for (const term of ["status", "updateRequestStatus", "frameworkKey", "organisationUuid", "country"]) {
+      if (query[term] != null) {
+        const field = associationFieldMap[term] || term;
+        builder.where({ [field]: query[term] });
+      }
     }
 
     if (query.search != null) {

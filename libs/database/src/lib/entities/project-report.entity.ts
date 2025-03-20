@@ -134,6 +134,10 @@ export class ProjectReport extends Model<ProjectReport> {
     return this.project?.organisationName;
   }
 
+  get organisationUuid() {
+    return this.project?.organisation?.uuid;
+  }
+
   @AllowNull
   @Column(STRING)
   title: string | null;

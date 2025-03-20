@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   Request,
   UnauthorizedException
 } from "@nestjs/common";
@@ -14,8 +15,11 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
+import { buildJsonApi, DocumentBuilder, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { UserUpdateBodyDto } from "./dto/user-update.dto";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { UserNewRequest } from "./dto/user-new-request.dto";
+import { UserCreationService } from "./user-creation.service";
 
 const USER_RESPONSE_SHAPE = {
   data: {
@@ -38,7 +42,10 @@ const USER_RESPONSE_SHAPE = {
 
 @Controller("users/v3/users")
 export class UsersController {
-  constructor(private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly userCreationService: UserCreationService
+  ) {}
 
   @Get(":uuid")
   @ApiOperation({ operationId: "usersFind", description: "Fetch a user by UUID, or with the 'me' identifier" })
@@ -86,6 +93,19 @@ export class UsersController {
       await user.save();
     }
 
+    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
+  }
+
+  @Post()
+  @NoBearerAuth
+  @ApiOperation({
+    operationId: "userCreation",
+    description: "Create a new user"
+  })
+  @JsonApiResponse(USER_RESPONSE_SHAPE)
+  @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
+  async create(@Body() payload: UserNewRequest): Promise<JsonApiDocument> {
+    const user = await this.userCreationService.createNewUser(payload);
     return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
   }
 

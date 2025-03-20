@@ -27,7 +27,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("research-service/documentation/api", app, document);
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true, transformOptions: { enableImplicitConversion: true } }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true, exposeDefaultValues: true }
+    })
+  );
   app.useLogger(app.get(TMLogService));
 
   const port = process.env.NODE_ENV === "production" ? 80 : process.env.RESEARCH_SERVICE_PROXY_PORT ?? 4030;

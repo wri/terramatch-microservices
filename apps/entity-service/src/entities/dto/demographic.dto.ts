@@ -1,9 +1,8 @@
-import { AssociationDto } from "./association.dto";
+import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { Demographic } from "@terramatch-microservices/database/entities";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import {
   ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
   CONVERGENCE,
@@ -70,14 +69,9 @@ export class DemographicEntryDto extends JsonApiAttributes<DemographicEntryDto> 
   amount: number;
 }
 
-type DemographicDtoAdditionalProps = {
-  entityType: EntityType;
-  entityUuid: string;
-};
-
 @JsonApiDto({ type: "demographics" })
 export class DemographicDto extends AssociationDto<DemographicDto> {
-  constructor(demographic: Demographic, additional: DemographicDtoAdditionalProps) {
+  constructor(demographic: Demographic, additional: AssociationDtoAdditionalProps) {
     super({
       ...pickApiProperties(demographic as Omit<Demographic, "entities">, DemographicDto),
       ...additional,

@@ -1,14 +1,15 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsDate, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
   POLYGON_STATUSES,
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
-import { CursorPage } from "@terramatch-microservices/common/dto/page.dto";
+import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
+import { Transform, Type } from "class-transformer";
 
-export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
+export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",
@@ -24,11 +25,23 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
     name: "projectId[]",
     isArray: true,
     required: false,
-    description: "Filter results by project UUID(s). If specified, the includeTestProjects param is ignored"
+    description:
+      "Filter results by project UUID(s). Only one of siteId, projectId and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   @IsArray()
   projectId?: string[];
+
+  @ApiProperty({
+    name: "siteId[]",
+    isArray: true,
+    required: false,
+    description:
+      "Filter results by site UUID(s). Only one of siteId, projectId and includeTestProjects may be used in a single request"
+  })
+  @IsOptional()
+  @IsArray()
+  siteId?: string[];
 
   @ApiProperty({
     enum: INDICATOR_SLUGS,
@@ -40,6 +53,17 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
   @IsOptional()
   @IsArray()
   missingIndicator?: IndicatorSlug[];
+
+  @ApiProperty({
+    enum: INDICATOR_SLUGS,
+    name: "presentIndicator[]",
+    isArray: true,
+    required: false,
+    description: "Filter results by polygons that have all of the indicators listed"
+  })
+  @IsOptional()
+  @IsArray()
+  presentIndicator?: IndicatorSlug[];
 
   @ApiProperty({
     required: false,
@@ -60,11 +84,33 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage) {
     required: false,
     default: false,
     description:
-      "Include polygons for test projects in the results. If an explicit list of project UUIDs is included in projectId[], this parameter is ignored."
+      "Include polygons for test projects in the results. Only one of siteId, projectId and includeTestProjects may be used in a single request"
   })
-  includeTestProjects?: boolean;
+  @IsBoolean()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
+  includeTestProjects? = false;
 
   @ValidateNested()
+  @Type(({ object }) => {
+    // Surprisingly, the object here is the whole query DTO.
+    const keys = Object.keys(object.page ?? {});
+    if (keys.includes("after")) return CursorPage;
+    if (keys.includes("number")) return NumberPage;
+    return Page;
+  })
   @IsOptional()
-  page?: CursorPage;
+  page?: CursorPage | NumberPage;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  search?: string;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description: "Wheter to include the complete sitePolygon Dto or not"
+  })
+  @IsBoolean()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
+  lightResource? = false;
 }

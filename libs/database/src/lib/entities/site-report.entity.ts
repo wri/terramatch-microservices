@@ -38,6 +38,7 @@ export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
+  static readonly UNSUBMITTED_STATUSES = ["due", "started"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
   static incomplete() {
@@ -56,11 +57,15 @@ export class SiteReport extends Model<SiteReport> {
     return chainScope(this, "dueBefore", date) as typeof SiteReport;
   }
 
-  static approvedIdsSubquery(siteIds: Literal, opts: ApprovedIdsSubqueryOptions = {}) {
+  static approvedIdsSubquery(siteIds: number[] | Literal, opts: ApprovedIdsSubqueryOptions = {}) {
     const builder = Subquery.select(SiteReport, "id").in("siteId", siteIds).in("status", SiteReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
     return builder.literal;
+  }
+
+  static approvedIdsForTaskSubquery(taskId: number) {
+    return Subquery.select(SiteReport, "id").eq("taskId", taskId).in("status", SiteReport.APPROVED_STATUSES).literal;
   }
 
   @PrimaryKey

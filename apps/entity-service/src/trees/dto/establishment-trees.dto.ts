@@ -2,16 +2,7 @@ import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { Dictionary } from "lodash";
-
-export class PreviousPlantingCountDto {
-  @ApiProperty({ nullable: true, description: "Taxonomic ID for this tree species row" })
-  taxonId?: string;
-
-  @ApiProperty({
-    description: "Number of trees of this type that have been planted in all previous reports on this entity."
-  })
-  amount: number;
-}
+import { PlantingCountMap } from "./planting-count.dto";
 
 // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
 // backed by a single DB table.
@@ -31,7 +22,7 @@ export class EstablishmentsTreesDto extends JsonApiAttributes<EstablishmentsTree
     type: "object",
     additionalProperties: {
       type: "object",
-      additionalProperties: { $ref: "#/components/schemas/PreviousPlantingCountDto" }
+      additionalProperties: { $ref: "#/components/schemas/PlantingCountDto" }
     },
     nullable: true,
     description:
@@ -48,5 +39,5 @@ export class EstablishmentsTreesDto extends JsonApiAttributes<EstablishmentsTree
       }
     }
   })
-  previousPlantingCounts?: Dictionary<Dictionary<PreviousPlantingCountDto>>;
+  previousPlantingCounts?: PlantingCountMap;
 }

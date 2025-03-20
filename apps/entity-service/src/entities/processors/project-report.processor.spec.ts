@@ -36,7 +36,7 @@ describe("ProjectReportProcessor", () => {
     processor = module.get(EntitiesService).createEntityProcessor("projectReports") as ProjectReportProcessor;
   });
 
-  describe("findMany", () => {
+  describe("should return a list of project reports when findMany is called with valid parameters", () => {
     async function expectProjectReports(
       expected: ProjectReport[],
       query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
@@ -82,7 +82,7 @@ describe("ProjectReportProcessor", () => {
       await expectProjectReports(projectReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
     });
 
-    it("searches", async () => {
+    it("should return project reports that match the search term", async () => {
       const s1 = await ProjectReportFactory.create({ projectName: "Foo Bar" });
       const s2 = await ProjectReportFactory.create({ projectName: "Baz Foo" });
       await ProjectReportFactory.createMany(3);
@@ -90,7 +90,7 @@ describe("ProjectReportProcessor", () => {
       await expectProjectReports([s1, s2], { search: "foo" });
     });
 
-    it("filters", async () => {
+    it("should return project reports filtered by the update request status or project", async () => {
       const p1 = await ProjectFactory.create();
       const p2 = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: p1.id });
@@ -130,7 +130,7 @@ describe("ProjectReportProcessor", () => {
       await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
-    it("sorts by title", async () => {
+    it("should sort project reports by title", async () => {
       const projectReportA = await ProjectReportFactory.create({ title: "A Project Report" });
       const projectReportB = await ProjectReportFactory.create({ title: "B Project Report" });
       const projectReportC = await ProjectReportFactory.create({ title: "C Project Report" });
@@ -151,7 +151,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("sorts by project name", async () => {
+    it("should sort project reports by project name", async () => {
       const projectA = await ProjectFactory.create({ name: "A Project" });
       const projectB = await ProjectFactory.create({ name: "B Project" });
       const projectC = await ProjectFactory.create({ name: "C Project" });
@@ -170,7 +170,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("sorts by organisation name", async () => {
+    it("should sort project reports by organisation name", async () => {
       const org1 = await OrganisationFactory.create({ name: "A Org" });
       const org2 = await OrganisationFactory.create({ name: "B Org" });
       const org3 = await OrganisationFactory.create({ name: "C Org" });
@@ -212,7 +212,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("sort by status", async () => {
+    it("should sort project reports by status", async () => {
       const projectReportA = await ProjectReportFactory.create({ status: "started" });
       const projectReportB = await ProjectReportFactory.create({ status: "approved" });
       const projectReportC = await ProjectReportFactory.create({ status: "approved" });
@@ -233,7 +233,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("sorts by dueDate", async () => {
+    it("should sort project reports by due date", async () => {
       const projectReportA = await ProjectReportFactory.create({ dueAt: DateTime.now().minus({ days: 1 }).toJSDate() });
       const projectReportB = await ProjectReportFactory.create({
         dueAt: DateTime.now().minus({ days: 10 }).toJSDate()
@@ -251,7 +251,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("sorts by updatedAt", async () => {
+    it("should sort project reports by updated at", async () => {
       const now = DateTime.now();
       const projectReportA = await ProjectReportFactory.create({
         updatedAt: now.minus({ days: 1 }).toJSDate()
@@ -274,7 +274,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("sorts by submittedAt", async () => {
+    it("should sort project reports by submitted at", async () => {
       const now = DateTime.now();
       const projectReportA = await ProjectReportFactory.create({
         submittedAt: now.minus({ minutes: 1 }).toJSDate()
@@ -297,7 +297,7 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("paginates", async () => {
+    it("should paginate project reports", async () => {
       const projectReports = sortBy(await ProjectReportFactory.createMany(25), "id");
       await expectProjectReports(projectReports.slice(0, 10), { page: { size: 10 } }, { total: projectReports.length });
       await expectProjectReports(
@@ -313,7 +313,7 @@ describe("ProjectReportProcessor", () => {
     });
   });
 
-  describe("findOne", () => {
+  describe("should return a requested project report when findOne is called with a valid uuid", () => {
     it("should return a requested project report", async () => {
       const projectReport = await ProjectReportFactory.create();
       const result = await processor.findOne(projectReport.uuid);
@@ -321,7 +321,7 @@ describe("ProjectReportProcessor", () => {
     });
   });
 
-  describe("DTOs", () => {
+  describe("should properly map the project report data into its respective DTOs", () => {
     it("should serialize a Project Report as a light resource (ProjectReportLightDto)", async () => {
       const { uuid } = await ProjectReportFactory.create();
       const projectReport = await processor.findOne(uuid);
@@ -333,7 +333,7 @@ describe("ProjectReportProcessor", () => {
         lightResource: true
       });
     });
-    it("should includes calculated fields in ProjectReportFullDto", async () => {
+    it("should include calculated fields in ProjectReportFullDto", async () => {
       const project = await ProjectFactory.create();
 
       const { uuid } = await ProjectReportFactory.create({

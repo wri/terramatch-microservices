@@ -252,15 +252,14 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should sort project reports by updated at", async () => {
-      const now = DateTime.now();
       const projectReportA = await ProjectReportFactory.create({
-        updatedAt: now.minus({ days: 1 }).toJSDate()
+        updatedAt: DateTime.now().minus({ days: 1 }).toJSDate()
       });
       const projectReportB = await ProjectReportFactory.create({
-        updatedAt: now.minus({ days: 10 }).toJSDate()
+        updatedAt: DateTime.now().minus({ days: 10 }).toJSDate()
       });
       const projectReportC = await ProjectReportFactory.create({
-        updatedAt: now.minus({ days: 5 }).toJSDate()
+        updatedAt: DateTime.now().minus({ days: 5 }).toJSDate()
       });
       await expectProjectReports(
         [projectReportA, projectReportC, projectReportB],

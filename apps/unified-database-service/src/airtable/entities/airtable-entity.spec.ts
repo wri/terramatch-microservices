@@ -2,6 +2,7 @@ import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-en
 import { faker } from "@faker-js/faker";
 import {
   Application,
+  Demographic,
   DemographicEntry,
   Framework,
   Nursery,
@@ -11,12 +12,12 @@ import {
   ProjectReport,
   Site,
   SiteReport,
-  TreeSpecies,
-  Demographic
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
   DemographicEntryFactory,
+  DemographicFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
   NurseryFactory,
@@ -28,8 +29,7 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
-  TreeSpeciesFactory,
-  DemographicFactory
+  TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {

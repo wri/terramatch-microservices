@@ -83,11 +83,15 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should return project reports that match the search term", async () => {
-      const s1 = await ProjectReportFactory.create({ projectName: "Foo Bar" });
-      const s2 = await ProjectReportFactory.create({ projectName: "Baz Foo" });
+      const project1 = await ProjectFactory.create({ name: "Foo Bar" });
+      const project2 = await ProjectFactory.create({ name: "Baz Foo" });
+      const projectReport1 = await ProjectReportFactory.create({ projectId: project1.id });
+      const projectReport2 = await ProjectReportFactory.create({ projectId: project2.id });
+      projectReport1.project = await projectReport1.$get("project");
+      projectReport2.project = await projectReport2.$get("project");
       await ProjectReportFactory.createMany(3);
 
-      await expectProjectReports([s1, s2], { search: "foo" });
+      await expectProjectReports([projectReport1, projectReport2], { search: "foo" });
     });
 
     it("should return project reports filtered by the update request status or project", async () => {

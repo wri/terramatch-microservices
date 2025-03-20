@@ -76,10 +76,18 @@ export class ProjectReportProcessor extends EntityProcessor<
 
     const associationFieldMap = {
       organisationUuid: "$project.organisation.uuid$",
-      country: "$project.country$"
+      country: "$project.country$",
+      projectUuid: "$project.uuid$"
     };
 
-    for (const term of ["status", "updateRequestStatus", "frameworkKey", "organisationUuid", "country"]) {
+    for (const term of [
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "organisationUuid",
+      "country",
+      "projectUuid"
+    ]) {
       if (query[term] != null) {
         const field = associationFieldMap[term] || term;
         builder.where({ [field]: query[term] });

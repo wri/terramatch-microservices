@@ -32,6 +32,12 @@ export class ProjectReportLightDto extends EntityDto {
   })
   organisationName: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    description: "The associated organisation uuid"
+  })
+  organisationUuid: string | null;
+
   @ApiProperty({ nullable: true })
   projectName: string | null;
 

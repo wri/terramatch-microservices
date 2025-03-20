@@ -83,6 +83,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @ApiProperty({
     required: false,
     default: false,
+    type: "boolean",
     description:
       "Include polygons for test projects in the results. Only one of siteId, projectId and includeTestProjects may be used in a single request"
   })
@@ -108,6 +109,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @ApiProperty({
     required: false,
     default: false,
+    type: "boolean",
     description: "Wheter to include the complete sitePolygon Dto or not"
   })
   @IsBoolean()

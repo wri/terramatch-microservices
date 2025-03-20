@@ -5,6 +5,17 @@
   "projectType": "application",
   "tags": [],
   "targets": {
+    "repl": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "webpackConfig": "apps/entity-service/webpack.config.js",
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/entity-service",
+        "main": "apps/entity-service/src/repl.ts"
+      }
+    },
     "serve": {
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
@@ -19,6 +30,9 @@
         },
         "production": {
           "buildTarget": "entity-service:build:production"
+        },
+        "repl": {
+          "buildTarget": "entity-service:repl"
         }
       }
     }

@@ -3,7 +3,11 @@ FROM terramatch-microservices-base:nx-base AS builder
 ARG BUILD_FLAG
 WORKDIR /app/builder
 COPY . .
-RUN npx nx build entity-service ${BUILD_FLAG}
+RUN npx nx run entity-service:build-repl ${BUILD_FLAG} && \
+    npx nx run entity-service:build ${BUILD_FLAG} && \
+    ls dist/apps && \
+    ls dist/apps/entity-service && \
+    ls dist/apps/entity-service-repl
 
 FROM terramatch-microservices-base:nx-base
 

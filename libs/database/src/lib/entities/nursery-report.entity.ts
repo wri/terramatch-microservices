@@ -23,7 +23,8 @@ import { Subquery } from "../util/subquery.builder";
 // Incomplete stub
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
-  nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } })
+  nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } }),
+  reportsTask: (taskId: number) => ({ where: { taskId: taskId } })
 }))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
@@ -38,6 +39,10 @@ export class NurseryReport extends Model<NurseryReport> {
 
   static nurseries(ids: number[] | Literal) {
     return chainScope(this, "nurseries", ids) as typeof NurseryReport;
+  }
+
+  static reportsTask(taskId: number) {
+    return chainScope(this, "reportsTask", taskId) as typeof NurseryReport;
   }
 
   static approvedIdsSubquery(nurseryIds: number[] | Literal) {

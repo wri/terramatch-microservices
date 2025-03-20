@@ -105,7 +105,7 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true })
   equitableOpportunities: string | null;
-  
+
   @ApiProperty({ nullable: true })
   resilienceProgress: string | null;
 
@@ -123,6 +123,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true })
   convergenceSchemes: string | null;
+
+  @ApiProperty({ nullable: true })
+  convergenceAmount: number | null;
 
   @ApiProperty({ nullable: true })
   beneficiariesScstobc: number | null;
@@ -155,9 +158,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   reportTitle: string | null;
 
   @ApiProperty({ nullable: true })
-  totalJobsCreated: number | null;
-
-  @ApiProperty({ nullable: true })
   seedsPlantedCount: number | null;
 
   @ApiProperty({ nullable: true })
@@ -165,6 +165,120 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty()
   regeneratedTreesCount: number;
+
+  @ApiProperty()
+  directRestorationPartners: number;
+
+  @ApiProperty()
+  indirectRestorationPartners: number;
+
+  @ApiProperty({ nullable: true })
+  topThreeSuccesses: string | null;
+
+  @ApiProperty({ nullable: true })
+  challengesFaced: string | null;
+
+  @ApiProperty({ nullable: true })
+  lessonsLearned: string | null;
+
+  @ApiProperty({ nullable: true })
+  maintenanceAndMonitoringActivities: string | null;
+
+  @ApiProperty({ nullable: true })
+  significantChange: string | null;
+
+  @ApiProperty({ nullable: true })
+  pctSurvivalToDate: number | null;
+
+  @ApiProperty({ nullable: true })
+  survivalCalculation: string | null;
+
+  @ApiProperty({ nullable: true })
+  survivalComparison: string | null;
+
+  @ApiProperty({ nullable: true })
+  ftSmallholderFarmers: number | null;
+
+  @ApiProperty({ nullable: true })
+  ptSmallholderFarmers: number | null;
+
+  @ApiProperty({ nullable: true })
+  seasonalMen: number | null;
+
+  @ApiProperty({ nullable: true })
+  seasonalWomen: number | null;
+
+  @ApiProperty({ nullable: true })
+  seasonalYouth: number | null;
+
+  @ApiProperty({ nullable: true })
+  seasonalSmallholderFarmers: number | null;
+
+  @ApiProperty({ nullable: true })
+  seasonalTotal: number | null;
+
+  @ApiProperty({ nullable: true })
+  volunteerSmallholderFarmers: number | null;
+
+  @ApiProperty({ nullable: true })
+  plantedTrees: number | null;
+
+  @ApiProperty({ nullable: true })
+  sharedDriveLink: string | null;
+
+  @ApiProperty({ nullable: true })
+  beneficiariesDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  beneficiariesIncomeIncrease: number | null;
+
+  @ApiProperty({ nullable: true })
+  beneficiariesIncomeIncreaseDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  beneficiariesSkillsKnowledgeIncreaseDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  indirectBeneficiaries: number | null;
+
+  @ApiProperty({ nullable: true })
+  indirectBeneficiariesDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  newJobsDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  volunteersWorkDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  siteReportsCount: number | null;
+
+  @ApiProperty({ nullable: true })
+  nurseryReportsCount: number | null;
+
+  @ApiProperty()
+  migrated: boolean;
+
+  @ApiProperty()
+  seedlingsGrown: number;
+
+  @ApiProperty({ nullable: true })
+  communityProgress: string | null;
+
+  @ApiProperty({ nullable: true })
+  localEngagement: string | null;
+
+  @ApiProperty()
+  siteAddition: boolean;
+
+  @ApiProperty({ nullable: true })
+  paidOtherActivityDescription: string | null;
+
+  @ApiProperty({ nullable: true })
+  nonTreeTotal: number | null;
+
+  @ApiProperty()
+  readableCompletionStatus: string;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

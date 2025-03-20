@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
@@ -20,6 +20,7 @@ import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
 import { SiteReport } from "./site-report.entity";
+import { Literal } from "sequelize/types/utils";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -73,17 +74,24 @@ export class ProjectReport extends Model<ProjectReport> {
     return builder.literal;
   }
 
-  static siteReportIdsTaksSubquery(taskId: number, opts: ApprovedIdsSubqueryOptions = {}) {
-    const builder = Subquery.select(SiteReport, "id").in("taskId", taskId);
+  static siteReportIdsTaksSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
     return builder.literal;
   }
 
-  static approvedSiteReportIdsSubquery(taskId: number | Literal, opts: ApprovedIdsSubqueryOptions = {}) {
-    const builder = Subquery.select(SiteReport, "id").in("taskId", taskId).in("status", SiteReport.APPROVED_STATUSES);
+  static approvedSiteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds).in("status", SiteReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static siteReportsUnsubmittedIdsTaskSubquery(taskIds: number[] | Literal) {
+    const builder = Subquery.select(SiteReport, "id")
+      .in("taskId", taskIds)
+      .in("status", SiteReport.UNSUBMITTED_STATUSES);
     return builder.literal;
   }
 
@@ -252,6 +260,10 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(TEXT)
+  localEngagement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
   equitableOpportunities: string | null;
 
   @AllowNull
@@ -277,6 +289,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   convergenceSchemes: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  convergenceAmount: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -309,6 +325,54 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   businessMilestones: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalTotal: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  plantedTrees: number | null;
+
+  @AllowNull
+  @Column(STRING)
+  oldModel: string;
+
+  @AllowNull
+  @Column(BOOLEAN)
+  siteAddition: boolean;
+
+  @AllowNull
+  @Column(TEXT)
+  paidOtherActivityDescription: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

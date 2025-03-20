@@ -7,7 +7,17 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util/json-api-
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Media, Project, ProjectUser, Seeding, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  Media,
+  NurseryReport,
+  Project,
+  ProjectUser,
+  Seeding,
+  SiteReport,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
+import { sumBy } from "lodash";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
@@ -20,7 +30,13 @@ export class ProjectReportProcessor extends EntityProcessor<
   async findOne(uuid: string) {
     return await ProjectReport.findOne({
       where: { uuid },
-      include: [{ association: "project", attributes: ["uuid", "name"] }]
+      include: [
+        {
+          association: "project",
+          attributes: ["uuid", "name", "country"],
+          include: [{ association: "organisation", attributes: ["name"] }]
+        }
+      ]
     });
   }
 
@@ -64,7 +80,12 @@ export class ProjectReportProcessor extends EntityProcessor<
     }
 
     if (query.search != null) {
-      builder.where({ name: { [Op.like]: `%${query.search}%` } });
+      builder.where({
+        [Op.or]: [
+          { "$project.name$": { [Op.like]: `%${query.search}%` } },
+          { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } }
+        ]
+      });
     }
 
     if (query.projectUuid != null) {
@@ -80,23 +101,36 @@ export class ProjectReportProcessor extends EntityProcessor<
 
   async addFullDto(document: DocumentBuilder, projectReport: ProjectReport) {
     const projectReportId = projectReport.id;
+    const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
-    const totalJobsCreated = await this.getTotalJobsCreated(projectReport);
-
-    const siteReportsIdsTaks = ProjectReport.siteReportIdsTaksSubquery(projectReport.taskId)
+    const siteReportsIdsTaks = ProjectReport.siteReportIdsTaksSubquery([taskId]);
     const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTaks).sum("amount")) ?? 0;
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTaks).sum("amount")) ?? 0;
     const approvedSiteReportsFromTask = await SiteReport.approved()
-      .task(projectReport.taskId)
+      .reportsTask(taskId)
       .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
     const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
+    const siteReportsCount = await SiteReport.reportsTask(taskId).count();
+    const nurseryReportsCount = await NurseryReport.reportsTask(taskId).count();
+    const migrated = !!projectReport.oldModel;
+    const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
+    const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
+    const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
+    const readableCompletionStatus = await this.getReadableCompletionStatus(projectReport.completion);
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
-      totalJobsCreated,
       seedsPlantedCount,
       treesPlantedCount,
       regeneratedTreesCount,
+      siteReportsCount,
+      nurseryReportsCount,
+      migrated,
+      seedlingsGrown,
+      nonTreeTotal,
+      readableCompletionStatus,
+      directRestorationPartners: 0,
+      indirectRestorationPartners: 0,
       ...(this.entitiesService.mapMediaCollection(
         await Media.projectReport(projectReportId).findAll(),
         ProjectReport.MEDIA
@@ -124,15 +158,19 @@ export class ProjectReportProcessor extends EntityProcessor<
     }
   }
 
-  protected async getTotalJobsCreated(projectReport: ProjectReport) {
-    const ptTotal = projectReport.ptTotal ?? 0;
-    const ftTotal = projectReport.ftTotal ?? 0;
+  protected async getSeedlingsGrown(projectReport: ProjectReport) {
+    if (projectReport.frameworkKey == "ppc") {
+      return TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount");
+    }
 
-    return ptTotal + ftTotal;
+    if (projectReport.frameworkKey == "terrafund") {
+      return NurseryReport.reportsTask(projectReport.taskId).sum("seedlingsYoungTrees");
+    }
+
+    return 0;
   }
-  
-}
-function sumBy(approvedSiteReportsFromTask: any, arg1: string) {
-  throw new Error("Function not implemented.");
-}
 
+  protected async getReadableCompletionStatus(completion: number) {
+    return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
+  }
+}

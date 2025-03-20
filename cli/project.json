@@ -1,0 +1,22 @@
+{
+  "name": "cli",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "cli/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "updateBuildableProjectDepsInPackageJson": true,
+      "buildableProjectDepsInPackageJsonType": "dependencies",
+      "options": {
+        "outputPath": "dist/cli",
+        "tsConfig": "cli/tsconfig.lib.json",
+        "packageJson": "cli/package.json",
+        "main": "cli/src/index.ts",
+        "assets": ["cli/*.md"]
+      }
+    }
+  }
+}

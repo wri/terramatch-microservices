@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@terramatch-microservices/cli": ["cli/src/index.ts"],
       "@terramatch-microservices/common": ["libs/common/src/index.ts"],
       "@terramatch-microservices/common/*": ["libs/common/src/lib/*"],
       "@terramatch-microservices/database": ["libs/database/src/index.ts"],

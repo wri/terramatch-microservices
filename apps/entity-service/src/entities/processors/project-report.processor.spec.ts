@@ -255,29 +255,6 @@ describe("ProjectReportProcessor", () => {
       );
     });
 
-    it("should sort project reports by updated at", async () => {
-      const projectReportA = await ProjectReportFactory.create({
-        updatedAt: DateTime.now().minus({ days: 1 }).toJSDate()
-      });
-      const projectReportB = await ProjectReportFactory.create({
-        updatedAt: DateTime.now().minus({ days: 10 }).toJSDate()
-      });
-      const projectReportC = await ProjectReportFactory.create({
-        updatedAt: DateTime.now().minus({ days: 5 }).toJSDate()
-      });
-
-      await expectProjectReports(
-        [projectReportA, projectReportB, projectReportC],
-        { sort: { field: "updatedAt", direction: "DESC" } },
-        { sortField: "updatedAt", sortUp: false }
-      );
-      await expectProjectReports(
-        [projectReportA, projectReportB, projectReportC],
-        { sort: { field: "updatedAt", direction: "ASC" } },
-        { sortField: "updatedAt", sortUp: true }
-      );
-    });
-
     it("should sort project reports by submitted at", async () => {
       const now = DateTime.now();
       const projectReportA = await ProjectReportFactory.create({

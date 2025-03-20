@@ -29,7 +29,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("job-service/documentation/api", app, document);
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true, transformOptions: { enableImplicitConversion: true } }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true, exposeDefaultValues: true }
+    })
+  );
 
   const port = process.env.NODE_ENV === "production" ? 80 : process.env.JOB_SERVICE_PORT ?? 4020;
   await app.listen(port);

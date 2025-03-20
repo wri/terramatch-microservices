@@ -91,7 +91,7 @@ export class UserCreationService {
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE }
       });
 
-      const token = await this.jwtService.signAsync({ userId: user.uuid });
+      const token = crypto.randomBytes(32).toString("hex");
       await this.saveUserVerification(user.id, token);
       await this.sendEmailVerification(
         user,
@@ -120,11 +120,11 @@ export class UserCreationService {
     const emailData = {
       title: await this.localizationService.translate(title, locale),
       body: await this.localizationService.translate(body, locale),
-      link: `${callbackUrl}?token=${token}`,
+      link: `${callbackUrl}/${token}`,
       cta: await this.localizationService.translate(cta, locale),
       monitoring: "monitoring"
     };
-    return this.templateService.render("user-services/views/default-email.hbs", emailData);
+    return this.templateService.render("user-service/views/default-email.hbs", emailData);
   }
 
   private async sendEmailVerification(

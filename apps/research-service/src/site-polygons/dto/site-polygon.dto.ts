@@ -54,7 +54,8 @@ export class SitePolygonLightDto extends HybridSupportDto {
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
         indicators: indicators,
-        siteName: sitePolygon.site?.name
+        siteName: sitePolygon.site?.name,
+        lightResource: true
       });
     }
   }
@@ -115,7 +116,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
         geometry: sitePolygon.polygon?.polygon,
         establishmentTreeSpecies,
         reportingPeriods,
-        lightResource: false // This is a full resource
+        lightResource: false
       });
     }
   }

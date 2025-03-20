@@ -29,7 +29,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("unified-database-service/documentation/api", app, document);
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true, transformOptions: { enableImplicitConversion: true } }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true, exposeDefaultValues: true }
+    })
+  );
 
   const port = process.env.NODE_ENV === "production" ? 80 : process.env.UNIFIED_DATABASE_SERVICE_PORT ?? 4040;
   await app.listen(port);

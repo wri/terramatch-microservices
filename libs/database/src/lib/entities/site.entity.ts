@@ -223,7 +223,7 @@ export class Site extends Model<Site> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: Site.LARAVEL_TYPE, collection: "tree-planted" }
+    scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
 
@@ -235,14 +235,14 @@ export class Site extends Model<Site> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: Site.LARAVEL_TYPE, collection: "non-tree" }
+    scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "non-tree" }
   })
   nonTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
-    scope: { seedableType: Site.LARAVEL_TYPE }
+    scope: { seedable_type: Site.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
 

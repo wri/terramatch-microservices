@@ -116,14 +116,11 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    const token = "fake token";
-    jwtService.signAsync.mockReturnValue(Promise.resolve(token));
     emailService.sendEmail.mockReturnValue(Promise.resolve());
     templateService.render.mockReturnValue("rendered template");
 
     const result = await service.createNewUser(userNewRequest);
     expect(reloadSpy).toHaveBeenCalled();
-    expect(jwtService.signAsync).toHaveBeenCalled();
     expect(emailService.sendEmail).toHaveBeenCalled();
     expect(result).toBeDefined();
   });
@@ -264,32 +261,6 @@ describe("UserCreationService", () => {
     );
 
     await expect(service.createNewUser(userNewRequest)).rejects.toThrow(new NotFoundException("Role not found"));
-  });
-
-  it("should generate a error when generate token fails", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationBody = await getLocalizationBody();
-    const localizationSubject = await getLocalizationSubject();
-    const localizationTitle = await getLocalizationTitle();
-    const localizationCta = await getLocalizationCta();
-
-    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
-
-    localizationService.getLocalizationKeys.mockReturnValue(
-      Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
-    );
-
-    jwtService.signAsync.mockRejectedValue(null);
-    const result = await service.createNewUser(userNewRequest);
-
-    expect(result).toBeNull();
   });
 
   it("should generate a error when create user in DB", async () => {

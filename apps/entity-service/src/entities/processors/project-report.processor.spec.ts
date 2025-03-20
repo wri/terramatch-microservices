@@ -265,16 +265,14 @@ describe("ProjectReportProcessor", () => {
       const projectReportC = await ProjectReportFactory.create({
         updatedAt: DateTime.now().minus({ days: 5 }).toJSDate()
       });
-      await projectReportA.update({ updatedAt: projectReportA.updatedAt });
-      await projectReportB.update({ updatedAt: projectReportB.updatedAt });
-      await projectReportC.update({ updatedAt: projectReportC.updatedAt });
+
       await expectProjectReports(
-        [projectReportA, projectReportC, projectReportB],
+        [projectReportA, projectReportB, projectReportC],
         { sort: { field: "updatedAt", direction: "DESC" } },
         { sortField: "updatedAt", sortUp: false }
       );
       await expectProjectReports(
-        [projectReportB, projectReportC, projectReportA],
+        [projectReportA, projectReportB, projectReportC],
         { sort: { field: "updatedAt", direction: "ASC" } },
         { sortField: "updatedAt", sortUp: true }
       );

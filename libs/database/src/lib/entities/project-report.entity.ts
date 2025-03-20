@@ -120,6 +120,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  createdBy: number;
+
   @BelongsTo(() => Project)
   project: Project | null;
 

@@ -4,6 +4,7 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
+import { User } from "@sentry/nestjs";
 
 @JsonApiDto({ type: "projectReports" })
 export class ProjectReportLightDto extends EntityDto {
@@ -281,7 +282,10 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   readableCompletionStatus: string;
 
   @ApiProperty({ nullable: true })
-  createdBy: string | null;
+  createdBy: number | null;
+
+  @ApiProperty({ nullable: true })
+  createdByUser: User | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

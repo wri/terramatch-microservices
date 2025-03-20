@@ -377,7 +377,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
+    scope: { speciesable_type: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
   nurserySeedlings: TreeSpecies[] | null;
 }

@@ -33,7 +33,7 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };
-  protected pageTotalFindOptions: FindOptions<Attributes<T>> = {};
+  protected pageAfterId: number | undefined;
 
   constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize: number, include?: Includeable[]) {
     this.findOptions.limit = this.pageSize;
@@ -51,8 +51,9 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
     const instance = await this.MODEL.findOne({ where: { uuid: pageAfter } as WhereOptions, attributes: ["id"] });
     if (instance == null) throw new BadRequestException(`No ${this.MODEL.name} found for uuid: ${pageAfter}`);
 
-    // Avoid using this.where() so that we don't include this in the pageTotalFindOptions
-    this.findOptions.where = combineWheresWithAnd(this.findOptions.where ?? {}, { id: { [Op.gt]: instance.id } });
+    // This gets combined into only the `execute` query, and ignored for the `paginationTotal` query,
+    // so we don't combine it into find options now.
+    this.pageAfterId = instance.id;
     return this;
   }
 
@@ -62,19 +63,20 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   where(options: WhereOptions, filterable?: Filterable) {
-    if (filterable == null) {
-      this.pageTotalFindOptions.where = combineWheresWithAnd(this.pageTotalFindOptions.where ?? {}, options);
-      filterable = this.findOptions;
-    }
+    if (filterable == null) filterable = this.findOptions;
     filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);
     return this;
   }
 
   async execute() {
-    return await this.MODEL.findAll(this.findOptions);
+    const findOptions = { ...this.findOptions };
+    if (this.pageAfterId != null) {
+      findOptions.where = combineWheresWithAnd(findOptions.where ?? {}, { id: { [Op.gt]: this.pageAfterId } });
+    }
+    return await this.MODEL.findAll(findOptions);
   }
 
   async paginationTotal() {
-    return await this.MODEL.count(this.pageTotalFindOptions);
+    return await this.MODEL.count(this.findOptions);
   }
 }

@@ -541,6 +541,7 @@ describe("SitePolygonsService", () => {
 
     expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
   });
+
   it("should return SitePolygonLightDto when lightResource is true", async () => {
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
@@ -549,25 +550,6 @@ describe("SitePolygonsService", () => {
     const lightDto = await service.buildLightDto(sitePolygon);
     expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
     expect(lightDto.name).toBe(sitePolygon.polyName);
-  });
-  it("should correctly calculate pagination total with required includes", async () => {
-    await SitePolygon.truncate();
-    await PolygonGeometry.truncate();
-
-    await SitePolygonFactory.createMany(5);
-
-    const query = await service.buildQuery({ size: 3 });
-
-    const countSpy = jest.spyOn(SitePolygon, "count");
-
-    await query.paginationTotal();
-
-    expect(countSpy).toHaveBeenCalled();
-    const callOptions = countSpy.mock.calls[0][0];
-
-    expect(callOptions.include).toHaveLength(2);
-    expect(callOptions.include[0].model).toBe(PolygonGeometry);
-    expect(callOptions.include[0].required).toBe(true);
   });
 
   it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {

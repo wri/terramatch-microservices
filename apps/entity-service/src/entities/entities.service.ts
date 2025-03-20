@@ -13,6 +13,7 @@ import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
+import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
@@ -24,6 +25,7 @@ import { DemographicDto } from "./dto/demographic.dto";
 const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
   sites: SiteProcessor,
+  nurseries: NurseryProcessor,
   projectReports: ProjectReportProcessor
 };
 

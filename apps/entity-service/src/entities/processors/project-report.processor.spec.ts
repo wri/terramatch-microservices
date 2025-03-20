@@ -265,6 +265,9 @@ describe("ProjectReportProcessor", () => {
       const projectReportC = await ProjectReportFactory.create({
         updatedAt: DateTime.now().minus({ days: 5 }).toJSDate()
       });
+      await projectReportA.update({ updatedAt: projectReportA.updatedAt });
+      await projectReportB.update({ updatedAt: projectReportB.updatedAt });
+      await projectReportC.update({ updatedAt: projectReportC.updatedAt });
       await expectProjectReports(
         [projectReportA, projectReportC, projectReportB],
         { sort: { field: "updatedAt", direction: "DESC" } },

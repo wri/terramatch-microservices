@@ -38,6 +38,10 @@ export class ProjectReportProcessor extends EntityProcessor<
         {
           association: "user",
           attributes: ["uuid", "firstName", "lastName"]
+        },
+        {
+          association: "task",
+          attributes: ["uuid"]
         }
       ]
     });

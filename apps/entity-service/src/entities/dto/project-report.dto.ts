@@ -51,8 +51,11 @@ export class ProjectReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true })
   submittedAt: Date | null;
 
-  @ApiProperty({ nullable: true })
-  taskId: number | null;
+  @ApiProperty({
+    nullable: true,
+    description: "The associated task uuid"
+  })
+  taskUuid: string | null;
 
   @ApiProperty({ nullable: true })
   title: string | null;

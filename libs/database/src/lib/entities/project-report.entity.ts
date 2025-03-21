@@ -22,6 +22,7 @@ import { Framework } from "./framework.entity";
 import { SiteReport } from "./site-report.entity";
 import { Literal } from "sequelize/types/utils";
 import { User } from "./user.entity";
+import { Task } from "./task.entity";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -130,6 +131,9 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => User)
   user: User | null;
 
+  @BelongsTo(() => Task)
+  task: Task | null;
+
   get projectName() {
     return this.project?.name;
   }
@@ -146,11 +150,15 @@ export class ProjectReport extends Model<ProjectReport> {
     return this.project?.organisation?.uuid;
   }
 
+  get taskUuid() {
+    return this.task?.uuid;
+  }
+
   @AllowNull
   @Column(STRING)
   title: string | null;
 
-  // TODO foreign key for task
+  @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;

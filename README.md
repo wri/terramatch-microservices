@@ -45,6 +45,13 @@ To run the REPL in an AWS Env:
 - Run it: `npx tm-v3-cli remote-repl entity-service staging`
   - This will run the Entity Service REPL in the staging env. Pass a `-v` flag (`npx tm-v3-cli -v ...`) for debug output.
 
+As you will note on the NestJS documentation above, the REPL gives you access to all services exposed by your AppModule.
+In addition, the CommonModule (which all services use) exposes a `REPL` service to make getting at some things a bit easier.
+As of this writing, it exposes two things:
+
+- All of lodash accessible through `$(REPL)._`
+- All database models quickly accessible through the models getter like so: `$(REPL).models.User`;
+
 # Deployment
 
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The

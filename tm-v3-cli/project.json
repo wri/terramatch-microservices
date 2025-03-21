@@ -17,6 +17,10 @@
         "main": "tm-v3-cli/src/index.ts",
         "assets": ["tm-v3-cli/*.md"]
       }
+    },
+    "executable": {
+      "command": "chmod +x dist/tm-v3-cli/src/tm-v3-cli.js",
+      "dependsOn": ["build"]
     }
   }
 }

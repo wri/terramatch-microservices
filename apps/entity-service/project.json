@@ -16,6 +16,10 @@
         "main": "apps/entity-service/src/repl.ts"
       }
     },
+    "repl": {
+      "dependsOn": ["build-repl"],
+      "command": "node dist/apps/entity-service-repl"
+    },
     "serve": {
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
@@ -30,9 +34,6 @@
         },
         "production": {
           "buildTarget": "entity-service:build:production"
-        },
-        "repl": {
-          "buildTarget": "entity-service:build-repl"
         }
       }
     }

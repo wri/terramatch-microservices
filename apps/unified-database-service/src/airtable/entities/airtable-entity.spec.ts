@@ -611,8 +611,6 @@ describe("AirtableEntity", () => {
       await TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: ppcReport.id, hidden: true });
       await TaskFactory.create();
 
-      // TODO this might start causing problems when Task is implemented in this codebase and we have a factory
-      // that's generating real records
       const terrafundReport = await ProjectReportFactory.create({
         projectId: faker.helpers.arrayElement(projectIds),
         frameworkKey: "terrafund",

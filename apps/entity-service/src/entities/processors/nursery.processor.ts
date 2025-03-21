@@ -55,8 +55,24 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 
-    for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
-      if (query[term] != null) builder.where({ [term]: query[term] });
+    const associationFieldMap = {
+      organisationUuid: "$project.organisation.uuid$",
+      country: "$project.country$",
+      projectUuid: "$project.uuid$"
+    };
+
+    for (const term of [
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "organisationUuid",
+      "country",
+      "projectUuid"
+    ]) {
+      if (query[term] != null) {
+        const field = associationFieldMap[term] ?? term;
+        builder.where({ [field]: query[term] });
+      }
     }
 
     if (query.search != null) {

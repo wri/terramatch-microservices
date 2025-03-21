@@ -26,7 +26,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } }),
-  approved: { where: { status: { [Op.in]: NurseryReport.APPROVED_STATUSES } } }
+  approved: { where: { status: { [Op.in]: NurseryReport.APPROVED_STATUSES } } },
+  task: (taskId: number) => ({ where: { taskId: taskId } })
 }))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
@@ -48,6 +49,10 @@ export class NurseryReport extends Model<NurseryReport> {
 
   static nurseries(ids: number[] | Literal) {
     return chainScope(this, "nurseries", ids) as typeof NurseryReport;
+  }
+
+  static task(taskId: number) {
+    return chainScope(this, "task", taskId) as typeof NurseryReport;
   }
 
   static approvedIdsSubquery(nurseryIds: number[] | Literal) {

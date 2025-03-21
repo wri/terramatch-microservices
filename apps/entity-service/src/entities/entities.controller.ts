@@ -19,6 +19,7 @@ import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
+import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
@@ -36,7 +37,8 @@ export class EntitiesController {
   @JsonApiResponse([
     { data: ProjectLightDto, pagination: "number" },
     { data: SiteLightDto, pagination: "number" },
-    { data: NurseryLightDto, pagination: "number" }
+    { data: NurseryLightDto, pagination: "number" },
+    { data: ProjectReportLightDto, pagination: "number" }
   ])
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async entityIndex<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
@@ -67,7 +69,7 @@ export class EntitiesController {
     operationId: "entityGet",
     summary: "Get a single full entity resource by UUID"
   })
-  @JsonApiResponse([ProjectFullDto, SiteFullDto, NurseryFullDto])
+  @JsonApiResponse([ProjectFullDto, SiteFullDto, NurseryFullDto, ProjectReportFullDto])
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })

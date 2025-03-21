@@ -29,6 +29,7 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
+  TaskFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
@@ -589,6 +590,7 @@ describe("AirtableEntity", () => {
       await ProjectReport.truncate();
 
       const projects = await ProjectFactory.createMany(2);
+      const tasks = await TaskFactory.createMany(2);
       projectUuids = projects.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
       const projectIds = projects.reduce((ids, { id }) => [...ids, id], [] as number[]);
       const allReports = [];
@@ -607,13 +609,14 @@ describe("AirtableEntity", () => {
       ).reduce((total, { amount }) => total + amount, 0);
       // make sure hidden is ignored
       await TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: ppcReport.id, hidden: true });
+      await TaskFactory.create();
 
       // TODO this might start causing problems when Task is implemented in this codebase and we have a factory
       // that's generating real records
       const terrafundReport = await ProjectReportFactory.create({
         projectId: faker.helpers.arrayElement(projectIds),
         frameworkKey: "terrafund",
-        taskId: 123
+        taskId: tasks[0].id
       });
       allReports.push(terrafundReport);
       const terrafundSeedlings = (

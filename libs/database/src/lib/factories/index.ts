@@ -26,3 +26,4 @@ export * from "./site-report.factory";
 export * from "./tree-species.factory";
 export * from "./tree-species-research.factory";
 export * from "./user.factory";
+export * from "./task.factory";

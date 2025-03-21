@@ -96,8 +96,8 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should return project reports filtered by the update request status or project", async () => {
-      const p1 = await ProjectFactory.create();
-      const p2 = await ProjectFactory.create();
+      const p1 = await ProjectFactory.create({ country: "MX" });
+      const p2 = await ProjectFactory.create({ country: "CA" });
       await ProjectUserFactory.create({ userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId, projectId: p2.id });
 
@@ -105,30 +105,36 @@ describe("ProjectReportProcessor", () => {
         title: "first project report",
         status: "approved",
         updateRequestStatus: "awaiting-approval",
+        frameworkKey: "ppc",
         projectId: p1.id
       });
       const second = await ProjectReportFactory.create({
         title: "second project report",
         status: "started",
         updateRequestStatus: "awaiting-approval",
+        frameworkKey: "ppc",
         projectId: p1.id
       });
       const third = await ProjectReportFactory.create({
         title: "third project report",
         status: "approved",
         updateRequestStatus: "awaiting-approval",
+        frameworkKey: "ppc",
         projectId: p1.id
       });
       const fourth = await ProjectReportFactory.create({
         title: "fourth project report",
         status: "approved",
         updateRequestStatus: "approved",
+        frameworkKey: "terrafund",
         projectId: p2.id
       });
 
       await expectProjectReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
 
       await expectProjectReports([fourth], { projectUuid: p2.uuid });
+
+      await expectProjectReports([first, second, third], { country: "MX" });
     });
 
     it("should throw an error if the project uuid is not found", async () => {

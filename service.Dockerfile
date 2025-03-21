@@ -16,8 +16,9 @@ ARG SENTRY_DSN
 ARG DEPLOY_ENV
 WORKDIR /app
 COPY --from=builder /app/builder ./
+ENV SERVICE=${SERVICE}
 ENV NODE_ENV=${NODE_ENV}
 ENV SENTRY_DSN=${SENTRY_DSN}
 ENV DEPLOY_ENV=${DEPLOY_ENV}
 
-CMD ["node", "./dist/apps/${SERVICE}/main.js"]
+CMD ["sh", "-c", "node ./dist/apps/$SERVICE/main.js"]

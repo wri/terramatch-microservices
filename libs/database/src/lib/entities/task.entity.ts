@@ -1,4 +1,4 @@
-import { AllowNull, AutoIncrement, Column, HasOne, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AutoIncrement, Column, HasOne, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, UUID } from "sequelize";
 import { ProjectReport } from "./project-report.entity";
 

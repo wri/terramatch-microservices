@@ -55,6 +55,7 @@ describe("ProjectReportProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
+
     it("should returns project reports", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
@@ -314,6 +315,7 @@ describe("ProjectReportProcessor", () => {
         lightResource: true
       });
     });
+
     it("should include calculated fields in ProjectReportFullDto", async () => {
       const project = await ProjectFactory.create();
 

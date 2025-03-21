@@ -93,7 +93,7 @@ export class ProjectReportProcessor extends EntityProcessor<
       "projectUuid"
     ]) {
       if (query[term] != null) {
-        const field = associationFieldMap[term] || term;
+        const field = associationFieldMap[term] ?? term;
         builder.where({ [field]: query[term] });
       }
     }
@@ -122,22 +122,22 @@ export class ProjectReportProcessor extends EntityProcessor<
     const projectReportId = projectReport.id;
     const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
-    const siteReportsIdsTaks = ProjectReport.siteReportIdsTaksSubquery([taskId]);
-    const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTaks).sum("amount")) ?? 0;
+    const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
+    const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const treesPlantedCount =
-      (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTaks).sum("amount")) ?? 0;
+      (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const approvedSiteReportsFromTask = await SiteReport.approved()
-      .reportsTask(taskId)
+      .task(taskId)
       .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
     const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
-    const siteReportsCount = await SiteReport.reportsTask(taskId).count();
-    const nurseryReportsCount = await NurseryReport.reportsTask(taskId).count();
-    const migrated = !!projectReport.oldModel;
+    const siteReportsCount = await SiteReport.task(taskId).count();
+    const nurseryReportsCount = await NurseryReport.task(taskId).count();
+    const migrated = projectReport.oldModel != null;
     const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
     const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
     const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
     const readableCompletionStatus = await this.getReadableCompletionStatus(projectReport.completion);
-    const createdByUser = projectReport.user ? projectReport.user : null;
+    const createdByUser = projectReport.user ?? null;
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
       seedsPlantedCount,
@@ -163,17 +163,17 @@ export class ProjectReportProcessor extends EntityProcessor<
   }
 
   protected async getReportTitle(projectReport: ProjectReport) {
-    if (projectReport.frameworkKey == "ppc" || !projectReport.dueAt) {
+    if (projectReport.frameworkKey == "ppc" || projectReport.dueAt == null) {
       return projectReport.title ?? "";
     } else {
       const dueAt = new Date(projectReport.dueAt);
       dueAt.setMonth(dueAt.getMonth() - 1);
-      const wEnd = dueAt.toLocaleString("en-US", { month: "long", year: "numeric" });
+      const wEnd = dueAt.toLocaleString(projectReport.user?.locale ?? "en-GB", { month: "long", year: "numeric" });
 
       dueAt.setMonth(dueAt.getMonth() - 5);
-      const wStart = dueAt.toLocaleString("en-US", { month: "long" });
+      const wStart = dueAt.toLocaleString(projectReport.user?.locale ?? "en-GB", { month: "long" });
 
-      return `Project Report  for ${wStart} - ${wEnd}`;
+      return `Project Report for ${wStart} - ${wEnd}`;
     }
   }
 
@@ -183,7 +183,7 @@ export class ProjectReportProcessor extends EntityProcessor<
     }
 
     if (projectReport.frameworkKey == "terrafund") {
-      return NurseryReport.reportsTask(projectReport.taskId).sum("seedlingsYoungTrees");
+      return NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees");
     }
 
     return 0;

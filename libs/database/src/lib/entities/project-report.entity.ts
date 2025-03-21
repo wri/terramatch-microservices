@@ -75,7 +75,7 @@ export class ProjectReport extends Model<ProjectReport> {
     return builder.literal;
   }
 
-  static siteReportIdsTaksSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
+  static siteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
     const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);

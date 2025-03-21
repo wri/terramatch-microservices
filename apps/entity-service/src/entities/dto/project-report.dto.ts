@@ -73,10 +73,10 @@ export class ProjectReportLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-// export type AdditionalProjectReportLightProps = Pick<ProjectReportLightDto, "treesPlantedCount">;
-export type AdditionalProjectReportFullProps =
-  /*AdditionalProjectReportLightProps &*/
-  AdditionalProps<ProjectReportFullDto, ProjectReportLightDto & Omit<ProjectReport, "project">>;
+export type AdditionalProjectReportFullProps = AdditionalProps<
+  ProjectReportFullDto,
+  ProjectReportLightDto & Omit<ProjectReport, "project">
+>;
 export type ProjectReportMedia = Pick<ProjectReportFullDto, keyof typeof ProjectReport.MEDIA>;
 
 export class ProjectReportFullDto extends ProjectReportLightDto {

@@ -32,7 +32,7 @@ type ApprovedIdsSubqueryOptions = {
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
-  reportsTask: (taskId: number) => ({ where: { taskId: taskId } })
+  task: (taskId: number) => ({ where: { taskId: taskId } })
 }))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
@@ -58,8 +58,8 @@ export class SiteReport extends Model<SiteReport> {
     return chainScope(this, "dueBefore", date) as typeof SiteReport;
   }
 
-  static reportsTask(taskId: number) {
-    return chainScope(this, "reportsTask", taskId) as typeof SiteReport;
+  static task(taskId: number) {
+    return chainScope(this, "task", taskId) as typeof SiteReport;
   }
 
   static approvedIdsSubquery(siteIds: number[] | Literal, opts: ApprovedIdsSubqueryOptions = {}) {

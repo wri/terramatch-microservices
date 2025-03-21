@@ -38,3 +38,4 @@ export * from "./tree-species.entity";
 export * from "./tree-species-research.entity";
 export * from "./user.entity";
 export * from "./verification.entity";
+export * from "./task.entity";

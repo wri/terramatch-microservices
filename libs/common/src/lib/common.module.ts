@@ -10,6 +10,8 @@ import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
 import { TemplateService } from "./email/template.service";
 import { SlackService } from "./slack/slack.service";
+import { REPL } from "./repl/repl.service";
+import { DatabaseModule } from "@terramatch-microservices/database";
 
 @Module({
   imports: [
@@ -23,7 +25,8 @@ import { SlackService } from "./slack/slack.service";
     }),
     ConfigModule.forRoot({
       isGlobal: true
-    })
+    }),
+    DatabaseModule
   ],
   providers: [
     PolicyService,
@@ -32,8 +35,18 @@ import { SlackService } from "./slack/slack.service";
     LocalizationService,
     MediaService,
     TemplateService,
-    SlackService
+    SlackService,
+    REPL
   ],
-  exports: [PolicyService, JwtModule, EmailService, LocalizationService, MediaService, TemplateService, SlackService]
+  exports: [
+    PolicyService,
+    JwtModule,
+    EmailService,
+    LocalizationService,
+    MediaService,
+    TemplateService,
+    SlackService,
+    REPL
+  ]
 })
 export class CommonModule {}

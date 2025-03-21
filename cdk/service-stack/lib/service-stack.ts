@@ -84,6 +84,7 @@ export class ServiceStack extends Stack {
         cluster,
         cpu: 512,
         desiredCount: 1,
+        enableExecuteCommand: true,
         taskImageOptions: {
           image,
           family: `terramatch-${service}-${env}`,

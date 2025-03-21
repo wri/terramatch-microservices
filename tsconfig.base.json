@@ -18,7 +18,8 @@
       "@terramatch-microservices/common": ["libs/common/src/index.ts"],
       "@terramatch-microservices/common/*": ["libs/common/src/lib/*"],
       "@terramatch-microservices/database": ["libs/database/src/index.ts"],
-      "@terramatch-microservices/database/*": ["libs/database/src/lib/*"]
+      "@terramatch-microservices/database/*": ["libs/database/src/lib/*"],
+      "@terramatch-microservices/tm-v3-cli": ["tm-v3-cli/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

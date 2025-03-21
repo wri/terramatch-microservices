@@ -5,6 +5,21 @@
   "projectType": "application",
   "tags": [],
   "targets": {
+    "build-repl": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "webpackConfig": "apps/research-service/repl.webpack.config.js",
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/research-service",
+        "main": "apps/research-service/src/repl.ts"
+      }
+    },
+    "repl": {
+      "dependsOn": ["build-repl"],
+      "command": "node dist/apps/research-service-repl"
+    },
     "serve": {
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",

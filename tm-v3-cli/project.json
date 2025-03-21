@@ -1,0 +1,26 @@
+{
+  "name": "tm-v3-cli",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tm-v3-cli/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "updateBuildableProjectDepsInPackageJson": true,
+      "buildableProjectDepsInPackageJsonType": "dependencies",
+      "options": {
+        "outputPath": "dist/tm-v3-cli",
+        "tsConfig": "tm-v3-cli/tsconfig.lib.json",
+        "packageJson": "tm-v3-cli/package.json",
+        "main": "tm-v3-cli/src/index.ts",
+        "assets": ["tm-v3-cli/*.md"]
+      }
+    },
+    "executable": {
+      "command": "chmod +x dist/tm-v3-cli/src/tm-v3-cli.js",
+      "dependsOn": ["build"]
+    }
+  }
+}

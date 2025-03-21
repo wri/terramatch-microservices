@@ -4,11 +4,9 @@ ARG SERVICE
 ARG BUILD_FLAG
 WORKDIR /app/builder
 COPY . .
-RUN npx nx run ${SERVICE}:build-repl ${BUILD_FLAG} && \
-    npx nx run ${SERVICE}:build ${BUILD_FLAG} && \
+RUN npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
     ls dist/apps && \
-    ls dist/apps/entity-service && \
-    ls dist/apps/entity-service-repl
+    ls dist/apps/${SERVICE}*
 
 FROM terramatch-microservices-base:nx-base
 

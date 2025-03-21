@@ -27,6 +27,24 @@ Repository for the Microservices API backend of the TerraMatch service
   - New `NEXT_PUBLIC_<SERVICE>_URL` values are needed for each service you're running locally. This will typically match
     the services defined in `V3_NAMESPACES` in `src/generated/v3/utils.ts`.
 
+# REPL (local and in the cloud)
+
+We utilize the [Nest JS REPL](https://docs.nestjs.com/recipes/repl) to be able to access the code running in a given AWS
+environment, and use the same tools for local development.
+
+To run the REPL locally (use any service name):
+
+- `nx repl entity-service`
+
+To run the REPL in an AWS Env:
+
+- Make sure you're logged in to your WRI AWS account
+- Make sure you have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) extension installed
+- Build and make executable the TM v3 CLI: `nx executable tm-v3-cli`
+- If you haven't done it before, link it: `cd dist/tm-v3-cli; npm link`
+- Run it: `npx tm-v3-cli remote-repl entity-service staging`
+  - This will run the Entity Service REPL in the staging env. Pass a `-v` flag (`npx tm-v3-cli -v ...`) for debug output.
+
 # Deployment
 
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The
@@ -48,12 +66,15 @@ and main branches.
   import "../../../instrument-sentry";
   ```
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
+- Set up REPL access:
+  - Copy `repl.ts` from an existing service
+  - Add the `build-repl` and `repl` targets to `project.json`, copying and modifying (update service name) from an existing service.
+  - Copy and modify (update service name) `repl.webpack.config.js` from an existing service
 - In your `.env` and `.env.local.sample`, add `_PORT` for the new service
 - In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
 - In your local web repo, follow directions in `README.md` for setting up a new service.
   - This step can be skipped for services that will not be used by the FE website.
 - For deployment to AWS:
-  - Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
   - Add the new service name to the "service" workflow input options in `deploy-service.yml`
   - Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
     - Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.

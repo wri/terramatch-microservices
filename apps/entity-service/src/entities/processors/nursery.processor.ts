@@ -70,7 +70,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       "projectUuid"
     ]) {
       if (query[term] != null) {
-        const field = associationFieldMap[term] || term;
+        const field = associationFieldMap[term] ?? term;
         builder.where({ [field]: query[term] });
       }
     }

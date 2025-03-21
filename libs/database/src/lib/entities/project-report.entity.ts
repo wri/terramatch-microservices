@@ -386,6 +386,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   paidOtherActivityDescription: string | null;
 
+  @AllowNull
+  @Column(TEXT("long"))
+  answers: string | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

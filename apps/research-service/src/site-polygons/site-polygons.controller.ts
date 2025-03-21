@@ -56,8 +56,10 @@ export class SitePolygonsController {
     await this.policyService.authorize("readAll", SitePolygon);
 
     const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, lightResource } = query;
-
-    const countSelectedParams = [siteId, projectId, includeTestProjects].filter(param => param != null).length;
+    let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
+    if (includeTestProjects) {
+      countSelectedParams++;
+    }
 
     if (lightResource && !isNumberPage(query.page)) {
       throw new BadRequestException("Light resources must use number pagination.");

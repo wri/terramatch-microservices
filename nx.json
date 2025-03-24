@@ -54,6 +54,15 @@
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
+    },
+    "build-repl": {
+      "cache": true,
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "webpackConfig": "repl/webpack.config.js",
+        "outputPath": "{workspaceRoot}/dist/{projectRoot}-repl"
+      }
     }
   }
 }

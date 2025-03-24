@@ -61,7 +61,7 @@ export class NurseryReportProcessor extends EntityProcessor<
 
     const builder = await this.entitiesService.buildQuery(NurseryReport, query, [nurseryAssociation]);
     if (query.sort != null) {
-      if (["dueAt", "submittedAt", "updatedAt"].includes(query.sort.field)) {
+      if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["nursery", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
@@ -150,7 +150,8 @@ export class NurseryReportProcessor extends EntityProcessor<
   }
 
   async addLightDto(document: DocumentBuilder, nurseryReport: NurseryReport): Promise<void> {
-    document.addData(nurseryReport.uuid, new NurseryReportLightDto(nurseryReport));
+    const reportTitle = await this.getReportTitle(nurseryReport);
+    document.addData(nurseryReport.uuid, new NurseryReportLightDto(nurseryReport, { reportTitle }));
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string | null) {

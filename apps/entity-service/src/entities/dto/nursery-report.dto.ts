@@ -8,7 +8,7 @@ import { User } from "@sentry/nestjs";
 
 @JsonApiDto({ type: "nurseryReports" })
 export class NurseryReportLightDto extends EntityDto {
-  constructor(nurseryReport?: NurseryReport) {
+  constructor(nurseryReport?: NurseryReport, props?: AdditionalNurseryReportLightProps) {
     super();
     if (nurseryReport != null) {
       this.populate(NurseryReportLightDto, {
@@ -16,7 +16,8 @@ export class NurseryReportLightDto extends EntityDto {
         lightResource: true,
         // these two are untyped and marked optional in the base model.
         createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.createdAt as Date
+        updatedAt: nurseryReport.createdAt as Date,
+        ...props
       });
     }
   }
@@ -84,27 +85,31 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true })
   title: string | null;
 
+  @ApiProperty({ nullable: true })
+  reportTitle: string | null;
+
   @ApiProperty()
   createdAt: Date;
 }
 
-export type AdditionalNurseryReportFullProps = AdditionalProps<
-  NurseryReportFullDto,
-  NurseryReportLightDto & Omit<NurseryReport, "nursery">
->;
+export type AdditionalNurseryReportLightProps = Pick<NurseryReportLightDto, "reportTitle">;
+export type AdditionalNurseryReportFullProps = AdditionalNurseryReportLightProps &
+  AdditionalProps<NurseryReportFullDto, NurseryReportLightDto & Omit<NurseryReport, "nursery">>;
 export type NurseryReportMedia = Pick<NurseryReportFullDto, keyof typeof NurseryReport.MEDIA>;
 
 export class NurseryReportFullDto extends NurseryReportLightDto {
   constructor(nurseryReport: NurseryReport, props?: AdditionalNurseryReportFullProps) {
     super();
-    this.populate(NurseryReportFullDto, {
-      ...pickApiProperties(nurseryReport, NurseryReportFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: nurseryReport.createdAt as Date,
-      updatedAt: nurseryReport.createdAt as Date,
-      ...props
-    });
+    if (nurseryReport != null) {
+      this.populate(NurseryReportFullDto, {
+        ...pickApiProperties(nurseryReport, NurseryReportFullDto),
+        lightResource: false,
+        // these two are untyped and marked optional in the base model.
+        createdAt: nurseryReport.createdAt as Date,
+        updatedAt: nurseryReport.createdAt as Date,
+        ...props
+      });
+    }
   }
 
   @ApiProperty({ nullable: true })

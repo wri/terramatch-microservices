@@ -11,6 +11,7 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
+  SiteReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -287,6 +288,48 @@ describe("NurseryReportProcessor", () => {
         [nurseryReportA],
         { sort: { field: "updatedAt", direction: "DESC" } },
         { sortField: "updatedAt", sortUp: false }
+      );
+    });
+
+    it("should sort nursery reports by update request status", async () => {
+      const nurseryReportA = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const nurseryReportB = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const nurseryReportC = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      await expectNurseryReports(
+        [nurseryReportA, nurseryReportB, nurseryReportC],
+        { sort: { field: "updateRequestStatus" } },
+        { sortField: "updateRequestStatus" }
+      );
+      await expectNurseryReports(
+        [nurseryReportA, nurseryReportB, nurseryReportC],
+        { sort: { field: "updateRequestStatus", direction: "ASC" } },
+        { sortField: "updateRequestStatus" }
+      );
+      await expectNurseryReports(
+        [nurseryReportC, nurseryReportB, nurseryReportA],
+        { sort: { field: "updateRequestStatus", direction: "DESC" } },
+        { sortField: "updateRequestStatus", sortUp: false }
+      );
+    });
+
+    it("should sort nursery reports by status", async () => {
+      const nurseryReportA = await NurseryReportFactory.create({ status: "started" });
+      const nurseryReportB = await NurseryReportFactory.create({ status: "approved" });
+      const nurseryReportC = await NurseryReportFactory.create({ status: "approved" });
+      await expectNurseryReports(
+        [nurseryReportA, nurseryReportB, nurseryReportC],
+        { sort: { field: "status" } },
+        { sortField: "status" }
+      );
+      await expectNurseryReports(
+        [nurseryReportA, nurseryReportB, nurseryReportC],
+        { sort: { field: "status", direction: "ASC" } },
+        { sortField: "status" }
+      );
+      await expectNurseryReports(
+        [nurseryReportC, nurseryReportB, nurseryReportA],
+        { sort: { field: "status", direction: "DESC" } },
+        { sortField: "status", sortUp: false }
       );
     });
 

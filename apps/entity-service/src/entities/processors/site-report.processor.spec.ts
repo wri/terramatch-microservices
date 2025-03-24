@@ -1,4 +1,4 @@
-import { NurseryReport, SiteReport } from "@terramatch-microservices/database/entities";
+import { SiteReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock } from "@golevelup/ts-jest";
@@ -6,8 +6,6 @@ import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
-  NurseryFactory,
-  NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
@@ -263,7 +261,7 @@ describe("SiteReportProcessor", () => {
       );
     });
 
-    it("should sort nursery reports by due date", async () => {
+    it("should sort site reports by due date", async () => {
       const siteReportA = await SiteReportFactory.create({ dueAt: DateTime.now().minus({ days: 1 }).toJSDate() });
       const siteReportB = await SiteReportFactory.create({
         dueAt: DateTime.now().minus({ days: 10 }).toJSDate()
@@ -281,7 +279,7 @@ describe("SiteReportProcessor", () => {
       );
     });
 
-    it("should sort nursery reports by submitted at", async () => {
+    it("should sort site reports by submitted at", async () => {
       const now = DateTime.now();
       const siteReportA = await SiteReportFactory.create({
         submittedAt: now.minus({ minutes: 1 }).toJSDate()

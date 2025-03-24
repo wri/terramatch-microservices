@@ -102,14 +102,15 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([nurseryReport1, nurseryReport2], { search: "foo" });
     });
 
-    it("should return nursery reports filtered by the update request status or project", async () => {
+    it("should return nursery reports filtered by the update request status, nursery, country and project", async () => {
       const p1 = await ProjectFactory.create({ country: "MX" });
       const p2 = await ProjectFactory.create({ country: "CA" });
       await ProjectUserFactory.create({ userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId, projectId: p2.id });
       const n1 = await NurseryFactory.create({ projectId: p1.id });
       const n2 = await NurseryFactory.create({ projectId: p2.id });
-
+      n1.project = await n1.$get("project");
+      n2.project = await n2.$get("project");
       const first = await NurseryReportFactory.create({
         title: "first nursery report",
         status: "approved",
@@ -139,15 +140,22 @@ describe("NurseryReportProcessor", () => {
         nurseryId: n2.id
       });
 
+      first.nursery = await first.$get("nursery");
+      second.nursery = await second.$get("nursery");
+      third.nursery = await third.$get("nursery");
+      fourth.nursery = await fourth.$get("nursery");
+
       await expectNurseryReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
 
       await expectNurseryReports([fourth], { projectUuid: p2.uuid });
 
       await expectNurseryReports([first, second, third], { country: "MX" });
+
+      await expectNurseryReports([first, second, third], { nurseryUuid: n1.uuid });
     });
 
-    it("should throw an error if the project uuid is not found", async () => {
-      await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
+    it("should throw an error if the nursery uuid is not found", async () => {
+      await expect(processor.findMany({ nurseryUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
     it("should sort nursery reports by update request status", async () => {

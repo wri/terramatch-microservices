@@ -1,7 +1,7 @@
 import {
   Media,
+  Nursery,
   NurseryReport,
-  Project,
   ProjectReport,
   ProjectUser,
   User
@@ -124,12 +124,12 @@ export class NurseryReportProcessor extends EntityProcessor<
       });
     }
 
-    if (query.projectUuid != null) {
-      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
-      if (project == null) {
-        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
+    if (query.nurseryUuid != null) {
+      const nursery = await Nursery.findOne({ where: { uuid: query.nurseryUuid }, attributes: ["id"] });
+      if (nursery == null) {
+        throw new BadRequestException(`Nursery with uuid ${query.nurseryUuid} not found`);
       }
-      builder.where({ "$nursery.project.id$": project.id });
+      builder.where({ nurseryId: nursery.id });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

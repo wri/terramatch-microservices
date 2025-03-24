@@ -63,18 +63,12 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
     if (query.sort != null) {
-      if (
-        ["status", "updateRequestStatus", "dueAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
-          query.sort.field
-        )
-      ) {
+      if (["dueAt", "submittedAt", "updatedAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["site", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
         builder.order(["site", "project", "name", query.sort.direction ?? "ASC"]);
-      } else if (query.sort.field === "siteName") {
-        builder.order(["site", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

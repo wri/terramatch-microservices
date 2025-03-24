@@ -117,10 +117,10 @@ describe("NurseryReportProcessor", () => {
       await ProjectUserFactory.create({ userId, projectId: p2.id });
       const n1 = await NurseryFactory.create({ projectId: p1.id });
       const n2 = await NurseryFactory.create({ projectId: p2.id });
-      n1.project = await n1.$get("project");
-      n2.project = await n2.$get("project");
-      n1.project.organisation = await n1.project.$get("organisation");
-      n2.project.organisation = await n2.project.$get("organisation");
+      // n1.project = await n1.$get("project");
+      // n2.project = await n2.$get("project");
+      // n1.project.organisation = await n1.project.$get("organisation");
+      // n2.project.organisation = await n2.project.$get("organisation");
       const first = await NurseryReportFactory.create({
         title: "first nursery report",
         status: "approved",

@@ -46,11 +46,7 @@ export class NurseryReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(
-    query: EntityQueryDto,
-    userId?: number,
-    permissions?: string[]
-  ): Promise<PaginatedResult<NurseryReport>> {
+  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]) {
     const nurseryAssociation: Includeable = {
       association: "nursery",
       attributes: ["id", "uuid", "name"],
@@ -72,11 +68,11 @@ export class NurseryReportProcessor extends EntityProcessor<
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["$nursery", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["nursery", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["$nursery", "project", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["nursery", "project", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "nurseryName") {
-        builder.order(["$nursery", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["nursery", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

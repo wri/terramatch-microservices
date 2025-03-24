@@ -147,6 +147,8 @@ describe("NurseryReportProcessor", () => {
 
       await expectNurseryReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
 
+      await expectNurseryReports([first, third, fourth], { status: "approved" });
+
       await expectNurseryReports([fourth], { projectUuid: p2.uuid });
 
       await expectNurseryReports([first, second, third], { country: "MX" });
@@ -201,7 +203,7 @@ describe("NurseryReportProcessor", () => {
       );
     });
 
-    it("should sort project reports by organisation name", async () => {
+    it("should sort nursery reports by organisation name", async () => {
       const org1 = await OrganisationFactory.create({ name: "A Org" });
       const org2 = await OrganisationFactory.create({ name: "B Org" });
       const org3 = await OrganisationFactory.create({ name: "C Org" });
@@ -246,7 +248,7 @@ describe("NurseryReportProcessor", () => {
       );
     });
 
-    it("should sort project reports by status", async () => {
+    it("should sort nursery reports by status", async () => {
       const nurseryReportA = await NurseryReportFactory.create({ status: "started" });
       const nurseryReportB = await NurseryReportFactory.create({ status: "approved" });
       const nurseryReportC = await NurseryReportFactory.create({ status: "approved" });

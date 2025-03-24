@@ -24,7 +24,6 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
       enumerable: true
     });
   }
-  replServer.context["db"] = replServer.context["get"](Sequelize).models;
 
   const cacheDirectory = join("node_modules", ".cache");
   if (!existsSync(cacheDirectory)) mkdirSync(cacheDirectory);

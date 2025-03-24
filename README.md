@@ -71,7 +71,7 @@ As you will note on the NestJS documentation above, the REPL gives you access to
 In addition, the `boostrap-repl.ts` utility that is used by all services exposes a couple of things to make life a bit
 easier in the REPL env:
 
-- All of lodash accessible through `lodash`
+- All of lodash accessible through `lodash` (e.g. `lodash.joins([1, 2])`)
 - All database models are made accessible in the global context (e.g. `await User.findOne({ emailAddress: "foo@bar.org" })`)
 
 # Deployment

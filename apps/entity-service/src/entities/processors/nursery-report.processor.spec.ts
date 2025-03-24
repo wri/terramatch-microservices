@@ -282,6 +282,12 @@ describe("NurseryReportProcessor", () => {
       const nurseryReportA = await NurseryReportFactory.create();
       const nurseryReportB = await NurseryReportFactory.create();
       const nurseryReportC = await NurseryReportFactory.create();
+      nurseryReportA.updatedAt = DateTime.now().minus({ minutes: 1 }).toJSDate();
+      nurseryReportB.updatedAt = DateTime.now().minus({ minutes: 10 }).toJSDate();
+      nurseryReportC.updatedAt = DateTime.now().minus({ minutes: 5 }).toJSDate();
+      await nurseryReportA.reload();
+      await nurseryReportB.reload();
+      await nurseryReportC.reload();
       await expectNurseryReports(
         [nurseryReportA, nurseryReportC, nurseryReportB],
         { sort: { field: "updatedAt", direction: "DESC" } },

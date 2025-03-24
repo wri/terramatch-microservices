@@ -100,7 +100,15 @@ export class NurseryReportProcessor extends EntityProcessor<
       projectUuid: "$nursery.project.uuid$"
     };
 
-    for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
+    for (const term of [
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "nurseryUuid",
+      "organisationUuid",
+      "country",
+      "projectUuid"
+    ]) {
       if (query[term] != null) {
         const field = associationFieldMap[term] || term;
         builder.where({ [field]: query[term] });

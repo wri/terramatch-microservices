@@ -11,7 +11,6 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
-  SiteReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";

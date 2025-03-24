@@ -1,6 +1,7 @@
-import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
+import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import {
   IndicatorFieldMonitoringDto,
   IndicatorHectaresDto,
@@ -12,7 +13,6 @@ import {
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
-
 export type IndicatorDto =
   | IndicatorTreeCoverLossDto
   | IndicatorHectaresDto
@@ -45,25 +45,19 @@ export class ReportingPeriodDto {
 }
 
 @JsonApiDto({ type: "sitePolygons" })
-export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
-  constructor(
-    sitePolygon: SitePolygon,
-    geometry: Polygon,
-    indicators: IndicatorDto[],
-    establishmentTreeSpecies: TreeSpeciesDto[],
-    reportingPeriods: ReportingPeriodDto[],
-    siteName: string
-  ) {
-    super({
-      ...pickApiProperties(sitePolygon, SitePolygonDto),
-      name: sitePolygon.polyName,
-      siteId: sitePolygon.siteUuid,
-      geometry,
-      indicators,
-      establishmentTreeSpecies,
-      reportingPeriods,
-      siteName
-    });
+export class SitePolygonLightDto extends HybridSupportDto {
+  constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
+    super();
+    if (sitePolygon != null) {
+      this.populate(SitePolygonLightDto, {
+        ...pickApiProperties(sitePolygon, SitePolygonLightDto),
+        name: sitePolygon.polyName,
+        siteId: sitePolygon.siteUuid,
+        indicators: indicators,
+        siteName: sitePolygon.site?.name,
+        lightResource: true
+      });
+    }
   }
 
   @ApiProperty()
@@ -72,31 +66,11 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   @ApiProperty({ enum: POLYGON_STATUSES })
   status: PolygonStatus;
 
-  @ApiProperty({
-    description: "If this ID points to a deleted site, the tree species and reporting period will be empty."
-  })
+  @ApiProperty({ description: "If this ID points to a deleted site, the indicators will be empty." })
   siteId: string;
-
-  @ApiProperty()
-  geometry: Polygon;
 
   @ApiProperty({ nullable: true })
   plantStart: Date | null;
-
-  @ApiProperty({ nullable: true })
-  plantEnd: Date | null;
-
-  @ApiProperty({ nullable: true })
-  practice: string | null;
-
-  @ApiProperty({ nullable: true })
-  targetSys: string | null;
-
-  @ApiProperty({ nullable: true })
-  distr: string | null;
-
-  @ApiProperty({ nullable: true })
-  numTrees: number | null;
 
   @ApiProperty({ nullable: true })
   calcArea: number | null;
@@ -117,6 +91,54 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
   })
   indicators: IndicatorDto[];
 
+  @ApiProperty({ description: "The name of the associated Site." })
+  siteName: string;
+}
+
+@JsonApiDto({ type: "sitePolygons" })
+export class SitePolygonFullDto extends SitePolygonLightDto {
+  constructor(
+    sitePolygon: SitePolygon,
+    indicators: IndicatorDto[],
+    establishmentTreeSpecies: TreeSpeciesDto[],
+    reportingPeriods: ReportingPeriodDto[]
+  ) {
+    // Call super() without arguments
+    super();
+
+    if (sitePolygon != null) {
+      this.populate(SitePolygonFullDto, {
+        ...pickApiProperties(sitePolygon, SitePolygonFullDto),
+        name: sitePolygon.polyName,
+        siteId: sitePolygon.siteUuid,
+        indicators: indicators,
+        siteName: sitePolygon.site?.name,
+        geometry: sitePolygon.polygon?.polygon,
+        establishmentTreeSpecies,
+        reportingPeriods,
+        lightResource: false
+      });
+    }
+  }
+
+  @ApiProperty({ nullable: true })
+  plantEnd: Date | null;
+
+  @ApiProperty()
+  geometry: Polygon;
+
+  @ApiProperty({ nullable: true })
+  practice: string | null;
+
+  @ApiProperty({ nullable: true })
+  targetSys: string | null;
+
+  @ApiProperty({ nullable: true })
+  distr: string | null;
+
+  @ApiProperty({ nullable: true })
+  numTrees: number | null;
+
   @ApiProperty({
     type: () => TreeSpeciesDto,
     isArray: true,
@@ -130,9 +152,4 @@ export class SitePolygonDto extends JsonApiAttributes<SitePolygonDto> {
     description: "Access to reported trees planted for each approved report on this site."
   })
   reportingPeriods: ReportingPeriodDto[];
-
-  @ApiProperty({
-    description: "The name of the associated Site."
-  })
-  siteName: string;
 }

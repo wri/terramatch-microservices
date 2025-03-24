@@ -18,6 +18,7 @@ import {
   SeedingFactory,
   SiteFactory,
   SiteReportFactory,
+  TaskFactory,
   TreeSpeciesFactory,
   TreeSpeciesResearchFactory
 } from "@terramatch-microservices/database/factories";
@@ -290,14 +291,14 @@ describe("TreeService", () => {
     // are so robust for each one that it makes sense to set them all up at once. Additionally, it helps
     // make sure that each entity type is only returning the data it's really supposed to.
     it("returns associated counts", async () => {
-      const taskIds = [faker.number.int({ min: 100, max: 500 }), faker.number.int({ min: 100, max: 500 })];
-      await ProjectReport.destroy({ where: { taskId: { [Op.in]: taskIds } } });
-      await SiteReport.destroy({ where: { taskId: { [Op.in]: taskIds } } });
+      const tasks = await TaskFactory.createMany(2);
+      await ProjectReport.destroy({ where: { taskId: { [Op.in]: tasks.map(({ id }) => id) } } });
+      await SiteReport.destroy({ where: { taskId: { [Op.in]: tasks.map(({ id }) => id) } } });
 
       const project = await ProjectFactory.create();
       const projectReport = await ProjectReportFactory.create({
         projectId: project.id,
-        taskId: taskIds[0],
+        taskId: tasks[0].id,
         status: "approved"
       });
 
@@ -307,12 +308,12 @@ describe("TreeService", () => {
       const siteReports = await Promise.all(
         flatten(
           sites.map(({ id: siteId }) =>
-            taskIds.map(taskId => SiteReportFactory.create({ siteId, taskId, status: "approved" }))
+            tasks.map(task => SiteReportFactory.create({ siteId, taskId: task.id, status: "approved" }))
           )
         )
       );
-      const task1SiteReports = siteReports.filter(({ taskId }) => taskId === taskIds[0]);
-      const task2SiteReports = siteReports.filter(({ taskId }) => taskId === taskIds[1]);
+      const task1SiteReports = siteReports.filter(({ taskId }) => taskId === tasks[0].id);
+      const task2SiteReports = siteReports.filter(({ taskId }) => taskId === tasks[1].id);
       const coffeeTrees = await Promise.all(
         [...task1SiteReports, ...task2SiteReports].map(({ id }) =>
           TreeSpeciesFactory.forSiteReportTreePlanted.create({

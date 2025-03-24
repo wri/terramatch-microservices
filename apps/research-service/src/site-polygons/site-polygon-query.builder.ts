@@ -83,12 +83,24 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   async filterSiteUuids(siteUuids: string[]) {
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
+
   async filterProjectUuids(projectUuids: string[]) {
     const filterProjects = await Project.findAll({
       where: { uuid: { [Op.in]: projectUuids } },
       attributes: ["id"]
     });
     return this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
+  }
+
+  async addSearch(searchTerm: string) {
+    return this.where({
+      [Op.or]: [
+        { "$site.name$": { [Op.like]: `${searchTerm}%` } },
+        { "$site.name$": { [Op.like]: `% ${searchTerm}%` } },
+        { polyName: { [Op.like]: `${searchTerm}%` } },
+        { polyName: { [Op.like]: `% ${searchTerm}%` } }
+      ]
+    });
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {
@@ -120,6 +132,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
     return this;
   }
+
   hasPresentIndicators(indicatorSlugs?: IndicatorSlug[]) {
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {

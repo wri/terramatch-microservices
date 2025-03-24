@@ -226,6 +226,12 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({
     nullable: true,
+    description: "The associated project country"
+  })
+  projectCountry: string;
+
+  @ApiProperty({
+    nullable: true,
     description: "The associated project organisation name"
   })
   organisationName: string;

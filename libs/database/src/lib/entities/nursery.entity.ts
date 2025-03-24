@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, Op, STRING, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -19,6 +19,7 @@ import { EntityStatus, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { FrameworkKey } from "../constants/framework";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -30,6 +31,12 @@ export class Nursery extends Model<Nursery> {
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
+
+  static readonly MEDIA = {
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true }
+  } as const;
 
   static approved() {
     return chainScope(this, "approved") as typeof Nursery;
@@ -71,13 +78,61 @@ export class Nursery extends Model<Nursery> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @AllowNull
+  @Column(DATE)
+  startDate: Date | null;
+
+  @AllowNull
+  @Column(DATE)
+  endDate: Date | null;
+
+  @AllowNull
+  @Column(TEXT)
+  feedback: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  feedbackFields: string[] | null;
+
+  @AllowNull
+  @Column(STRING)
+  type: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seedlingGrown: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  plantingContribution: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  oldModel: string | null;
+
   @BelongsTo(() => Project)
   project: Project | null;
+
+  get projectName() {
+    return this.project?.name;
+  }
+
+  get projectUuid() {
+    return this.project?.uuid;
+  }
+
+  get organisationName() {
+    return this.project?.organisationName;
+  }
+
+  get migrated() {
+    return this.oldModel;
+  }
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: Nursery.LARAVEL_TYPE, collection: "nursery-seedling" }
+    scope: { speciesable_type: Nursery.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
   seedlings: TreeSpecies[] | null;
 

@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException, LoggerService } from "@nestjs/common";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { Verification } from "@terramatch-microservices/database/entities/verification.entity";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 @Injectable()
 export class VerificationUserService {
-  protected readonly logger: LoggerService = new TMLogService(VerificationUserService.name);
+  protected readonly logger = new TMLogger(VerificationUserService.name);
 
   async verify(token: string) {
     const verification = await Verification.findOne({

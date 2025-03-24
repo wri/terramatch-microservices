@@ -28,6 +28,8 @@ export type Resource = {
 
 type DocumentMeta = {
   resourceType: string;
+  // Only supplied in the case of a delete
+  resourceId?: string;
   page?: {
     cursor?: string;
     number?: number;
@@ -42,7 +44,7 @@ type ResourceMeta = {
 };
 
 export type JsonApiDocument = {
-  data: Resource | Resource[];
+  data?: Resource | Resource[];
   included?: Resource | Resource[];
   meta: DocumentMeta;
 };
@@ -119,6 +121,7 @@ type DocumentBuilderOptions = {
 export type SerializeOptions = {
   paginationTotal?: number;
   pageNumber?: number;
+  deletedResourceId?: string;
 };
 
 export class DocumentBuilder {
@@ -157,13 +160,18 @@ export class DocumentBuilder {
     return builder;
   }
 
-  serialize({ paginationTotal, pageNumber }: SerializeOptions = {}): JsonApiDocument {
+  serialize({ paginationTotal, pageNumber, deletedResourceId }: SerializeOptions = {}): JsonApiDocument {
     const singular = this.data.length === 1 && this.options.pagination == null && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
-      meta: { resourceType: this.resourceType },
-      // Data can either be a single object or an array
-      data: singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize())
+      meta: { resourceType: this.resourceType }
     };
+
+    if (deletedResourceId != null) {
+      doc.meta.resourceId = deletedResourceId;
+    } else {
+      // Data can either be a single object or an array
+      doc.data = singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize());
+    }
 
     if (this.included.length > 0) {
       // Included is always an array
@@ -185,5 +193,10 @@ export class DocumentBuilder {
   }
 }
 
+export const getDtoType = <DTO>(dtoClass: Type<DTO>) => Reflect.getMetadata(DTO_TYPE_METADATA, dtoClass);
+
 export const buildJsonApi = <DTO>(dtoClass: Type<DTO>, options?: DocumentBuilderOptions) =>
-  new DocumentBuilder(Reflect.getMetadata(DTO_TYPE_METADATA, dtoClass), options);
+  new DocumentBuilder(getDtoType(dtoClass), options);
+
+export const buildDeletedResponse = (resourceType: string, id: string) =>
+  new DocumentBuilder(resourceType).serialize({ deletedResourceId: id });

@@ -36,7 +36,7 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - run: npx run lint-build
+      - run: npm run lint-build
 
       - name: Bring up DB Docker Container
         run: |

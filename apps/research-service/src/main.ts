@@ -6,11 +6,13 @@ import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { NestExpressApplication } from "@nestjs/platform-express";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: new TMLogger()
+  });
   app.set("query parser", "extended");
 
   if (process.env.NODE_ENV === "development") {
@@ -27,8 +29,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("research-service/documentation/api", app, document);
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true, transformOptions: { enableImplicitConversion: true } }));
-  app.useLogger(app.get(TMLogService));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true, exposeDefaultValues: true }
+    })
+  );
 
   const port = process.env.NODE_ENV === "production" ? 80 : process.env.RESEARCH_SERVICE_PROXY_PORT ?? 4030;
   await app.listen(port);

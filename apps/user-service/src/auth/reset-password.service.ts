@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException, LoggerService } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import bcrypt from "bcryptjs";
 import { JwtService } from "@nestjs/jwt";
 import { User } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { TemplateService } from "@terramatch-microservices/common/email/template.service";
 
 @Injectable()
 export class ResetPasswordService {
-  protected readonly logger: LoggerService = new TMLogService(ResetPasswordService.name);
+  protected readonly logger = new TMLogger(ResetPasswordService.name);
 
   constructor(
     private readonly jwtService: JwtService,

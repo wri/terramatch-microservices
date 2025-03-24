@@ -13,7 +13,9 @@ import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
-import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { NurseryProcessor } from "./processors/nursery.processor";
+import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { ProjectReportProcessor } from "./processors/project-report.processor";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
@@ -22,7 +24,9 @@ import { DemographicDto } from "./dto/demographic.dto";
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
-  sites: SiteProcessor
+  sites: SiteProcessor,
+  nurseries: NurseryProcessor,
+  projectReports: ProjectReportProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
@@ -59,7 +63,7 @@ const MAX_PAGE_SIZE = 100 as const;
 export class EntitiesService {
   constructor(private readonly mediaService: MediaService) {}
 
-  createEntityProcessor<T extends Model<T>>(entity: ProcessableEntity) {
+  createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
     if (processorClass == null) {
       throw new BadRequestException(`Entity type invalid: ${entity}`);

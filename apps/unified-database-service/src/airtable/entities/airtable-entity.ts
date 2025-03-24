@@ -1,10 +1,9 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, groupBy, isEmpty, isObject, uniq } from "lodash";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
-import { TMLogService } from "@terramatch-microservices/common/util/tm-log.service";
-import { LoggerService } from "@nestjs/common";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -19,7 +18,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   readonly SUPPORTS_UPDATED_SINCE: boolean = true;
   readonly FILTER_FLAGS: string[] = [];
 
-  protected readonly logger: LoggerService = new TMLogService(AirtableEntity.name);
+  protected readonly logger = new TMLogger(AirtableEntity.name);
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden

@@ -23,7 +23,9 @@ import { Subquery } from "../util/subquery.builder";
 // Incomplete stub
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
-  nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } })
+  nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } }),
+  approved: { where: { status: { [Op.in]: NurseryReport.APPROVED_STATUSES } } },
+  task: (taskId: number) => ({ where: { taskId: taskId } })
 }))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
@@ -40,10 +42,18 @@ export class NurseryReport extends Model<NurseryReport> {
     return chainScope(this, "nurseries", ids) as typeof NurseryReport;
   }
 
+  static task(taskId: number) {
+    return chainScope(this, "task", taskId) as typeof NurseryReport;
+  }
+
   static approvedIdsSubquery(nurseryIds: number[] | Literal) {
     return Subquery.select(NurseryReport, "id")
       .in("nurseryId", nurseryIds)
       .in("status", NurseryReport.APPROVED_STATUSES).literal;
+  }
+
+  static approved() {
+    return chainScope(this, "approved") as typeof NurseryReport;
   }
 
   @PrimaryKey
@@ -89,7 +99,7 @@ export class NurseryReport extends Model<NurseryReport> {
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: NurseryReport.LARAVEL_TYPE, collection: "nursery-seedling" }
+    scope: { speciesable_type: NurseryReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
   seedlings: TreeSpecies[] | null;
 }

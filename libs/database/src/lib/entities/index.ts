@@ -1,3 +1,4 @@
+export * from "./action.entity";
 export * from "./application.entity";
 export * from "./delayed-job.entity";
 export * from "./demographic.entity";
@@ -37,3 +38,4 @@ export * from "./tree-species.entity";
 export * from "./tree-species-research.entity";
 export * from "./user.entity";
 export * from "./verification.entity";
+export * from "./task.entity";

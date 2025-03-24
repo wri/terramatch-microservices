@@ -22,6 +22,7 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -356,6 +357,7 @@ describe("SitePolygonsService", () => {
   it("throws when an indicator slug is invalid", async () => {
     const query = await service.buildQuery({ size: 20 });
     expect(() => query.isMissingIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
+    expect(() => query.hasPresentIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
   });
 
   it("filters polygons by boundary polygon", async () => {
@@ -509,5 +511,89 @@ describe("SitePolygonsService", () => {
     const treeCount = await sitePolygon.$get("indicatorsTreeCount");
     expect(treeCount.length).toBe(1);
     expect(treeCount[0]).toMatchObject(dto);
+  });
+
+  it("should build LightDto correctly when lightResource is true", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+  });
+
+  it("should build FullDto correctly when lightResource is false", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+    await IndicatorOutputHectaresFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "restorationByStrategy"
+    });
+    const fullDto = await service.buildFullDto(sitePolygon);
+
+    expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
+  });
+
+  it("should return SitePolygonLightDto when lightResource is true", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+
+    const lightDto = await service.buildLightDto(sitePolygon);
+    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+    expect(lightDto.name).toBe(sitePolygon.polyName);
+  });
+
+  it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+
+    const project = await ProjectFactory.create();
+    const site1 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Alpha Site"
+    });
+    const site2 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Beta Location"
+    });
+    const site3 = await SiteFactory.create({
+      projectId: project.id,
+      name: "Gamma Zone"
+    });
+
+    await SitePolygonFactory.create({
+      siteUuid: site1.uuid,
+      polyName: "First Polygon"
+    });
+    await SitePolygonFactory.create({
+      siteUuid: site2.uuid,
+      polyName: "Alphabetical Order"
+    });
+    await SitePolygonFactory.create({
+      siteUuid: site3.uuid,
+      polyName: "Zone Polygon"
+    });
+
+    let query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Alpha");
+    let results = await query.execute();
+    expect(results.length).toBe(2);
+    expect(results[0].siteUuid).toBe(site1.uuid);
+
+    query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Zone");
+    results = await query.execute();
+    expect(results.length).toBe(1);
+    expect(results[0].siteUuid).toBe(site3.uuid);
+    expect(results[0].polyName).toBe("Zone Polygon");
   });
 });

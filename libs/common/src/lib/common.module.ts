@@ -10,7 +10,6 @@ import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
 import { TemplateService } from "./email/template.service";
 import { SlackService } from "./slack/slack.service";
-import { DatabaseModule } from "@terramatch-microservices/database";
 
 @Module({
   imports: [
@@ -24,8 +23,7 @@ import { DatabaseModule } from "@terramatch-microservices/database";
     }),
     ConfigModule.forRoot({
       isGlobal: true
-    }),
-    DatabaseModule
+    })
   ],
   providers: [
     PolicyService,

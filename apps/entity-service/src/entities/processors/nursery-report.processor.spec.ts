@@ -278,6 +278,29 @@ describe("NurseryReportProcessor", () => {
       );
     });
 
+    it("should sort nursery reports by updated at", async () => {
+      const now = DateTime.now();
+      const nurseryReportA = await NurseryReportFactory.create({
+        updatedAt: now.minus({ minutes: 1 }).toJSDate()
+      });
+      const nurseryReportB = await NurseryReportFactory.create({
+        updatedAt: now.minus({ minutes: 10 }).toJSDate()
+      });
+      const nurseryReportC = await NurseryReportFactory.create({
+        updatedAt: now.minus({ minutes: 5 }).toJSDate()
+      });
+      await expectNurseryReports(
+        [nurseryReportA, nurseryReportC, nurseryReportB],
+        { sort: { field: "updatedAt", direction: "DESC" } },
+        { sortField: "updatedAt", sortUp: false }
+      );
+      await expectNurseryReports(
+        [nurseryReportB, nurseryReportC, nurseryReportA],
+        { sort: { field: "updatedAt", direction: "ASC" } },
+        { sortField: "updatedAt", sortUp: true }
+      );
+    });
+
     it("should paginate nursery reports", async () => {
       const nurseryReports = sortBy(await NurseryReportFactory.createMany(25), "id");
       await expectNurseryReports(nurseryReports.slice(0, 10), { page: { size: 10 } }, { total: nurseryReports.length });

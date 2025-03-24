@@ -279,16 +279,9 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should sort nursery reports by updated at", async () => {
-      const now = DateTime.now();
-      const nurseryReportA = await NurseryReportFactory.create({
-        updatedAt: now.minus({ minutes: 1 }).toJSDate()
-      });
-      const nurseryReportB = await NurseryReportFactory.create({
-        updatedAt: now.minus({ minutes: 10 }).toJSDate()
-      });
-      const nurseryReportC = await NurseryReportFactory.create({
-        updatedAt: now.minus({ minutes: 5 }).toJSDate()
-      });
+      const nurseryReportA = await NurseryReportFactory.create();
+      const nurseryReportB = await NurseryReportFactory.create();
+      const nurseryReportC = await NurseryReportFactory.create();
       await expectNurseryReports(
         [nurseryReportA, nurseryReportC, nurseryReportB],
         { sort: { field: "updatedAt", direction: "DESC" } },

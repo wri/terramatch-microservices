@@ -9,5 +9,5 @@ export const SERVICES = [
 ] as const;
 export type Service = (typeof SERVICES)[number];
 
-export const ENVIRONMENTS = ["prod", "staging", "test", "dev"] as const;
+export const ENVIRONMENTS = ["prod", "staging", "test", "dev", "local"] as const;
 export type Environment = (typeof ENVIRONMENTS)[number];

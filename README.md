@@ -32,9 +32,9 @@ Repository for the Microservices API backend of the TerraMatch service
 We utilize the [Nest JS REPL](https://docs.nestjs.com/recipes/repl) to be able to access the code running in a given AWS
 environment, and use the same tools for local development.
 
-To run the REPL locally (use any service name):
+To run the REPL locally (use any service name, minus the -service suffix):
 
-- `npm run repl --service=entity-service`
+- `npm run repl --service=entity`
 
 To run the REPL in an AWS Env:
 
@@ -74,9 +74,8 @@ and main branches.
   ```
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
 - Set up REPL access:
-  - Copy `repl.ts` from an existing service
-  - Add the `build-repl` and `repl` targets to `project.json`, copying and modifying (update service name) from an existing service.
-  - Copy and modify (update service name) `repl.webpack.config.js` from an existing service
+  - Copy `repl.ts` from an existing service (and modify to specify the new service's name)
+  - Add the `build-repl` target to `project.json`, copying from an existing service.
 - In your `.env` and `.env.local.sample`, add `_PORT` for the new service
 - In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
 - In your local web repo, follow directions in `README.md` for setting up a new service.

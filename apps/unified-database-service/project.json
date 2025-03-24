@@ -7,13 +7,9 @@
   "targets": {
     "build-repl": {
       "executor": "@nx/webpack:webpack",
-      "outputs": ["{options.outputPath}"],
       "options": {
-        "webpackConfig": "apps/unified-database-service/repl.webpack.config.js",
-        "target": "node",
-        "compiler": "tsc",
-        "outputPath": "dist/apps/unified-database-service-repl",
-        "main": "apps/unified-database-service/src/repl.ts"
+        "webpackConfig": "repl/webpack.config.js",
+        "outputPath": "{workspaceRoot}/dist/{projectRoot}-repl"
       }
     },
     "serve": {

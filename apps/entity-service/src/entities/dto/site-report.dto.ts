@@ -9,7 +9,7 @@ import { ProjectReportLightDto } from "./project-report.dto";
 
 @JsonApiDto({ type: "siteReports" })
 export class SiteReportLightDto extends EntityDto {
-  constructor(siteReport?: SiteReport) {
+  constructor(siteReport?: SiteReport, props?: AdditionalSiteReportLightProps) {
     super();
     if (siteReport != null) {
       this.populate(SiteReportLightDto, {
@@ -17,7 +17,8 @@ export class SiteReportLightDto extends EntityDto {
         lightResource: true,
         // these two are untyped and marked optional in the base model.
         createdAt: siteReport.createdAt as Date,
-        updatedAt: siteReport.createdAt as Date
+        updatedAt: siteReport.createdAt as Date,
+        ...props
       });
     }
   }
@@ -80,13 +81,18 @@ export class SiteReportLightDto extends EntityDto {
   taskId: number | null;
 
   @ApiProperty()
+  dueAt: Date | null;
+
+  @ApiProperty({ nullable: true })
+  reportTitle: string | null;
+
+  @ApiProperty()
   createdAt: Date;
 }
 
-export type AdditionalSiteReportFullProps = AdditionalProps<
-  SiteReportFullDto,
-  SiteReportLightDto & Omit<SiteReport, "site">
->;
+export type AdditionalSiteReportLightProps = Pick<SiteReportLightDto, "reportTitle">;
+export type AdditionalSiteReportFullProps = AdditionalSiteReportLightProps &
+  AdditionalProps<SiteReportFullDto, SiteReportLightDto & Omit<SiteReport, "site">>;
 export type SiteReportMedia = Pick<SiteReportFullDto, keyof typeof SiteReport.MEDIA>;
 
 export class SiteReportFullDto extends SiteReportLightDto {

@@ -63,7 +63,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
     if (query.sort != null) {
-      if (["dueAt", "submittedAt", "updatedAt"].includes(query.sort.field)) {
+      if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["site", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
@@ -165,7 +165,8 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
   }
 
   async addLightDto(document: DocumentBuilder, siteReport: SiteReport): Promise<void> {
-    document.addData(siteReport.uuid, new SiteReportLightDto(siteReport));
+    const reportTitle = await this.getReportTitle(siteReport);
+    document.addData(siteReport.uuid, new SiteReportLightDto(siteReport, { reportTitle }));
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string | null) {

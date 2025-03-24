@@ -1,6 +1,5 @@
 import {
   Media,
-  Nursery,
   NurseryReport,
   Project,
   ProjectReport,
@@ -10,7 +9,7 @@ import {
 import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { col, fn, Includeable, Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { AdditionalNurseryReportFullProps, NurseryReportFullDto, NurseryReportMedia } from "../dto/nursery-report.dto";

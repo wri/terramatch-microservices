@@ -1,4 +1,4 @@
-import { NurseryReport, ProjectReport } from "@terramatch-microservices/database/entities";
+import { NurseryReport } from "@terramatch-microservices/database/entities";
 import { EntityDto, AdditionalProps } from "./entity.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";

@@ -53,6 +53,7 @@ describe("SiteProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
+
     it("should returns sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
@@ -154,6 +155,10 @@ describe("SiteProcessor", () => {
         { sort: { field: "projectName", direction: "DESC" } },
         { sortField: "projectName" }
       );
+    });
+
+    it("should throw an error if the sort field is not recognized", async () => {
+      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -12,13 +12,9 @@
         "webpackConfig": "apps/job-service/repl.webpack.config.js",
         "target": "node",
         "compiler": "tsc",
-        "outputPath": "dist/apps/job-service",
+        "outputPath": "dist/apps/job-service-repl",
         "main": "apps/job-service/src/repl.ts"
       }
-    },
-    "repl": {
-      "dependsOn": ["build-repl"],
-      "command": "node dist/apps/job-service-repl"
     },
     "serve": {
       "executor": "@nx/js:node",

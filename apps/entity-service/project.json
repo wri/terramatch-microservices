@@ -12,13 +12,9 @@
         "webpackConfig": "apps/entity-service/repl.webpack.config.js",
         "target": "node",
         "compiler": "tsc",
-        "outputPath": "dist/apps/entity-service",
+        "outputPath": "dist/apps/entity-service-repl",
         "main": "apps/entity-service/src/repl.ts"
       }
-    },
-    "repl": {
-      "dependsOn": ["build-repl"],
-      "command": "node dist/apps/entity-service-repl"
     },
     "serve": {
       "executor": "@nx/js:node",

@@ -9,7 +9,9 @@
     "all": "nx run-many --parallel=100 -t serve --no-cloud",
     "prepare": "husky",
     "test:ci": "nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests --exclude database",
-    "lint-build": "nx run-many -t lint build --no-cloud"
+    "lint-build": "nx run-many -t lint build --no-cloud",
+    "prerepl": "nx build-repl $npm_config_service",
+    "repl": "node dist/apps/$npm_config_service-repl"
   },
   "private": true,
   "dependencies": {

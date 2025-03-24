@@ -34,7 +34,7 @@ environment, and use the same tools for local development.
 
 To run the REPL locally (use any service name):
 
-- `nx repl entity-service`
+- `npm run repl --service=entity-service`
 
 To run the REPL in an AWS Env:
 

@@ -270,6 +270,18 @@ describe("SiteReportProcessor", () => {
       );
     });
 
+    it("should sort site reports by updated at", async () => {
+      const siteReportA = await SiteReportFactory.create();
+      siteReportA.updatedAt = DateTime.now().minus({ days: 1 }).toJSDate();
+
+      await expectSiteReports([siteReportA], { sort: { field: "updatedAt" } }, { sortField: "updatedAt" });
+      await expectSiteReports(
+        [siteReportA],
+        { sort: { field: "updatedAt", direction: "DESC" } },
+        { sortField: "updatedAt", sortUp: false }
+      );
+    });
+
     it("should paginate site reports", async () => {
       const siteReports = sortBy(await SiteReportFactory.createMany(25), "id");
       await expectSiteReports(siteReports.slice(0, 10), { page: { size: 10 } }, { total: siteReports.length });

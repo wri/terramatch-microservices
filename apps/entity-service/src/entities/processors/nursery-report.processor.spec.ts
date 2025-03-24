@@ -336,7 +336,7 @@ describe("NurseryReportProcessor", () => {
 
     it("should return an empty list when there are no matches in the search", async () => {
       await NurseryReportFactory.createMany(3, { title: "foo" });
-      await expectNurseryReports([], { search: "bar" });
+      await expectNurseryReports([], { search: "test" });
     });
 
     it("should paginate nursery reports", async () => {

@@ -164,6 +164,8 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([first, second, third], { country: "MX" });
 
       await expectNurseryReports([first, second, third], { nurseryUuid: n1.uuid });
+
+      await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
     });
 
     it("should throw an error if the nursery uuid is not found", async () => {

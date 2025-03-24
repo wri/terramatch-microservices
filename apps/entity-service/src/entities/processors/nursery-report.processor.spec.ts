@@ -87,12 +87,16 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should return nursery reports that match the search term", async () => {
-      const project1 = await ProjectFactory.create({ name: "Foo Bar" });
-      const project2 = await ProjectFactory.create({ name: "Baz Foo" });
+      const org1 = await OrganisationFactory.create({ name: "A Org" });
+      const org2 = await OrganisationFactory.create({ name: "B Org" });
+      const project1 = await ProjectFactory.create({ name: "Foo Bar", organisationId: org1.id });
+      const project2 = await ProjectFactory.create({ name: "Baz Foo", organisationId: org2.id });
       const nursery1 = await NurseryFactory.create({ projectId: project1.id });
       const nursery2 = await NurseryFactory.create({ projectId: project2.id });
       nursery1.project = await nursery1.$get("project");
       nursery2.project = await nursery2.$get("project");
+      project1.organisation = await project1.$get("organisation");
+      project2.organisation = await project2.$get("organisation");
       const nurseryReport1 = await NurseryReportFactory.create({ nurseryId: nursery1.id });
       const nurseryReport2 = await NurseryReportFactory.create({ nurseryId: nursery2.id });
       nurseryReport1.nursery = await nurseryReport1.$get("nursery");
@@ -100,17 +104,23 @@ describe("NurseryReportProcessor", () => {
       await NurseryReportFactory.createMany(3);
 
       await expectNurseryReports([nurseryReport1, nurseryReport2], { search: "foo" });
+
+      await expectNurseryReports([nurseryReport1, nurseryReport2], { search: "org" });
     });
 
-    it("should return nursery reports filtered by the update request status, nursery, country and project", async () => {
-      const p1 = await ProjectFactory.create({ country: "MX" });
-      const p2 = await ProjectFactory.create({ country: "CA" });
+    it("should return nursery reports filtered by the status, update request status, nursery, country, organisation and project", async () => {
+      const org1 = await OrganisationFactory.create();
+      const org2 = await OrganisationFactory.create();
+      const p1 = await ProjectFactory.create({ country: "MX", organisationId: org1.id });
+      const p2 = await ProjectFactory.create({ country: "CA", organisationId: org2.id });
       await ProjectUserFactory.create({ userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId, projectId: p2.id });
       const n1 = await NurseryFactory.create({ projectId: p1.id });
       const n2 = await NurseryFactory.create({ projectId: p2.id });
       n1.project = await n1.$get("project");
       n2.project = await n2.$get("project");
+      n1.project.organisation = await n1.project.$get("organisation");
+      n2.project.organisation = await n2.project.$get("organisation");
       const first = await NurseryReportFactory.create({
         title: "first nursery report",
         status: "approved",

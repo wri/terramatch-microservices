@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
@@ -20,6 +20,9 @@ import { Literal } from "sequelize/types/utils";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
+import { Task } from "./task.entity";
+import { User } from "./user.entity";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -41,6 +44,17 @@ export class SiteReport extends Model<SiteReport> {
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly UNSUBMITTED_STATUSES = ["due", "started"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
+
+  static readonly MEDIA = {
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    media: { dbCollection: "media", multiple: true },
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true },
+    treeSpecies: { dbCollection: "tree_species", multiple: true },
+    siteSubmission: { dbCollection: "site_submission", multiple: true },
+    documentFiles: { dbCollection: "document_files", multiple: true }
+  } as const;
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof SiteReport;
@@ -93,10 +107,52 @@ export class SiteReport extends Model<SiteReport> {
   @BelongsTo(() => Site)
   site: Site | null;
 
-  // TODO foreign key for task
+  @BelongsTo(() => User)
+  user: User | null;
+
+  @BelongsTo(() => Task)
+  task: Task | null;
+
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  createdBy: number;
+
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  approvedBy: number;
+
+  @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;
+
+  get projectName() {
+    return this.site?.project?.name;
+  }
+
+  get projectUuid() {
+    return this.site?.project?.uuid;
+  }
+
+  get organisationName() {
+    return this.site?.project?.organisationName;
+  }
+
+  get organisationUuid() {
+    return this.site?.project?.organisationUuid;
+  }
+
+  get siteName() {
+    return this.site?.name;
+  }
+
+  get siteUuid() {
+    return this.site?.uuid;
+  }
+
+  get taskUuid() {
+    return this.task?.uuid;
+  }
 
   @Column(STRING)
   status: string;
@@ -160,6 +216,74 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(TEXT)
   waterStructures: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  title: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  disturbanceDetails: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  completion: number | null;
+
+  @AllowNull
+  @Column(DATE)
+  approvedAt: Date | null;
+
+  @AllowNull
+  @Column(TEXT)
+  sharedDriveLink: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  oldModel: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  oldId: number | null;
+
+  @AllowNull
+  @Column(TEXT("long"))
+  answers: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  polygonStatus: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  paidOtherActivityDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  invasiveSpeciesRemoved: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  invasiveSpeciesManagement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  siteCommunityPartnersDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  siteCommunityPartnersIncomeIncreaseDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  feedback: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  feedbackFields: string[] | null;
+
+  @AllowNull
+  @Column(TINYINT)
+  nothingToReport: boolean;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

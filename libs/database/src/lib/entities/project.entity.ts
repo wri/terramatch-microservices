@@ -367,6 +367,10 @@ export class Project extends Model<Project> {
     return this.organisation?.name;
   }
 
+  get organisationUuid() {
+    return this.organisation?.uuid;
+  }
+
   @BelongsTo(() => Application)
   application: Application | null;
 

@@ -18,6 +18,7 @@ import { chainScope } from "../util/chain-scope";
 import { Nursery } from "./nursery.entity";
 import { Site } from "./site.entity";
 import { ProjectReport } from "./project-report.entity";
+import { SiteReport } from "./site-report.entity";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
@@ -43,6 +44,12 @@ import { ProjectReport } from "./project-report.entity";
   projectReport: (id: number) => ({
     where: {
       modelType: ProjectReport.LARAVEL_TYPE,
+      modelId: id
+    }
+  }),
+  siteReport: (id: number) => ({
+    where: {
+      modelType: SiteReport.LARAVEL_TYPE,
       modelId: id
     }
   })
@@ -75,6 +82,10 @@ export class Media extends Model<Media> {
 
   static projectReport(id: number) {
     return chainScope(this, "projectReport", id) as typeof Media;
+  }
+
+  static siteReport(id: number) {
+    return chainScope(this, "siteReport", id) as typeof Media;
   }
 
   @PrimaryKey

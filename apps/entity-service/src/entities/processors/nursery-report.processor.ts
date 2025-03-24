@@ -154,7 +154,7 @@ export class NurseryReportProcessor extends EntityProcessor<
     document.addData(nurseryReport.uuid, new NurseryReportLightDto(nurseryReport));
   }
 
-  protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string = "en-GB") {
+  protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string | null) {
     if (dueAt == null) return title ?? "";
 
     const adjustedDate = new Date(dueAt);

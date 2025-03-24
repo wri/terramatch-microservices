@@ -170,27 +170,6 @@ describe("NurseryReportProcessor", () => {
       await expect(processor.findMany({ nurseryUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
-    it("should sort nursery reports by update request status", async () => {
-      const nurseryReportA = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const nurseryReportB = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const nurseryReportC = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      await expectNurseryReports(
-        [nurseryReportA, nurseryReportB, nurseryReportC],
-        { sort: { field: "updateRequestStatus" } },
-        { sortField: "updateRequestStatus" }
-      );
-      await expectNurseryReports(
-        [nurseryReportA, nurseryReportB, nurseryReportC],
-        { sort: { field: "updateRequestStatus", direction: "ASC" } },
-        { sortField: "updateRequestStatus" }
-      );
-      await expectNurseryReports(
-        [nurseryReportC, nurseryReportB, nurseryReportA],
-        { sort: { field: "updateRequestStatus", direction: "DESC" } },
-        { sortField: "updateRequestStatus", sortUp: false }
-      );
-    });
-
     it("should sort nursery reports by project name", async () => {
       const projectA = await ProjectFactory.create({ name: "A Project" });
       const projectB = await ProjectFactory.create({ name: "B Project" });
@@ -255,27 +234,6 @@ describe("NurseryReportProcessor", () => {
         nurseryReports,
         { sort: { field: "organisationName", direction: "DESC" } },
         { sortField: "organisationName", sortUp: false }
-      );
-    });
-
-    it("should sort nursery reports by status", async () => {
-      const nurseryReportA = await NurseryReportFactory.create({ status: "started" });
-      const nurseryReportB = await NurseryReportFactory.create({ status: "approved" });
-      const nurseryReportC = await NurseryReportFactory.create({ status: "approved" });
-      await expectNurseryReports(
-        [nurseryReportA, nurseryReportB, nurseryReportC],
-        { sort: { field: "status" } },
-        { sortField: "status" }
-      );
-      await expectNurseryReports(
-        [nurseryReportA, nurseryReportB, nurseryReportC],
-        { sort: { field: "status", direction: "ASC" } },
-        { sortField: "status" }
-      );
-      await expectNurseryReports(
-        [nurseryReportC, nurseryReportB, nurseryReportA],
-        { sort: { field: "status", direction: "DESC" } },
-        { sortField: "status", sortUp: false }
       );
     });
 

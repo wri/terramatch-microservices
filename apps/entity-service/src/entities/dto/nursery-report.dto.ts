@@ -81,6 +81,9 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty()
   dueAt: Date | null;
 
+  @ApiProperty({ nullable: true })
+  title: string | null;
+
   @ApiProperty()
   createdAt: Date;
 }

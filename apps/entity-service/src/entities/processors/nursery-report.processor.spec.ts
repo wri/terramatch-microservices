@@ -357,7 +357,13 @@ describe("NurseryReportProcessor", () => {
 
   describe("should return a requested nursery report when findOne is called with a valid uuid", () => {
     it("should return a requested nursery report", async () => {
-      const nurseryReport = await NurseryReportFactory.create();
+      const org = await OrganisationFactory.create({ name: "foo" });
+      const project = await ProjectFactory.create({ organisationId: org.id, name: "bar" });
+      const nursery = await NurseryFactory.create({ projectId: project.id, name: "baz" });
+      const nurseryReport = await NurseryReportFactory.create({ nurseryId: nursery.id, title: "qux" });
+      nurseryReport.nursery = await nurseryReport.$get("nursery");
+      nurseryReport.nursery.project = await nurseryReport.nursery.$get("project");
+      nurseryReport.nursery.project.organisation = await nurseryReport.nursery.project.$get("organisation");
       const result = await processor.findOne(nurseryReport.uuid);
       expect(result.id).toBe(nurseryReport.id);
     });

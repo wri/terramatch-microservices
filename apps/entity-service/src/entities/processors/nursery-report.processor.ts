@@ -66,15 +66,17 @@ export class NurseryReportProcessor extends EntityProcessor<
     const builder = await this.entitiesService.buildQuery(NurseryReport, query, [nurseryAssociation]);
     if (query.sort != null) {
       if (
-        ["status", "updateRequestStatus", "createdAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
+        ["status", "updateRequestStatus", "dueAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
           query.sort.field
         )
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["$nursery", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["$nursery", "project", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "nurseryName") {
+        builder.order(["$nursery", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
@@ -108,7 +110,6 @@ export class NurseryReportProcessor extends EntityProcessor<
     if (query.search != null) {
       builder.where({
         [Op.or]: [
-          { name: { [Op.like]: `%${query.search}%` } },
           { "$nursery.project.name$": { [Op.like]: `%${query.search}%` } },
           { "$nursery.project.organisation.name$": { [Op.like]: `%${query.search}%` } }
         ]

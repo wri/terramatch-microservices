@@ -153,6 +153,8 @@ describe("SiteReportProcessor", () => {
 
       await expectSiteReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
 
+      await expectSiteReports([first, third, fourth], { status: "approved" });
+
       await expectSiteReports([fourth], { projectUuid: p2.uuid });
 
       await expectSiteReports([first, second, third], { country: "MX" });

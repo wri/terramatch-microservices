@@ -64,15 +64,17 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const builder = await this.entitiesService.buildQuery(SiteReport, query, [siteAssociation]);
     if (query.sort != null) {
       if (
-        ["status", "updateRequestStatus", "createdAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
+        ["status", "updateRequestStatus", "dueAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
           query.sort.field
         )
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["site", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["site", "project", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "siteName") {
+        builder.order(["site", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
@@ -106,7 +108,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     if (query.search != null) {
       builder.where({
         [Op.or]: [
-          { name: { [Op.like]: `%${query.search}%` } },
+          { "$site.name$": { [Op.like]: `%${query.search}%` } },
           { "$site.project.name$": { [Op.like]: `%${query.search}%` } },
           { "$site.project.organisation.name$": { [Op.like]: `%${query.search}%` } }
         ]

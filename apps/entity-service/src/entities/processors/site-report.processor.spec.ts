@@ -91,8 +91,8 @@ describe("SiteReportProcessor", () => {
       const org2 = await OrganisationFactory.create({ name: "B Org" });
       const project1 = await ProjectFactory.create({ name: "Foo Bar", organisationId: org1.id });
       const project2 = await ProjectFactory.create({ name: "Baz Foo", organisationId: org2.id });
-      const site1 = await SiteFactory.create({ projectId: project1.id });
-      const site2 = await SiteFactory.create({ projectId: project2.id });
+      const site1 = await SiteFactory.create({ projectId: project1.id, name: "A Site" });
+      const site2 = await SiteFactory.create({ projectId: project2.id, name: "Site B" });
       site1.project = await site1.$get("project");
       site2.project = await site2.$get("project");
       const siteReport1 = await SiteReportFactory.create({ siteId: site1.id });
@@ -104,6 +104,8 @@ describe("SiteReportProcessor", () => {
       await expectSiteReports([siteReport1, siteReport2], { search: "foo" });
 
       await expectSiteReports([siteReport1, siteReport2], { search: "org" });
+
+      await expectSiteReports([siteReport1, siteReport2], { search: "site" });
     });
 
     it("should return site reports filtered by the update request status, country, site and project", async () => {

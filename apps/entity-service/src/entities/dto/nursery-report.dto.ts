@@ -79,6 +79,9 @@ export class NurseryReportLightDto extends EntityDto {
   taskId: number | null;
 
   @ApiProperty()
+  dueAt: Date | null;
+
+  @ApiProperty()
   createdAt: Date;
 }
 

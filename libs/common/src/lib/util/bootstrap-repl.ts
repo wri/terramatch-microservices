@@ -15,7 +15,15 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
 
   // Makes all lodash functions available via the global `lodash` accessor in the REPL
   replServer.context["lodash"] = lodash;
-  // Makes all Sequelize models easily accessible via the `db` accessor in the REPL
+  // Makes all Sequelize models accessible in the global context
+  for (const [name, model] of Object.entries(replServer.context["get"](Sequelize).models)) {
+    // For in REPL auto-complete functionality
+    Object.defineProperty(replServer.context, name, {
+      value: model,
+      configurable: false,
+      enumerable: true
+    });
+  }
   replServer.context["db"] = replServer.context["get"](Sequelize).models;
 
   const cacheDirectory = join("node_modules", ".cache");

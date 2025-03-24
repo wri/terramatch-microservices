@@ -72,7 +72,7 @@ In addition, the `boostrap-repl.ts` utility that is used by all services exposes
 easier in the REPL env:
 
 - All of lodash accessible through `lodash`
-- All database models are accessible through `db` (e.g. `await db.User.findOne({ emailAddress: "foo@bar.org" })`)
+- All database models are made accessible in the global context (e.g. `await User.findOne({ emailAddress: "foo@bar.org" })`)
 
 # Deployment
 

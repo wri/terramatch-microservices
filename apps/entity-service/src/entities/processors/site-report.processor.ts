@@ -1,9 +1,9 @@
 import {
   Media,
-  Project,
   ProjectReport,
   ProjectUser,
   Seeding,
+  Site,
   SiteReport,
   TreeSpecies,
   User
@@ -123,12 +123,12 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       });
     }
 
-    if (query.projectUuid != null) {
-      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
-      if (project == null) {
-        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
+    if (query.siteUuid != null) {
+      const site = await Site.findOne({ where: { uuid: query.siteUuid }, attributes: ["id"] });
+      if (site == null) {
+        throw new BadRequestException(`Site with uuid ${query.siteUuid} not found`);
       }
-      builder.where({ "$site.project.id$": project.id });
+      builder.where({ siteId: site.id });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

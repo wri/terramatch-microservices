@@ -102,7 +102,7 @@ describe("SiteReportProcessor", () => {
       await expectSiteReports([siteReport1, siteReport2], { search: "foo" });
     });
 
-    it("should return site reports filtered by the update request status, country and project", async () => {
+    it("should return site reports filtered by the update request status, country, site and project", async () => {
       const p1 = await ProjectFactory.create({ country: "MX" });
       const p2 = await ProjectFactory.create({ country: "CA" });
       await ProjectUserFactory.create({ userId, projectId: p1.id });
@@ -150,6 +150,8 @@ describe("SiteReportProcessor", () => {
       await expectSiteReports([fourth], { projectUuid: p2.uuid });
 
       await expectSiteReports([first, second, third], { country: "MX" });
+
+      await expectSiteReports([first, second, third], { siteUuid: s1.uuid });
     });
 
     it("should throw an error if the project uuid is not found", async () => {

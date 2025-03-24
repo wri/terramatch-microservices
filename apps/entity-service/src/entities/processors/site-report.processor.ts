@@ -48,7 +48,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<SiteReport>> {
+  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]) {
     const siteAssociation: Includeable = {
       association: "site",
       attributes: ["id", "uuid", "name"],
@@ -60,8 +60,8 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
         }
       ]
     };
-
-    const builder = await this.entitiesService.buildQuery(SiteReport, query, [siteAssociation]);
+    const associations = [siteAssociation];
+    const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
     if (query.sort != null) {
       if (
         ["status", "updateRequestStatus", "dueAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
@@ -98,9 +98,17 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       projectUuid: "$site.project.uuid$"
     };
 
-    for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
+    for (const term of [
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "siteUuid",
+      "organisationUuid",
+      "country",
+      "projectUuid"
+    ]) {
       if (query[term] != null) {
-        const field = associationFieldMap[term] || term;
+        const field = associationFieldMap[term] ?? term;
         builder.where({ [field]: query[term] });
       }
     }

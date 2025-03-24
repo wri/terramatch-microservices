@@ -6,17 +6,17 @@ import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
 import { User } from "@sentry/nestjs";
 
-@JsonApiDto({ type: "nursery-reports" })
+@JsonApiDto({ type: "nurseryReports" })
 export class NurseryReportLightDto extends EntityDto {
-  constructor(projectReport?: ProjectReport) {
+  constructor(nurseryReport?: NurseryReport) {
     super();
-    if (projectReport != null) {
+    if (nurseryReport != null) {
       this.populate(NurseryReportLightDto, {
-        ...pickApiProperties(NurseryReport, NurseryReportLightDto),
+        ...pickApiProperties(nurseryReport, NurseryReportLightDto),
         lightResource: true,
         // these two are untyped and marked optional in the base model.
-        createdAt: projectReport.createdAt as Date,
-        updatedAt: projectReport.createdAt as Date
+        createdAt: nurseryReport.createdAt as Date,
+        updatedAt: nurseryReport.createdAt as Date
       });
     }
   }
@@ -82,14 +82,14 @@ export class NurseryReportLightDto extends EntityDto {
   createdAt: Date;
 }
 
-// export type AdditionalNurseryReportLightProps = Pick<NurseryReportLightDto, "treesPlantedCount">;
-export type AdditionalNurseryReportFullProps =
-  /*AdditionalNurseryReportLightProps &*/
-  AdditionalProps<NurseryReportFullDto, NurseryReportLightDto & Omit<NurseryReport, "project">>;
+export type AdditionalNurseryReportFullProps = AdditionalProps<
+  NurseryReportFullDto,
+  NurseryReportLightDto & Omit<NurseryReport, "nursery">
+>;
 export type NurseryReportMedia = Pick<NurseryReportFullDto, keyof typeof NurseryReport.MEDIA>;
 
 export class NurseryReportFullDto extends NurseryReportLightDto {
-  constructor(nurseryReport: NurseryReport, props: AdditionalNurseryReportFullProps) {
+  constructor(nurseryReport: NurseryReport, props?: AdditionalNurseryReportFullProps) {
     super();
     this.populate(NurseryReportFullDto, {
       ...pickApiProperties(nurseryReport, NurseryReportFullDto),
@@ -159,7 +159,7 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   seedlingsYoungTrees: number | null;
 
   @ApiProperty({ nullable: true })
-  interesting_facts: string | null;
+  interestingFacts: string | null;
 
   @ApiProperty({ nullable: true })
   sitePrep: string | null;
@@ -194,6 +194,12 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   @ApiProperty({ nullable: true })
   taskId: number | null;
 
+  @ApiProperty({
+    nullable: true,
+    description: "The associated task uuid"
+  })
+  taskUuid: string | null;
+
   @ApiProperty({ nullable: true })
   submittedAt: Date | null;
 
@@ -205,18 +211,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
 
   @ApiProperty()
   updatedAt: Date;
-
-  @ApiProperty({
-    nullable: true,
-    description: "The associated project report name"
-  })
-  projectReportName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    description: "The associated project report uuid"
-  })
-  projectReportUuid: string | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   file: MediaDto[];

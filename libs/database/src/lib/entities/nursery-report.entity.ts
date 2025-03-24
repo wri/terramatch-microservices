@@ -21,6 +21,7 @@ import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Task } from "./task.entity";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -96,6 +97,9 @@ export class NurseryReport extends Model<NurseryReport> {
   @BelongsTo(() => User)
   user: User | null;
 
+  @BelongsTo(() => Task)
+  task: Task | null;
+
   get projectName() {
     return this.nursery?.project?.name;
   }
@@ -120,7 +124,11 @@ export class NurseryReport extends Model<NurseryReport> {
     return this.nursery?.uuid;
   }
 
-  // TODO foreign key for task
+  get taskUuid() {
+    return this.task?.uuid;
+  }
+
+  @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;

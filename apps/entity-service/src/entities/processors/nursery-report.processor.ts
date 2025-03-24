@@ -1,12 +1,19 @@
-import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
-import { NurseryLightDto, NurseryFullDto, AdditionalNurseryFullProps, NurseryMedia } from "../dto/nursery.dto";
+import {
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  ProjectUser,
+  User
+} from "@terramatch-microservices/database/entities";
 import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { NurseryReportFullDto, NurseryReportMedia } from "../dto/nursery-report.dto";
+import { AdditionalNurseryReportFullProps, NurseryReportFullDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { NurseryReportLightDto } from "../dto/nursery-report.dto";
 
 export class NurseryReportProcessor extends EntityProcessor<
@@ -23,14 +30,18 @@ export class NurseryReportProcessor extends EntityProcessor<
       include: [
         {
           association: "nursery",
-          attributes: ["uuid", "name"],
+          attributes: ["id", "uuid", "name"],
           include: [
             {
               association: "project",
-              attributes: ["uuid", "name"],
+              attributes: ["id", "uuid", "name"],
               include: [{ association: "organisation", attributes: ["uuid", "name"] }]
             }
           ]
+        },
+        {
+          association: "task",
+          attributes: ["uuid"]
         }
       ]
     });
@@ -41,22 +52,22 @@ export class NurseryReportProcessor extends EntityProcessor<
     userId?: number,
     permissions?: string[]
   ): Promise<PaginatedResult<NurseryReport>> {
-    const projectAssociation: Includeable = {
+    const nurseryAssociation: Includeable = {
       association: "nursery",
-      attributes: ["uuid", "name"],
+      attributes: ["id", "uuid", "name"],
       include: [
         {
           association: "project",
-          attributes: ["uuid", "name"],
-          include: [{ association: "organisation", attributes: ["uuid", "name"] }]
+          attributes: ["id", "uuid", "name"],
+          include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }]
         }
       ]
     };
 
-    const builder = await this.entitiesService.buildQuery(NurseryReport, query, [projectAssociation]);
+    const builder = await this.entitiesService.buildQuery(NurseryReport, query, [nurseryAssociation]);
     if (query.sort != null) {
       if (
-        ["name", "status", "updateRequestStatus", "createdAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
+        ["status", "updateRequestStatus", "createdAt", "submittedAt", "updatedAt", "frameworkKey"].includes(
           query.sort.field
         )
       ) {
@@ -83,9 +94,9 @@ export class NurseryReportProcessor extends EntityProcessor<
 
     const associationFieldMap = {
       nurseryUuid: "$nursery.uuid$",
-      organisationUuid: "$project.organisation.uuid$",
-      country: "$project.country$",
-      projectUuid: "$project.uuid$"
+      organisationUuid: "$nursery.project.organisation.uuid$",
+      country: "$nursery.project.country$",
+      projectUuid: "$nursery.project.uuid$"
     };
 
     for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
@@ -99,8 +110,8 @@ export class NurseryReportProcessor extends EntityProcessor<
       builder.where({
         [Op.or]: [
           { name: { [Op.like]: `%${query.search}%` } },
-          { "$project.name$": { [Op.like]: `%${query.search}%` } },
-          { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } }
+          { "$nursery.project.name$": { [Op.like]: `%${query.search}%` } },
+          { "$nursery.project.organisation.name$": { [Op.like]: `%${query.search}%` } }
         ]
       });
     }
@@ -118,15 +129,19 @@ export class NurseryReportProcessor extends EntityProcessor<
 
   async addFullDto(document: DocumentBuilder, nurseryReport: NurseryReport): Promise<void> {
     const nurseryReportId = nurseryReport.id;
-
-    const nurseryReportsTotal = await NurseryReport.nurseries([nurseryReportId]).count();
-    const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryReportId);
-    const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryReportId);
-    const props: AdditionalNurseryFullProps = {
-      seedlingsGrownCount,
-      nurseryReportsTotal,
-      overdueNurseryReportsTotal,
-
+    const reportTitle = await this.getReportTitle(nurseryReport);
+    const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
+    const readableCompletionStatus = await this.getReadableCompletionStatus(nurseryReport.completion);
+    const createdByUser = await User.findOne({ where: { id: nurseryReport?.createdBy } });
+    const approvedByUser = await User.findOne({ where: { id: nurseryReport?.approvedBy } });
+    const migrated = nurseryReport.oldModel != null;
+    const props: AdditionalNurseryReportFullProps = {
+      reportTitle,
+      projectReportTitle,
+      readableCompletionStatus,
+      createdByUser,
+      approvedByUser,
+      migrated,
       ...(this.entitiesService.mapMediaCollection(
         await Media.nurseryReport(nurseryReportId).findAll(),
         NurseryReport.MEDIA
@@ -137,27 +152,33 @@ export class NurseryReportProcessor extends EntityProcessor<
   }
 
   async addLightDto(document: DocumentBuilder, nurseryReport: NurseryReport): Promise<void> {
-    const nurseryReportId = nurseryReport.id;
-
-    const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryReportId);
-    document.addData(nurseryReport.uuid, new NurseryReportLightDto(nurseryReport, { seedlingsGrownCount }));
+    document.addData(nurseryReport.uuid, new NurseryReportLightDto(nurseryReport));
   }
 
-  protected async getTotalOverdueReports(nurseryId: number) {
-    const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
-    return await NurseryReport.incomplete().nurseries([nurseryId]).count(countOpts);
+  protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string = "en-GB") {
+    if (dueAt == null) return title ?? "";
+
+    const adjustedDate = new Date(dueAt);
+    adjustedDate.setMonth(adjustedDate.getMonth() - 1);
+    const wEnd = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
+
+    adjustedDate.setMonth(adjustedDate.getMonth() - 5);
+    const wStart = adjustedDate.toLocaleString(locale, { month: "long" });
+
+    return `Nursery Report for ${wStart} - ${wEnd}`;
   }
 
-  private async getSeedlingsGrownCount(nurseryReportId: number) {
-    return (
-      (
-        await NurseryReport.nurseries([nurseryReportId])
-          .approved()
-          .findAll({
-            raw: true,
-            attributes: [[fn("SUM", col("seedlings_young_trees")), "seedlingsYoungTrees"]]
-          })
-      )[0].seedlingsYoungTrees ?? 0
-    );
+  protected async getReportTitle(nurseryReport: NurseryReport) {
+    return this.getReportTitleBase(nurseryReport.dueAt, nurseryReport.title, nurseryReport.user?.locale ?? "en-GB");
+  }
+
+  protected async getProjectReportTitle(nurseryReport: NurseryReport) {
+    const projectReport = await ProjectReport.findOne({ where: { taskId: nurseryReport.taskId } });
+
+    return this.getReportTitleBase(projectReport.dueAt, projectReport.title, projectReport.user?.locale ?? "en-GB");
+  }
+
+  protected async getReadableCompletionStatus(completion: number) {
+    return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
   }
 }

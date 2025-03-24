@@ -334,6 +334,11 @@ describe("NurseryReportProcessor", () => {
       );
     });
 
+    it("should return an empty list when there are no matches in the search", async () => {
+      await NurseryReportFactory.createMany(3, { title: "foo" });
+      await expectNurseryReports([], { search: "bar" });
+    });
+
     it("should paginate nursery reports", async () => {
       const nurseryReports = sortBy(await NurseryReportFactory.createMany(25), "id");
       await expectNurseryReports(nurseryReports.slice(0, 10), { page: { size: 10 } }, { total: nurseryReports.length });

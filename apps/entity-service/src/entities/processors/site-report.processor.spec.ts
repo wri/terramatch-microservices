@@ -154,8 +154,8 @@ describe("SiteReportProcessor", () => {
       await expectSiteReports([first, second, third], { siteUuid: s1.uuid });
     });
 
-    it("should throw an error if the project uuid is not found", async () => {
-      await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
+    it("should throw an error if the site uuid is not found", async () => {
+      await expect(processor.findMany({ siteUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
     it("should sort site reports by update request status", async () => {

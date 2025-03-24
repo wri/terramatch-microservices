@@ -6,7 +6,7 @@ import {
   ProjectUser,
   User
 } from "@terramatch-microservices/database/entities";
-import { EntityProcessor, PaginatedResult } from "./entity-processor";
+import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { Includeable, Op } from "sequelize";

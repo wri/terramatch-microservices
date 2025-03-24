@@ -282,6 +282,48 @@ describe("SiteReportProcessor", () => {
       );
     });
 
+    it("should sort site reports by update request status", async () => {
+      const siteReportA = await SiteReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const siteReportB = await SiteReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const siteReportC = await SiteReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      await expectSiteReports(
+        [siteReportA, siteReportB, siteReportC],
+        { sort: { field: "updateRequestStatus" } },
+        { sortField: "updateRequestStatus" }
+      );
+      await expectSiteReports(
+        [siteReportA, siteReportB, siteReportC],
+        { sort: { field: "updateRequestStatus", direction: "ASC" } },
+        { sortField: "updateRequestStatus" }
+      );
+      await expectSiteReports(
+        [siteReportC, siteReportB, siteReportA],
+        { sort: { field: "updateRequestStatus", direction: "DESC" } },
+        { sortField: "updateRequestStatus", sortUp: false }
+      );
+    });
+
+    it("should sort site reports by status", async () => {
+      const siteReportA = await SiteReportFactory.create({ status: "started" });
+      const siteReportB = await SiteReportFactory.create({ status: "approved" });
+      const siteReportC = await SiteReportFactory.create({ status: "approved" });
+      await expectSiteReports(
+        [siteReportA, siteReportB, siteReportC],
+        { sort: { field: "status" } },
+        { sortField: "status" }
+      );
+      await expectSiteReports(
+        [siteReportA, siteReportB, siteReportC],
+        { sort: { field: "status", direction: "ASC" } },
+        { sortField: "status" }
+      );
+      await expectSiteReports(
+        [siteReportC, siteReportB, siteReportA],
+        { sort: { field: "status", direction: "DESC" } },
+        { sortField: "status", sortUp: false }
+      );
+    });
+
     it("should paginate site reports", async () => {
       const siteReports = sortBy(await SiteReportFactory.createMany(25), "id");
       await expectSiteReports(siteReports.slice(0, 10), { page: { size: 10 } }, { total: siteReports.length });

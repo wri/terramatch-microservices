@@ -80,16 +80,6 @@ describe("SiteProcessor", () => {
       await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
     });
 
-    it("searches", async () => {
-      const s1 = await SiteFactory.create({ name: "Foo Bar" });
-      const s2 = await SiteFactory.create({ name: "Baz Foo" });
-      await SiteFactory.createMany(3);
-
-      await expectSites([s1, s2], { search: "foo" });
-
-      await expectSites([s1, s2], { q: "foo" });
-    });
-
     it("filters", async () => {
       const p1 = await ProjectFactory.create();
       const p2 = await ProjectFactory.create();

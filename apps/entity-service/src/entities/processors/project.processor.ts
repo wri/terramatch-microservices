@@ -49,7 +49,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
 
   async findMany(query: EntityQueryDto, userId: number, permissions: string[]) {
     const builder = await this.entitiesService.buildQuery(Project, query, [
-      { association: "organisation", attributes: ["name"] },
+      { association: "organisation", attributes: ["uuid", "name"] },
       { association: "framework" }
     ]);
 
@@ -74,8 +74,21 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 
-    for (const term of ["country", "status", "updateRequestStatus", "frameworkKey"]) {
-      if (query[term] != null) builder.where({ [term]: query[term] });
+    const associationFieldMap = {
+      projectUuid: "uuid",
+      organisationUuid: "$organisation.uuid$"
+    };
+
+    for (const term of [
+      "country",
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "projectUuid",
+      "organisationUuid"
+    ]) {
+      const field = associationFieldMap[term] ?? term;
+      if (query[term] != null) builder.where({ [field]: query[term] });
     }
     if (query.search != null) {
       builder.where({ name: { [Op.like]: `%${query.search}%` } });

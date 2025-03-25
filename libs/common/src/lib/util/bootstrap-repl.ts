@@ -5,18 +5,26 @@ import { repl } from "@nestjs/core";
 import { Sequelize } from "sequelize-typescript";
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
+import { Dictionary } from "lodash";
+import { buildJsonApi } from "./json-api-builder";
 
 const logger = new TMLogger("REPL");
 
-export async function bootstrapRepl(serviceName: string, module: Type | DynamicModule) {
+/**
+ * Starts up the NestJS REPL for the given app module.
+ * @param serviceName The name of the service (for logging)
+ * @param module The app module
+ * @param context Any additional parameters that should be included in the global context for this REPL runtime
+ */
+export async function bootstrapRepl(serviceName: string, module: Type | DynamicModule, context?: Dictionary<unknown>) {
   logger.log(`Starting REPL for ${serviceName}`);
 
   const replServer = await repl(module);
 
-  // Makes all lodash functions available via the global `lodash` accessor in the REPL
-  replServer.context["lodash"] = lodash;
-  // Makes all Sequelize models accessible in the global context
-  for (const [name, model] of Object.entries(replServer.context["get"](Sequelize).models)) {
+  // By default, we make lodash, the JSON API Builder, and the Sequelize models available
+  context = { lodash, buildJsonApi, ...replServer.context["get"](Sequelize).models, ...context };
+
+  for (const [name, model] of Object.entries(context as Dictionary<unknown>)) {
     // For in REPL auto-complete functionality
     Object.defineProperty(replServer.context, name, {
       value: model,

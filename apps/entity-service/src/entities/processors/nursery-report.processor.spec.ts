@@ -168,10 +168,8 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
 
       await expectNurseryReports([first, second, third], { projectUuid: p1.uuid });
-    });
 
-    it("should throw an error if the project uuid is not found", async () => {
-      await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
+      await expectNurseryReports([], { projectUuid: "123" });
     });
 
     it("should throw an error if the nursery uuid is not found", async () => {

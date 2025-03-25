@@ -58,9 +58,8 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
 
   @ApiProperty({
     required: false,
-    isArray: true,
     description: "If the base entity supports it, this will load the first page of associated entities",
-    type: () => EntitySideload
+    type: [EntitySideload]
   })
   @IsArray()
   @Type(() => EntitySideload)

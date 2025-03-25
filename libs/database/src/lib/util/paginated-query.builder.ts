@@ -37,6 +37,7 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
 
   constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize: number, include?: Includeable[]) {
     this.findOptions.limit = this.pageSize;
+    this.pageTotalFindOptions = {};
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }

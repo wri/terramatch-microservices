@@ -324,6 +324,10 @@ describe("SiteReportProcessor", () => {
       );
     });
 
+    it("should throw an error if the sort field is not valid", async () => {
+      await expect(processor.findMany({ sort: { field: "invalid" } })).rejects.toThrow(BadRequestException);
+    });
+
     it("should paginate site reports", async () => {
       const siteReports = sortBy(await SiteReportFactory.createMany(25), "id");
       await expectSiteReports(siteReports.slice(0, 10), { page: { size: 10 } }, { total: siteReports.length });
@@ -357,12 +361,60 @@ describe("SiteReportProcessor", () => {
       });
     });
 
-    it("should include calculated fields in SiteReportFullDto", async () => {
+    it("should include calculated fields in SiteReportFullDto completion Completed", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
 
       const { uuid } = await SiteReportFactory.create({
-        siteId: site.id
+        siteId: site.id,
+        title: "Site Report",
+        completion: 100
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const document = buildJsonApi(SiteReportFullDto, { forceDataArray: true });
+      await processor.addFullDto(document, siteReport);
+      const attributes = document.serialize().data[0].attributes as SiteReportFullDto;
+      expect(attributes).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        siteUuid: site.uuid
+      });
+    });
+
+    it("should include calculated fields in SiteReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+
+      const { uuid } = await SiteReportFactory.create({
+        siteId: site.id,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const document = buildJsonApi(SiteReportFullDto, { forceDataArray: true });
+      await processor.addFullDto(document, siteReport);
+      const attributes = document.serialize().data[0].attributes as SiteReportFullDto;
+      expect(attributes).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        siteUuid: site.uuid
+      });
+    });
+
+    it("should include calculated fields in SiteReportFullDto completion Started", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+
+      const { uuid } = await SiteReportFactory.create({
+        siteId: site.id,
+        title: "",
+        dueAt: null,
+        completion: 50
       });
 
       const siteReport = await processor.findOne(uuid);

@@ -167,7 +167,7 @@ describe("NurseryReportProcessor", () => {
 
       await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
 
-      await expectNurseryReports([first], { projectUuid: p1.uuid });
+      await expectNurseryReports([first, second, third], { projectUuid: p1.uuid });
     });
 
     it("should throw an error if the project uuid is not found", async () => {

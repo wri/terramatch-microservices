@@ -40,18 +40,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
     const projectAssociation: Includeable = {
       association: "project",
-      attributes: ["uuid", "name"]
+      attributes: ["uuid", "name"],
+      include: [{ association: "organisation", attributes: ["uuid", "name"] }]
     };
     const frameworkAssociation: Includeable = {
       association: "framework",
       attributes: ["name"]
     };
-    if (query.search != null) {
-      // This is they way that sequelize supports for searching in a joined table
-      projectAssociation.where = { name: { [Op.like]: `%${query.search}%` } };
-      // This is to ensure that the project is not required to be joined (simulating an OR)
-      projectAssociation.required = false;
-    }
 
     const associations = [projectAssociation, frameworkAssociation];
 
@@ -81,13 +76,30 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       });
     }
 
-    for (const term of ["status", "updateRequestStatus", "frameworkKey"]) {
-      if (query[term] != null) builder.where({ [term]: query[term] });
+    const associationFieldMap = {
+      organisationUuid: "$project.organisation.uuid$",
+      country: "$project.country$",
+      projectUuid: "$project.uuid$"
+    };
+
+    for (const term of [
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "projectUuid",
+      "organisationUuid",
+      "country"
+    ]) {
+      const field = associationFieldMap[term] ?? term;
+      if (query[term] != null) builder.withAssociations(associations).where({ [field]: query[term] });
     }
 
-    if (query.search != null) {
+    if (query.search != null || query.searchFilter != null) {
       builder.where({
-        name: { [Op.like]: `%${query.search}%` }
+        [Op.or]: [
+          { name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } },
+          { "$project.name$": { [Op.like]: `%${query.search}%` } }
+        ]
       });
     }
 

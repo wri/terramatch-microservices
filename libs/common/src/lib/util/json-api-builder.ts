@@ -2,6 +2,8 @@
 import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
 import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
+import { cloneDeep } from "lodash";
+import * as qs from "qs";
 
 type AttributeValue = string | number | boolean;
 type Attributes = {
@@ -30,11 +32,7 @@ type DocumentMeta = {
   resourceType: string;
   // Only supplied in the case of a delete
   resourceId?: string;
-  page?: {
-    cursor?: string;
-    number?: number;
-    total?: number;
-  };
+  indices?: IndexData[];
 };
 
 type ResourceMeta = {
@@ -119,14 +117,22 @@ type DocumentBuilderOptions = {
 };
 
 export type SerializeOptions = {
-  paginationTotal?: number;
-  pageNumber?: number;
   deletedResourceId?: string;
+};
+
+export type IndexData = {
+  resource: string;
+  requestPath: string;
+  ids: string[];
+  total?: number;
+  cursor?: string;
+  pageNumber?: number;
 };
 
 export class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
+  indexData: IndexData[] = [];
 
   constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
 
@@ -160,8 +166,13 @@ export class DocumentBuilder {
     return builder;
   }
 
-  serialize({ paginationTotal, pageNumber, deletedResourceId }: SerializeOptions = {}): JsonApiDocument {
-    const singular = this.data.length === 1 && this.options.pagination == null && this.options.forceDataArray !== true;
+  addIndexData(indexData: IndexData): DocumentBuilder {
+    this.indexData.push(indexData);
+    return this;
+  }
+
+  serialize({ deletedResourceId }: SerializeOptions = {}): JsonApiDocument {
+    const singular = this.data.length === 1 && this.indexData.length === 0 && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
       meta: { resourceType: this.resourceType }
     };
@@ -178,15 +189,11 @@ export class DocumentBuilder {
       doc.included = this.included.map(resource => resource.serialize());
     }
 
-    if (this.options.pagination != null) {
-      doc.meta.page = {
-        total: paginationTotal
-      };
-      if (this.options.pagination === "cursor") {
-        doc.meta.page.cursor = this.data[0]?.id;
-      } else if (this.options.pagination === "number") {
-        doc.meta.page.number = pageNumber ?? 1;
-      }
+    if (!singular && this.indexData.length === 0) {
+      throw new ApiBuilderException("Index data is required on index endpoints");
+    }
+    if (this.indexData.length > 0) {
+      doc.meta.indices = this.indexData;
     }
 
     return doc;
@@ -200,3 +207,13 @@ export const buildJsonApi = <DTO>(dtoClass: Type<DTO>, options?: DocumentBuilder
 
 export const buildDeletedResponse = (resourceType: string, id: string) =>
   new DocumentBuilder(resourceType).serialize({ deletedResourceId: id });
+
+export const getStableRequestQuery = (originalQuery: object) => {
+  const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };
+  if (normalizedQuery.page?.number != null) delete normalizedQuery.page.number;
+  if (normalizedQuery.sideloads != null) delete normalizedQuery.sideloads;
+  const searchParams = new URLSearchParams(qs.stringify(normalizedQuery));
+  searchParams.sort();
+  const query = searchParams.toString();
+  return query.length === 0 ? query : `?${query}`;
+};

@@ -1,4 +1,3 @@
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
   Demographic,
@@ -28,6 +27,8 @@ import {
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { BadRequestException } from "@nestjs/common";
+import { ProcessableEntity } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
   readonly LIGHT_DTO = ProjectLightDto;
@@ -47,7 +48,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     });
   }
 
-  async findMany(query: EntityQueryDto, userId: number, permissions: string[]) {
+  async findMany(query: EntityQueryDto) {
     const builder = await this.entitiesService.buildQuery(Project, query, [
       { association: "organisation", attributes: ["name"] },
       { association: "framework" }
@@ -63,15 +64,16 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       .filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);
     if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions.includes("manage-own")) {
-      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
     } else if (permissions.includes("projects-manage")) {
-      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
     for (const term of ["country", "status", "updateRequestStatus", "frameworkKey"]) {
@@ -84,14 +86,24 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addLightDto(document: DocumentBuilder, project: Project) {
+  async processSideload(
+    document: DocumentBuilder,
+    model: Project,
+    entity: ProcessableEntity,
+    pageSize: number
+  ): Promise<void> {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
+  }
+
+  async getLightDto(project: Project) {
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
-    document.addData(project.uuid, new ProjectLightDto(project, { totalHectaresRestoredSum }));
+    return { id: project.uuid, dto: new ProjectLightDto(project, { totalHectaresRestoredSum }) };
   }
 
-  async addFullDto(document: DocumentBuilder, project: Project) {
+  async getFullDto(project: Project) {
     const projectId = project.id;
     const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
@@ -151,7 +163,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       ) as ProjectMedia)
     };
 
-    document.addData(project.uuid, new ProjectFullDto(project, props));
+    return { id: project.uuid, dto: new ProjectFullDto(project, props) };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

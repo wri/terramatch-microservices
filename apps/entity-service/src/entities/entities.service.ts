@@ -20,6 +20,7 @@ import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
+import { PolicyService } from "@terramatch-microservices/common";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -61,7 +62,19 @@ export const MAX_PAGE_SIZE = 100 as const;
 
 @Injectable()
 export class EntitiesService {
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(private readonly mediaService: MediaService, private readonly policyService: PolicyService) {}
+
+  get userId() {
+    return this.policyService.userId;
+  }
+
+  async getPermissions() {
+    return await this.policyService.getPermissions();
+  }
+
+  async authorize(action: string, subject: Model | Model[]) {
+    await this.policyService.authorize(action, subject);
+  }
 
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
@@ -69,7 +82,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
   }
 
   createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(

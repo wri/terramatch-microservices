@@ -8,7 +8,13 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { buildJsonApi, JsonApiDocument, SerializeOptions } from "@terramatch-microservices/common/util";
+import {
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery,
+  IndexData,
+  JsonApiDocument
+} from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -114,17 +120,28 @@ export class SitePolygonsController {
     }
     const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
 
+    const indexIds: string[] = [];
     const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     for (const sitePolygon of await queryBuilder.execute()) {
+      indexIds.push(sitePolygon.uuid);
       if (lightResource) {
         document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon));
       } else {
         document.addData(sitePolygon.uuid, await this.sitePolygonService.buildFullDto(sitePolygon));
       }
     }
-    const serializeOptions: SerializeOptions = { paginationTotal: await queryBuilder.paginationTotal() };
-    if (isNumberPage(query.page)) serializeOptions.pageNumber = query.page.number;
-    return document.serialize(serializeOptions);
+
+    const indexData: IndexData = {
+      resource: getDtoType(dtoType),
+      requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`,
+      ids: indexIds,
+      total: await queryBuilder.paginationTotal()
+    };
+    if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
+    else indexData.cursor = indexIds[0];
+    document.addIndexData(indexData);
+
+    return document.serialize();
   }
 
   @Patch()

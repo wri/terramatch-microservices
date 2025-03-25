@@ -12,7 +12,7 @@ import {
 import { ApiOperation } from "@nestjs/swagger";
 import { Op } from "sequelize";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getDtoType, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "./dto/delayed-job.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
@@ -24,7 +24,7 @@ export class DelayedJobsController {
     operationId: "listDelayedJobs",
     description: "Retrieve a list of all delayed jobs."
   })
-  @JsonApiResponse(DelayedJobDto)
+  @JsonApiResponse({ data: DelayedJobDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async getRunningJobs(@Request() { authenticatedUserId }): Promise<JsonApiDocument> {
     const runningJobs = await DelayedJob.findAll({
@@ -42,12 +42,16 @@ export class DelayedJobsController {
       })
     );
 
-    const document = buildJsonApi(DelayedJobDto);
+    const document = buildJsonApi(DelayedJobDto, { forceDataArray: true });
+    const indexIds: string[] = [];
     jobsWithEntityNames.forEach(job => {
+      indexIds.push(job.uuid);
       document.addData(job.uuid, new DelayedJobDto(job));
     });
+    document.addIndexData({ resource: getDtoType(DelayedJobDto), requestPath: "/jobs/v3/delayedJobs", ids: indexIds });
     return document.serialize();
   }
+
   @Get(":uuid")
   @ApiOperation({
     operationId: "delayedJobsFind",

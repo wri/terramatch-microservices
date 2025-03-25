@@ -31,7 +31,7 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
     description: "Search query used for filtering selectable options in autocomplete fields."
   })
   @IsOptional()
-  q?: string;
+  searchFilter?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

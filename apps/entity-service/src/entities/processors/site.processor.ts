@@ -94,10 +94,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       if (query[term] != null) builder.withAssociations(associations).where({ [field]: query[term] });
     }
 
-    if (query.search != null || query.q != null) {
+    if (query.search != null || query.searchFilter != null) {
       builder.where({
         [Op.or]: [
-          { name: { [Op.like]: `%${query.search ?? query.q}%` } },
+          { name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } },
           { "$project.name$": { [Op.like]: `%${query.search}%` } }
         ]
       });

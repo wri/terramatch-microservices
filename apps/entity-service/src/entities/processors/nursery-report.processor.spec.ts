@@ -108,7 +108,7 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([nurseryReport1, nurseryReport2], { search: "org" });
     });
 
-    it("should return nursery reports filtered by the status, update request status, nursery, country, organisation and project", async () => {
+    it("should return nursery reports filtered by the status, update request status, nursery, country, organisation", async () => {
       const org1 = await OrganisationFactory.create();
       const org2 = await OrganisationFactory.create();
       const p1 = await ProjectFactory.create({ country: "MX", organisationId: org1.id });
@@ -166,6 +166,12 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([first, second, third], { nurseryUuid: n1.uuid });
 
       await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
+
+      await expectNurseryReports([first], { projectUuid: p1.uuid });
+    });
+
+    it("should throw an error if the project uuid is not found", async () => {
+      await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw an error if the nursery uuid is not found", async () => {

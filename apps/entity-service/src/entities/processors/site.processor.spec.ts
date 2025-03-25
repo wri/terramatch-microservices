@@ -86,6 +86,8 @@ describe("SiteProcessor", () => {
       await SiteFactory.createMany(3);
 
       await expectSites([s1, s2], { search: "foo" });
+
+      await expectSites([s1, s2], { q: "foo" });
     });
 
     it("filters", async () => {

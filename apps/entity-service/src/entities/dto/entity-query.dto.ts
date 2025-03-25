@@ -28,6 +28,10 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  q?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   country?: string;
 
   @ApiProperty({ required: false })

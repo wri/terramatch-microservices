@@ -90,8 +90,8 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
-    if (query.search != null) {
-      builder.where({ name: { [Op.like]: `%${query.search}%` } });
+    if (query.search != null || query.q != null) {
+      builder.where({ name: { [Op.like]: `%${query.search ?? query.q}%` } });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

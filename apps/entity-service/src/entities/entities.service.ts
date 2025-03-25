@@ -57,7 +57,7 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-const MAX_PAGE_SIZE = 100 as const;
+export const MAX_PAGE_SIZE = 100 as const;
 
 @Injectable()
 export class EntitiesService {

@@ -1,6 +1,8 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsEnum, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsEnum, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { MAX_PAGE_SIZE, PROCESSABLE_ENTITIES, ProcessableEntity } from "../entities.service";
+import { Type } from "class-transformer";
 
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })
@@ -11,6 +13,18 @@ class QuerySort {
   @IsEnum(["ASC", "DESC"])
   @IsOptional()
   direction?: "ASC" | "DESC";
+}
+
+export class EntitySideload {
+  @IsIn(PROCESSABLE_ENTITIES)
+  @ApiProperty({ name: "entity", enum: PROCESSABLE_ENTITIES, description: "Entity type to sideload" })
+  entity: ProcessableEntity;
+
+  @ApiProperty({ name: "pageSize", description: "The page size to include." })
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PAGE_SIZE)
+  pageSize: number;
 }
 
 export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
@@ -41,4 +55,15 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({
+    required: false,
+    isArray: true,
+    description: "If the base entity supports it, this will load the first page of associated entities",
+    type: () => EntitySideload
+  })
+  @IsArray()
+  @Type(() => EntitySideload)
+  @ValidateNested({ each: true })
+  sideloads?: EntitySideload[];
 }

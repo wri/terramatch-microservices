@@ -17,7 +17,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
-import { EntityQueryDto } from "./dto/entity-query.dto";
+import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
@@ -25,7 +25,7 @@ import { EntityModel } from "@terramatch-microservices/database/constants/entiti
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto)
+@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 

@@ -198,6 +198,10 @@ describe("NurseryReportProcessor", () => {
       );
     });
 
+    it("should throw an error if the sort field is not valid", async () => {
+      await expect(processor.findMany({ sort: { field: "invalid" } })).rejects.toThrow(BadRequestException);
+    });
+
     it("should sort nursery reports by organisation name", async () => {
       const org1 = await OrganisationFactory.create({ name: "A Org" });
       const org2 = await OrganisationFactory.create({ name: "B Org" });
@@ -385,7 +389,8 @@ describe("NurseryReportProcessor", () => {
       const nursery = await NurseryFactory.create({ projectId: project.id });
 
       const { uuid } = await NurseryReportFactory.create({
-        nurseryId: nursery.id
+        nurseryId: nursery.id,
+        dueAt: null
       });
 
       const nurseryReport = await processor.findOne(uuid);
@@ -396,7 +401,8 @@ describe("NurseryReportProcessor", () => {
         uuid,
         lightResource: false,
         projectUuid: project.uuid,
-        nurseryUuid: nursery.uuid
+        nurseryUuid: nursery.uuid,
+        dueAt: null
       });
     });
   });

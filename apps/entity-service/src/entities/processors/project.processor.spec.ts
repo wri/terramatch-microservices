@@ -1,10 +1,4 @@
-import {
-  Demographic,
-  Framework,
-  Project,
-  ProjectReport,
-  SiteReport
-} from "@terramatch-microservices/database/entities";
+import { Demographic, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";

@@ -230,8 +230,7 @@ describe("ProjectProcessor", () => {
       expect(attributes).toMatchObject({
         uuid,
         lightResource: true,
-        organisationName: org.name,
-        frameworkUuid: framework.uuid
+        organisationName: org.name
       });
     });
 
@@ -381,7 +380,6 @@ describe("ProjectProcessor", () => {
         uuid,
         lightResource: false,
         organisationName: org.name,
-        frameworkUuid: framework.uuid,
         totalSites: approvedSites.length,
         totalNurseries: approvedNurseries.length,
         totalOverdueReports: 3,

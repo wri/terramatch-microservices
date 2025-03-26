@@ -5,8 +5,7 @@ import {
   Seeding,
   Site,
   SiteReport,
-  TreeSpecies,
-  User
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";

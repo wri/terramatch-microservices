@@ -214,10 +214,6 @@ describe("ProjectProcessor", () => {
   describe("DTOs", () => {
     it("includes calculated fields in ProjectLightDto", async () => {
       const org = await OrganisationFactory.create();
-      const [framework] = await Framework.findOrCreate({
-        where: { slug: "foofund" },
-        defaults: { uuid: faker.string.uuid(), name: "FooFunding" }
-      });
       const { uuid } = await ProjectFactory.create({
         organisationId: org.id,
         frameworkKey: "foofund" as FrameworkKey
@@ -236,10 +232,6 @@ describe("ProjectProcessor", () => {
 
     it("includes calculated fields in ProjectFullDto", async () => {
       const org = await OrganisationFactory.create();
-      const [framework] = await Framework.findOrCreate({
-        where: { slug: "barfund" },
-        defaults: { uuid: faker.string.uuid(), name: "BarFunding" }
-      });
       const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
       const { id: projectId, uuid } = await ProjectFactory.create({
         organisationId: org.id,

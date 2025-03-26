@@ -16,8 +16,8 @@ export class SiteReportLightDto extends EntityDto {
         ...pickApiProperties(siteReport, SiteReportLightDto),
         lightResource: true,
         // these two are untyped and marked optional in the base model.
-        createdAt: siteReport.createdAt as Date,
-        updatedAt: siteReport.createdAt as Date,
+        createdAt: new Date(siteReport.createdAt),
+        updatedAt: new Date(siteReport.updatedAt),
         ...props
       });
     }
@@ -78,7 +78,7 @@ export class SiteReportLightDto extends EntityDto {
   submittedAt: Date | null;
 
   @ApiProperty({ nullable: true })
-  taskId: number | null;
+  taskUuid: string | null;
 
   @ApiProperty()
   dueAt: Date | null;
@@ -102,8 +102,8 @@ export class SiteReportFullDto extends SiteReportLightDto {
       ...pickApiProperties(siteReport, SiteReportFullDto),
       lightResource: false,
       // these two are untyped and marked optional in the base model.
-      createdAt: siteReport.createdAt as Date,
-      updatedAt: siteReport.createdAt as Date,
+      createdAt: new Date(siteReport.createdAt),
+      updatedAt: new Date(siteReport.updatedAt),
       ...props
     });
   }
@@ -166,13 +166,7 @@ export class SiteReportFullDto extends SiteReportLightDto {
   sharedDriveLink: string | null;
 
   @ApiProperty({ nullable: true })
-  createdBy: number | null;
-
-  @ApiProperty({ nullable: true })
   createdByUser: User | null;
-
-  @ApiProperty({ nullable: true })
-  approvedBy: number | null;
 
   @ApiProperty({ nullable: true })
   approvedByUser: User | null;
@@ -188,9 +182,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
     description: "The associated project uuid"
   })
   projectUuid: string | null;
-
-  @ApiProperty({ nullable: true })
-  taskId: number | null;
 
   @ApiProperty({
     nullable: true,

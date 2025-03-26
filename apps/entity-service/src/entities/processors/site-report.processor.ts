@@ -43,6 +43,14 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
         {
           association: "task",
           attributes: ["uuid"]
+        },
+        {
+          association: "createdByUser",
+          attributes: ["id", "uuid", "firstName", "lastName"]
+        },
+        {
+          association: "approvedByUser",
+          attributes: ["id", "uuid", "firstName", "lastName"]
         }
       ]
     });
@@ -133,8 +141,6 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const reportTitle = await this.getReportTitle(siteReport);
     const projectReportTitle = await this.getProjectReportTitle(siteReport);
     const readableCompletionStatus = await this.getReadableCompletionStatus(siteReport.completion);
-    const createdByUser = await User.findOne({ where: { id: siteReport?.createdBy } });
-    const approvedByUser = await User.findOne({ where: { id: siteReport?.approvedBy } });
     const migrated = siteReport.oldModel != null;
     const totalTreesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports([siteReportId]).sum("amount")) ?? 0;
@@ -143,22 +149,18 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       (await TreeSpecies.visible().collection("non-tree").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
+    const mediaCollection = await Media.siteReport(siteReportId).findAll();
     const props: AdditionalSiteReportFullProps = {
       reportTitle,
       projectReportTitle,
       readableCompletionStatus,
-      createdByUser,
-      approvedByUser,
       migrated,
       totalTreesPlantedCount,
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
       projectReport: undefined,
-      ...(this.entitiesService.mapMediaCollection(
-        await Media.siteReport(siteReportId).findAll(),
-        SiteReport.MEDIA
-      ) as SiteReportMedia)
+      ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA) as SiteReportMedia)
     };
 
     document.addData(siteReport.uuid, new SiteReportFullDto(siteReport, props));

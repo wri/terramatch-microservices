@@ -1,11 +1,4 @@
-import {
-  Media,
-  Nursery,
-  NurseryReport,
-  ProjectReport,
-  ProjectUser,
-  User
-} from "@terramatch-microservices/database/entities";
+import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";

@@ -41,6 +41,14 @@ export class NurseryReportProcessor extends EntityProcessor<
         {
           association: "task",
           attributes: ["uuid"]
+        },
+        {
+          association: "createdByUser",
+          attributes: ["id", "uuid", "firstName", "lastName"]
+        },
+        {
+          association: "approvedByUser",
+          attributes: ["id", "uuid", "firstName", "lastName"]
         }
       ]
     });
@@ -90,7 +98,7 @@ export class NurseryReportProcessor extends EntityProcessor<
       projectUuid: "$nursery.project.uuid$"
     };
 
-    for (const term of [
+    const termsToFilter = [
       "status",
       "updateRequestStatus",
       "frameworkKey",
@@ -98,12 +106,14 @@ export class NurseryReportProcessor extends EntityProcessor<
       "organisationUuid",
       "country",
       "projectUuid"
-    ]) {
+    ];
+
+    termsToFilter.forEach(term => {
+      const field = associationFieldMap[term] ?? term;
       if (query[term] != null) {
-        const field = associationFieldMap[term] || term;
         builder.where({ [field]: query[term] });
       }
-    }
+    });
 
     if (query.search != null) {
       builder.where({
@@ -127,23 +137,17 @@ export class NurseryReportProcessor extends EntityProcessor<
 
   async addFullDto(document: DocumentBuilder, nurseryReport: NurseryReport): Promise<void> {
     const nurseryReportId = nurseryReport.id;
+    const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
     const readableCompletionStatus = await this.getReadableCompletionStatus(nurseryReport.completion);
-    const createdByUser = await User.findOne({ where: { id: nurseryReport?.createdBy } });
-    const approvedByUser = await User.findOne({ where: { id: nurseryReport?.approvedBy } });
     const migrated = nurseryReport.oldModel != null;
     const props: AdditionalNurseryReportFullProps = {
       reportTitle,
       projectReportTitle,
       readableCompletionStatus,
-      createdByUser,
-      approvedByUser,
       migrated,
-      ...(this.entitiesService.mapMediaCollection(
-        await Media.nurseryReport(nurseryReportId).findAll(),
-        NurseryReport.MEDIA
-      ) as NurseryReportMedia)
+      ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
 
     document.addData(nurseryReport.uuid, new NurseryReportFullDto(nurseryReport, props));

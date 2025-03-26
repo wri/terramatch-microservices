@@ -15,8 +15,8 @@ export class NurseryReportLightDto extends EntityDto {
         ...pickApiProperties(nurseryReport, NurseryReportLightDto),
         lightResource: true,
         // these two are untyped and marked optional in the base model.
-        createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.createdAt as Date,
+        createdAt: new Date(nurseryReport.createdAt),
+        updatedAt: new Date(nurseryReport.updatedAt),
         ...props
       });
     }
@@ -77,7 +77,7 @@ export class NurseryReportLightDto extends EntityDto {
   submittedAt: Date | null;
 
   @ApiProperty({ nullable: true })
-  taskId: number | null;
+  taskUuid: string | null;
 
   @ApiProperty()
   dueAt: Date | null;
@@ -105,8 +105,8 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
         ...pickApiProperties(nurseryReport, NurseryReportFullDto),
         lightResource: false,
         // these two are untyped and marked optional in the base model.
-        createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.createdAt as Date,
+        createdAt: new Date(nurseryReport.createdAt),
+        updatedAt: new Date(nurseryReport.updatedAt),
         ...props
       });
     }
@@ -201,9 +201,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
     description: "The associated project uuid"
   })
   projectUuid: string | null;
-
-  @ApiProperty({ nullable: true })
-  taskId: number | null;
 
   @ApiProperty({
     nullable: true,

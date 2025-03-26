@@ -75,10 +75,10 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       }
     }
 
-    if (query.search != null) {
+    if (query.search != null || query.searchFilter != null) {
       builder.where({
         [Op.or]: [
-          { name: { [Op.like]: `%${query.search}%` } },
+          { name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } },
           { "$project.name$": { [Op.like]: `%${query.search}%` } },
           { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } }
         ]

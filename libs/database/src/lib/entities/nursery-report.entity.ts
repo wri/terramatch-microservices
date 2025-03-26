@@ -97,6 +97,12 @@ export class NurseryReport extends Model<NurseryReport> {
   @BelongsTo(() => User)
   user: User | null;
 
+  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
+  createdByUser: User | null;
+
+  @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
+  approvedByUser: User | null;
+
   @BelongsTo(() => Task)
   task: Task | null;
 

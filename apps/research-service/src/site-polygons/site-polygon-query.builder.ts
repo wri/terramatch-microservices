@@ -1,4 +1,4 @@
-import { IncludeOptions, literal, Op, Sequelize } from "sequelize";
+import { IncludeOptions, literal, Op } from "sequelize";
 import {
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,

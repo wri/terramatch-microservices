@@ -108,7 +108,7 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([nurseryReport1, nurseryReport2], { search: "org" });
     });
 
-    it("should return nursery reports filtered by the status, update request status, nursery, country, organisation and project", async () => {
+    it("should return nursery reports filtered by the status, update request status, nursery, country, organisation", async () => {
       const org1 = await OrganisationFactory.create();
       const org2 = await OrganisationFactory.create();
       const p1 = await ProjectFactory.create({ country: "MX", organisationId: org1.id });
@@ -162,6 +162,10 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([first, second, third], { nurseryUuid: n1.uuid });
 
       await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
+
+      await expectNurseryReports([first, second, third], { projectUuid: p1.uuid });
+
+      await expectNurseryReports([], { projectUuid: "123" });
     });
 
     it("should throw an error if the nursery uuid is not found", async () => {
@@ -188,6 +192,10 @@ describe("NurseryReportProcessor", () => {
         { sort: { field: "projectName", direction: "DESC" } },
         { sortField: "projectName" }
       );
+    });
+
+    it("should throw an error if the sort field is not valid", async () => {
+      await expect(processor.findMany({ sort: { field: "invalid" } })).rejects.toThrow(BadRequestException);
     });
 
     it("should sort nursery reports by organisation name", async () => {
@@ -377,7 +385,8 @@ describe("NurseryReportProcessor", () => {
       const nursery = await NurseryFactory.create({ projectId: project.id });
 
       const { uuid } = await NurseryReportFactory.create({
-        nurseryId: nursery.id
+        nurseryId: nursery.id,
+        dueAt: null
       });
 
       const nurseryReport = await processor.findOne(uuid);
@@ -388,7 +397,8 @@ describe("NurseryReportProcessor", () => {
         uuid,
         lightResource: false,
         projectUuid: project.uuid,
-        nurseryUuid: nursery.uuid
+        nurseryUuid: nursery.uuid,
+        dueAt: null
       });
     });
   });

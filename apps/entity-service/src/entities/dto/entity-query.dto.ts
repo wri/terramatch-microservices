@@ -62,6 +62,7 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
     type: [EntitySideload]
   })
   @IsArray()
+  @IsOptional()
   @Type(() => EntitySideload)
   @ValidateNested({ each: true })
   sideloads?: EntitySideload[];

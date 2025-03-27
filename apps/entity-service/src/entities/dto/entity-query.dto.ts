@@ -52,4 +52,8 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ApiProperty({ required: false })
   @IsOptional()
   nurseryUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  siteUuid?: string;
 }

@@ -15,8 +15,8 @@ export class NurseryReportLightDto extends EntityDto {
         ...pickApiProperties(nurseryReport, NurseryReportLightDto),
         lightResource: true,
         // these two are untyped and marked optional in the base model.
-        createdAt: new Date(nurseryReport.createdAt),
-        updatedAt: new Date(nurseryReport.updatedAt),
+        createdAt: nurseryReport.createdAt as Date,
+        updatedAt: nurseryReport.updatedAt as Date,
         ...props
       });
     }
@@ -105,8 +105,8 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
         ...pickApiProperties(nurseryReport, NurseryReportFullDto),
         lightResource: false,
         // these two are untyped and marked optional in the base model.
-        createdAt: new Date(nurseryReport.createdAt),
-        updatedAt: new Date(nurseryReport.updatedAt),
+        createdAt: nurseryReport.createdAt as Date,
+        updatedAt: nurseryReport.updatedAt as Date,
         ...props
       });
     }

@@ -82,11 +82,12 @@ jobs:
           docker build -t terramatch-microservices-base:nx-base .
           SERVICE_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:${{ env.IMAGE_TAG }}
           docker build \
+            --build-arg SERVICE=${{ inputs.service }} \
             --build-arg NODE_ENV=production \
             --build-arg DEPLOY_ENV=${{ inputs.env }} \
             --build-arg SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
             --build-arg BUILD_FLAG='--prod --verbose --no-cloud' \
-            -f apps/${{ inputs.service }}/Dockerfile \
+            -f service.Dockerfile \
             -t $SERVICE_IMAGE .
           docker push $SERVICE_IMAGE
           echo "image=$SERVICE_IMAGE"

@@ -201,6 +201,10 @@ describe("ProjectProcessor", () => {
       await expectProjects(projects.slice(10, 20), { page: { size: 10, number: 2 } }, { total: projects.length });
       await expectProjects(projects.slice(20), { page: { size: 10, number: 3 } }, { total: projects.length });
     });
+
+    it("should throw an error if the sort field is not recognized", async () => {
+      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe("findOne", () => {

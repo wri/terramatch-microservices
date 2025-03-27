@@ -48,4 +48,8 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  nurseryUuid?: string;
 }

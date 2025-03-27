@@ -5,6 +5,7 @@ import { User } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { TemplateService } from "@terramatch-microservices/common/email/template.service";
 
 @Injectable()
 export class ResetPasswordService {
@@ -13,7 +14,8 @@ export class ResetPasswordService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
-    private readonly localizationService: LocalizationService
+    private readonly localizationService: LocalizationService,
+    private readonly templateService: TemplateService
   ) {}
 
   async sendResetPasswordEmail(emailAddress: string, callbackUrl: string) {
@@ -24,8 +26,15 @@ export class ResetPasswordService {
 
     const bodyKey = "reset-password.body";
     const subjectKey = "reset-password.subject";
+    const titleKey = "reset-password.title";
+    const ctaKey = "reset-password.cta";
 
-    const localizationKeys = await this.localizationService.getLocalizationKeys([bodyKey, subjectKey]);
+    const localizationKeys = await this.localizationService.getLocalizationKeys([
+      bodyKey,
+      subjectKey,
+      titleKey,
+      ctaKey
+    ]);
 
     if (!localizationKeys.length) {
       throw new NotFoundException("Localizations not found");
@@ -33,6 +42,8 @@ export class ResetPasswordService {
 
     const bodyLocalization = localizationKeys.find(x => x.key == bodyKey);
     const subjectLocalization = localizationKeys.find(x => x.key == subjectKey);
+    const titleLocalization = localizationKeys.find(x => x.key == titleKey);
+    const ctaLocalization = localizationKeys.find(x => x.key == ctaKey);
 
     if (bodyLocalization == null) {
       throw new NotFoundException("Localization body not found");
@@ -42,19 +53,38 @@ export class ResetPasswordService {
       throw new NotFoundException("Localization subject not found");
     }
 
+    if (titleLocalization == null) {
+      throw new NotFoundException("Localization title not found");
+    }
+
+    if (ctaLocalization == null) {
+      throw new NotFoundException("Localization CTA not found");
+    }
+
     const resetToken = await this.jwtService.signAsync({ sub: user.uuid }, { expiresIn: "2h" });
 
-    const bodyEmailContent = await this.localizationService.translate(bodyLocalization.value, user.locale);
     const resetLink = `${callbackUrl}/${resetToken}`;
-    const bodyEmail = this.formatBody(bodyEmailContent, resetLink);
+    const bodyEmail = await this.formatEmail(
+      user.locale,
+      bodyLocalization.value,
+      titleLocalization.value,
+      ctaLocalization.value,
+      resetLink
+    );
     await this.emailService.sendEmail(user.emailAddress, subjectLocalization.value, bodyEmail);
 
     return { email: user.emailAddress, uuid: user.uuid };
   }
 
-  private formatBody(bodyEmailContent: string, resetLink: string) {
-    const anchor = `<a href="${resetLink}" target="_blank">link</a>`;
-    return bodyEmailContent.replace("link", anchor).replace("enlace", anchor).replace("lien", anchor);
+  private async formatEmail(locale: string, body: string, title: string, cta: string, callbackUrl: string) {
+    const emailData = {
+      title: await this.localizationService.translate(title, locale),
+      body: await this.localizationService.translate(body, locale),
+      link: callbackUrl,
+      cta: await this.localizationService.translate(cta, locale),
+      monitoring: "monitoring"
+    };
+    return this.templateService.render("user-service/views/default-email.hbs", emailData);
   }
 
   async resetPassword(resetToken: string, newPassword: string) {

@@ -133,12 +133,10 @@ export class NurseryReportProcessor extends EntityProcessor<
     const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
-    const readableCompletionStatus = await this.getReadableCompletionStatus(nurseryReport.completion);
     const migrated = nurseryReport.oldModel != null;
     const props: AdditionalNurseryReportFullProps = {
       reportTitle,
       projectReportTitle,
-      readableCompletionStatus,
       migrated,
       ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
@@ -172,9 +170,5 @@ export class NurseryReportProcessor extends EntityProcessor<
     const projectReport = await ProjectReport.findOne({ where: { taskId: nurseryReport.taskId } });
 
     return this.getReportTitleBase(projectReport.dueAt, projectReport.title, projectReport.user?.locale ?? "en-GB");
-  }
-
-  protected async getReadableCompletionStatus(completion: number) {
-    return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
   }
 }

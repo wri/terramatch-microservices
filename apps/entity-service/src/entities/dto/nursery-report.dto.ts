@@ -160,8 +160,8 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   @ApiProperty()
   nothingToReport: boolean;
 
-  @ApiProperty()
-  readableCompletionStatus: string;
+  @ApiProperty({ nullable: true })
+  completion: number | null;
 
   @ApiProperty({ nullable: true })
   title: string | null;

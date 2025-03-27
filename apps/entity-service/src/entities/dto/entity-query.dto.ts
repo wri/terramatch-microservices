@@ -63,6 +63,14 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @IsOptional()
   projectUuid?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  nurseryUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  siteUuid?: string;
+
   @ApiProperty({
     required: false,
     description: "If the base entity supports it, this will load the first page of associated entities",

@@ -16,6 +16,8 @@ import { AssociationDto } from "./dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
+import { NurseryReportProcessor } from "./processors/nursery-report.processor";
+import { SiteReportProcessor } from "./processors/site-report.processor";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
@@ -27,7 +29,9 @@ const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
   sites: SiteProcessor,
   nurseries: NurseryProcessor,
-  projectReports: ProjectReportProcessor
+  projectReports: ProjectReportProcessor,
+  nurseryReports: NurseryReportProcessor,
+  siteReports: SiteReportProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;

@@ -179,10 +179,16 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   sharedDriveLink: string | null;
 
   @ApiProperty({ nullable: true })
-  createdByUser: User | null;
+  createdByFirstName: string | null;
 
   @ApiProperty({ nullable: true })
-  approvedByUser: User | null;
+  createdByLastName: string | null;
+
+  @ApiProperty({ nullable: true })
+  approvedByFirstName: string | null;
+
+  @ApiProperty({ nullable: true })
+  approvedByLastName: string | null;
 
   @ApiProperty({
     nullable: true,

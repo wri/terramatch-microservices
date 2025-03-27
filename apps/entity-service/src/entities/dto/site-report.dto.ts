@@ -156,8 +156,8 @@ export class SiteReportFullDto extends SiteReportLightDto {
   @ApiProperty()
   nothingToReport: boolean;
 
-  @ApiProperty()
-  readableCompletionStatus: string;
+  @ApiProperty({ nullable: true })
+  completion: number | null;
 
   @ApiProperty({ nullable: true })
   title: string | null;

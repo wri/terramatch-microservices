@@ -139,7 +139,6 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const siteReportId = siteReport.id;
     const reportTitle = await this.getReportTitle(siteReport);
     const projectReportTitle = await this.getProjectReportTitle(siteReport);
-    const readableCompletionStatus = await this.getReadableCompletionStatus(siteReport.completion);
     const migrated = siteReport.oldModel != null;
     const totalTreesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports([siteReportId]).sum("amount")) ?? 0;
@@ -152,7 +151,6 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const props: AdditionalSiteReportFullProps = {
       reportTitle,
       projectReportTitle,
-      readableCompletionStatus,
       migrated,
       totalTreesPlantedCount,
       totalSeedsPlantedCount,
@@ -191,9 +189,5 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const projectReport = await ProjectReport.findOne({ where: { taskId: siteReport.taskId } });
 
     return this.getReportTitleBase(projectReport.dueAt, projectReport.title, projectReport.user?.locale ?? "en-GB");
-  }
-
-  protected async getReadableCompletionStatus(completion: number) {
-    return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
   }
 }

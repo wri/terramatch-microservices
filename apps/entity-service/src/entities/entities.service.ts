@@ -20,6 +20,7 @@ import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
+import { NurseryReportProcessor } from "./processors/nursery-report.processor";
 import { SiteReportProcessor } from "./processors/site-report.processor";
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -27,6 +28,7 @@ const ENTITY_PROCESSORS = {
   sites: SiteProcessor,
   nurseries: NurseryProcessor,
   projectReports: ProjectReportProcessor,
+  nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor
 };
 

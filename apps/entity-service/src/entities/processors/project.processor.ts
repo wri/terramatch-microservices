@@ -106,6 +106,9 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     entity: ProcessableEntity,
     pageSize: number
   ): Promise<void> {
+    if (!["sites", "nurseries"].includes(entity)) {
+      throw new BadRequestException("Projects only support sideloading associated sites and nurseries");
+    }
     const processor = this.entitiesService.createEntityProcessor(entity);
     await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
   }

@@ -160,6 +160,22 @@ export class SiteReport extends Model<SiteReport> {
     return this.task?.uuid;
   }
 
+  get createdByFirstName() {
+    return this.createdByUser?.firstName;
+  }
+
+  get createdByLastName() {
+    return this.createdByUser?.lastName;
+  }
+
+  get approvedByFirstName() {
+    return this.approvedByUser?.firstName;
+  }
+
+  get approvedByLastName() {
+    return this.approvedByUser?.lastName;
+  }
+
   @Column(STRING)
   status: string;
 

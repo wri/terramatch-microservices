@@ -4,7 +4,6 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
-import { User } from "@sentry/nestjs";
 import { ProjectReportLightDto } from "./project-report.dto";
 
 @JsonApiDto({ type: "siteReports" })

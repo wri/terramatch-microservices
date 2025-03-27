@@ -16,8 +16,8 @@ export class SiteReportLightDto extends EntityDto {
         ...pickApiProperties(siteReport, SiteReportLightDto),
         lightResource: true,
         // these two are untyped and marked optional in the base model.
-        createdAt: new Date(siteReport.createdAt),
-        updatedAt: new Date(siteReport.updatedAt),
+        createdAt: siteReport.createdAt as Date,
+        updatedAt: siteReport.updatedAt as Date,
         ...props
       });
     }

@@ -1,12 +1,15 @@
 import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { AdditionalNurseryReportFullProps, NurseryReportFullDto, NurseryReportMedia } from "../dto/nursery-report.dto";
-import { NurseryReportLightDto } from "../dto/nursery-report.dto";
+import {
+  AdditionalNurseryReportFullProps,
+  NurseryReportFullDto,
+  NurseryReportLightDto,
+  NurseryReportMedia
+} from "../dto/nursery-report.dto";
 
 export class NurseryReportProcessor extends EntityProcessor<
   NurseryReport,
@@ -16,7 +19,7 @@ export class NurseryReportProcessor extends EntityProcessor<
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;
 
-  async findOne(uuid: string): Promise<NurseryReport> {
+  async findOne(uuid: string) {
     return await NurseryReport.findOne({
       where: { uuid },
       include: [
@@ -128,7 +131,7 @@ export class NurseryReportProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, nurseryReport: NurseryReport): Promise<void> {
+  async getFullDto(nurseryReport: NurseryReport) {
     const nurseryReportId = nurseryReport.id;
     const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
@@ -141,12 +144,12 @@ export class NurseryReportProcessor extends EntityProcessor<
       ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
 
-    document.addData(nurseryReport.uuid, new NurseryReportFullDto(nurseryReport, props));
+    return { id: nurseryReport.uuid, dto: new NurseryReportFullDto(nurseryReport, props) };
   }
 
-  async addLightDto(document: DocumentBuilder, nurseryReport: NurseryReport): Promise<void> {
+  async getLightDto(nurseryReport: NurseryReport) {
     const reportTitle = await this.getReportTitle(nurseryReport);
-    document.addData(nurseryReport.uuid, new NurseryReportLightDto(nurseryReport, { reportTitle }));
+    return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string | null) {

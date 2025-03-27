@@ -48,8 +48,10 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
   }
 
   async findMany(query: EntityQueryDto, userId: number, permissions: string[]) {
-    const associations = [{ association: "organisation", attributes: ["uuid", "name"] }, { association: "framework" }];
-    const builder = await this.entitiesService.buildQuery(Project, query, associations);
+    const builder = await this.entitiesService.buildQuery(Project, query, [
+      { association: "organisation", attributes: ["uuid", "name"] },
+      { association: "framework" }
+    ]);
 
     if (query.sort != null) {
       if (["name", "plantingStartDate", "country"].includes(query.sort.field)) {
@@ -86,7 +88,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       "organisationUuid"
     ]) {
       const field = associationFieldMap[term] ?? term;
-      if (query[term] != null) builder.withAssociations(associations).where({ [field]: query[term] });
+      if (query[term] != null) builder.where({ [field]: query[term] });
     }
 
     if (query.search != null || query.searchFilter != null) {

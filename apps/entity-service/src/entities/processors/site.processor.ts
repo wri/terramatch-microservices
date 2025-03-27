@@ -47,10 +47,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       association: "framework",
       attributes: ["name"]
     };
+    const builder = await this.entitiesService.buildQuery(Site, query, [projectAssociation, frameworkAssociation]);
 
-    const associations = [projectAssociation, frameworkAssociation];
-
-    const builder = await this.entitiesService.buildQuery(Site, query, associations);
     if (query.sort != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
@@ -91,11 +89,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       "country"
     ]) {
       const field = associationFieldMap[term] ?? term;
-      if (query[term] != null) builder.withAssociations(associations).where({ [field]: query[term] });
+      if (query[term] != null) builder.where({ [field]: query[term] });
     }
 
     if (query.search != null || query.searchFilter != null) {
-      builder.withAssociations([projectAssociation]).where({
+      builder.where({
         [Op.or]: [
           { name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } },
           { "$project.name$": { [Op.like]: `%${query.search}%` } }

@@ -62,23 +62,6 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
     return this;
   }
 
-  /**
-   * Temporarily adds associations to the query, enabling filtering on related model fields.
-   * This method is a temporary workaround and will be removed once the related
-   * association changes currently in staging are deployed to production.
-   */
-
-  withAssociations(include: Includeable[]) {
-    if (!include || include.length === 0) {
-      throw new BadRequestException("requires at least one association in include");
-    }
-
-    this.findOptions.include = include;
-    this.pageTotalFindOptions.include = include;
-
-    return this;
-  }
-
   where(options: WhereOptions, filterable?: Filterable) {
     if (filterable == null) filterable = this.findOptions;
     filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);

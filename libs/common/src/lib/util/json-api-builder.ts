@@ -43,7 +43,7 @@ type ResourceMeta = {
 
 export type JsonApiDocument = {
   data?: Resource | Resource[];
-  included?: Resource | Resource[];
+  included?: Resource[];
   meta: DocumentMeta;
 };
 
@@ -189,9 +189,6 @@ export class DocumentBuilder {
       doc.included = this.included.map(resource => resource.serialize());
     }
 
-    if (!singular && this.indexData.length === 0) {
-      throw new ApiBuilderException("Index data is required on index endpoints");
-    }
     if (this.indexData.length > 0) {
       doc.meta.indices = this.indexData;
     }

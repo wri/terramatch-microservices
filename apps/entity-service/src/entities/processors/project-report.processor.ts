@@ -188,11 +188,13 @@ export class ProjectReportProcessor extends EntityProcessor<
 
   protected async getSeedlingsGrown(projectReport: ProjectReport) {
     if (projectReport.frameworkKey == "ppc") {
-      return TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount");
+      return (
+        (await TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount")) ?? 0
+      );
     }
 
     if (projectReport.frameworkKey == "terrafund") {
-      return NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees");
+      return (await NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees")) ?? 0;
     }
 
     return 0;

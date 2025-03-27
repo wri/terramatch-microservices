@@ -1,7 +1,7 @@
 import { Nursery } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -12,14 +12,14 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { NurseryProcessor } from "./nursery.processor";
-import { NurseryFullDto, NurseryLightDto } from "../dto/nursery.dto";
 import { DateTime } from "luxon";
+import { PolicyService } from "@terramatch-microservices/common";
 
-describe("NuseryProcessor", () => {
+describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -30,7 +30,11 @@ describe("NuseryProcessor", () => {
     await Nursery.truncate();
 
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("nurseries") as NurseryProcessor;
@@ -47,7 +51,8 @@ describe("NuseryProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -55,6 +60,7 @@ describe("NuseryProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
+
     it("should return nurseries the user is allowed to manage", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
@@ -314,10 +320,9 @@ describe("NuseryProcessor", () => {
     it("should return a light resource representation of the nursery in NurseryLightDto", async () => {
       const { uuid } = await NurseryFactory.create();
       const nursery = await processor.findOne(uuid);
-      const document = buildJsonApi(NurseryLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, nursery);
-      const attributes = document.serialize().data[0].attributes as NurseryLightDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getLightDto(nursery);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: true
       });
@@ -331,10 +336,9 @@ describe("NuseryProcessor", () => {
 
       const nursery = await processor.findOne(uuid);
       nursery.project = await nursery.$get("project");
-      const document = buildJsonApi(NurseryFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, nursery);
-      const attributes = document.serialize().data[0].attributes as NurseryFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(nursery);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid

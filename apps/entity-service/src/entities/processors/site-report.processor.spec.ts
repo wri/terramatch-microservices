@@ -13,11 +13,10 @@ import {
   SiteReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DateTime } from "luxon";
 import { SiteReportProcessor } from "./site-report.processor";
-import { SiteReportFullDto, SiteReportLightDto } from "../dto/site-report.dto";
+import { PolicyService } from "@terramatch-microservices/common";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
@@ -31,13 +30,17 @@ describe("SiteReportProcessor", () => {
     await SiteReport.truncate();
 
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: createMock<PolicyService>() },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("siteReports") as SiteReportProcessor;
   });
 
-  describe("should return a list of site reports when findMany is called with valid parameters", () => {
+  describe("findMany", () => {
     async function expectSiteReports(
       expected: SiteReport[],
       query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
@@ -340,7 +343,7 @@ describe("SiteReportProcessor", () => {
     });
   });
 
-  describe("should return a requested site report when findOne is called with a valid uuid", () => {
+  describe("findOne", () => {
     it("should return a requested site report", async () => {
       const siteReport = await SiteReportFactory.create();
       const result = await processor.findOne(siteReport.uuid);
@@ -348,14 +351,13 @@ describe("SiteReportProcessor", () => {
     });
   });
 
-  describe("should properly map the site report data into its respective DTOs", () => {
+  describe("getFullDto / getLightDto", () => {
     it("should serialize a Site Report as a light resource (SiteReportLightDto)", async () => {
       const { uuid } = await SiteReportFactory.create();
       const siteReport = await processor.findOne(uuid);
-      const document = buildJsonApi(SiteReportLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, siteReport);
-      const attributes = document.serialize().data[0].attributes as SiteReportLightDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getLightDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: true
       });
@@ -372,10 +374,9 @@ describe("SiteReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const document = buildJsonApi(SiteReportFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, siteReport);
-      const attributes = document.serialize().data[0].attributes as SiteReportFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid,
@@ -395,10 +396,9 @@ describe("SiteReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const document = buildJsonApi(SiteReportFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, siteReport);
-      const attributes = document.serialize().data[0].attributes as SiteReportFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid,
@@ -418,10 +418,9 @@ describe("SiteReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const document = buildJsonApi(SiteReportFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, siteReport);
-      const attributes = document.serialize().data[0].attributes as SiteReportFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid,

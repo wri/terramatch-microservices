@@ -26,19 +26,21 @@ import {
   TreeSpeciesFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { ProjectFullDto, ProjectLightDto } from "../dto/project.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
+import { PolicyService } from "@terramatch-microservices/common";
+import { ProjectLightDto } from "../dto/project.dto";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -49,7 +51,11 @@ describe("ProjectProcessor", () => {
     await Project.truncate();
 
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
@@ -70,7 +76,8 @@ describe("ProjectProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -190,9 +197,8 @@ describe("ProjectProcessor", () => {
         { sortField: "organisationName", sortUp: false }
       );
 
-      await expect(
-        processor.findMany({ sort: { field: "uuid" } } as EntityQueryDto, userId, ["projects-read"])
-      ).rejects.toThrow(BadRequestException);
+      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      await expect(processor.findMany({ sort: { field: "uuid" } })).rejects.toThrow(BadRequestException);
     });
 
     it("paginates", async () => {
@@ -203,7 +209,40 @@ describe("ProjectProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
+      policyService.getPermissions.mockResolvedValue([]);
+      await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
+    });
+
+    describe("processSideload", () => {
+      it("throws if the sideloads includes something unsupported", async () => {
+        await ProjectFactory.create();
+        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        const document = buildJsonApi(ProjectLightDto);
+        await expect(
+          processor.addIndex(document, { sideloads: [{ entity: "siteReports", pageSize: 5 }] })
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it("includes sideloaded sites and nurseries", async () => {
+        const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund" });
+        await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund" });
+        await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund" });
+        policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+        const document = buildJsonApi(ProjectLightDto);
+        await processor.addIndex(document, {
+          sideloads: [
+            { entity: "sites", pageSize: 5 },
+            { entity: "nurseries", pageSize: 5 }
+          ]
+        });
+
+        const result = document.serialize();
+        expect(result.included?.length).toBe(8);
+        expect(result.included.filter(({ type }) => type === "sites").length).toBe(5);
+        expect(result.included.filter(({ type }) => type === "nurseries").length).toBe(3);
+        expect(result.meta.indices.length).toBe(3);
+        expect(result.meta.indices.find(({ resource }) => resource === "sites").total).toBe(12);
+      });
     });
   });
 
@@ -227,11 +266,11 @@ describe("ProjectProcessor", () => {
         frameworkKey: "foofund" as FrameworkKey
       });
 
-      const { models } = await processor.findMany({} as EntityQueryDto, userId, ["projects-read"]);
-      const document = buildJsonApi(ProjectLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, models[0]);
-      const attributes = document.serialize().data[0].attributes as ProjectLightDto;
-      expect(attributes).toMatchObject({
+      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      const { models } = await processor.findMany({});
+      const { id, dto } = await processor.getLightDto(models[0]);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: true,
         organisationName: org.name,
@@ -378,10 +417,9 @@ describe("ProjectProcessor", () => {
       );
 
       const project = await processor.findOne(uuid);
-      const document = buildJsonApi(ProjectFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, project);
-      const attributes = document.serialize().data[0].attributes as ProjectFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(project);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         organisationName: org.name,

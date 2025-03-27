@@ -70,7 +70,7 @@ export abstract class EntityProcessor<
     entity: ProcessableEntity,
     pageSize: number
   ): Promise<void> {
-    throw new BadRequestException("This resource does not support sideloading");
+    throw new BadRequestException("This entity does not support sideloading");
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 

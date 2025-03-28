@@ -13,6 +13,7 @@
   },
   "private": true,
   "dependencies": {
+    "@aws-sdk/client-ecs": "^3.766.0",
     "@casl/ability": "^6.7.3",
     "@nestjs/bullmq": "^11.0.2",
     "@nestjs/common": "^11.0.11",
@@ -33,6 +34,8 @@
     "bullmq": "^5.43.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "commander": "^13.1.0",
+    "debug": "^4.4.0",
     "geojson": "^0.5.0",
     "hbs": "^4.2.0",
     "lodash": "^4.17.21",
@@ -45,7 +48,9 @@
     "rxjs": "^7.8.2",
     "sequelize": "^6.37.6",
     "sequelize-typescript": "^2.1.6",
-    "tslib": "^2.8.1"
+    "ssm-session": "^1.0.6",
+    "tslib": "^2.8.1",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.6.0",

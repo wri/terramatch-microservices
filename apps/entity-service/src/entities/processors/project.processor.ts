@@ -37,7 +37,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     return await Project.findOne({
       where: { uuid },
       include: [
-        { association: "organisation", attributes: ["name"] },
+        { association: "organisation", attributes: ["uuid", "name"] },
         {
           association: "application",
           include: [{ association: "fundingProgramme" }, { association: "formSubmissions" }]
@@ -48,7 +48,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
 
   async findMany(query: EntityQueryDto, userId: number, permissions: string[]) {
     const builder = await this.entitiesService.buildQuery(Project, query, [
-      { association: "organisation", attributes: ["name"] }
+      { association: "organisation", attributes: ["uuid", "name"] }
     ]);
 
     if (query.sort != null) {
@@ -72,11 +72,25 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
       builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
     }
 
-    for (const term of ["country", "status", "updateRequestStatus", "frameworkKey"]) {
-      if (query[term] != null) builder.where({ [term]: query[term] });
+    const associationFieldMap = {
+      projectUuid: "uuid",
+      organisationUuid: "$organisation.uuid$"
+    };
+
+    for (const term of [
+      "country",
+      "status",
+      "updateRequestStatus",
+      "frameworkKey",
+      "projectUuid",
+      "organisationUuid"
+    ]) {
+      const field = associationFieldMap[term] ?? term;
+      if (query[term] != null) builder.where({ [field]: query[term] });
     }
-    if (query.search != null) {
-      builder.where({ name: { [Op.like]: `%${query.search}%` } });
+
+    if (query.search != null || query.searchFilter != null) {
+      builder.where({ name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

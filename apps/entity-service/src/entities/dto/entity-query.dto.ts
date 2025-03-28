@@ -26,6 +26,13 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @IsOptional()
   search?: string;
 
+  @ApiProperty({
+    required: false,
+    description: "Search query used for filtering selectable options in autocomplete fields."
+  })
+  @IsOptional()
+  searchFilter?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   country?: string;
@@ -41,4 +48,12 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  nurseryUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  siteUuid?: string;
 }

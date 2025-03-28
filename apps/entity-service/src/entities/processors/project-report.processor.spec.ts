@@ -299,6 +299,10 @@ describe("ProjectReportProcessor", () => {
         { total: projectReports.length }
       );
     });
+
+    it("should throw an error if the sort field is not recognized", async () => {
+      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe("should return a requested project report when findOne is called with a valid uuid", () => {

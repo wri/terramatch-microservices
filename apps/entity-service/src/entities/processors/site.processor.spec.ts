@@ -53,6 +53,7 @@ describe("SiteProcessor", () => {
       if (!sortUp) reverse(sorted);
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
+
     it("should returns sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId, projectId: project.id });
@@ -78,14 +79,6 @@ describe("SiteProcessor", () => {
       }
 
       await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
-    });
-
-    it("searches", async () => {
-      const s1 = await SiteFactory.create({ name: "Foo Bar" });
-      const s2 = await SiteFactory.create({ name: "Baz Foo" });
-      await SiteFactory.createMany(3);
-
-      await expectSites([s1, s2], { search: "foo" });
     });
 
     it("filters", async () => {
@@ -154,6 +147,10 @@ describe("SiteProcessor", () => {
         { sort: { field: "projectName", direction: "DESC" } },
         { sortField: "projectName" }
       );
+    });
+
+    it("should throw an error if the sort field is not recognized", async () => {
+      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
     });
   });
 

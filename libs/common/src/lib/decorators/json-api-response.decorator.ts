@@ -3,7 +3,7 @@ import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from "
 import { applyDecorators, HttpStatus } from "@nestjs/common";
 import { DTO_ID_METADATA, DTO_TYPE_METADATA, IdType } from "./json-api-dto.decorator";
 import { JsonApiAttributes } from "../dto/json-api-attributes";
-import { isArray, uniq } from "lodash";
+import { Dictionary, isArray, uniq } from "lodash";
 
 type ExampleTypeProperty = {
   type: "string";
@@ -157,21 +157,32 @@ function buildSchema(options: JsonApiOptions) {
   }
 
   if (pagination != null) {
-    const properties = {
+    const properties: Dictionary<object> = {
+      resource: { type: "string", description: "The resource type for this included index" },
+      requestPath: {
+        type: "string",
+        description:
+          "The full stable (sorted query param) request path for this request, suitable for use as a store key in the FE React app"
+      },
       total: { type: "number", description: "The total number of records available.", example: 42 }
-    } as { total: object; cursor?: object; number?: object };
+    };
     if (pagination === "cursor") {
-      properties.cursor = {
+      properties["cursor"] = {
         type: "string",
         description: "The cursor for the first record on this page."
       };
     } else if (pagination === "number") {
-      properties.number = {
+      properties["pageNumber"] = {
         type: "number",
         description: "The current page number."
       };
     }
-    addMeta(document, "page", { type: "object", properties });
+    properties["ids"] = {
+      type: "array",
+      items: { type: "string" },
+      description: "The ordered set of resource IDs for this page of this index search."
+    };
+    addMeta(document, "indices", { type: "array", items: { type: "object", properties } });
   }
 
   return { document, extraModels };

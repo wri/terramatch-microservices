@@ -31,6 +31,12 @@ describe("SitePolicy", () => {
     await expectCan(service, "read", new Site());
   });
 
+  it("allows reading all sites with projects-read permissions", async () => {
+    mockUserId(123);
+    mockPermissions("projects-read");
+    await expectCan(service, "read", new Site());
+  });
+
   it("allows reading sites in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");

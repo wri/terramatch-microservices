@@ -65,10 +65,10 @@ describe("ProjectReportPolicy", () => {
     await expectCannot(service, "read", pr2);
     await expectCan(service, "read", pr3);
     await expectCan(service, "read", pr4);
-    await expectCan(service, "delete", pr1);
+    await expectCannot(service, "delete", pr1);
     await expectCannot(service, "delete", pr2);
-    await expectCan(service, "delete", pr3);
-    await expectCan(service, "delete", pr4);
+    await expectCannot(service, "delete", pr3);
+    await expectCannot(service, "delete", pr4);
   });
 
   it("allows reading project reports for managed projects", async () => {

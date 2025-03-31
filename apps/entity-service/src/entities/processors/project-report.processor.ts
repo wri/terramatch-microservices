@@ -1,9 +1,12 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
 import { EntityProcessor } from "./entity-processor";
-import { AdditionalProjectReportFullProps, ProjectReportFullDto, ProjectReportMedia } from "../dto/project-report.dto";
-import { ProjectReportLightDto } from "../dto/project-report.dto";
+import {
+  AdditionalProjectReportFullProps,
+  ProjectReportFullDto,
+  ProjectReportLightDto,
+  ProjectReportMedia
+} from "../dto/project-report.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util/json-api-builder";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -47,7 +50,7 @@ export class ProjectReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]) {
+  async findMany(query: EntityQueryDto) {
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"],
@@ -71,15 +74,16 @@ export class ProjectReportProcessor extends EntityProcessor<
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
     const associationFieldMap = {
@@ -122,7 +126,7 @@ export class ProjectReportProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, projectReport: ProjectReport) {
+  async getFullDto(projectReport: ProjectReport) {
     const projectReportId = projectReport.id;
     const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
@@ -159,11 +163,12 @@ export class ProjectReportProcessor extends EntityProcessor<
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
     };
-    document.addData(projectReport.uuid, new ProjectReportFullDto(projectReport, props));
+
+    return { id: projectReport.uuid, dto: new ProjectReportFullDto(projectReport, props) };
   }
 
-  async addLightDto(document: DocumentBuilder, projectReport: ProjectReport) {
-    document.addData(projectReport.uuid, new ProjectReportLightDto(projectReport));
+  async getLightDto(projectReport: ProjectReport) {
+    return { id: projectReport.uuid, dto: new ProjectReportLightDto(projectReport) };
   }
 
   protected async getReportTitle(projectReport: ProjectReport) {
@@ -183,11 +188,13 @@ export class ProjectReportProcessor extends EntityProcessor<
 
   protected async getSeedlingsGrown(projectReport: ProjectReport) {
     if (projectReport.frameworkKey == "ppc") {
-      return TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount");
+      return (
+        (await TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount")) ?? 0
+      );
     }
 
     if (projectReport.frameworkKey == "terrafund") {
-      return NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees");
+      return (await NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees")) ?? 0;
     }
 
     return 0;

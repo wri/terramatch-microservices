@@ -5,13 +5,18 @@ import { createMock } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
+import { PolicyService } from "@terramatch-microservices/common";
 
-describe("ProjectProcessor", () => {
+describe("EntityProcessor", () => {
   let processor: ProjectProcessor;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: createMock<PolicyService>() },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;

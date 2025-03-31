@@ -34,7 +34,7 @@ We have a CLI app in this repo. Currently it's responsible for building and laun
 To build the CLI and make it executable:
 
 - `nx executable tm-v3-cli`
-- `cd dist/tm-v3-cli; npm link`
+- `(cd dist/tm-v3-cli; npm link)`
 
 The CLI may then be invoked as a direct shell command:
 
@@ -71,7 +71,7 @@ As you will note on the NestJS documentation above, the REPL gives you access to
 In addition, the `boostrap-repl.ts` utility that is used by all services exposes a couple of things to make life a bit
 easier in the REPL env:
 
-- All of lodash accessible through `lodash` (e.g. `lodash.joins([1, 2])`)
+- All of lodash accessible through `lodash` (e.g. `lodash.join([1, 2])`)
 - All database models are made accessible in the global context (e.g. `await User.findOne({ emailAddress: "foo@bar.org" })`)
 
 # Deployment

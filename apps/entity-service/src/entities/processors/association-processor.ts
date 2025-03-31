@@ -1,6 +1,6 @@
 import { NotFoundException, Type } from "@nestjs/common";
 import { AssociationDto } from "../dto/association.dto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, getDtoType } from "@terramatch-microservices/common/util";
 import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
@@ -57,8 +57,16 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     const associations = await this.getAssociations(await this.getBaseEntity());
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
+    const indexIds: string[] = [];
     for (const association of associations) {
       document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
+
+    const resource = getDtoType(this.DTO);
+    document.addIndexData({
+      resource,
+      requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}`,
+      ids: indexIds
+    });
   }
 }

@@ -17,7 +17,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
-import { EntityQueryDto } from "./dto/entity-query.dto";
+import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "./dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
@@ -27,7 +27,7 @@ import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-repor
 import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto)
+@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 
@@ -47,25 +47,9 @@ export class EntitiesController {
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async entityIndex<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-    const { models, paginationTotal } = await processor.findMany(
-      query,
-      this.policyService.userId,
-      await this.policyService.getPermissions()
-    );
-
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
-    if (models.length !== 0) {
-      await this.policyService.authorize("read", models);
-
-      // Unfortunately, order matters on these returned documents, so we have to wait for each
-      // build individually. Typically, light DTO processing shouldn't require additional queries
-      // though, so this probably doesn't matter in the end.
-      for (const model of models) {
-        await processor.addLightDto(document, model);
-      }
-    }
-
-    return document.serialize({ paginationTotal, pageNumber: query.page?.number });
+    await processor.addIndex(document, query);
+    return document.serialize();
   }
 
   @Get(":entity/:uuid")
@@ -94,7 +78,8 @@ export class EntitiesController {
     await this.policyService.authorize("read", model);
 
     const document = buildJsonApi(processor.FULL_DTO);
-    await processor.addFullDto(document, model);
+    const { id, dto } = await processor.getFullDto(model);
+    document.addData(id, dto);
     return document.serialize();
   }
 

@@ -19,7 +19,11 @@ export class EntityAssociationsController {
     operationId: "entityAssociationIndex",
     summary: "Get all of a single type of association that are related to a given entity."
   })
-  @JsonApiResponse([DemographicDto, SeedingDto, TreeSpeciesDto])
+  @JsonApiResponse([
+    { data: DemographicDto, hasMany: true },
+    { data: SeedingDto, hasMany: true },
+    { data: TreeSpeciesDto, hasMany: true }
+  ])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Base entity not found" })
   async associationIndex(@Param() { entity, uuid, association }: EntityAssociationIndexParamsDto) {

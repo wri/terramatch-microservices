@@ -45,6 +45,11 @@
     }
   ],
   "targetDefaults": {
+    "serve": {
+      "options": {
+        "inspect": false
+      }
+    },
     "lint": {
       "options": {
         "max-warnings": 0

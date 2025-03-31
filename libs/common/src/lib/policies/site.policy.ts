@@ -9,6 +9,7 @@ export class SitePolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can("read", Site, { frameworkKey: { $in: this.frameworks } });
+      this.builder.can("delete", Site, { frameworkKey: { $in: this.frameworks } });
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -23,6 +24,7 @@ export class SitePolicy extends UserPermissionsPolicy {
         ];
         if (projectIds.length > 0) {
           this.builder.can("read", Site, { projectId: { $in: projectIds } });
+          this.builder.can("delete", Site, { projectId: { $in: projectIds } });
         }
       }
     }
@@ -33,6 +35,7 @@ export class SitePolicy extends UserPermissionsPolicy {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can("read", Site, { projectId: { $in: projectIds } });
+          this.builder.can("delete", Site, { projectId: { $in: projectIds } });
         }
       }
     }

@@ -13,11 +13,10 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DateTime } from "luxon";
 import { NurseryReportProcessor } from "./nursery-report.processor";
-import { NurseryReportFullDto, NurseryReportLightDto } from "../dto/nursery-report.dto";
+import { PolicyService } from "@terramatch-microservices/common";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
@@ -31,10 +30,18 @@ describe("NurseryReportProcessor", () => {
     await NurseryReport.truncate();
 
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: createMock<PolicyService>({ userId }) },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("nurseryReports") as NurseryReportProcessor;
+  });
+
+  afterEach(async () => {
+    jest.resetAllMocks();
   });
 
   describe("should return a list of nursery reports when findMany is called with valid parameters", () => {
@@ -371,10 +378,9 @@ describe("NurseryReportProcessor", () => {
     it("should serialize a Nursery Report as a light resource (NurseryReportLightDto)", async () => {
       const { uuid } = await NurseryReportFactory.create();
       const nurseryReport = await processor.findOne(uuid);
-      const document = buildJsonApi(NurseryReportLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, nurseryReport);
-      const attributes = document.serialize().data[0].attributes as NurseryReportLightDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getLightDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: true
       });
@@ -390,10 +396,9 @@ describe("NurseryReportProcessor", () => {
       });
 
       const nurseryReport = await processor.findOne(uuid);
-      const document = buildJsonApi(NurseryReportFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, nurseryReport);
-      const attributes = document.serialize().data[0].attributes as NurseryReportFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid,

@@ -1,7 +1,7 @@
 import { Site } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { SiteProcessor } from "./site.processor";
 import { reverse, sortBy } from "lodash";
@@ -12,12 +12,14 @@ import {
   SiteFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { SiteFullDto, SiteLightDto } from "../dto/site.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { PolicyService } from "@terramatch-microservices/common";
+import { SiteLightDto } from "../dto/site.dto";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -28,10 +30,18 @@ describe("SiteProcessor", () => {
     await Site.truncate();
 
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
+  });
+
+  afterEach(async () => {
+    jest.resetAllMocks();
   });
 
   describe("findMany", () => {
@@ -45,7 +55,8 @@ describe("SiteProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -150,7 +161,28 @@ describe("SiteProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
+      policyService.getPermissions.mockResolvedValue([]);
+      await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
+    });
+
+    it("should support search", async () => {
+      const project = await ProjectFactory.create({ name: "Fancy Project" });
+      const site = await SiteFactory.create({ name: "Boring Site", projectId: project.id });
+
+      await expectSites([site], { search: "Fancy" });
+      await expectSites([], { searchFilter: "Fancy" });
+      await expectSites([site], { search: "Boring" });
+      await expectSites([site], { searchFilter: "Boring" });
+    });
+
+    describe("processSideloads", () => {
+      it("should throw", async () => {
+        policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+        await SiteFactory.create({ frameworkKey: "terrafund" });
+        await expect(
+          processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
+        ).rejects.toThrow(BadRequestException);
+      });
     });
   });
 
@@ -166,10 +198,9 @@ describe("SiteProcessor", () => {
     it("should serialize a Site as a light resource (SiteLightDto)", async () => {
       const { uuid } = await SiteFactory.create();
       const site = await processor.findOne(uuid);
-      const document = buildJsonApi(SiteLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, site);
-      const attributes = document.serialize().data[0].attributes as SiteLightDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getLightDto(site);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: true
       });
@@ -182,10 +213,9 @@ describe("SiteProcessor", () => {
       });
 
       const site = await processor.findOne(uuid);
-      const document = buildJsonApi(SiteFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, site);
-      const attributes = document.serialize().data[0].attributes as SiteFullDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getFullDto(site);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid

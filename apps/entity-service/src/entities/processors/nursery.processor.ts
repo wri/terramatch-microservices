@@ -8,10 +8,9 @@ import {
   Role,
   User
 } from "@terramatch-microservices/database/entities";
-import { NurseryLightDto, NurseryFullDto, AdditionalNurseryFullProps, NurseryMedia } from "../dto/nursery.dto";
-import { EntityProcessor, PaginatedResult } from "./entity-processor";
+import { AdditionalNurseryFullProps, NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
+import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -20,7 +19,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
   readonly LIGHT_DTO = NurseryLightDto;
   readonly FULL_DTO = NurseryFullDto;
 
-  async findOne(uuid: string): Promise<Nursery> {
+  async findOne(uuid: string) {
     return await Nursery.findOne({
       where: { uuid },
       include: [
@@ -33,7 +32,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Nursery>> {
+  async findMany(query: EntityQueryDto) {
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"],
@@ -53,15 +52,16 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
     const associationFieldMap = {
@@ -105,7 +105,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, nursery: Nursery): Promise<void> {
+  async getFullDto(nursery: Nursery) {
     const nurseryId = nursery.id;
 
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
@@ -122,14 +122,14 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       ) as NurseryMedia)
     };
 
-    document.addData(nursery.uuid, new NurseryFullDto(nursery, props));
+    return { id: nursery.uuid, dto: new NurseryFullDto(nursery, props) };
   }
 
-  async addLightDto(document: DocumentBuilder, nursery: Nursery): Promise<void> {
+  async getLightDto(nursery: Nursery) {
     const nurseryId = nursery.id;
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    document.addData(nursery.uuid, new NurseryLightDto(nursery, { seedlingsGrownCount }));
+    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount }) };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {

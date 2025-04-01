@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Param, Query, UnauthorizedException } from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -29,9 +29,17 @@ export class TreesController {
     if (isEmpty(search)) throw new BadRequestException("search query param is required");
 
     const document = buildJsonApi(ScientificNameDto, { forceDataArray: true });
+    const indexIds: string[] = [];
     for (const treeSpecies of await this.treeService.searchScientificNames(search)) {
+      indexIds.push(treeSpecies.taxonId);
       document.addData(treeSpecies.taxonId, new ScientificNameDto(treeSpecies));
     }
+
+    document.addIndexData({
+      resource: getDtoType(ScientificNameDto),
+      requestPath: `/trees/v3/scientificNames${getStableRequestQuery({ search })}`,
+      ids: indexIds
+    });
 
     return document.serialize();
   }

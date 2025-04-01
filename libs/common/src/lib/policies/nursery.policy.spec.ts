@@ -32,6 +32,12 @@ describe("NurseryPolicy", () => {
     await expectCannot(service, "delete", new Nursery());
   });
 
+  it("allows reading all nurseries with projects-read permissions", async () => {
+    mockUserId(123);
+    mockPermissions("projects-read");
+    await expectCan(service, "read", new Nursery());
+  });
+
   it("allows reading nurseries in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");

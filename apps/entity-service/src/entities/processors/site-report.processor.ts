@@ -9,7 +9,6 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -24,7 +23,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;
 
-  async findOne(uuid: string): Promise<SiteReport> {
+  async findOne(uuid: string) {
     return await SiteReport.findOne({
       where: { uuid },
       include: [
@@ -135,7 +134,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, siteReport: SiteReport): Promise<void> {
+  async getFullDto(siteReport: SiteReport) {
     const siteReportId = siteReport.id;
     const reportTitle = await this.getReportTitle(siteReport);
     const projectReportTitle = await this.getProjectReportTitle(siteReport);
@@ -160,12 +159,12 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA) as SiteReportMedia)
     };
 
-    document.addData(siteReport.uuid, new SiteReportFullDto(siteReport, props));
+    return { id: siteReport.uuid, dto: new SiteReportFullDto(siteReport, props) };
   }
 
-  async addLightDto(document: DocumentBuilder, siteReport: SiteReport): Promise<void> {
+  async getLightDto(siteReport: SiteReport) {
     const reportTitle = await this.getReportTitle(siteReport);
-    document.addData(siteReport.uuid, new SiteReportLightDto(siteReport, { reportTitle }));
+    return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string | null) {

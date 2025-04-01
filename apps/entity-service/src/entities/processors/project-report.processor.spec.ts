@@ -1,7 +1,7 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -12,14 +12,14 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { ProjectReportProcessor } from "./project-report.processor";
-import { ProjectReportFullDto, ProjectReportLightDto } from "../dto/project-report.dto";
 import { DateTime } from "luxon";
+import { PolicyService } from "@terramatch-microservices/common";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -30,13 +30,17 @@ describe("ProjectReportProcessor", () => {
     await ProjectReport.truncate();
 
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        EntitiesService
+      ]
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("projectReports") as ProjectReportProcessor;
   });
 
-  describe("should return a list of project reports when findMany is called with valid parameters", () => {
+  describe("findMany", () => {
     async function expectProjectReports(
       expected: ProjectReport[],
       query: Omit<EntityQueryDto, "field" | "direction" | "size" | "number">,
@@ -47,7 +51,8 @@ describe("ProjectReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -301,11 +306,12 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      await expect(processor.findMany({ sort: { field: "foo" } }, userId, [])).rejects.toThrow(BadRequestException);
+      policyService.getPermissions.mockResolvedValue([]);
+      await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
   });
 
-  describe("should return a requested project report when findOne is called with a valid uuid", () => {
+  describe("findOne", () => {
     it("should return a requested project report", async () => {
       const projectReport = await ProjectReportFactory.create();
       const result = await processor.findOne(projectReport.uuid);
@@ -313,34 +319,55 @@ describe("ProjectReportProcessor", () => {
     });
   });
 
-  describe("should properly map the project report data into its respective DTOs", () => {
+  describe("getFullDto / getLightDto", () => {
     it("should serialize a Project Report as a light resource (ProjectReportLightDto)", async () => {
       const { uuid } = await ProjectReportFactory.create();
       const projectReport = await processor.findOne(uuid);
-      const document = buildJsonApi(ProjectReportLightDto, { forceDataArray: true });
-      await processor.addLightDto(document, projectReport);
-      const attributes = document.serialize().data[0].attributes as ProjectReportLightDto;
-      expect(attributes).toMatchObject({
+      const { id, dto } = await processor.getLightDto(projectReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
         uuid,
         lightResource: true
       });
     });
 
     it("should include calculated fields in ProjectReportFullDto", async () => {
-      const project = await ProjectFactory.create();
+      const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
+      const hbfProject = await ProjectFactory.create({ frameworkKey: "hbf" });
 
-      const { uuid } = await ProjectReportFactory.create({
-        projectId: project.id
+      const { uuid: ppcUuid } = await ProjectReportFactory.create({ projectId: ppcProject.id, frameworkKey: "ppc" });
+      const { uuid: tfUuid } = await ProjectReportFactory.create({
+        projectId: tfProject.id,
+        frameworkKey: "terrafund"
+      });
+      const { uuid: hbfUuid } = await ProjectReportFactory.create({
+        projectId: hbfProject.id,
+        frameworkKey: "hbf"
       });
 
-      const projectReport = await processor.findOne(uuid);
-      const document = buildJsonApi(ProjectReportFullDto, { forceDataArray: true });
-      await processor.addFullDto(document, projectReport);
-      const attributes = document.serialize().data[0].attributes as ProjectReportFullDto;
-      expect(attributes).toMatchObject({
-        uuid,
+      const ppcResult = await processor.getFullDto(await processor.findOne(ppcUuid));
+      expect(ppcResult.id).toEqual(ppcUuid);
+      expect(ppcResult.dto).toMatchObject({
+        uuid: ppcUuid,
         lightResource: false,
-        projectUuid: project.uuid
+        projectUuid: ppcProject.uuid
+      });
+
+      const tfResult = await processor.getFullDto(await processor.findOne(tfUuid));
+      expect(tfResult.id).toEqual(tfUuid);
+      expect(tfResult.dto).toMatchObject({
+        uuid: tfUuid,
+        lightResource: false,
+        projectUuid: tfProject.uuid
+      });
+
+      const hbfResult = await processor.getFullDto(await processor.findOne(hbfUuid));
+      expect(hbfResult.id).toEqual(hbfUuid);
+      expect(hbfResult.dto).toMatchObject({
+        uuid: hbfUuid,
+        lightResource: false,
+        projectUuid: hbfProject.uuid
       });
     });
   });

@@ -3,12 +3,13 @@ import { EntitiesController } from "./entities.controller";
 import { EntitiesService } from "./entities.service";
 import { Test } from "@nestjs/testing";
 import { EntityProcessor } from "./processors/entity-processor";
-import { ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
+import { AdditionalProjectFullProps, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
 import { Project } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { EntityQueryDto } from "./dto/entity-query.dto";
+import { faker } from "@faker-js/faker";
 
 class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
   LIGHT_DTO = ProjectLightDto;
@@ -16,8 +17,10 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
 
   findOne = jest.fn(() => Promise.resolve(null));
   findMany = jest.fn(() => Promise.resolve({ models: [], paginationTotal: 0 }));
-  addFullDto = jest.fn(() => Promise.resolve());
-  addLightDto = jest.fn(() => Promise.resolve());
+  getFullDto = jest.fn(() =>
+    Promise.resolve({ id: "uuid", dto: new ProjectFullDto(new Project(), {} as AdditionalProjectFullProps) })
+  );
+  getLightDto = jest.fn(() => Promise.resolve({ id: faker.string.uuid(), dto: new ProjectLightDto() }));
   delete = jest.fn(() => Promise.resolve());
 }
 
@@ -37,7 +40,7 @@ describe("EntitiesController", () => {
     }).compile();
 
     controller = module.get(EntitiesController);
-    processor = new StubProcessor(entitiesService);
+    processor = new StubProcessor(entitiesService, "projects");
     entitiesService.createEntityProcessor.mockImplementation(() => processor);
   });
 
@@ -50,17 +53,7 @@ describe("EntitiesController", () => {
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const query = { page: { number: 2 }, sort: { field: "name" }, status: "approved" } as EntityQueryDto;
       await controller.entityIndex({ entity: "projects" }, query);
-      expect(processor.findMany).toHaveBeenCalledWith(query, 123, ["projects-read"]);
-    });
-
-    it("should throw an error if the policy does not authorize", async () => {
-      processor.findMany.mockResolvedValue({ models: await ProjectFactory.createMany(2), paginationTotal: 2 });
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
-      policyService.authorize.mockRejectedValue(new UnauthorizedException());
-
-      await expect(controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto)).rejects.toThrow(
-        UnauthorizedException
-      );
+      expect(processor.findMany).toHaveBeenCalledWith(query);
     });
 
     it("should add DTOs to the document", async () => {
@@ -69,9 +62,9 @@ describe("EntitiesController", () => {
       policyService.authorize.mockResolvedValue();
 
       const result = await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto);
-      expect(processor.addLightDto).toHaveBeenCalledTimes(2);
-      expect(result.meta.page.number).toBe(1);
-      expect(result.meta.page.total).toBe(2);
+      expect(processor.getLightDto).toHaveBeenCalledTimes(2);
+      expect(result.meta.indices[0]?.pageNumber).toBe(1);
+      expect(result.meta.indices[0]?.total).toBe(2);
       expect(result.meta.resourceType).toBe("projects");
     });
   });
@@ -93,7 +86,7 @@ describe("EntitiesController", () => {
       processor.findOne.mockResolvedValue(project);
       policyService.authorize.mockResolvedValue();
       const result = await controller.entityGet({ entity: "projects", uuid: "asdf" });
-      expect(processor.addFullDto).toHaveBeenCalledWith(expect.anything(), project);
+      expect(processor.getFullDto).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
     });
   });

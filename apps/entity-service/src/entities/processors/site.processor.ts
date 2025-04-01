@@ -1,5 +1,4 @@
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { Aggregate, aggregateColumns, EntityProcessor, PaginatedResult } from "./entity-processor";
+import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
   Demographic,
   DemographicEntry,
@@ -40,7 +39,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
+  async findMany(query: EntityQueryDto) {
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"],
@@ -62,6 +61,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);
@@ -69,11 +69,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) }
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
       });
     } else if (permissions?.includes("projects-manage")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) }
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
       });
     }
 
@@ -115,7 +115,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, site: Site): Promise<void> {
+  async getFullDto(site: Site) {
     const siteId = site.id;
 
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
@@ -144,15 +144,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };
 
-    document.addData(site.uuid, new SiteFullDto(site, props));
+    return { id: site.uuid, dto: new SiteFullDto(site, props) };
   }
 
-  async addLightDto(document: DocumentBuilder, site: Site) {
+  async getLightDto(site: Site) {
     const siteId = site.id;
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
-    document.addData(site.uuid, new SiteLightDto(site, { treesPlantedCount }));
+
+    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount }) };
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {

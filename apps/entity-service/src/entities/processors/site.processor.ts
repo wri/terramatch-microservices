@@ -12,11 +12,12 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
 import { sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
+import { Action } from "@terramatch-microservices/database/entities/action.entity";
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
   readonly LIGHT_DTO = SiteLightDto;
@@ -193,5 +194,19 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getTotalOverdueReports(siteId: number) {
     const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
     return await SiteReport.incomplete().sites([siteId]).count(countOpts);
+  }
+
+  async delete(site: Site) {
+    const permissions = await this.entitiesService.getPermissions();
+    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
+    if (managesOwn) {
+      const reportCount = await SiteReport.count({ where: { siteId: site.id } });
+      if (reportCount > 0) {
+        throw new NotAcceptableException("You can only delete sites that do not have reports");
+      }
+    }
+
+    await Action.targetable(Site.LARAVEL_TYPE, site.id).destroy();
+    await site.destroy();
   }
 }

@@ -1,9 +1,16 @@
-import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectUser
+} from "@terramatch-microservices/database/entities";
 import { AdditionalNurseryFullProps, NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { col, fn, Includeable, Op } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, NurseryFullDto> {
@@ -139,5 +146,19 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
           })
       )[0].seedlingsYoungTrees ?? 0
     );
+  }
+
+  async delete(nursery: Nursery) {
+    const permissions = await this.entitiesService.getPermissions();
+    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
+    if (managesOwn) {
+      const reportCount = await NurseryReport.count({ where: { nurseryId: nursery.id } });
+      if (reportCount > 0) {
+        throw new NotAcceptableException("You can only delete nurseries that do not have reports");
+      }
+    }
+
+    await Action.targetable(Nursery.LARAVEL_TYPE, nursery.id).destroy();
+    await nursery.destroy();
   }
 }

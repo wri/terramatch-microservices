@@ -16,6 +16,8 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { PolicyService } from "@terramatch-microservices/common";
 import { SiteLightDto } from "../dto/site.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
+import { NotAcceptableException } from "@nestjs/common";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
@@ -220,6 +222,29 @@ describe("SiteProcessor", () => {
         lightResource: false,
         projectUuid: project.uuid
       });
+    });
+  });
+
+  describe("delete", () => {
+    it("should allow an admin to delete a site", async () => {
+      const site = await SiteFactory.create();
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(site);
+      expect(site.deletedAt).not.toBeNull();
+    });
+
+    it("should not allow a non-admin to delete a site if it has reports", async () => {
+      const site = await SiteFactory.create();
+      await SiteReportFactory.create({ siteId: site.id });
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
+    });
+
+    it("should allow a non-admin to delete a site if it has no reports", async () => {
+      const site = await SiteFactory.create();
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(site);
+      expect(site.deletedAt).not.toBeNull();
     });
   });
 });

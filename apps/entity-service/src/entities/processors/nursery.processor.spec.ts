@@ -1,4 +1,4 @@
-import { Nursery } from "@terramatch-microservices/database/entities";
+import { ModelHasRole, Nursery, User } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -7,15 +7,18 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   NurseryFactory,
+  NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
+  RoleFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { NurseryProcessor } from "./nursery.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
+import { NotAcceptableException } from "@nestjs/common";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
@@ -343,6 +346,34 @@ describe("NurseryProcessor", () => {
         lightResource: false,
         projectUuid: project.uuid
       });
+    });
+  });
+
+  describe("delete", () => {
+    it("should allow an admin to delete a nursery", async () => {
+      const nursery = await NurseryFactory.create();
+      const user = await UserFactory.create();
+      const role = await RoleFactory.create({ name: "admin" });
+      await ModelHasRole.findOrCreate({
+        where: { modelId: user.id, roleId: role.id },
+        defaults: { modelId: user.id, roleId: role.id, modelType: User.LARAVEL_TYPE }
+      });
+      await processor.delete(nursery, user.id);
+      expect(nursery.deletedAt).not.toBeNull();
+    });
+
+    it("should not allow a non-admin to delete a nursery if it has reports", async () => {
+      const nursery = await NurseryFactory.create();
+      const user = await UserFactory.create();
+      await NurseryReportFactory.create({ nurseryId: nursery.id });
+      await expect(processor.delete(nursery, user.id)).rejects.toThrow(NotAcceptableException);
+    });
+
+    it("should allow a non-admin to delete a nursery if it has no reports", async () => {
+      const nursery = await NurseryFactory.create();
+      const user = await UserFactory.create();
+      await processor.delete(nursery, user.id);
+      expect(nursery.deletedAt).not.toBeNull();
     });
   });
 });

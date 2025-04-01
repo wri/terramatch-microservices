@@ -101,8 +101,7 @@ export abstract class EntityProcessor<
     }
   }
 
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-  async delete(model: ModelType, userId?: number) {
+  async delete(model: ModelType) {
     await Action.targetable((model.constructor as EntityClass<ModelType>).LARAVEL_TYPE, model.id).destroy();
     await model.destroy();
   }

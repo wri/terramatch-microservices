@@ -5,13 +5,11 @@ import {
   Media,
   Project,
   ProjectUser,
-  Role,
   Seeding,
   Site,
   SitePolygon,
   SiteReport,
-  TreeSpecies,
-  User
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
@@ -198,13 +196,14 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return await SiteReport.incomplete().sites([siteId]).count(countOpts);
   }
 
-  async delete(site: Site, userId: number) {
-    const user = await User.findOne({ where: { id: userId }, include: [Role] });
-    const isAdmin = user?.roles?.some(r => r.name.startsWith("admin"));
-    const reports = await SiteReport.count({ where: { siteId: site.id } });
-
-    if (!isAdmin && reports > 0) {
-      throw new NotAcceptableException("You can only delete sites that do not have reports");
+  async delete(site: Site) {
+    const permissions = await this.entitiesService.getPermissions();
+    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
+    if (managesOwn) {
+      const reportCount = await SiteReport.count({ where: { siteId: site.id } });
+      if (reportCount > 0) {
+        throw new NotAcceptableException("You can only delete sites that do not have reports");
+      }
     }
 
     await Action.targetable(Site.LARAVEL_TYPE, site.id).destroy();

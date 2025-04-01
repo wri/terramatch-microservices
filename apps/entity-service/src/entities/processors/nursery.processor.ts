@@ -4,9 +4,7 @@ import {
   Nursery,
   NurseryReport,
   Project,
-  ProjectUser,
-  Role,
-  User
+  ProjectUser
 } from "@terramatch-microservices/database/entities";
 import { AdditionalNurseryFullProps, NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor } from "./entity-processor";
@@ -150,13 +148,14 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
     );
   }
 
-  async delete(nursery: Nursery, userId: number) {
-    const user = await User.findOne({ where: { id: userId }, include: [Role] });
-    const isAdmin = user?.roles?.some(r => r.name.startsWith("admin"));
-    const reports = await NurseryReport.count({ where: { nurseryId: nursery.id } });
-
-    if (!isAdmin && reports > 0) {
-      throw new NotAcceptableException("You can only delete nurseries that do not have reports");
+  async delete(nursery: Nursery) {
+    const permissions = await this.entitiesService.getPermissions();
+    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
+    if (managesOwn) {
+      const reportCount = await NurseryReport.count({ where: { nurseryId: nursery.id } });
+      if (reportCount > 0) {
+        throw new NotAcceptableException("You can only delete nurseries that do not have reports");
+      }
     }
 
     await Action.targetable(Nursery.LARAVEL_TYPE, nursery.id).destroy();

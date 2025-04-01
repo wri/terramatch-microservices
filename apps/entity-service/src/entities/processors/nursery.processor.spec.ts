@@ -1,4 +1,4 @@
-import { ModelHasRole, Nursery, User } from "@terramatch-microservices/database/entities";
+import { Nursery } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -11,7 +11,6 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
-  RoleFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -352,27 +351,22 @@ describe("NurseryProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a nursery", async () => {
       const nursery = await NurseryFactory.create();
-      const user = await UserFactory.create();
-      const role = await RoleFactory.create({ name: "admin" });
-      await ModelHasRole.findOrCreate({
-        where: { modelId: user.id, roleId: role.id },
-        defaults: { modelId: user.id, roleId: role.id, modelType: User.LARAVEL_TYPE }
-      });
-      await processor.delete(nursery, user.id);
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
     });
 
     it("should not allow a non-admin to delete a nursery if it has reports", async () => {
       const nursery = await NurseryFactory.create();
-      const user = await UserFactory.create();
       await NurseryReportFactory.create({ nurseryId: nursery.id });
-      await expect(processor.delete(nursery, user.id)).rejects.toThrow(NotAcceptableException);
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await expect(processor.delete(nursery)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a nursery if it has no reports", async () => {
       const nursery = await NurseryFactory.create();
-      const user = await UserFactory.create();
-      await processor.delete(nursery, user.id);
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
     });
   });

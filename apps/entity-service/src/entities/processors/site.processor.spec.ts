@@ -1,4 +1,4 @@
-import { ModelHasRole, Site, User } from "@terramatch-microservices/database/entities";
+import { Site } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -9,7 +9,6 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   ProjectFactory,
   ProjectUserFactory,
-  RoleFactory,
   SiteFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -229,27 +228,22 @@ describe("SiteProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a site", async () => {
       const site = await SiteFactory.create();
-      const user = await UserFactory.create();
-      const role = await RoleFactory.create({ name: "admin" });
-      await ModelHasRole.findOrCreate({
-        where: { modelId: user.id, roleId: role.id },
-        defaults: { modelId: user.id, roleId: role.id, modelType: User.LARAVEL_TYPE }
-      });
-      await processor.delete(site, user.id);
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
 
     it("should not allow a non-admin to delete a site if it has reports", async () => {
       const site = await SiteFactory.create();
-      const user = await UserFactory.create();
       await SiteReportFactory.create({ siteId: site.id });
-      await expect(processor.delete(site, user.id)).rejects.toThrow(NotAcceptableException);
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a site if it has no reports", async () => {
       const site = await SiteFactory.create();
-      const user = await UserFactory.create();
-      await processor.delete(site, user.id);
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
   });

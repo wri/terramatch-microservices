@@ -110,7 +110,7 @@ describe("EntitiesController", () => {
       processor.findOne.mockResolvedValue(project);
       policyService.authorize.mockResolvedValue();
       const result = await controller.entityDelete({ entity: "projects", uuid: project.uuid });
-      expect(processor.delete).toHaveBeenCalledWith(project, 123);
+      expect(processor.delete).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
       expect(result.meta.resourceId).toBe(project.uuid);
       expect(result.data).toBeUndefined();

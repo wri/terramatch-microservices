@@ -104,7 +104,7 @@ export class EntitiesController {
 
     await this.policyService.authorize("delete", model);
 
-    await processor.delete(model, this.policyService.userId);
+    await processor.delete(model);
 
     return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
   }

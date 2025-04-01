@@ -1,10 +1,19 @@
-import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectUser,
+  Role,
+  User
+} from "@terramatch-microservices/database/entities";
 import { NurseryLightDto, NurseryFullDto, AdditionalNurseryFullProps, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor, PaginatedResult } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { col, fn, Includeable, Op } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, NurseryFullDto> {
@@ -139,5 +148,18 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
           })
       )[0].seedlingsYoungTrees ?? 0
     );
+  }
+
+  async delete(nursery: Nursery, userId: number) {
+    const user = await User.findOne({ where: { id: userId }, include: [Role] });
+    const isAdmin = user?.roles?.some(r => r.name.startsWith("admin"));
+    const reports = await NurseryReport.count({ where: { nurseryId: nursery.id } });
+
+    if (!isAdmin && reports > 0) {
+      throw new NotAcceptableException("You can only delete nurseries that do not have reports");
+    }
+
+    await Action.targetable(Nursery.LARAVEL_TYPE, nursery.id).destroy();
+    await nursery.destroy();
   }
 }

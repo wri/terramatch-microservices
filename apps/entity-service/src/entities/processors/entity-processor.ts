@@ -48,7 +48,7 @@ export abstract class EntityProcessor<
   abstract addFullDto(document: DocumentBuilder, model: ModelType): Promise<void>;
   abstract addLightDto(document: DocumentBuilder, model: ModelType): Promise<void>;
 
-  async delete(model: ModelType) {
+  async delete(model: ModelType, userId: number) {
     await Action.targetable((model.constructor as EntityClass<ModelType>).LARAVEL_TYPE, model.id).destroy();
     await model.destroy();
   }

@@ -119,7 +119,7 @@ export class EntitiesController {
 
     await this.policyService.authorize("delete", model);
 
-    await processor.delete(model);
+    await processor.delete(model, this.policyService.userId);
 
     return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
   }

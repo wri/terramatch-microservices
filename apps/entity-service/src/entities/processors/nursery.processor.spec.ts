@@ -7,6 +7,7 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   NurseryFactory,
+  NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
@@ -16,6 +17,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { NurseryProcessor } from "./nursery.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
+import { NotAcceptableException } from "@nestjs/common";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
@@ -343,6 +345,29 @@ describe("NurseryProcessor", () => {
         lightResource: false,
         projectUuid: project.uuid
       });
+    });
+  });
+
+  describe("delete", () => {
+    it("should allow an admin to delete a nursery", async () => {
+      const nursery = await NurseryFactory.create();
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(nursery);
+      expect(nursery.deletedAt).not.toBeNull();
+    });
+
+    it("should not allow a non-admin to delete a nursery if it has reports", async () => {
+      const nursery = await NurseryFactory.create();
+      await NurseryReportFactory.create({ nurseryId: nursery.id });
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await expect(processor.delete(nursery)).rejects.toThrow(NotAcceptableException);
+    });
+
+    it("should allow a non-admin to delete a nursery if it has no reports", async () => {
+      const nursery = await NurseryFactory.create();
+      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      await processor.delete(nursery);
+      expect(nursery.deletedAt).not.toBeNull();
     });
   });
 });

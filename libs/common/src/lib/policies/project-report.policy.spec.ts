@@ -29,6 +29,7 @@ describe("ProjectReportPolicy", () => {
     mockUserId(123);
     mockPermissions("view-dashboard");
     await expectCan(service, "read", new ProjectReport());
+    await expectCannot(service, "delete", new ProjectReport());
   });
 
   it("allows reading project reports in your framework", async () => {
@@ -38,6 +39,8 @@ describe("ProjectReportPolicy", () => {
     const tf = await ProjectReportFactory.create({ frameworkKey: "terrafund" });
     await expectCan(service, "read", ppc);
     await expectCannot(service, "read", tf);
+    await expectCan(service, "delete", ppc);
+    await expectCannot(service, "delete", tf);
   });
 
   it("allows reading project reports for own projects", async () => {
@@ -62,6 +65,10 @@ describe("ProjectReportPolicy", () => {
     await expectCannot(service, "read", pr2);
     await expectCan(service, "read", pr3);
     await expectCan(service, "read", pr4);
+    await expectCannot(service, "delete", pr1);
+    await expectCannot(service, "delete", pr2);
+    await expectCannot(service, "delete", pr3);
+    await expectCannot(service, "delete", pr4);
   });
 
   it("allows reading project reports for managed projects", async () => {
@@ -78,5 +85,7 @@ describe("ProjectReportPolicy", () => {
 
     await expectCan(service, "read", pr1);
     await expectCannot(service, "read", pr2);
+    await expectCan(service, "delete", pr1);
+    await expectCannot(service, "delete", pr2);
   });
 });

@@ -30,6 +30,7 @@ describe("NurseryReportPolicy", () => {
     mockUserId(123);
     mockPermissions("view-dashboard");
     await expectCan(service, "read", new NurseryReport());
+    await expectCannot(service, "delete", new NurseryReport());
   });
 
   it("allows reading nursery reports in your framework", async () => {
@@ -39,6 +40,8 @@ describe("NurseryReportPolicy", () => {
     const tf = await NurseryReportFactory.create({ frameworkKey: "terrafund" });
     await expectCan(service, "read", ppc);
     await expectCannot(service, "read", tf);
+    await expectCan(service, "delete", ppc);
+    await expectCannot(service, "delete", tf);
   });
 
   it("allows reading nursery reports for own projects", async () => {
@@ -68,6 +71,10 @@ describe("NurseryReportPolicy", () => {
     await expectCannot(service, "read", nr2);
     await expectCan(service, "read", nr3);
     await expectCan(service, "read", nr4);
+    await expectCannot(service, "delete", nr1);
+    await expectCannot(service, "delete", nr2);
+    await expectCannot(service, "delete", nr3);
+    await expectCannot(service, "delete", nr4);
   });
 
   it("allows reading nursery reports for managed projects", async () => {
@@ -87,5 +94,7 @@ describe("NurseryReportPolicy", () => {
 
     await expectCan(service, "read", nr1);
     await expectCannot(service, "read", nr2);
+    await expectCan(service, "delete", nr1);
+    await expectCannot(service, "delete", nr2);
   });
 });

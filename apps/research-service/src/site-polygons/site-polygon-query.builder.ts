@@ -13,7 +13,7 @@ import {
   SiteReport
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
-import { omit, uniq } from "lodash";
+import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
@@ -60,7 +60,6 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   constructor(pageSize: number) {
     super(SitePolygon, pageSize);
 
-    // Note: all required includes must be accounted for in the paginationTotal method override.
     this.findOptions.include = [
       { model: IndicatorOutputFieldMonitoring, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
       { model: IndicatorOutputHectares, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
@@ -73,16 +72,6 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     ];
 
     this.where({ isActive: true });
-  }
-
-  async paginationTotal() {
-    // Make sure the pageTotalFindOptions is up to date on our required includes so that they are
-    // accounted for in the count() query.
-    this.pageTotalFindOptions.include = [
-      { model: PolygonGeometry, required: true },
-      omit(this.siteJoin, ["attributes", "include"])
-    ];
-    return super.paginationTotal();
   }
 
   async excludeTestProjects() {

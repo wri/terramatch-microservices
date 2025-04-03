@@ -367,13 +367,17 @@ export class Project extends Model<Project> {
     return this.organisation?.name;
   }
 
+  get organisationUuid() {
+    return this.organisation?.uuid;
+  }
+
   @BelongsTo(() => Application)
   application: Application | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: Project.LARAVEL_TYPE, collection: "tree-planted" }
+    scope: { speciesable_type: Project.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
 

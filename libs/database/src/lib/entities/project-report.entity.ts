@@ -11,13 +11,18 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
 import { COMPLETE_REPORT_STATUSES } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
+import { Framework } from "./framework.entity";
+import { SiteReport } from "./site-report.entity";
+import { Literal } from "sequelize/types/utils";
+import { User } from "./user.entity";
+import { Task } from "./task.entity";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -37,6 +42,14 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
+
+  static readonly MEDIA = {
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    media: { dbCollection: "media", multiple: true },
+    file: { dbCollection: "file", multiple: true },
+    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
+    photos: { dbCollection: "photos", multiple: true }
+  } as const;
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof ProjectReport;
@@ -63,6 +76,27 @@ export class ProjectReport extends Model<ProjectReport> {
     return builder.literal;
   }
 
+  static siteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static approvedSiteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
+    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds).in("status", SiteReport.APPROVED_STATUSES);
+    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
+    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static siteReportsUnsubmittedIdsTaskSubquery(taskIds: number[] | Literal) {
+    const builder = Subquery.select(SiteReport, "id")
+      .in("taskId", taskIds)
+      .in("status", SiteReport.UNSUBMITTED_STATUSES);
+    return builder.literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -76,14 +110,55 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
+  @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
+  framework: Framework | null;
+
+  get frameworkUuid() {
+    return this.framework?.uuid;
+  }
+
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  createdBy: number;
+
   @BelongsTo(() => Project)
   project: Project | null;
 
-  // TODO foreign key for task
+  @BelongsTo(() => User)
+  user: User | null;
+
+  @BelongsTo(() => Task)
+  task: Task | null;
+
+  get projectName() {
+    return this.project?.name;
+  }
+
+  get projectUuid() {
+    return this.project?.uuid;
+  }
+
+  get organisationName() {
+    return this.project?.organisationName;
+  }
+
+  get organisationUuid() {
+    return this.project?.organisation?.uuid;
+  }
+
+  get taskUuid() {
+    return this.task?.uuid;
+  }
+
+  @AllowNull
+  @Column(STRING)
+  title: string | null;
+
+  @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;
@@ -96,8 +171,24 @@ export class ProjectReport extends Model<ProjectReport> {
   updateRequestStatus: string;
 
   @AllowNull
+  @Column(TEXT)
+  feedback: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  feedbackFields: string[] | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  completion: number | null;
+
+  @AllowNull
   @Column(DATE)
   dueAt: Date | null;
+
+  @AllowNull
+  @Column(DATE)
+  submittedAt: Date | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
@@ -189,6 +280,10 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(TEXT)
+  localEngagement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
   equitableOpportunities: string | null;
 
   @AllowNull
@@ -214,6 +309,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   convergenceSchemes: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  convergenceAmount: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -247,10 +346,62 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   businessMilestones: string | null;
 
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  seasonalTotal: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  plantedTrees: number | null;
+
+  @AllowNull
+  @Column(STRING)
+  oldModel: string;
+
+  @AllowNull
+  @Column(BOOLEAN)
+  siteAddition: boolean;
+
+  @AllowNull
+  @Column(TEXT)
+  paidOtherActivityDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT("long"))
+  answers: string | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
-    scope: { speciesableType: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
+    scope: { speciesable_type: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
   nurserySeedlings: TreeSpecies[] | null;
 }

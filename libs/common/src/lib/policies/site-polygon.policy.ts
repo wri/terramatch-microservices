@@ -6,6 +6,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can("manage", SitePolygon);
+      return;
     }
 
     if (this.frameworks.length > 0) {

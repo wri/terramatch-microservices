@@ -1,5 +1,4 @@
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { Aggregate, aggregateColumns, EntityProcessor, PaginatedResult } from "./entity-processor";
+import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
   Demographic,
   DemographicEntry,
@@ -13,11 +12,12 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
 import { sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
+import { Action } from "@terramatch-microservices/database/entities/action.entity";
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
   readonly LIGHT_DTO = SiteLightDto;
@@ -37,7 +37,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]): Promise<PaginatedResult<Site>> {
+  async findMany(query: EntityQueryDto) {
     const projectAssociation: Includeable = {
       association: "project",
       attributes: ["uuid", "name"],
@@ -47,10 +47,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       association: "framework",
       attributes: ["name"]
     };
+    const builder = await this.entitiesService.buildQuery(Site, query, [projectAssociation, frameworkAssociation]);
 
-    const associations = [projectAssociation, frameworkAssociation];
-
-    const builder = await this.entitiesService.buildQuery(Site, query, associations);
     if (query.sort != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
@@ -61,6 +59,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);
@@ -68,11 +67,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) }
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
       });
     } else if (permissions?.includes("projects-manage")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) }
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
       });
     }
 
@@ -91,11 +90,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       "country"
     ]) {
       const field = associationFieldMap[term] ?? term;
-      if (query[term] != null) builder.withAssociations(associations).where({ [field]: query[term] });
+      if (query[term] != null) builder.where({ [field]: query[term] });
     }
 
     if (query.search != null || query.searchFilter != null) {
-      builder.withAssociations([projectAssociation]).where({
+      builder.where({
         [Op.or]: [
           { name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } },
           { "$project.name$": { [Op.like]: `%${query.search}%` } }
@@ -114,7 +113,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFullDto(document: DocumentBuilder, site: Site): Promise<void> {
+  async getFullDto(site: Site) {
     const siteId = site.id;
 
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
@@ -143,15 +142,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
     };
 
-    document.addData(site.uuid, new SiteFullDto(site, props));
+    return { id: site.uuid, dto: new SiteFullDto(site, props) };
   }
 
-  async addLightDto(document: DocumentBuilder, site: Site) {
+  async getLightDto(site: Site) {
     const siteId = site.id;
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
-    document.addData(site.uuid, new SiteLightDto(site, { treesPlantedCount }));
+
+    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount }) };
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
@@ -194,5 +194,19 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getTotalOverdueReports(siteId: number) {
     const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
     return await SiteReport.incomplete().sites([siteId]).count(countOpts);
+  }
+
+  async delete(site: Site) {
+    const permissions = await this.entitiesService.getPermissions();
+    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
+    if (managesOwn) {
+      const reportCount = await SiteReport.count({ where: { siteId: site.id } });
+      if (reportCount > 0) {
+        throw new NotAcceptableException("You can only delete sites that do not have reports");
+      }
+    }
+
+    await Action.targetable(Site.LARAVEL_TYPE, site.id).destroy();
+    await site.destroy();
   }
 }

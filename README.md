@@ -27,6 +27,53 @@ Repository for the Microservices API backend of the TerraMatch service
   - New `NEXT_PUBLIC_<SERVICE>_URL` values are needed for each service you're running locally. This will typically match
     the services defined in `V3_NAMESPACES` in `src/generated/v3/utils.ts`.
 
+# CLI
+
+We have a CLI app in this repo. Currently it's responsible for building and launching REPL processes locally and in the cloud.
+
+To build the CLI and make it executable:
+
+- `nx executable tm-v3-cli`
+- `(cd dist/tm-v3-cli; npm link)`
+
+The CLI may then be invoked as a direct shell command:
+
+- `tm-v3-cli -h`
+
+The verbose flag will put extra debugging output in the console:
+
+- `tm-v3-cli -v <command and args>`
+
+Development:
+
+- If you're working on active development of the CLI, you can run a build watcher:
+  - `nx build tm-v3-cli --watch --no-cloud`
+  - Note: starting this process will regenerate the `dist/tm-v3-cli` directory, which may remove the executable flag on the script.
+    If that happens, you can re-enable by running `nx exectuable tm-v3-cli` while the build watch command above is running.
+
+# REPL (local and in the cloud)
+
+We utilize the [Nest JS REPL](https://docs.nestjs.com/recipes/repl) to be able to access the code running in a given AWS
+environment, and use the same tools for local development.
+
+Start by following the steps above in the CLI section to get the CLI built and running locally.
+
+The command for running the REPL is simply `repl`:
+
+- `tm-v3-cli repl -h`
+
+The service name is required. The environment name is optional and will default to building and running the local REPL for that given service.
+
+If connecting to a remote REPL environment, the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+is required to be installed on your machine.
+
+As you will note on the NestJS documentation above, the REPL gives you access to all services exposed by your AppModule.
+In addition, the `boostrap-repl.ts` utility that is used by all services exposes a couple of things to make life a bit
+easier in the REPL env:
+
+- All of lodash accessible through `lodash` (e.g. `lodash.join([1, 2])`)
+- All database models are made accessible in the global context (e.g. `await User.findOne({ emailAddress: "foo@bar.org" })`)
+
 # Deployment
 
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The
@@ -48,12 +95,14 @@ and main branches.
   import "../../../instrument-sentry";
   ```
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
+- Set up REPL access:
+  - Copy `repl.ts` from an existing service (and modify to specify the new service's name)
+  - Add the `build-repl` target to `project.json`, which an empty definition.
 - In your `.env` and `.env.local.sample`, add `_PORT` for the new service
 - In `api-gateway-stack.ts`, add the new service and namespace to `V3_SERVICES`
 - In your local web repo, follow directions in `README.md` for setting up a new service.
   - This step can be skipped for services that will not be used by the FE website.
 - For deployment to AWS:
-  - Add a Dockerfile in the new app directory. A simple copy and modify from user-service is sufficient
   - Add the new service name to the "service" workflow input options in `deploy-service.yml`
   - Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
     - Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.

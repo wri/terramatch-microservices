@@ -13,16 +13,25 @@ import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
+import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { ProjectReportProcessor } from "./processors/project-report.processor";
+import { NurseryReportProcessor } from "./processors/nursery-report.processor";
+import { SiteReportProcessor } from "./processors/site-report.processor";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
+import { PolicyService } from "@terramatch-microservices/common";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
-  sites: SiteProcessor
+  sites: SiteProcessor,
+  nurseries: NurseryProcessor,
+  projectReports: ProjectReportProcessor,
+  nurseryReports: NurseryReportProcessor,
+  siteReports: SiteReportProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
@@ -53,11 +62,23 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-const MAX_PAGE_SIZE = 100 as const;
+export const MAX_PAGE_SIZE = 100 as const;
 
 @Injectable()
 export class EntitiesService {
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(private readonly mediaService: MediaService, private readonly policyService: PolicyService) {}
+
+  get userId() {
+    return this.policyService.userId;
+  }
+
+  async getPermissions() {
+    return await this.policyService.getPermissions();
+  }
+
+  async authorize(action: string, subject: Model | Model[]) {
+    await this.policyService.authorize(action, subject);
+  }
 
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
@@ -65,7 +86,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
   }
 
   createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(

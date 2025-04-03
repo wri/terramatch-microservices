@@ -15,13 +15,19 @@ import { DemographicDto, DemographicEntryDto } from "../dto/demographic.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { TreeSpeciesDto } from "../dto/tree-species.dto";
 import { SeedingDto } from "../dto/seeding.dto";
+import { PolicyService } from "@terramatch-microservices/common";
+import { SiteReport } from "@terramatch-microservices/database/entities";
 
 describe("AssociationProcessor", () => {
   let service: EntitiesService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [{ provide: MediaService, useValue: createMock<MediaService>() }, EntitiesService]
+      providers: [
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: PolicyService, useValue: createMock<PolicyService>() },
+        EntitiesService
+      ]
     }).compile();
 
     service = module.get(EntitiesService);
@@ -50,7 +56,8 @@ describe("AssociationProcessor", () => {
 
       const document = buildJsonApi(DemographicDto, { forceDataArray: true });
       await service.createAssociationProcessor("projectReports", projectReportUuid, "demographics").addDtos(document);
-      const data = document.serialize().data as Resource[];
+      const result = document.serialize();
+      const data = result.data as Resource[];
       expect(data.length).toEqual(1);
 
       const dto = data.find(({ id }) => id === uuid)?.attributes as unknown as DemographicDto;
@@ -61,6 +68,13 @@ describe("AssociationProcessor", () => {
         unknown
       );
       expect(dto.entries.find(({ type, subtype }) => type === "age" && subtype === "youth")).toMatchObject(youth);
+
+      expect(result.meta.indices.length).toBe(1);
+      expect(result.meta.indices[0]).toMatchObject({
+        resource: "demographics",
+        requestPath: `/entities/v3/projectReports/${projectReportUuid}/demographics`,
+        ids: [uuid]
+      });
     });
 
     it("should include tree species", async () => {
@@ -101,6 +115,16 @@ describe("AssociationProcessor", () => {
         if (data.taxonId === undefined) data.taxonId = null;
         expect(seedingData).toMatchObject(data);
       }
+    });
+
+    it("should memoize the base entity", async () => {
+      const { uuid } = await SiteReportFactory.create();
+      const spy = jest.spyOn(SiteReport, "findOne");
+      const processor = service.createAssociationProcessor("siteReports", uuid, "seedings");
+      const first = await processor.getBaseEntity();
+      const second = await processor.getBaseEntity();
+      expect(first).toBe(second);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 });

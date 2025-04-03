@@ -16,6 +16,7 @@ import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { NurseryReport } from "./nursery-report.entity";
+import { ProjectReport } from "./project-report.entity";
 
 @Scopes(() => ({
   visible: { where: { hidden: false } },
@@ -28,6 +29,12 @@ import { NurseryReport } from "./nursery-report.entity";
   nurseryReports: (ids: number[] | Literal) => ({
     where: {
       speciesableType: NurseryReport.LARAVEL_TYPE,
+      speciesableId: { [Op.in]: ids }
+    }
+  }),
+  projectReports: (ids: number[] | Literal) => ({
+    where: {
+      speciesableType: ProjectReport.LARAVEL_TYPE,
       speciesableId: { [Op.in]: ids }
     }
   }),
@@ -58,6 +65,10 @@ export class TreeSpecies extends Model<TreeSpecies> {
 
   static collection(collection: string) {
     return chainScope(this, "collection", collection) as typeof TreeSpecies;
+  }
+
+  static projectReports(ids: number[] | Literal) {
+    return chainScope(this, "projectReports", ids) as typeof TreeSpecies;
   }
 
   @PrimaryKey

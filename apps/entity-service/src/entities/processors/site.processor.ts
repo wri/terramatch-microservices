@@ -128,7 +128,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
     const props: AdditionalSiteFullProps = {
-      totalHectaresRestoredSum: await SitePolygon.approved().sites([site.uuid]).sum("calcArea"),
+      totalHectaresRestoredSum: await SitePolygon.active().approved().sites([site.uuid]).sum("calcArea"),
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),

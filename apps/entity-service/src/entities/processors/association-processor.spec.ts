@@ -56,7 +56,8 @@ describe("AssociationProcessor", () => {
 
       const document = buildJsonApi(DemographicDto, { forceDataArray: true });
       await service.createAssociationProcessor("projectReports", projectReportUuid, "demographics").addDtos(document);
-      const data = document.serialize().data as Resource[];
+      const result = document.serialize();
+      const data = result.data as Resource[];
       expect(data.length).toEqual(1);
 
       const dto = data.find(({ id }) => id === uuid)?.attributes as unknown as DemographicDto;
@@ -67,6 +68,13 @@ describe("AssociationProcessor", () => {
         unknown
       );
       expect(dto.entries.find(({ type, subtype }) => type === "age" && subtype === "youth")).toMatchObject(youth);
+
+      expect(result.meta.indices.length).toBe(1);
+      expect(result.meta.indices[0]).toMatchObject({
+        resource: "demographics",
+        requestPath: `/entities/v3/projectReports/${projectReportUuid}/demographics`,
+        ids: [uuid]
+      });
     });
 
     it("should include tree species", async () => {

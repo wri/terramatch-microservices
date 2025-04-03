@@ -59,6 +59,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];
     for (const association of associations) {
+      indexIds.push(association.uuid);
       document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
 

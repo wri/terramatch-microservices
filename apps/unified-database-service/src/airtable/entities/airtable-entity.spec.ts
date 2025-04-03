@@ -9,6 +9,7 @@ import {
   NurseryReport,
   Organisation,
   Project,
+  ProjectPitch,
   ProjectReport,
   Site,
   SiteReport,
@@ -24,6 +25,7 @@ import {
   NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
+  ProjectPitchFactory,
   ProjectReportFactory,
   SeedingFactory,
   SiteFactory,
@@ -280,11 +282,20 @@ describe("AirtableEntity", () => {
       associationUuids[ProjectReport.LARAVEL_TYPE] = projectReport.uuid;
       const siteReport = await SiteReportFactory.create();
       associationUuids[SiteReport.LARAVEL_TYPE] = siteReport.uuid;
+      const organisation = await OrganisationFactory.create();
+      associationUuids[Organisation.LARAVEL_TYPE] = organisation.uuid;
+      const projectPitch = await ProjectPitchFactory.create();
+      associationUuids[ProjectPitch.LARAVEL_TYPE] = projectPitch.uuid;
+      const project = await ProjectFactory.create();
+      associationUuids[Project.LARAVEL_TYPE] = project.uuid;
 
       const factories = [
         () => DemographicFactory.forProjectReportWorkday.create({ demographicalId: projectReport.id }),
         () => DemographicFactory.forSiteReportWorkday.create({ demographicalId: siteReport.id }),
-        () => DemographicFactory.forProjectReportRestorationPartner.create({ demographicalId: projectReport.id })
+        () => DemographicFactory.forProjectReportRestorationPartner.create({ demographicalId: projectReport.id }),
+        () => DemographicFactory.forOrganisationBeneficiaries.create({ demographicalId: organisation.id }),
+        () => DemographicFactory.forProjectPitchAllEmployees.create({ demographicalId: projectPitch.id }),
+        () => DemographicFactory.forProjectAllEmployees.create({ demographicalId: project.id })
       ];
 
       const allDemographics: Demographic[] = [];

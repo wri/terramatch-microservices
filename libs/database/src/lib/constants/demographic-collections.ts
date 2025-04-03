@@ -92,6 +92,7 @@ export const VOLUNTEERS_PROJECT_COLLECTIONS = [VOLUNTEER] as const;
 
 export const ALL = "all";
 export const ALL_BENEFICIARIES_PROJECT_COLLECTIONS = [ALL] as const;
+export const ALL_BENEFICIARIES_ORGANISATION_COLLECTIONS = [ALL] as const;
 
 export const TRAINING = "training";
 export const TRAINING_BENEFICIARIES_PROJECT_COLLECTIONS = [TRAINING] as const;

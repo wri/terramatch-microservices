@@ -8,6 +8,7 @@ import {
   IndicatorOutputTreeCountFactory,
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
+  LandscapeGeometryFactory,
   POLYGON,
   PolygonGeometryFactory,
   ProjectFactory,
@@ -368,9 +369,12 @@ describe("SitePolygonsService", () => {
       polygon: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
     });
     const sitePoly2 = await SitePolygonFactory.create({ polygonUuid: poly2.uuid });
+    const landscape = await LandscapeGeometryFactory.create({
+      geometry: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
+    });
 
     let query = await service.buildQuery({ size: 20 });
-    await query.touchesBoundary(poly2.uuid);
+    await query.touchesLandscape(landscape.id);
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(sitePoly2.id);
@@ -383,7 +387,7 @@ describe("SitePolygonsService", () => {
 
   it("throws when a boundary poly uuid doesn't exist", async () => {
     const query = await service.buildQuery({ size: 20 });
-    await expect(query.touchesBoundary("asdf")).rejects.toThrow(BadRequestException);
+    await expect(query.touchesLandscape(0)).rejects.toThrow(BadRequestException);
   });
 
   it("Can apply multiple filter types at once", async () => {
@@ -404,12 +408,13 @@ describe("SitePolygonsService", () => {
       sitePolygonId: approvedPoly2.id,
       indicatorSlug: "restorationByStrategy"
     });
+    const landscape = await LandscapeGeometryFactory.create();
 
     const query = (await service.buildQuery({ size: 20 }))
       .isMissingIndicators(["restorationByStrategy"])
       .hasStatuses(["draft", "approved"]);
     await query.filterProjectUuids([project2.uuid]);
-    await query.touchesBoundary(approvedPoly2.polygonUuid);
+    await query.touchesLandscape(landscape.id);
     const result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(draftPoly2.id);

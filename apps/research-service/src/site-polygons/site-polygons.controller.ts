@@ -101,7 +101,10 @@ export class SitePolygonsController {
     } else if (presentIndicator) {
       queryBuilder.hasPresentIndicators(presentIndicator);
     }
-    await queryBuilder.touchesBoundary(query.boundaryPolygon);
+
+    if (query.boundaryPolygon != null) {
+      await queryBuilder.touchesLandscape(query.boundaryPolygon);
+    }
 
     if (query.siteId != null) {
       await queryBuilder.filterSiteUuids(query.siteId);

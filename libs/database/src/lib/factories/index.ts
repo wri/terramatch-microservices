@@ -10,6 +10,7 @@ export * from "./indicator-output-msu-carbon.factory";
 export * from "./indicator-output-tree-count.factory";
 export * from "./indicator-output-tree-cover.factory";
 export * from "./indicator-output-tree-cover-loss.factory";
+export * from "./landscape-geometry.factory";
 export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";

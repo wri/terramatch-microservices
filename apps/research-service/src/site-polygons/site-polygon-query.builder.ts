@@ -6,6 +6,7 @@ import {
   IndicatorOutputTreeCount,
   IndicatorOutputTreeCover,
   IndicatorOutputTreeCoverLoss,
+  LandscapeGeometry,
   PolygonGeometry,
   Project,
   Site,
@@ -153,23 +154,20 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this;
   }
 
-  async touchesBoundary(polygonUuid?: string) {
-    if (polygonUuid != null) {
-      // This check isn't strictly necessary for constructing the query, but we do want to throw a useful
-      // error to the caller if the polygonUuid doesn't exist, and simply mixing it into the query won't
-      // do it
-      if ((await PolygonGeometry.count({ where: { uuid: polygonUuid } })) === 0) {
-        throw new BadRequestException(`Unrecognized polygon UUID: ${polygonUuid}`);
-      }
-
-      this.where({
-        [Op.and]: [
-          literal(
-            `(SELECT ST_INTERSECTS(polygon.geom, (SELECT geom FROM polygon_geometry WHERE uuid = "${polygonUuid}")))`
-          )
-        ]
-      });
+  async touchesLandscape(id: number) {
+    // This check isn't strictly necessary for constructing the query, but we do want to throw a useful
+    // error to the caller if the polygonUuid doesn't exist, and simply mixing it into the query won't
+    // do it
+    if ((await LandscapeGeometry.count({ where: { id } })) === 0) {
+      throw new BadRequestException(`Unrecognized landscape ID: ${id}`);
     }
+
+    this.where({
+      [Op.and]: [
+        literal(`(SELECT ST_INTERSECTS(polygon.geom, (SELECT geometry FROM landscape_geom WHERE id = "${id}")))`)
+      ]
+    });
+
     return this;
   }
 }

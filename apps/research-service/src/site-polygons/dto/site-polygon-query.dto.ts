@@ -75,10 +75,10 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
 
   @ApiProperty({
     required: false,
-    description: "Filter results by polygons that intersect with the boundary of the polygon referenced by this UUID"
+    description: "Filter results by landscape boundaries. Referenced by landscape ID"
   })
   @IsOptional()
-  boundaryPolygon?: string;
+  boundaryPolygon?: number;
 
   @ApiProperty({
     required: false,

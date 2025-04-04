@@ -21,7 +21,7 @@ function unpackAnd(where: WhereOptions) {
   return where[Op.and];
 }
 
-function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions) {
+export function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions) {
   const unpackedA = unpackAnd(whereA);
   if (unpackedA === undefined) return whereB;
   const unpackedB = unpackAnd(whereB);

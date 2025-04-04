@@ -26,6 +26,7 @@ import { IndicatorOutputTreeCover } from "./indicator-output-tree-cover.entity";
 import { IndicatorOutputTreeCoverLoss } from "./indicator-output-tree-cover-loss.entity";
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
+import { Subquery } from "../util/subquery.builder";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -206,5 +207,12 @@ export class SitePolygon extends Model<SitePolygon> {
     });
 
     return this._indicators;
+  }
+  static siteUuidsForStatus(polygonStatus: string) {
+    return Subquery.select(SitePolygon, "siteUuid").isNull("deletedAt").eq("isActive", true).eq("status", polygonStatus)
+      .literal;
+  }
+  static sitesWithPolygons() {
+    return Subquery.select(SitePolygon, "siteUuid").isNull("deletedAt").eq("isActive", true).literal;
   }
 }

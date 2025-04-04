@@ -43,6 +43,7 @@ export const POLYGON_STATUSES_FILTERS = [
   "needs-more-information",
   "draft"
 ] as const;
+export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
 const ASSOCIATION_PROCESSORS = {
   demographics: AssociationProcessor.buildSimpleProcessor(
     DemographicDto,

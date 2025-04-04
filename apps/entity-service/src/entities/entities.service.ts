@@ -36,7 +36,14 @@ const ENTITY_PROCESSORS = {
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
-
+export const POLYGON_STATUSES_FILTERS = [
+  "no-polygons",
+  "submitted",
+  "approved",
+  "needs-more-information",
+  "draft"
+] as const;
+export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
 const ASSOCIATION_PROCESSORS = {
   demographics: AssociationProcessor.buildSimpleProcessor(
     DemographicDto,

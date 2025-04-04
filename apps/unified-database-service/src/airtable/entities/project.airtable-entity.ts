@@ -71,8 +71,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "socioeconomicGoals",
   "communityIncentives",
   "landTenureProjectArea",
-  "jobsCreatedGoal",
-  "projBeneficiaries",
   "longTermGrowth",
   "projectCountyDistrict",
   "goalTreesRestoredPlanting",
@@ -97,8 +95,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "baselineBiodiversity",
   "projImpactFoodsec",
   "projImpactBiodiv",
-  "pctEmployeesMarginalised",
-  "pctBeneficiariesMarginalised",
   "proposedGovPartners",
   "yearFiveCrownCover",
   "directSeedingSurvivalRate"

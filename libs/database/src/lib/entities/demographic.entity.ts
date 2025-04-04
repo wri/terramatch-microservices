@@ -20,16 +20,20 @@ export class Demographic extends Model<Demographic> {
   static readonly WORKDAYS_TYPE = "workdays";
   static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
   static readonly JOBS_TYPE = "jobs";
+  static readonly EMPLOYEES_TYPE = "employees";
   static readonly VOLUNTEERS_TYPE = "volunteers";
   static readonly ALL_BENEFICIARIES_TYPE = "all-beneficiaries";
   static readonly TRAINING_BENEFICIARIES_TYPE = "training-beneficiaries";
+  static readonly INDIRECT_BENEFICIARIES_TYPE = "indirect-beneficiaries";
   static readonly VALID_TYPES = [
     Demographic.WORKDAYS_TYPE,
     Demographic.RESTORATION_PARTNERS_TYPE,
     Demographic.JOBS_TYPE,
+    Demographic.EMPLOYEES_TYPE,
     Demographic.VOLUNTEERS_TYPE,
     Demographic.ALL_BENEFICIARIES_TYPE,
-    Demographic.TRAINING_BENEFICIARIES_TYPE
+    Demographic.TRAINING_BENEFICIARIES_TYPE,
+    Demographic.INDIRECT_BENEFICIARIES_TYPE
   ] as const;
 
   static idsSubquery(demographicalIds: Literal, demographicalType: string, type: DemographicType) {

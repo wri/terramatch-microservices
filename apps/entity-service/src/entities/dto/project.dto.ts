@@ -32,13 +32,6 @@ export class ProjectLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
-    description: "Framework UUID. Will be removed after the FE is refactored to not use these IDs",
-    deprecated: true
-  })
-  frameworkUuid: string | null;
-
-  @ApiProperty({
-    nullable: true,
     description: "The associated organisation name"
   })
   organisationName: string | null;

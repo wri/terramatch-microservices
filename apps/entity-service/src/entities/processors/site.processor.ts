@@ -110,6 +110,24 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       builder.where({ projectId: project.id });
     }
 
+    if (query.polygon) {
+      const sequelize = SitePolygon.sequelize;
+      if (query.polygon === "no-polygons") {
+        const sitesWithPolygons = sequelize.literal(
+          `(SELECT site_id FROM site_polygon WHERE is_active = true GROUP BY site_id)`
+        );
+        builder.where({
+          uuid: { [Op.notIn]: sitesWithPolygons }
+        });
+      } else {
+        const sitesWithMatchingPolygons = sequelize.literal(
+          `(SELECT site_id FROM site_polygon WHERE status = ${sequelize.escape(query.polygon)} AND is_active = true)`
+        );
+        builder.where({
+          uuid: { [Op.in]: sitesWithMatchingPolygons }
+        });
+      }
+    }
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 

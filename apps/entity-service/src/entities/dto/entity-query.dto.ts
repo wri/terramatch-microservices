@@ -81,4 +81,8 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @Type(() => EntitySideload)
   @ValidateNested({ each: true })
   sideloads?: EntitySideload[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  polygon?: string;
 }

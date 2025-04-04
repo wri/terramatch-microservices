@@ -208,11 +208,14 @@ export class SitePolygon extends Model<SitePolygon> {
 
     return this._indicators;
   }
+
   static siteUuidsForStatus(polygonStatus: string) {
     return Subquery.select(SitePolygon, "siteUuid").isNull("deletedAt").eq("isActive", true).eq("status", polygonStatus)
       .literal;
   }
+
   static sitesWithPolygons() {
-    return Subquery.select(SitePolygon, "siteUuid").isNull("deletedAt").eq("isActive", true).literal;
+    return Subquery.select(SitePolygon, "siteUuid", { distinct: true }).isNull("deletedAt").eq("isActive", true)
+      .literal;
   }
 }

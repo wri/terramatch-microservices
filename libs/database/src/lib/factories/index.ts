@@ -16,6 +16,7 @@ export * from "./nursery-report.factory";
 export * from "./organisation.factory";
 export * from "./polygon-geometry.factory";
 export * from "./project.factory";
+export * from "./project-pitch.factory";
 export * from "./project-report.factory";
 export * from "./project-user.factory";
 export * from "./role.factory";

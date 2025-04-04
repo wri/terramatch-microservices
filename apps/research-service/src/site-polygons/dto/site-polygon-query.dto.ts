@@ -26,18 +26,27 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     isArray: true,
     required: false,
     description:
-      "Filter results by project UUID(s). Only one of siteId, projectId and includeTestProjects may be used in a single request"
+      "Filter results by project UUID(s). Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   @IsArray()
   projectId?: string[];
 
   @ApiProperty({
+    name: "projectCohort",
+    required: false,
+    description:
+      "Filter results by project UUID(s). Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
+  })
+  @IsOptional()
+  projectCohort?: string;
+
+  @ApiProperty({
     name: "siteId[]",
     isArray: true,
     required: false,
     description:
-      "Filter results by site UUID(s). Only one of siteId, projectId and includeTestProjects may be used in a single request"
+      "Filter results by site UUID(s). Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   @IsArray()
@@ -85,7 +94,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     default: false,
     type: "boolean",
     description:
-      "Include polygons for test projects in the results. Only one of siteId, projectId and includeTestProjects may be used in a single request"
+      "Include polygons for test projects in the results. Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
   })
   @IsBoolean()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))

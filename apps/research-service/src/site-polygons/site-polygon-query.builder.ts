@@ -85,6 +85,10 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
+  async filterProjectCohort(cohort: string) {
+    return this.where({ projectId: { [Op.in]: Project.forCohort(cohort) } }, this.siteJoin);
+  }
+
   async filterProjectUuids(projectUuids: string[]) {
     const filterProjects = await Project.findAll({
       where: { uuid: { [Op.in]: projectUuids } },

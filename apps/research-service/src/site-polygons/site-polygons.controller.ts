@@ -61,11 +61,11 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
-    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, lightResource } = query;
+    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, lightResource, projectCohort } =
+      query;
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
-    if (includeTestProjects) {
-      countSelectedParams++;
-    }
+    if (includeTestProjects) countSelectedParams++;
+    if (projectCohort != null) countSelectedParams++;
 
     if (lightResource && !isNumberPage(query.page)) {
       throw new BadRequestException("Light resources must use number pagination.");
@@ -96,9 +96,9 @@ export class SitePolygonsController {
       .hasStatuses(query.polygonStatus)
       .modifiedSince(query.lastModifiedDate);
 
-    if (missingIndicator) {
+    if (missingIndicator != null && missingIndicator.length > 0) {
       queryBuilder.isMissingIndicators(missingIndicator);
-    } else if (presentIndicator) {
+    } else if (presentIndicator != null && presentIndicator.length > 0) {
       queryBuilder.hasPresentIndicators(presentIndicator);
     }
 
@@ -106,16 +106,20 @@ export class SitePolygonsController {
       await queryBuilder.touchesLandscape(query.boundaryPolygon);
     }
 
-    if (query.siteId != null) {
-      await queryBuilder.filterSiteUuids(query.siteId);
+    if (siteId != null) {
+      await queryBuilder.filterSiteUuids(siteId);
     }
 
-    if (query.projectId != null) {
-      await queryBuilder.filterProjectUuids(query.projectId);
+    if (projectId != null) {
+      await queryBuilder.filterProjectUuids(projectId);
+    }
+
+    if (projectCohort != null) {
+      await queryBuilder.filterProjectCohort(projectCohort);
     }
 
     // Ensure test projects are excluded only if not included explicitly
-    if (!query.includeTestProjects && query.siteId == null && query.projectId == null) {
+    if (!includeTestProjects && siteId == null && projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
     if (query.search != null) {

@@ -17,7 +17,13 @@ import {
   SiteReportFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
-import { Indicator, PolygonGeometry, SitePolygon, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  Indicator,
+  PolygonGeometry,
+  Project,
+  SitePolygon,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
@@ -203,6 +209,7 @@ describe("SitePolygonsService", () => {
     expect(result2.length).toBe(1);
     expect(result2[0].id).toBe(poly2.id);
   });
+
   it("Should only include given projects", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
@@ -220,6 +227,27 @@ describe("SitePolygonsService", () => {
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
+  });
+
+  it("should only include projects in the cohort given", async () => {
+    await SitePolygon.truncate();
+    await Project.truncate();
+    const tf = await ProjectFactory.create({ cohort: "terrafund" });
+    const ppc = await ProjectFactory.create({ cohort: "ppc" });
+    const tfSite = await SiteFactory.create({ projectId: tf.id });
+    const ppcSite = await SiteFactory.create({ projectId: ppc.id });
+    const tfPoly = await SitePolygonFactory.create({ siteUuid: tfSite.uuid });
+    const ppcPoly = await SitePolygonFactory.create({ siteUuid: ppcSite.uuid });
+
+    let query = await (await service.buildQuery({ size: 20 })).filterProjectCohort("terrafund");
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(tfPoly.id);
+
+    query = await (await service.buildQuery({ size: 20 })).filterProjectCohort("ppc");
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(ppcPoly.id);
   });
 
   it("should only include polys with the given statuses", async () => {

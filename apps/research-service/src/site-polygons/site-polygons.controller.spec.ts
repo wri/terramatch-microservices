@@ -29,6 +29,7 @@ describe("SitePolygonsController", () => {
     };
     builder.touchesBoundary = jest.fn().mockResolvedValue(builder);
     builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
+    builder.filterProjectCohort = jest.fn().mockResolvedValue(builder);
     builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
 
@@ -69,9 +70,18 @@ describe("SitePolygonsController", () => {
       await expect(controller.findMany({})).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should throw an error if siteId and projectId are both provided", async () => {
+    it("should throw an error if multiple conflicting filters are provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      await expect(controller.findMany({ siteId: ["123"], projectId: ["456"] })).rejects.toThrow(BadRequestException);
+      const siteId = ["123"];
+      const projectId = ["456"];
+      const projectCohort = "pants";
+      const includeTestProjects = true;
+      await expect(controller.findMany({ siteId, projectId })).rejects.toThrow(BadRequestException);
+      await expect(controller.findMany({ siteId, projectCohort })).rejects.toThrow(BadRequestException);
+      await expect(controller.findMany({ projectId, projectCohort })).rejects.toThrow(BadRequestException);
+      await expect(controller.findMany({ siteId, includeTestProjects })).rejects.toThrow(BadRequestException);
+      await expect(controller.findMany({ projectId, includeTestProjects })).rejects.toThrow(BadRequestException);
+      await expect(controller.findMany({ projectCohort, includeTestProjects })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw an error if presentIndicator and missingIndicator are both provided", async () => {
@@ -140,7 +150,7 @@ describe("SitePolygonsController", () => {
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
 
-    it("should honor projectIds, siteIds, includeTestProjects when provided", async () => {
+    it("should honor projectIds, projectCohort, siteIds, includeTestProjects when provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
 
@@ -148,6 +158,13 @@ describe("SitePolygonsController", () => {
       expect(builder.filterProjectUuids).toHaveBeenCalledWith(["asdf"]);
       expect(builder.excludeTestProjects).not.toHaveBeenCalled();
       builder.filterProjectUuids.mockClear();
+
+      await controller.findMany({ projectCohort: "pants" });
+      expect(builder.filterProjectCohort).toHaveBeenCalledWith("pants");
+      // when filtering by cohort, we _do_ want to also exclude test projects
+      expect(builder.excludeTestProjects).toHaveBeenCalled();
+      builder.excludeTestProjects.mockClear();
+      builder.filterProjectCohort.mockClear();
 
       await controller.findMany({ includeTestProjects: true });
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();

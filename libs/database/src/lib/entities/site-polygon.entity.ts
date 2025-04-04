@@ -214,7 +214,7 @@ export class SitePolygon extends Model<SitePolygon> {
       .literal;
   }
 
-  static sitesWithPolygons() {
+  static siteUuidsWithPolygons() {
     return Subquery.select(SitePolygon, "siteUuid", { distinct: true }).isNull("deletedAt").eq("isActive", true)
       .literal;
   }

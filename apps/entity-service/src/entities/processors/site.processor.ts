@@ -113,7 +113,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     if (query.polygonStatus != null) {
       if (query.polygonStatus === "no-polygons") {
         builder.where({
-          uuid: { [Op.notIn]: SitePolygon.sitesWithPolygons() }
+          uuid: { [Op.notIn]: SitePolygon.siteUuidsWithPolygons() }
         });
       } else {
         builder.where({

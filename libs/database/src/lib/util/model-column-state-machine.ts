@@ -1,8 +1,7 @@
 import { Column, Model } from "sequelize-typescript";
 import { Attributes, STRING } from "sequelize";
-import { applyDecorators, CustomDecorator, SetMetadata } from "@nestjs/common";
 
-export type States<M extends Model<M>, S extends string> = {
+export type States<M extends Model, S extends string> = {
   default: S;
   transitions: Partial<Record<S, S[]>>;
 
@@ -31,11 +30,11 @@ export type States<M extends Model<M>, S extends string> = {
 
 export class StateMachineError extends Error {}
 
-export type StateMachineModel<M extends Model<M>, S extends string> = M & {
+export type StateMachineModel<M extends Model, S extends string> = M & {
   _stateMachines?: Record<string, ModelColumnStateMachine<M, S>>;
 };
 
-function ensureStateMachine<M extends Model<M>, S extends string>(
+function ensureStateMachine<M extends Model, S extends string>(
   model: StateMachineModel<M, S>,
   propertyName: keyof Attributes<M>,
   states: States<M, S>
@@ -47,29 +46,42 @@ function ensureStateMachine<M extends Model<M>, S extends string>(
   return model._stateMachines[propertyName as string];
 }
 
+export function getStateMachine<M extends Model, S extends string>(model: M, propertyName: keyof Attributes<M>) {
+  return (model as StateMachineModel<M, S>)._stateMachines?.[propertyName as string];
+}
+
+const METADATA_KEY = Symbol("model-column-state-machine");
+
+export const getStateMachineProperties = <M extends Model>(model: M): (keyof Attributes<M>)[] =>
+  Reflect.getMetadata(METADATA_KEY, model) ?? [];
+
+/**
+ * Apply to any string column in a database model class to enforce state machine mechanics.
+ */
 export const StateMachineColumn =
-  <M extends Model<M>, S extends string>(states: States<M, S>) =>
-  (target: object, propertyName: string, propertyDescriptor?: PropertyDescriptor) => {
-    applyDecorators(
-      // Will cause the `afterSave` method of the state machine to be called when the model is
-      // saved. See sequelize-config.service.ts
-      SetMetadata(`model-column-state-machine:${propertyName}`, true),
-      Column({
-        type: STRING,
-        defaultValue: states.default,
+  <M extends Model, S extends string>(states: States<M, S>) =>
+  (target: M, propertyName: string, propertyDescriptor?: PropertyDescriptor) => {
+    // Will cause the `afterSave` method of the state machine to be called when the model is
+    // saved. See sequelize-config.service.ts
+    Reflect.defineMetadata(METADATA_KEY, [...getStateMachineProperties(target), propertyName], target);
 
-        get(this: StateMachineModel<M, S>) {
-          return ensureStateMachine(this, propertyName as keyof Attributes<M>, states);
-        },
+    // Define the sequelize column as we need it. To consumers of the model, it will appear to be a
+    // column of type S. If access to the underlying state machine is needed, use getStateMachine()
+    Column({
+      type: STRING,
+      defaultValue: states.default,
 
-        set(this: StateMachineModel<M, S>, value: S) {
-          ensureStateMachine(this, propertyName as keyof Attributes<M>, states).transitionTo(value);
-        }
-      }) as CustomDecorator
-    )(target, propertyName, propertyDescriptor);
+      get(this: StateMachineModel<M, S>) {
+        return ensureStateMachine(this, propertyName as keyof Attributes<M>, states).current;
+      },
+
+      set(this: StateMachineModel<M, S>, value: S) {
+        ensureStateMachine(this, propertyName as keyof Attributes<M>, states).transitionTo(value);
+      }
+    })(target, propertyName, propertyDescriptor);
   };
 
-export class ModelColumnStateMachine<M extends Model<M>, S extends string> {
+export class ModelColumnStateMachine<M extends Model, S extends string> {
   constructor(
     protected readonly model: M,
     protected readonly column: keyof Attributes<M>,
@@ -101,7 +113,6 @@ export class ModelColumnStateMachine<M extends Model<M>, S extends string> {
     this.validateTransition(to);
 
     this.fromState = this.current;
-    // @ts-expect-error force a string into the column this is applied to.
     this.model.setDataValue(this.column, to);
   }
 

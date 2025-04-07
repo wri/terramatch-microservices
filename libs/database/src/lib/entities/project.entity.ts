@@ -21,8 +21,9 @@ import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
-import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { EntityStatus, EntityStatusStates, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -87,9 +88,8 @@ export class Project extends Model<Project> {
   @Column(BIGINT.UNSIGNED)
   applicationId: number | null;
 
-  @AllowNull
-  @Column(STRING)
-  status: EntityStatus | null;
+  @StateMachineColumn(EntityStatusStates)
+  status: EntityStatus;
 
   @AllowNull
   @Default("no-update")

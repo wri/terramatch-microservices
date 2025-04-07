@@ -44,11 +44,10 @@ export class ProjectLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({
-    nullable: true,
     description: "Entity status for this project",
     enum: ENTITY_STATUSES
   })
-  status: EntityStatus | null;
+  status: EntityStatus;
 
   @ApiProperty({
     nullable: true,

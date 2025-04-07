@@ -3,7 +3,19 @@ import { ConfigService } from "@nestjs/config";
 import * as Entities from "./entities";
 import { SequelizeModuleOptions, SequelizeOptionsFactory } from "@nestjs/sequelize";
 import { Model } from "sequelize-typescript";
-import { StateMachineModel } from "./util/model-column-state-machine";
+import { getStateMachine, getStateMachineProperties } from "./util/model-column-state-machine";
+
+export const SEQUELIZE_GLOBAL_HOOKS = {
+  afterSave: function (model: Model) {
+    // After any model saves, check if we have a state machine defined on one or more of its
+    // columns, and if so, call afterSave on the state machine instance for the possible
+    // processing of afterTransitionHooks. See StateMachineColumn decorator in
+    // model-column-state-machine.ts
+    for (const key of getStateMachineProperties(model)) {
+      getStateMachine(model, key)?.afterSave();
+    }
+  }
+};
 
 @Injectable()
 export class SequelizeConfigService implements SequelizeOptionsFactory {
@@ -20,23 +32,8 @@ export class SequelizeConfigService implements SequelizeOptionsFactory {
       database: this.configService.get<string>("DB_DATABASE"),
       synchronize: false,
       models: Object.values(Entities),
-      logging: sql => logger.log(sql),
-      hooks: {
-        afterSave: function (model: Model) {
-          // After any model saves, check if we have a state machine defined on one or more of its
-          // columns, and if so, call afterSave on the state machine instance for the possible
-          // processing of afterTransitionHooks. See model-column-state-machine.ts
-          const stateMachineMetadataKeys = Reflect.getMetadataKeys(model).filter(key =>
-            key.startsWith("model-column-state-machine:")
-          );
-          for (const key of stateMachineMetadataKeys) {
-            const propertyName = key.split(":").pop();
-            if (!Reflect.getMetadata(key, model)) continue;
-
-            (model as StateMachineModel<Model, string>)._stateMachines?.[propertyName]?.afterSave();
-          }
-        }
-      }
+      hooks: SEQUELIZE_GLOBAL_HOOKS,
+      logging: sql => logger.log(sql)
     };
   }
 }

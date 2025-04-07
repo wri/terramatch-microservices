@@ -1,5 +1,7 @@
 import { States } from "../util/model-column-state-machine";
 import { Nursery, Project, Site } from "../entities";
+import { Model } from "sequelize-typescript";
+import { DatabaseModule } from "../database.module";
 
 export const STARTED = "started";
 export const AWAITING_APPROVAL = "awaiting-approval";
@@ -9,6 +11,9 @@ export const NEEDS_MORE_INFORMATION = "needs-more-information";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 
+const emitStatusUpdateHook = (from: string, model: Model) => {
+  DatabaseModule.emitModelEvent("statusUpdated", model);
+};
 export const EntityStatusStates: States<Project | Site | Nursery, EntityStatus> = {
   default: STARTED,
   transitions: {
@@ -18,14 +23,9 @@ export const EntityStatusStates: States<Project | Site | Nursery, EntityStatus> 
     [APPROVED]: [NEEDS_MORE_INFORMATION]
   },
   afterTransitionHooks: {
-    [APPROVED]: (from, model) => {
-      console.log("After approved", { from, uuid: model.uuid });
-      // TODO Send status change email
-    },
-    [NEEDS_MORE_INFORMATION]: (from, model) => {
-      console.log("After needs more info", { from, uuid: model.uuid });
-      // TODO Send status change email
-    }
+    [APPROVED]: emitStatusUpdateHook,
+    [AWAITING_APPROVAL]: emitStatusUpdateHook,
+    [NEEDS_MORE_INFORMATION]: emitStatusUpdateHook
   }
 };
 

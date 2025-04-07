@@ -1,5 +1,4 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { JwtService } from "@nestjs/jwt";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
@@ -13,7 +12,6 @@ import { TemplateService } from "@terramatch-microservices/common/email/template
 
 describe("UserCreationService", () => {
   let service: UserCreationService;
-  let jwtService: DeepMocked<JwtService>;
   let emailService: DeepMocked<EmailService>;
   let localizationService: DeepMocked<LocalizationService>;
   let templateService: DeepMocked<TemplateService>;
@@ -68,10 +66,6 @@ describe("UserCreationService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserCreationService,
-        {
-          provide: JwtService,
-          useValue: (jwtService = createMock<JwtService>())
-        },
         {
           provide: EmailService,
           useValue: (emailService = createMock<EmailService>())
@@ -306,8 +300,6 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
-    const token = "fake token";
-    jwtService.signAsync.mockReturnValue(Promise.resolve(token));
     jest.spyOn(Verification, "findOrCreate").mockImplementation(() => Promise.reject());
     const result = await service.createNewUser(userNewRequest);
 
@@ -333,9 +325,6 @@ describe("UserCreationService", () => {
     localizationService.getLocalizationKeys.mockReturnValue(
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
-
-    const token = "fake token";
-    jwtService.signAsync.mockReturnValue(Promise.resolve(token));
 
     emailService.sendEmail.mockRejectedValue(null);
     const result = await service.createNewUser(userNewRequest);
@@ -408,8 +397,6 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
-    const token = "fake token";
-    jwtService.signAsync.mockReturnValue(Promise.resolve(token));
     jest.spyOn(Verification, "findOrCreate").mockRejectedValue(new Error("Verification creation failed"));
 
     await expect(service.createNewUser(userNewRequest)).resolves.toBeNull();

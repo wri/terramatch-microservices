@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
 import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
@@ -16,7 +15,6 @@ export class UserCreationService {
   private roles = ["project-developer", "funder", "government"];
 
   constructor(
-    private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
     private readonly templateService: TemplateService,
     private readonly localizationService: LocalizationService

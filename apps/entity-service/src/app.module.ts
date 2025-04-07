@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { DatabaseModule } from "@terramatch-microservices/database";
 import { CommonModule } from "@terramatch-microservices/common";
 import { HealthModule } from "./health/health.module";
 import { TreesController } from "./trees/trees.controller";
@@ -11,7 +10,7 @@ import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 
 @Module({
-  imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
+  imports: [SentryModule.forRoot(), CommonModule, HealthModule],
   controllers: [EntitiesController, EntityAssociationsController, TreesController],
   providers: [
     {

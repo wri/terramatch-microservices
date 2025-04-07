@@ -1,4 +1,3 @@
-import { DatabaseModule } from "@terramatch-microservices/database";
 import { CommonModule } from "@terramatch-microservices/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { BullModule } from "@nestjs/bullmq";
@@ -10,7 +9,6 @@ import { TerminusModule } from "@nestjs/terminus";
 
 @Module({
   imports: [
-    DatabaseModule,
     CommonModule,
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRootAsync({

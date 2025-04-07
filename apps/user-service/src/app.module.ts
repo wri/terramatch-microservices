@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { LoginController } from "./auth/login.controller";
 import { AuthService } from "./auth/auth.service";
-import { DatabaseModule } from "@terramatch-microservices/database";
 import { UsersController } from "./users/users.controller";
 import { CommonModule } from "@terramatch-microservices/common";
 import { HealthModule } from "./health/health.module";
@@ -14,7 +13,7 @@ import { VerificationUserService } from "./auth/verification-user.service";
 import { UserCreationService } from "./users/user-creation.service";
 
 @Module({
-  imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
+  imports: [SentryModule.forRoot(), CommonModule, HealthModule],
   controllers: [LoginController, UsersController, ResetPasswordController, VerificationUserController],
   providers: [
     {

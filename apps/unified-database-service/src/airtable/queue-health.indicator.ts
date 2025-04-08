@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import { Queue } from "bullmq";
 
+// TODO Add to common for all services to use.
 @Injectable()
 export class QueueHealthIndicator {
   constructor(

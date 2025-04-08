@@ -13,6 +13,8 @@ import { SlackService } from "./slack/slack.service";
 import { DatabaseModule } from "@terramatch-microservices/database";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { EventService } from "./events/event.service";
+import { BullModule } from "@nestjs/bullmq";
+import { EmailProcessor } from "./email/email.processor";
 
 @Module({
   imports: [
@@ -28,7 +30,25 @@ import { EventService } from "./events/event.service";
       isGlobal: true
     }),
     DatabaseModule,
-    EventEmitterModule.forRoot()
+    // Event Emitter is used for sending lightweight messages about events typically from the DB
+    // layer to processes that want to hear about specific types of DB updates.
+    EventEmitterModule.forRoot(),
+    // BullMQ is used for scheduling tasks that should not happen in the context of a typical API
+    // request (like sending en email).
+    BullModule.forRootAsync({
+      imports: [ConfigModule.forRoot({ isGlobal: true })],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get("REDIS_HOST"),
+          port: configService.get("REDIS_PORT"),
+          prefix: "terramatch-microservices",
+          // Use TLS in AWS
+          ...(process.env["NODE_ENV"] !== "development" ? { tls: {} } : null)
+        }
+      })
+    }),
+    BullModule.registerQueue({ name: "email" })
   ],
   providers: [
     PolicyService,
@@ -38,7 +58,8 @@ import { EventService } from "./events/event.service";
     MediaService,
     TemplateService,
     SlackService,
-    EventService
+    EventService,
+    EmailProcessor
   ],
   exports: [PolicyService, JwtModule, EmailService, LocalizationService, MediaService, TemplateService, SlackService]
 })

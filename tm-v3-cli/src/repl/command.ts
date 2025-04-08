@@ -29,7 +29,7 @@ const startLocalRepl = async (service: Service) => {
   });
 
   debug(`Launching REPL process for ${service}`);
-  spawn("node", [`dist/apps/${service}-repl`], { stdio: "inherit" });
+  spawn("node", [`dist/apps/${service}-repl`], { stdio: "inherit", env: { ...process.env, NODE_ENV: "development" } });
 };
 
 const getTaskId = async (service: Service, env: Environment) => {

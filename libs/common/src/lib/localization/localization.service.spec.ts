@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
-import { i18nItem, i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { ConfigService } from "@nestjs/config";
 import { tx } from "@transifex/native";
 import { createMock } from "@golevelup/ts-jest";
@@ -41,25 +41,25 @@ describe("LocalizationService", () => {
   });
 
   it("should return the translated text when a matching i18n item and translation record are found", async () => {
-    const i18Record = new i18nTranslation();
+    const i18Record = new I18nTranslation();
     i18Record.shortValue = "contenido traducido";
-    const i18Item = new i18nItem();
-    jest.spyOn(i18nItem, "findOne").mockImplementation(() => Promise.resolve(i18Item));
-    jest.spyOn(i18nTranslation, "findOne").mockImplementation(() => Promise.resolve(i18Record));
+    const i18Item = new I18nItem();
+    jest.spyOn(I18nItem, "findOne").mockImplementation(() => Promise.resolve(i18Item));
+    jest.spyOn(I18nTranslation, "findOne").mockImplementation(() => Promise.resolve(i18Record));
     const result = await service.translate("content translate", "es-MX");
     expect(result).toBe(i18Record.shortValue);
   });
 
   it("should return the original text when no matching i18n item is found", async () => {
-    jest.spyOn(i18nItem, "findOne").mockImplementation(() => Promise.resolve(null));
+    jest.spyOn(I18nItem, "findOne").mockImplementation(() => Promise.resolve(null));
     const result = await service.translate("content translate", "es-MX");
     expect(result).toBe("content translate");
   });
 
   it("should return the original text when no translation record is found for the given locale", async () => {
-    const i18Item = new i18nItem();
-    jest.spyOn(i18nItem, "findOne").mockImplementation(() => Promise.resolve(i18Item));
-    jest.spyOn(i18nTranslation, "findOne").mockImplementation(() => Promise.resolve(null));
+    const i18Item = new I18nItem();
+    jest.spyOn(I18nItem, "findOne").mockImplementation(() => Promise.resolve(i18Item));
+    jest.spyOn(I18nTranslation, "findOne").mockImplementation(() => Promise.resolve(null));
     const result = await service.translate("content translate", "es-MX");
     expect(result).toBe("content translate");
   });

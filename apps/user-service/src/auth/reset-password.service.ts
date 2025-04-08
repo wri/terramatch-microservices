@@ -4,7 +4,6 @@ import { JwtService } from "@nestjs/jwt";
 import { User } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { EMAIL_TEMPLATE } from "../util/constants";
 
 const EMAIL_KEYS = {
   body: "reset-password.body",
@@ -29,9 +28,8 @@ export class ResetPasswordService {
     const resetToken = await this.jwtService.signAsync({ sub: uuid }, { expiresIn: "2h" });
 
     const resetLink = `${callbackUrl}/${resetToken}`;
-    await this.emailService.sendI18nTemplateEmail(EMAIL_TEMPLATE, emailAddress, locale, EMAIL_KEYS, {
-      link: resetLink,
-      monitoring: "monitoring"
+    await this.emailService.sendI18nTemplateEmail(emailAddress, locale, EMAIL_KEYS, {
+      additionalValues: { link: resetLink, monitoring: "monitoring" }
     });
 
     return { email: emailAddress, uuid };

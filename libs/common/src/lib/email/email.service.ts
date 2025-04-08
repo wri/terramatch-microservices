@@ -5,6 +5,14 @@ import * as Mail from "nodemailer/lib/mailer";
 import { Dictionary, isEmpty } from "lodash";
 import { LocalizationService } from "../localization/localization.service";
 import { TemplateService } from "./template.service";
+import { User } from "@terramatch-microservices/database/entities";
+
+type I18nEmailOptions = {
+  i18nReplacements?: Dictionary<string>;
+  additionalValues?: Dictionary<string>;
+};
+
+const EMAIL_TEMPLATE = "libs/common/src/lib/views/default-email.hbs";
 
 @Injectable()
 export class EmailService {
@@ -26,26 +34,41 @@ export class EmailService {
     });
   }
 
-  filterEntityEmailRecipients(recipients: string[]) {
+  filterEntityEmailRecipients(recipients: User[]) {
     const entityDoNotEmailList = this.configService.get("ENTITY_UPDATE_DO_NOT_EMAIL");
     if (isEmpty(entityDoNotEmailList)) return recipients;
 
     const doNotEmail = entityDoNotEmailList.split(",");
-    return recipients.filter(address => !doNotEmail.includes(address));
+    return recipients.filter(({ emailAddress }) => !doNotEmail.includes(emailAddress));
+  }
+
+  async renderI18nTemplateEmail(
+    locale: string,
+    i18nKeys: Dictionary<string>,
+    { i18nReplacements, additionalValues }: I18nEmailOptions = {}
+  ) {
+    if (i18nKeys["subject"] == null) throw new InternalServerErrorException("Email subject is required");
+    const { subject, ...translated } = await this.localizationService.translateKeys(
+      i18nKeys,
+      locale,
+      i18nReplacements ?? {}
+    );
+
+    const body = this.templateService.render(EMAIL_TEMPLATE, { ...translated, ...(additionalValues ?? {}) });
+    return { subject, body };
   }
 
   async sendI18nTemplateEmail(
-    templatePath: string,
     to: string | string[],
     locale: string,
     i18nKeys: Dictionary<string>,
-    additionalValues: Dictionary<string> = {}
+    { i18nReplacements, additionalValues }: I18nEmailOptions = {}
   ) {
-    if (i18nKeys["subject"] == null) throw new InternalServerErrorException("Email subject is required");
-    const { subject, ...translated } = await this.localizationService.translateKeys(i18nKeys, locale);
-
-    const renderedBody = this.templateService.render(templatePath, { ...translated, ...additionalValues });
-    await this.sendEmail(to, subject, renderedBody);
+    const { subject, body } = await this.renderI18nTemplateEmail(locale, i18nKeys, {
+      i18nReplacements,
+      additionalValues
+    });
+    await this.sendEmail(to, subject, body);
   }
 
   async sendEmail(to: string | string[], subject: string, body: string) {

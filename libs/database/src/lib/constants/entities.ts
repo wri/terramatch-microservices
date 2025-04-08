@@ -1,6 +1,7 @@
 import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
+import { kebabCase } from "lodash";
 
 export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -25,6 +26,9 @@ export const ENTITY_MODELS: { [E in EntityType]: EntityClass<EntityModel> } = {
   nurseries: Nursery
 };
 
+export const isReport = (entity: EntityModel): entity is ReportModel =>
+  Object.values(REPORT_MODELS).find(model => entity instanceof model) != null;
+
 /**
  * Get the project ID associated with the given entity, which may be any one of EntityModels defined in this file.
  *
@@ -39,4 +43,9 @@ export async function getProjectId(entity: EntityModel) {
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;
   const parentId = entity instanceof SiteReport ? entity.siteId : entity.nurseryId;
   return (await parentClass.findOne({ where: { id: parentId }, attributes: ["projectId"] }))?.projectId;
+}
+
+export function getViewLinkPath(entity: EntityModel) {
+  const prefix = isReport(entity) ? "/reports/" : "/";
+  return `${prefix}${kebabCase(entity.constructor.name)}/${entity.uuid}`;
 }

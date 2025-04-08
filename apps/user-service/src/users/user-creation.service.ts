@@ -6,7 +6,6 @@ import crypto from "node:crypto";
 import { omit } from "lodash";
 import bcrypt from "bcryptjs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { EMAIL_TEMPLATE } from "../util/constants";
 
 const EMAIL_KEYS = {
   body: "user-verification.body",
@@ -63,9 +62,8 @@ export class UserCreationService {
   }
 
   private async sendEmailVerification({ emailAddress, locale }: User, token: string, callbackUrl: string) {
-    await this.emailService.sendI18nTemplateEmail(EMAIL_TEMPLATE, emailAddress, locale, EMAIL_KEYS, {
-      link: `${callbackUrl}/${token}`,
-      monitoring: "monitoring"
+    await this.emailService.sendI18nTemplateEmail(emailAddress, locale, EMAIL_KEYS, {
+      additionalValues: { link: `${callbackUrl}/${token}`, monitoring: "monitoring" }
     });
   }
 

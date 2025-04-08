@@ -36,6 +36,7 @@ export * from "./site-polygon.entity";
 export * from "./site-report.entity";
 export * from "./tree-species.entity";
 export * from "./tree-species-research.entity";
+export * from "./update-request.entity";
 export * from "./user.entity";
 export * from "./verification.entity";
 export * from "./task.entity";

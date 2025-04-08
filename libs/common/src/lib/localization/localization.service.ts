@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
-import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";
+import { I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { normalizeLocale, tx } from "@transifex/native";
@@ -14,48 +13,33 @@ export class LocalizationService {
     });
   }
 
-  async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
-    return await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } });
-  }
-
-  private async getItemI18n(value: string): Promise<i18nItem | null> {
-    return await i18nItem.findOne({
-      where: {
-        [Op.or]: [{ shortValue: value }, { longValue: value }]
-      }
-    });
-  }
-
-  private async getTranslateItem(itemId: number, locale: string): Promise<i18nTranslation | null> {
-    return await i18nTranslation.findOne({ where: { i18nItemId: itemId, language: locale } });
-  }
-
-  async translateKeys(keyMap: Dictionary<string>, locale: string) {
+  async translateKeys(keyMap: Dictionary<string>, locale: string, replacements: Dictionary<string> = {}) {
     const keyStrings = Object.values(keyMap);
-    const keys = (await this.getLocalizationKeys(keyStrings)) ?? [];
+    const keys = await this.getLocalizationKeys(keyStrings);
+    const i18nItemIds = keys.map(({ valueId }) => valueId).filter(id => id != null);
+    const translations =
+      i18nItemIds.length === 0
+        ? []
+        : await I18nTranslation.findAll({
+            where: { i18nItemId: { [Op.in]: i18nItemIds }, language: locale }
+          });
 
-    const result: Dictionary<string> = {};
-    await Promise.all(
-      Object.entries(keyMap).map(async ([prop, key]) => {
-        const value = keys.find(record => record.key === key)?.value;
-        if (value == null) throw new NotFoundException(`Localization key not found [${key}]`);
+    return Object.entries(keyMap).reduce((result, [prop, key]) => {
+      const { value, valueId } = keys.find(record => record.key === key) ?? {};
+      if (value == null) throw new NotFoundException(`Localization key not found [${key}]`);
 
-        const translated = await this.translate(value, locale);
-        if (translated != null) result[prop] = translated;
-      })
-    );
+      const translation = translations.find(({ i18nItemId }) => i18nItemId === valueId);
+      const translated = Object.entries(replacements).reduce(
+        (translated, [replacementKey, replacementValue]) => translated.replaceAll(replacementKey, replacementValue),
+        translation?.longValue ?? translation?.shortValue ?? value
+      );
 
-    return result;
+      return { ...result, [prop]: translated };
+    }, {} as Dictionary<string>);
   }
 
-  async translate(content: string, locale: string): Promise<string | null> {
-    const itemResult = await this.getItemI18n(content);
-    if (itemResult == null) return content;
-
-    const translationResult = await this.getTranslateItem(itemResult.id, locale);
-    if (translationResult == null) return content;
-
-    return translationResult.shortValue ?? translationResult.longValue;
+  private async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
+    return (await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } })) ?? [];
   }
 
   /**
@@ -66,9 +50,7 @@ export class LocalizationService {
    */
   async localizeText(text: string, locale: string): Promise<string> {
     // Set the locale for the SDK
-
     const txLocale = normalizeLocale(locale);
-
     await tx.setCurrentLocale(txLocale);
 
     // Translate the text

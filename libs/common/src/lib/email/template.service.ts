@@ -3,7 +3,6 @@ import { ConfigService } from "@nestjs/config";
 import * as Handlebars from "handlebars";
 import * as fs from "fs";
 import * as path from "path";
-import { TemplateParams } from "./TemplateParams";
 import { Dictionary } from "factory-girl-ts";
 
 @Injectable()
@@ -20,15 +19,15 @@ export class TemplateService {
     return (this.templates[template] = Handlebars.compile(templateSource));
   }
 
-  render(templatePath: string, data: TemplateParams): string {
+  render(templatePath: string, data: Dictionary<string>): string {
     const params = {
-      ...data,
       backendUrl: this.configService.get<string>("EMAIL_IMAGE_BASE_URL"),
       banner: null,
       invite: null,
       monitoring: null,
-      transactional: data.transactional || null,
-      year: new Date().getFullYear()
+      transactional: null,
+      year: new Date().getFullYear(),
+      ...data
     };
     return this.getCompiledTemplate(templatePath)(params);
   }

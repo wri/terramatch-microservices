@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { i18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { i18nItem } from "@terramatch-microservices/database/entities/i18n-item.entity";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { normalizeLocale, tx } from "@transifex/native";
+import { Dictionary } from "lodash";
 
 @Injectable()
 export class LocalizationService {
@@ -29,16 +30,32 @@ export class LocalizationService {
     return await i18nTranslation.findOne({ where: { i18nItemId: itemId, language: locale } });
   }
 
+  async translateKeys(keyMap: Dictionary<string>, locale: string) {
+    const keyStrings = Object.values(keyMap);
+    const keys = (await this.getLocalizationKeys(keyStrings)) ?? [];
+
+    const result: Dictionary<string> = {};
+    await Promise.all(
+      Object.entries(keyMap).map(async ([prop, key]) => {
+        const value = keys.find(record => record.key === key)?.value;
+        if (value == null) throw new NotFoundException(`Localization key not found [${key}]`);
+
+        const translated = await this.translate(value, locale);
+        if (translated != null) result[prop] = translated;
+      })
+    );
+
+    return result;
+  }
+
   async translate(content: string, locale: string): Promise<string | null> {
     const itemResult = await this.getItemI18n(content);
-    if (itemResult == null) {
-      return content;
-    }
+    if (itemResult == null) return content;
+
     const translationResult = await this.getTranslateItem(itemResult.id, locale);
-    if (translationResult == null) {
-      return content;
-    }
-    return translationResult.shortValue || translationResult.longValue;
+    if (translationResult == null) return content;
+
+    return translationResult.shortValue ?? translationResult.longValue;
   }
 
   /**

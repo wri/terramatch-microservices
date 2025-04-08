@@ -1,13 +1,20 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
 import * as Mail from "nodemailer/lib/mailer";
+import { Dictionary, isEmpty } from "lodash";
+import { LocalizationService } from "../localization/localization.service";
+import { TemplateService } from "./template.service";
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly localizationService: LocalizationService,
+    private readonly templateService: TemplateService
+  ) {
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>("MAIL_HOST"),
       port: this.configService.get<number>("MAIL_PORT"),
@@ -19,7 +26,29 @@ export class EmailService {
     });
   }
 
-  async sendEmail(to: string, subject: string, body: string) {
+  filterEntityEmailRecipients(recipients: string[]) {
+    const entityDoNotEmailList = this.configService.get("ENTITY_UPDATE_DO_NOT_EMAIL");
+    if (isEmpty(entityDoNotEmailList)) return recipients;
+
+    const doNotEmail = entityDoNotEmailList.split(",");
+    return recipients.filter(address => !doNotEmail.includes(address));
+  }
+
+  async sendI18nTemplateEmail(
+    templatePath: string,
+    to: string | string[],
+    locale: string,
+    i18nKeys: Dictionary<string>,
+    additionalValues: Dictionary<string> = {}
+  ) {
+    if (i18nKeys["subject"] == null) throw new InternalServerErrorException("Email subject is required");
+    const { subject, ...translated } = await this.localizationService.translateKeys(i18nKeys, locale);
+
+    const renderedBody = this.templateService.render(templatePath, { ...translated, ...additionalValues });
+    await this.sendEmail(to, subject, renderedBody);
+  }
+
+  async sendEmail(to: string | string[], subject: string, body: string) {
     const headers = {} as { [p: string]: string | string[] | { prepared: boolean; value: string } };
     const mailOptions: Mail.Options = {
       from: this.configService.get<string>("MAIL_FROM_ADDRESS"),

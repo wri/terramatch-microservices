@@ -24,3 +24,19 @@ export const ENTITY_MODELS: { [E in EntityType]: EntityClass<EntityModel> } = {
   sites: Site,
   nurseries: Nursery
 };
+
+/**
+ * Get the project ID associated with the given entity, which may be any one of EntityModels defined in this file.
+ *
+ * Note: this method does require that for sites, nurseries and project reports, the entity's projectId must have
+ * been loaded when it was fetched from the DB, or `undefined` will be returned. Likewise, For site reports and
+ * nursery reports, the associated parent entity's id must be included.
+ */
+export async function getProjectId(entity: EntityModel) {
+  if (entity instanceof Project) return entity.id;
+  if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
+
+  const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;
+  const parentId = entity instanceof SiteReport ? entity.siteId : entity.nurseryId;
+  return (await parentClass.findOne({ where: { id: parentId }, attributes: ["projectId"] }))?.projectId;
+}

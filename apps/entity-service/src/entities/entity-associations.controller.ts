@@ -24,9 +24,8 @@ export class EntityAssociationsController {
   @JsonApiResponse([
     { data: DemographicDto, hasMany: true },
     { data: SeedingDto, hasMany: true },
-    { data: TreeSpeciesDto, hasMany: true }
-    // TODO: check why this is causing a TypeError
-    // { data: MediaDto, hasMany: true }
+    { data: TreeSpeciesDto, hasMany: true },
+    { data: MediaDto, hasMany: true }
   ])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Base entity not found" })

@@ -63,6 +63,9 @@ const ASSOCIATION_PROCESSORS = {
       attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
       group: ["taxonId", "name", "collection"]
     })
+  ),
+  medias: AssociationProcessor.buildSimpleProcessor(MediaDto, ({ id: modelId }, modelType) =>
+    Media.findAll({ where: { modelType, modelId } })
   )
 };
 
@@ -134,7 +137,11 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto = (media: Media) => new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media));
+  mediaDto = (media: Media) =>
+    new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media), {
+      entityType: media.modelType as EntityType,
+      entityUuid: media.modelId.toString()
+    });
 
   mapMediaCollection(media: Media[], collection: MediaCollection) {
     const grouped = groupBy(media, "collectionName");

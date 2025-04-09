@@ -87,7 +87,7 @@ and main branches.
 
 - In the root directory: `nx g @nx/nest:app apps/foo-service`
 - Set up the new `main.ts` similarly to existing services.
-  - Make sure swagger docs and the `/health` endpoint are implemented
+  - Make sure swagger docs are implemented
   - Pick a default local port that is unique from other services
   - Make sure the top of `main.ts` has these two lines:
   ```
@@ -95,6 +95,7 @@ and main branches.
   import "../../../instrument-sentry";
   ```
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
+  - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
 - Set up REPL access:
   - Copy `repl.ts` from an existing service (and modify to specify the new service's name)
   - Add the `build-repl` target to `project.json`, which an empty definition.

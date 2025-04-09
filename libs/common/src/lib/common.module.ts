@@ -16,6 +16,8 @@ import { EventService } from "./events/event.service";
 import { BullModule } from "@nestjs/bullmq";
 import { EmailProcessor } from "./email/email.processor";
 
+export const QUEUES = ["email"];
+
 @Module({
   imports: [
     RequestContextModule,
@@ -48,7 +50,7 @@ import { EmailProcessor } from "./email/email.processor";
         }
       })
     }),
-    BullModule.registerQueue({ name: "email" })
+    ...QUEUES.map(name => BullModule.registerQueue({ name }))
   ],
   providers: [
     PolicyService,

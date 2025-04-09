@@ -23,7 +23,14 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
   const replServer = await repl(module);
 
   // By default, we make lodash, the JSON API Builder, and the Sequelize models available
-  context = { lodash, buildJsonApi, ...replServer.context["get"](Sequelize).models, Op, ...context };
+  context = {
+    lodash,
+    buildJsonApi,
+    Op,
+    Reflect,
+    ...replServer.context["get"](Sequelize).models,
+    ...context
+  };
 
   for (const [name, model] of Object.entries(context as Dictionary<unknown>)) {
     // For in REPL auto-complete functionality

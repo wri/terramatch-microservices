@@ -126,6 +126,9 @@ export class EntitiesController {
     @Param() { entity, uuid }: SpecificEntityDto,
     @Body() updatePayload: EntityUpdateBody
   ) {
+    // The structure of the EntityUpdateBody ensures that the `type` field in the body controls
+    // which update body is used for validation, but it doesn't make sure that the body of the
+    // request matches the type in the URL path.
     if (entity !== updatePayload.data.type) {
       throw new BadRequestException("Entity type in path and payload do not match");
     }
@@ -134,7 +137,13 @@ export class EntitiesController {
     const model = await processor.findOne(uuid);
     if (model == null) throw new NotFoundException();
 
-    // await this.policyService.authorize("update", model);
-    return { entity, uuid, updatePayload, type: typeof updatePayload.data };
+    await this.policyService.authorize("update", model);
+
+    await processor.update(model, updatePayload.data.attributes);
+
+    const document = buildJsonApi(processor.FULL_DTO);
+    const { id, dto } = await processor.getFullDto(model);
+    document.addData(id, dto);
+    return document.serialize();
   }
 }

@@ -1,5 +1,5 @@
 import { States } from "../util/model-column-state-machine";
-import { Nursery, Project, Site } from "../entities";
+import { Nursery, Project } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 
@@ -14,14 +14,17 @@ export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 const emitStatusUpdateHook = (from: string, model: Model) => {
   DatabaseModule.emitModelEvent("statusUpdated", model);
 };
-export const EntityStatusStates: States<Project | Site | Nursery, EntityStatus> = {
+
+export const EntityStatusStates: States<Project | Nursery, EntityStatus> = {
   default: STARTED,
+
   transitions: {
     [STARTED]: [AWAITING_APPROVAL],
     [AWAITING_APPROVAL]: [APPROVED, NEEDS_MORE_INFORMATION],
     [NEEDS_MORE_INFORMATION]: [APPROVED, AWAITING_APPROVAL],
     [APPROVED]: [NEEDS_MORE_INFORMATION]
   },
+
   afterTransitionHooks: {
     [APPROVED]: emitStatusUpdateHook,
     [AWAITING_APPROVAL]: emitStatusUpdateHook,

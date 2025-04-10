@@ -23,6 +23,7 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { EntityUpdateData } from "./dto/entity-update.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -80,13 +81,17 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
+  async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
+    return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+  }
+
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
     if (processorClass == null) {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
   createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(

@@ -18,8 +18,14 @@ import {
   SiteReportLightDto,
   SiteReportMedia
 } from "../dto/site-report.dto";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
-export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportLightDto, SiteReportFullDto> {
+export class SiteReportProcessor extends EntityProcessor<
+  SiteReport,
+  SiteReportLightDto,
+  SiteReportFullDto,
+  EntityUpdateAttributes
+> {
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;
 

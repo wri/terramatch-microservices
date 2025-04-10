@@ -26,11 +26,17 @@ import {
 } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 
-export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
+export class ProjectProcessor extends EntityProcessor<
+  Project,
+  ProjectLightDto,
+  ProjectFullDto,
+  ProjectUpdateAttributes
+> {
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;
 
@@ -98,6 +104,19 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+  }
+
+  async update(project: Project, update: ProjectUpdateAttributes) {
+    if (update.isTest != null) {
+      if (!(await this.entitiesService.isFrameworkAdmin(project))) {
+        // Only framework admins can set the isTest flag.
+        throw new UnauthorizedException();
+      }
+
+      project.isTest = update.isTest;
+    }
+
+    await super.update(project, update);
   }
 
   async processSideload(

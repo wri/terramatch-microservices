@@ -1,5 +1,6 @@
 import { Column, Model } from "sequelize-typescript";
 import { Attributes, STRING } from "sequelize";
+import { HttpException, HttpStatus } from "@nestjs/common";
 
 export type States<M extends Model, S extends string> = {
   default: S;
@@ -28,7 +29,12 @@ export type States<M extends Model, S extends string> = {
   afterTransitionHooks?: Partial<Record<S, (from: S, model: M) => void>>;
 };
 
-export class StateMachineError extends Error {}
+// Extends HttpException so these errors bubble up to the API consumer
+export class StateMachineException extends HttpException {
+  constructor(message: string) {
+    super(message, HttpStatus.BAD_REQUEST);
+  }
+}
 
 export type StateMachineModel<M extends Model, S extends string> = M & {
   _stateMachines?: Record<string, ModelColumnStateMachine<M, S>>;
@@ -103,7 +109,7 @@ export class ModelColumnStateMachine<M extends Model, S extends string> {
 
   canBe(from: S, to: S) {
     if (!Object.keys(this.states.transitions).includes(from)) {
-      throw new StateMachineError(`Current state is not defined [${from}]`);
+      throw new StateMachineException(`Current state is not defined [${from}]`);
     }
 
     return from === to || this.states.transitions[from]?.includes(to) === true;
@@ -120,14 +126,14 @@ export class ModelColumnStateMachine<M extends Model, S extends string> {
     if (this.model.isNewRecord) return;
 
     if (!this.canBe(this.current, to)) {
-      throw new StateMachineError(`Transition not valid [from=${this.current}, to=${to}]`);
+      throw new StateMachineException(`Transition not valid [from=${this.current}, to=${to}]`);
     }
 
     if (
       this.states.transitionValidForModel != null &&
       !this.states.transitionValidForModel(this.current, to, this.model)
     ) {
-      throw new StateMachineError(
+      throw new StateMachineException(
         `Transition not valid for model [from=${this.current}, to=${to}, id=${this.model.id}]`
       );
     }

@@ -10,11 +10,13 @@ import {
   NurseryReportLightDto,
   NurseryReportMedia
 } from "../dto/nursery-report.dto";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
 export class NurseryReportProcessor extends EntityProcessor<
   NurseryReport,
   NurseryReportLightDto,
-  NurseryReportFullDto
+  NurseryReportFullDto,
+  EntityUpdateAttributes
 > {
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;

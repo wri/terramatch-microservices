@@ -20,11 +20,13 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
   ProjectReportLightDto,
-  ProjectReportFullDto
+  ProjectReportFullDto,
+  EntityUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;

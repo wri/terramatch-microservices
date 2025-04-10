@@ -8,6 +8,7 @@ import {
   IndicatorOutputTreeCountFactory,
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
+  LandscapeGeometryFactory,
   POLYGON,
   PolygonGeometryFactory,
   ProjectFactory,
@@ -16,7 +17,13 @@ import {
   SiteReportFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
-import { Indicator, PolygonGeometry, SitePolygon, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  Indicator,
+  PolygonGeometry,
+  Project,
+  SitePolygon,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
@@ -202,6 +209,7 @@ describe("SitePolygonsService", () => {
     expect(result2.length).toBe(1);
     expect(result2[0].id).toBe(poly2.id);
   });
+
   it("Should only include given projects", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
@@ -219,6 +227,27 @@ describe("SitePolygonsService", () => {
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
+  });
+
+  it("should only include projects in the cohort given", async () => {
+    await SitePolygon.truncate();
+    await Project.truncate();
+    const tf = await ProjectFactory.create({ cohort: "terrafund" });
+    const ppc = await ProjectFactory.create({ cohort: "ppc" });
+    const tfSite = await SiteFactory.create({ projectId: tf.id });
+    const ppcSite = await SiteFactory.create({ projectId: ppc.id });
+    const tfPoly = await SitePolygonFactory.create({ siteUuid: tfSite.uuid });
+    const ppcPoly = await SitePolygonFactory.create({ siteUuid: ppcSite.uuid });
+
+    let query = await (await service.buildQuery({ size: 20 })).filterProjectCohort("terrafund");
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(tfPoly.id);
+
+    query = await (await service.buildQuery({ size: 20 })).filterProjectCohort("ppc");
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(ppcPoly.id);
   });
 
   it("should only include polys with the given statuses", async () => {
@@ -368,9 +397,12 @@ describe("SitePolygonsService", () => {
       polygon: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
     });
     const sitePoly2 = await SitePolygonFactory.create({ polygonUuid: poly2.uuid });
+    const landscape = await LandscapeGeometryFactory.create({
+      geometry: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
+    });
 
     let query = await service.buildQuery({ size: 20 });
-    await query.touchesBoundary(poly2.uuid);
+    await query.touchesLandscape(landscape.id);
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(sitePoly2.id);
@@ -383,7 +415,7 @@ describe("SitePolygonsService", () => {
 
   it("throws when a boundary poly uuid doesn't exist", async () => {
     const query = await service.buildQuery({ size: 20 });
-    await expect(query.touchesBoundary("asdf")).rejects.toThrow(BadRequestException);
+    await expect(query.touchesLandscape(0)).rejects.toThrow(BadRequestException);
   });
 
   it("Can apply multiple filter types at once", async () => {
@@ -404,12 +436,13 @@ describe("SitePolygonsService", () => {
       sitePolygonId: approvedPoly2.id,
       indicatorSlug: "restorationByStrategy"
     });
+    const landscape = await LandscapeGeometryFactory.create();
 
     const query = (await service.buildQuery({ size: 20 }))
       .isMissingIndicators(["restorationByStrategy"])
       .hasStatuses(["draft", "approved"]);
     await query.filterProjectUuids([project2.uuid]);
-    await query.touchesBoundary(approvedPoly2.polygonUuid);
+    await query.touchesLandscape(landscape.id);
     const result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(draftPoly2.id);

@@ -6,14 +6,26 @@ import { Literal } from "sequelize/types/utils";
 const isLiteral = (values: string[] | number[] | Literal): values is Literal =>
   isObject(values) && (values as { val: unknown }).val != null;
 
+type SelectOptions = {
+  distinct?: boolean;
+};
+
 export class Subquery<T extends Model<T>> {
   private constructor(public readonly modelStatic: ModelStatic<T>) {}
 
-  public static select<T extends Model<T>>(modelStatic: ModelStatic<T>, attribute: keyof Attributes<T>) {
-    return new Subquery(modelStatic).select(attribute);
+  public static select<T extends Model<T>>(
+    modelStatic: ModelStatic<T>,
+    attribute: keyof Attributes<T>,
+    options: SelectOptions = {}
+  ) {
+    return new Subquery(modelStatic).select(attribute, options);
   }
 
-  private select(attribute: keyof Attributes<T>) {
+  private select(attribute: keyof Attributes<T>, options: SelectOptions = {}) {
+    if (options.distinct) {
+      return new SubqueryBuilder(this, `SELECT DISTINCT ${this.field(attribute)} FROM ${this.modelStatic.tableName}`);
+    }
+
     return new SubqueryBuilder(this, `SELECT ${this.field(attribute)} FROM ${this.modelStatic.tableName}`);
   }
 

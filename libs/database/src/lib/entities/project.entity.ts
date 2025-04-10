@@ -46,6 +46,10 @@ export class Project extends Model<Project> {
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;
   }
 
+  static forCohort(cohort: string) {
+    return Subquery.select(Project, "id").isNull("deletedAt").eq("cohort", cohort).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

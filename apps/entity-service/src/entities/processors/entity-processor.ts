@@ -5,7 +5,7 @@ import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
-import { EntityClass, EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData } from "../dto/entity-update.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
@@ -107,7 +107,7 @@ export abstract class EntityProcessor<
   }
 
   async delete(model: ModelType) {
-    await Action.targetable((model.constructor as EntityClass<ModelType>).LARAVEL_TYPE, model.id).destroy();
+    await Action.for(model).destroy();
     await model.destroy();
   }
 

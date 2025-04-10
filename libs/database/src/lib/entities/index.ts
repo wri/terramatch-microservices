@@ -5,6 +5,7 @@ export * from "./delayed-job.entity";
 export * from "./demographic.entity";
 export * from "./demographic-entry.entity";
 export * from "./form-submission.entity";
+export * from "./form-question.entity";
 export * from "./framework.entity";
 export * from "./framework-user.entity";
 export * from "./funding-programme.entity";

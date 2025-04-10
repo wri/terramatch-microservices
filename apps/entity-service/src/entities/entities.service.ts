@@ -101,7 +101,7 @@ export class EntitiesService {
     return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(
+  createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation

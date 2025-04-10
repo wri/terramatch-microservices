@@ -45,6 +45,13 @@ export async function getProjectId(entity: EntityModel) {
   return (await parentClass.findOne({ where: { id: parentId }, attributes: ["projectId"] }))?.projectId;
 }
 
+export async function getOrganisationId(entity: EntityModel) {
+  if (entity instanceof Project) return entity.organisationId;
+
+  return (await Project.findOne({ where: { id: await getProjectId(entity) }, attributes: ["organisationId"] }))
+    ?.organisationId;
+}
+
 export function getViewLinkPath(entity: EntityModel) {
   const prefix = isReport(entity) ? "/reports/" : "/";
   return `${prefix}${kebabCase(entity.constructor.name)}/${entity.uuid}`;

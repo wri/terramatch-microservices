@@ -14,14 +14,14 @@ import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID, UUIDV4 } from "se
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
-import { LaravelModel, LaravelModelCtor } from "../types/util";
+import { LaravelModel, laravelType } from "../types/util";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
   collection: (collectionName: string) => ({ where: { collectionName } }),
   association: (association: LaravelModel) => ({
     where: {
-      modelType: (association.constructor as LaravelModelCtor).LARAVEL_TYPE,
+      modelType: laravelType(association),
       modelId: association.id
     }
   })

@@ -1,6 +1,8 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, ENUM, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { User } from "./user.entity";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, BOOLEAN, DATE, ENUM, NOW, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+
+const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
+type AuditStatusType = (typeof TYPES)[number];
 
 @Table({
   tableName: "audit_statuses",
@@ -21,48 +23,64 @@ export class AuditStatus extends Model<AuditStatus> {
 
   @AllowNull
   @Column(STRING)
-  status: string;
+  status: string | null;
 
   @AllowNull
   @Column(TEXT)
-  comment: string;
+  comment: string | null;
 
   @AllowNull
   @Column(STRING)
-  firstName: string;
+  firstName: string | null;
 
   @AllowNull
   @Column(STRING)
-  lastName: string;
+  lastName: string | null;
 
   @AllowNull
-  @Column({
-    type: ENUM,
-    values: ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"]
-  })
-  type: string;
+  @Column({ type: ENUM, values: TYPES })
+  type: AuditStatusType | null;
 
-  @AllowNull
-  @Column(BOOLEAN)
-  isSubmitted: boolean;
-
+  /**
+   * @deprecated
+   *
+   * All records in the DB have null for this field, so it seems not to be useful.
+   */
   @AllowNull
   @Column(BOOLEAN)
-  isActive: boolean;
+  isSubmitted: boolean | null;
 
+  /**
+   * @deprecated
+   *
+   * All records in the DB have true for this field, so it seems not to be useful.
+   */
+  @AllowNull
+  @Column({ type: BOOLEAN, defaultValue: true })
+  isActive: boolean | null;
+
+  /**
+   * @deprecated
+   *
+   * All records in the DB have null for this field, so it seems not to be useful.
+   */
   @AllowNull
   @Column(BOOLEAN)
-  requestRemoved: boolean;
+  requestRemoved: boolean | null;
 
-  /** @deprecated */
+  /**
+   * @deprecated
+   *
+   * Needs an investigation to see if this field is being used anywhere, but it is totally superfluous with the
+   * automatic createdAt field.
+   **/
   @AllowNull
-  @Column(DATE)
-  dateCreated: Date;
+  @Column({ type: DATE, defaultValue: NOW })
+  dateCreated: Date | null;
 
   @AllowNull
-  @ForeignKey(() => User)
-  @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  @Column(STRING)
+  createdBy: string | null;
 
   @Column(STRING)
   auditableType: string;

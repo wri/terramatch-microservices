@@ -132,6 +132,9 @@ export class EntitiesController {
     if (entity !== updatePayload.data.type) {
       throw new BadRequestException("Entity type in path and payload do not match");
     }
+    if (uuid !== updatePayload.data.id) {
+      throw new BadRequestException("Entity id in path and payload do not match");
+    }
 
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const model = await processor.findOne(uuid);

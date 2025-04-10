@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
@@ -50,7 +50,7 @@ export class Media extends Model<Media> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)

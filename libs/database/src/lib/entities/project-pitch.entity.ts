@@ -1,5 +1,5 @@
 import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, UUID } from "sequelize";
+import { BIGINT, UUID, UUIDV4 } from "sequelize";
 
 // Incomplete stub
 @Table({ tableName: "project_pitches", underscored: true, paranoid: true })
@@ -12,6 +12,6 @@ export class ProjectPitch extends Model<ProjectPitch> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 }

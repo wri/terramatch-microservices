@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -56,7 +56,7 @@ export class Nursery extends Model<Nursery> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)

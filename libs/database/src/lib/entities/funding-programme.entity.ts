@@ -1,5 +1,5 @@
 import { AutoIncrement, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 
 // Incomplete stub
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
@@ -10,7 +10,7 @@ export class FundingProgramme extends Model<FundingProgramme> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)

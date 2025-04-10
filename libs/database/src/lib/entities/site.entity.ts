@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -79,7 +79,7 @@ export class Site extends Model<Site> {
   updateRequestStatus: UpdateRequestStatus | null;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

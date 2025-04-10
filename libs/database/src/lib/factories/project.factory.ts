@@ -9,7 +9,6 @@ import { FRAMEWORK_KEYS } from "../constants/framework";
 const CONTINENTS = ["africa", "australia", "south-america", "asia", "north-america"];
 
 export const ProjectFactory = FactoryGirl.define(Project, async () => ({
-  uuid: crypto.randomUUID(),
   name: faker.animal.petName(),
   frameworkKey: faker.helpers.arrayElement(FRAMEWORK_KEYS),
   status: faker.helpers.arrayElement(ENTITY_STATUSES),

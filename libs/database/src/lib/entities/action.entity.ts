@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { Literal } from "sequelize/types/utils";
@@ -44,7 +44,7 @@ export class Action extends Model<Action> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

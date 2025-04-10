@@ -9,7 +9,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { User } from "./user.entity";
@@ -38,7 +38,7 @@ export class UpdateRequest extends Model<UpdateRequest> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

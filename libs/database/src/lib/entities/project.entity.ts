@@ -11,7 +11,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
@@ -56,7 +56,7 @@ export class Project extends Model<Project> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

@@ -42,7 +42,7 @@ export class UserCreationService {
       const callbackUrl = request.callbackUrl;
       const newUser = omit(request, ["callbackUrl", "role", "password"]);
 
-      const user = await User.create({ ...newUser, uuid: crypto.randomUUID(), password: hashPassword });
+      const user = await User.create({ ...newUser, password: hashPassword });
 
       await user.reload();
 

@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   NotFoundException,
   Param,
+  Patch,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
@@ -24,7 +26,8 @@ import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
-import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
+import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
+import { EntityUpdateBody } from "./dto/entity-update.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
@@ -107,5 +110,31 @@ export class EntitiesController {
     await processor.delete(model);
 
     return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
+  }
+
+  @Patch(":entity/:uuid")
+  @ApiOperation({
+    operationId: "entityUpdate",
+    summary: "Update various supported entity fields directly. Typically used for status transitions"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
+  async entityUpdate<T extends EntityModel>(
+    @Param() { entity, uuid }: SpecificEntityDto,
+    @Body() updatePayload: EntityUpdateBody
+  ) {
+    if (entity !== updatePayload.data.type) {
+      throw new BadRequestException("Entity type in path and payload do not match");
+    }
+
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    const model = await processor.findOne(uuid);
+    if (model == null) throw new NotFoundException();
+
+    // await this.policyService.authorize("update", model);
+    return { entity, uuid, updatePayload, type: typeof updatePayload.data };
   }
 }

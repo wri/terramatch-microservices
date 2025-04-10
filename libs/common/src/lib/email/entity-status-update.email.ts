@@ -1,4 +1,4 @@
-import { EmailProcessor } from "./email-processor";
+import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { StatusUpdateData } from "./email.processor";
 import {
@@ -23,7 +23,7 @@ import { TMLogger } from "../util/tm-logger";
 import { InternalServerErrorException } from "@nestjs/common";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
 
-export class EntityStatusUpdateEmail extends EmailProcessor {
+export class EntityStatusUpdateEmail extends EmailSender {
   private readonly logger = new TMLogger(EntityStatusUpdateEmail.name);
 
   private readonly type: EntityType;

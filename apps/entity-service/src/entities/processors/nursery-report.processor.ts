@@ -134,8 +134,7 @@ export class NurseryReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(nurseryReport: NurseryReport) {
-    const nurseryReportId = nurseryReport.id;
-    const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
+    const mediaCollection = await Media.for(nurseryReport).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
     const migrated = nurseryReport.oldModel != null;

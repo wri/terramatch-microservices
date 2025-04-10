@@ -28,7 +28,7 @@ import { chainScope } from "../util/chain-scope";
 }))
 @Table({ tableName: "v2_update_requests", underscored: true, paranoid: true })
 export class UpdateRequest extends Model<UpdateRequest> {
-  static entity<T extends EntityModel>(entity: T) {
+  static for<T extends EntityModel>(entity: T) {
     return chainScope(this, "entity", entity) as typeof UpdateRequest;
   }
 

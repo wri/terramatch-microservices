@@ -114,7 +114,7 @@ export class EntityStatusUpdateEmail extends EmailProcessor {
       return entity.feedback;
     }
 
-    const updateRequest = await UpdateRequest.entity(entity).findOne({
+    const updateRequest = await UpdateRequest.for(entity).findOne({
       order: [["updatedAt", "DESC"]],
       attributes: ["feedback"]
     });

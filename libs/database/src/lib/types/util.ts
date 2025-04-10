@@ -1,3 +1,6 @@
-import { Model } from "sequelize-typescript";
+import { Model, ModelCtor } from "sequelize-typescript";
 
-export type UuidModel<T> = Model<T> & { uuid: string };
+export type UuidModel = Model & { uuid: string };
+
+export type LaravelModelCtor = ModelCtor & { LARAVEL_TYPE: string };
+export type LaravelModel = InstanceType<LaravelModelCtor>;

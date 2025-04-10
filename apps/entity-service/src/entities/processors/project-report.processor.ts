@@ -129,7 +129,6 @@ export class ProjectReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(projectReport: ProjectReport) {
-    const projectReportId = projectReport.id;
     const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
     const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
@@ -161,7 +160,7 @@ export class ProjectReportProcessor extends EntityProcessor<
       readableCompletionStatus,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
-        await Media.projectReport(projectReportId).findAll(),
+        await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
     };

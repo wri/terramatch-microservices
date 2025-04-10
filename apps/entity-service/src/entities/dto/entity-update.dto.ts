@@ -1,7 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { ENTITY_STATUSES, SITE_STATUSES } from "@terramatch-microservices/database/constants/status";
-import { IsBoolean, IsIn, IsOptional } from "class-validator";
+import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
 import { JsonApiDataDto, JsonApiMultiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { Type } from "class-transformer";
 
 export class EntityUpdateAttributes {
   @IsOptional()
@@ -12,6 +13,22 @@ export class EntityUpdateAttributes {
     enum: ENTITY_STATUSES
   })
   status?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ description: "Specific feedback for the PD", nullable: true })
+  feedback?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
+    isArray: true,
+    type: String,
+    description: "The fields in the entity form that need attention from the PD",
+    nullable: true
+  })
+  feedbackFields?: string[] | null;
 }
 
 export class ProjectUpdateAttributes extends EntityUpdateAttributes {

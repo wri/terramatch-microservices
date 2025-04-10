@@ -112,14 +112,20 @@ export abstract class EntityProcessor<
   }
 
   /**
-   * Performs the basic function of setting the status and saving the model. If this concrete processor
-   * needs to support more fields on the update dto, override this method and set the appropriate fields
-   * and then call super.update()
+   * Performs the basic function of setting fields in EntityUpdateAttributes and saving the model.
+   * If this concrete processor needs to support more fields on the update dto, override this method
+   * and set the appropriate fields and then call super.update()
    */
   async update(model: ModelType, update: UpdateDto) {
     if (update.status != null) {
       if (this.APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);
+
+        // If an admin is doing an update, set the feedback / feedbackFields to whatever is in the
+        // request, even if it's null. We ignore feedback / feedbackFields if the status is not
+        // also being updated.
+        model.feedback = update.feedback;
+        model.feedbackFields = update.feedbackFields;
       }
 
       model.status = update.status;

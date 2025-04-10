@@ -51,13 +51,19 @@ export class SiteUpdateAttributes extends EntityUpdateAttributes {
   status?: string | null;
 }
 
-// These are stubs, and most will need updating as we add support for these entity types
+export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, SiteUpdateAttributes) {}
+
 export class NurseryUpdateData extends JsonApiDataDto({ type: "nurseries" }, EntityUpdateAttributes) {}
 export class ProjectReportUpdateData extends JsonApiDataDto({ type: "projectReports" }, EntityUpdateAttributes) {}
 export class SiteReportUpdateData extends JsonApiDataDto({ type: "siteReports" }, EntityUpdateAttributes) {}
 export class NurseryReportUpdateData extends JsonApiDataDto({ type: "nurseryReports" }, EntityUpdateAttributes) {}
 
-export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, SiteUpdateAttributes) {}
-
 export type EntityUpdateData = ProjectUpdateAttributes | SiteUpdateAttributes | EntityUpdateAttributes;
-export class EntityUpdateBody extends JsonApiMultiBodyDto([ProjectUpdateData, SiteUpdateData] as const) {}
+export class EntityUpdateBody extends JsonApiMultiBodyDto([
+  ProjectUpdateData,
+  SiteUpdateData,
+  NurseryUpdateData,
+  ProjectReportUpdateData,
+  SiteReportUpdateData,
+  NurseryReportUpdateData
+] as const) {}

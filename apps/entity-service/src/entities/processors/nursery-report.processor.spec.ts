@@ -396,10 +396,12 @@ describe("NurseryReportProcessor", () => {
 
       const { uuid: uuidTF } = await NurseryReportFactory.create({
         nurseryId: nurseryTF.id,
+        frameworkKey: "terrafund",
         dueAt: null
       });
       const { uuid: uuidTFL } = await NurseryReportFactory.create({
         nurseryId: nurseryTFL.id,
+        frameworkKey: "terrafund-landscapes",
         dueAt: null
       });
 

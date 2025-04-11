@@ -408,5 +408,70 @@ describe("NurseryReportProcessor", () => {
         dueAt: null
       });
     });
+
+    it("should include calculated fields in NuseryReportFullDto completion Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nusery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nusery.id,
+        title: "Nursery Report",
+        completion: 100
+      });
+
+      const nuseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nuseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nusery.uuid
+      });
+    });
+
+    it("should include calculated fields in NuseryReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nusery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nusery.id,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const nuseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nuseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nusery.uuid
+      });
+    });
+
+    it("should include calculated fields in NuseryReportFullDto completion Started", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
+        title: "",
+        dueAt: null,
+        completion: 50
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid
+      });
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, groupBy, isEmpty, isObject, uniq } from "lodash";
+import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, uniq } from "lodash";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
@@ -9,6 +9,9 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 const AIRTABLE_PAGE_SIZE = 10;
 
 type UpdateBaseOptions = { startPage?: number; updatedSince?: Date };
+
+// Limit in Airtable
+const LONG_TEXT_MAX_LENGTH = 100000;
 
 export abstract class AirtableEntity<ModelType extends Model<ModelType>, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
@@ -205,9 +208,11 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   protected async mapEntityColumns(record: ModelType, associations: AssociationType) {
     const airtableObject = {};
     for (const mapping of this.COLUMNS) {
-      airtableObject[airtableColumnName(mapping)] = isObject(mapping)
-        ? await mapping.valueMap(record, associations)
-        : record[mapping];
+      let value = isObject(mapping) ? await mapping.valueMap(record, associations) : record[mapping];
+      if (isString(value) && value.length > LONG_TEXT_MAX_LENGTH) {
+        value = value.substring(0, LONG_TEXT_MAX_LENGTH - 3) + "...";
+      }
+      airtableObject[airtableColumnName(mapping)] = value;
     }
 
     return airtableObject;

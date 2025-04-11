@@ -33,7 +33,7 @@ describe("NurseryReportProcessor", () => {
     const module = await Test.createTestingModule({
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>({ userId }) },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         EntitiesService
       ]
     }).compile();

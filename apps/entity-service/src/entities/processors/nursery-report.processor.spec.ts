@@ -390,9 +390,12 @@ describe("NurseryReportProcessor", () => {
 
     it("should include calculated fields in NurseryReportFullDto", async () => {
       const projectTF = await ProjectFactory.create({ frameworkKey: "terrafund" });
-      const nurseryTF = await NurseryFactory.create({ projectId: projectTF.id });
+      const nurseryTF = await NurseryFactory.create({ projectId: projectTF.id, frameworkKey: "terrafund" });
       const projectTFL = await ProjectFactory.create({ frameworkKey: "terrafund-landscapes" });
-      const nurseryTFL = await NurseryFactory.create({ projectId: projectTFL.id });
+      const nurseryTFL = await NurseryFactory.create({
+        projectId: projectTFL.id,
+        frameworkKey: "terrafund-landscapes"
+      });
 
       const { uuid: uuidTF } = await NurseryReportFactory.create({
         nurseryId: nurseryTF.id,

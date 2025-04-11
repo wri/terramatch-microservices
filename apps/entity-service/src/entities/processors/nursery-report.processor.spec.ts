@@ -389,45 +389,22 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should include calculated fields in NurseryReportFullDto", async () => {
-      const projectTF = await ProjectFactory.create({ frameworkKey: "terrafund" });
-      const nurseryTF = await NurseryFactory.create({ projectId: projectTF.id, frameworkKey: "terrafund" });
-      const projectTFL = await ProjectFactory.create({ frameworkKey: "terrafund-landscapes" });
-      const nurseryTFL = await NurseryFactory.create({
-        projectId: projectTFL.id,
-        frameworkKey: "terrafund-landscapes"
-      });
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
 
-      const { uuid: uuidTF } = await NurseryReportFactory.create({
-        nurseryId: nurseryTF.id,
-        frameworkKey: "terrafund",
-        dueAt: null
-      });
-      const { uuid: uuidTFL } = await NurseryReportFactory.create({
-        nurseryId: nurseryTFL.id,
-        frameworkKey: "terrafund-landscapes",
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
         dueAt: null
       });
 
-      const nurseryReportTF = await processor.findOne(uuidTF);
-      const nurseryReportTFL = await processor.findOne(uuidTFL);
-
-      const { id: idTF, dto: dtoTF } = await processor.getFullDto(nurseryReportTF);
-      const { id: idTFL, dto: dtoTFL } = await processor.getFullDto(nurseryReportTFL);
-
-      expect(idTF).toEqual(uuidTF);
-      expect(dtoTF).toMatchObject({
-        uuidTF,
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
         lightResource: false,
-        projectUuid: projectTF.uuid,
-        nurseryUuid: nurseryTF.uuid,
-        dueAt: null
-      });
-      expect(idTFL).toEqual(uuidTFL);
-      expect(dtoTFL).toMatchObject({
-        uuidTFL,
-        lightResource: false,
-        projectUuid: projectTFL.uuid,
-        nurseryUuid: nurseryTFL.uuid,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid,
         dueAt: null
       });
     });

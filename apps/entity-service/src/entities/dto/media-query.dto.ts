@@ -31,8 +31,8 @@ export class MediaQueryDto extends IntersectionType(NumberPage) {
   @IsOptional()
   isPrivate?: boolean;
 
-  @ApiProperty({ name: "direction", required: false, enum: ["ASC", "DESC"], default: "ASC" })
-  @IsEnum(["ASC", "DESC"])
+  @ApiProperty({ name: "direction", required: false, enum: ["asc", "desc"], default: "asc" })
+  @IsEnum(["asc", "desc"])
   @IsOptional()
-  direction?: "ASC" | "DESC";
+  direction?: "asc" | "desc";
 }

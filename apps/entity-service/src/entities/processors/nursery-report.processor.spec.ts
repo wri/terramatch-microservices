@@ -1,7 +1,7 @@
 import { NurseryReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -20,6 +20,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -32,7 +33,7 @@ describe("NurseryReportProcessor", () => {
     const module = await Test.createTestingModule({
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>({ userId }) },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         EntitiesService
       ]
     }).compile();
@@ -55,7 +56,8 @@ describe("NurseryReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -404,6 +406,71 @@ describe("NurseryReportProcessor", () => {
         projectUuid: project.uuid,
         nurseryUuid: nursery.uuid,
         dueAt: null
+      });
+    });
+
+    it("should include calculated fields in NuseryReportFullDto completion Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nusery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nusery.id,
+        title: "Nursery Report",
+        completion: 100
+      });
+
+      const nuseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nuseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nusery.uuid
+      });
+    });
+
+    it("should include calculated fields in NuseryReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nusery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nusery.id,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const nuseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nuseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nusery.uuid
+      });
+    });
+
+    it("should include calculated fields in NuseryReportFullDto completion Started", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
+        title: "",
+        dueAt: null,
+        completion: 50
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid
       });
     });
   });

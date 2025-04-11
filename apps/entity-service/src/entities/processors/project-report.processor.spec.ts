@@ -370,5 +370,64 @@ describe("ProjectReportProcessor", () => {
         projectUuid: hbfProject.uuid
       });
     });
+
+    it("should include calculated fields in ProjectReportFullDto completion Completed", async () => {
+      const project = await ProjectFactory.create();
+
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        title: "Project Report",
+        completion: 100
+      });
+
+      const projectReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(projectReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid
+      });
+    });
+
+    it("should include calculated fields in ProjectReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid
+      });
+    });
+
+    it("should include calculated fields in ProjectReportFullDto completion Started", async () => {
+      const project = await ProjectFactory.create();
+
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        title: "",
+        dueAt: null,
+        completion: 50
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid
+      });
+    });
   });
 });

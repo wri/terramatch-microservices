@@ -50,7 +50,7 @@ export class NurseryReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]) {
+  async findMany(query: EntityQueryDto, userId?: number) {
     const nurseryAssociation: Includeable = {
       association: "nursery",
       attributes: ["id", "uuid", "name"],
@@ -76,6 +76,7 @@ export class NurseryReportProcessor extends EntityProcessor<
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);

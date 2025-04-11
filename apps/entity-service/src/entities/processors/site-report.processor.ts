@@ -54,7 +54,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number, permissions?: string[]) {
+  async findMany(query: EntityQueryDto, userId?: number) {
     const siteAssociation: Includeable = {
       association: "site",
       attributes: ["id", "uuid", "name"],
@@ -80,6 +80,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       }
     }
 
+    const permissions = await this.entitiesService.getPermissions();
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey);

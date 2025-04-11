@@ -5,11 +5,18 @@ import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { Demographic, Media, Seeding, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  Demographic,
+  Media,
+  Seeding,
+  Site,
+  SiteReport,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
-import { col, fn, Includeable } from "sequelize";
+import { col, fn, Includeable, Op } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
@@ -51,6 +58,10 @@ const ASSOCIATION_PROCESSORS = {
       Demographic.findAll({
         where: { demographicalType, demographicalId, hidden: false },
         include: [{ association: "entries" }]
+      }),
+    ({ id: demographicalId }, demographicalType) =>
+      Demographic.count({
+        where: { demographicalType: demographicalType.toString(), demographicalId, hidden: false }
       })
   ),
   seedings: AssociationProcessor.buildSimpleProcessor(SeedingDto, ({ id: seedableId }, seedableType) =>
@@ -64,8 +75,51 @@ const ASSOCIATION_PROCESSORS = {
       group: ["taxonId", "name", "collection"]
     })
   ),
-  medias: AssociationProcessor.buildSimpleProcessor(MediaDto, ({ id: modelId }, modelType) =>
-    Media.findAll({ where: { modelType, modelId } })
+  media: AssociationProcessor.buildSimpleProcessor(
+    MediaDto,
+    async ({ id: modelId }, modelType, query) => {
+      const models = [{ modelType: modelType.toString(), ids: [modelId] }];
+      if (modelType === Site.LARAVEL_TYPE) {
+        const siteReports = await SiteReport.findAll({ where: { siteId: modelId }, attributes: ["id"] });
+
+        models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
+      }
+
+      const where = {
+        [Op.or]: models.map(model => {
+          return {
+            modelType: model.modelType,
+            modelId: {
+              [Op.in]: model.ids
+            }
+          };
+        })
+      };
+
+      const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
+      return Media.findAll({ where, limit: pageSize, offset: (pageNumber - 1) * pageSize });
+    },
+    async ({ id: modelId }, modelType) => {
+      const models = [{ modelType: modelType.toString(), ids: [modelId] }];
+      if (modelType === Site.LARAVEL_TYPE) {
+        const siteReports = await SiteReport.findAll({ where: { siteId: modelId }, attributes: ["id"] });
+
+        models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
+      }
+
+      const where = {
+        [Op.or]: models.map(model => {
+          return {
+            modelType: model.modelType,
+            modelId: {
+              [Op.in]: model.ids
+            }
+          };
+        })
+      };
+
+      return Media.count({ where });
+    }
   )
 };
 

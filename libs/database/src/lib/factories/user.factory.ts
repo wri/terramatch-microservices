@@ -14,7 +14,7 @@ export const UserFactory = FactoryGirl.define(User, async () => ({
 async function generateUniqueEmail() {
   let emailAddress = faker.internet.email();
 
-  while ((await User.findOne({ where: { emailAddress } })) != null) {
+  while ((await User.count({ where: { emailAddress } })) !== 0) {
     emailAddress = faker.internet.email();
   }
 

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
+import { LocalizationKey, ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
@@ -62,6 +62,10 @@ describe("UserCreationService", () => {
     return await UserFactory.create();
   }
 
+  beforeAll(async () => {
+    await LocalizationKey.truncate();
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -110,114 +114,13 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    emailService.sendEmail.mockReturnValue(Promise.resolve());
+    emailService.sendI18nTemplateEmail.mockReturnValue(Promise.resolve());
     templateService.render.mockReturnValue("rendered template");
 
     const result = await service.createNewUser(userNewRequest);
     expect(reloadSpy).toHaveBeenCalled();
-    expect(emailService.sendEmail).toHaveBeenCalled();
+    expect(emailService.sendI18nTemplateEmail).toHaveBeenCalled();
     expect(result).toBeDefined();
-  });
-
-  it("should return an error because localizations not found", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
-      new NotFoundException("Localizations not found")
-    );
-  });
-
-  it("should return an error because localization body not found", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationSubject = await getLocalizationSubject();
-
-    localizationService.getLocalizationKeys.mockReturnValue(Promise.resolve([localizationSubject]));
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
-      new NotFoundException("Localization body not found")
-    );
-  });
-
-  it("should return an error because localization subject not found", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationBody = await getLocalizationBody();
-
-    localizationService.getLocalizationKeys.mockReturnValue(Promise.resolve([localizationBody]));
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
-      new NotFoundException("Localization subject not found")
-    );
-  });
-
-  it("should return an error because localization title not found", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationBody = await getLocalizationBody();
-    const localizationSubject = await getLocalizationSubject();
-
-    localizationService.getLocalizationKeys.mockReturnValue(Promise.resolve([localizationBody, localizationSubject]));
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
-      new NotFoundException("Localization title not found")
-    );
-  });
-
-  it("should return an error because localization CTA not found", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationBody = await getLocalizationBody();
-    const localizationSubject = await getLocalizationSubject();
-    const localizationTitle = await getLocalizationTitle();
-
-    localizationService.getLocalizationKeys.mockReturnValue(
-      Promise.resolve([localizationBody, localizationSubject, localizationTitle])
-    );
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
-      new NotFoundException("Localization CTA not found")
-    );
   });
 
   it("should generate a error because user already exist", async () => {
@@ -235,7 +138,7 @@ describe("UserCreationService", () => {
     );
 
     await expect(service.createNewUser(userNewRequest)).rejects.toThrow(
-      new UnprocessableEntityException("User already exist")
+      new UnprocessableEntityException("User already exists")
     );
   });
 
@@ -326,7 +229,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    emailService.sendEmail.mockRejectedValue(null);
+    emailService.sendI18nTemplateEmail.mockRejectedValue(null);
     const result = await service.createNewUser(userNewRequest);
 
     expect(result).toBeNull();
@@ -400,18 +303,5 @@ describe("UserCreationService", () => {
     jest.spyOn(Verification, "findOrCreate").mockRejectedValue(new Error("Verification creation failed"));
 
     await expect(service.createNewUser(userNewRequest)).resolves.toBeNull();
-  });
-
-  it("should return an error when localizationService.getLocalizationKeys fails", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest
-      .spyOn(localizationService, "getLocalizationKeys")
-      .mockRejectedValue(new Error("Localization keys retrieval failed"));
-
-    await expect(service.createNewUser(userNewRequest)).rejects.toThrow("Localization keys retrieval failed");
   });
 });

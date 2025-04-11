@@ -38,7 +38,7 @@ export class LocalizationService {
     }, {} as Dictionary<string>);
   }
 
-  private async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
+  async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
     return (await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } })) ?? [];
   }
 

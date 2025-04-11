@@ -19,6 +19,6 @@ export class LocalizationKey extends Model<LocalizationKey> {
   @Column(INTEGER({ length: 11 }))
   valueId: number;
 
-  @BelongsTo(() => I18nItem, { foreignKey: "value_id" })
+  @BelongsTo(() => I18nItem, { foreignKey: "value_id", constraints: false })
   i18nItem: I18nItem;
 }

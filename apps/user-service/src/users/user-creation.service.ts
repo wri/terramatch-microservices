@@ -34,7 +34,7 @@ export class UserCreationService {
 
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
     if (userExists) {
-      throw new UnprocessableEntityException("User already exist");
+      throw new UnprocessableEntityException("User already exists");
     }
 
     try {

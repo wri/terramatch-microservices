@@ -389,22 +389,40 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should include calculated fields in NurseryReportFullDto", async () => {
-      const project = await ProjectFactory.create();
-      const nursery = await NurseryFactory.create({ projectId: project.id });
+      const projectTF = await ProjectFactory.create({ frameworkKey: "terrafund" });
+      const nurseryTF = await NurseryFactory.create({ projectId: projectTF.id });
+      const projectTFL = await ProjectFactory.create({ frameworkKey: "terrafund-landscapes" });
+      const nurseryTFL = await NurseryFactory.create({ projectId: projectTFL.id });
 
-      const { uuid } = await NurseryReportFactory.create({
-        nurseryId: nursery.id,
+      const { uuid: uuidTF } = await NurseryReportFactory.create({
+        nurseryId: nurseryTF.id,
+        dueAt: null
+      });
+      const { uuid: uuidTFL } = await NurseryReportFactory.create({
+        nurseryId: nurseryTFL.id,
         dueAt: null
       });
 
-      const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nurseryReport);
-      expect(id).toEqual(uuid);
-      expect(dto).toMatchObject({
-        uuid,
+      const nurseryReportTF = await processor.findOne(uuidTF);
+      const nurseryReportTFL = await processor.findOne(uuidTFL);
+
+      const { id: idTF, dto: dtoTF } = await processor.getFullDto(nurseryReportTF);
+      const { id: idTFL, dto: dtoTFL } = await processor.getFullDto(nurseryReportTFL);
+
+      expect(idTF).toEqual(uuidTF);
+      expect(dtoTF).toMatchObject({
+        uuidTF,
         lightResource: false,
-        projectUuid: project.uuid,
-        nurseryUuid: nursery.uuid,
+        projectUuid: projectTF.uuid,
+        nurseryUuid: nurseryTF.uuid,
+        dueAt: null
+      });
+      expect(idTFL).toEqual(uuidTFL);
+      expect(dtoTFL).toMatchObject({
+        uuidTFL,
+        lightResource: false,
+        projectUuid: projectTFL.uuid,
+        nurseryUuid: nurseryTFL.uuid,
         dueAt: null
       });
     });

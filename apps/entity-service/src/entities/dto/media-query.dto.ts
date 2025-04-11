@@ -1,6 +1,7 @@
-import { IsBoolean, IsEnum, IsOptional, ValidateNested } from "class-validator";
+import { IsEnum, IsOptional, ValidateNested } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
 export class MediaQueryDto extends IntersectionType(NumberPage) {
   @ValidateNested()
@@ -11,8 +12,8 @@ export class MediaQueryDto extends IntersectionType(NumberPage) {
   @IsOptional()
   modelType?: string;
 
-  @IsOptional()
-  @IsBoolean()
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
   isGeotagged?: boolean;
 
   @ApiProperty({ required: false })
@@ -23,12 +24,12 @@ export class MediaQueryDto extends IntersectionType(NumberPage) {
   @IsOptional()
   fileType?: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
   isPublic?: boolean;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
   isPrivate?: boolean;
 
   @ApiProperty({ name: "direction", required: false, enum: ["asc", "desc"], default: "asc" })

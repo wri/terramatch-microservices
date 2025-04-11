@@ -28,9 +28,10 @@ import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorat
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
 import { EntityUpdateBody } from "./dto/entity-update.dto";
+import { SupportedEntities } from "./dto/entity.dto";
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
+@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 

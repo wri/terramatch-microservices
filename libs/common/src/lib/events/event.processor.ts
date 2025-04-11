@@ -3,7 +3,7 @@ import { RequestContext } from "nestjs-request-context";
 import { EventService } from "./event.service";
 
 export abstract class EventProcessor {
-  constructor(protected readonly eventService: EventService) {}
+  protected constructor(protected readonly eventService: EventService) {}
 
   private _authenticatedUser?: User | null;
   async getAuthenticatedUser() {

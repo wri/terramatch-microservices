@@ -213,7 +213,6 @@ describe("AirtableEntity", () => {
   });
 
   describe("ApplicationEntity", () => {
-    let fundingProgrammeNames: Record<string, string>;
     let applications: Application[];
     let submissionStatuses: Record<string, string>;
 
@@ -222,14 +221,13 @@ describe("AirtableEntity", () => {
 
       const org = await OrganisationFactory.create({});
       const fundingProgrammes = await FundingProgrammeFactory.createMany(3);
-      fundingProgrammeNames = fundingProgrammes.reduce((names, { uuid, name }) => ({ ...names, [uuid]: name }), {});
       const allApplications = [];
       for (let ii = 0; ii < 15; ii++) {
         allApplications.push(
           await ApplicationFactory.create({
             organisationUuid: org.uuid,
             // test one not having an attached funding programme
-            fundingProgrammeUuid: ii === 4 ? null : faker.helpers.arrayElement(Object.keys(fundingProgrammeNames))
+            fundingProgrammeUuid: ii === 4 ? null : faker.helpers.arrayElement(fundingProgrammes).uuid
           })
         );
       }
@@ -262,7 +260,7 @@ describe("AirtableEntity", () => {
           fields: {
             uuid,
             organisationUuid,
-            fundingProgrammeName: fundingProgrammeNames[fundingProgrammeUuid],
+            fundingProgrammeUuid,
             status: submissionStatuses[uuid]
           }
         })

@@ -136,11 +136,9 @@ export class NurseryReportProcessor extends EntityProcessor<
     const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
-    const migrated = nurseryReport.oldModel != null;
     const props: AdditionalNurseryReportFullProps = {
       reportTitle,
       projectReportTitle,
-      migrated,
       ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
 

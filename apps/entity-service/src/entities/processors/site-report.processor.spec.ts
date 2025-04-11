@@ -1,7 +1,7 @@
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -20,6 +20,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -32,7 +33,7 @@ describe("SiteReportProcessor", () => {
     const module = await Test.createTestingModule({
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>() },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         EntitiesService
       ]
     }).compile();
@@ -51,7 +52,8 @@ describe("SiteReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 

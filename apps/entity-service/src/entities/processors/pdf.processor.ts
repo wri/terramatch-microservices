@@ -97,9 +97,9 @@ export class PdfProcessor {
           <div class="section">
             <h2>General Information</h2>
             <table>
-              <tr><th>Organization Name</th><td>${projectData.organization}</td></tr>
+              <tr><th>Organization Name</th><td>${projectData.organisationName}</td></tr>
               <tr><th>Project Name</th><td>${projectData.name}</td></tr>
-              <tr><th>Number of Sites</th><td>${projectData.siteCount}</td></tr>
+              <tr><th>Number of Sites</th><td>${projectData.totalSites}</td></tr>
               <tr><th>Most Recent Survival Rate</th><td>${projectData.survivalRate}%</td></tr>
               <tr><th>Total Direct Beneficiaries</th><td>${projectData.beneficiaries}</td></tr>
               <tr><th>Total Smallholder Farmers Engaged</th><td>${projectData.farmers}</td></tr>
@@ -110,8 +110,16 @@ export class PdfProcessor {
             <h2>Project and Goals</h2>
             <div class="chart">
               ${this.generateProgressRing("Jobs Created", 100, `43 Full-time<br>12 Part-time`)}
-              ${this.generateProgressRing("Hectares Restored", 45, `${projectData.totalHectaresRestoredSum} of 30 ha`)}
-              ${this.generateProgressRing("Trees Planted", 114, `${projectData.treesRestoredPpc} of 30,000`)}
+              ${this.generateProgressRing(
+                "Hectares Restored",
+                Math.round((projectData.totalHectaresRestoredSum / projectData.totalHectaresRestoredGoal) * 100),
+                `${projectData.totalHectaresRestoredSum.toLocaleString()} of ${projectData.totalHectaresRestoredGoal.toLocaleString()} ha`
+              )}
+              ${this.generateProgressRing(
+                "Trees Planted",
+                Math.round((projectData.treesPlantedCount / projectData.treesGrownGoal) * 100),
+                `${projectData.treesPlantedCount.toLocaleString()} of ${projectData.treesGrownGoal.toLocaleString()}`
+              )}
             </div>
           </div>
   

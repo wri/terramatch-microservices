@@ -16,7 +16,7 @@ import {
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
-import { col, fn, Includeable, Op } from "sequelize";
+import { col, fn, Includeable, Op, OrderItem } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";
@@ -81,9 +81,10 @@ const ASSOCIATION_PROCESSORS = {
       const models = [{ modelType: modelType.toString(), ids: [modelId] }];
       if (modelType === Site.LARAVEL_TYPE) {
         const siteReports = await SiteReport.findAll({ where: { siteId: modelId }, attributes: ["id"] });
-
         models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
       }
+
+      const conditions = [];
 
       const where = {
         [Op.or]: models.map(model => {
@@ -96,8 +97,38 @@ const ASSOCIATION_PROCESSORS = {
         })
       };
 
+      conditions.push(where);
+
+      if (query.isGeotagged != null) {
+        conditions.push({
+          [Op.and]: [
+            {
+              lat: {
+                [query.isGeotagged ? Op.ne : Op.eq]: null
+              },
+              lng: {
+                [query.isGeotagged ? Op.ne : Op.eq]: null
+              }
+            }
+          ]
+        });
+      }
+
+      if (query.isPublic != null) {
+        conditions.push({
+          isPublic: query.isPublic ? "1" : "0"
+        });
+      }
+
+      const sort: OrderItem[] | undefined = query.direction ? [["createdAt", query.direction]] : undefined;
+
       const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
-      return Media.findAll({ where, limit: pageSize, offset: (pageNumber - 1) * pageSize });
+      return Media.findAll({
+        where: { [Op.and]: conditions },
+        limit: pageSize,
+        offset: (pageNumber - 1) * pageSize,
+        order: sort
+      });
     },
     async ({ id: modelId }, modelType) => {
       const models = [{ modelType: modelType.toString(), ids: [modelId] }];

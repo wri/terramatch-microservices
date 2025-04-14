@@ -5,13 +5,16 @@ import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/
 import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { MediaQueryDto } from "../dto/media-query.dto";
+import { EntitiesService } from "../entities.service";
+import { MediaDto } from "../dto/media.dto";
 export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
   constructor(
     protected readonly entityType: EntityType,
     protected readonly entityUuid: string,
-    protected readonly entityModelClass: EntityClass<EntityModel>
+    protected readonly entityModelClass: EntityClass<EntityModel>,
+    protected readonly entitiesService: EntitiesService
   ) {}
 
   /**
@@ -67,7 +70,19 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
-      document.addData(association.uuid, new this.DTO(association, additionalProps));
+      if (this.DTO.name === MediaDto.name) {
+        document.addData(
+          association.uuid,
+          new this.DTO(
+            association,
+            this.entitiesService.fullUrl(association as any),
+            this.entitiesService.thumbnailUrl(association as any),
+            additionalProps
+          )
+        );
+      } else {
+        document.addData(association.uuid, new this.DTO(association, additionalProps));
+      }
     }
 
     const total = await this.getTotal(await this.getBaseEntity(), query);

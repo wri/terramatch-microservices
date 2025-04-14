@@ -60,4 +60,10 @@ export class MediaDto extends AssociationDto<MediaDto> {
 
   @ApiProperty({ nullable: true })
   photographer: string | null;
+
+  @ApiProperty({ nullable: true })
+  modelType: string | null;
+
+  @ApiProperty({ nullable: true })
+  modelName: string | null;
 }

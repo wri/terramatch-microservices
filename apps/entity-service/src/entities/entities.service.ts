@@ -168,7 +168,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entityType}`);
     }
 
-    return new processorClass(entityType, uuid, entityModelClass) as unknown as AssociationProcessor<T, D>;
+    return new processorClass(entityType, uuid, entityModelClass, this) as unknown as AssociationProcessor<T, D>;
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {

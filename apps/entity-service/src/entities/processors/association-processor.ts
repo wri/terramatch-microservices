@@ -7,6 +7,8 @@ import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
 import { MediaDto } from "../dto/media.dto";
+import { Media, User } from "@terramatch-microservices/database/entities";
+import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
 export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
@@ -71,12 +73,15 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     for (const association of associations) {
       indexIds.push(association.uuid);
       if (this.DTO.name === MediaDto.name) {
+        const media = association as unknown as Media;
+        const user = media.createdBy ? await User.findOne({ where: { id: media.createdBy } }) : null;
         document.addData(
           association.uuid,
           new this.DTO(
             association,
             this.entitiesService.fullUrl(association as any),
             this.entitiesService.thumbnailUrl(association as any),
+            user ? new UserDto(user, []) : null,
             additionalProps
           )
         );

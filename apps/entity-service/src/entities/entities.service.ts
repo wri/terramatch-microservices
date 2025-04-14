@@ -11,7 +11,8 @@ import {
   Seeding,
   Site,
   SiteReport,
-  TreeSpecies
+  TreeSpecies,
+  User
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
@@ -30,6 +31,7 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -117,6 +119,12 @@ const ASSOCIATION_PROCESSORS = {
       if (query.isPublic != null) {
         conditions.push({
           isPublic: query.isPublic ? "1" : "0"
+        });
+      }
+
+      if (query.fileType != null) {
+        conditions.push({
+          fileType: query.fileType
         });
       }
 
@@ -222,11 +230,14 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto = (media: Media) =>
-    new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media), {
+  async mediaDto(media: Media) {
+    const userDto = await User.findOne({ where: { id: media.createdBy } });
+
+    new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media), userDto ? new UserDto(userDto, []) : null, {
       entityType: media.modelType as EntityType,
       entityUuid: media.modelId.toString()
     });
+  }
 
   mapMediaCollection(media: Media[], collection: MediaCollection) {
     const grouped = groupBy(media, "collectionName");

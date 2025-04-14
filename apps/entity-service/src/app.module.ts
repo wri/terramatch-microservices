@@ -9,6 +9,7 @@ import { APP_FILTER } from "@nestjs/core";
 import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
+import { PdfProcessor } from "./entities/processors/pdf.processor";
 
 @Module({
   imports: [SentryModule.forRoot(), DatabaseModule, CommonModule, HealthModule],
@@ -19,7 +20,9 @@ import { EntityAssociationsController } from "./entities/entity-associations.con
       useClass: SentryGlobalFilter
     },
     EntitiesService,
-    TreeService
+    TreeService,
+    EntitiesService,
+    PdfProcessor
   ]
 })
 export class AppModule {}

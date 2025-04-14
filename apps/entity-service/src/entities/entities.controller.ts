@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Query,
+  Res,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
@@ -25,6 +26,7 @@ import { EntityModel } from "@terramatch-microservices/database/constants/entiti
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
+import { Response as ExpressResponse } from "express";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
@@ -107,5 +109,36 @@ export class EntitiesController {
     await processor.delete(model);
 
     return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
+  }
+
+  @Get(":entity/:uuid/pdf")
+  @ApiOperation({
+    operationId: "entityPdf",
+    summary: "Generate a PDF report for the entity"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  @ExceptionResponse(BadRequestException, { description: "Entity type does not support PDF generation." })
+  async entityPdf(@Param() { entity, uuid }: SpecificEntityDto, @Res() res: ExpressResponse) {
+    if (entity !== "projects") {
+      throw new BadRequestException("PDF generation is only supported for projects at this time");
+    }
+
+    try {
+      const pdfBuffer = await this.entitiesService.generateProjectPdf(uuid);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${uuid}-report.pdf"`);
+      res.setHeader("Content-Length", pdfBuffer.length);
+
+      return res.send(pdfBuffer);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to generate PDF: ${error.message}`);
+    }
   }
 }

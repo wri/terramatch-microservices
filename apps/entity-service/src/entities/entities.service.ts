@@ -23,6 +23,7 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { PdfProcessor } from "./processors/pdf.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -74,6 +75,7 @@ export const MAX_PAGE_SIZE = 100 as const;
 @Injectable()
 export class EntitiesService {
   constructor(private readonly mediaService: MediaService, private readonly policyService: PolicyService) {}
+  private readonly pdfProcessor = new PdfProcessor();
 
   get userId() {
     return this.policyService.userId;
@@ -149,5 +151,9 @@ export class EntitiesService {
       }),
       {}
     );
+  }
+
+  async generateProjectPdf(uuid: string): Promise<Buffer> {
+    return this.pdfProcessor.generateProjectPdf(this, uuid);
   }
 }

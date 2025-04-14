@@ -79,8 +79,8 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
           association.uuid,
           new this.DTO(
             association,
-            this.entitiesService.fullUrl(association as any),
-            this.entitiesService.thumbnailUrl(association as any),
+            this.entitiesService.fullUrl(media),
+            this.entitiesService.thumbnailUrl(media),
             user ? new UserDto(user, []) : null,
             additionalProps
           )

@@ -61,11 +61,19 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
     await this.policyService.authorize("readAll", SitePolygon);
 
-    const { siteId, projectId, includeTestProjects, missingIndicator, presentIndicator, lightResource, projectCohort } =
-      query;
+    const {
+      siteId,
+      projectId,
+      includeTestProjects,
+      missingIndicator,
+      presentIndicator,
+      lightResource,
+      projectCohort,
+      landscape
+    } = query;
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
-    if (includeTestProjects) countSelectedParams++;
-    if (projectCohort != null) countSelectedParams++;
+    // these two can be used together, but not along with the other project / site filters.
+    if (projectCohort != null || landscape != null) countSelectedParams++;
 
     if (lightResource && !isNumberPage(query.page)) {
       throw new BadRequestException("Light resources must use number pagination.");
@@ -73,7 +81,7 @@ export class SitePolygonsController {
 
     if (countSelectedParams > 1) {
       throw new BadRequestException(
-        "Only one of siteId, projectId, and includeTestProjects may be used in a single request."
+        "Only one of siteId, projectId, projectCohort, landscape, and includeTestProjects may be used in a single request."
       );
     }
     if (missingIndicator != null && presentIndicator != null) {
@@ -102,10 +110,6 @@ export class SitePolygonsController {
       queryBuilder.hasPresentIndicators(presentIndicator);
     }
 
-    if (query.boundaryPolygon != null) {
-      await queryBuilder.touchesLandscape(query.boundaryPolygon);
-    }
-
     if (siteId != null) {
       await queryBuilder.filterSiteUuids(siteId);
     }
@@ -114,8 +118,8 @@ export class SitePolygonsController {
       await queryBuilder.filterProjectUuids(projectId);
     }
 
-    if (projectCohort != null) {
-      await queryBuilder.filterProjectCohort(projectCohort);
+    if (projectCohort != null || landscape != null) {
+      await queryBuilder.filterProjectAttributes(projectCohort, landscape);
     }
 
     // Ensure test projects are excluded only if not included explicitly

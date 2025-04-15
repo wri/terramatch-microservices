@@ -92,9 +92,6 @@ export class PdfProcessor {
     try {
       const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
 
-      // Get all approved site reports for these sites
-      const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
-
       // First, fetch all the approved sites with their basic info
       const sites = await Site.approved()
         .project(projectId)

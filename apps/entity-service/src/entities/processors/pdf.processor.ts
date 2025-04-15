@@ -51,6 +51,7 @@ export class PdfProcessor {
     const siteNames = sites.map(site => site.name);
 
     const demographicData = await this.getDemographicData(projectId);
+    const beneficiariesData = await this.getBeneficiariesData(projectId);
 
     return {
       sites,
@@ -61,7 +62,9 @@ export class PdfProcessor {
         fullTime: demographicData.fullTimeJobs?.total || 0,
         partTime: demographicData.partTimeJobs?.total || 0,
         volunteers: demographicData.volunteers?.total || 0
-      }
+      },
+      beneficiaries: beneficiariesData.beneficiaries,
+      farmers: beneficiariesData.farmers
     };
   }
 
@@ -243,6 +246,80 @@ export class PdfProcessor {
     }
   }
 
+  private async getBeneficiariesData(projectId: number) {
+    try {
+      const projectReportIds = ProjectReport.approvedIdsSubquery(projectId);
+
+      // Obtener IDs de registros demográficos para beneficiarios
+      const beneficiariesDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.ALL_BENEFICIARIES_TYPE,
+          collection: "all",
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      // Obtener IDs de registros demográficos para pequeños agricultores
+      const smallholdersDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.ALL_BENEFICIARIES_TYPE,
+          collection: "all",
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      // Obtener datos de beneficiarios (usando género como ejemplo)
+      const beneficiariesEntries = await DemographicEntry.findAll({
+        where: {
+          demographicId: {
+            [Op.in]: beneficiariesDemographicIds
+          },
+          type: "gender"
+        },
+        raw: true
+      });
+
+      // Obtener datos de pequeños agricultores
+      const smallholdersEntries = await DemographicEntry.findAll({
+        where: {
+          demographicId: {
+            [Op.in]: smallholdersDemographicIds
+          },
+          type: "farmer",
+          subtype: "smallholder"
+        },
+        raw: true
+      });
+
+      // Calcular totales
+      const totalBeneficiaries = beneficiariesEntries.reduce((sum, entry) => sum + entry.amount, 0);
+      const totalSmallholders = smallholdersEntries.reduce((sum, entry) => sum + entry.amount, 0);
+
+      return {
+        beneficiaries: totalBeneficiaries,
+        farmers: totalSmallholders
+      };
+    } catch (error) {
+      console.error("Error fetching beneficiaries data:", error);
+      return {
+        beneficiaries: 0,
+        farmers: 0
+      };
+    }
+  }
+
   private generateHtmlTemplate(projectData, additionalData) {
     return `
       <!DOCTYPE html>
@@ -365,8 +442,10 @@ export class PdfProcessor {
               <tr><th>Project name</th><td>${projectData.name || "-"}</td></tr>
               <tr><th>Number of sites</th><td>${projectData.totalSites || 0}</td></tr>
               <tr><th>Most recent survival rate</th><td>${projectData.survivalRate || 0}%</td></tr>
-              <tr><th>Total direct beneficiaries</th><td>${projectData.beneficiaries || 0}</td></tr>
-              <tr><th>Total smallholder farmers engaged</th><td>${projectData.farmers || 0}</td></tr>
+              <tr><th>Total direct beneficiaries</th><td>${additionalData.beneficiaries.toLocaleString() || 0}</td></tr>
+              <tr><th>Total smallholder farmers engaged</th><td>${
+                additionalData.farmers.toLocaleString() || 0
+              }</td></tr>
             </table>
           </div>
   

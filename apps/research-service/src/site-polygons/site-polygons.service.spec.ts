@@ -238,12 +238,12 @@ describe("SitePolygonsService", () => {
     const tfPoly = await SitePolygonFactory.create({ siteUuid: tfSite.uuid });
     const ppcPoly = await SitePolygonFactory.create({ siteUuid: ppcSite.uuid });
 
-    let query = await (await service.buildQuery({ size: 20 })).filterProjectCohort("terrafund");
+    let query = await (await service.buildQuery({ size: 20 })).filterProjectAttributes("terrafund");
     let result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(tfPoly.id);
 
-    query = await (await service.buildQuery({ size: 20 })).filterProjectCohort("ppc");
+    query = await (await service.buildQuery({ size: 20 })).filterProjectAttributes("ppc");
     result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(ppcPoly.id);
@@ -269,15 +269,52 @@ describe("SitePolygonsService", () => {
 
     let query = await (
       await service.buildQuery({ size: 20 })
-    ).filterProjectLandscape(landscapes[0].slug as LandscapeSlug);
+    ).filterProjectAttributes(undefined, landscapes[0].slug as LandscapeSlug);
     let result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual(landscape1Polys.map(({ id }) => id).sort());
 
-    query = await (await service.buildQuery({ size: 20 })).filterProjectLandscape(landscapes[1].slug as LandscapeSlug);
+    query = await (
+      await service.buildQuery({ size: 20 })
+    ).filterProjectAttributes(undefined, landscapes[1].slug as LandscapeSlug);
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual(landscape2Polys.map(({ id }) => id).sort());
+  });
+
+  it("should filter based on landscape and cohort", async () => {
+    const landscapes = await LandscapeGeometryFactory.createMany(2);
+    const inLandscape1 = await Promise.all([
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "terrafund" })
+    ]);
+    const inLandscape2 = await Promise.all([
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "terrafund" })
+    ]);
+
+    const landscape1Sites = await Promise.all(inLandscape1.map(({ id }) => SiteFactory.create({ projectId: id })));
+    const landscape2Sites = await Promise.all(inLandscape2.map(({ id }) => SiteFactory.create({ projectId: id })));
+
+    const landscape1Polys = await Promise.all(
+      landscape1Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+    const landscape2Polys = await Promise.all(
+      landscape2Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+
+    const cases = [
+      { polyId: landscape1Polys[0].id, cohort: "ppc", landscape: landscapes[0].slug as LandscapeSlug },
+      { polyId: landscape1Polys[1].id, cohort: "terrafund", landscape: landscapes[0].slug as LandscapeSlug },
+      { polyId: landscape2Polys[0].id, cohort: "ppc", landscape: landscapes[1].slug as LandscapeSlug },
+      { polyId: landscape2Polys[1].id, cohort: "terrafund", landscape: landscapes[1].slug as LandscapeSlug }
+    ];
+    for (const { polyId, cohort, landscape } of cases) {
+      const query = await (await service.buildQuery({ size: 20 })).filterProjectAttributes(cohort, landscape);
+      const result = await query.execute();
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe(polyId);
+    }
   });
 
   it("should only include polys with the given statuses", async () => {

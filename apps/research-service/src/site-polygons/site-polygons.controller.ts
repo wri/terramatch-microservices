@@ -72,9 +72,8 @@ export class SitePolygonsController {
       landscape
     } = query;
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
-    if (includeTestProjects) countSelectedParams++;
-    if (projectCohort != null) countSelectedParams++;
-    if (landscape != null) countSelectedParams++;
+    // these two can be used together, but not along with the other project / site filters.
+    if (projectCohort != null || landscape != null) countSelectedParams++;
 
     if (lightResource && !isNumberPage(query.page)) {
       throw new BadRequestException("Light resources must use number pagination.");
@@ -119,12 +118,8 @@ export class SitePolygonsController {
       await queryBuilder.filterProjectUuids(projectId);
     }
 
-    if (projectCohort != null) {
-      await queryBuilder.filterProjectCohort(projectCohort);
-    }
-
-    if (query.landscape != null) {
-      await queryBuilder.filterProjectLandscape(query.landscape);
+    if (projectCohort != null || landscape != null) {
+      await queryBuilder.filterProjectAttributes(projectCohort, landscape);
     }
 
     // Ensure test projects are excluded only if not included explicitly

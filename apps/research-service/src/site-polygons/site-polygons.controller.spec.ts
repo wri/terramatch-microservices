@@ -29,8 +29,7 @@ describe("SitePolygonsController", () => {
       lightResource: jest.fn().mockReturnThis()
     };
     builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectCohort = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectLandscape = jest.fn().mockResolvedValue(builder);
+    builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
     builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
 
@@ -71,18 +70,22 @@ describe("SitePolygonsController", () => {
       await expect(controller.findMany({})).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should throw an error if multiple conflicting filters are provided", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const siteId = ["123"];
-      const projectId = ["456"];
+    it("should throw when more than one exclusive query param is provided", async () => {
+      const landscape = "gcb" as LandscapeSlug;
+      const projectId = ["asdf"];
       const projectCohort = "pants";
-      const includeTestProjects = true;
-      await expect(controller.findMany({ siteId, projectId })).rejects.toThrow(BadRequestException);
-      await expect(controller.findMany({ siteId, projectCohort })).rejects.toThrow(BadRequestException);
-      await expect(controller.findMany({ projectId, projectCohort })).rejects.toThrow(BadRequestException);
-      await expect(controller.findMany({ siteId, includeTestProjects })).rejects.toThrow(BadRequestException);
-      await expect(controller.findMany({ projectId, includeTestProjects })).rejects.toThrow(BadRequestException);
-      await expect(controller.findMany({ projectCohort, includeTestProjects })).rejects.toThrow(BadRequestException);
+      const siteId = ["asdf"];
+      const cases = [
+        { landscape, projectId },
+        { landscape, siteId },
+        { projectCohort, projectId },
+        { projectCohort, siteId },
+        { projectId, siteId }
+      ];
+
+      for (const query of cases) {
+        await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+      }
     });
 
     it("should throw an error if presentIndicator and missingIndicator are both provided", async () => {
@@ -161,18 +164,25 @@ describe("SitePolygonsController", () => {
       builder.filterProjectUuids.mockClear();
 
       await controller.findMany({ projectCohort: "pants" });
-      expect(builder.filterProjectCohort).toHaveBeenCalledWith("pants");
+      expect(builder.filterProjectAttributes).toHaveBeenCalledWith("pants", undefined);
       // when filtering by cohort, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();
-      builder.filterProjectCohort.mockClear();
+      builder.filterProjectAttributes.mockClear();
 
       await controller.findMany({ landscape: "gcb" });
-      expect(builder.filterProjectLandscape).toHaveBeenCalledWith("gcb");
+      expect(builder.filterProjectAttributes).toHaveBeenCalledWith(undefined, "gcb");
       // when filtering by landscape, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();
-      builder.filterProjectLandscape.mockClear();
+      builder.filterProjectAttributes.mockClear();
+
+      await controller.findMany({ projectCohort: "shirts", landscape: "ikr" });
+      expect(builder.filterProjectAttributes).toHaveBeenCalledWith("shirts", "ikr");
+      // when filtering by landscape and cohort, we _do_ want to also exclude test projects
+      expect(builder.excludeTestProjects).toHaveBeenCalled();
+      builder.excludeTestProjects.mockClear();
+      builder.filterProjectAttributes.mockClear();
 
       await controller.findMany({ includeTestProjects: true });
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();
@@ -184,30 +194,6 @@ describe("SitePolygonsController", () => {
 
       await controller.findMany({ siteId: ["asdf"] });
       expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
-    });
-
-    it("should throw when more than one exclusive query param is provided", async () => {
-      const landscape = "gcb" as LandscapeSlug;
-      const projectId = ["asdf"];
-      const projectCohort = "pants";
-      const includeTestProjects = true;
-      const siteId = ["asdf"];
-      const cases = [
-        { landscape, projectId },
-        { landscape, projectCohort },
-        { landscape, includeTestProjects },
-        { landscape, siteId },
-        { projectId, projectCohort },
-        { projectId, includeTestProjects },
-        { projectId, siteId },
-        { projectCohort, includeTestProjects },
-        { projectId, siteId },
-        { includeTestProjects, siteId }
-      ];
-
-      for (const query of cases) {
-        await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
-      }
     });
 
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {

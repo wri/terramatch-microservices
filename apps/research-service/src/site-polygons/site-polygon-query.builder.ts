@@ -19,6 +19,7 @@ import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -86,17 +87,22 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
-  async filterProjectCohort(cohort: string) {
-    return this.where({ projectId: { [Op.in]: Project.forCohort(cohort) } }, this.siteJoin);
-  }
+  async filterProjectAttributes(cohort?: string, slug?: LandscapeSlug) {
+    const subquery = Subquery.select(Project, "id");
+    if (slug != null) {
+      const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
+      if (landscape == null) {
+        throw new BadRequestException(`Unrecognized landscape slug: ${slug}`);
+      }
 
-  async filterProjectLandscape(slug: LandscapeSlug) {
-    const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
-    if (landscape == null) {
-      throw new BadRequestException(`Unrecognized landscape slug: ${slug}`);
+      subquery.eq("landscape", landscape.landscape);
     }
 
-    return this.where({ projectId: { [Op.in]: Project.forLandscape(landscape.landscape) } }, this.siteJoin);
+    if (cohort != null) {
+      subquery.eq("cohort", cohort);
+    }
+
+    return this.where({ projectId: { [Op.in]: subquery.literal } }, this.siteJoin);
   }
 
   async filterProjectUuids(projectUuids: string[]) {

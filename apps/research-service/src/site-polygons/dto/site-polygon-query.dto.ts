@@ -27,32 +27,39 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     name: "projectId[]",
     isArray: true,
     required: false,
-    description:
-      "Filter results by project UUID(s). Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
+    description: "Filter results by project UUID(s). May not be used with siteId[], projectCohort or landscape"
   })
   @IsOptional()
   @IsArray()
   projectId?: string[];
 
   @ApiProperty({
+    name: "siteId[]",
+    isArray: true,
+    required: false,
+    description: "Filter results by site UUID(s). May not be used with projectId[], projectCohort or landscape"
+  })
+  @IsOptional()
+  @IsArray()
+  siteId?: string[];
+
+  @ApiProperty({
     name: "projectCohort",
     required: false,
-    description:
-      "Filter results by project cohort. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
+    description: "Filter results by project cohort. May not be used with projectId[] or siteId[]"
   })
   @IsOptional()
   projectCohort?: string;
 
   @ApiProperty({
-    name: "siteId[]",
-    isArray: true,
     required: false,
     description:
-      "Filter results by site UUID(s). Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
+      "Filter results by project landscape. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request",
+    enum: LandscapeGeometry.LANDSCAPE_SLUGS
   })
   @IsOptional()
-  @IsArray()
-  siteId?: string[];
+  @IsEnum(LandscapeGeometry.LANDSCAPE_SLUGS)
+  landscape?: LandscapeSlug;
 
   @ApiProperty({
     enum: INDICATOR_SLUGS,
@@ -86,20 +93,9 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
 
   @ApiProperty({
     required: false,
-    description:
-      "Filter results by project landscape. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request",
-    enum: LandscapeGeometry.LANDSCAPE_SLUGS
-  })
-  @IsOptional()
-  @IsEnum(LandscapeGeometry.LANDSCAPE_SLUGS)
-  landscape?: LandscapeSlug;
-
-  @ApiProperty({
-    required: false,
     default: false,
     type: "boolean",
-    description:
-      "Include polygons for test projects in the results. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
+    description: "Include polygons for test projects in the results."
   })
   @IsBoolean()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))

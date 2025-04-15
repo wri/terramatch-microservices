@@ -1,13 +1,9 @@
-import { IsEnum, IsOptional, ValidateNested } from "class-validator";
-import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { ApiProperty, IntersectionType } from "@nestjs/swagger";
+import { IsOptional } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
+import { EntityQueryDto } from "./entity-query.dto";
 
-export class MediaQueryDto extends IntersectionType(NumberPage) {
-  @ValidateNested()
-  @IsOptional()
-  page?: NumberPage;
-
+export class MediaQueryDto extends EntityQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   modelType?: string;
@@ -15,10 +11,6 @@ export class MediaQueryDto extends IntersectionType(NumberPage) {
   @ApiProperty({ required: false, default: false })
   @TransformBooleanString()
   isGeotagged?: boolean;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  search?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -31,9 +23,4 @@ export class MediaQueryDto extends IntersectionType(NumberPage) {
   @ApiProperty({ required: false, default: false })
   @TransformBooleanString()
   isPrivate?: boolean;
-
-  @ApiProperty({ name: "direction", required: false, enum: ["asc", "desc"], default: "asc" })
-  @IsEnum(["asc", "desc"])
-  @IsOptional()
-  direction?: "asc" | "desc";
 }

@@ -32,6 +32,7 @@ import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
+import { MediaProcessor } from "./processors/media.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -77,89 +78,7 @@ const ASSOCIATION_PROCESSORS = {
       group: ["taxonId", "name", "collection"]
     })
   ),
-  media: AssociationProcessor.buildSimpleProcessor(
-    MediaDto,
-    async ({ id: modelId }, modelType, query) => {
-      const models = [{ modelType: modelType.toString(), ids: [modelId] }];
-      if (modelType === Site.LARAVEL_TYPE) {
-        const siteReports = await SiteReport.findAll({ where: { siteId: modelId }, attributes: ["id"] });
-        models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
-      }
-
-      const conditions = [];
-
-      const where = {
-        [Op.or]: models.map(model => {
-          return {
-            modelType: model.modelType,
-            modelId: {
-              [Op.in]: model.ids
-            }
-          };
-        })
-      };
-
-      conditions.push(where);
-
-      if (query.isGeotagged != null) {
-        conditions.push({
-          [Op.and]: [
-            {
-              lat: {
-                [query.isGeotagged ? Op.ne : Op.eq]: null
-              },
-              lng: {
-                [query.isGeotagged ? Op.ne : Op.eq]: null
-              }
-            }
-          ]
-        });
-      }
-
-      if (query.isPublic != null) {
-        conditions.push({
-          isPublic: query.isPublic ? "1" : "0"
-        });
-      }
-
-      if (query.fileType != null) {
-        conditions.push({
-          fileType: query.fileType
-        });
-      }
-
-      const sort: OrderItem[] | undefined = query.direction ? [["createdAt", query.direction]] : undefined;
-
-      const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
-      return Media.findAll({
-        where: { [Op.and]: conditions },
-        limit: pageSize,
-        offset: (pageNumber - 1) * pageSize,
-        order: sort
-      });
-    },
-    async ({ id: modelId }, modelType) => {
-      const models = [{ modelType: modelType.toString(), ids: [modelId] }];
-      if (modelType === Site.LARAVEL_TYPE) {
-        const siteReports = await SiteReport.findAll({ where: { siteId: modelId }, attributes: ["id"] });
-
-        models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
-      }
-
-      const where = {
-        [Op.or]: models.map(model => {
-          return {
-            modelType: model.modelType,
-            modelId: {
-              [Op.in]: model.ids
-            }
-          };
-        })
-      };
-
-      return Media.count({ where });
-    }
-  )
+  media: MediaProcessor
 };
 
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;

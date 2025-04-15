@@ -65,7 +65,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     return this._baseEntity;
   }
 
-  async addDtos(document: DocumentBuilder, query: MediaQueryDto): Promise<void> {
+  async addDtos(document: DocumentBuilder, query?: MediaQueryDto): Promise<void> {
     const associations = await this.getAssociations(await this.getBaseEntity(), query);
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };

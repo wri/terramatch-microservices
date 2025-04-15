@@ -5,19 +5,11 @@ import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import {
-  Demographic,
-  Media,
-  Seeding,
-  Site,
-  SiteReport,
-  TreeSpecies,
-  User
-} from "@terramatch-microservices/database/entities";
+import { Demographic, Media, Seeding, TreeSpecies, User } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
-import { col, fn, Includeable, Op, OrderItem } from "sequelize";
+import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto } from "./dto/association.dto";

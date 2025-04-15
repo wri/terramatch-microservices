@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import * as puppeteer from "puppeteer";
-import { Project, Site, SiteReport } from "@terramatch-microservices/database/entities";
+import { Project, Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { EntitiesService } from "../entities.service";
+import { fn } from "sequelize";
+import { col } from "sequelize";
 
 @Injectable()
 export class PdfProcessor {
@@ -60,18 +62,6 @@ export class PdfProcessor {
     // This would fetch data from the database using repositories or services
     // Example implementation:
     try {
-      // Query for sites associated with the project
-      // This would typically use the project repository or a site service
-      // Placeholder data - replace with actual implementation
-      const approvedSites = await Site.approved().project(projectId).findAll();
-      console.log(
-        "Sites for project",
-        projectId,
-        ":",
-        approvedSites.map(site => site.name)
-      );
-      const siteReports = await SiteReport.approved().sites([approvedSites[0].id]).findAll();
-      console.log("Site reports for site", approvedSites[0].name, ":", siteReports);
       return [
         {
           name: "Agroforestry Marasoli",
@@ -100,158 +90,53 @@ export class PdfProcessor {
     // Implementation to get tree species distribution
     // Example implementation:
     try {
-      return [
-        {
-          name: "Acacia",
-          totalPlanted: 870,
-          progress: 2.5,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 870,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Azadirachta indica",
-          totalPlanted: 6500,
-          progress: 18.6,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 6500,
-            "Songa forest-Marasoli": 880
-          }
-        },
-        {
-          name: "Carica papaya",
-          totalPlanted: 230,
-          progress: 0.7,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 230,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Citrus + aurantium",
-          totalPlanted: 350,
-          progress: 1,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 350,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Citrus",
-          totalPlanted: 260,
-          progress: 0.7,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 260,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Croton megalocarpus",
-          totalPlanted: 1530,
-          progress: 4.4,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 1530,
-            "Songa forest-Marasoli": 4830
-          }
-        },
-        {
-          name: "Croton",
-          totalPlanted: 2200,
-          progress: 6.3,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 2200,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Grevillea robusta",
-          totalPlanted: 1285,
-          progress: 3.7,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 1285,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Leucaena leucocephala",
-          totalPlanted: 2200,
-          progress: 6.3,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 2200,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Mangifera indica",
-          totalPlanted: 1600,
-          progress: 4.6,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 1600,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Medicago sativa",
-          totalPlanted: 150,
-          progress: 0.4,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 150,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Moringa oleifera",
-          totalPlanted: 2580,
-          progress: 7.4,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 2580,
-            "Songa forest-Marasoli": 250
-          }
-        },
-        {
-          name: "Musa acuminata",
-          totalPlanted: 45,
-          progress: 0.1,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 45,
-            "Songa forest-Marasoli": "-"
-          }
-        },
-        {
-          name: "Olea",
-          totalPlanted: 380,
-          progress: 1.1,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 380,
-            "Songa forest-Marasoli": 200
-          }
-        },
-        {
-          name: "Passiflora edulis",
-          totalPlanted: 350,
-          progress: 1,
-          goal: 35000,
-          siteCounts: {
-            "Agroforestry Marasoli": 350,
-            "Songa forest-Marasoli": "-"
-          }
-        }
-      ];
+      const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
+
+      // Get all approved site reports for these sites
+      const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
+
+      // First, fetch all the approved sites with their basic info
+      const sites = await Site.approved()
+        .project(projectId)
+        .findAll({
+          attributes: ["id", "uuid", "name"]
+        });
+
+      // For each site, we need to find the associated site reports
+      const siteDistribution = [];
+
+      for (const site of sites) {
+        // Get reports for this specific site
+        const siteReportIds = SiteReport.approvedIdsSubquery([site.id]);
+
+        // Find all tree species entries linked to these site reports
+        const treeSpeciesEntries = await TreeSpecies.visible()
+          .collection("tree-planted")
+          .siteReports(siteReportIds)
+          .findAll({
+            attributes: ["name", "taxonId", [fn("SUM", col("amount")), "amount"]],
+            group: ["name", "taxonId"],
+            raw: true
+          });
+
+        // Transform data into a more usable format
+        const speciesList = treeSpeciesEntries.map(entry => ({
+          name: entry.name,
+          taxonId: entry.taxonId,
+          amount: parseInt(entry.amount as unknown as string, 10)
+        }));
+
+        // Add this site's data to the result
+        siteDistribution.push({
+          siteId: site.id,
+          siteUuid: site.uuid,
+          siteName: site.name,
+          species: speciesList
+        });
+      }
+
+      console.log("siteDistribution", JSON.stringify(siteDistribution, null, 2));
+      return siteDistribution;
     } catch (error) {
       console.error("Error fetching tree species distribution:", error);
       return [];
@@ -630,54 +515,138 @@ export class PdfProcessor {
       </div>
     `;
   }
-
-  private generateTreeSpeciesPages(treeSpeciesData, sites) {
-    if (!treeSpeciesData || !sites || sites.length === 0) {
-      return "";
+  private generateTreeSpeciesPages(treeSpeciesData, sitesNames) {
+    // Make sure we have valid data to work with
+    if (!treeSpeciesData || !Array.isArray(treeSpeciesData) || treeSpeciesData.length === 0) {
+      console.log("Invalid or empty treeSpeciesData:", treeSpeciesData);
+      return "<div class='section'><h2 class='section-title'>Tree Species Planting Summary</h2><p>No tree species data available</p></div>";
     }
 
+    // Step 1: Transform the data structure
+    // We need to create a consolidated view where each species appears once and has counts for each site
+
+    // Create a map of all species across all sites
+    const speciesMap = new Map();
+
+    // First pass: collect all unique species
+    treeSpeciesData.forEach(site => {
+      // Make sure the site has a species array before trying to iterate
+      if (!site.species || !Array.isArray(site.species)) {
+        console.log("Site missing species array:", site);
+        site.species = []; // Initialize as empty array to avoid further errors
+      }
+
+      site.species.forEach(species => {
+        if (!species || typeof species !== "object") {
+          console.log("Invalid species entry:", species);
+          return; // Skip this entry
+        }
+
+        const key = species.name || "Unknown";
+        if (!speciesMap.has(key)) {
+          speciesMap.set(key, {
+            name: species.name || "Unknown",
+            taxonId: species.taxonId,
+            totalPlanted: 0,
+            siteCounts: {}
+          });
+        }
+      });
+    });
+
+    // If no valid species were found, return early
+    if (speciesMap.size === 0) {
+      return "<div class='section'><h2 class='section-title'>Tree Species Planting Summary</h2><p>No tree species data found across sites</p></div>";
+    }
+
+    // Second pass: fill in the counts for each site
+    treeSpeciesData.forEach(site => {
+      const siteName = site.siteName || site.name || `Site ${site.siteId || "Unknown"}`;
+
+      // Initialize all species with default value for this site
+      speciesMap.forEach(speciesInfo => {
+        speciesInfo.siteCounts[siteName] = "-";
+      });
+
+      // Update with actual counts
+      if (Array.isArray(site.species)) {
+        site.species.forEach(species => {
+          if (!species || !species.name) return;
+
+          const key = species.name;
+          const speciesInfo = speciesMap.get(key);
+          if (speciesInfo) {
+            const amount =
+              typeof species.amount === "number"
+                ? species.amount
+                : parseInt(species.amount as unknown as string, 10) || 0;
+            speciesInfo.siteCounts[siteName] = amount;
+            speciesInfo.totalPlanted += amount;
+          }
+        });
+      }
+    });
+
+    // Convert map to array and sort by name
+    const consolidatedSpecies = Array.from(speciesMap.values()).sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "")
+    );
+
+    // Calculate goal and progress for each species (sample calculation)
+    // You might want to adjust this logic based on your requirements
+    const treeGoal = 35000; // Default goal per species
+    consolidatedSpecies.forEach(species => {
+      species.goal = treeGoal;
+      species.progress = (species.totalPlanted / treeGoal) * 100;
+    });
+
+    // Get the list of all site names
+    const allSiteNames = treeSpeciesData.map(site => site.siteName || site.name || `Site ${site.siteId || "Unknown"}`);
+
+    // Step 2: Generate the pages with 3 sites per page
     const pages = [];
     const sitesPerPage = 3;
 
-    for (let i = 0; i < sites.length; i += sitesPerPage) {
-      const currentSites = sites.slice(i, i + sitesPerPage);
+    for (let i = 0; i < allSiteNames.length; i += sitesPerPage) {
+      const currentSites = allSiteNames.slice(i, i + sitesPerPage);
 
       // Header row
       const siteHeaders = currentSites.map(site => `<th>Trees Planted in ${site}</th>`).join("");
 
       // Data rows
-      const rows = treeSpeciesData
+      const rows = consolidatedSpecies
         .map(species => {
           const siteDataCells = currentSites
             .map(site => {
-              const count = species.siteCounts[site] ?? "-";
-              return `<td>${count}</td>`;
+              const count = species.siteCounts[site];
+              return `<td>${count !== undefined ? count : "-"}</td>`;
             })
             .join("");
 
-          const progress = species.progress || 0;
-          const goal = species.goal || 35000;
-          const percentComplete = Math.min((species.totalPlanted / goal) * 100, 100);
+          const percentComplete = Math.min((species.totalPlanted / species.goal) * 100, 100);
 
           return `
           <tr>
-            <td>${species.name}</td>
+            <td>${species.name || "Unknown"}</td>
             ${siteDataCells}
             <td>
               <div class="progress-bar-container">
-                <div class="progress-bar" style="width:${percentComplete}%;"></div>
+                <div class="progress-bar" style="width:${percentComplete.toFixed(1)}%;"></div>
               </div>
-              <small>${species.totalPlanted.toLocaleString()} of ${goal.toLocaleString()}</small>
+              <small>${species.totalPlanted.toLocaleString()} of ${species.goal.toLocaleString()}</small>
             </td>
           </tr>
         `;
         })
         .join("");
 
+      // Make sure each page starts fresh
+      const pageBreakBefore = i > 0 ? "page-break-before: always;" : "";
+
       const table = `
-        <div class="section" ${i < sites.length - sitesPerPage ? 'style="page-break-after: always;"' : ""}>
+        <div class="section" style="${pageBreakBefore}">
           <h2 class="section-title">Tree Species Planting Summary</h2>
-          <p>Showing Sites ${i + 1} - ${Math.min(i + sitesPerPage, sites.length)} (of ${sites.length})</p>
+          <p>Showing Sites ${i + 1} - ${Math.min(i + sitesPerPage, allSiteNames.length)} (of ${allSiteNames.length})</p>
           <table>
             <thead>
               <tr>
@@ -691,8 +660,8 @@ export class PdfProcessor {
             </tbody>
           </table>
         </div>
-        ${i < sites.length - sitesPerPage ? '<div class="page-break"></div>' : ""}
       `;
+
       pages.push(table);
     }
 

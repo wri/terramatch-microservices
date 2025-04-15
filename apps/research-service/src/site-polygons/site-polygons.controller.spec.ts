@@ -10,6 +10,7 @@ import { SitePolygonFactory } from "@terramatch-microservices/database/factories
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -27,9 +28,9 @@ describe("SitePolygonsController", () => {
       hasPresentIndicators: jest.fn().mockReturnThis(),
       lightResource: jest.fn().mockReturnThis()
     };
-    builder.touchesBoundary = jest.fn().mockResolvedValue(builder);
     builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
     builder.filterProjectCohort = jest.fn().mockResolvedValue(builder);
+    builder.filterProjectLandscape = jest.fn().mockResolvedValue(builder);
     builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
 
@@ -150,7 +151,7 @@ describe("SitePolygonsController", () => {
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
 
-    it("should honor projectIds, projectCohort, siteIds, includeTestProjects when provided", async () => {
+    it("should honor projectIds, projectCohort, landscape, siteIds, includeTestProjects when provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
 
@@ -166,6 +167,13 @@ describe("SitePolygonsController", () => {
       builder.excludeTestProjects.mockClear();
       builder.filterProjectCohort.mockClear();
 
+      await controller.findMany({ landscape: "gcb" });
+      expect(builder.filterProjectLandscape).toHaveBeenCalledWith("gcb");
+      // when filtering by landscape, we _do_ want to also exclude test projects
+      expect(builder.excludeTestProjects).toHaveBeenCalled();
+      builder.excludeTestProjects.mockClear();
+      builder.filterProjectLandscape.mockClear();
+
       await controller.findMany({ includeTestProjects: true });
       expect(builder.filterProjectUuids).not.toHaveBeenCalled();
       expect(builder.excludeTestProjects).not.toHaveBeenCalled();
@@ -178,6 +186,30 @@ describe("SitePolygonsController", () => {
       expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
     });
 
+    it("should throw when more than one exclusive query param is provided", async () => {
+      const landscape = "gcb" as LandscapeSlug;
+      const projectId = ["asdf"];
+      const projectCohort = "pants";
+      const includeTestProjects = true;
+      const siteId = ["asdf"];
+      const cases = [
+        { landscape, projectId },
+        { landscape, projectCohort },
+        { landscape, includeTestProjects },
+        { landscape, siteId },
+        { projectId, projectCohort },
+        { projectId, includeTestProjects },
+        { projectId, siteId },
+        { projectCohort, includeTestProjects },
+        { projectId, siteId },
+        { includeTestProjects, siteId }
+      ];
+
+      for (const query of cases) {
+        await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+      }
+    });
+
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,
@@ -186,6 +218,7 @@ describe("SitePolygonsController", () => {
 
       await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
     });
+
     it("should call addSearch when search parameter is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();

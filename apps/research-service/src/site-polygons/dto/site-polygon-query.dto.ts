@@ -1,5 +1,5 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsDate, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsEnum, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -8,6 +8,8 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
 import { Transform, Type } from "class-transformer";
+import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
@@ -26,7 +28,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     isArray: true,
     required: false,
     description:
-      "Filter results by project UUID(s). Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
+      "Filter results by project UUID(s). Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   @IsArray()
@@ -36,7 +38,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     name: "projectCohort",
     required: false,
     description:
-      "Filter results by project UUID(s). Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
+      "Filter results by project cohort. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   projectCohort?: string;
@@ -46,7 +48,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     isArray: true,
     required: false,
     description:
-      "Filter results by site UUID(s). Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
+      "Filter results by site UUID(s). Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
   })
   @IsOptional()
   @IsArray()
@@ -84,17 +86,20 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
 
   @ApiProperty({
     required: false,
-    description: "Filter results by landscape boundaries. Referenced by landscape ID"
+    description:
+      "Filter results by project landscape. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request",
+    enum: LandscapeGeometry.LANDSCAPE_SLUGS
   })
   @IsOptional()
-  boundaryPolygon?: number;
+  @IsEnum(LandscapeGeometry.LANDSCAPE_SLUGS)
+  landscape?: LandscapeSlug;
 
   @ApiProperty({
     required: false,
     default: false,
     type: "boolean",
     description:
-      "Include polygons for test projects in the results. Only one of siteId, projectId, projectCohort and includeTestProjects may be used in a single request"
+      "Include polygons for test projects in the results. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request"
   })
   @IsBoolean()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
@@ -119,7 +124,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     required: false,
     default: false,
     type: "boolean",
-    description: "Wheter to include the complete sitePolygon Dto or not"
+    description: "Whether to include the complete sitePolygon Dto or not"
   })
   @IsBoolean()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))

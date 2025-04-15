@@ -9,8 +9,6 @@ import {
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
   LandscapeGeometryFactory,
-  POLYGON,
-  PolygonGeometryFactory,
   ProjectFactory,
   SiteFactory,
   SitePolygonFactory,
@@ -30,6 +28,7 @@ import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -250,6 +249,37 @@ describe("SitePolygonsService", () => {
     expect(result[0].id).toBe(ppcPoly.id);
   });
 
+  it("should only include projects in the landscape given", async () => {
+    const landscapes = await LandscapeGeometryFactory.createMany(2);
+    const inLandscape1 = await ProjectFactory.createMany(2, { landscape: landscapes[0].landscape });
+    const inLandscape2 = await ProjectFactory.createMany(2, { landscape: landscapes[1].landscape });
+    const noLandscape = await ProjectFactory.createMany(2, { landscape: null });
+
+    const landscape1Sites = await Promise.all(inLandscape1.map(({ id }) => SiteFactory.create({ projectId: id })));
+    const landscape2Sites = await Promise.all(inLandscape2.map(({ id }) => SiteFactory.create({ projectId: id })));
+    const noLandscapeSites = await Promise.all(noLandscape.map(({ id }) => SiteFactory.create({ projectId: id })));
+
+    const landscape1Polys = await Promise.all(
+      landscape1Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+    const landscape2Polys = await Promise.all(
+      landscape2Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+    await Promise.all(noLandscapeSites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid })));
+
+    let query = await (
+      await service.buildQuery({ size: 20 })
+    ).filterProjectLandscape(landscapes[0].slug as LandscapeSlug);
+    let result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual(landscape1Polys.map(({ id }) => id).sort());
+
+    query = await (await service.buildQuery({ size: 20 })).filterProjectLandscape(landscapes[1].slug as LandscapeSlug);
+    result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual(landscape2Polys.map(({ id }) => id).sort());
+  });
+
   it("should only include polys with the given statuses", async () => {
     await SitePolygon.truncate();
     const draftPoly = await SitePolygonFactory.create({ status: "draft" });
@@ -349,6 +379,7 @@ describe("SitePolygonsService", () => {
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
   });
+
   it("should only return polys with all specified indicators present", async () => {
     await SitePolygon.truncate();
     const poly1 = await SitePolygonFactory.create();
@@ -389,35 +420,6 @@ describe("SitePolygonsService", () => {
     expect(() => query.hasPresentIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
   });
 
-  it("filters polygons by boundary polygon", async () => {
-    await SitePolygon.truncate();
-    await PolygonGeometry.truncate();
-    const sitePoly1 = await SitePolygonFactory.create();
-    const poly2 = await PolygonGeometryFactory.create({
-      polygon: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
-    });
-    const sitePoly2 = await SitePolygonFactory.create({ polygonUuid: poly2.uuid });
-    const landscape = await LandscapeGeometryFactory.create({
-      geometry: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
-    });
-
-    let query = await service.buildQuery({ size: 20 });
-    await query.touchesLandscape(landscape.id);
-    let result = await query.execute();
-    expect(result.length).toBe(1);
-    expect(result[0].id).toBe(sitePoly2.id);
-
-    query = await service.buildQuery({ size: 20 });
-    result = await query.execute();
-    expect(result.length).toBe(2);
-    expect(result.map(({ id }) => id).sort()).toEqual([sitePoly1.id, sitePoly2.id].sort());
-  });
-
-  it("throws when a boundary poly uuid doesn't exist", async () => {
-    const query = await service.buildQuery({ size: 20 });
-    await expect(query.touchesLandscape(0)).rejects.toThrow(BadRequestException);
-  });
-
   it("Can apply multiple filter types at once", async () => {
     await SitePolygon.truncate();
     const project1 = await ProjectFactory.create({ isTest: true });
@@ -436,13 +438,11 @@ describe("SitePolygonsService", () => {
       sitePolygonId: approvedPoly2.id,
       indicatorSlug: "restorationByStrategy"
     });
-    const landscape = await LandscapeGeometryFactory.create();
 
     const query = (await service.buildQuery({ size: 20 }))
       .isMissingIndicators(["restorationByStrategy"])
       .hasStatuses(["draft", "approved"]);
     await query.filterProjectUuids([project2.uuid]);
-    await query.touchesLandscape(landscape.id);
     const result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(draftPoly2.id);

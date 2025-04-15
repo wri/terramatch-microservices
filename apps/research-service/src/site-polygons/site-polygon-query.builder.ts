@@ -18,6 +18,7 @@ import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -89,6 +90,15 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ projectId: { [Op.in]: Project.forCohort(cohort) } }, this.siteJoin);
   }
 
+  async filterProjectLandscape(slug: LandscapeSlug) {
+    const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
+    if (landscape == null) {
+      throw new BadRequestException(`Unrecognized landscape slug: ${slug}`);
+    }
+
+    return this.where({ projectId: { [Op.in]: Project.forLandscape(landscape.landscape) } }, this.siteJoin);
+  }
+
   async filterProjectUuids(projectUuids: string[]) {
     const filterProjects = await Project.findAll({
       where: { uuid: { [Op.in]: projectUuids } },
@@ -155,23 +165,6 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
       });
       this.where({ [Op.and]: literals });
     }
-    return this;
-  }
-
-  async touchesLandscape(id: number) {
-    // This check isn't strictly necessary for constructing the query, but we do want to throw a useful
-    // error to the caller if the polygonUuid doesn't exist, and simply mixing it into the query won't
-    // do it
-    if ((await LandscapeGeometry.count({ where: { id } })) === 0) {
-      throw new BadRequestException(`Unrecognized landscape ID: ${id}`);
-    }
-
-    this.where({
-      [Op.and]: [
-        literal(`(SELECT ST_INTERSECTS(polygon.geom, (SELECT geometry FROM landscape_geom WHERE id = "${id}")))`)
-      ]
-    });
-
     return this;
   }
 }

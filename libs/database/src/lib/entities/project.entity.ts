@@ -49,6 +49,10 @@ export class Project extends Model<Project> {
     return Subquery.select(Project, "id").isNull("deletedAt").eq("cohort", cohort).literal;
   }
 
+  static forLandscape(landscapeName: string) {
+    return Subquery.select(Project, "id").isNull("deletedAt").eq("landscape", landscapeName).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

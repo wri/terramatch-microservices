@@ -1,15 +1,10 @@
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { Framework, FundingProgramme } from "@terramatch-microservices/database/entities";
+import { FundingProgramme } from "@terramatch-microservices/database/entities";
 
 const COLUMNS: ColumnMapping<FundingProgramme>[] = [
   ...commonEntityColumns<FundingProgramme>("fundingProgramme"),
   "name",
-  {
-    airtableColumn: "framework",
-    dbColumn: "frameworkKey",
-    include: [{ model: Framework, attributes: ["name"] }],
-    valueMap: async ({ framework, frameworkKey }) => framework?.name ?? frameworkKey
-  },
+  "frameworkKey",
   "status",
   "description",
   "location",

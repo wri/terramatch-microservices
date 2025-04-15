@@ -6,6 +6,7 @@ import { EntitiesService } from "../entities.service";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("EntityProcessor", () => {
   let processor: ProjectProcessor;
@@ -15,6 +16,7 @@ describe("EntityProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

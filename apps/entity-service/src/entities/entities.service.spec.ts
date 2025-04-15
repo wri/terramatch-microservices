@@ -10,6 +10,7 @@ import { MediaDto } from "./dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -29,6 +30,7 @@ describe("EntitiesService", () => {
       providers: [
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

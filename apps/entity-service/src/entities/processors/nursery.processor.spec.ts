@@ -18,6 +18,7 @@ import { NurseryProcessor } from "./nursery.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
 import { NotAcceptableException } from "@nestjs/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
@@ -35,6 +36,7 @@ describe("NurseryProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

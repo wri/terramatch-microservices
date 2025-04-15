@@ -8,6 +8,7 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   ProjectUserFactory,
   SiteFactory,
   SiteReportFactory,
@@ -17,6 +18,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DateTime } from "luxon";
 import { SiteReportProcessor } from "./site-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
@@ -34,6 +36,7 @@ describe("SiteReportProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();
@@ -390,8 +393,33 @@ describe("SiteReportProcessor", () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
 
+      const { taskId } = await ProjectReportFactory.create({ projectId: project.id });
       const { uuid } = await SiteReportFactory.create({
         siteId: site.id,
+        taskId,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        siteUuid: site.uuid
+      });
+    });
+
+    it("should handle a missing taskId", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+
+      const { uuid } = await SiteReportFactory.create({
+        siteId: site.id,
+        taskId: null,
         title: null,
         dueAt: null,
         completion: 0

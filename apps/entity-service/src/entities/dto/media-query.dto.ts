@@ -1,0 +1,29 @@
+import { IsOptional } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
+import { EntityQueryDto } from "./entity-query.dto";
+
+export class MediaQueryDto extends EntityQueryDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  modelType?: string;
+
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
+  isGeotagged?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  fileType?: string;
+
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
+  isPublic?: boolean;
+
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
+  isPrivate?: boolean;
+
+  @IsOptional()
+  search?: string;
+}

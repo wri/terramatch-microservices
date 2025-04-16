@@ -23,6 +23,8 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
+import { MediaProcessor } from "./processors/media.processor";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 
@@ -53,6 +55,10 @@ const ASSOCIATION_PROCESSORS = {
       Demographic.findAll({
         where: { demographicalType, demographicalId, hidden: false },
         include: [{ association: "entries" }]
+      }),
+    ({ id: demographicalId }, demographicalType) =>
+      Demographic.count({
+        where: { demographicalType: demographicalType.toString(), demographicalId, hidden: false }
       })
   ),
   seedings: AssociationProcessor.buildSimpleProcessor(SeedingDto, ({ id: seedableId }, seedableType) =>
@@ -65,7 +71,8 @@ const ASSOCIATION_PROCESSORS = {
       attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
       group: ["taxonId", "name", "collection"]
     })
-  )
+  ),
+  media: MediaProcessor
 };
 
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
@@ -129,7 +136,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entityType}`);
     }
 
-    return new processorClass(entityType, uuid, entityModelClass) as unknown as AssociationProcessor<T, D>;
+    return new processorClass(entityType, uuid, entityModelClass, this) as unknown as AssociationProcessor<T, D>;
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
@@ -152,7 +159,14 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto = (media: Media) => new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media));
+  async mediaDto(media: Media) {
+    const userDto = await User.findOne({ where: { id: media.createdBy } });
+
+    new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media), userDto ? new UserDto(userDto, []) : null, {
+      entityType: media.modelType as EntityType,
+      entityUuid: media.modelId.toString()
+    });
+  }
 
   mapMediaCollection(media: Media[], collection: MediaCollection) {
     const grouped = groupBy(media, "collectionName");

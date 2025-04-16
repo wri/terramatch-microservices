@@ -28,7 +28,7 @@ export class PdfProcessor {
 
     const { dto: projectData } = await projectProcessor.getFullDto(project);
     const additionalData = await this.getAdditionalReportData(entitiesService, project.id);
-    const htmlContent = this.generateHtmlTemplate(projectData, additionalData);
+    const htmlContent = await this.generateHtmlTemplate(projectData, additionalData);
 
     // Generate PDF using Puppeteer
     const browser = await puppeteer.launch({ headless: true });
@@ -47,7 +47,7 @@ export class PdfProcessor {
 
   private async getAdditionalReportData(entitiesService: EntitiesService, projectId: number) {
     const sites = await this.getSiteBreakdown(entitiesService, projectId);
-    const treeSpeciesSummary = await this.getTreeSpeciesDistribution(projectId);
+    const treeSpeciesData = await this.getTreeSpeciesDistribution(projectId);
     const siteNames = sites.map(site => site.name);
 
     const demographicData = await this.getDemographicData(projectId);
@@ -57,7 +57,7 @@ export class PdfProcessor {
     return {
       sites,
       siteNames,
-      treeSpeciesSummary,
+      treeSpeciesSummary: treeSpeciesData,
       employmentDemographics: demographicData,
       employment: {
         fullTime: demographicData.fullTimeJobs?.total || 0,
@@ -110,8 +110,6 @@ export class PdfProcessor {
 
   private async getTreeSpeciesDistribution(projectId: number) {
     try {
-      const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
-
       const sites = await Site.approved()
         .project(projectId)
         .findAll({
@@ -146,10 +144,17 @@ export class PdfProcessor {
         });
       }
 
-      return siteDistribution;
+      // Add the projectId to the return data so we don't need to look it up again
+      return {
+        projectId,
+        sites: siteDistribution
+      };
     } catch (error) {
       console.error("Error fetching tree species distribution:", error);
-      return [];
+      return {
+        projectId: null,
+        sites: []
+      };
     }
   }
 
@@ -351,7 +356,7 @@ export class PdfProcessor {
     }
   }
 
-  private generateHtmlTemplate(projectData, additionalData) {
+  private async generateHtmlTemplate(projectData, additionalData) {
     return `
       <!DOCTYPE html>
       <html>
@@ -584,7 +589,7 @@ export class PdfProcessor {
               </tbody>
             </table>
           </div>
-          ${this.generateTreeSpeciesPages(additionalData.treeSpeciesSummary, additionalData.siteNames)}
+          ${await this.generateTreeSpeciesPages(additionalData.treeSpeciesSummary)}
         </body>
       </html>
     `;
@@ -686,14 +691,22 @@ export class PdfProcessor {
       </div>
     `;
   }
-  private generateTreeSpeciesPages(treeSpeciesData, sitesNames) {
-    if (!treeSpeciesData || !Array.isArray(treeSpeciesData) || treeSpeciesData.length === 0) {
+
+  private async generateTreeSpeciesPages(treeSpeciesData) {
+    if (
+      !treeSpeciesData ||
+      !treeSpeciesData.sites ||
+      !Array.isArray(treeSpeciesData.sites) ||
+      treeSpeciesData.sites.length === 0
+    ) {
       return "<div class='section'><h2 class='section-title'>Tree Species Planting Summary</h2><p>No tree species data available</p></div>";
     }
 
     const speciesMap = new Map();
+    const sitesData = treeSpeciesData.sites;
+    const projectId = treeSpeciesData.projectId;
 
-    treeSpeciesData.forEach(site => {
+    sitesData.forEach(site => {
       if (!site.species || !Array.isArray(site.species)) {
         site.species = [];
       }
@@ -719,7 +732,7 @@ export class PdfProcessor {
       return "<div class='section'><h2 class='section-title'>Tree Species Planting Summary</h2><p>No tree species data found across sites</p></div>";
     }
 
-    treeSpeciesData.forEach(site => {
+    sitesData.forEach(site => {
       const siteName = site.siteName || site.name || `Site ${site.siteId || "Unknown"}`;
 
       speciesMap.forEach(speciesInfo => {
@@ -748,13 +761,40 @@ export class PdfProcessor {
       (a.name || "").localeCompare(b.name || "")
     );
 
-    const treeGoal = 35000; // Default goal per species
+    // Find the project tree species goals
+    const projectSpeciesGoals = new Map();
+    try {
+      if (projectId) {
+        // Get the tree species for this project
+        const projectTreeSpecies = await TreeSpecies.findAll({
+          where: {
+            speciesableType: Project.LARAVEL_TYPE,
+            speciesableId: projectId,
+            hidden: false
+          },
+          attributes: ["name", "amount"]
+        });
+
+        // Create a map of species name to goal amount
+        projectTreeSpecies.forEach(species => {
+          if (species.name && species.amount) {
+            projectSpeciesGoals.set(species.name, species.amount);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching project tree species goals:", error);
+    }
+
+    const defaultGoal = 35000; // Default goal per species if not found in project data
+
     consolidatedSpecies.forEach(species => {
-      species.goal = treeGoal;
-      species.progress = (species.totalPlanted / treeGoal) * 100;
+      // Use the project's goal amount for this species if available, or default to 35000
+      species.goal = projectSpeciesGoals.has(species.name) ? projectSpeciesGoals.get(species.name) : defaultGoal;
+      species.progress = (species.totalPlanted / species.goal) * 100;
     });
 
-    const allSiteNames = treeSpeciesData.map(site => site.siteName || site.name || `Site ${site.siteId || "Unknown"}`);
+    const allSiteNames = sitesData.map(site => site.siteName || site.name || `Site ${site.siteId || "Unknown"}`);
 
     const pages = [];
     const sitesPerPage = 3;

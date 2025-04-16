@@ -166,6 +166,12 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       });
     }
 
+    if (query.search != null) {
+      builder.where({
+        [Op.or]: [{ name: { [Op.like]: `%${query.search}%` } }, { fileName: { [Op.like]: `%${query.search}%` } }]
+      });
+    }
+
     if (query.fileType != null) {
       builder.where({
         fileType: query.fileType

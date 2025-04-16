@@ -23,4 +23,7 @@ export class MediaQueryDto extends EntityQueryDto {
   @ApiProperty({ required: false, default: false })
   @TransformBooleanString()
   isPrivate?: boolean;
+
+  @IsOptional()
+  search?: string;
 }

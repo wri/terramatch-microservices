@@ -1,9 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import * as puppeteer from "puppeteer";
-import { Project, Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  Project,
+  Site,
+  SiteReport,
+  TreeSpecies,
+  ProjectReport,
+  Demographic,
+  DemographicEntry
+} from "@terramatch-microservices/database/entities";
 import { EntitiesService } from "../entities.service";
 import { fn } from "sequelize";
 import { col } from "sequelize";
+import { SiteFullDto } from "../dto/site.dto";
+import { Op } from "sequelize";
 
 @Injectable()
 export class PdfProcessor {
@@ -17,7 +27,7 @@ export class PdfProcessor {
     await entitiesService.authorize("read", project);
 
     const { dto: projectData } = await projectProcessor.getFullDto(project);
-    const additionalData = await this.getAdditionalReportData(project.id);
+    const additionalData = await this.getAdditionalReportData(entitiesService, project.id);
     const htmlContent = this.generateHtmlTemplate(projectData, additionalData);
 
     // Generate PDF using Puppeteer
@@ -35,14 +45,14 @@ export class PdfProcessor {
     return Buffer.from(pdfBuffer);
   }
 
-  private async getAdditionalReportData(projectId: number) {
-    // Fetch additional data from sites, tree species, and demographic data
-    const sites = await this.getSiteBreakdown(projectId);
+  private async getAdditionalReportData(entitiesService: EntitiesService, projectId: number) {
+    const sites = await this.getSiteBreakdown(entitiesService, projectId);
     const treeSpeciesSummary = await this.getTreeSpeciesDistribution(projectId);
     const siteNames = sites.map(site => site.name);
 
-    // Get demographic data from approved project reports
     const demographicData = await this.getDemographicData(projectId);
+    const beneficiariesData = await this.getBeneficiariesData(projectId);
+    const survivalRate = await this.getMostRecentSurvivalRate(projectId);
 
     return {
       sites,
@@ -53,33 +63,31 @@ export class PdfProcessor {
         fullTime: demographicData.fullTimeJobs?.total || 0,
         partTime: demographicData.partTimeJobs?.total || 0,
         volunteers: demographicData.volunteers?.total || 0
-      }
+      },
+      beneficiaries: beneficiariesData.beneficiaries,
+      farmers: beneficiariesData.farmers,
+      survivalRate
     };
   }
 
-  private async getSiteBreakdown(projectId: number) {
-    // Implementation to get site data for the report
-    // This would fetch data from the database using repositories or services
-    // Example implementation:
+  private async getSiteBreakdown(entitiesService: EntitiesService, projectId: number) {
     try {
-      return [
-        {
-          name: "Agroforestry Marasoli",
-          hectareGoal: 20,
-          underRestoration: 4.352,
-          totalDisturbances: 3,
-          climatic: 4,
-          manmade: 1
-        },
-        {
-          name: "Songa forest-Marasoli",
-          hectareGoal: 10,
-          underRestoration: 9.085,
-          totalDisturbances: 9,
-          climatic: 3,
-          manmade: 5
-        }
-      ];
+      const approvedSites = await Site.approved().project(projectId).findAll();
+      const siteProcessor = entitiesService.createEntityProcessor<Site>("sites");
+      const siteDataPromises = approvedSites.map(async site => {
+        const { dto } = await siteProcessor.getFullDto(site);
+        const siteFullDto = dto as SiteFullDto;
+        return {
+          name: siteFullDto.name,
+          hectareGoal: siteFullDto.hectaresToRestoreGoal,
+          underRestoration: Number(siteFullDto.totalHectaresRestoredSum.toFixed(2)),
+          totalDisturbances: 0,
+          climatic: 0,
+          manmade: 0
+        };
+      });
+
+      return await Promise.all(siteDataPromises);
     } catch (error) {
       console.error("Error fetching site breakdown:", error);
       return [];
@@ -87,26 +95,20 @@ export class PdfProcessor {
   }
 
   private async getTreeSpeciesDistribution(projectId: number) {
-    // Implementation to get tree species distribution
-    // Example implementation:
     try {
       const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
 
-      // First, fetch all the approved sites with their basic info
       const sites = await Site.approved()
         .project(projectId)
         .findAll({
           attributes: ["id", "uuid", "name"]
         });
 
-      // For each site, we need to find the associated site reports
       const siteDistribution = [];
 
       for (const site of sites) {
-        // Get reports for this specific site
         const siteReportIds = SiteReport.approvedIdsSubquery([site.id]);
 
-        // Find all tree species entries linked to these site reports
         const treeSpeciesEntries = await TreeSpecies.visible()
           .collection("tree-planted")
           .siteReports(siteReportIds)
@@ -116,14 +118,12 @@ export class PdfProcessor {
             raw: true
           });
 
-        // Transform data into a more usable format
         const speciesList = treeSpeciesEntries.map(entry => ({
           name: entry.name,
           taxonId: entry.taxonId,
           amount: parseInt(entry.amount as unknown as string, 10)
         }));
 
-        // Add this site's data to the result
         siteDistribution.push({
           siteId: site.id,
           siteUuid: site.uuid,
@@ -132,7 +132,6 @@ export class PdfProcessor {
         });
       }
 
-      console.log("siteDistribution", JSON.stringify(siteDistribution, null, 2));
       return siteDistribution;
     } catch (error) {
       console.error("Error fetching tree species distribution:", error);
@@ -141,32 +140,103 @@ export class PdfProcessor {
   }
 
   private async getDemographicData(projectId: number) {
-    // Implementation to get demographic data from approved project reports
-    // This would fetch data from project reports
-    // Example implementation:
     try {
+      const projectReportIds = ProjectReport.approvedIdsSubquery(projectId);
+
+      const fullTimeDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.JOBS_TYPE,
+          collection: "full-time",
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      const partTimeDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.JOBS_TYPE,
+          collection: "part-time",
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      const volunteersDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.VOLUNTEERS_TYPE,
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      const getDemographicData = async (demographicIds: number[], type: string) => {
+        const genderEntries = await DemographicEntry.findAll({
+          where: {
+            demographicId: {
+              [Op.in]: demographicIds
+            },
+            type: "gender"
+          },
+          raw: true
+        });
+
+        const ageEntries = await DemographicEntry.findAll({
+          where: {
+            demographicId: {
+              [Op.in]: demographicIds
+            },
+            type: "age"
+          },
+          raw: true
+        });
+
+        const total = genderEntries.reduce((sum, entry) => sum + entry.amount, 0);
+
+        const male = genderEntries
+          .filter(entry => entry.subtype === "male")
+          .reduce((sum, entry) => sum + entry.amount, 0);
+
+        const female = genderEntries
+          .filter(entry => entry.subtype === "female")
+          .reduce((sum, entry) => sum + entry.amount, 0);
+
+        const youth = ageEntries
+          .filter(entry => entry.subtype === "youth")
+          .reduce((sum, entry) => sum + entry.amount, 0);
+        console.log("ageEntries ", ageEntries);
+        const nonYouth = total - youth;
+        return {
+          total,
+          male,
+          female,
+          youth,
+          nonYouth
+        };
+      };
+
+      const fullTimeJobs = await getDemographicData(fullTimeDemographicIds, "full-time");
+      const partTimeJobs = await getDemographicData(partTimeDemographicIds, "part-time");
+      const volunteers = await getDemographicData(volunteersDemographicIds, "volunteers");
+
       return {
-        fullTimeJobs: {
-          total: 43,
-          male: 22,
-          female: 12,
-          youth: 10,
-          nonYouth: 6
-        },
-        partTimeJobs: {
-          total: 37,
-          male: 22,
-          female: 12,
-          youth: 10,
-          nonYouth: 6
-        },
-        volunteers: {
-          total: 67,
-          male: 11,
-          female: 56,
-          youth: 10,
-          nonYouth: 6
-        }
+        fullTimeJobs,
+        partTimeJobs,
+        volunteers
       };
     } catch (error) {
       console.error("Error fetching demographic data:", error);
@@ -175,6 +245,96 @@ export class PdfProcessor {
         partTimeJobs: { total: 0, male: 0, female: 0, youth: 0, nonYouth: 0 },
         volunteers: { total: 0, male: 0, female: 0, youth: 0, nonYouth: 0 }
       };
+    }
+  }
+
+  private async getBeneficiariesData(projectId: number) {
+    try {
+      const projectReportIds = ProjectReport.approvedIdsSubquery(projectId);
+
+      const beneficiariesDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.ALL_BENEFICIARIES_TYPE,
+          collection: "all",
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      const smallholdersDemographicIds = await Demographic.findAll({
+        where: {
+          demographicalId: {
+            [Op.in]: projectReportIds
+          },
+          demographicalType: ProjectReport.LARAVEL_TYPE,
+          type: Demographic.ALL_BENEFICIARIES_TYPE,
+          collection: "all",
+          hidden: false
+        },
+        attributes: ["id"],
+        raw: true
+      }).then(results => results.map(r => r.id));
+
+      const beneficiariesEntries = await DemographicEntry.findAll({
+        where: {
+          demographicId: {
+            [Op.in]: beneficiariesDemographicIds
+          },
+          type: "gender"
+        },
+        raw: true
+      });
+
+      const smallholdersEntries = await DemographicEntry.findAll({
+        where: {
+          demographicId: {
+            [Op.in]: smallholdersDemographicIds
+          },
+          type: "farmer",
+          subtype: "smallholder"
+        },
+        raw: true
+      });
+
+      const totalBeneficiaries = beneficiariesEntries.reduce((sum, entry) => sum + entry.amount, 0);
+      const totalSmallholders = smallholdersEntries.reduce((sum, entry) => sum + entry.amount, 0);
+
+      return {
+        beneficiaries: totalBeneficiaries,
+        farmers: totalSmallholders
+      };
+    } catch (error) {
+      console.error("Error fetching beneficiaries data:", error);
+      return {
+        beneficiaries: 0,
+        farmers: 0
+      };
+    }
+  }
+
+  private async getMostRecentSurvivalRate(projectId: number) {
+    try {
+      const mostRecentReport = await ProjectReport.approved()
+        .project(projectId)
+        .findOne({
+          where: {
+            pctSurvivalToDate: {
+              [Op.ne]: null
+            }
+          },
+          order: [["dueAt", "DESC"]],
+          attributes: ["pctSurvivalToDate"]
+        });
+
+      return mostRecentReport?.pctSurvivalToDate ?? 0;
+    } catch (error) {
+      console.error("Error fetching most recent survival rate:", error);
+      return 0;
     }
   }
 
@@ -299,9 +459,11 @@ export class PdfProcessor {
               <tr><th>Organization Name</th><td>${projectData.organisationName || "-"}</td></tr>
               <tr><th>Project name</th><td>${projectData.name || "-"}</td></tr>
               <tr><th>Number of sites</th><td>${projectData.totalSites || 0}</td></tr>
-              <tr><th>Most recent survival rate</th><td>${projectData.survivalRate || 0}%</td></tr>
-              <tr><th>Total direct beneficiaries</th><td>${projectData.beneficiaries || 0}</td></tr>
-              <tr><th>Total smallholder farmers engaged</th><td>${projectData.farmers || 0}</td></tr>
+              <tr><th>Most recent survival rate</th><td>${additionalData.survivalRate}%</td></tr>
+              <tr><th>Total direct beneficiaries</th><td>${additionalData.beneficiaries.toLocaleString() || 0}</td></tr>
+              <tr><th>Total smallholder farmers engaged</th><td>${
+                additionalData.farmers.toLocaleString() || 0
+              }</td></tr>
             </table>
           </div>
   
@@ -312,7 +474,7 @@ export class PdfProcessor {
               ${this.generateProgressRing(
                 "HECTARES RESTORED",
                 Math.round((projectData.totalHectaresRestoredSum / projectData.totalHectaresRestoredGoal) * 100),
-                `${projectData.totalHectaresRestoredSum?.toLocaleString() || 0} of ${
+                `${projectData.totalHectaresRestoredSum?.toFixed(1).toLocaleString() || 0} of ${
                   projectData.totalHectaresRestoredGoal?.toLocaleString() || 0
                 } ha`,
                 "#5cb85c"
@@ -469,7 +631,7 @@ export class PdfProcessor {
 
     const paths = slices
       .map(slice => {
-        if (slice.value === 0) return ""; // Skip slices with zero value
+        if (slice.value === 0) return "";
 
         const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
         cumulativePercent += slice.value / total;
@@ -486,7 +648,6 @@ export class PdfProcessor {
       })
       .join("");
 
-    // Generate the legend items
     const legendItems = slices
       .map(slice => {
         return `
@@ -513,30 +674,20 @@ export class PdfProcessor {
     `;
   }
   private generateTreeSpeciesPages(treeSpeciesData, sitesNames) {
-    // Make sure we have valid data to work with
     if (!treeSpeciesData || !Array.isArray(treeSpeciesData) || treeSpeciesData.length === 0) {
-      console.log("Invalid or empty treeSpeciesData:", treeSpeciesData);
       return "<div class='section'><h2 class='section-title'>Tree Species Planting Summary</h2><p>No tree species data available</p></div>";
     }
 
-    // Step 1: Transform the data structure
-    // We need to create a consolidated view where each species appears once and has counts for each site
-
-    // Create a map of all species across all sites
     const speciesMap = new Map();
 
-    // First pass: collect all unique species
     treeSpeciesData.forEach(site => {
-      // Make sure the site has a species array before trying to iterate
       if (!site.species || !Array.isArray(site.species)) {
-        console.log("Site missing species array:", site);
-        site.species = []; // Initialize as empty array to avoid further errors
+        site.species = [];
       }
 
       site.species.forEach(species => {
         if (!species || typeof species !== "object") {
-          console.log("Invalid species entry:", species);
-          return; // Skip this entry
+          return;
         }
 
         const key = species.name || "Unknown";
@@ -551,21 +702,17 @@ export class PdfProcessor {
       });
     });
 
-    // If no valid species were found, return early
     if (speciesMap.size === 0) {
       return "<div class='section'><h2 class='section-title'>Tree Species Planting Summary</h2><p>No tree species data found across sites</p></div>";
     }
 
-    // Second pass: fill in the counts for each site
     treeSpeciesData.forEach(site => {
       const siteName = site.siteName || site.name || `Site ${site.siteId || "Unknown"}`;
 
-      // Initialize all species with default value for this site
       speciesMap.forEach(speciesInfo => {
         speciesInfo.siteCounts[siteName] = "-";
       });
 
-      // Update with actual counts
       if (Array.isArray(site.species)) {
         site.species.forEach(species => {
           if (!species || !species.name) return;
@@ -584,33 +731,26 @@ export class PdfProcessor {
       }
     });
 
-    // Convert map to array and sort by name
     const consolidatedSpecies = Array.from(speciesMap.values()).sort((a, b) =>
       (a.name || "").localeCompare(b.name || "")
     );
 
-    // Calculate goal and progress for each species (sample calculation)
-    // You might want to adjust this logic based on your requirements
     const treeGoal = 35000; // Default goal per species
     consolidatedSpecies.forEach(species => {
       species.goal = treeGoal;
       species.progress = (species.totalPlanted / treeGoal) * 100;
     });
 
-    // Get the list of all site names
     const allSiteNames = treeSpeciesData.map(site => site.siteName || site.name || `Site ${site.siteId || "Unknown"}`);
 
-    // Step 2: Generate the pages with 3 sites per page
     const pages = [];
     const sitesPerPage = 3;
 
     for (let i = 0; i < allSiteNames.length; i += sitesPerPage) {
       const currentSites = allSiteNames.slice(i, i + sitesPerPage);
 
-      // Header row
       const siteHeaders = currentSites.map(site => `<th>Trees Planted in ${site}</th>`).join("");
 
-      // Data rows
       const rows = consolidatedSpecies
         .map(species => {
           const siteDataCells = currentSites
@@ -637,7 +777,6 @@ export class PdfProcessor {
         })
         .join("");
 
-      // Make sure each page starts fresh
       const pageBreakBefore = i > 0 ? "page-break-before: always;" : "";
 
       const table = `

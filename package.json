@@ -7,7 +7,7 @@
     "unified-database": "nx serve unified-database-service --no-cloud",
     "fe-services": "nx run-many -t serve --parallel=10 --no-cloud --projects user-service job-service entity-service research-service",
     "all": "nx run-many --parallel=100 -t serve --no-cloud",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "test:ci": "nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests --exclude database",
     "lint-build": "nx run-many -t lint build --no-cloud"
   },

@@ -1,13 +1,10 @@
-FROM node:lts-alpine3.21 AS builder
+FROM node:lts-alpine3.21
 
 ARG NODE_ENV
 ARG SERVICE
 ARG BUILD_FLAG
 ARG SENTRY_DSN
 ARG DEPLOY_ENV
-
-WORKDIR /app
-COPY . .
 
 # Puppeteer requires many native dependencies for Chromium
 # https://pptr.dev/troubleshooting#running-on-alpine
@@ -17,24 +14,32 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont \
-    && npm install
+    ttf-freefont
+
+# Add user so we don't need --no-sandbox.
+#RUN addgroup -S pptruser && adduser -S -G pptruser pptruser \
+#    && mkdir -p /home/pptruser/Downloads \
+#    && chown -R pptruser:pptruser /home/pptruser
+
+WORKDIR /app
+#COPY --chown=pptruser:pptruser . .
+COPY . .
 
 # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-RUN npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
-    ls dist/apps && \
-    ls dist/apps/${SERVICE}*
+# Install with development to get our dev dependencies, some of which are required for app build.
+# TODO sort out dev deps - nx for instance should get moved out of the dev group
+RUN HUSKY=0 NODE_ENV=development npm install
 
-# Add user so we don't need --no-sandbox.
-RUN addgroup -S pptruser && adduser -S -G pptruser pptruser \
-    && mkdir -p /home/pptruser/Downloads /app \
-    && chown -R pptruser:pptruser /home/pptruser \
-    && chown -R pptruser:pptruser /app
+# I haven't been able to figure out why the build fails if it's run as the non-priveleged user, so
+# we build as root, then chwon dist and switch users.
+RUN npx nx run-many -t build build-repl -p ${SERVICE} --skip-nx-cache ${BUILD_FLAG}
+#RUN chown -R pptruser:pptruser dist && ls -l dist/apps && ls -l dist/apps/${SERVICE}*
 
-USER pptruser
+#USER pptruser
 
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV SERVICE=${SERVICE}
 ENV NODE_ENV=${NODE_ENV}
 ENV SENTRY_DSN=${SENTRY_DSN}

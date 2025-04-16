@@ -84,7 +84,7 @@ jobs:
             --build-arg NODE_ENV=production \
             --build-arg DEPLOY_ENV=${{ inputs.env }} \
             --build-arg SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
-            --build-arg BUILD_FLAG='--prod --verbose --no-cloud' \
+            --build-arg BUILD_FLAG='--prod --verbose' \
             -f service.Dockerfile \
             -t $SERVICE_IMAGE .
           docker push $SERVICE_IMAGE

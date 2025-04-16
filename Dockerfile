@@ -1,4 +1,4 @@
-FROM node:lts-alpine3.19 as builder
+FROM node:lts-alpine3.21 as builder
 ARG NODE_ENV
 ARG BUILD_FLAG
 

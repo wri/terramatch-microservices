@@ -14,9 +14,12 @@ import { fn } from "sequelize";
 import { col } from "sequelize";
 import { SiteFullDto } from "../dto/site.dto";
 import { Op } from "sequelize";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 @Injectable()
 export class PdfProcessor {
+  private readonly logger = new TMLogger(PdfProcessor.name);
+
   constructor(private readonly entitiesService: EntitiesService) {}
 
   async generateProjectPdf(uuid: string): Promise<Buffer> {
@@ -31,12 +34,15 @@ export class PdfProcessor {
     const { dto: projectData } = await projectProcessor.getFullDto(project);
     const additionalData = await this.getAdditionalReportData(project.id);
     const htmlContent = await this.generateHtmlTemplate(projectData, additionalData);
+    this.logger.log(`Html content generated, launching Puppeteer [${uuid}]`);
 
     // Generate PDF using Puppeteer
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const page = await browser.newPage();
+    this.logger.log(`Setting content [${uuid}]`);
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
+    this.logger.log(`Generating PDF [${uuid}]`);
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -44,6 +50,7 @@ export class PdfProcessor {
     });
 
     await browser.close();
+    this.logger.log(`Returning PDF buffer [${uuid}]}`);
     return Buffer.from(pdfBuffer);
   }
 

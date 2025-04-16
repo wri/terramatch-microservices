@@ -46,7 +46,11 @@ export class Project extends Model<Project> {
   }
 
   static forCohort(cohort: string) {
-    return Subquery.select(Project, "id").isNull("deletedAt").eq("cohort", cohort).literal;
+    return Subquery.select(Project, "id").eq("cohort", cohort).literal;
+  }
+
+  static forLandscape(landscapeName: string) {
+    return Subquery.select(Project, "id").eq("landscape", landscapeName).literal;
   }
 
   @PrimaryKey

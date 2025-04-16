@@ -31,6 +31,7 @@ import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constan
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
@@ -48,6 +49,7 @@ describe("ProjectProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

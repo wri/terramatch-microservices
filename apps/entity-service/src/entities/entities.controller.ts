@@ -6,7 +6,6 @@ import {
   NotFoundException,
   Param,
   Query,
-  Res,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
@@ -25,9 +24,9 @@ import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
-import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
-import { Response as ExpressResponse } from "express";
-import { PdfProcessor } from "./processors/pdf.processor";
+import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
@@ -35,7 +34,7 @@ export class EntitiesController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly entitiesService: EntitiesService,
-    private readonly pdfProcessor: PdfProcessor
+    @InjectQueue("pdfs") private readonly pdfQueue: Queue
   ) {}
 
   @Get(":entity")
@@ -126,19 +125,22 @@ export class EntitiesController {
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   @ExceptionResponse(BadRequestException, { description: "Entity type does not support PDF generation." })
-  async entityPdf(@Param() { entity, uuid }: SpecificEntityDto, @Res() res: ExpressResponse) {
+  async entityPdf(@Param() { entity, uuid }: SpecificEntityDto) {
+    //, @Res() res: ExpressResponse) {
     if (entity !== "projects") {
       throw new BadRequestException("PDF generation is only supported for projects at this time");
     }
 
     try {
-      const pdfBuffer = await this.pdfProcessor.generateProjectPdf(uuid);
-
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${uuid}-report.pdf"`);
-      res.setHeader("Content-Length", pdfBuffer.length);
-
-      return res.send(pdfBuffer);
+      await this.pdfQueue.add("generateProjectPdf", uuid);
+      return { message: "started generation" };
+      // const pdfBuffer = await this.pdfProcessor.generateProjectPdf(uuid);
+      //
+      // res.setHeader("Content-Type", "application/pdf");
+      // res.setHeader("Content-Disposition", `attachment; filename="${uuid}-report.pdf"`);
+      // res.setHeader("Content-Length", pdfBuffer.length);
+      //
+      // return res.send(pdfBuffer);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

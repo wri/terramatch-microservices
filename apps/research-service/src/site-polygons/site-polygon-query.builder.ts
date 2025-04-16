@@ -54,7 +54,8 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         model: SiteReport,
         include: [{ association: "treesPlanted", attributes: ["name", "amount"] }],
         attributes: ["dueAt", "submittedAt"]
-      }
+      },
+      { association: "project", attributes: ["uuid"] }
     ],
     attributes: ["projectId", "name"],
     required: true

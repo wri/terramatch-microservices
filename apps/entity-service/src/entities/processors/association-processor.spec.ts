@@ -17,6 +17,7 @@ import { TreeSpeciesDto } from "../dto/tree-species.dto";
 import { SeedingDto } from "../dto/seeding.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SiteReport } from "@terramatch-microservices/database/entities";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("AssociationProcessor", () => {
   let service: EntitiesService;
@@ -26,6 +27,7 @@ describe("AssociationProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

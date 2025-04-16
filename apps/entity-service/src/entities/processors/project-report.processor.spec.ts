@@ -16,6 +16,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { ProjectReportProcessor } from "./project-report.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
@@ -33,6 +34,7 @@ describe("ProjectReportProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

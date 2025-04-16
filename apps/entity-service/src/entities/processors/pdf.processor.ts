@@ -77,13 +77,27 @@ export class PdfProcessor {
       const siteDataPromises = approvedSites.map(async site => {
         const { dto } = await siteProcessor.getFullDto(site);
         const siteFullDto = dto as SiteFullDto;
+
+        const siteReports = await SiteReport.approved().sites([site.id]).findAll();
+
+        const disturbancePromises = siteReports.map(async report => {
+          await report.loadDisturbances();
+          return report.disturbances || [];
+        });
+
+        const allDisturbances = (await Promise.all(disturbancePromises)).flat();
+
+        const totalDisturbances = allDisturbances.length;
+        const climaticDisturbances = allDisturbances.filter(d => d.type === "climatic").length;
+        const manmadeDisturbances = allDisturbances.filter(d => d.type === "manmade").length;
+
         return {
           name: siteFullDto.name,
           hectareGoal: siteFullDto.hectaresToRestoreGoal,
-          underRestoration: Number(siteFullDto.totalHectaresRestoredSum.toFixed(2)),
-          totalDisturbances: 0,
-          climatic: 0,
-          manmade: 0
+          underRestoration: Number((siteFullDto.totalHectaresRestoredSum ?? 0).toFixed(2)),
+          totalDisturbances,
+          climatic: climaticDisturbances,
+          manmade: manmadeDisturbances
         };
       });
 
@@ -218,7 +232,6 @@ export class PdfProcessor {
         const youth = ageEntries
           .filter(entry => entry.subtype === "youth")
           .reduce((sum, entry) => sum + entry.amount, 0);
-        console.log("ageEntries ", ageEntries);
         const nonYouth = total - youth;
         return {
           total,

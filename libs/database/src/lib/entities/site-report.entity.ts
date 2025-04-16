@@ -23,6 +23,7 @@ import { Subquery } from "../util/subquery.builder";
 import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Disturbance } from "./disturbance.entity";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -314,9 +315,21 @@ export class SiteReport extends Model<SiteReport> {
   })
   treesPlanted: TreeSpecies[] | null;
 
+  @HasMany(() => Disturbance, {
+    foreignKey: "disturbanceableId",
+    constraints: false,
+    scope: { disturbanceable_type: SiteReport.LARAVEL_TYPE }
+  })
+  disturbances: Disturbance[] | null;
+
   async loadTreesPlanted() {
     this.treesPlanted ??= await this.$get("treesPlanted");
     return this.treesPlanted;
+  }
+
+  async loadDisturbances() {
+    this.disturbances ??= await this.$get("disturbances");
+    return this.disturbances;
   }
 
   @HasMany(() => TreeSpecies, {

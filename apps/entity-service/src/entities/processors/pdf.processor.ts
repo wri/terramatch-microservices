@@ -52,6 +52,7 @@ export class PdfProcessor {
 
     const demographicData = await this.getDemographicData(projectId);
     const beneficiariesData = await this.getBeneficiariesData(projectId);
+    const survivalRate = await this.getMostRecentSurvivalRate(projectId);
 
     return {
       sites,
@@ -64,7 +65,8 @@ export class PdfProcessor {
         volunteers: demographicData.volunteers?.total || 0
       },
       beneficiaries: beneficiariesData.beneficiaries,
-      farmers: beneficiariesData.farmers
+      farmers: beneficiariesData.farmers,
+      survivalRate
     };
   }
 
@@ -250,7 +252,6 @@ export class PdfProcessor {
     try {
       const projectReportIds = ProjectReport.approvedIdsSubquery(projectId);
 
-      // Obtener IDs de registros demográficos para beneficiarios
       const beneficiariesDemographicIds = await Demographic.findAll({
         where: {
           demographicalId: {
@@ -265,7 +266,6 @@ export class PdfProcessor {
         raw: true
       }).then(results => results.map(r => r.id));
 
-      // Obtener IDs de registros demográficos para pequeños agricultores
       const smallholdersDemographicIds = await Demographic.findAll({
         where: {
           demographicalId: {
@@ -280,7 +280,6 @@ export class PdfProcessor {
         raw: true
       }).then(results => results.map(r => r.id));
 
-      // Obtener datos de beneficiarios (usando género como ejemplo)
       const beneficiariesEntries = await DemographicEntry.findAll({
         where: {
           demographicId: {
@@ -291,7 +290,6 @@ export class PdfProcessor {
         raw: true
       });
 
-      // Obtener datos de pequeños agricultores
       const smallholdersEntries = await DemographicEntry.findAll({
         where: {
           demographicId: {
@@ -303,7 +301,6 @@ export class PdfProcessor {
         raw: true
       });
 
-      // Calcular totales
       const totalBeneficiaries = beneficiariesEntries.reduce((sum, entry) => sum + entry.amount, 0);
       const totalSmallholders = smallholdersEntries.reduce((sum, entry) => sum + entry.amount, 0);
 
@@ -317,6 +314,27 @@ export class PdfProcessor {
         beneficiaries: 0,
         farmers: 0
       };
+    }
+  }
+
+  private async getMostRecentSurvivalRate(projectId: number) {
+    try {
+      const mostRecentReport = await ProjectReport.approved()
+        .project(projectId)
+        .findOne({
+          where: {
+            pctSurvivalToDate: {
+              [Op.ne]: null
+            }
+          },
+          order: [["dueAt", "DESC"]],
+          attributes: ["pctSurvivalToDate"]
+        });
+
+      return mostRecentReport?.pctSurvivalToDate ?? 0;
+    } catch (error) {
+      console.error("Error fetching most recent survival rate:", error);
+      return 0;
     }
   }
 
@@ -441,7 +459,7 @@ export class PdfProcessor {
               <tr><th>Organization Name</th><td>${projectData.organisationName || "-"}</td></tr>
               <tr><th>Project name</th><td>${projectData.name || "-"}</td></tr>
               <tr><th>Number of sites</th><td>${projectData.totalSites || 0}</td></tr>
-              <tr><th>Most recent survival rate</th><td>${projectData.survivalRate || 0}%</td></tr>
+              <tr><th>Most recent survival rate</th><td>${additionalData.survivalRate}%</td></tr>
               <tr><th>Total direct beneficiaries</th><td>${additionalData.beneficiaries.toLocaleString() || 0}</td></tr>
               <tr><th>Total smallholder farmers engaged</th><td>${
                 additionalData.farmers.toLocaleString() || 0

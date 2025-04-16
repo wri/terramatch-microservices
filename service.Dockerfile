@@ -1,9 +1,23 @@
-FROM terramatch-microservices-base:nx-base AS builder
+FROM node:lts-alpine3.21 AS builder
 
+ARG NODE_ENV
 ARG SERVICE
 ARG BUILD_FLAG
+
 WORKDIR /app/builder
 COPY . .
+
+# Puppeteer requires many native dependencies for Chromium
+# https://pptr.dev/troubleshooting#running-on-alpine
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    && npm install
+
 RUN npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
     ls dist/apps && \
     ls dist/apps/${SERVICE}*

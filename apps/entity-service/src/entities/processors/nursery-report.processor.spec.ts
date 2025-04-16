@@ -10,6 +10,7 @@ import {
   NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -17,6 +18,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DateTime } from "luxon";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
@@ -34,6 +36,7 @@ describe("NurseryReportProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();
@@ -392,8 +395,10 @@ describe("NurseryReportProcessor", () => {
       const project = await ProjectFactory.create();
       const nursery = await NurseryFactory.create({ projectId: project.id });
 
+      const { taskId } = await ProjectReportFactory.create({ projectId: project.id });
       const { uuid } = await NurseryReportFactory.create({
         nurseryId: nursery.id,
+        taskId,
         dueAt: null
       });
 
@@ -409,50 +414,72 @@ describe("NurseryReportProcessor", () => {
       });
     });
 
-    it("should include calculated fields in NuseryReportFullDto completion Completed", async () => {
+    it("should handle a missing taskId", async () => {
       const project = await ProjectFactory.create();
-      const nusery = await NurseryFactory.create({ projectId: project.id });
+      const nursery = await NurseryFactory.create({ projectId: project.id });
 
       const { uuid } = await NurseryReportFactory.create({
-        nurseryId: nusery.id,
-        title: "Nursery Report",
-        completion: 100
+        nurseryId: nursery.id,
+        taskId: null,
+        dueAt: null
       });
 
-      const nuseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nuseryReport);
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid,
-        nurseryUuid: nusery.uuid
+        nurseryUuid: nursery.uuid,
+        dueAt: null
       });
     });
 
-    it("should include calculated fields in NuseryReportFullDto completion Not Completed", async () => {
+    it("should include calculated fields in NurseryReportFullDto completion Completed", async () => {
       const project = await ProjectFactory.create();
-      const nusery = await NurseryFactory.create({ projectId: project.id });
+      const nursery = await NurseryFactory.create({ projectId: project.id });
 
       const { uuid } = await NurseryReportFactory.create({
-        nurseryId: nusery.id,
+        nurseryId: nursery.id,
+        title: "Nursery Report",
+        completion: 100
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid
+      });
+    });
+
+    it("should include calculated fields in NurseryReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
         title: null,
         dueAt: null,
         completion: 0
       });
 
-      const nuseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nuseryReport);
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
         lightResource: false,
         projectUuid: project.uuid,
-        nurseryUuid: nusery.uuid
+        nurseryUuid: nursery.uuid
       });
     });
 
-    it("should include calculated fields in NuseryReportFullDto completion Started", async () => {
+    it("should include calculated fields in NurseryReportFullDto completion Started", async () => {
       const project = await ProjectFactory.create();
       const nursery = await NurseryFactory.create({ projectId: project.id });
 

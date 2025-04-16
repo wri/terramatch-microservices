@@ -27,11 +27,16 @@ import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorat
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
 import { Response as ExpressResponse } from "express";
+import { PdfProcessor } from "./processors/pdf.processor";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
 export class EntitiesController {
-  constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly entitiesService: EntitiesService,
+    private readonly pdfProcessor: PdfProcessor
+  ) {}
 
   @Get(":entity")
   @ApiOperation({
@@ -127,7 +132,7 @@ export class EntitiesController {
     }
 
     try {
-      const pdfBuffer = await this.entitiesService.generateProjectPdf(uuid);
+      const pdfBuffer = await this.pdfProcessor.generateProjectPdf(uuid);
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${uuid}-report.pdf"`);

@@ -17,17 +17,19 @@ import { Op } from "sequelize";
 
 @Injectable()
 export class PdfProcessor {
-  async generateProjectPdf(entitiesService: EntitiesService, uuid: string): Promise<Buffer> {
-    const projectProcessor = entitiesService.createEntityProcessor<Project>("projects");
+  constructor(private readonly entitiesService: EntitiesService) {}
+
+  async generateProjectPdf(uuid: string): Promise<Buffer> {
+    const projectProcessor = this.entitiesService.createEntityProcessor<Project>("projects");
 
     const project = await projectProcessor.findOne(uuid);
     if (!project) {
       throw new Error("Project not found");
     }
-    await entitiesService.authorize("read", project);
+    await this.entitiesService.authorize("read", project);
 
     const { dto: projectData } = await projectProcessor.getFullDto(project);
-    const additionalData = await this.getAdditionalReportData(entitiesService, project.id);
+    const additionalData = await this.getAdditionalReportData(project.id);
     const htmlContent = await this.generateHtmlTemplate(projectData, additionalData);
 
     // Generate PDF using Puppeteer
@@ -45,8 +47,8 @@ export class PdfProcessor {
     return Buffer.from(pdfBuffer);
   }
 
-  private async getAdditionalReportData(entitiesService: EntitiesService, projectId: number) {
-    const sites = await this.getSiteBreakdown(entitiesService, projectId);
+  private async getAdditionalReportData(projectId: number) {
+    const sites = await this.getSiteBreakdown(projectId);
     const treeSpeciesData = await this.getTreeSpeciesDistribution(projectId);
     const siteNames = sites.map(site => site.name);
 
@@ -70,10 +72,10 @@ export class PdfProcessor {
     };
   }
 
-  private async getSiteBreakdown(entitiesService: EntitiesService, projectId: number) {
+  private async getSiteBreakdown(projectId: number) {
     try {
       const approvedSites = await Site.approved().project(projectId).findAll();
-      const siteProcessor = entitiesService.createEntityProcessor<Site>("sites");
+      const siteProcessor = this.entitiesService.createEntityProcessor<Site>("sites");
       const siteDataPromises = approvedSites.map(async site => {
         const { dto } = await siteProcessor.getFullDto(site);
         const siteFullDto = dto as SiteFullDto;
@@ -364,8 +366,8 @@ export class PdfProcessor {
           <meta charset="utf-8">
           <title>Project Report: ${projectData.name}</title>
           <style>
-            body { 
-              font-family: Arial, sans-serif; 
+            body {
+              font-family: Arial, sans-serif;
               padding: 20px;
               color: #333;
               line-height: 1.5;
@@ -470,7 +472,7 @@ export class PdfProcessor {
               })}</div>
             </div>
           </div>
-  
+
           <div class="section">
             <h2 class="section-title">General</h2>
             <table class="info-table">
@@ -484,7 +486,7 @@ export class PdfProcessor {
               }</td></tr>
             </table>
           </div>
-  
+
           <div class="section">
             <h2 class="section-title">Project and Goals</h2>
             <div class="chart">
@@ -507,14 +509,14 @@ export class PdfProcessor {
               )}
             </div>
           </div>
-  
+
           <div class="section">
             <h2 class="section-title">Employment Opportunities Created</h2>
             <div style="display: flex; align-items: center;">
               ${this.generateEmploymentPieChart(additionalData.employment)}
             </div>
           </div>
-  
+
           <div class="section">
             <h2 class="section-title">Employment by Demographics</h2>
             <table>
@@ -557,7 +559,7 @@ export class PdfProcessor {
               </tbody>
             </table>
           </div>
-  
+
           <div class="section">
             <h2 class="section-title">Site Information</h2>
             <table>

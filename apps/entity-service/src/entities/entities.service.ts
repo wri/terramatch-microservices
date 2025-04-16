@@ -23,7 +23,6 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { PdfProcessor } from "./processors/pdf.processor";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 
@@ -81,7 +80,7 @@ export class EntitiesService {
     private readonly policyService: PolicyService,
     private readonly localizationService: LocalizationService
   ) {}
-  private readonly pdfProcessor = new PdfProcessor();
+
   get userId() {
     return this.policyService.userId;
   }
@@ -168,9 +167,5 @@ export class EntitiesService {
       }),
       {}
     );
-  }
-
-  async generateProjectPdf(uuid: string): Promise<Buffer> {
-    return this.pdfProcessor.generateProjectPdf(this, uuid);
   }
 }

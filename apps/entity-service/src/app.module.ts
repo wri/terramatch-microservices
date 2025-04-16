@@ -21,7 +21,6 @@ import { PdfProcessor } from "./entities/processors/pdf.processor";
     },
     EntitiesService,
     TreeService,
-    EntitiesService,
     PdfProcessor
   ]
 })

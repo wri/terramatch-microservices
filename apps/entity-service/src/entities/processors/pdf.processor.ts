@@ -28,9 +28,13 @@ export class PdfProcessor extends WorkerHost {
     const { name, data } = job;
     if (name !== "generateProjectPdf") throw new NotImplementedException(`Unknown job type: ${name}`);
 
-    this.logger.log(`Starting generation process [${data}]`);
-    const buffer = await this.generateProjectPdf(data as string);
-    this.logger.log(`Generated PDF [${data}, ${buffer.length}]`);
+    try {
+      this.logger.log(`Starting generation process [${data}]`);
+      const buffer = await this.generateProjectPdf(data as string);
+      this.logger.log(`Generated PDF [${data}, ${buffer.length}]`);
+    } catch (e) {
+      this.logger.error(`Generation failed [${data}]`, e);
+    }
   }
 
   async generateProjectPdf(uuid: string): Promise<Buffer> {

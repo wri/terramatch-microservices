@@ -33,7 +33,7 @@ export class PdfProcessor {
     const htmlContent = await this.generateHtmlTemplate(projectData, additionalData);
 
     // Generate PDF using Puppeteer
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -366,8 +366,8 @@ export class PdfProcessor {
   <meta charset="utf-8">
   <title>Project Report: ${projectData.name}</title>
   <style>
-    body { 
-      font-family: Arial, sans-serif; 
+    body {
+      font-family: Arial, sans-serif;
       padding: 20px;
       color: #333;
       line-height: 1.5;
@@ -707,10 +707,10 @@ export class PdfProcessor {
         const largeArcFlag = slice.value / total > 0.5 ? 1 : 0;
 
         return `
-          <path 
-            d="M 0 0 L ${startX * 100} ${startY * 100} A 100 100 0 ${largeArcFlag} 1 ${endX * 100} ${endY * 100} Z" 
-            fill="${slice.color}" 
-            stroke="white" 
+          <path
+            d="M 0 0 L ${startX * 100} ${startY * 100} A 100 100 0 ${largeArcFlag} 1 ${endX * 100} ${endY * 100} Z"
+            fill="${slice.color}"
+            stroke="white"
             stroke-width="2"
           >
             <title>${slice.label}: ${slice.value}</title>

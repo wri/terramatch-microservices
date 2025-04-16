@@ -861,6 +861,9 @@ export class PdfProcessor {
     const pages = [];
     const sitesPerPage = 3;
 
+    // Add a page break before the first tree species page
+    pages.push('<div class="page-break"></div>');
+
     for (let i = 0; i < allSiteNames.length; i += sitesPerPage) {
       const currentSites = allSiteNames.slice(i, i + sitesPerPage);
 
@@ -897,10 +900,10 @@ export class PdfProcessor {
         })
         .join("");
 
-      const pageBreakBefore = i > 0 ? "page-break-before: always;" : "";
-
+      // We no longer need page-break-before since we're using page-break between all groups
+      // and already added a page break at the beginning
       const table = `
-        <div class="section" style="${pageBreakBefore}">
+        <div class="section">
           <h2 class="section-title">Tree Species Planting Summary</h2>
           <p>Showing Sites ${i + 1} - ${Math.min(i + sitesPerPage, allSiteNames.length)} (of ${allSiteNames.length})</p>
           <table>
@@ -915,6 +918,7 @@ export class PdfProcessor {
               ${rows}
             </tbody>
           </table>
+          ${i < allSiteNames.length - sitesPerPage ? '<div class="page-break"></div>' : ""}
         </div>
       `;
 

@@ -1,4 +1,4 @@
-import { Argument, Command } from "commander";
+import { Argument, Command, Option, OptionValues } from "commander";
 import { rootDebug } from "../utils";
 import { ECSClient, ExecuteCommandCommand, ListTasksCommand } from "@aws-sdk/client-ecs";
 import { CLUSTER, Environment, ENVIRONMENTS, Service, SERVICES } from "../consts";
@@ -12,6 +12,9 @@ const debug = rootDebug.extend("remote-repl");
 const debugError = rootDebug.extend("remote-repl:error");
 
 const TERM_OPTIONS = { rows: 34, cols: 197 };
+
+const REMOTE_COMMANDS = ["repl", "sh"] as const;
+type RemoteCommand = (typeof REMOTE_COMMANDS)[number];
 
 const startLocalRepl = async (service: Service) => {
   debug(`Building REPL for ${service}`);
@@ -46,17 +49,32 @@ const getTaskId = async (service: Service, env: Environment) => {
   return undefined;
 };
 
-const startRemoteRepl = async (taskId: string, service: Service) => {
+const getRemoteCommandString = (service: Service, remoteCommand: RemoteCommand) => {
+  switch (remoteCommand) {
+    case "repl":
+      return `node dist/apps/${service}-repl`;
+    case "sh":
+      return "sh";
+
+    default:
+      debugError(`Unrecognized command: ${remoteCommand}`);
+      process.exit(-1);
+  }
+};
+
+const startRemoteRepl = async (taskId: string, service: Service, remoteCommand: RemoteCommand) => {
   const client = new ECSClient();
-  const command = new ExecuteCommandCommand({
+  const command = getRemoteCommandString(service, remoteCommand);
+  debug(`Setting command to run after connection: ${command}`);
+  const executionCommand = new ExecuteCommandCommand({
     cluster: CLUSTER,
     task: taskId,
     interactive: true,
-    command: `node dist/apps/${service}-repl`
+    command
   });
   const {
     session: { streamUrl, tokenValue }
-  } = await client.send(command);
+  } = await client.send(executionCommand);
 
   const textDecoder = new TextDecoder();
   const textEncoder = new TextEncoder();
@@ -109,7 +127,12 @@ export const replCommand = () =>
     .addArgument(
       new Argument("environment", "The environment to connect to").choices(ENVIRONMENTS).default("local").argOptional()
     )
-    .action(async (service: Service, environment: Environment) => {
+    .addOption(
+      new Option("-c, --command <command>", "Ignored in local environment. Command to run after connecting.")
+        .default("repl")
+        .choices(REMOTE_COMMANDS)
+    )
+    .action(async (service: Service, environment: Environment, options: OptionValues) => {
       if (environment === "local") {
         await startLocalRepl(service);
       } else {
@@ -117,6 +140,6 @@ export const replCommand = () =>
         if (taskId == null) return;
         debug(`Found task id: ${taskId}`);
 
-        await startRemoteRepl(taskId, service);
+        await startRemoteRepl(taskId, service, options.command as RemoteCommand);
       }
     });

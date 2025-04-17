@@ -2,10 +2,10 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
 import * as Mail from "nodemailer/lib/mailer";
-import { Dictionary, isEmpty } from "lodash";
+import { Dictionary, isEmpty, isString } from "lodash";
 import { LocalizationService } from "../localization/localization.service";
-import { TemplateService } from "./template.service";
 import { User } from "@terramatch-microservices/database/entities";
+import { TemplateService } from "../templates/template.service";
 
 type I18nEmailOptions = {
   i18nReplacements?: Dictionary<string>;
@@ -89,7 +89,23 @@ export class EmailService {
       i18nReplacements ?? {}
     );
 
-    const body = this.templateService.render(EMAIL_TEMPLATE, { ...translated, ...(additionalValues ?? {}) });
+    const data: Dictionary<string | null | undefined | number> = {
+      backendUrl: this.configService.get<string>("EMAIL_IMAGE_BASE_URL"),
+      banner: null,
+      invite: null,
+      monitoring: null,
+      transactional: null,
+      year: new Date().getFullYear(),
+      ...translated,
+      ...(additionalValues ?? {})
+    };
+    if (isString(data["link"]) && data["link"].substring(0, 4).toLowerCase() !== "http") {
+      // If we're given a link that's pointing to a raw path, assume it should be prepended with
+      // the configured app FE base URL.
+      data["link"] = `${this.configService.get("APP_FRONT_END")}${data["link"]}`;
+    }
+
+    const body = this.templateService.render(EMAIL_TEMPLATE, data);
     return { subject, body };
   }
 }

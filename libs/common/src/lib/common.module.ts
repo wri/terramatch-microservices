@@ -8,13 +8,13 @@ import { PolicyService } from "./policies/policy.service";
 import { LocalizationService } from "./localization/localization.service";
 import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
-import { TemplateService } from "./email/template.service";
 import { SlackService } from "./slack/slack.service";
 import { DatabaseModule } from "@terramatch-microservices/database";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { EventService } from "./events/event.service";
 import { BullModule } from "@nestjs/bullmq";
 import { EmailProcessor } from "./email/email.processor";
+import { TemplateService } from "./templates/template.service";
 
 export const QUEUES = ["email"];
 

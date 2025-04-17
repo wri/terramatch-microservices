@@ -8,7 +8,7 @@ import { ResetPasswordService } from "./reset-password.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { TemplateService } from "@terramatch-microservices/common/email/template.service";
+import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
 
 describe("ResetPasswordService", () => {
   let service: ResetPasswordService;

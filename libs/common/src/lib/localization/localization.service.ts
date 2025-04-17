@@ -39,7 +39,7 @@ export class LocalizationService {
   }
 
   async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
-    return (await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } })) ?? [];
+    return await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } });
   }
 
   /**

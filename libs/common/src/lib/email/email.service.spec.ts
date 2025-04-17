@@ -4,8 +4,8 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
 import * as nodemailer from "nodemailer";
 import { LocalizationService } from "../localization/localization.service";
-import { TemplateService } from "./template.service";
 import { UserFactory } from "@terramatch-microservices/database/factories";
+import { TemplateService } from "../templates/template.service";
 
 jest.mock("nodemailer");
 
@@ -86,6 +86,15 @@ describe("EmailService", () => {
     const filtered = service.filterEntityEmailRecipients([u1, u2, u3]);
     expect(filtered.length).toBe(2);
     expect(filtered.map(({ id }) => id)).toEqual([u2, u3].map(({ id }) => id));
+  });
+
+  it("returns the list of users when there is no do not email list", async () => {
+    const users = await UserFactory.createMany(3);
+    configService.get.mockImplementation((envName: string) => {
+      if (envName === "ENTITY_UPDATE_DO_NOT_EMAIL") return "";
+      return "";
+    });
+    expect(service.filterEntityEmailRecipients(users)).toBe(users);
   });
 
   it("throws if the template subject key is not provided", async () => {

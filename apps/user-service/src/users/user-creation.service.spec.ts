@@ -8,7 +8,7 @@ import { UserNewRequest } from "./dto/user-new-request.dto";
 import { NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { RoleFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
-import { TemplateService } from "@terramatch-microservices/common/email/template.service";
+import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
 
 describe("UserCreationService", () => {
   let service: UserCreationService;

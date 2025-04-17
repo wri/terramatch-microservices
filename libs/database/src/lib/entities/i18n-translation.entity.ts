@@ -1,4 +1,4 @@
-import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, TEXT } from "sequelize";
 
 @Table({ tableName: "i18n_translations", underscored: true })
@@ -9,7 +9,6 @@ export class I18nTranslation extends Model<I18nTranslation> {
   override id: number;
 
   @AllowNull
-  @Unique
   @Column(INTEGER({ length: 11 }))
   i18nItemId: number;
 

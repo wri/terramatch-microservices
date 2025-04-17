@@ -4,6 +4,7 @@ export * from "./demographic.factory";
 export * from "./demographic-entry.factory";
 export * from "./form-submission.factory";
 export * from "./funding-programme.factory";
+export * from "./i18n-item.factory";
 export * from "./indicator-output-field-monitoring.factory";
 export * from "./indicator-output-hectares.factory";
 export * from "./indicator-output-msu-carbon.factory";

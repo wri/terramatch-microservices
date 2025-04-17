@@ -42,22 +42,6 @@ export class EmailService {
     return recipients.filter(({ emailAddress }) => !doNotEmail.includes(emailAddress));
   }
 
-  async renderI18nTemplateEmail(
-    locale: string,
-    i18nKeys: Dictionary<string>,
-    { i18nReplacements, additionalValues }: I18nEmailOptions = {}
-  ) {
-    if (i18nKeys["subject"] == null) throw new InternalServerErrorException("Email subject is required");
-    const { subject, ...translated } = await this.localizationService.translateKeys(
-      i18nKeys,
-      locale,
-      i18nReplacements ?? {}
-    );
-
-    const body = this.templateService.render(EMAIL_TEMPLATE, { ...translated, ...(additionalValues ?? {}) });
-    return { subject, body };
-  }
-
   async sendI18nTemplateEmail(
     to: string | string[],
     locale: string,
@@ -91,5 +75,21 @@ export class EmailService {
     }
 
     await this.transporter.sendMail(mailOptions);
+  }
+
+  private async renderI18nTemplateEmail(
+    locale: string,
+    i18nKeys: Dictionary<string>,
+    { i18nReplacements, additionalValues }: I18nEmailOptions = {}
+  ) {
+    if (i18nKeys["subject"] == null) throw new InternalServerErrorException("Email subject is required");
+    const { subject, ...translated } = await this.localizationService.translateKeys(
+      i18nKeys,
+      locale,
+      i18nReplacements ?? {}
+    );
+
+    const body = this.templateService.render(EMAIL_TEMPLATE, { ...translated, ...(additionalValues ?? {}) });
+    return { subject, body };
   }
 }

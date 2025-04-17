@@ -125,10 +125,6 @@ export class Nursery extends Model<Nursery> {
     return this.project?.organisationName;
   }
 
-  get migrated() {
-    return this.oldModel;
-  }
-
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

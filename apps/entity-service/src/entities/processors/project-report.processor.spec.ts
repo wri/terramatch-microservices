@@ -16,6 +16,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { ProjectReportProcessor } from "./project-report.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
@@ -33,6 +34,7 @@ describe("ProjectReportProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();
@@ -368,6 +370,65 @@ describe("ProjectReportProcessor", () => {
         uuid: hbfUuid,
         lightResource: false,
         projectUuid: hbfProject.uuid
+      });
+    });
+
+    it("should include calculated fields in ProjectReportFullDto completion Completed", async () => {
+      const project = await ProjectFactory.create();
+
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        title: "Project Report",
+        completion: 100
+      });
+
+      const projectReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(projectReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid
+      });
+    });
+
+    it("should include calculated fields in ProjectReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid
+      });
+    });
+
+    it("should include calculated fields in ProjectReportFullDto completion Started", async () => {
+      const project = await ProjectFactory.create();
+
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        title: "",
+        dueAt: null,
+        completion: 50
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid
       });
     });
   });

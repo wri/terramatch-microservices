@@ -1,7 +1,7 @@
 import { NurseryReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -10,6 +10,7 @@ import {
   NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -17,9 +18,11 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DateTime } from "luxon";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -32,7 +35,8 @@ describe("NurseryReportProcessor", () => {
     const module = await Test.createTestingModule({
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>({ userId }) },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();
@@ -55,7 +59,8 @@ describe("NurseryReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -390,8 +395,10 @@ describe("NurseryReportProcessor", () => {
       const project = await ProjectFactory.create();
       const nursery = await NurseryFactory.create({ projectId: project.id });
 
+      const { taskId } = await ProjectReportFactory.create({ projectId: project.id });
       const { uuid } = await NurseryReportFactory.create({
         nurseryId: nursery.id,
+        taskId,
         dueAt: null
       });
 
@@ -404,6 +411,93 @@ describe("NurseryReportProcessor", () => {
         projectUuid: project.uuid,
         nurseryUuid: nursery.uuid,
         dueAt: null
+      });
+    });
+
+    it("should handle a missing taskId", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
+        taskId: null,
+        dueAt: null
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid,
+        dueAt: null
+      });
+    });
+
+    it("should include calculated fields in NurseryReportFullDto completion Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
+        title: "Nursery Report",
+        completion: 100
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid
+      });
+    });
+
+    it("should include calculated fields in NurseryReportFullDto completion Not Completed", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid
+      });
+    });
+
+    it("should include calculated fields in NurseryReportFullDto completion Started", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+
+      const { uuid } = await NurseryReportFactory.create({
+        nurseryId: nursery.id,
+        title: "",
+        dueAt: null,
+        completion: 50
+      });
+
+      const nurseryReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(nurseryReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        nurseryUuid: nursery.uuid
       });
     });
   });

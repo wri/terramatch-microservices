@@ -23,7 +23,12 @@ const COLUMNS: ColumnMapping<SiteReport, SiteReportAssociations>[] = [
   associatedValueColumn("totalSeedsPlanted", "id"),
   "numTreesRegenerating",
   "soilWaterRestorationDescription",
-  "waterStructures"
+  "waterStructures",
+  "polygonStatus",
+  "invasiveSpeciesRemoved",
+  "invasiveSpeciesManagement",
+  "siteCommunityPartnersDescription",
+  "siteCommunityPartnersIncomeIncreaseDescription"
 ];
 
 export class SiteReportEntity extends AirtableEntity<SiteReport, SiteReportAssociations> {

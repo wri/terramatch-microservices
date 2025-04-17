@@ -18,6 +18,7 @@ import { SiteLightDto } from "../dto/site.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
 import { NotAcceptableException } from "@nestjs/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
@@ -35,6 +36,7 @@ describe("SiteProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();

@@ -5,7 +5,7 @@ import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { Demographic, Media, Seeding, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { Demographic, Media, Seeding, TreeSpecies, User } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
@@ -24,6 +24,8 @@ import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { EntityUpdateData } from "./dto/entity-update.dto";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ITranslateParams } from "@transifex/native";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -74,7 +76,11 @@ export const MAX_PAGE_SIZE = 100 as const;
 
 @Injectable()
 export class EntitiesService {
-  constructor(private readonly mediaService: MediaService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly policyService: PolicyService,
+    private readonly localizationService: LocalizationService
+  ) {}
 
   get userId() {
     return this.policyService.userId;
@@ -90,6 +96,18 @@ export class EntitiesService {
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+  }
+
+  private _userLocale?: string;
+  async getUserLocale() {
+    if (this._userLocale == null) {
+      this._userLocale = (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] })).locale ?? "en-GB";
+    }
+    return this._userLocale;
+  }
+
+  async localizeText(text: string, params?: ITranslateParams) {
+    return await this.localizationService.localizeText(text, await this.getUserLocale(), params);
   }
 
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {

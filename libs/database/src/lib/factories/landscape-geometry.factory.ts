@@ -5,5 +5,6 @@ import { POLYGON } from "./polygon-geometry.factory";
 
 export const LandscapeGeometryFactory = FactoryGirl.define(LandscapeGeometry, async () => ({
   geometry: POLYGON,
-  landscape: faker.location.country()
+  landscape: faker.location.country(),
+  slug: faker.lorem.slug()
 }));

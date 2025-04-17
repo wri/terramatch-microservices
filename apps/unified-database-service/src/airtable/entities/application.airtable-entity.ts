@@ -1,6 +1,6 @@
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { Application, FormSubmission, FundingProgramme } from "@terramatch-microservices/database/entities";
-import { groupBy, orderBy, uniq } from "lodash";
+import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { Application, FormSubmission } from "@terramatch-microservices/database/entities";
+import { groupBy, orderBy } from "lodash";
 
 const loadFormSubmissions = async (applicationIds: number[]) =>
   groupBy(
@@ -12,14 +12,13 @@ const loadFormSubmissions = async (applicationIds: number[]) =>
   );
 
 type ApplicationAssociations = {
-  fundingProgrammeName?: string;
   formSubmissions: FormSubmission[];
 };
 
 const COLUMNS: ColumnMapping<Application, ApplicationAssociations>[] = [
   ...commonEntityColumns<Application, ApplicationAssociations>("application"),
   "organisationUuid",
-  associatedValueColumn("fundingProgrammeName", "fundingProgrammeUuid"),
+  "fundingProgrammeUuid",
   {
     airtableColumn: "status",
     valueMap: async (_, { formSubmissions }) => orderBy(formSubmissions, ["id"], ["desc"])[0]?.status
@@ -34,18 +33,12 @@ export class ApplicationEntity extends AirtableEntity<Application, ApplicationAs
 
   protected async loadAssociations(applications: Application[]) {
     const applicationIds = applications.map(({ id }) => id);
-    const fundingProgrammeUuids = uniq(applications.map(({ fundingProgrammeUuid }) => fundingProgrammeUuid));
-    const fundingProgrammes = await FundingProgramme.findAll({
-      where: { uuid: fundingProgrammeUuids },
-      attributes: ["uuid", "name"]
-    });
     const formSubmissions = await loadFormSubmissions(applicationIds);
 
     return applications.reduce(
-      (associations, { id, fundingProgrammeUuid }) => ({
+      (associations, { id }) => ({
         ...associations,
         [id]: {
-          fundingProgrammeName: fundingProgrammes.find(({ uuid }) => uuid === fundingProgrammeUuid)?.name,
           formSubmissions: formSubmissions[id] ?? []
         }
       }),

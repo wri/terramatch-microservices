@@ -1,13 +1,14 @@
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   ProjectUserFactory,
   SiteFactory,
   SiteReportFactory,
@@ -17,9 +18,11 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DateTime } from "luxon";
 import { SiteReportProcessor } from "./site-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
+  let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
   beforeAll(async () => {
@@ -32,7 +35,8 @@ describe("SiteReportProcessor", () => {
     const module = await Test.createTestingModule({
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>() },
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();
@@ -51,7 +55,8 @@ describe("SiteReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId, permissions);
+      policyService.getPermissions.mockResolvedValue(permissions);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 
@@ -388,8 +393,33 @@ describe("SiteReportProcessor", () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
 
+      const { taskId } = await ProjectReportFactory.create({ projectId: project.id });
       const { uuid } = await SiteReportFactory.create({
         siteId: site.id,
+        taskId,
+        title: null,
+        dueAt: null,
+        completion: 0
+      });
+
+      const siteReport = await processor.findOne(uuid);
+      const { id, dto } = await processor.getFullDto(siteReport);
+      expect(id).toEqual(uuid);
+      expect(dto).toMatchObject({
+        uuid,
+        lightResource: false,
+        projectUuid: project.uuid,
+        siteUuid: site.uuid
+      });
+    });
+
+    it("should handle a missing taskId", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+
+      const { uuid } = await SiteReportFactory.create({
+        siteId: site.id,
+        taskId: null,
         title: null,
         dueAt: null,
         completion: 0

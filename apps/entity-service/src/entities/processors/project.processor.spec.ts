@@ -26,12 +26,13 @@ import { flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { EntityProcessor } from "./entity-processor";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
@@ -247,6 +248,29 @@ describe("ProjectProcessor", () => {
       const project = await ProjectFactory.create({});
       const result = await processor.findOne(project.uuid);
       expect(result.id).toBe(project.id);
+    });
+  });
+
+  describe("update", () => {
+    it("can update the isTest flag", async () => {
+      const project = await ProjectFactory.create({ isTest: false });
+      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      await expect(processor.update(project, { isTest: false })).rejects.toThrow(UnauthorizedException);
+      expect(project.isTest).toBe(false);
+      await processor.update(project, {});
+      expect(project.isTest).toBe(false);
+
+      policyService.getPermissions.mockResolvedValue([`framework-${project.frameworkKey}`]);
+      await processor.update(project, { isTest: true });
+      expect(project.isTest).toBe(true);
+    });
+
+    it("should call super.update", async () => {
+      const project = await ProjectFactory.create();
+      const spy = jest.spyOn(EntityProcessor.prototype, "update");
+      const update = { feedback: "foo" };
+      await processor.update(project, update);
+      expect(spy).toHaveBeenCalledWith(project, update);
     });
   });
 

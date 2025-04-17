@@ -38,8 +38,6 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   isTest?: boolean;
 }
 
-export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}
-
 export class SiteUpdateAttributes extends EntityUpdateAttributes {
   @IsOptional()
   @IsIn(SITE_STATUSES)
@@ -51,8 +49,8 @@ export class SiteUpdateAttributes extends EntityUpdateAttributes {
   status?: string | null;
 }
 
+export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}
 export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, SiteUpdateAttributes) {}
-
 export class NurseryUpdateData extends JsonApiDataDto({ type: "nurseries" }, EntityUpdateAttributes) {}
 export class ProjectReportUpdateData extends JsonApiDataDto({ type: "projectReports" }, EntityUpdateAttributes) {}
 export class SiteReportUpdateData extends JsonApiDataDto({ type: "siteReports" }, EntityUpdateAttributes) {}

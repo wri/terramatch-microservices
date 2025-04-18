@@ -116,7 +116,7 @@ export class EntityStatusUpdate extends EventProcessor {
       isEmpty(feedbackFields)
         ? []
         : await FormQuestion.findAll({
-            where: { uuid: { [Op.in]: this.model.feedbackFields } },
+            where: { uuid: { [Op.in]: feedbackFields as string[] } },
             attributes: ["label"]
           }),
       "label"

@@ -9,4 +9,4 @@ export const laravelType = (model: LaravelModel) => (model.constructor as Larave
 
 export type StatusModel = Model & { status: string };
 
-export type FeedbackModel = Model & { feedback?: string; feedbackFields?: string[] };
+export type FeedbackModel = Model & { feedback?: string | null; feedbackFields?: string[] | null };

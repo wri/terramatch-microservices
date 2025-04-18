@@ -53,6 +53,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         ...pickApiProperties(sitePolygon, SitePolygonLightDto),
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
+        projectId: sitePolygon.site?.project?.uuid,
         indicators: indicators,
         siteName: sitePolygon.site?.name,
         lightResource: true
@@ -68,6 +69,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ description: "If this ID points to a deleted site, the indicators will be empty." })
   siteId: string;
+
+  @ApiProperty()
+  projectId: string;
 
   @ApiProperty({ nullable: true })
   plantStart: Date | null;
@@ -111,6 +115,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
         ...pickApiProperties(sitePolygon, SitePolygonFullDto),
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
+        projectId: sitePolygon.site?.project?.uuid,
         indicators: indicators,
         siteName: sitePolygon.site?.name,
         geometry: sitePolygon.polygon?.polygon,

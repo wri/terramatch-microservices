@@ -145,7 +145,6 @@ export class SiteReportProcessor extends EntityProcessor<
     const siteReportId = siteReport.id;
     const reportTitle = await this.getReportTitle(siteReport);
     const projectReportTitle = await this.getProjectReportTitle(siteReport);
-    const migrated = siteReport.oldModel != null;
     const totalTreesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalSeedsPlantedCount = (await Seeding.visible().siteReports([siteReportId]).sum("amount")) ?? 0;
@@ -157,7 +156,6 @@ export class SiteReportProcessor extends EntityProcessor<
     const props: AdditionalSiteReportFullProps = {
       reportTitle,
       projectReportTitle,
-      migrated,
       totalTreesPlantedCount,
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,

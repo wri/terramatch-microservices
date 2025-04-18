@@ -258,9 +258,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   nurseryReportsCount: number | null;
 
   @ApiProperty()
-  migrated: boolean;
-
-  @ApiProperty()
   seedlingsGrown: number;
 
   @ApiProperty({ nullable: true })

@@ -87,6 +87,9 @@ export class SiteReportLightDto extends EntityDto {
 
   @ApiProperty()
   createdAt: Date;
+
+  @ApiProperty({ nullable: true })
+  nothingToReport: boolean | null;
 }
 
 export type AdditionalSiteReportLightProps = Pick<SiteReportLightDto, "reportTitle">;
@@ -152,8 +155,8 @@ export class SiteReportFullDto extends SiteReportLightDto {
   @ApiProperty({ nullable: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty()
-  nothingToReport: boolean;
+  @ApiProperty({ nullable: true })
+  nothingToReport: boolean | null;
 
   @ApiProperty({ nullable: true })
   completion: number | null;

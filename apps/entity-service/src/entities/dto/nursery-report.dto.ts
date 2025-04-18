@@ -89,6 +89,9 @@ export class NurseryReportLightDto extends EntityDto {
 
   @ApiProperty()
   createdAt: Date;
+
+  @ApiProperty({ nullable: true })
+  nothingToReport: boolean | null;
 }
 
 export type AdditionalNurseryReportLightProps = Pick<NurseryReportLightDto, "reportTitle">;

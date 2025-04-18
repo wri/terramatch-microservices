@@ -305,7 +305,7 @@ export class SiteReport extends Model<SiteReport> {
 
   @AllowNull
   @Column(TINYINT)
-  nothingToReport: boolean;
+  nothingToReport: boolean | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

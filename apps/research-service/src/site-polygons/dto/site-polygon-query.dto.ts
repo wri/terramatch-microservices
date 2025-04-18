@@ -53,8 +53,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
 
   @ApiProperty({
     required: false,
-    description:
-      "Filter results by project landscape. Only one of siteId, projectId, projectCohort, landscape and includeTestProjects may be used in a single request",
+    description: "Filter results by project landscape. May not be used with projectId[] or siteId[]",
     enum: LandscapeGeometry.LANDSCAPE_SLUGS
   })
   @IsOptional()

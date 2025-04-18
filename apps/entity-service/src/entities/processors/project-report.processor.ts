@@ -140,7 +140,6 @@ export class ProjectReportProcessor extends EntityProcessor<
     const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
     const siteReportsCount = await SiteReport.task(taskId).count();
     const nurseryReportsCount = await NurseryReport.task(taskId).count();
-    const migrated = projectReport.oldModel != null;
     const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
     const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
     const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
@@ -153,7 +152,6 @@ export class ProjectReportProcessor extends EntityProcessor<
       regeneratedTreesCount,
       siteReportsCount,
       nurseryReportsCount,
-      migrated,
       seedlingsGrown,
       nonTreeTotal,
       readableCompletionStatus,

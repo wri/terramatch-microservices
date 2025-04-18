@@ -60,9 +60,6 @@ export class NurseryLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({ nullable: true })
-  migrated: string | null;
-
-  @ApiProperty({ nullable: true })
   startDate: Date | null;
 
   @ApiProperty({ nullable: true })

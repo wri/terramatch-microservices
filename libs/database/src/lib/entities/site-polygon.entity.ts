@@ -12,7 +12,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, Op, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DOUBLE, INTEGER, Op, STRING, UUID, UUIDV4 } from "sequelize";
 import { Site } from "./site.entity";
 import { PointGeometry } from "./point-geometry.entity";
 import { PolygonGeometry } from "./polygon-geometry.entity";
@@ -61,7 +61,7 @@ export class SitePolygon extends Model<SitePolygon> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(UUID)

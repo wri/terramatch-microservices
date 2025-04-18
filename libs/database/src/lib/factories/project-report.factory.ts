@@ -11,7 +11,6 @@ export const ProjectReportFactory = FactoryGirl.define(ProjectReport, async () =
   const dueAt = faker.date.past({ years: 2 });
   dueAt.setMilliseconds(0);
   return {
-    uuid: crypto.randomUUID(),
     projectId: ProjectFactory.associate("id"),
     taskId: TaskFactory.associate("id"),
     frameworkKey: faker.helpers.arrayElement(FRAMEWORK_KEYS),

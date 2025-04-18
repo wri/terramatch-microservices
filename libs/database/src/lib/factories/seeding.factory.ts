@@ -5,7 +5,6 @@ import { SiteReportFactory } from "./site-report.factory";
 import { SiteFactory } from "./site.factory";
 
 const defaultAttributesFactory = async () => ({
-  uuid: crypto.randomUUID(),
   name: faker.lorem.words(2),
   amount: faker.number.int({ min: 10, max: 1000 }),
   seedsInSample: faker.number.int({ min: 10, max: 1000 }),

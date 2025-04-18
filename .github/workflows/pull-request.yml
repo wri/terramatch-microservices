@@ -46,7 +46,7 @@ jobs:
       # First run just the small database test to get the test database synced to the current schema
       # in a clean way.
       - name: Sync DB Schema
-        run: npx nx test database --no-cloud --skip-nx-cache
+        run: npx nx test database --no-cloud --skip-nx-cache libs/database/src/lib/database.module.spec.ts
 
       # All tests are run in band so that wipes of database tables from one test doesn't interfere
       # with other tests.

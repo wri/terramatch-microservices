@@ -9,7 +9,6 @@ import { ProjectReportFactory } from "./project-report.factory";
 import { NurseryFactory } from "./nursery.factory";
 
 const defaultAttributesFactory = async () => ({
-  uuid: crypto.randomUUID(),
   name: faker.lorem.words(2),
   taxonId: null,
   amount: faker.number.int({ min: 10, max: 1000 }),

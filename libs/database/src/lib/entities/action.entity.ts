@@ -10,18 +10,17 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
-import { Literal } from "sequelize/types/utils";
-import { isNumber } from "lodash";
 import { chainScope } from "../util/chain-scope";
+import { LaravelModel, laravelType } from "../types/util";
 
 @Scopes(() => ({
-  targetable: (laravelType: string, ids: number[] | Literal) => ({
+  targetable: (targetable: LaravelModel) => ({
     where: {
-      targetableType: laravelType,
-      targetableId: ids
+      targetableType: laravelType(targetable),
+      targetableId: targetable.id
     }
   })
 }))
@@ -33,9 +32,8 @@ import { chainScope } from "../util/chain-scope";
   indexes: [{ name: "v2_actions_targetable_type_targetable_id_index", fields: ["targetable_type", "targetable_id"] }]
 })
 export class Action extends Model<Action> {
-  static targetable(laravelType: string, ids: number | number[] | Literal) {
-    if (isNumber(ids)) ids = [ids];
-    return chainScope(this, "targetable", laravelType, ids) as typeof Action;
+  static for(targetable: LaravelModel) {
+    return chainScope(this, "targetable", targetable) as typeof Action;
   }
 
   @PrimaryKey
@@ -44,7 +42,7 @@ export class Action extends Model<Action> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull
@@ -57,12 +55,13 @@ export class Action extends Model<Action> {
   @Column(BIGINT.UNSIGNED)
   targetableId: number;
 
+  @AllowNull
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number;
+  organisationId: number | null;
 
   @BelongsTo(() => Organisation)
-  organisation?: Organisation;
+  organisation?: Organisation | null;
 
   @AllowNull
   @ForeignKey(() => Project)

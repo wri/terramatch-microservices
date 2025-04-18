@@ -13,7 +13,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, col, DATE, fn, Op, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, col, DATE, fn, Op, STRING, UUID, UUIDV4 } from "sequelize";
 import { Role } from "./role.entity";
 import { ModelHasRole } from "./model-has-role.entity";
 import { Permission } from "./permission.entity";
@@ -37,7 +37,7 @@ export class User extends Model<User> {
   // index until that is fixed.
   @AllowNull
   @Index({ unique: false })
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string | null;
 
   @ForeignKey(() => Organisation)

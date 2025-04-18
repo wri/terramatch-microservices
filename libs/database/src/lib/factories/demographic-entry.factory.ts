@@ -20,7 +20,6 @@ const NAMES: Record<string, (null | string)[]> = {
 export const DemographicEntryFactory = FactoryGirl.define(DemographicEntry, async () => {
   const type = faker.helpers.arrayElement(TYPES);
   return {
-    uuid: crypto.randomUUID(),
     demographicId: DemographicFactory.forProjectReportWorkday.associate("id"),
     type,
     subtype: faker.helpers.arrayElement(SUBTYPES[type] ?? [null]),

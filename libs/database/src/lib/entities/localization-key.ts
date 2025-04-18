@@ -1,5 +1,6 @@
-import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, TEXT } from "sequelize";
+import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "localization_keys", underscored: true })
 export class LocalizationKey extends Model<LocalizationKey> {
@@ -17,4 +18,7 @@ export class LocalizationKey extends Model<LocalizationKey> {
   @AllowNull
   @Column(INTEGER({ length: 11 }))
   valueId: number;
+
+  @BelongsTo(() => I18nItem, { foreignKey: "value_id", constraints: false })
+  i18nItem: I18nItem;
 }

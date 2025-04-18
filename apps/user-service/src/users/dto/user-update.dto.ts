@@ -1,6 +1,6 @@
-import { Equals, IsEnum, IsUUID, ValidateNested } from "class-validator";
+import { IsEnum } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
 const VALID_LOCALES = ["en-US", "es-MX", "fr-FR", "pt-BR"];
 
@@ -10,24 +10,6 @@ class UserUpdateAttributes {
   locale?: string | null;
 }
 
-class UserUpdate {
-  @Equals("users")
-  @ApiProperty({ enum: ["users"] })
-  type: string;
-
-  @IsUUID()
-  @ApiProperty({ format: "uuid" })
-  id: string;
-
-  @ValidateNested()
-  @Type(() => UserUpdateAttributes)
-  @ApiProperty({ type: () => UserUpdateAttributes })
-  attributes: UserUpdateAttributes;
-}
-
-export class UserUpdateBodyDto {
-  @ValidateNested()
-  @Type(() => UserUpdate)
-  @ApiProperty({ type: () => UserUpdate })
-  data: UserUpdate;
-}
+export class UserUpdateBody extends JsonApiBodyDto(
+  class UserData extends JsonApiDataDto({ type: "users" }, UserUpdateAttributes) {}
+) {}

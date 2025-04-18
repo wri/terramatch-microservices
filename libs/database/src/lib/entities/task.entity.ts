@@ -1,5 +1,5 @@
 import { AutoIncrement, Column, HasOne, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, UUID } from "sequelize";
+import { BIGINT, UUID, UUIDV4 } from "sequelize";
 import { ProjectReport } from "./project-report.entity";
 
 @Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
@@ -12,7 +12,7 @@ export class Task extends Model<Task> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @HasOne(() => ProjectReport)

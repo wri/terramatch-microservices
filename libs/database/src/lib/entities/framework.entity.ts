@@ -1,5 +1,5 @@
 import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, STRING, UUID } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 
 // Incomplete stub
 @Table({ tableName: "frameworks", underscored: true })
@@ -10,7 +10,7 @@ export class Framework extends Model<Framework> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Index

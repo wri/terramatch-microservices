@@ -10,11 +10,13 @@ import {
   NurseryReportLightDto,
   NurseryReportMedia
 } from "../dto/nursery-report.dto";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
 export class NurseryReportProcessor extends EntityProcessor<
   NurseryReport,
   NurseryReportLightDto,
-  NurseryReportFullDto
+  NurseryReportFullDto,
+  EntityUpdateAttributes
 > {
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;
@@ -133,8 +135,7 @@ export class NurseryReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(nurseryReport: NurseryReport) {
-    const nurseryReportId = nurseryReport.id;
-    const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
+    const mediaCollection = await Media.for(nurseryReport).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
     const props: AdditionalNurseryReportFullProps = {

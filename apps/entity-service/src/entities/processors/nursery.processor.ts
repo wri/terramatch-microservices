@@ -1,19 +1,18 @@
-import {
-  Action,
-  Media,
-  Nursery,
-  NurseryReport,
-  Project,
-  ProjectUser
-} from "@terramatch-microservices/database/entities";
+import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
 import { AdditionalNurseryFullProps, NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
-export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, NurseryFullDto> {
+export class NurseryProcessor extends EntityProcessor<
+  Nursery,
+  NurseryLightDto,
+  NurseryFullDto,
+  EntityUpdateAttributes
+> {
   readonly LIGHT_DTO = NurseryLightDto;
   readonly FULL_DTO = NurseryFullDto;
 
@@ -114,10 +113,7 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
 
-      ...(this.entitiesService.mapMediaCollection(
-        await Media.nursery(nurseryId).findAll(),
-        Nursery.MEDIA
-      ) as NurseryMedia)
+      ...(this.entitiesService.mapMediaCollection(await Media.for(nursery).findAll(), Nursery.MEDIA) as NurseryMedia)
     };
 
     return { id: nursery.uuid, dto: new NurseryFullDto(nursery, props) };
@@ -158,7 +154,6 @@ export class NurseryProcessor extends EntityProcessor<Nursery, NurseryLightDto, 
       }
     }
 
-    await Action.targetable(Nursery.LARAVEL_TYPE, nursery.id).destroy();
-    await nursery.destroy();
+    await super.delete(nursery);
   }
 }

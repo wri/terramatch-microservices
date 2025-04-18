@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, UUID } from "sequelize";
+import { BIGINT, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { FormSubmission } from "./form-submission.entity";
 import { FundingProgramme } from "./funding-programme.entity";
@@ -30,7 +30,7 @@ export class Application extends Model<Application> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

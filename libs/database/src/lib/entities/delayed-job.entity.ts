@@ -9,7 +9,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 
@@ -26,7 +26,7 @@ export class DelayedJob extends Model<DelayedJob> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Default("pending")

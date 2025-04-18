@@ -14,6 +14,10 @@ export class ProjectUser extends Model<ProjectUser> {
     return Subquery.select(ProjectUser, "projectId").eq("userId", userId).eq("isManaging", true).literal;
   }
 
+  static projectUsersSubquery(projectId: number) {
+    return Subquery.select(ProjectUser, "userId").eq("projectId", projectId).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

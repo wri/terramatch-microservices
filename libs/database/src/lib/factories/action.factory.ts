@@ -4,7 +4,7 @@ import { OrganisationFactory } from "./organisation.factory";
 import { ProjectFactory } from "./project.factory";
 
 const defaultAttributesFactory = async () => ({
-  uuid: crypto.randomUUID(),
+  type: "notification",
   organisationId: OrganisationFactory.associate("id"),
   projectId: ProjectFactory.associate("id")
 });

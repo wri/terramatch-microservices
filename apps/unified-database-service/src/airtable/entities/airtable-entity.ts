@@ -159,7 +159,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     try {
       const records = (await this.MODEL.findAll(
         this.getDeletePageFindOptions(deletedSince, page)
-      )) as unknown as UuidModel<ModelType>[];
+      )) as unknown as UuidModel[];
 
       // Page had no records, halt processing.
       if (records.length === 0) return false;
@@ -324,7 +324,7 @@ const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =
     return mapping.include.reduce(mergeInclude, includes);
   }, [] as Include[]);
 
-export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>
+export const commonEntityColumns = <T extends UuidModel, A = Record<string, never>>(adminSiteType: string) =>
   [
     "uuid",
     "createdAt",

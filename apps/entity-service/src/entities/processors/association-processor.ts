@@ -5,7 +5,7 @@ import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/
 import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 
-export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
+export abstract class AssociationProcessor<M extends UuidModel, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
   constructor(
@@ -19,7 +19,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
    * are simple enough that providing a reference to the DTO class, and a getter of associations based on the
    * base entity is enough.
    */
-  static buildSimpleProcessor<M extends UuidModel<M>, D extends AssociationDto<D>>(
+  static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto<D>>(
     dtoClass: Type<D>,
     associationGetter: (entity: EntityModel, entityLaravelType: string) => Promise<M[]>
   ) {

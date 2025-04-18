@@ -20,11 +20,13 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
   ProjectReportLightDto,
-  ProjectReportFullDto
+  ProjectReportFullDto,
+  EntityUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;
@@ -127,7 +129,6 @@ export class ProjectReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(projectReport: ProjectReport) {
-    const projectReportId = projectReport.id;
     const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
     const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
@@ -157,7 +158,7 @@ export class ProjectReportProcessor extends EntityProcessor<
       readableCompletionStatus,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
-        await Media.projectReport(projectReportId).findAll(),
+        await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
     };

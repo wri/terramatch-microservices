@@ -1,8 +1,9 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants/framework";
 import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
 export class FundingProgramme extends Model<FundingProgramme> {
@@ -12,7 +13,7 @@ export class FundingProgramme extends Model<FundingProgramme> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)
@@ -22,9 +23,8 @@ export class FundingProgramme extends Model<FundingProgramme> {
   @Column(INTEGER)
   nameId: number | null;
 
-  // TODO after TM-1861 is merged
-  // @BelongsTo(() => I18nItem, { foreignKey: "name_id", constraints: false })
-  // nameI18nItem: I18nItem | null;
+  @BelongsTo(() => I18nItem, { foreignKey: "name_id", constraints: false })
+  nameI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
@@ -43,9 +43,8 @@ export class FundingProgramme extends Model<FundingProgramme> {
   @Column(INTEGER)
   descriptionId: number | null;
 
-  // TODO after TM-1861 is merged
-  // @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
-  // descriptionI18nItem: I18nItem | null;
+  @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
+  descriptionI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(TEXT)
@@ -63,7 +62,6 @@ export class FundingProgramme extends Model<FundingProgramme> {
   @Column(INTEGER)
   locationId: number | null;
 
-  // TODO after TM-1861 is merged
-  // @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
-  // locationI18nItem: I18nItem | null;
+  @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
+  locationI18nItem: I18nItem | null;
 }

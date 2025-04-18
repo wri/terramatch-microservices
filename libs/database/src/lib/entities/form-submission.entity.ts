@@ -9,7 +9,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, CHAR, STRING, UUID } from "sequelize";
+import { BIGINT, CHAR, STRING, UUID, UUIDV4 } from "sequelize";
 import { Application } from "./application.entity";
 import { FormSubmissionStatus } from "../constants/status";
 
@@ -22,7 +22,7 @@ export class FormSubmission extends Model<FormSubmission> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)

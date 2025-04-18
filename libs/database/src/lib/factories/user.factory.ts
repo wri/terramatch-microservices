@@ -5,7 +5,7 @@ import { User } from "../entities";
 // TODO: generate correctly hashed passwords. This will be easily accomplished once user signup
 //   has been implemented in this codebase.
 export const UserFactory = FactoryGirl.define(User, async () => ({
-  uuid: crypto.randomUUID(),
+  locale: "en-US",
   firstName: faker.person.firstName(),
   lastName: faker.person.lastName(),
   emailAddress: await generateUniqueEmail(),
@@ -15,7 +15,7 @@ export const UserFactory = FactoryGirl.define(User, async () => ({
 async function generateUniqueEmail() {
   let emailAddress = faker.internet.email();
 
-  while ((await User.findOne({ where: { emailAddress } })) != null) {
+  while ((await User.count({ where: { emailAddress } })) !== 0) {
     emailAddress = faker.internet.email();
   }
 

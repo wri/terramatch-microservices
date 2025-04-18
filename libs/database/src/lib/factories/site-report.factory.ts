@@ -10,7 +10,6 @@ export const SiteReportFactory = FactoryGirl.define(SiteReport, async () => {
   const dueAt = faker.date.past({ years: 2 });
   dueAt.setMilliseconds(0);
   return {
-    uuid: crypto.randomUUID(),
     siteId: SiteFactory.associate("id"),
     taskId: TaskFactory.associate("id"),
     dueAt,

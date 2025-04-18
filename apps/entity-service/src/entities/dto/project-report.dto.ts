@@ -24,9 +24,6 @@ export class ProjectReportLightDto extends EntityDto {
   @ApiProperty()
   frameworkKey: string | null;
 
-  @ApiProperty()
-  frameworkUuid: string | null;
-
   @ApiProperty({
     nullable: true,
     description: "The associated organisation name"
@@ -259,9 +256,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true })
   nurseryReportsCount: number | null;
-
-  @ApiProperty()
-  migrated: boolean;
 
   @ApiProperty()
   seedlingsGrown: number;

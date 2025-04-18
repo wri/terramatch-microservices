@@ -1,10 +1,4 @@
-import {
-  Demographic,
-  Framework,
-  Project,
-  ProjectReport,
-  SiteReport
-} from "@terramatch-microservices/database/entities";
+import { Demographic, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -37,6 +31,7 @@ import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constan
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
@@ -54,6 +49,7 @@ describe("ProjectProcessor", () => {
       providers: [
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
       ]
     }).compile();
@@ -257,10 +253,6 @@ describe("ProjectProcessor", () => {
   describe("DTOs", () => {
     it("includes calculated fields in ProjectLightDto", async () => {
       const org = await OrganisationFactory.create();
-      const [framework] = await Framework.findOrCreate({
-        where: { slug: "foofund" },
-        defaults: { uuid: faker.string.uuid(), name: "FooFunding" }
-      });
       const { uuid } = await ProjectFactory.create({
         organisationId: org.id,
         frameworkKey: "foofund" as FrameworkKey
@@ -273,17 +265,12 @@ describe("ProjectProcessor", () => {
       expect(dto).toMatchObject({
         uuid,
         lightResource: true,
-        organisationName: org.name,
-        frameworkUuid: framework.uuid
+        organisationName: org.name
       });
     });
 
     it("includes calculated fields in ProjectFullDto", async () => {
       const org = await OrganisationFactory.create();
-      const [framework] = await Framework.findOrCreate({
-        where: { slug: "barfund" },
-        defaults: { uuid: faker.string.uuid(), name: "BarFunding" }
-      });
       const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
       const { id: projectId, uuid } = await ProjectFactory.create({
         organisationId: org.id,
@@ -423,7 +410,6 @@ describe("ProjectProcessor", () => {
         uuid,
         lightResource: false,
         organisationName: org.name,
-        frameworkUuid: framework.uuid,
         totalSites: approvedSites.length,
         totalNurseries: approvedNurseries.length,
         totalOverdueReports: 3,

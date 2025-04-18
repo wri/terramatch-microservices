@@ -198,9 +198,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
   submittedAt: Date | null;
 
   @ApiProperty()
-  migrated: boolean;
-
-  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()

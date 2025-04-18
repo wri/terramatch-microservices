@@ -38,7 +38,6 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     return await Project.findOne({
       where: { uuid },
       include: [
-        { association: "framework" },
         { association: "organisation", attributes: ["uuid", "name"] },
         {
           association: "application",
@@ -50,8 +49,7 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
 
   async findMany(query: EntityQueryDto) {
     const builder = await this.entitiesService.buildQuery(Project, query, [
-      { association: "organisation", attributes: ["uuid", "name"] },
-      { association: "framework" }
+      { association: "organisation", attributes: ["uuid", "name"] }
     ]);
 
     if (query.sort != null) {

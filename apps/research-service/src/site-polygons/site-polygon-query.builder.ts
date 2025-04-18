@@ -6,6 +6,7 @@ import {
   IndicatorOutputTreeCount,
   IndicatorOutputTreeCover,
   IndicatorOutputTreeCoverLoss,
+  LandscapeGeometry,
   PolygonGeometry,
   Project,
   Site,
@@ -17,6 +18,8 @@ import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -51,7 +54,8 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         model: SiteReport,
         include: [{ association: "treesPlanted", attributes: ["name", "amount"] }],
         attributes: ["dueAt", "submittedAt"]
-      }
+      },
+      { association: "project", attributes: ["uuid"] }
     ],
     attributes: ["projectId", "name"],
     required: true
@@ -82,6 +86,24 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
 
   async filterSiteUuids(siteUuids: string[]) {
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
+  }
+
+  async filterProjectAttributes(cohort?: string, slug?: LandscapeSlug) {
+    const subquery = Subquery.select(Project, "id");
+    if (slug != null) {
+      const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
+      if (landscape == null) {
+        throw new BadRequestException(`Unrecognized landscape slug: ${slug}`);
+      }
+
+      subquery.eq("landscape", landscape.landscape);
+    }
+
+    if (cohort != null) {
+      subquery.eq("cohort", cohort);
+    }
+
+    return this.where({ projectId: { [Op.in]: subquery.literal } }, this.siteJoin);
   }
 
   async filterProjectUuids(projectUuids: string[]) {
@@ -149,26 +171,6 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         );
       });
       this.where({ [Op.and]: literals });
-    }
-    return this;
-  }
-
-  async touchesBoundary(polygonUuid?: string) {
-    if (polygonUuid != null) {
-      // This check isn't strictly necessary for constructing the query, but we do want to throw a useful
-      // error to the caller if the polygonUuid doesn't exist, and simply mixing it into the query won't
-      // do it
-      if ((await PolygonGeometry.count({ where: { uuid: polygonUuid } })) === 0) {
-        throw new BadRequestException(`Unrecognized polygon UUID: ${polygonUuid}`);
-      }
-
-      this.where({
-        [Op.and]: [
-          literal(
-            `(SELECT ST_INTERSECTS(polygon.geom, (SELECT geom FROM polygon_geometry WHERE uuid = "${polygonUuid}")))`
-          )
-        ]
-      });
     }
     return this;
   }

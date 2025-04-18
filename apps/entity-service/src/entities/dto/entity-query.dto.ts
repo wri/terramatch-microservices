@@ -1,7 +1,13 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
 import { IsArray, IsEnum, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { MAX_PAGE_SIZE, PROCESSABLE_ENTITIES, ProcessableEntity } from "../entities.service";
+import {
+  MAX_PAGE_SIZE,
+  PROCESSABLE_ENTITIES,
+  ProcessableEntity,
+  POLYGON_STATUSES_FILTERS,
+  PolygonStatusFilter
+} from "../entities.service";
 import { Type } from "class-transformer";
 
 class QuerySort {
@@ -81,4 +87,9 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @Type(() => EntitySideload)
   @ValidateNested({ each: true })
   sideloads?: EntitySideload[];
+
+  @ApiProperty({ required: false, enum: POLYGON_STATUSES_FILTERS })
+  @IsOptional()
+  @IsIn(POLYGON_STATUSES_FILTERS)
+  polygonStatus?: PolygonStatusFilter;
 }

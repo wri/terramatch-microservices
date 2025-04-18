@@ -1,5 +1,12 @@
 import { AirtableEntity, associatedValueColumn, ColumnMapping, PolymorphicUuidAssociation } from "./airtable-entity";
-import { ProjectReport, SiteReport, Demographic } from "@terramatch-microservices/database/entities";
+import {
+  ProjectReport,
+  SiteReport,
+  Demographic,
+  Organisation,
+  ProjectPitch,
+  Project
+} from "@terramatch-microservices/database/entities";
 
 const LARAVEL_TYPE_MAPPINGS: Record<string, PolymorphicUuidAssociation<DemographicAssociations>> = {
   [ProjectReport.LARAVEL_TYPE]: {
@@ -9,12 +16,27 @@ const LARAVEL_TYPE_MAPPINGS: Record<string, PolymorphicUuidAssociation<Demograph
   [SiteReport.LARAVEL_TYPE]: {
     association: "siteReportUuid",
     model: SiteReport
+  },
+  [Organisation.LARAVEL_TYPE]: {
+    association: "organisationUuid",
+    model: Organisation
+  },
+  [ProjectPitch.LARAVEL_TYPE]: {
+    association: "projectPitchUuid",
+    model: ProjectPitch
+  },
+  [Project.LARAVEL_TYPE]: {
+    association: "projectUuid",
+    model: Project
   }
 };
 
 type DemographicAssociations = {
   projectReportUuid?: string;
   siteReportUuid?: string;
+  organisationUuid?: string;
+  projectPitchUuid?: string;
+  projectUuid?: string;
 };
 
 const COLUMNS: ColumnMapping<Demographic, DemographicAssociations>[] = [
@@ -23,7 +45,10 @@ const COLUMNS: ColumnMapping<Demographic, DemographicAssociations>[] = [
   "collection",
   "description",
   associatedValueColumn("projectReportUuid", ["demographicalId", "demographicalType"]),
-  associatedValueColumn("siteReportUuid", ["demographicalId", "demographicalType"])
+  associatedValueColumn("siteReportUuid", ["demographicalId", "demographicalType"]),
+  associatedValueColumn("organisationUuid", ["demographicalId", "demographicalType"]),
+  associatedValueColumn("projectPitchUuid", ["demographicalId", "demographicalType"]),
+  associatedValueColumn("projectUuid", ["demographicalId", "demographicalType"])
 ];
 
 export class DemographicEntity extends AirtableEntity<Demographic, DemographicAssociations> {

@@ -137,11 +137,9 @@ export class NurseryReportProcessor extends EntityProcessor<
     const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
-    const migrated = nurseryReport.oldModel != null;
     const props: AdditionalNurseryReportFullProps = {
       reportTitle,
       projectReportTitle,
-      migrated,
       ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
 
@@ -153,26 +151,39 @@ export class NurseryReportProcessor extends EntityProcessor<
     return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
   }
 
-  protected async getReportTitleBase(dueAt: Date | null, title: string | null, locale: string | null) {
+  protected async getReportTitleBase(dueAt: Date | null, title: string) {
     if (dueAt == null) return title ?? "";
 
     const adjustedDate = new Date(dueAt);
     adjustedDate.setMonth(adjustedDate.getMonth() - 1);
-    const wEnd = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
+    const locale = await this.entitiesService.getUserLocale();
+    const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
 
     adjustedDate.setMonth(adjustedDate.getMonth() - 5);
-    const wStart = adjustedDate.toLocaleString(locale, { month: "long" });
+    const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
 
-    return `Nursery Report for ${wStart} - ${wEnd}`;
+    return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
+      title,
+      startDate,
+      endDate
+    });
   }
 
   protected async getReportTitle(nurseryReport: NurseryReport) {
-    return this.getReportTitleBase(nurseryReport.dueAt, nurseryReport.title, nurseryReport.user?.locale ?? "en-GB");
+    return await this.getReportTitleBase(
+      nurseryReport.dueAt,
+      nurseryReport.title ?? (await this.entitiesService.localizeText("Site Report"))
+    );
   }
 
   protected async getProjectReportTitle(nurseryReport: NurseryReport) {
-    const projectReport = await ProjectReport.findOne({ where: { taskId: nurseryReport.taskId } });
+    const projectReportTitle = await this.entitiesService.localizeText("Project Report");
+    const { taskId } = nurseryReport;
+    if (taskId == null) return projectReportTitle;
 
-    return this.getReportTitleBase(projectReport.dueAt, projectReport.title, projectReport.user?.locale ?? "en-GB");
+    const projectReport = await ProjectReport.findOne({ where: { taskId }, attributes: ["dueAt", "title"] });
+    if (projectReport == null) return projectReportTitle;
+
+    return await this.getReportTitleBase(projectReport.dueAt, projectReport.title ?? projectReportTitle);
   }
 }

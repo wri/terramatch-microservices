@@ -8,21 +8,27 @@ import {
   IndicatorOutputTreeCountFactory,
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
-  POLYGON,
-  PolygonGeometryFactory,
+  LandscapeGeometryFactory,
   ProjectFactory,
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
-import { Indicator, PolygonGeometry, SitePolygon, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  Indicator,
+  PolygonGeometry,
+  Project,
+  SitePolygon,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -202,6 +208,7 @@ describe("SitePolygonsService", () => {
     expect(result2.length).toBe(1);
     expect(result2[0].id).toBe(poly2.id);
   });
+
   it("Should only include given projects", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();
@@ -219,6 +226,95 @@ describe("SitePolygonsService", () => {
     result = await query.execute();
     expect(result.length).toBe(2);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
+  });
+
+  it("should only include projects in the cohort given", async () => {
+    await SitePolygon.truncate();
+    await Project.truncate();
+    const tf = await ProjectFactory.create({ cohort: "terrafund" });
+    const ppc = await ProjectFactory.create({ cohort: "ppc" });
+    const tfSite = await SiteFactory.create({ projectId: tf.id });
+    const ppcSite = await SiteFactory.create({ projectId: ppc.id });
+    const tfPoly = await SitePolygonFactory.create({ siteUuid: tfSite.uuid });
+    const ppcPoly = await SitePolygonFactory.create({ siteUuid: ppcSite.uuid });
+
+    let query = await (await service.buildQuery({ size: 20 })).filterProjectAttributes("terrafund");
+    let result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(tfPoly.id);
+
+    query = await (await service.buildQuery({ size: 20 })).filterProjectAttributes("ppc");
+    result = await query.execute();
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(ppcPoly.id);
+  });
+
+  it("should only include projects in the landscape given", async () => {
+    const landscapes = await LandscapeGeometryFactory.createMany(2);
+    const inLandscape1 = await ProjectFactory.createMany(2, { landscape: landscapes[0].landscape });
+    const inLandscape2 = await ProjectFactory.createMany(2, { landscape: landscapes[1].landscape });
+    const noLandscape = await ProjectFactory.createMany(2, { landscape: null });
+
+    const landscape1Sites = await Promise.all(inLandscape1.map(({ id }) => SiteFactory.create({ projectId: id })));
+    const landscape2Sites = await Promise.all(inLandscape2.map(({ id }) => SiteFactory.create({ projectId: id })));
+    const noLandscapeSites = await Promise.all(noLandscape.map(({ id }) => SiteFactory.create({ projectId: id })));
+
+    const landscape1Polys = await Promise.all(
+      landscape1Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+    const landscape2Polys = await Promise.all(
+      landscape2Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+    await Promise.all(noLandscapeSites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid })));
+
+    let query = await (
+      await service.buildQuery({ size: 20 })
+    ).filterProjectAttributes(undefined, landscapes[0].slug as LandscapeSlug);
+    let result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual(landscape1Polys.map(({ id }) => id).sort());
+
+    query = await (
+      await service.buildQuery({ size: 20 })
+    ).filterProjectAttributes(undefined, landscapes[1].slug as LandscapeSlug);
+    result = await query.execute();
+    expect(result.length).toBe(2);
+    expect(result.map(({ id }) => id).sort()).toEqual(landscape2Polys.map(({ id }) => id).sort());
+  });
+
+  it("should filter based on landscape and cohort", async () => {
+    const landscapes = await LandscapeGeometryFactory.createMany(2);
+    const inLandscape1 = await Promise.all([
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "terrafund" })
+    ]);
+    const inLandscape2 = await Promise.all([
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "terrafund" })
+    ]);
+
+    const landscape1Sites = await Promise.all(inLandscape1.map(({ id }) => SiteFactory.create({ projectId: id })));
+    const landscape2Sites = await Promise.all(inLandscape2.map(({ id }) => SiteFactory.create({ projectId: id })));
+
+    const landscape1Polys = await Promise.all(
+      landscape1Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+    const landscape2Polys = await Promise.all(
+      landscape2Sites.map(({ uuid }) => SitePolygonFactory.create({ siteUuid: uuid }))
+    );
+
+    const cases = [
+      { polyId: landscape1Polys[0].id, cohort: "ppc", landscape: landscapes[0].slug as LandscapeSlug },
+      { polyId: landscape1Polys[1].id, cohort: "terrafund", landscape: landscapes[0].slug as LandscapeSlug },
+      { polyId: landscape2Polys[0].id, cohort: "ppc", landscape: landscapes[1].slug as LandscapeSlug },
+      { polyId: landscape2Polys[1].id, cohort: "terrafund", landscape: landscapes[1].slug as LandscapeSlug }
+    ];
+    for (const { polyId, cohort, landscape } of cases) {
+      const query = await (await service.buildQuery({ size: 20 })).filterProjectAttributes(cohort, landscape);
+      const result = await query.execute();
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe(polyId);
+    }
   });
 
   it("should only include polys with the given statuses", async () => {
@@ -320,6 +416,7 @@ describe("SitePolygonsService", () => {
     expect(result.length).toBe(3);
     expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
   });
+
   it("should only return polys with all specified indicators present", async () => {
     await SitePolygon.truncate();
     const poly1 = await SitePolygonFactory.create();
@@ -360,32 +457,6 @@ describe("SitePolygonsService", () => {
     expect(() => query.hasPresentIndicators(["foo" as IndicatorSlug])).toThrow(BadRequestException);
   });
 
-  it("filters polygons by boundary polygon", async () => {
-    await SitePolygon.truncate();
-    await PolygonGeometry.truncate();
-    const sitePoly1 = await SitePolygonFactory.create();
-    const poly2 = await PolygonGeometryFactory.create({
-      polygon: { ...POLYGON, coordinates: [POLYGON.coordinates[0].map(([lat, lng]) => [lat + 5, lng + 5])] }
-    });
-    const sitePoly2 = await SitePolygonFactory.create({ polygonUuid: poly2.uuid });
-
-    let query = await service.buildQuery({ size: 20 });
-    await query.touchesBoundary(poly2.uuid);
-    let result = await query.execute();
-    expect(result.length).toBe(1);
-    expect(result[0].id).toBe(sitePoly2.id);
-
-    query = await service.buildQuery({ size: 20 });
-    result = await query.execute();
-    expect(result.length).toBe(2);
-    expect(result.map(({ id }) => id).sort()).toEqual([sitePoly1.id, sitePoly2.id].sort());
-  });
-
-  it("throws when a boundary poly uuid doesn't exist", async () => {
-    const query = await service.buildQuery({ size: 20 });
-    await expect(query.touchesBoundary("asdf")).rejects.toThrow(BadRequestException);
-  });
-
   it("Can apply multiple filter types at once", async () => {
     await SitePolygon.truncate();
     const project1 = await ProjectFactory.create({ isTest: true });
@@ -409,7 +480,6 @@ describe("SitePolygonsService", () => {
       .isMissingIndicators(["restorationByStrategy"])
       .hasStatuses(["draft", "approved"]);
     await query.filterProjectUuids([project2.uuid]);
-    await query.touchesBoundary(approvedPoly2.polygonUuid);
     const result = await query.execute();
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(draftPoly2.id);

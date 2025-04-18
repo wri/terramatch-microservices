@@ -45,6 +45,14 @@ export class Project extends Model<Project> {
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;
   }
 
+  static forCohort(cohort: string) {
+    return Subquery.select(Project, "id").eq("cohort", cohort).literal;
+  }
+
+  static forLandscape(landscapeName: string) {
+    return Subquery.select(Project, "id").eq("landscape", landscapeName).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -27,7 +27,6 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return await Site.findOne({
       where: { uuid },
       include: [
-        { association: "framework" },
         {
           association: "project",
           attributes: ["uuid", "name", "country"],
@@ -110,6 +109,17 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       builder.where({ projectId: project.id });
     }
 
+    if (query.polygonStatus != null) {
+      if (query.polygonStatus === "no-polygons") {
+        builder.where({
+          uuid: { [Op.notIn]: SitePolygon.siteUuidsWithPolygons() }
+        });
+      } else {
+        builder.where({
+          uuid: { [Op.in]: SitePolygon.siteUuidsForStatus(query.polygonStatus) }
+        });
+      }
+    }
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
@@ -128,7 +138,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
     const props: AdditionalSiteFullProps = {
-      totalHectaresRestoredSum: await SitePolygon.approved().sites([site.uuid]).sum("calcArea"),
+      totalHectaresRestoredSum: await SitePolygon.active().approved().sites([site.uuid]).sum("calcArea"),
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),

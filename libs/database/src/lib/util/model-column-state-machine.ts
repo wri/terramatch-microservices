@@ -100,19 +100,13 @@ export class ModelColumnStateMachine<M extends Model, S extends string> {
     return this.model.getDataValue(this.column) as S;
   }
 
-  /**
-   * Allows this object to serialize to the string value of its DB column when included in an API DTO.
-   */
-  toJSON() {
-    return this.current;
-  }
-
   canBe(from: S, to: S) {
-    if (!Object.keys(this.states.transitions).includes(from)) {
+    const toStates = this.states.transitions[from];
+    if (toStates == null) {
       throw new StateMachineException(`Current state is not defined [${from}]`);
     }
 
-    return from === to || this.states.transitions[from]?.includes(to) === true;
+    return from === to || toStates.includes(to) === true;
   }
 
   transitionTo(to: S) {

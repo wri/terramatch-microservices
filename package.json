@@ -8,7 +8,7 @@
     "fe-services": "nx run-many -t serve --parallel=10 --no-cloud --projects user-service job-service entity-service research-service",
     "all": "nx run-many --parallel=100 -t serve --no-cloud",
     "prepare": "husky",
-    "test:ci": "nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests --exclude database",
+    "test:ci": "nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests",
     "lint-build": "nx run-many -t lint build --no-cloud"
   },
   "private": true,
@@ -92,6 +92,7 @@
     "jest-environment-node": "^29.7.0",
     "nx": "20.6.1",
     "prettier": "^2.6.2",
+    "sqlite3": "^5.1.7",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.6",
     "ts-node": "10.9.2",

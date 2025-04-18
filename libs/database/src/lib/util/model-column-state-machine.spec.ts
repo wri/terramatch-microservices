@@ -1,5 +1,5 @@
 import { Model, Sequelize, Table } from "sequelize-typescript";
-import { StateMachineColumn, StateMachineException, States } from "./model-column-state-machine";
+import { StateMachineColumn, StateMachineException, States, transitions } from "./model-column-state-machine";
 import { SEQUELIZE_GLOBAL_HOOKS } from "../sequelize-config.service";
 
 const hook = jest.fn(() => undefined);
@@ -9,11 +9,10 @@ type StubStatus = "first" | "second" | "third" | "final";
 const StubStates: States<StubModel, StubStatus> = {
   default: "first",
 
-  transitions: {
-    first: ["second", "final"],
-    second: ["third", "final"],
-    third: ["final"]
-  },
+  transitions: transitions()
+    .from("first", () => ["second", "final"])
+    .from("second", () => ["third", "final"])
+    .from("third", () => ["final"]).transitions,
 
   transitionValidForModel: transitionValid,
 

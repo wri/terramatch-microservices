@@ -2,9 +2,11 @@ import { Column, Model } from "sequelize-typescript";
 import { Attributes, STRING } from "sequelize";
 import { HttpException, HttpStatus } from "@nestjs/common";
 
+type Transitions<S extends string> = Partial<Record<S, S[]>>;
+
 export type States<M extends Model, S extends string> = {
   default: S;
-  transitions: Partial<Record<S, S[]>>;
+  transitions: Transitions<S>;
 
   /**
    * If specified, this function can be used to perform extra validations for a transition within
@@ -28,6 +30,21 @@ export type States<M extends Model, S extends string> = {
    */
   afterTransitionHooks?: Partial<Record<S, (from: S, model: M) => void>>;
 };
+
+/**
+ * A simple builder mechanism to make it more readable and concise to extend one set of states for another set of states.
+ */
+class TransitionBuilder<S extends string> {
+  constructor(public transitions: Transitions<S> = {}) {}
+
+  from(from: S, to: (current: S[]) => S[]) {
+    this.transitions[from] = to(this.transitions[from] ?? []);
+    return this;
+  }
+}
+
+export const transitions = <S extends string>(transitions: Transitions<S> = {}) =>
+  new TransitionBuilder<S>(transitions);
 
 // Extends HttpException so these errors bubble up to the API consumer
 export class StateMachineException extends HttpException {

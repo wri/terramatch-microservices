@@ -16,7 +16,13 @@ import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
-import { APPROVED, RESTORATION_IN_PROGRESS, SiteStatus, UpdateRequestStatus } from "../constants/status";
+import {
+  APPROVED,
+  RESTORATION_IN_PROGRESS,
+  SiteStatus,
+  SiteStatusStates,
+  UpdateRequestStatus
+} from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
@@ -24,6 +30,7 @@ import { Framework } from "./framework.entity";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -71,7 +78,7 @@ export class Site extends Model<Site> {
   @Column(STRING)
   name: string;
 
-  @Column(STRING)
+  @StateMachineColumn(SiteStatusStates)
   status: SiteStatus;
 
   @AllowNull

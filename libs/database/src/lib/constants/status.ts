@@ -1,5 +1,5 @@
-import { States } from "../util/model-column-state-machine";
-import { Nursery, Project } from "../entities";
+import { States, transitions } from "../util/model-column-state-machine";
+import { Nursery, Project, Site } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 
@@ -18,12 +18,11 @@ const emitStatusUpdateHook = (from: string, model: Model) => {
 export const EntityStatusStates: States<Project | Nursery, EntityStatus> = {
   default: STARTED,
 
-  transitions: {
-    [STARTED]: [AWAITING_APPROVAL],
-    [AWAITING_APPROVAL]: [APPROVED, NEEDS_MORE_INFORMATION],
-    [NEEDS_MORE_INFORMATION]: [APPROVED, AWAITING_APPROVAL],
-    [APPROVED]: [NEEDS_MORE_INFORMATION]
-  },
+  transitions: transitions()
+    .from(STARTED, () => [AWAITING_APPROVAL])
+    .from(AWAITING_APPROVAL, () => [APPROVED, NEEDS_MORE_INFORMATION])
+    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL])
+    .from(APPROVED, () => [NEEDS_MORE_INFORMATION]).transitions,
 
   afterTransitionHooks: {
     [APPROVED]: emitStatusUpdateHook,
@@ -34,6 +33,16 @@ export const EntityStatusStates: States<Project | Nursery, EntityStatus> = {
 
 export const SITE_STATUSES = [...ENTITY_STATUSES, RESTORATION_IN_PROGRESS] as const;
 export type SiteStatus = (typeof SITE_STATUSES)[number];
+
+export const SiteStatusStates: States<Site, SiteStatus> = {
+  ...(EntityStatusStates as unknown as States<Site, SiteStatus>),
+
+  transitions: transitions<SiteStatus>(EntityStatusStates.transitions)
+    .from(AWAITING_APPROVAL, to => [...to, RESTORATION_IN_PROGRESS])
+    .from(NEEDS_MORE_INFORMATION, to => [...to, RESTORATION_IN_PROGRESS])
+    .from(APPROVED, to => [...to, RESTORATION_IN_PROGRESS])
+    .from(RESTORATION_IN_PROGRESS, () => [NEEDS_MORE_INFORMATION, APPROVED]).transitions
+};
 
 export const DUE = "due";
 export const REPORT_STATUSES = [DUE, ...ENTITY_STATUSES] as const;

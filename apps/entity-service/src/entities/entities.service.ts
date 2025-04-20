@@ -55,10 +55,6 @@ const ASSOCIATION_PROCESSORS = {
       Demographic.findAll({
         where: { demographicalType, demographicalId, hidden: false },
         include: [{ association: "entries" }]
-      }),
-    ({ id: demographicalId }, demographicalType) =>
-      Demographic.count({
-        where: { demographicalType: demographicalType.toString(), demographicalId, hidden: false }
       })
   ),
   seedings: AssociationProcessor.buildSimpleProcessor(SeedingDto, ({ id: seedableId }, seedableType) =>

@@ -1,9 +1,9 @@
 import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 
-export type AssociationDtoAdditionalProps = {
+export interface AssociationDtoAdditionalProps {
   entityType: EntityType;
   entityUuid: string;
-};
+}
 import { ApiProperty } from "@nestjs/swagger";
 import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
 

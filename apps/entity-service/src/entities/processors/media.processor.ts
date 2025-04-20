@@ -16,6 +16,7 @@ import { EntitiesService } from "../entities.service";
 import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { col, fn, Op, Sequelize } from "sequelize";
 import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
+import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
 
 export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   readonly DTO = MediaDto;
@@ -197,23 +198,22 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
   public async addDtos(document: DocumentBuilder, query: MediaQueryDto): Promise<void> {
     const associations = await this.getAssociations(await this.getBaseEntity(), query);
-
-    const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
       const media = association as unknown as Media;
-      const user = media.createdBy ? await User.findOne({ where: { id: media.createdBy } }) : null;
-      document.addData(
-        association.uuid,
-        new this.DTO(
-          association,
-          this.entitiesService.fullUrl(media),
-          this.entitiesService.thumbnailUrl(media),
-          user ? new UserDto(user, []) : null,
-          additionalProps
-        )
-      );
+
+      const user = await User.findOne({ where: { id: media.createdBy } });
+
+      const additionalProps: MediaAssociationDtoAdditionalProps = {
+        entityType: this.entityType,
+        entityUuid: this.entityUuid,
+        url: this.entitiesService.fullUrl(media),
+        thumbUrl: this.entitiesService.thumbnailUrl(media),
+        createdBy: user != null ? new UserDto(user, []) : null
+      };
+
+      document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
 
     const total = await this.getTotal(await this.getBaseEntity(), query);

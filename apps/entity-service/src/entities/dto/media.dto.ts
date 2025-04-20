@@ -4,23 +4,15 @@ import { Media } from "@terramatch-microservices/database/entities";
 import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { MediaAssociationDtoAdditionalProps } from "./media-association.dto";
 
 @JsonApiDto({ type: "media" })
 export class MediaDto extends AssociationDto<MediaDto> {
-  constructor(
-    media: Media,
-    url: string,
-    thumbUrl: string,
-    userDto: UserDto,
-    additional: AssociationDtoAdditionalProps
-  ) {
+  constructor(media: Media, additional: MediaAssociationDtoAdditionalProps) {
     super({
       ...pickApiProperties(media, MediaDto),
-      url,
-      thumbUrl,
-      createdBy: userDto,
-      createdAt: media.createdAt,
-      ...additional
+      ...additional,
+      createdAt: media.createdAt
     });
   }
 

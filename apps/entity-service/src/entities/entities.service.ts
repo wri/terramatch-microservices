@@ -162,7 +162,10 @@ export class EntitiesService {
   async mediaDto(media: Media) {
     const userDto = await User.findOne({ where: { id: media.createdBy } });
 
-    new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media), userDto ? new UserDto(userDto, []) : null, {
+    return new MediaDto(media, {
+      url: this.fullUrl(media),
+      thumbUrl: this.thumbnailUrl(media),
+      createdBy: userDto,
       entityType: media.modelType as EntityType,
       entityUuid: media.modelId.toString()
     });

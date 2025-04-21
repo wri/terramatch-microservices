@@ -65,22 +65,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
-      if (this.DTO.name === MediaDto.name) {
-        const media = association as unknown as Media;
-        const user = media.createdBy ? await User.findOne({ where: { id: media.createdBy } }) : null;
-        document.addData(
-          association.uuid,
-          new this.DTO(
-            association,
-            this.entitiesService.fullUrl(media),
-            this.entitiesService.thumbnailUrl(media),
-            user ? new UserDto(user, []) : null,
-            additionalProps
-          )
-        );
-      } else {
-        document.addData(association.uuid, new this.DTO(association, additionalProps));
-      }
+      document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
 
     const resource = getDtoType(this.DTO);

@@ -5,7 +5,6 @@ import {
   Site,
   SiteReport,
   Nursery,
-  User,
   NurseryReport
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "../dto/media.dto";
@@ -15,8 +14,14 @@ import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
 import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { col, fn, Includeable, Op, Sequelize } from "sequelize";
-import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
 import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { Literal } from "sequelize/types/utils";
+
+type QueryModelType = {
+  modelType: string;
+  subquery: number[] | Literal;
+};
 
 export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   readonly DTO = MediaDto;
@@ -30,97 +35,99 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     super(entityType, entityUuid, entityModelClass, entitiesService);
   }
 
-  private async getSiteModels(site: Site) {
-    const models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, ids: [site.id] }];
-
-    const siteReports = await SiteReport.findAll({ where: { siteId: site.id }, attributes: ["id"] });
-    models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
-
+  private async getSiteModels(site: Site): Promise<QueryModelType[]> {
+    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [site.id] }];
+    const subquery = Subquery.select(SiteReport, "id").eq("siteId", site.id);
+    models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: subquery.literal });
     return models;
   }
 
   private async getNurseryModels(nursery: Nursery) {
-    const models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, ids: [nursery.id] }];
-
-    const nurseryReports = await NurseryReport.findAll({ where: { nurseryId: nursery.id }, attributes: ["id"] });
-    models.push({ modelType: NurseryReport.LARAVEL_TYPE, ids: nurseryReports.map(report => report.id) });
-
+    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [nursery.id] }];
+    const subquery = Subquery.select(NurseryReport, "id").eq("nurseryId", nursery.id);
+    models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: subquery.literal });
     return models;
   }
 
   private async getProjectModels(project: Project) {
-    const models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, ids: [project.id] }];
+    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [project.id] }];
 
-    const projectReports = await ProjectReport.findAll({ where: { projectId: project.id }, attributes: ["id"] });
-    models.push({ modelType: ProjectReport.LARAVEL_TYPE, ids: projectReports.map(report => report.id) });
+    const projectReportSubquery = Subquery.select(ProjectReport, "id").eq("projectId", project.id);
+    models.push({ modelType: ProjectReport.LARAVEL_TYPE, subquery: projectReportSubquery.literal });
+
+    const siteSubquery = Subquery.select(Site, "id").eq("projectId", project.id);
+    models.push({ modelType: Site.LARAVEL_TYPE, subquery: siteSubquery.literal });
 
     const sites = await Site.findAll({ where: { projectId: project.id }, attributes: ["id"] });
-    models.push({ modelType: Site.LARAVEL_TYPE, ids: sites.map(site => site.id) });
 
-    const siteReports = await SiteReport.findAll({
-      where: { siteId: { [Op.in]: sites.map(site => site.id) } },
-      attributes: ["id"]
-    });
-    models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
+    const siteReportSubquery = Subquery.select(SiteReport, "id").in(
+      "siteId",
+      sites.map(site => site.id)
+    );
+    models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReportSubquery.literal });
 
     const nurseries = await Nursery.findAll({ where: { projectId: project.id }, attributes: ["id"] });
-    models.push({ modelType: Nursery.LARAVEL_TYPE, ids: nurseries.map(nursery => nursery.id) });
+    const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", project.id);
+    models.push({ modelType: Nursery.LARAVEL_TYPE, subquery: nurserySubquery.literal });
 
-    const nurseryReports = await NurseryReport.findAll({
-      where: { nurseryId: { [Op.in]: nurseries.map(nursery => nursery.id) } },
-      attributes: ["id"]
-    });
-    models.push({ modelType: NurseryReport.LARAVEL_TYPE, ids: nurseryReports.map(report => report.id) });
+    const nurseryReportSubquery = Subquery.select(NurseryReport, "id").in(
+      "nurseryId",
+      nurseries.map(nursery => nursery.id)
+    );
+    models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: nurseryReportSubquery.literal });
 
     return models;
   }
 
   private async getProjectReportModels(projectReport: ProjectReport) {
-    const models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, ids: [projectReport.id] }];
+    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [projectReport.id] }];
 
-    const fullProjectReport = await ProjectReport.findOne({ where: { id: projectReport.id } });
+    const projectReportWithDue = await ProjectReport.findOne({
+      where: { id: projectReport.id },
+      attributes: ["dueAt"]
+    });
 
     const project = await Project.findOne({ where: { id: projectReport.projectId }, attributes: ["id"] });
 
-    const sites = await Site.findAll({ where: { projectId: project.id }, attributes: ["id"] });
-    const nurseries = await Nursery.findAll({ where: { projectId: project.id }, attributes: ["id"] });
+    const siteSubquery = Subquery.select(Site, "id").eq("projectId", project.id);
+    const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", project.id);
 
     let siteReports = [];
-    if (fullProjectReport.dueAt) {
+    if (projectReportWithDue.dueAt) {
       siteReports = await SiteReport.findAll({
         where: {
           [Op.and]: [
-            { siteId: { [Op.in]: sites.map(site => site.id) } },
-            Sequelize.where(fn("MONTH", col("due_at")), fullProjectReport.dueAt.getMonth() + 1),
-            Sequelize.where(fn("YEAR", col("due_at")), fullProjectReport.dueAt.getFullYear())
+            { siteId: { [Op.in]: siteSubquery.literal } },
+            Sequelize.where(fn("MONTH", col("due_at")), projectReportWithDue.dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), projectReportWithDue.dueAt.getFullYear())
           ]
         },
         attributes: ["id"]
       });
     }
 
-    models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
+    models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReports.map(report => report.id) });
 
     let nurseryReports = [];
-    if (fullProjectReport.dueAt) {
+    if (projectReportWithDue.dueAt) {
       nurseryReports = await NurseryReport.findAll({
         where: {
           [Op.and]: [
-            { nurseryId: { [Op.in]: nurseries.map(nursery => nursery.id) } },
-            Sequelize.where(fn("MONTH", col("due_at")), fullProjectReport.dueAt.getMonth() + 1),
-            Sequelize.where(fn("YEAR", col("due_at")), fullProjectReport.dueAt.getFullYear())
+            { nurseryId: { [Op.in]: nurserySubquery.literal } },
+            Sequelize.where(fn("MONTH", col("due_at")), projectReportWithDue.dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), projectReportWithDue.dueAt.getFullYear())
           ]
         },
         attributes: ["id"]
       });
     }
-    models.push({ modelType: NurseryReport.LARAVEL_TYPE, ids: nurseryReports.map(report => report.id) });
+    models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: nurseryReports.map(report => report.id) });
 
     return models;
   }
 
   private async getSiteReportModels(siteReport: SiteReport) {
-    return [{ modelType: this.entityModelClass.LARAVEL_TYPE, ids: [siteReport.id] }];
+    return [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [siteReport.id] }];
   }
 
   private async buildQuery(baseEntity: EntityModel, query: MediaQueryDto) {
@@ -151,7 +158,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
         return {
           modelType: model.modelType,
           modelId: {
-            [Op.in]: model.ids
+            [Op.in]: model.subquery
           }
         };
       })

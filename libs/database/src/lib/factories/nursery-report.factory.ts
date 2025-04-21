@@ -10,7 +10,6 @@ export const NurseryReportFactory = FactoryGirl.define(NurseryReport, async () =
   const dueAt = faker.date.past({ years: 2 });
   dueAt.setMilliseconds(0);
   return {
-    uuid: crypto.randomUUID(),
     nurseryId: NurseryFactory.associate("id"),
     taskId: TaskFactory.associate("id"),
     dueAt,

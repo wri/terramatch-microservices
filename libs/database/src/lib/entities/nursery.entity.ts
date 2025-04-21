@@ -11,15 +11,16 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
-import { EntityStatus, UpdateRequestStatus } from "../constants/status";
+import { EntityStatus, EntityStatusStates, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { FrameworkKey } from "../constants/framework";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -56,10 +57,10 @@ export class Nursery extends Model<Nursery> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @Column(STRING)
+  @StateMachineColumn(EntityStatusStates)
   status: EntityStatus;
 
   @AllowNull

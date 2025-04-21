@@ -17,12 +17,13 @@ import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
-import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -176,8 +177,8 @@ export class SiteReport extends Model<SiteReport> {
     return this.approvedByUser?.lastName;
   }
 
-  @Column(STRING)
-  status: string;
+  @StateMachineColumn(ReportStatusStates)
+  status: ReportStatus;
 
   @AllowNull
   @Column(STRING)

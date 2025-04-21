@@ -14,7 +14,7 @@ import {
 import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
@@ -22,6 +22,7 @@ import { Subquery } from "../util/subquery.builder";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 // Incomplete stub
 @Scopes(() => ({
@@ -155,7 +156,7 @@ export class NurseryReport extends Model<NurseryReport> {
   @BelongsTo(() => Task, { constraints: false })
   task: Task | null;
 
-  @Column(STRING)
+  @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
   @AllowNull

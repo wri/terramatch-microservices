@@ -1,7 +1,8 @@
 import { States, transitions } from "../util/model-column-state-machine";
-import { Nursery, Project, Site } from "../entities";
+import { Nursery, Project, ProjectReport, Site, Task } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
+import { ReportModel } from "./entities";
 
 export const STARTED = "started";
 export const AWAITING_APPROVAL = "awaiting-approval";
@@ -48,10 +49,40 @@ export const DUE = "due";
 export const REPORT_STATUSES = [DUE, ...ENTITY_STATUSES] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
+export const ReportStatusStates: States<ReportModel, ReportStatus> = {
+  ...(EntityStatusStates as unknown as States<ReportModel, ReportStatus>),
+
+  default: DUE,
+
+  transitions: transitions<ReportStatus>(EntityStatusStates.transitions)
+    .from(DUE, () => [STARTED, AWAITING_APPROVAL])
+    // reports can go from awaiting approval to started in the nothing_to_report case (see validation below)
+    .from(AWAITING_APPROVAL, to => [...to, STARTED]).transitions,
+
+  transitionValidForModel: (from: ReportStatus, to: ReportStatus, report: ReportModel) => {
+    if ((from === DUE && to === AWAITING_APPROVAL) || (from === AWAITING_APPROVAL && to === STARTED)) {
+      // these two transitions are only allowed for site / nursery reports when the nothingToReport flag is true;
+      return !(report instanceof ProjectReport) && report.nothingToReport;
+    }
+
+    return true;
+  }
+};
+
 export const COMPLETE_REPORT_STATUSES = [APPROVED, AWAITING_APPROVAL] as const;
 
 export const TASK_STATUSES = [DUE, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL, APPROVED] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const TaskStatusStates: States<Task, TaskStatus> = {
+  default: DUE,
+
+  transitions: transitions<TaskStatus>()
+    .from(DUE, () => [AWAITING_APPROVAL])
+    .from(AWAITING_APPROVAL, () => [NEEDS_MORE_INFORMATION, APPROVED])
+    .from(NEEDS_MORE_INFORMATION, () => [AWAITING_APPROVAL, APPROVED])
+    .from(APPROVED, () => [AWAITING_APPROVAL, NEEDS_MORE_INFORMATION]).transitions
+};
 
 export const DRAFT = "draft";
 export const NO_UPDATE = "no-update";

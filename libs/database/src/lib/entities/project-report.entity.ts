@@ -15,7 +15,7 @@ import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
-import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
@@ -23,6 +23,7 @@ import { SiteReport } from "./site-report.entity";
 import { Literal } from "sequelize/types/utils";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -163,8 +164,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => Task, { constraints: false })
   task: Task | null;
 
-  @Column(STRING)
-  status: string;
+  @StateMachineColumn(ReportStatusStates)
+  status: ReportStatus;
 
   @AllowNull
   @Column(STRING)

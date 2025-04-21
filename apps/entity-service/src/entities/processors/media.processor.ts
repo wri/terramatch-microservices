@@ -14,7 +14,7 @@ import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
 import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { col, fn, Op, Sequelize } from "sequelize";
+import { col, fn, Includeable, Op, Sequelize } from "sequelize";
 import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
 import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
 
@@ -85,29 +85,35 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const sites = await Site.findAll({ where: { projectId: project.id }, attributes: ["id"] });
     const nurseries = await Nursery.findAll({ where: { projectId: project.id }, attributes: ["id"] });
 
-    const siteReports = await SiteReport.findAll({
-      where: {
-        [Op.and]: [
-          { siteId: { [Op.in]: sites.map(site => site.id) } },
-          Sequelize.where(fn("MONTH", col("due_at")), fullProjectReport.dueAt.getMonth() + 1),
-          Sequelize.where(fn("YEAR", col("due_at")), fullProjectReport.dueAt.getFullYear())
-        ]
-      },
-      attributes: ["id"]
-    });
+    let siteReports = [];
+    if (fullProjectReport.dueAt) {
+      siteReports = await SiteReport.findAll({
+        where: {
+          [Op.and]: [
+            { siteId: { [Op.in]: sites.map(site => site.id) } },
+            Sequelize.where(fn("MONTH", col("due_at")), fullProjectReport.dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), fullProjectReport.dueAt.getFullYear())
+          ]
+        },
+        attributes: ["id"]
+      });
+    }
 
     models.push({ modelType: SiteReport.LARAVEL_TYPE, ids: siteReports.map(report => report.id) });
 
-    const nurseryReports = await NurseryReport.findAll({
-      where: {
-        [Op.and]: [
-          { nurseryId: { [Op.in]: nurseries.map(nursery => nursery.id) } },
-          Sequelize.where(fn("MONTH", col("due_at")), fullProjectReport.dueAt.getMonth() + 1),
-          Sequelize.where(fn("YEAR", col("due_at")), fullProjectReport.dueAt.getFullYear())
-        ]
-      },
-      attributes: ["id"]
-    });
+    let nurseryReports = [];
+    if (fullProjectReport.dueAt) {
+      nurseryReports = await NurseryReport.findAll({
+        where: {
+          [Op.and]: [
+            { nurseryId: { [Op.in]: nurseries.map(nursery => nursery.id) } },
+            Sequelize.where(fn("MONTH", col("due_at")), fullProjectReport.dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), fullProjectReport.dueAt.getFullYear())
+          ]
+        },
+        attributes: ["id"]
+      });
+    }
     models.push({ modelType: NurseryReport.LARAVEL_TYPE, ids: nurseryReports.map(report => report.id) });
 
     return models;
@@ -118,7 +124,12 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   }
 
   private async buildQuery(baseEntity: EntityModel, query: MediaQueryDto) {
-    const builder = await this.entitiesService.buildQuery(Media, query);
+    const userAssociations: Includeable = {
+      association: "createdByUser",
+      attributes: ["firstName", "lastName"]
+    };
+
+    const builder = await this.entitiesService.buildQuery(Media, query, [userAssociations]);
 
     let models = [];
     if (baseEntity instanceof Project) {
@@ -203,14 +214,11 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       indexIds.push(association.uuid);
       const media = association as unknown as Media;
 
-      const user = await User.findOne({ where: { id: media.createdBy } });
-
       const additionalProps: MediaAssociationDtoAdditionalProps = {
         entityType: this.entityType,
         entityUuid: this.entityUuid,
         url: this.entitiesService.fullUrl(media),
-        thumbUrl: this.entitiesService.thumbnailUrl(media),
-        createdBy: user != null ? new UserDto(user, []) : null
+        thumbUrl: this.entitiesService.thumbnailUrl(media)
       };
 
       document.addData(association.uuid, new this.DTO(association, additionalProps));

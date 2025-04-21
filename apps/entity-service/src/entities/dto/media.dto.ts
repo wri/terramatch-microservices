@@ -1,8 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Media } from "@terramatch-microservices/database/entities";
-import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
-import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
+import { AssociationDto } from "./association.dto";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { MediaAssociationDtoAdditionalProps } from "./media-association.dto";
 
@@ -68,5 +67,8 @@ export class MediaDto extends AssociationDto<MediaDto> {
   modelName: string | null;
 
   @ApiProperty({ nullable: true })
-  createdBy: UserDto | null;
+  createdBy: number | null;
+
+  @ApiProperty({ nullable: true })
+  createdByUserName: string | null;
 }

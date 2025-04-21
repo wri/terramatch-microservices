@@ -5,7 +5,6 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 export interface MediaAssociationDtoAdditionalProps extends AssociationDtoAdditionalProps {
   url: string;
   thumbUrl: string;
-  createdBy: UserDto;
 }
 
 export class MediaAssociationDto extends AssociationDto<MediaAssociationDto> {

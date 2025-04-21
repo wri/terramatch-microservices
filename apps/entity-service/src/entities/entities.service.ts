@@ -23,7 +23,6 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
 import { MediaProcessor } from "./processors/media.processor";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
@@ -155,13 +154,10 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  async mediaDto(media: Media) {
-    const userDto = await User.findOne({ where: { id: media.createdBy } });
-
+  mediaDto(media: Media) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),
-      createdBy: userDto,
       entityType: media.modelType as EntityType,
       entityUuid: media.modelId.toString()
     });

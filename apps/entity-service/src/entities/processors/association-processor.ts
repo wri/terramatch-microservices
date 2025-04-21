@@ -26,8 +26,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
    */
   static buildSimpleProcessor<M extends UuidModel<M>, D extends AssociationDto<D>>(
     dtoClass: Type<D>,
-    associationGetter: (entity: EntityModel, entityLaravelType: string, query?: MediaQueryDto) => Promise<M[]>,
-    totalGetter?: (entity: EntityModel, entityLaravelType: string, query?: MediaQueryDto) => Promise<number>
+    associationGetter: (entity: EntityModel, entityLaravelType: string, query?: MediaQueryDto) => Promise<M[]>
   ) {
     class SimpleProcessor extends AssociationProcessor<M, D> {
       readonly DTO = dtoClass;
@@ -35,17 +34,11 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
       async getAssociations(entity: EntityModel, query?: MediaQueryDto) {
         return await associationGetter(entity, this.entityModelClass.LARAVEL_TYPE, query);
       }
-
-      async getTotal(entity: EntityModel, query?: MediaQueryDto) {
-        return totalGetter ? await totalGetter(entity, this.entityModelClass.LARAVEL_TYPE, query) : 0;
-      }
     }
     return SimpleProcessor;
   }
 
   protected abstract getAssociations(baseEntity: EntityModel, query?: MediaQueryDto): Promise<M[]>;
-
-  protected abstract getTotal(baseEntity: EntityModel, query?: MediaQueryDto): Promise<number>;
 
   private _baseEntity: EntityModel;
   async getBaseEntity(): Promise<EntityModel> {
@@ -90,14 +83,10 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
       }
     }
 
-    const total = await this.getTotal(await this.getBaseEntity(), query);
-
     const resource = getDtoType(this.DTO);
     document.addIndexData({
       resource,
       requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}${getStableRequestQuery(query)}`,
-      total,
-      pageNumber: query.page?.number,
       ids: indexIds
     });
   }

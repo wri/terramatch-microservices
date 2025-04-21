@@ -202,7 +202,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return builder.execute();
   }
 
-  protected async getTotal(baseEntity: EntityModel, query: MediaQueryDto) {
+  public async getTotal(baseEntity: EntityModel, query: MediaQueryDto) {
     const builder = await this.buildQuery(baseEntity, query);
     return builder.paginationTotal();
   }

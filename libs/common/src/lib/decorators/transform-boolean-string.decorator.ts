@@ -2,11 +2,11 @@ import { IsBoolean, IsOptional } from "class-validator";
 import { Transform } from "class-transformer";
 import { applyDecorators } from "@nestjs/common";
 
-type BooleanStreamOptions = {
+type BooleanStringOptions = {
   /** @default true */
   optional?: boolean;
 };
-export const TransformBooleanString = ({ optional }: BooleanStreamOptions = {}) => {
+export const TransformBooleanString = ({ optional }: BooleanStringOptions = {}) => {
   const decorators = [
     IsBoolean(),
     Transform(({ key, obj }) => {

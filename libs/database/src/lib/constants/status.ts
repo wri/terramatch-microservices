@@ -50,6 +50,9 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 export const COMPLETE_REPORT_STATUSES = [APPROVED, AWAITING_APPROVAL] as const;
 
+export const TASK_STATUSES = [DUE, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL, APPROVED] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
 export const DRAFT = "draft";
 export const NO_UPDATE = "no-update";
 export const UPDATE_REQUEST_STATUSES = [NO_UPDATE, DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;

@@ -116,9 +116,6 @@ export class SiteReport extends Model<SiteReport> {
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
-  @BelongsTo(() => Task)
-  task: Task | null;
-
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   createdBy: number;
@@ -131,6 +128,9 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;
+
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
 
   get projectName() {
     return this.site?.project?.name;

@@ -131,9 +131,6 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => User)
   user: User | null;
 
-  @BelongsTo(() => Task)
-  task: Task | null;
-
   get projectName() {
     return this.project?.name;
   }
@@ -162,6 +159,9 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;
+
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
 
   @Column(STRING)
   status: string;

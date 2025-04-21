@@ -103,9 +103,6 @@ export class NurseryReport extends Model<NurseryReport> {
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
-  @BelongsTo(() => Task)
-  task: Task | null;
-
   get projectName() {
     return this.nursery?.project?.name;
   }
@@ -154,6 +151,9 @@ export class NurseryReport extends Model<NurseryReport> {
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;
+
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
 
   @Column(STRING)
   status: ReportStatus;

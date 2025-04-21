@@ -15,7 +15,7 @@ import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
@@ -35,7 +35,8 @@ type ApprovedIdsSubqueryOptions = {
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
   project: (id: number) => ({ where: { projectId: id } }),
-  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
@@ -96,6 +97,10 @@ export class ProjectReport extends Model<ProjectReport> {
       .in("taskId", taskIds)
       .in("status", SiteReport.UNSUBMITTED_STATUSES);
     return builder.literal;
+  }
+
+  static task(taskId: number) {
+    return chainScope(this, "task", taskId) as typeof ProjectReport;
   }
 
   @PrimaryKey
@@ -169,7 +174,7 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: string;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(TEXT)

@@ -17,7 +17,7 @@ import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Task } from "./task.entity";
@@ -36,7 +36,7 @@ type ApprovedIdsSubqueryOptions = {
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
-  task: (taskId: number) => ({ where: { taskId: taskId } })
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
@@ -182,7 +182,7 @@ export class SiteReport extends Model<SiteReport> {
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: string;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(DATE)

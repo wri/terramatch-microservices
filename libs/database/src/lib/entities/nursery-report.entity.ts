@@ -29,7 +29,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: NurseryReport.APPROVED_STATUSES } } },
-  task: (taskId: number) => ({ where: { taskId: taskId } })
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {

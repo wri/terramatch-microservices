@@ -128,7 +128,7 @@ export abstract class EntityProcessor<
         model.feedbackFields = update.feedbackFields;
       }
 
-      model.status = update.status;
+      model.status = update.status as ModelType["status"];
     }
 
     await model.save();

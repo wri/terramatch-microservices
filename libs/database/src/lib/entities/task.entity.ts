@@ -1,9 +1,23 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  ForeignKey,
+  HasMany,
+  HasOne,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, DATE, STRING, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { TaskStatus, TaskStatusStates } from "../constants/status";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { ProjectReport } from "./project-report.entity";
+import { SiteReport } from "./site-report.entity";
+import { NurseryReport } from "./nursery-report.entity";
 
 @Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
 export class Task extends Model<Task> {
@@ -45,4 +59,13 @@ export class Task extends Model<Task> {
   // make that a real constraint when the schema is controlled by v3 code.
   @Column(DATE)
   dueAt: Date;
+
+  @HasOne(() => ProjectReport)
+  projectReport: ProjectReport | null;
+
+  @HasMany(() => SiteReport)
+  siteReports: SiteReport[] | null;
+
+  @HasMany(() => NurseryReport)
+  nurseryReports: NurseryReport[] | null;
 }

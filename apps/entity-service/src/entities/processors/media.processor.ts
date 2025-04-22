@@ -150,7 +150,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     } else if (baseEntity instanceof SiteReport) {
       models = await this.getSiteReportModels(baseEntity);
     } else if (baseEntity instanceof NurseryReport) {
-      models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, ids: [baseEntity.id] }];
+      models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [baseEntity.id] }];
     }
 
     builder.where({

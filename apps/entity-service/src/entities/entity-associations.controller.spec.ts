@@ -7,7 +7,6 @@ import { EntityAssociationsController } from "./entity-associations.controller";
 import { AssociationProcessor } from "./processors/association-processor";
 import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
-import { EntityAssociationIndexParamsDto } from "./dto/entity-association-index-params.dto";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 
 class StubProcessor extends AssociationProcessor<Demographic, DemographicDto> {
@@ -36,7 +35,7 @@ describe("EntityAssociationsController", () => {
 
     controller = module.get(EntityAssociationsController);
     entitiesService.createAssociationProcessor.mockImplementation((entity, uuid) => {
-      return new StubProcessor(entity, uuid, ProjectReport);
+      return new StubProcessor(entity, uuid, ProjectReport, entitiesService);
     });
   });
 
@@ -48,14 +47,17 @@ describe("EntityAssociationsController", () => {
     it("should call getBaseEntity", async () => {
       policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
       const pr = await ProjectReportFactory.create();
-      const processor = new StubProcessor("projectReports", pr.uuid, ProjectReport);
+      const processor = new StubProcessor("projectReports", pr.uuid, ProjectReport, entitiesService);
       entitiesService.createAssociationProcessor.mockImplementation(() => processor);
       const spy = jest.spyOn(processor, "getBaseEntity");
-      await controller.associationIndex({
-        entity: "projectReports",
-        uuid: pr.uuid,
-        association: "demographics"
-      } as EntityAssociationIndexParamsDto);
+      await controller.associationIndex(
+        {
+          entity: "projectReports",
+          uuid: pr.uuid,
+          association: "demographics"
+        },
+        {}
+      );
       expect(spy).toHaveBeenCalled();
     });
 
@@ -63,22 +65,28 @@ describe("EntityAssociationsController", () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       const pr = await ProjectReportFactory.create();
       await expect(
-        controller.associationIndex({
-          entity: "projectReports",
-          uuid: pr.uuid,
-          association: "demographics"
-        })
+        controller.associationIndex(
+          {
+            entity: "projectReports",
+            uuid: pr.uuid,
+            association: "demographics"
+          },
+          {}
+        )
       ).rejects.toThrow(UnauthorizedException);
     });
 
     it("should throw if the base entity is not found", async () => {
       policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
       await expect(
-        controller.associationIndex({
-          entity: "projectReports",
-          uuid: "fake uuid",
-          association: "demographics"
-        })
+        controller.associationIndex(
+          {
+            entity: "projectReports",
+            uuid: "fake uuid",
+            association: "demographics"
+          },
+          {}
+        )
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -86,11 +94,14 @@ describe("EntityAssociationsController", () => {
       const pr = await ProjectReportFactory.create();
       await DemographicFactory.forProjectReportWorkday.create({ demographicalId: pr.id });
       await DemographicFactory.forProjectReportJobs.create({ demographicalId: pr.id });
-      const result = await controller.associationIndex({
-        entity: "projectReports",
-        uuid: pr.uuid,
-        association: "demographics"
-      });
+      const result = await controller.associationIndex(
+        {
+          entity: "projectReports",
+          uuid: pr.uuid,
+          association: "demographics"
+        },
+        {}
+      );
 
       const processor = entitiesService.createAssociationProcessor.mock.results[0].value;
       expect(processor.addDtos).toHaveBeenCalled();

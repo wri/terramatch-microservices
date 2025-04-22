@@ -16,12 +16,6 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
-import { Project } from "./project.entity";
-import { Nursery } from "./nursery.entity";
-import { Site } from "./site.entity";
-import { NurseryReport } from "./nursery-report.entity";
-import { ProjectReport } from "./project-report.entity";
-import { SiteReport } from "./site-report.entity";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({

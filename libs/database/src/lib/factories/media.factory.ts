@@ -4,7 +4,6 @@ import { ProjectFactory } from "./project.factory";
 import { faker } from "@faker-js/faker";
 
 const defaultAttributesFactory = async () => ({
-  uuid: crypto.randomUUID(),
   collectionName: faker.lorem.words(1),
   name: faker.lorem.words(2),
   fileName: `${faker.lorem.words(1)}.jpg`,

@@ -1,9 +1,9 @@
 import { Controller, Get } from "@nestjs/common";
 import { HealthCheck, HealthCheckService, SequelizeHealthIndicator } from "@nestjs/terminus";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { ApiExcludeController } from "@nestjs/swagger";
 import { User } from "@terramatch-microservices/database/entities";
-import { QueueHealthIndicator } from "../airtable/queue-health.indicator";
+import { QueueHealthIndicator } from "./queue-health.indicator";
+import { NoBearerAuth } from "../guards";
 
 @Controller("health")
 @ApiExcludeController()
@@ -18,11 +18,13 @@ export class HealthController {
   @HealthCheck()
   @NoBearerAuth
   async check() {
-    const connection = await User.sequelize.connectionManager.getConnection({ type: "read" });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const sequelize = User.sequelize!;
+    const connection = await sequelize.connectionManager.getConnection({ type: "read" });
     try {
       return this.health.check([() => this.db.pingCheck("database", { connection }), () => this.queue.isHealthy()]);
     } finally {
-      User.sequelize.connectionManager.releaseConnection(connection);
+      sequelize.connectionManager.releaseConnection(connection);
     }
   }
 }

@@ -18,8 +18,14 @@ import {
   SiteReportLightDto,
   SiteReportMedia
 } from "../dto/site-report.dto";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
-export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportLightDto, SiteReportFullDto> {
+export class SiteReportProcessor extends EntityProcessor<
+  SiteReport,
+  SiteReportLightDto,
+  SiteReportFullDto,
+  EntityUpdateAttributes
+> {
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;
 
@@ -139,7 +145,6 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     const siteReportId = siteReport.id;
     const reportTitle = await this.getReportTitle(siteReport);
     const projectReportTitle = await this.getProjectReportTitle(siteReport);
-    const migrated = siteReport.oldModel != null;
     const totalTreesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalSeedsPlantedCount = (await Seeding.visible().siteReports([siteReportId]).sum("amount")) ?? 0;
@@ -147,11 +152,10 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       (await TreeSpecies.visible().collection("non-tree").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
-    const mediaCollection = await Media.siteReport(siteReportId).findAll();
+    const mediaCollection = await Media.for(siteReport).findAll();
     const props: AdditionalSiteReportFullProps = {
       reportTitle,
       projectReportTitle,
-      migrated,
       totalTreesPlantedCount,
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,

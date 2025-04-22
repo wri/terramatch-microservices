@@ -6,10 +6,8 @@ import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
-import { MediaDto } from "../dto/media.dto";
-import { Media, User } from "@terramatch-microservices/database/entities";
-import { UserDto } from "@terramatch-microservices/common/dto/user.dto";
-export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
+
+export abstract class AssociationProcessor<M extends UuidModel, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
   constructor(
@@ -24,7 +22,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
    * are simple enough that providing a reference to the DTO class, and a getter of associations based on the
    * base entity is enough.
    */
-  static buildSimpleProcessor<M extends UuidModel<M>, D extends AssociationDto<D>>(
+  static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto<D>>(
     dtoClass: Type<D>,
     associationGetter: (entity: EntityModel, entityLaravelType: string, query?: MediaQueryDto) => Promise<M[]>
   ) {

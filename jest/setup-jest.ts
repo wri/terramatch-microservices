@@ -1,6 +1,7 @@
 import { Sequelize } from "sequelize-typescript";
 import { FactoryGirl, SequelizeAdapter } from "factory-girl-ts";
 import * as Entities from "@terramatch-microservices/database/entities";
+import { SEQUELIZE_GLOBAL_HOOKS } from "@terramatch-microservices/database/sequelize-config.service";
 
 let sequelize: Sequelize;
 
@@ -14,7 +15,8 @@ beforeAll(async () => {
     password: "wri",
     database: "terramatch_microservices_test",
     models: Object.values(Entities),
-    // Switch to true locally to debug SQL statements in unit tests, especially table/index creation problems.
+    hooks: SEQUELIZE_GLOBAL_HOOKS,
+    // Switch to console.log locally to debug SQL statements in unit tests, especially table/index creation problems.
     logging: false
   });
 

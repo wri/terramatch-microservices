@@ -17,11 +17,18 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { Includeable, Op } from "sequelize";
 import { sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { Action } from "@terramatch-microservices/database/entities/action.entity";
+import { SiteUpdateAttributes } from "../dto/entity-update.dto";
+import {
+  APPROVED,
+  NEEDS_MORE_INFORMATION,
+  RESTORATION_IN_PROGRESS
+} from "@terramatch-microservices/database/constants/status";
 
-export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
+export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, SiteUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
+
+  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, RESTORATION_IN_PROGRESS];
 
   async findOne(uuid: string) {
     return await Site.findOne({
@@ -149,7 +156,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
 
-      ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
+      ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA) as SiteMedia)
     };
 
     return { id: site.uuid, dto: new SiteFullDto(site, props) };
@@ -216,7 +223,6 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
-    await Action.targetable(Site.LARAVEL_TYPE, site.id).destroy();
-    await site.destroy();
+    await super.delete(site);
   }
 }

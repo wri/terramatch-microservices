@@ -2,7 +2,7 @@ import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table } from "sequ
 import { BIGINT, STRING, TEXT } from "sequelize";
 
 @Table({ tableName: "i18n_items", underscored: true })
-export class i18nItem extends Model<i18nItem> {
+export class I18nItem extends Model<I18nItem> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

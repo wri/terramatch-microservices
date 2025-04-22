@@ -6,7 +6,6 @@ import { SITE_STATUSES, UPDATE_REQUEST_STATUSES } from "../constants/status";
 import { SITING_STRATEGIES } from "../constants/entity-selects";
 
 export const SiteFactory = FactoryGirl.define(Site, async () => ({
-  uuid: crypto.randomUUID(),
   projectId: ProjectFactory.associate("id"),
   name: faker.animal.petName(),
   status: faker.helpers.arrayElement(SITE_STATUSES),

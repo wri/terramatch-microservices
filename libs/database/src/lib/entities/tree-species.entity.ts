@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, Op, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, Op, STRING, UUID, UUIDV4 } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
@@ -77,7 +77,7 @@ export class TreeSpecies extends Model<TreeSpecies> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

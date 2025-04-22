@@ -24,6 +24,7 @@ import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaProcessor } from "./processors/media.processor";
+import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 
@@ -95,6 +96,10 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
+  async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
+    return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+  }
+
   private _userLocale?: string;
   async getUserLocale() {
     if (this._userLocale == null) {
@@ -113,10 +118,10 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(
+  createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation

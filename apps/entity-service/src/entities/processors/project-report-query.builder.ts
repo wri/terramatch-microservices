@@ -13,7 +13,6 @@ import { BadRequestException } from "@nestjs/common";
 import { Op } from "sequelize";
 
 export interface ProjectReportData {
-  project: Project;
   siteBreakdown: SiteBreakdownData[];
   treeSpeciesSummary: TreeSpeciesDistributionData;
   employmentDemographics: EmploymentDemographicData;
@@ -75,15 +74,9 @@ export class ProjectReportQueryBuilder {
 
   constructor(private readonly projectUuid: string) {}
 
-  /**
-   * Fetches all data needed for a project report in an optimized manner to minimize database queries
-   */
   async execute(): Promise<ProjectReportData> {
-    // First fetch the project to get its ID and basic data
     this.project = await this.fetchProject();
     this.projectId = this.project.id;
-
-    // Execute all queries in parallel for efficiency
     const [siteBreakdown, treeSpeciesSummary, employmentDemographics, beneficiariesData, survivalRate] =
       await Promise.all([
         this.fetchSiteBreakdownWithPolygons(),
@@ -94,7 +87,6 @@ export class ProjectReportQueryBuilder {
       ]);
 
     return {
-      project: this.project,
       siteBreakdown,
       treeSpeciesSummary,
       employmentDemographics,
@@ -123,7 +115,6 @@ export class ProjectReportQueryBuilder {
   }
 
   private async fetchSiteBreakdownWithPolygons(): Promise<SiteBreakdownData[]> {
-    // Fetch all approved sites and their UUIDs for this project in a single query
     const approvedSites = await Site.approved()
       .project(this.projectId)
       .findAll({
@@ -145,10 +136,7 @@ export class ProjectReportQueryBuilder {
         ]
       });
 
-    // Get all site UUIDs
     const siteUuids = approvedSites.map(site => site.uuid);
-
-    // Fetch all polygon areas for these sites in a single query
     const polygonAreas =
       siteUuids.length > 0
         ? await SitePolygon.active()
@@ -160,11 +148,7 @@ export class ProjectReportQueryBuilder {
               attributes: ["siteUuid", "calcArea"]
             })
         : [];
-
-    // Group polygon areas by site UUID for easy lookup
     const areasBySite = groupBy(polygonAreas, "siteUuid");
-
-    // Map sites to the return format with polygon data included
     return approvedSites.map(site => {
       const disturbances = site.reports?.flatMap(report => report.disturbances ?? []) ?? [];
       const sitePolygons = areasBySite[site.uuid] || [];
@@ -221,11 +205,9 @@ export class ProjectReportQueryBuilder {
       }
     });
 
-    // Prepare the site data
     const siteDistribution = sites.map(site => {
       const siteEntries = entriesBySite[site.id] || [];
 
-      // Aggregate species data for this site
       const speciesBySite = new Map();
       siteEntries.forEach(entry => {
         const key = entry.name;
@@ -254,7 +236,6 @@ export class ProjectReportQueryBuilder {
   }
 
   private async fetchDemographicData(): Promise<EmploymentDemographicData> {
-    // Get all approved project report IDs in one query
     const projectReportIds = await ProjectReport.approved()
       .project(this.projectId)
       .findAll({
@@ -270,7 +251,6 @@ export class ProjectReportQueryBuilder {
       };
     }
 
-    // Get all demographics in one query
     const demographics = await Demographic.findAll({
       where: {
         demographicalId: {
@@ -285,7 +265,6 @@ export class ProjectReportQueryBuilder {
       attributes: ["id", "type", "collection"]
     });
 
-    // Separate demographics by type
     const fullTimeDemographicIds = demographics
       .filter(d => d.type === Demographic.JOBS_TYPE && d.collection === "full-time")
       .map(d => d.id);
@@ -296,7 +275,6 @@ export class ProjectReportQueryBuilder {
 
     const volunteersDemographicIds = demographics.filter(d => d.type === Demographic.VOLUNTEERS_TYPE).map(d => d.id);
 
-    // Get all demographic entries in one query
     const allDemographicIds = [...fullTimeDemographicIds, ...partTimeDemographicIds, ...volunteersDemographicIds];
 
     if (allDemographicIds.length === 0) {
@@ -315,7 +293,6 @@ export class ProjectReportQueryBuilder {
       }
     });
 
-    // Process each type of demographic
     const processDemographicData = (demographicIds: number[]) => {
       const entries = allEntries.filter(entry => demographicIds.includes(entry.demographicId));
 
@@ -343,7 +320,6 @@ export class ProjectReportQueryBuilder {
   }
 
   private async fetchBeneficiariesData(): Promise<BeneficiaryData> {
-    // Get approved project report IDs in one query
     const projectReportIds = await ProjectReport.approved()
       .project(this.projectId)
       .findAll({
@@ -355,7 +331,6 @@ export class ProjectReportQueryBuilder {
       return { beneficiaries: 0, farmers: 0 };
     }
 
-    // Get all beneficiary demographics in one query
     const beneficiariesDemographics = await Demographic.findAll({
       where: {
         demographicalId: {
@@ -371,7 +346,6 @@ export class ProjectReportQueryBuilder {
 
     const beneficiariesDemographicIds = beneficiariesDemographics.map(r => r.id);
 
-    // Get all entries in one query
     const [beneficiariesEntries, smallholdersEntries] = await Promise.all([
       DemographicEntry.findAll({
         where: {

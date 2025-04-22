@@ -58,6 +58,11 @@ export class ReportUpdateAttributes extends EntityUpdateAttributes {
     enum: REPORT_STATUSES
   })
   status?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ description: "Update the nothingToReport flag.", nullable: true })
+  nothingToReport?: boolean;
 }
 
 export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}

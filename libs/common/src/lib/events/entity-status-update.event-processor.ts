@@ -25,6 +25,8 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { InternalServerErrorException } from "@nestjs/common";
 
+const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
+
 export class EntityStatusUpdate extends EventProcessor {
   private readonly logger = new TMLogger(EntityStatusUpdate.name);
 
@@ -51,7 +53,11 @@ export class EntityStatusUpdate extends EventProcessor {
     }
     await this.createAuditStatus();
 
-    if (entityType != null && isReport(this.model as EntityModel)) {
+    if (
+      entityType != null &&
+      isReport(this.model as EntityModel) &&
+      TASK_UPDATE_REPORT_STATUSES.includes(this.model.status)
+    ) {
       await this.checkTaskStatus();
     }
   }

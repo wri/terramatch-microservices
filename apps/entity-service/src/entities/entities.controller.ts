@@ -6,7 +6,6 @@ import {
   NotFoundException,
   Param,
   Query,
-  Res,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
@@ -26,7 +25,6 @@ import { EntityModel } from "@terramatch-microservices/database/constants/entiti
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
-import { Response as ExpressResponse } from "express";
 import { ProjectProcessor } from "./processors";
 
 @Controller("entities/v3")

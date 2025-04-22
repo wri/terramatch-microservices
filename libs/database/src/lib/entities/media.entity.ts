@@ -66,22 +66,6 @@ export class Media extends Model<Media> {
   @Column(BIGINT.UNSIGNED)
   modelId: number;
 
-  get modelName() {
-    return this.modelType === Project.LARAVEL_TYPE
-      ? "project"
-      : this.modelType === Nursery.LARAVEL_TYPE
-      ? "nursery"
-      : this.modelType === Site.LARAVEL_TYPE
-      ? "site"
-      : this.modelType === NurseryReport.LARAVEL_TYPE
-      ? "nursery-report"
-      : this.modelType === ProjectReport.LARAVEL_TYPE
-      ? "project-report"
-      : this.modelType === SiteReport.LARAVEL_TYPE
-      ? "site-report"
-      : null;
-  }
-
   @Column(STRING)
   collectionName: string;
 

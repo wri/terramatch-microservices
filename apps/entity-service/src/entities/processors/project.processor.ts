@@ -29,6 +29,7 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { BadRequestException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { ProjectReportQueryBuilder, ProjectReportData } from "./project-report-query.builder";
 
 export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
   readonly LIGHT_DTO = ProjectLightDto;
@@ -249,5 +250,16 @@ export class ProjectProcessor extends EntityProcessor<Project, ProjectLightDto, 
     const nTotal = await NurseryReport.incomplete().nurseries(Nursery.approvedIdsSubquery(projectId)).count(countOpts);
 
     return pTotal + sTotal + nTotal;
+  }
+
+  async getProjectReportData(uuid: string): Promise<ProjectReportData> {
+    const project = await this.findOne(uuid);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    await this.entitiesService.authorize("read", project);
+
+    const queryBuilder = new ProjectReportQueryBuilder(uuid);
+    return await queryBuilder.execute();
   }
 }

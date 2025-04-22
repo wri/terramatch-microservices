@@ -164,7 +164,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  taskId: number;
+  taskId: number | null;
 
   @BelongsTo(() => Task, { constraints: false })
   task: Task | null;

@@ -143,7 +143,7 @@ export class EntityStatusUpdate extends EventProcessor {
     }`;
   }
 
-  async checkTaskStatus() {
+  private async checkTaskStatus() {
     const { taskId } = this.model as ReportModel;
     if (taskId == null) {
       this.logger.warn(`No task found for status changed report [${this.model.constructor.name}, ${this.model.id}]`);
@@ -175,7 +175,7 @@ export class EntityStatusUpdate extends EventProcessor {
 
     const reportStatuses = uniq(reports.map(({ status }) => status));
     if (reportStatuses.length === 1 && reportStatuses[0] === APPROVED) {
-      await task.update({ status: "approved" });
+      await task.update({ status: APPROVED });
       return;
     }
 
@@ -190,12 +190,12 @@ export class EntityStatusUpdate extends EventProcessor {
     );
     if (moreInfoReport != null) {
       // A report in needs-more-information causes the task to go to needs-more-information
-      await task.update({ status: "needs-more-information" });
+      await task.update({ status: NEEDS_MORE_INFORMATION });
       return;
     }
 
     // If there are no reports or update requests in needs-more-information, the only option left is that
     // something is in awaiting-approval.
-    await task.update({ status: "awaiting-approval" });
+    await task.update({ status: AWAITING_APPROVAL });
   }
 }

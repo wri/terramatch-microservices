@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ENTITY_STATUSES, SITE_STATUSES } from "@terramatch-microservices/database/constants/status";
+import { ENTITY_STATUSES, REPORT_STATUSES, SITE_STATUSES } from "@terramatch-microservices/database/constants/status";
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
 import { JsonApiDataDto, JsonApiMultiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Type } from "class-transformer";
@@ -42,9 +42,20 @@ export class SiteUpdateAttributes extends EntityUpdateAttributes {
   @IsOptional()
   @IsIn(SITE_STATUSES)
   @ApiProperty({
-    description: "Request to change to the status of the given entity",
+    description: "Request to change to the status of the given site",
     nullable: true,
     enum: SITE_STATUSES
+  })
+  status?: string | null;
+}
+
+export class ReportUpdateAttributes extends EntityUpdateAttributes {
+  @IsOptional()
+  @IsIn(REPORT_STATUSES)
+  @ApiProperty({
+    description: "Request to change to the status of the given report",
+    nullable: true,
+    enum: REPORT_STATUSES
   })
   status?: string | null;
 }
@@ -52,11 +63,15 @@ export class SiteUpdateAttributes extends EntityUpdateAttributes {
 export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}
 export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, SiteUpdateAttributes) {}
 export class NurseryUpdateData extends JsonApiDataDto({ type: "nurseries" }, EntityUpdateAttributes) {}
-export class ProjectReportUpdateData extends JsonApiDataDto({ type: "projectReports" }, EntityUpdateAttributes) {}
-export class SiteReportUpdateData extends JsonApiDataDto({ type: "siteReports" }, EntityUpdateAttributes) {}
-export class NurseryReportUpdateData extends JsonApiDataDto({ type: "nurseryReports" }, EntityUpdateAttributes) {}
+export class ProjectReportUpdateData extends JsonApiDataDto({ type: "projectReports" }, ReportUpdateAttributes) {}
+export class SiteReportUpdateData extends JsonApiDataDto({ type: "siteReports" }, ReportUpdateAttributes) {}
+export class NurseryReportUpdateData extends JsonApiDataDto({ type: "nurseryReports" }, ReportUpdateAttributes) {}
 
-export type EntityUpdateData = ProjectUpdateAttributes | SiteUpdateAttributes | EntityUpdateAttributes;
+export type EntityUpdateData =
+  | ProjectUpdateAttributes
+  | SiteUpdateAttributes
+  | ReportUpdateAttributes
+  | EntityUpdateAttributes;
 export class EntityUpdateBody extends JsonApiMultiBodyDto([
   ProjectUpdateData,
   SiteUpdateData,

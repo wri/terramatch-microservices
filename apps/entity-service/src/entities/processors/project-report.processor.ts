@@ -6,7 +6,7 @@ import {
   ProjectReportLightDto,
   ProjectReportMedia
 } from "../dto/project-report.dto";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -21,6 +21,10 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { ProcessableAssociation } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
 
 export class ProjectReportProcessor extends EntityProcessor<
   ProjectReport,
@@ -126,6 +130,35 @@ export class ProjectReportProcessor extends EntityProcessor<
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+  }
+
+  async processSideload(
+    document: DocumentBuilder,
+    model: ProjectReport,
+    entity: SideloadType,
+    pageSize: number
+  ): Promise<void> {
+    if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
+      const processor = this.entitiesService.createAssociationProcessor(
+        "projectReports",
+        model.uuid,
+        entity as ProcessableAssociation
+      );
+      const entityDocument = new DocumentBuilder(entity as string);
+      await processor.addDtos(entityDocument);
+      const serialized = entityDocument.serialize();
+      if (serialized.data) {
+        if (Array.isArray(serialized.data)) {
+          serialized.data.forEach(resource => {
+            document.addIncluded(resource.id, resource.attributes);
+          });
+        } else {
+          document.addIncluded(serialized.data.id, serialized.data.attributes);
+        }
+      }
+    } else {
+      throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
+    }
   }
 
   async getFullDto(projectReport: ProjectReport) {

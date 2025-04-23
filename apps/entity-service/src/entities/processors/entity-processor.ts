@@ -2,7 +2,7 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes, col, fn, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { BadRequestException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
@@ -72,7 +72,7 @@ export abstract class EntityProcessor<
   async processSideload(
     document: DocumentBuilder,
     model: ModelType,
-    entity: ProcessableEntity,
+    entity: SideloadType,
     pageSize: number
   ): Promise<void> {
     throw new BadRequestException("This entity does not support sideloading");

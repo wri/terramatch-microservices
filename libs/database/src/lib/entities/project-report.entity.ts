@@ -24,6 +24,7 @@ import { Literal } from "sequelize/types/utils";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -181,7 +182,7 @@ export class ProjectReport extends Model<ProjectReport> {
   feedback: string | null;
 
   @AllowNull
-  @Column(TEXT)
+  @JsonColumn()
   feedbackFields: string[] | null;
 
   @AllowNull

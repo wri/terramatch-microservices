@@ -1,5 +1,5 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import {
   AdditionalProjectReportFullProps,
   ProjectReportFullDto,
@@ -20,13 +20,13 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
-import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class ProjectReportProcessor extends EntityProcessor<
+export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
   ProjectReportFullDto,
-  EntityUpdateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;

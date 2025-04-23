@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectAuthority, expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { Project } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
@@ -38,18 +38,18 @@ describe("ProjectPolicy", () => {
     await expectCannot(service, "delete", new Project());
   });
 
-  it("allows reading and deleting projects in your framework", async () => {
+  it("allows managing projects in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
     const ppc = await ProjectFactory.create({ frameworkKey: "ppc" });
     const tf = await ProjectFactory.create({ frameworkKey: "terrafund" });
-    await expectCan(service, "read", ppc);
-    await expectCan(service, "delete", ppc);
-    await expectCannot(service, "read", tf);
-    await expectCannot(service, "delete", tf);
+    await expectAuthority(service, {
+      can: [[["read", "delete", "update", "approve"], ppc]],
+      cannot: [[["read", "delete", "update", "approve"], tf]]
+    });
   });
 
-  it("allows reading and deleting own projects", async () => {
+  it("allows managing own projects", async () => {
     mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
@@ -61,15 +61,20 @@ describe("ProjectPolicy", () => {
     const p4 = await ProjectFactory.create({ status: "awaiting-approval" });
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
-    await expectCan(service, "read", p1);
-    await expectCan(service, "delete", p1);
-    await expectCannot(service, "read", p2);
-    await expectCannot(service, "delete", p2);
-    await expectCan(service, "read", p3);
-    await expectCan(service, "delete", p3);
-    await expectCan(service, "read", p4);
-    // This project is not in the "started" state
-    await expectCannot(service, "delete", p4);
+    await expectAuthority(service, {
+      can: [
+        [["read", "update", "delete"], p1],
+        [["read", "update", "delete"], p3],
+        [["read", "update"], p4]
+      ],
+      cannot: [
+        // manage-own does not give permission to approve.
+        ["approve", p1],
+        [["read", "update", "delete"], p2],
+        // This project is not in the "started" state
+        ["delete", p4]
+      ]
+    });
   });
 
   it("allows reading and deleting managed projects", async () => {
@@ -79,9 +84,9 @@ describe("ProjectPolicy", () => {
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isMonitoring: false, isManaging: true });
-    await expectCan(service, "read", p1);
-    await expectCan(service, "delete", p1);
-    await expectCannot(service, "read", p2);
-    await expectCannot(service, "delete", p2);
+    await expectAuthority(service, {
+      can: [[["read", "delete", "update", "approve"], p1]],
+      cannot: [[["read", "delete", "update", "approve"], p2]]
+    });
   });
 });

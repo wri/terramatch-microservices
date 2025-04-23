@@ -1,5 +1,5 @@
 import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
@@ -10,13 +10,13 @@ import {
   NurseryReportLightDto,
   NurseryReportMedia
 } from "../dto/nursery-report.dto";
-import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class NurseryReportProcessor extends EntityProcessor<
+export class NurseryReportProcessor extends ReportProcessor<
   NurseryReport,
   NurseryReportLightDto,
   NurseryReportFullDto,
-  EntityUpdateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;

@@ -7,7 +7,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
@@ -18,13 +18,13 @@ import {
   SiteReportLightDto,
   SiteReportMedia
 } from "../dto/site-report.dto";
-import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class SiteReportProcessor extends EntityProcessor<
+export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
   SiteReportLightDto,
   SiteReportFullDto,
-  EntityUpdateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;

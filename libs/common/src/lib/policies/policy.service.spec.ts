@@ -3,6 +3,7 @@ import { PolicyService } from "./policy.service";
 import { UnauthorizedException } from "@nestjs/common";
 import { ModelHasRole, Permission, User } from "@terramatch-microservices/database/entities";
 import { RequestContext } from "nestjs-request-context";
+import { isArray } from "lodash";
 
 export function mockUserId(userId?: number) {
   jest
@@ -15,12 +16,28 @@ export function mockPermissions(...permissions: string[]) {
 }
 
 type Subject = Parameters<PolicyService["authorize"]>[1];
-export async function expectCan(service: PolicyService, action: string, subject: Subject) {
-  await expect(service.authorize(action, subject)).resolves.toBeUndefined();
+export async function expectCan(service: PolicyService, action: string | string[], subject: Subject) {
+  const actions = isArray(action) ? action : [action];
+  for (const action of actions) {
+    await expect(service.authorize(action, subject)).resolves.toBeUndefined();
+  }
 }
 
-export async function expectCannot(service: PolicyService, action: string, subject: Subject) {
-  await expect(service.authorize(action, subject)).rejects.toThrow(UnauthorizedException);
+export async function expectCannot(service: PolicyService, action: string | string[], subject: Subject) {
+  const actions = isArray(action) ? action : [action];
+  for (const action of actions) {
+    await expect(service.authorize(action, subject)).rejects.toThrow(UnauthorizedException);
+  }
+}
+
+type AuthorityTest = [string | string[], Subject];
+type AuthorityTests = {
+  can?: AuthorityTest[];
+  cannot?: AuthorityTest[];
+};
+export async function expectAuthority(service: PolicyService, tests: AuthorityTests) {
+  await Promise.all((tests.can ?? []).map(([action, subject]) => expectCan(service, action, subject)));
+  await Promise.all((tests.cannot ?? []).map(([action, subject]) => expectCannot(service, action, subject)));
 }
 
 describe("PolicyService", () => {

@@ -10,7 +10,9 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete"], NurseryReport, { frameworkKey: { $in: this.frameworks } });
+      this.builder.can(["read", "delete", "update", "approve"], NurseryReport, {
+        frameworkKey: { $in: this.frameworks }
+      });
     }
 
     if (this.permissions.includes("manage-own")) {

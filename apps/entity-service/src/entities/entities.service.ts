@@ -26,6 +26,8 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
+import { DisturbancesProcessor } from "./processors/disturbances.processor";
+import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -34,7 +36,8 @@ const ENTITY_PROCESSORS = {
   nurseries: NurseryProcessor,
   projectReports: ProjectReportProcessor,
   nurseryReports: NurseryReportProcessor,
-  siteReports: SiteReportProcessor
+  siteReports: SiteReportProcessor,
+  disturbances: DisturbancesProcessor
 };
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
@@ -94,7 +97,9 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
-  async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
+  async isFrameworkAdmin<T extends EntityModel>(T: EntityModel) {
+    if (T instanceof Disturbance) return;
+    const { frameworkKey } = T;
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
   }
 

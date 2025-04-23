@@ -15,6 +15,7 @@ import { Action, AuditStatus, FormQuestion } from "@terramatch-microservices/dat
 import { get, isEmpty, map } from "lodash";
 import { Op } from "sequelize";
 import { STATUS_DISPLAY_STRINGS } from "@terramatch-microservices/database/constants/status";
+import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
 
 export type StatusUpdateModel = LaravelModel & StatusModel & FeedbackModel;
 
@@ -53,6 +54,9 @@ export class EntityStatusUpdate extends EventProcessor {
   private async updateActions() {
     this.logger.log(`Updating actions [${JSON.stringify({ model: this.model.constructor.name, id: this.model.id })}]`);
     const entity = this.model as EntityModel;
+
+    if (entity instanceof Disturbance) return;
+
     await Action.for(entity).destroy({ where: { type: "notification" } });
 
     if (entity.status !== "awaiting-approval") {

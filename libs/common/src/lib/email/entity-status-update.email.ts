@@ -22,6 +22,7 @@ import { Op } from "sequelize";
 import { TMLogger } from "../util/tm-logger";
 import { InternalServerErrorException } from "@nestjs/common";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
 
 export class EntityStatusUpdateEmail extends EmailSender {
   private readonly logger = new TMLogger(EntityStatusUpdateEmail.name);
@@ -37,6 +38,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
 
   async send(emailService: EmailService) {
     const entity = await this.getEntity();
+    if (entity instanceof Disturbance) return;
     const status =
       entity.status === NEEDS_MORE_INFORMATION || entity.updateRequestStatus === NEEDS_MORE_INFORMATION
         ? NEEDS_MORE_INFORMATION
@@ -110,6 +112,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
   }
 
   private async getFeedback(entity: EntityModel) {
+    if (entity instanceof Disturbance) return;
     if (![APPROVED, NEEDS_MORE_INFORMATION].includes(entity.updateRequestStatus ?? "")) {
       return entity.feedback;
     }

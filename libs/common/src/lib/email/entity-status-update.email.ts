@@ -74,11 +74,12 @@ export class EntityStatusUpdateEmail extends EmailSender {
     }
 
     const entityTypeName = isReport(entity) ? "Report" : entity.constructor.name;
+    const feedback = await this.getFeedback(entity);
     const i18nReplacements: Dictionary<string> = {
       "{entityTypeName}": entityTypeName,
       "{lowerEntityTypeName}": entityTypeName.toLowerCase(),
       "{entityName}": (isReport(entity) ? "" : entity.name) ?? "",
-      "{feedback}": (await this.getFeedback(entity)) ?? "(No feedback)"
+      "{feedback}": feedback == null || feedback === "" ? "(No feedback)" : feedback
     };
     if (isReport(entity)) i18nReplacements["{parentEntityName}"] = this.getParentName(entity) ?? "";
 

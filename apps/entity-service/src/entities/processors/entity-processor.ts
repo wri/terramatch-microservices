@@ -5,10 +5,15 @@ import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { BadRequestException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
-import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
-import { EntityUpdateData } from "../dto/entity-update.dto";
-import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
+import {
+  APPROVED,
+  NEEDS_MORE_INFORMATION,
+  RESTORATION_IN_PROGRESS
+} from "@terramatch-microservices/database/constants/status";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -58,7 +63,7 @@ export abstract class EntityProcessor<
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
+  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, RESTORATION_IN_PROGRESS];
 
   constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
 
@@ -128,9 +133,46 @@ export abstract class EntityProcessor<
         model.feedbackFields = update.feedbackFields;
       }
 
-      model.status = update.status;
+      model.status = update.status as ModelType["status"];
     }
 
     await model.save();
+  }
+}
+
+export abstract class ReportProcessor<
+  ModelType extends ReportModel,
+  LightDto extends EntityDto,
+  FullDto extends EntityDto,
+  UpdateDto extends ReportUpdateAttributes
+> extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto> {
+  async update(model: ModelType, update: UpdateDto) {
+    if (update.nothingToReport != null) {
+      if (model instanceof ProjectReport) {
+        throw new BadRequestException("ProjectReport does not support nothingToReport");
+      }
+
+      if (update.nothingToReport !== model.nothingToReport) {
+        model.nothingToReport = update.nothingToReport;
+
+        if (model.nothingToReport) {
+          const statusChanged = update.status != null && update.status !== model.status;
+          if (statusChanged && update.status !== "awaiting-approval") {
+            throw new BadRequestException(
+              "Cannot set status to anything other than 'awaiting-approval' with nothingToReport: true"
+            );
+          }
+
+          if (model.submittedAt == null) {
+            model.completion = 100;
+            model.submittedAt = new Date();
+          }
+
+          model.status = "awaiting-approval";
+        }
+      }
+    }
+
+    await super.update(model, update);
   }
 }

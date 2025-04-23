@@ -3,8 +3,8 @@ import { NurseryReport } from "../entities";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { NurseryFactory } from "./nursery.factory";
-import { REPORT_STATUSES, UPDATE_REQUEST_STATUSES } from "../constants/status";
 import { TaskFactory } from "./task.factory";
+import { NO_UPDATE } from "../constants/status";
 
 export const NurseryReportFactory = FactoryGirl.define(NurseryReport, async () => {
   const dueAt = faker.date.past({ years: 2 });
@@ -14,7 +14,6 @@ export const NurseryReportFactory = FactoryGirl.define(NurseryReport, async () =
     taskId: TaskFactory.associate("id"),
     dueAt,
     submittedAt: faker.date.between({ from: dueAt, to: DateTime.fromJSDate(dueAt).plus({ days: 14 }).toJSDate() }),
-    status: faker.helpers.arrayElement(REPORT_STATUSES),
-    updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES)
+    updateRequestStatus: NO_UPDATE
   };
 });

@@ -56,7 +56,7 @@ describe("SiteReportProcessor", () => {
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
       policyService.getPermissions.mockResolvedValue(permissions);
-      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto, userId);
+      const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
 

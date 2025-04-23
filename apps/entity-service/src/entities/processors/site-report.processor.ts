@@ -60,7 +60,7 @@ export class SiteReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number) {
+  async findMany(query: EntityQueryDto) {
     const siteAssociation: Includeable = {
       association: "site",
       attributes: ["id", "uuid", "name"],
@@ -93,9 +93,13 @@ export class SiteReportProcessor extends EntityProcessor<
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({
+        "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({
+        "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+      });
     }
 
     const associationFieldMap = {

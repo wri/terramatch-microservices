@@ -52,7 +52,7 @@ export class NurseryReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number) {
+  async findMany(query: EntityQueryDto) {
     const nurseryAssociation: Includeable = {
       association: "nursery",
       attributes: ["id", "uuid", "name"],
@@ -85,9 +85,13 @@ export class NurseryReportProcessor extends EntityProcessor<
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ "$nursery.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({
+        "$nursery.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ "$nursery.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({
+        "$nursery.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+      });
     }
 
     const associationFieldMap = {

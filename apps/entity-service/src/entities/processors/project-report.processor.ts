@@ -139,7 +139,7 @@ export class ProjectReportProcessor extends ReportProcessor<
         model.uuid,
         entity as ProcessableAssociation
       );
-      await processor.addIncludedDtos(document);
+      await processor.addDtos(document, true);
     } else {
       throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
     }

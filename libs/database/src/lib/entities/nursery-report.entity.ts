@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";

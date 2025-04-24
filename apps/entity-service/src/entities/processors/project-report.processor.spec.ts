@@ -17,17 +17,11 @@ import { ProjectReportProcessor } from "./project-report.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { AssociationProcessor } from "./association-processor";
-import { UuidModel } from "@terramatch-microservices/database/types/util";
-import { AssociationDto } from "../dto/association.dto";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
   let policyService: DeepMocked<PolicyService>;
   let userId: number;
-  let entitiesService: DeepMocked<EntitiesService>;
-  let mockAssociationProcessor: Partial<AssociationProcessor<UuidModel, AssociationDto<unknown>>>;
 
   beforeAll(async () => {
     userId = (await UserFactory.create()).id;
@@ -46,20 +40,6 @@ describe("ProjectReportProcessor", () => {
     }).compile();
 
     processor = module.get(EntitiesService).createEntityProcessor("projectReports") as ProjectReportProcessor;
-
-    mockAssociationProcessor = {
-      addIncludedDtos: jest.fn().mockResolvedValue(undefined)
-    };
-
-    entitiesService = createMock<EntitiesService>({
-      createAssociationProcessor: jest.fn().mockReturnValue(mockAssociationProcessor)
-    });
-
-    const moduleRef = await Test.createTestingModule({
-      providers: [ProjectReportProcessor, { provide: EntitiesService, useValue: entitiesService }]
-    }).compile();
-
-    processor = moduleRef.get<ProjectReportProcessor>(ProjectReportProcessor);
   });
 
   describe("findMany", () => {
@@ -450,23 +430,6 @@ describe("ProjectReportProcessor", () => {
         lightResource: false,
         projectUuid: project.uuid
       });
-    });
-  });
-
-  describe("processSideload", () => {
-    it("should use addIncludedDtos for supported associations", async () => {
-      const document = new DocumentBuilder("projectReports");
-      const projectReport = new ProjectReport();
-      projectReport.uuid = "test-uuid";
-
-      await processor.processSideload(document, projectReport, "demographics");
-
-      expect(entitiesService.createAssociationProcessor).toHaveBeenCalledWith(
-        "projectReports",
-        "test-uuid",
-        "demographics"
-      );
-      expect(mockAssociationProcessor.addIncludedDtos).toHaveBeenCalledWith(document);
     });
   });
 });

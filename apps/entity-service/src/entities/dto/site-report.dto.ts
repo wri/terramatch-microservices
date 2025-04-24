@@ -156,9 +156,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
   feedbackFields: string[] | null;
 
   @ApiProperty({ nullable: true })
-  nothingToReport: boolean | null;
-
-  @ApiProperty({ nullable: true })
   completion: number | null;
 
   @ApiProperty({ nullable: true })

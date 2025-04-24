@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { COMPLETE_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../constants/status";
@@ -171,7 +171,7 @@ export class NurseryReport extends Model<NurseryReport> {
   seedlingsYoungTrees: number | null;
 
   @AllowNull
-  @Column(TINYINT)
+  @Column(BOOLEAN)
   nothingToReport: boolean;
 
   @AllowNull

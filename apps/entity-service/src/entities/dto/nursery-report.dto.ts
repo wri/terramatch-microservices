@@ -159,9 +159,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   @ApiProperty({ nullable: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty()
-  nothingToReport: boolean;
-
   @ApiProperty({ nullable: true })
   completion: number | null;
 

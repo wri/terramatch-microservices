@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
@@ -304,7 +304,7 @@ export class SiteReport extends Model<SiteReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(TINYINT)
+  @Column(BOOLEAN)
   nothingToReport: boolean | null;
 
   @HasMany(() => TreeSpecies, {

@@ -168,7 +168,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
-    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount }) };
+    const totalHectaresRestoredSum = await SitePolygon.active().approved().sites([site.uuid]).sum("calcArea");
+
+    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount, totalHectaresRestoredSum }) };
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {

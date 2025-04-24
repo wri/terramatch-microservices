@@ -56,6 +56,12 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty()
   treesPlantedCount: number;
 
+  @ApiProperty({ nullable: true })
+  hectaresToRestoreGoal: number;
+
+  @ApiProperty()
+  totalHectaresRestoredSum: number;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -63,7 +69,7 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalSiteLightProps = Pick<SiteLightDto, "treesPlantedCount">;
+export type AdditionalSiteLightProps = Pick<SiteLightDto, "treesPlantedCount" | "totalHectaresRestoredSum">;
 export type AdditionalSiteFullProps = AdditionalSiteLightProps &
   AdditionalProps<SiteFullDto, SiteLightDto & Omit<Site, "project">>;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;

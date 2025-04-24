@@ -6,26 +6,28 @@ import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
+import { DisturbanceFullDto, DisturbanceLightDto } from "../dto/disturbance.dto";
 
 export class DisturbancesProcessor extends EntityProcessor<
-  Nursery,
-  NurseryLightDto,
-  NurseryFullDto,
+  Disturbance,
+  DisturbanceLightDto,
+  DisturbanceFullDto,
   EntityUpdateAttributes
 > {
-  readonly LIGHT_DTO = NurseryLightDto;
-  readonly FULL_DTO = NurseryFullDto;
+  readonly LIGHT_DTO = DisturbanceLightDto;
+  readonly FULL_DTO = DisturbanceFullDto;
 
   async findOne(uuid: string) {
-    return await Nursery.findOne({
-      where: { uuid },
-      include: [
+    return await Disturbance.findOne({
+      where: { uuid }
+      /*include: [
         {
           association: "project",
           attributes: ["uuid", "name"],
           include: [{ association: "organisation", attributes: ["name"] }]
         }
-      ]
+      ]*/
     });
   }
 
@@ -36,7 +38,7 @@ export class DisturbancesProcessor extends EntityProcessor<
       include: [{ association: "organisation", attributes: ["name"] }]
     };
 
-    const builder = await this.entitiesService.buildQuery(Nursery, query, [projectAssociation]);
+    const builder = await this.entitiesService.buildQuery(Disturbance, query, [projectAssociation]);
     if (query.sort != null) {
       if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
@@ -102,7 +104,7 @@ export class DisturbancesProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async getFullDto(nursery: Nursery) {
+  async getFullDto(nursery: Disturbance) {
     const nurseryId = nursery.id;
 
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
@@ -116,14 +118,14 @@ export class DisturbancesProcessor extends EntityProcessor<
       ...(this.entitiesService.mapMediaCollection(await Media.for(nursery).findAll(), Nursery.MEDIA) as NurseryMedia)
     };
 
-    return { id: nursery.uuid, dto: new NurseryFullDto(nursery, props) };
+    return { id: nursery.uuid, dto: new DisturbanceFullDto(nursery, props) };
   }
 
-  async getLightDto(nursery: Nursery) {
+  async getLightDto(nursery: Disturbance) {
     const nurseryId = nursery.id;
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount }) };
+    return { id: nursery.uuid, dto: new DisturbanceLightDto(nursery, { seedlingsGrownCount }) };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {
@@ -144,16 +146,16 @@ export class DisturbancesProcessor extends EntityProcessor<
     );
   }
 
-  async delete(nursery: Nursery) {
+  async delete(disturbance: Disturbance) {
     const permissions = await this.entitiesService.getPermissions();
-    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
+    const managesOwn = permissions.includes("manage-own"); // TODO validate this condition
     if (managesOwn) {
-      const reportCount = await NurseryReport.count({ where: { nurseryId: nursery.id } });
+      const reportCount = await NurseryReport.count({ where: { nurseryId: disturbance.id } });
       if (reportCount > 0) {
         throw new NotAcceptableException("You can only delete nurseries that do not have reports");
       }
     }
 
-    await super.delete(nursery);
+    await super.delete(disturbance);
   }
 }

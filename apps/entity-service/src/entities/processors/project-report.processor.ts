@@ -6,7 +6,7 @@ import {
   ProjectReportLightDto,
   ProjectReportMedia
 } from "../dto/project-report.dto";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -20,6 +20,10 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
+import { ProcessableAssociation } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 export class ProjectReportProcessor extends ReportProcessor<
@@ -126,6 +130,19 @@ export class ProjectReportProcessor extends ReportProcessor<
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+  }
+
+  async processSideload(document: DocumentBuilder, model: ProjectReport, entity: SideloadType): Promise<void> {
+    if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
+      const processor = this.entitiesService.createAssociationProcessor(
+        "projectReports",
+        model.uuid,
+        entity as ProcessableAssociation
+      );
+      await processor.addDtos(document, true);
+    } else {
+      throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
+    }
   }
 
   async getFullDto(projectReport: ProjectReport) {

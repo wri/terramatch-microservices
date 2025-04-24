@@ -4,11 +4,15 @@ import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
   MAX_PAGE_SIZE,
   PROCESSABLE_ENTITIES,
-  ProcessableEntity,
+  PROCESSABLE_ASSOCIATIONS,
   POLYGON_STATUSES_FILTERS,
   PolygonStatusFilter
 } from "../entities.service";
 import { Type } from "class-transformer";
+
+export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
+
+export type SideloadType = (typeof VALID_SIDELOAD_TYPES)[number];
 
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })
@@ -22,9 +26,13 @@ class QuerySort {
 }
 
 export class EntitySideload {
-  @IsIn(PROCESSABLE_ENTITIES)
-  @ApiProperty({ name: "entity", enum: PROCESSABLE_ENTITIES, description: "Entity type to sideload" })
-  entity: ProcessableEntity;
+  @IsIn(VALID_SIDELOAD_TYPES)
+  @ApiProperty({
+    name: "entity",
+    enum: VALID_SIDELOAD_TYPES,
+    description: "Entity or association type to sideload"
+  })
+  entity: SideloadType;
 
   @ApiProperty({ name: "pageSize", description: "The page size to include." })
   @IsInt()

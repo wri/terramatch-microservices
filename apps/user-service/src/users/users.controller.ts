@@ -16,7 +16,7 @@ import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder, JsonApiDocument } from "@terramatch-microservices/common/util";
-import { UserUpdateBodyDto } from "./dto/user-update.dto";
+import { UserUpdateBody } from "./dto/user-update.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import { UserCreationService } from "./user-creation.service";
@@ -73,7 +73,7 @@ export class UsersController {
   @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
   @ExceptionResponse(NotFoundException, { description: "User with that ID not found" })
   @ExceptionResponse(BadRequestException, { description: "Something is malformed about the request" })
-  async update(@Param("uuid") uuid: string, @Body() updatePayload: UserUpdateBodyDto) {
+  async update(@Param("uuid") uuid: string, @Body() updatePayload: UserUpdateBody) {
     if (uuid !== updatePayload.data.id) {
       throw new BadRequestException(`Path uuid and payload id do not match`);
     }

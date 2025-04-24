@@ -1,5 +1,5 @@
 import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
@@ -10,11 +10,13 @@ import {
   NurseryReportLightDto,
   NurseryReportMedia
 } from "../dto/nursery-report.dto";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class NurseryReportProcessor extends EntityProcessor<
+export class NurseryReportProcessor extends ReportProcessor<
   NurseryReport,
   NurseryReportLightDto,
-  NurseryReportFullDto
+  NurseryReportFullDto,
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;
@@ -50,7 +52,7 @@ export class NurseryReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number) {
+  async findMany(query: EntityQueryDto) {
     const nurseryAssociation: Includeable = {
       association: "nursery",
       attributes: ["id", "uuid", "name"],
@@ -83,9 +85,13 @@ export class NurseryReportProcessor extends EntityProcessor<
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ "$nursery.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({
+        "$nursery.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ "$nursery.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({
+        "$nursery.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+      });
     }
 
     const associationFieldMap = {
@@ -133,15 +139,12 @@ export class NurseryReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(nurseryReport: NurseryReport) {
-    const nurseryReportId = nurseryReport.id;
-    const mediaCollection = await Media.nurseryReport(nurseryReportId).findAll();
+    const mediaCollection = await Media.for(nurseryReport).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
-    const migrated = nurseryReport.oldModel != null;
     const props: AdditionalNurseryReportFullProps = {
       reportTitle,
       projectReportTitle,
-      migrated,
       ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
 

@@ -224,7 +224,7 @@ describe("DelayedJobsController", () => {
       await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
     });
 
-    it('should not update jobs with status "pending"', async () => {
+    it('should update jobs with status "pending"', async () => {
       const authenticatedUserId = 130999;
       const pendingJob = await DelayedJob.create({
         uuid: uuidv4(),
@@ -234,18 +234,36 @@ describe("DelayedJobsController", () => {
         metadata: { entity_name: "TestEntityPending" } // Adding entity_name
       });
 
+      const pendingJob2 = await DelayedJob.create({
+        uuid: uuidv4(),
+        createdBy: authenticatedUserId,
+        isAcknowledged: false,
+        status: "pending",
+        metadata: { entity_name: "TestEntityPending2" } // Adding entity_name
+      });
+
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
           {
             type: "delayedJobs",
             uuid: pendingJob.uuid,
             attributes: { isAcknowledged: true }
+          },
+          {
+            type: "delayedJobs",
+            uuid: pendingJob2.uuid,
+            attributes: { isAcknowledged: true }
           }
         ]
       };
       const request = { authenticatedUserId };
 
-      await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
+      const result = await controller.bulkUpdateJobs(payload, request);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].id).toBe(pendingJob.uuid);
+      expect(result.data[0].attributes.entityName).toBe("TestEntityPending");
+      expect(result.data[1].id).toBe(pendingJob2.uuid);
+      expect(result.data[1].attributes.entityName).toBe("TestEntityPending2");
     });
   });
 

@@ -1,5 +1,5 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import {
   AdditionalProjectReportFullProps,
   ProjectReportFullDto,
@@ -20,11 +20,13 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class ProjectReportProcessor extends EntityProcessor<
+export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
-  ProjectReportFullDto
+  ProjectReportFullDto,
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;
@@ -127,7 +129,6 @@ export class ProjectReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(projectReport: ProjectReport) {
-    const projectReportId = projectReport.id;
     const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
     const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
@@ -140,7 +141,6 @@ export class ProjectReportProcessor extends EntityProcessor<
     const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
     const siteReportsCount = await SiteReport.task(taskId).count();
     const nurseryReportsCount = await NurseryReport.task(taskId).count();
-    const migrated = projectReport.oldModel != null;
     const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
     const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
     const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
@@ -153,13 +153,12 @@ export class ProjectReportProcessor extends EntityProcessor<
       regeneratedTreesCount,
       siteReportsCount,
       nurseryReportsCount,
-      migrated,
       seedlingsGrown,
       nonTreeTotal,
       readableCompletionStatus,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
-        await Media.projectReport(projectReportId).findAll(),
+        await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
     };

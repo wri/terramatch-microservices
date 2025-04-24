@@ -5,8 +5,15 @@ import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
-import { EntityClass, EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
+import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
+import {
+  APPROVED,
+  NEEDS_MORE_INFORMATION,
+  RESTORATION_IN_PROGRESS
+} from "@terramatch-microservices/database/constants/status";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -50,10 +57,13 @@ const getIndexData = (
 export abstract class EntityProcessor<
   ModelType extends EntityModel,
   LightDto extends EntityDto,
-  FullDto extends EntityDto
+  FullDto extends EntityDto,
+  UpdateDto extends EntityUpdateData
 > {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
+
+  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, RESTORATION_IN_PROGRESS];
 
   constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
 
@@ -102,7 +112,67 @@ export abstract class EntityProcessor<
   }
 
   async delete(model: ModelType) {
-    await Action.targetable((model.constructor as EntityClass<ModelType>).LARAVEL_TYPE, model.id).destroy();
+    await Action.for(model).destroy();
     await model.destroy();
+  }
+
+  /**
+   * Performs the basic function of setting fields in EntityUpdateAttributes and saving the model.
+   * If this concrete processor needs to support more fields on the update dto, override this method
+   * and set the appropriate fields and then call super.update()
+   */
+  async update(model: ModelType, update: UpdateDto) {
+    if (update.status != null) {
+      if (this.APPROVAL_STATUSES.includes(update.status)) {
+        await this.entitiesService.authorize("approve", model);
+
+        // If an admin is doing an update, set the feedback / feedbackFields to whatever is in the
+        // request, even if it's null. We ignore feedback / feedbackFields if the status is not
+        // also being updated.
+        model.feedback = update.feedback;
+        model.feedbackFields = update.feedbackFields;
+      }
+
+      model.status = update.status as ModelType["status"];
+    }
+
+    await model.save();
+  }
+}
+
+export abstract class ReportProcessor<
+  ModelType extends ReportModel,
+  LightDto extends EntityDto,
+  FullDto extends EntityDto,
+  UpdateDto extends ReportUpdateAttributes
+> extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto> {
+  async update(model: ModelType, update: UpdateDto) {
+    if (update.nothingToReport != null) {
+      if (model instanceof ProjectReport) {
+        throw new BadRequestException("ProjectReport does not support nothingToReport");
+      }
+
+      if (update.nothingToReport !== model.nothingToReport) {
+        model.nothingToReport = update.nothingToReport;
+
+        if (model.nothingToReport) {
+          const statusChanged = update.status != null && update.status !== model.status;
+          if (statusChanged && update.status !== "awaiting-approval") {
+            throw new BadRequestException(
+              "Cannot set status to anything other than 'awaiting-approval' with nothingToReport: true"
+            );
+          }
+
+          if (model.submittedAt == null) {
+            model.completion = 100;
+            model.submittedAt = new Date();
+          }
+
+          model.status = "awaiting-approval";
+        }
+      }
+    }
+
+    await super.update(model, update);
   }
 }

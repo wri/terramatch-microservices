@@ -23,18 +23,19 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 
 // The keys of this array must match the type in the resulting DTO.
-const ENTITY_PROCESSORS = {
+export const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
   sites: SiteProcessor,
   nurseries: NurseryProcessor,
   projectReports: ProjectReportProcessor,
   nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor
-};
+} as const;
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
@@ -45,7 +46,9 @@ export const POLYGON_STATUSES_FILTERS = [
   "needs-more-information",
   "draft"
 ] as const;
+
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
+
 const ASSOCIATION_PROCESSORS = {
   demographics: AssociationProcessor.buildSimpleProcessor(
     DemographicDto,
@@ -93,6 +96,10 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
+  async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
+    return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+  }
+
   private _userLocale?: string;
   async getUserLocale() {
     if (this._userLocale == null) {
@@ -111,10 +118,10 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(
+  createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation

@@ -211,9 +211,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   submittedAt: Date | null;
 
   @ApiProperty()
-  migrated: boolean;
-
-  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()

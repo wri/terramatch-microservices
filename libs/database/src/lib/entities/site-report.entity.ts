@@ -17,12 +17,13 @@ import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
-import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -35,7 +36,7 @@ type ApprovedIdsSubqueryOptions = {
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
-  task: (taskId: number) => ({ where: { taskId: taskId } })
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
 export class SiteReport extends Model<SiteReport> {
@@ -93,7 +94,7 @@ export class SiteReport extends Model<SiteReport> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull
@@ -116,9 +117,6 @@ export class SiteReport extends Model<SiteReport> {
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
-  @BelongsTo(() => Task)
-  task: Task | null;
-
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   createdBy: number;
@@ -131,6 +129,9 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   taskId: number;
+
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
 
   get projectName() {
     return this.site?.project?.name;
@@ -176,12 +177,12 @@ export class SiteReport extends Model<SiteReport> {
     return this.approvedByUser?.lastName;
   }
 
-  @Column(STRING)
-  status: string;
+  @StateMachineColumn(ReportStatusStates)
+  status: ReportStatus;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: string;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(DATE)

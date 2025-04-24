@@ -62,7 +62,7 @@ export const ReportStatusStates: States<ReportModel, ReportStatus> = {
   transitionValidForModel: (from: ReportStatus, to: ReportStatus, report: ReportModel) => {
     if ((from === DUE && to === AWAITING_APPROVAL) || (from === AWAITING_APPROVAL && to === STARTED)) {
       // these two transitions are only allowed for site / nursery reports when the nothingToReport flag is true;
-      return !(report instanceof ProjectReport) && report.nothingToReport;
+      return !(report instanceof ProjectReport) && (report.nothingToReport || false);
     }
 
     return true;

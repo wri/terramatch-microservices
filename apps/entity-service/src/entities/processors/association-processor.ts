@@ -70,4 +70,22 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
       ids: indexIds
     });
   }
+
+  async addIncludedDtos(document: DocumentBuilder): Promise<void> {
+    const associations = await this.getAssociations(await this.getBaseEntity());
+
+    const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
+    const indexIds: string[] = [];
+    for (const association of associations) {
+      indexIds.push(association.uuid);
+      document.addIncluded(association.uuid, new this.DTO(association, additionalProps));
+    }
+
+    const resource = getDtoType(this.DTO);
+    document.addIndexData({
+      resource,
+      requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}`,
+      ids: indexIds
+    });
+  }
 }

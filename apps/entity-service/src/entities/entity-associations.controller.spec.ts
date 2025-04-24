@@ -14,6 +14,7 @@ class StubProcessor extends AssociationProcessor<Demographic, DemographicDto> {
   DTO = DemographicDto;
 
   addDtos = jest.fn(() => Promise.resolve());
+  addIncludedDtos = jest.fn(() => Promise.resolve());
   getAssociations = jest.fn(() => Promise.resolve([] as Demographic[]));
 }
 

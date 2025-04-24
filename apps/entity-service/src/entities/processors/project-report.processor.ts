@@ -139,18 +139,7 @@ export class ProjectReportProcessor extends ReportProcessor<
         model.uuid,
         entity as ProcessableAssociation
       );
-      const entityDocument = new DocumentBuilder(entity as string);
-      await processor.addDtos(entityDocument);
-      const serialized = entityDocument.serialize();
-      if (serialized.data) {
-        if (Array.isArray(serialized.data)) {
-          serialized.data.forEach(resource => {
-            document.addIncluded(resource.id, resource.attributes);
-          });
-        } else {
-          document.addIncluded(serialized.data.id, serialized.data.attributes);
-        }
-      }
+      await processor.addIncludedDtos(document);
     } else {
       throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
     }

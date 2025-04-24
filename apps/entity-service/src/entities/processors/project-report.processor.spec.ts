@@ -19,13 +19,15 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { AssociationProcessor } from "./association-processor";
+import { UuidModel } from "@terramatch-microservices/database/types/util";
+import { AssociationDto } from "../dto/association.dto";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
   let policyService: DeepMocked<PolicyService>;
   let userId: number;
   let entitiesService: DeepMocked<EntitiesService>;
-  let mockAssociationProcessor: Partial<AssociationProcessor<any, any>>;
+  let mockAssociationProcessor: Partial<AssociationProcessor<UuidModel, AssociationDto<unknown>>>;
 
   beforeAll(async () => {
     userId = (await UserFactory.create()).id;

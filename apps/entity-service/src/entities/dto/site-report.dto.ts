@@ -292,4 +292,16 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   documentFiles: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  treePlantingUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  anrPhotos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  soilWaterConservationUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  soilWaterConservationPhotos: MediaDto[];
 }

@@ -51,7 +51,26 @@ export class ProjectReport extends Model<ProjectReport> {
     media: { dbCollection: "media", multiple: true },
     file: { dbCollection: "file", multiple: true },
     otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true }
+    photos: { dbCollection: "photos", multiple: true },
+    baselineReportUpload: { dbCollection: "baseline_report_upload", multiple: true },
+    localGovernanceOrderLetterUpload: { dbCollection: "local_governance_order_letter_upload", multiple: true },
+    eventsMeetingsPhotos: { dbCollection: "events_meetings_photos", multiple: true },
+    localGovernanceProofOfPartnershipUpload: {
+      dbCollection: "local_governance_proof_of_partnership_upload",
+      multiple: true
+    },
+    topThreeSuccessesUpload: { dbCollection: "top_three_successes_upload", multiple: true },
+    directJobsUpload: { dbCollection: "direct_jobs_upload", multiple: true },
+    convergenceJobsUpload: { dbCollection: "convergence_jobs_upload", multiple: true },
+    convergenceSchemesUpload: { dbCollection: "convergence_schemes_upload", multiple: true },
+    livelihoodActivitiesUpload: { dbCollection: "livelihood_activities_upload", multiple: true },
+    directLivelihoodImpactsUpload: { dbCollection: "direct_livelihood_impacts_upload", multiple: true },
+    certifiedDatabaseUpload: { dbCollection: "certified_database_upload", multiple: true },
+    physicalAssetsPhotos: { dbCollection: "physical_assets_photos", multiple: true },
+    indirectCommunityPartnersUpload: { dbCollection: "indirect_community_partners_upload", multiple: true },
+    trainingCapacityBuildingUpload: { dbCollection: "training_capacity_building_upload", multiple: true },
+    trainingCapacityBuildingPhotos: { dbCollection: "training_capacity_building_photos", multiple: true },
+    financialReportUpload: { dbCollection: "financial_report_upload", multiple: true }
   } as const;
 
   static incomplete() {

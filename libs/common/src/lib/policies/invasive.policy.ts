@@ -1,10 +1,10 @@
-import { Disturbance, Project, Site, User } from "@terramatch-microservices/database/entities";
+import { Invasive, Project, Site, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class InvasivePolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("view-dashboard") || this.permissions.includes("reports-manage")) {
-      this.builder.can("read", Disturbance);
+      this.builder.can("read", Invasive);
       return;
     }
 

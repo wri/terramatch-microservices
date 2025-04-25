@@ -18,6 +18,7 @@ export * from "./indicator-output-msu-carbon.entity";
 export * from "./indicator-output-tree-count.entity";
 export * from "./indicator-output-tree-cover.entity";
 export * from "./indicator-output-tree-cover-loss.entity";
+export * from "./invasive.entity";
 export * from "./landscape-geometry.entity";
 export * from "./localization-key";
 export * from "./media.entity";

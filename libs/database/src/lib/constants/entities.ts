@@ -1,4 +1,4 @@
-import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport, Disturbance, Invasive } from "../entities";
+import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";

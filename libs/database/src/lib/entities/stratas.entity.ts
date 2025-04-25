@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
 
 @Table({ tableName: "v2_stratas", underscored: true, paranoid: true })
 export class Strata extends Model<Strata> {

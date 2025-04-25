@@ -1,9 +1,7 @@
-import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
+import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport, Disturbance, Invasive } from "../entities";
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";
-import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
-import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 
 export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];

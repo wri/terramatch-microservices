@@ -147,8 +147,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const polygonsBySite = groupBy(polygons, "siteUuid");
 
     for (const siteUuid of siteUuids) {
-      const sitesPolygons = polygonsBySite[siteUuid] || [];
-      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => Number(polygon.calcArea) || 0);
+      const sitesPolygons = polygonsBySite[siteUuid] ?? [];
+      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => Number(polygon.calcArea) ?? 0);
     }
 
     return hectaresMap;
@@ -187,10 +187,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     for (const site of sites) {
       const siteId = site.id;
-      const siteReports = reportBySiteId[siteId] || [];
+      const siteReports = reportBySiteId[siteId] ?? [];
       const siteReportIds = siteReports.map(r => r.id);
       const treesForSite = treesPlanted.filter(t => siteReportIds.includes(t.speciesableId));
-      result[site.uuid] = sumBy(treesForSite, "amount") || 0;
+      result[site.uuid] = sumBy(treesForSite, "amount") ?? 0;
     }
 
     return result;
@@ -211,7 +211,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
-    const totalHectaresRestoredSum = hectaresData[site.uuid] || 0;
+    const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
 
     const props: AdditionalSiteFullProps = {
       totalHectaresRestoredSum,
@@ -237,8 +237,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       this.getTreesPlantedCount([site])
     ]);
 
-    const totalHectaresRestoredSum = hectaresData[site.uuid] || 0;
-    const treesPlantedCount = treesPlantedData[site.uuid] || 0;
+    const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
+    const treesPlantedCount = treesPlantedData[site.uuid] ?? 0;
 
     return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount, totalHectaresRestoredSum }) };
   }
@@ -256,8 +256,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return sites.map(site => ({
       id: site.uuid,
       dto: new SiteLightDto(site, {
-        treesPlantedCount: treesPlantedData[site.uuid] || 0,
-        totalHectaresRestoredSum: hectaresData[site.uuid] || 0
+        treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
+        totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0
       })
     }));
   }

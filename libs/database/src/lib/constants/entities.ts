@@ -24,8 +24,6 @@ export const ENTITY_MODELS: { [E in EntityType]: EntityClass<EntityModel> } = {
   projects: Project,
   sites: Site,
   nurseries: Nursery
-  // disturbances: Disturbance,
-  // stratas:  Strata::class,
 };
 
 export const isReport = (entity: EntityModel): entity is ReportModel =>
@@ -40,8 +38,6 @@ export const isReport = (entity: EntityModel): entity is ReportModel =>
  */
 export async function getProjectId(entity: EntityModel) {
   if (entity instanceof Project) return entity.id;
-  if (entity instanceof Disturbance) return entity.id;
-  if (entity instanceof Invasive) return entity.id;
   if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
 
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;

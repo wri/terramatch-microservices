@@ -24,14 +24,23 @@ const gadmLevel1 = (level0: string) => `
     AND gid_0 = '${level0}'
 `;
 
-const gadmLevel2 = (level0: string, level1: string) => `
+const gadmLevel2 = (level1: string) => `
   SELECT gid_2 as id, name_2 as name
   FROM gadm_administrative_boundaries
-  WHERE gid_0 = '${level0}'
-    AND gid_1 = '${level1}'
+  WHERE gid_1 = '${level1}'
     AND adm_level='2'
     AND type_2 NOT IN ('Waterbody', 'Water body', 'Water Body')
 `;
+
+type GadmCountry = {
+  name: string;
+  iso: string;
+};
+
+type GadmLevelCode = {
+  name: string;
+  id: string;
+};
 
 /**
  * A service for accessing, and in some cases caching, data from the Data API. It's not super
@@ -44,21 +53,16 @@ export class DataApiService {
 
   constructor(@InjectRedis() private readonly redis: Redis, private readonly configService: ConfigService) {}
 
-  async gadmLevel0() {
+  async gadmLevel0(): Promise<GadmCountry[]> {
     return await this.getDataset("gadm-level-0", GADM_QUERY, gadmLevel0(), GADM_CACHE_DURATION);
   }
 
-  async gadmLevel1(level0: string) {
+  async gadmLevel1(level0: string): Promise<GadmLevelCode[]> {
     return await this.getDataset(`gadm-level-1:${level0}`, GADM_QUERY, gadmLevel1(level0), GADM_CACHE_DURATION);
   }
 
-  async gadmLevel2(level0: string, level1: string) {
-    return await this.getDataset(
-      `gadm-level-2:${level0}:${level1}`,
-      GADM_QUERY,
-      gadmLevel2(level0, level1),
-      GADM_CACHE_DURATION
-    );
+  async gadmLevel2(level1: string): Promise<GadmLevelCode[]> {
+    return await this.getDataset(`gadm-level-2:${level1}`, GADM_QUERY, gadmLevel2(level1), GADM_CACHE_DURATION);
   }
 
   private async getDataset(key: string, queryPath: string, query: string, cacheDuration: number) {

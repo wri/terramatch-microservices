@@ -5,7 +5,7 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 import { ApiProperty } from "@nestjs/swagger";
 import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
 import { AllowNull, Column } from "sequelize-typescript";
-import { STRING, TEXT } from "sequelize";
+import { INTEGER, STRING, TEXT, TINYINT } from "sequelize";
 
 @JsonApiDto({ type: "disturbances" })
 export class DisturbanceLightDto extends EntityDto {
@@ -64,4 +64,13 @@ export class DisturbanceFullDto extends DisturbanceLightDto {
 
   @ApiProperty({ nullable: true })
   description: string | null;
+
+  @ApiProperty({ nullable: true })
+  oldId: number;
+
+  @ApiProperty({ nullable: true })
+  oldModel: string | null;
+
+  @ApiProperty({ nullable: true })
+  hidden: number | null;
 }

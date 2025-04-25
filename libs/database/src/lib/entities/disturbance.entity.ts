@@ -49,5 +49,5 @@ export class Disturbance extends Model<Disturbance> {
   oldModel: string | null;
 
   @Column(TINYINT)
-  hidden: string | null;
+  hidden: number | null;
 }

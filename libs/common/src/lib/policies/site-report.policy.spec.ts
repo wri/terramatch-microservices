@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectAuthority, expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
@@ -33,18 +33,18 @@ describe("SiteReportPolicy", () => {
     await expectCannot(service, "delete", new SiteReport());
   });
 
-  it("allows reading site reports in your framework", async () => {
+  it("allows managing site reports in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
     const ppc = await SiteReportFactory.create({ frameworkKey: "ppc" });
     const tf = await SiteReportFactory.create({ frameworkKey: "terrafund" });
-    await expectCan(service, "read", ppc);
-    await expectCannot(service, "read", tf);
-    await expectCan(service, "delete", ppc);
-    await expectCannot(service, "delete", tf);
+    await expectAuthority(service, {
+      can: [[["read", "delete", "update", "approve"], ppc]],
+      cannot: [[["read", "delete", "update", "approve"], tf]]
+    });
   });
 
-  it("allows reading site reports for own projects", async () => {
+  it("allows managing site reports for own projects", async () => {
     mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
@@ -67,17 +67,22 @@ describe("SiteReportPolicy", () => {
     const sr3 = await SiteReportFactory.create({ siteId: s3.id });
     const sr4 = await SiteReportFactory.create({ siteId: s4.id });
 
-    await expectCan(service, "read", sr1);
-    await expectCannot(service, "read", sr2);
-    await expectCan(service, "read", sr3);
-    await expectCan(service, "read", sr4);
-    await expectCannot(service, "delete", sr1);
-    await expectCannot(service, "delete", sr2);
-    await expectCannot(service, "delete", sr3);
-    await expectCannot(service, "delete", sr4);
+    await expectAuthority(service, {
+      can: [
+        [["read", "update"], sr1],
+        [["read", "update"], sr3],
+        [["read", "update"], sr4]
+      ],
+      cannot: [
+        [["delete", "approve"], sr1],
+        [["read", "delete"], sr2],
+        ["delete", sr3],
+        ["delete", sr4]
+      ]
+    });
   });
 
-  it("allows reading site reports for managed projects", async () => {
+  it("allows managing site reports for managed projects", async () => {
     mockPermissions("projects-manage");
     const user = await UserFactory.create();
     mockUserId(user.id);
@@ -92,9 +97,9 @@ describe("SiteReportPolicy", () => {
     const sr1 = await SiteReportFactory.create({ siteId: s1.id });
     const sr2 = await SiteReportFactory.create({ siteId: s2.id });
 
-    await expectCan(service, "read", sr1);
-    await expectCannot(service, "read", sr2);
-    await expectCan(service, "delete", sr1);
-    await expectCannot(service, "delete", sr2);
+    await expectAuthority(service, {
+      can: [[["read", "delete", "update", "approve"], sr1]],
+      cannot: [[["read", "delete", "update", "approve"], sr2]]
+    });
   });
 });

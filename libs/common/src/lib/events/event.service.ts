@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { OnEvent } from "@nestjs/event-emitter";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { EntityStatusUpdate, StatusUpdateModel } from "./entity-status-update.event-processor";
+import { EntityStatusUpdate } from "./entity-status-update.event-processor";
+import { StatusUpdateModel } from "@terramatch-microservices/database/types/util";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and

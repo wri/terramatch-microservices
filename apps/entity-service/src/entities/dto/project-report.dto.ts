@@ -71,6 +71,9 @@ export class ProjectReportLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true })
+  pctSurvivalToDate: number | null;
 }
 
 export type AdditionalProjectReportFullProps = AdditionalProps<
@@ -187,9 +190,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true })
   significantChange: string | null;
-
-  @ApiProperty({ nullable: true })
-  pctSurvivalToDate: number | null;
 
   @ApiProperty({ nullable: true })
   survivalCalculation: string | null;

@@ -1,15 +1,5 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column,
-  HasMany,
-  Index,
-  Model,
-  PrimaryKey,
-  Scopes,
-  Table
-} from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {
@@ -24,9 +14,40 @@ export class Disturbance extends Model<Disturbance> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @Column(BIGINT.UNSIGNED)
-  disturbanceableType: number;
+  @Column(STRING)
+  disturbanceableType: string;
 
   @Column(BIGINT.UNSIGNED)
   disturbanceableId: number;
+
+  @AllowNull
+  @Column(STRING)
+  collection: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  type: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  intensity: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  extent: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  description: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  oldId: number;
+
+  @AllowNull
+  @Column(STRING)
+  oldModel: string | null;
+
+  @Column(TINYINT)
+  hidden: string | null;
 }

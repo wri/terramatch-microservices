@@ -93,57 +93,18 @@ export class DisturbancesProcessor extends EntityProcessor<
       });
     }
 
-    if (query.projectUuid != null) {
-      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
-      if (project == null) {
-        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
-      }
-      builder.where({ projectId: project.id });
-    }
-
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async getFullDto(nursery: Disturbance) {
-    const nurseryId = nursery.id;
+  async getFullDto(disturbance: Disturbance) {
+    const nurseryId = disturbance.id;
 
-    const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
-    const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
-    const props: AdditionalNurseryFullProps = {
-      seedlingsGrownCount,
-      nurseryReportsTotal,
-      overdueNurseryReportsTotal,
-
-      ...(this.entitiesService.mapMediaCollection(await Media.for(nursery).findAll(), Nursery.MEDIA) as NurseryMedia)
-    };
-
-    return { id: nursery.uuid, dto: new DisturbanceFullDto(nursery, props) };
+    return { id: disturbance.uuid, dto: new DisturbanceFullDto(disturbance, null) };
   }
 
-  async getLightDto(nursery: Disturbance) {
-    const nurseryId = nursery.id;
-
-    const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new DisturbanceLightDto(nursery, { seedlingsGrownCount }) };
-  }
-
-  protected async getTotalOverdueReports(nurseryId: number) {
-    const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
-    return await NurseryReport.incomplete().nurseries([nurseryId]).count(countOpts);
-  }
-
-  private async getSeedlingsGrownCount(nurseryId: number) {
-    return (
-      (
-        await NurseryReport.nurseries([nurseryId])
-          .approved()
-          .findAll({
-            raw: true,
-            attributes: [[fn("SUM", col("seedlings_young_trees")), "seedlingsYoungTrees"]]
-          })
-      )[0].seedlingsYoungTrees ?? 0
-    );
+  async getLightDto(disturbance: Disturbance) {
+    const nurseryId = disturbance.id;
+    return { id: disturbance.uuid, dto: new DisturbanceLightDto(disturbance, null) };
   }
 
   async delete(disturbance: Disturbance) {

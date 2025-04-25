@@ -2,6 +2,7 @@ import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
+  Disturbance,
   Nursery,
   NurseryReport,
   Permission,
@@ -24,6 +25,7 @@ import { SitePolicy } from "./site.policy";
 import { NurseryReportPolicy } from "./nursery-report.policy";
 import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
+import { DisturbancePolicy } from "@terramatch-microservices/common/policies/disturbance.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,7 +45,8 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
-  [User, UserPolicy]
+  [User, UserPolicy],
+  [Disturbance, DisturbancePolicy]
 ];
 
 /**

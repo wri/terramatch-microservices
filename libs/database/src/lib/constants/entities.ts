@@ -16,19 +16,18 @@ export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
   nurseryReports: NurseryReport
 };
 
-export const ENTITY_TYPES = ["projects", "sites", "nurseries", "disturbances", "invasives", ...REPORT_TYPES] as const;
+export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
-export type EntityModel = ReportModel | Project | Site | Nursery | Disturbance | Invasive;
+export type EntityModel = ReportModel | Project | Site | Nursery;
 export type EntityClass<T extends EntityModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const ENTITY_MODELS: { [E in EntityType]: EntityClass<EntityModel> } = {
   ...REPORT_MODELS,
   projects: Project,
   sites: Site,
-  nurseries: Nursery,
-  disturbances: Disturbance,
+  nurseries: Nursery
+  // disturbances: Disturbance,
   // stratas:  Strata::class,
-  invasives: Invasive
 };
 
 export const isReport = (entity: EntityModel): entity is ReportModel =>

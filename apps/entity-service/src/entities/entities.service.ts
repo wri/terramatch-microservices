@@ -36,6 +36,8 @@ import { ITranslateParams } from "@transifex/native";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { DisturbanceDto } from "./dto/disturbance.dto";
 import { InvasiveDto } from "./dto/invasive.dto";
+import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
+import { StrataDto } from "./dto/strata.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -84,6 +86,9 @@ const ASSOCIATION_PROCESSORS = {
   ),
   invasives: AssociationProcessor.buildSimpleProcessor(InvasiveDto, ({ id: invasiveableId }, invasiveableType) =>
     Invasive.findAll({ where: { invasiveableType, invasiveableId, hidden: false } })
+  ),
+  stratas: AssociationProcessor.buildSimpleProcessor(StrataDto, ({ id: stratasableId }, stratasableType) =>
+    Strata.findAll({ where: { stratasableType, stratasableId, hidden: false } })
   )
 };
 

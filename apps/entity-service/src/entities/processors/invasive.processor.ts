@@ -6,19 +6,20 @@ import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
-import { DisturbanceFullDto, DisturbanceLightDto } from "../dto/disturbance.dto";
+import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
+import { InvasiveFullDto, InvasiveLightDto } from "../dto/invasive.dto";
 
-export class DisturbancesProcessor extends EntityProcessor<
-  Disturbance,
-  DisturbanceLightDto,
-  DisturbanceFullDto,
+export class InvasiveProcessor extends EntityProcessor<
+  Invasive,
+  InvasiveLightDto,
+  InvasiveFullDto,
   EntityUpdateAttributes
 > {
-  readonly LIGHT_DTO = DisturbanceLightDto;
-  readonly FULL_DTO = DisturbanceFullDto;
+  readonly LIGHT_DTO = InvasiveLightDto;
+  readonly FULL_DTO = InvasiveFullDto;
 
   async findOne(uuid: string) {
-    return await Disturbance.findOne({
+    return await Invasive.findOne({
       where: { uuid }
       /*include: [
         {
@@ -37,7 +38,7 @@ export class DisturbancesProcessor extends EntityProcessor<
       include: [{ association: "organisation", attributes: ["name"] }]
     };
 
-    const builder = await this.entitiesService.buildQuery(Disturbance, query, [projectAssociation]);
+    const builder = await this.entitiesService.buildQuery(Invasive, query, [projectAssociation]);
     if (query.sort != null) {
       if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
@@ -95,27 +96,27 @@ export class DisturbancesProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async getFullDto(disturbance: Disturbance) {
-    const nurseryId = disturbance.id;
+  async getFullDto(invasive: Invasive) {
+    const nurseryId = invasive.id;
 
-    return { id: disturbance.uuid, dto: new DisturbanceFullDto(disturbance, null) };
+    return { id: invasive.uuid, dto: new InvasiveFullDto(invasive, null) };
   }
 
-  async getLightDto(disturbance: Disturbance) {
-    const nurseryId = disturbance.id;
-    return { id: disturbance.uuid, dto: new DisturbanceLightDto(disturbance, null) };
+  async getLightDto(invasive: Invasive) {
+    const nurseryId = invasive.id;
+    return { id: invasive.uuid, dto: new InvasiveLightDto(invasive, null) };
   }
 
-  async delete(disturbance: Disturbance) {
+  async delete(invasive: Invasive) {
     const permissions = await this.entitiesService.getPermissions();
     const managesOwn = permissions.includes("manage-own"); // TODO validate this condition
     if (managesOwn) {
-      const reportCount = await NurseryReport.count({ where: { nurseryId: disturbance.id } });
+      const reportCount = await NurseryReport.count({ where: { nurseryId: invasive.id } });
       if (reportCount > 0) {
         throw new NotAcceptableException("You can only delete nurseries that do not have reports");
       }
     }
 
-    await super.delete(disturbance);
+    await super.delete(invasive);
   }
 }

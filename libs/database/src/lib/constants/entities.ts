@@ -3,6 +3,7 @@ import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";
 import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
+import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 
 export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -15,19 +16,19 @@ export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
   nurseryReports: NurseryReport
 };
 
-export const ENTITY_TYPES = ["projects", "sites", "nurseries", "disturbances", ...REPORT_TYPES] as const;
+export const ENTITY_TYPES = ["projects", "sites", "nurseries", "disturbances", "invasives", ...REPORT_TYPES] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
-export type EntityModel = ReportModel | Project | Site | Nursery | Disturbance;
+export type EntityModel = ReportModel | Project | Site | Nursery | Disturbance | Invasive;
 export type EntityClass<T extends EntityModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const ENTITY_MODELS: { [E in EntityType]: EntityClass<EntityModel> } = {
   ...REPORT_MODELS,
   projects: Project,
   sites: Site,
   nurseries: Nursery,
-  disturbances: Disturbance
+  disturbances: Disturbance,
   // stratas:  Strata::class,
-  //'invasives:  Invasive::class,
+  invasives: Invasive
 };
 
 export const isReport = (entity: EntityModel): entity is ReportModel =>
@@ -43,6 +44,7 @@ export const isReport = (entity: EntityModel): entity is ReportModel =>
 export async function getProjectId(entity: EntityModel) {
   if (entity instanceof Project) return entity.id;
   if (entity instanceof Disturbance) return entity.id;
+  if (entity instanceof Invasive) return entity.id;
   if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
 
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;

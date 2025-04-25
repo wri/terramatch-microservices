@@ -9,8 +9,8 @@ import { EntityModel } from "@terramatch-microservices/database/constants/entiti
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData } from "../dto/entity-update.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
-import { Project } from "@terramatch-microservices/database/entities";
 import { Disturbance } from "@terramatch-microservices/database/entities/disturbance.entity";
+import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -120,6 +120,7 @@ export abstract class EntityProcessor<
    */
   async update(model: ModelType, update: UpdateDto) {
     if (model instanceof Disturbance) return;
+    if (model instanceof Invasive) return;
 
     if (update.status != null) {
       if (this.APPROVAL_STATUSES.includes(update.status)) {

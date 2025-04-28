@@ -17,7 +17,9 @@ describe("EntitiesService", () => {
   let service: EntitiesService;
 
   function expectMediaMatchesDto(dto: object, media: Media) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { modelType: _, ...dtoWithoutModelType } = dto as MediaDto;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { modelType: __, ...mediaWithoutModelType } = media;
 
     expect(dtoWithoutModelType).toMatchObject({

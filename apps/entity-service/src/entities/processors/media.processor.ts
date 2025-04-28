@@ -93,7 +93,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", project.id);
 
     let siteReports = [];
-    if (projectReportWithDue.dueAt) {
+    if (projectReportWithDue.dueAt != null) {
       siteReports = await SiteReport.findAll({
         where: {
           [Op.and]: [
@@ -109,7 +109,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReports.map(report => report.id) });
 
     let nurseryReports = [];
-    if (projectReportWithDue.dueAt) {
+    if (projectReportWithDue.dueAt != null) {
       nurseryReports = await NurseryReport.findAll({
         where: {
           [Op.and]: [
@@ -181,7 +181,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     if (query.isPublic != null) {
       builder.where({
-        isPublic: query.isPublic ? "1" : "0"
+        isPublic: query.isPublic
       });
     }
 

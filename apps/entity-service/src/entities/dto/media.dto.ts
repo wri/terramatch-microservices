@@ -68,8 +68,5 @@ export class MediaDto extends AssociationDto<MediaDto> {
   modelType: string | null;
 
   @ApiProperty({ nullable: true })
-  createdBy: number | null;
-
-  @ApiProperty({ nullable: true })
   createdByUserName: string | null;
 }

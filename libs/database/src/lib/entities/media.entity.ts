@@ -117,7 +117,7 @@ export class Media extends Model<Media> {
   @Column(BIGINT.UNSIGNED)
   createdBy: number | null;
 
-  @BelongsTo(() => User)
+  @BelongsTo(() => User, { constraints: false })
   createdByUser: User | null;
 
   get createdByUserName() {

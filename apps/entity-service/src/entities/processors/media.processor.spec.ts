@@ -12,7 +12,7 @@ import {
   ProjectReportFactory,
   SiteReportFactory
 } from "@terramatch-microservices/database/factories";
-import { buildJsonApi, DocumentBuilder, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
 import { MediaDto } from "../dto/media.dto";
 import { MediaProcessor } from "./media.processor";
 import { Media } from "@terramatch-microservices/database/entities";

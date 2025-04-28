@@ -17,6 +17,7 @@ import { col, fn, Includeable, Op, Sequelize } from "sequelize";
 import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 
 type QueryModelType = {
   modelType: string;
@@ -44,20 +45,6 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [baseEntity.id] }];
   }
 
-  private async getSiteModels(site: Site) {
-    const models: QueryModelType[] = this.getBaseEntityModels(site);
-    const subquery = Subquery.select(SiteReport, "id").eq("siteId", site.id);
-    models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: subquery.literal });
-    return models;
-  }
-
-  private async getNurseryModels(nursery: Nursery) {
-    const models: QueryModelType[] = this.getBaseEntityModels(nursery);
-    const subquery = Subquery.select(NurseryReport, "id").eq("nurseryId", nursery.id);
-    models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: subquery.literal });
-    return models;
-  }
-
   private async getProjectModels(project: Project) {
     const models: QueryModelType[] = this.getBaseEntityModels(project);
 
@@ -76,6 +63,20 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const nurseryReportSubquery = Subquery.select(NurseryReport, "id").in("nurseryId", nurserySubquery.literal);
     models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: nurseryReportSubquery.literal });
 
+    return models;
+  }
+
+  private async getSiteModels(site: Site) {
+    const models: QueryModelType[] = this.getBaseEntityModels(site);
+    const subquery = Subquery.select(SiteReport, "id").eq("siteId", site.id);
+    models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: subquery.literal });
+    return models;
+  }
+
+  private async getNurseryModels(nursery: Nursery) {
+    const models: QueryModelType[] = this.getBaseEntityModels(nursery);
+    const subquery = Subquery.select(NurseryReport, "id").eq("nurseryId", nursery.id);
+    models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: subquery.literal });
     return models;
   }
 
@@ -235,7 +236,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     });
   }
 
-  _queryBuilder = null;
+  _queryBuilder: Promise<PaginatedQueryBuilder<Media>> | null = null;
 
   get queryBuilder() {
     if (this._queryBuilder == null) {

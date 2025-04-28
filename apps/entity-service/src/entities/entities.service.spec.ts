@@ -17,8 +17,11 @@ describe("EntitiesService", () => {
   let service: EntitiesService;
 
   function expectMediaMatchesDto(dto: object, media: Media) {
-    expect(dto).toMatchObject({
-      ...pickApiProperties(media, MediaDto),
+    const { modelType: _, ...dtoWithoutModelType } = dto as MediaDto;
+    const { modelType: __, ...mediaWithoutModelType } = media;
+
+    expect(dtoWithoutModelType).toMatchObject({
+      ...pickApiProperties(mediaWithoutModelType, MediaDto),
       url: service.fullUrl(media),
       thumbUrl: service.thumbnailUrl(media),
       createdAt: media.createdAt
@@ -89,7 +92,7 @@ describe("EntitiesService", () => {
 
     it("returns a valid DTO", async () => {
       const media = await MediaFactory.forProject.create();
-      const dto = service.mediaDto(media, { modelType: "projects" });
+      const dto = service.mediaDto(media, {});
       expectMediaMatchesDto(dto, media);
     });
   });

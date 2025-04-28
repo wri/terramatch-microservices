@@ -14,7 +14,8 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
     protected readonly entityType: EntityType,
     protected readonly entityUuid: string,
     protected readonly entityModelClass: EntityClass<EntityModel>,
-    protected readonly entitiesService: EntitiesService
+    protected readonly entitiesService: EntitiesService,
+    protected readonly query?: MediaQueryDto
   ) {}
 
   /**
@@ -24,19 +25,19 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
    */
   static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto<D>>(
     dtoClass: Type<D>,
-    associationGetter: (entity: EntityModel, entityLaravelType: string, query?: MediaQueryDto) => Promise<M[]>
+    associationGetter: (entity: EntityModel, entityLaravelType: string) => Promise<M[]>
   ) {
     class SimpleProcessor extends AssociationProcessor<M, D> {
       readonly DTO = dtoClass;
 
-      async getAssociations(entity: EntityModel, query?: MediaQueryDto) {
-        return await associationGetter(entity, this.entityModelClass.LARAVEL_TYPE, query);
+      async getAssociations(entity: EntityModel) {
+        return await associationGetter(entity, this.entityModelClass.LARAVEL_TYPE);
       }
     }
     return SimpleProcessor;
   }
 
-  protected abstract getAssociations(baseEntity: EntityModel, query?: MediaQueryDto): Promise<M[]>;
+  protected abstract getAssociations(baseEntity: EntityModel): Promise<M[]>;
 
   /**
    * Returns all attributes that should be loaded on the base model load.
@@ -65,8 +66,8 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
     return this._baseEntity;
   }
 
-  async addDtos(document: DocumentBuilder, query?: MediaQueryDto): Promise<void> {
-    const associations = await this.getAssociations(await this.getBaseEntity(), query);
+  async addDtos(document: DocumentBuilder): Promise<void> {
+    const associations = await this.getAssociations(await this.getBaseEntity());
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];

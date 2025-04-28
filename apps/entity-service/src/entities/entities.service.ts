@@ -28,6 +28,7 @@ import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 import { MediaAssociationDtoAdditionalProps } from "./dto/media-association.dto";
+import { MediaQueryDto } from "./dto/media-query.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -125,7 +126,8 @@ export class EntitiesService {
   createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
-    association: ProcessableAssociation
+    association: ProcessableAssociation,
+    query?: MediaQueryDto
   ) {
     const processorClass = ASSOCIATION_PROCESSORS[association];
     if (processorClass == null) {
@@ -137,7 +139,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entityType}`);
     }
 
-    return new processorClass(entityType, uuid, entityModelClass, this) as unknown as AssociationProcessor<T, D>;
+    return new processorClass(entityType, uuid, entityModelClass, this, query) as unknown as AssociationProcessor<T, D>;
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {

@@ -30,9 +30,10 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     protected readonly entityType: EntityType,
     protected readonly entityUuid: string,
     protected readonly entityModelClass: EntityClass<EntityModel>,
-    protected readonly entitiesService: EntitiesService
+    protected readonly entitiesService: EntitiesService,
+    protected readonly query?: MediaQueryDto
   ) {
-    super(entityType, entityUuid, entityModelClass, entitiesService);
+    super(entityType, entityUuid, entityModelClass, entitiesService, query);
   }
 
   get baseModelAttributes() {
@@ -118,13 +119,15 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return models;
   }
 
-  private async buildQuery(baseEntity: EntityModel, query: MediaQueryDto) {
+  private async getQueryBuilder() {
+    const baseEntity: EntityModel = await this.getBaseEntity();
+
     const userAssociations: Includeable = {
       association: "createdByUser",
       attributes: ["firstName", "lastName"]
     };
 
-    const builder = await this.entitiesService.buildQuery(Media, query, [userAssociations]);
+    const builder = await this.entitiesService.buildQuery(Media, this.query, [userAssociations]);
 
     let models: QueryModelType[] = [];
     if (baseEntity instanceof Project) {
@@ -150,58 +153,60 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       })
     });
 
-    if (query.isGeotagged != null) {
+    if (this.query.isGeotagged != null) {
       builder.where({
         [Op.and]: [
           {
             lat: {
-              [query.isGeotagged ? Op.ne : Op.eq]: null
+              [this.query.isGeotagged ? Op.ne : Op.eq]: null
             },
             lng: {
-              [query.isGeotagged ? Op.ne : Op.eq]: null
+              [this.query.isGeotagged ? Op.ne : Op.eq]: null
             }
           }
         ]
       });
     }
 
-    if (query.isPublic != null) {
+    if (this.query.isPublic != null) {
       builder.where({
-        isPublic: query.isPublic
+        isPublic: this.query.isPublic
       });
     }
 
-    if (query.search != null) {
+    if (this.query.search != null) {
       builder.where({
-        [Op.or]: [{ name: { [Op.like]: `%${query.search}%` } }, { fileName: { [Op.like]: `%${query.search}%` } }]
+        [Op.or]: [
+          { name: { [Op.like]: `%${this.query.search}%` } },
+          { fileName: { [Op.like]: `%${this.query.search}%` } }
+        ]
       });
     }
 
-    if (query.fileType != null) {
+    if (this.query.fileType != null) {
       builder.where({
-        fileType: query.fileType
+        fileType: this.query.fileType
       });
     }
 
-    if (query.direction) {
-      builder.order(["createdAt", query.direction]);
+    if (this.query.direction) {
+      builder.order(["createdAt", this.query.direction]);
     }
     return builder;
   }
 
-  public async getAssociations(baseEntity: EntityModel, query: MediaQueryDto) {
-    const builder = await this.buildQuery(baseEntity, query);
-
+  public async getAssociations() {
+    const builder = await this.queryBuilder;
     return builder.execute();
   }
 
-  public async getTotal(baseEntity: EntityModel, query: MediaQueryDto) {
-    const builder = await this.buildQuery(baseEntity, query);
+  public async getTotal() {
+    const builder = await this.queryBuilder;
     return builder.paginationTotal();
   }
 
-  public async addDtos(document: DocumentBuilder, query: MediaQueryDto): Promise<void> {
-    const associations = await this.getAssociations(await this.getBaseEntity(), query);
+  public async addDtos(document: DocumentBuilder): Promise<void> {
+    const associations = await this.getAssociations();
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
@@ -218,15 +223,24 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
 
-    const total = await this.getTotal(await this.getBaseEntity(), query);
+    const total = await this.getTotal();
 
     const resource = getDtoType(this.DTO);
     document.addIndexData({
       resource,
-      requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}${getStableRequestQuery(query)}`,
+      requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}${getStableRequestQuery(this.query)}`,
       total,
-      pageNumber: query.page?.number,
+      pageNumber: this.query?.page?.number,
       ids: indexIds
     });
+  }
+
+  _queryBuilder = null;
+
+  get queryBuilder() {
+    if (this._queryBuilder == null) {
+      this._queryBuilder = this.getQueryBuilder();
+    }
+    return this._queryBuilder;
   }
 }

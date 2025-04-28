@@ -32,11 +32,11 @@ export class EntityAssociationsController {
     @Param() { entity, uuid, association }: EntityAssociationIndexParamsDto,
     @Query() query: MediaQueryDto
   ) {
-    const processor = this.entitiesService.createAssociationProcessor(entity, uuid, association);
+    const processor = this.entitiesService.createAssociationProcessor(entity, uuid, association, query);
     const baseEntity = await processor.getBaseEntity();
     await this.policyService.authorize("read", baseEntity);
     const document = buildJsonApi(processor.DTO, { forceDataArray: true });
-    await processor.addDtos(document, query);
+    await processor.addDtos(document);
     return document.serialize();
   }
 }

@@ -35,22 +35,30 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     super(entityType, entityUuid, entityModelClass, entitiesService);
   }
 
-  private async getSiteModels(site: Site): Promise<QueryModelType[]> {
-    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [site.id] }];
+  get baseModelAttributes() {
+    return [...super.baseModelAttributes, "dueAt"];
+  }
+
+  private getBaseEntityModels(baseEntity: EntityModel): QueryModelType[] {
+    return [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [baseEntity.id] }];
+  }
+
+  private async getSiteModels(site: Site) {
+    const models: QueryModelType[] = this.getBaseEntityModels(site);
     const subquery = Subquery.select(SiteReport, "id").eq("siteId", site.id);
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: subquery.literal });
     return models;
   }
 
   private async getNurseryModels(nursery: Nursery) {
-    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [nursery.id] }];
+    const models: QueryModelType[] = this.getBaseEntityModels(nursery);
     const subquery = Subquery.select(NurseryReport, "id").eq("nurseryId", nursery.id);
     models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: subquery.literal });
     return models;
   }
 
   private async getProjectModels(project: Project) {
-    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [project.id] }];
+    const models: QueryModelType[] = this.getBaseEntityModels(project);
 
     const projectReportSubquery = Subquery.select(ProjectReport, "id").eq("projectId", project.id);
     models.push({ modelType: ProjectReport.LARAVEL_TYPE, subquery: projectReportSubquery.literal });
@@ -80,12 +88,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   }
 
   private async getProjectReportModels(projectReport: ProjectReport) {
-    const models: QueryModelType[] = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [projectReport.id] }];
-
-    const projectReportWithDue = await ProjectReport.findOne({
-      where: { id: projectReport.id },
-      attributes: ["dueAt"]
-    });
+    const models: QueryModelType[] = this.getBaseEntityModels(projectReport);
 
     const project = await Project.findOne({ where: { id: projectReport.projectId }, attributes: ["id"] });
 
@@ -93,13 +96,13 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", project.id);
 
     let siteReports = [];
-    if (projectReportWithDue.dueAt != null) {
+    if (projectReport.dueAt != null) {
       siteReports = await SiteReport.findAll({
         where: {
           [Op.and]: [
             { siteId: { [Op.in]: siteSubquery.literal } },
-            Sequelize.where(fn("MONTH", col("due_at")), projectReportWithDue.dueAt.getMonth() + 1),
-            Sequelize.where(fn("YEAR", col("due_at")), projectReportWithDue.dueAt.getFullYear())
+            Sequelize.where(fn("MONTH", col("due_at")), projectReport.dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), projectReport.dueAt.getFullYear())
           ]
         },
         attributes: ["id"]
@@ -109,13 +112,13 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReports.map(report => report.id) });
 
     let nurseryReports = [];
-    if (projectReportWithDue.dueAt != null) {
+    if (projectReport.dueAt != null) {
       nurseryReports = await NurseryReport.findAll({
         where: {
           [Op.and]: [
             { nurseryId: { [Op.in]: nurserySubquery.literal } },
-            Sequelize.where(fn("MONTH", col("due_at")), projectReportWithDue.dueAt.getMonth() + 1),
-            Sequelize.where(fn("YEAR", col("due_at")), projectReportWithDue.dueAt.getFullYear())
+            Sequelize.where(fn("MONTH", col("due_at")), projectReport.dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), projectReport.dueAt.getFullYear())
           ]
         },
         attributes: ["id"]
@@ -126,10 +129,6 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return models;
   }
 
-  private async getBaseEntityModels(baseEntity: EntityModel) {
-    return [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [baseEntity.id] }];
-  }
-
   private async buildQuery(baseEntity: EntityModel, query: MediaQueryDto) {
     const userAssociations: Includeable = {
       association: "createdByUser",
@@ -138,7 +137,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     const builder = await this.entitiesService.buildQuery(Media, query, [userAssociations]);
 
-    let models = [];
+    let models: QueryModelType[] = [];
     if (baseEntity instanceof Project) {
       models = await this.getProjectModels(baseEntity);
     } else if (baseEntity instanceof Site) {
@@ -148,7 +147,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     } else if (baseEntity instanceof ProjectReport) {
       models = await this.getProjectReportModels(baseEntity);
     } else {
-      models = await this.getBaseEntityModels(baseEntity);
+      models = this.getBaseEntityModels(baseEntity);
     }
 
     builder.where({

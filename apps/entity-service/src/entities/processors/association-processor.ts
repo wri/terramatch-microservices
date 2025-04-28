@@ -38,15 +38,24 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
 
   protected abstract getAssociations(baseEntity: EntityModel, query?: MediaQueryDto): Promise<M[]>;
 
+  /**
+   * Returns all attributes that should be loaded on the base model load.
+   *
+   * Note: The code that uses this attribute will perform an intersection between this list and the available
+   * attributes on the model class so it's OK to include attributes here that are not available on all Entity
+   * classes.
+   */
+  get baseModelAttributes() {
+    // Only pull the attributes that are needed by the entity policies.
+    return ["id", "frameworkKey", "projectId", "siteId", "nurseryId"];
+  }
+
   private _baseEntity: EntityModel;
   async getBaseEntity(): Promise<EntityModel> {
     if (this._baseEntity != null) return this._baseEntity;
 
     // Only pull the attributes that are needed by the entity policies.
-    const attributes = intersection(
-      ["id", "frameworkKey", "projectId", "siteId", "nurseryId"],
-      Object.keys(this.entityModelClass.getAttributes())
-    );
+    const attributes = intersection(this.baseModelAttributes, Object.keys(this.entityModelClass.getAttributes()));
 
     this._baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
     if (this._baseEntity == null) {

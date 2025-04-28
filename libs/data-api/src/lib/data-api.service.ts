@@ -24,7 +24,8 @@ const gadmLevel1 = (level0: string) => `
     AND gid_0 = '${level0}'
 `;
 
-const gadmLevel2 = (level1: string) => `
+// Exported for testing only
+export const gadmLevel2 = (level1: string) => `
   SELECT gid_2 as id, name_2 as name
   FROM gadm_administrative_boundaries
   WHERE gid_1 = '${level1}'
@@ -81,7 +82,7 @@ export class DataApiService {
     const response = await fetch(`${DATA_API_DATASET}${queryPath}?${params}`, {
       headers: {
         Origin: new URL(appFrontend).hostname,
-        ["x-api-key"]: dataApiKey
+        "x-api-key": dataApiKey
       }
     });
 
@@ -89,7 +90,7 @@ export class DataApiService {
       throw new InternalServerErrorException(response.statusText);
     }
 
-    const json = (await response.json()) as { data: any };
+    const json = (await response.json()) as { data: never };
     await this.redis.set(`${KEY_NAMESPACE}${key}`, JSON.stringify(json.data), "EX", cacheDuration);
 
     return json.data;

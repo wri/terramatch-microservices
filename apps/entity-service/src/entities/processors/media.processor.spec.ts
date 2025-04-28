@@ -35,14 +35,8 @@ describe("MediaProcessor", () => {
       expect(id).toBeDefined();
       expect(uuid).toBeDefined();
       const document = buildJsonApi(MediaDto, { forceDataArray: true });
-      await service.createAssociationProcessor("projects", projectUuid, "media").addDtos(document, {
-        page: {
-          number: 1,
-          size: 10
-        }
-      });
+      await service.createAssociationProcessor("projects", projectUuid, "media").addDtos(document);
       const result = document.serialize();
-      console.log(result);
       expect(result).toMatchObject({
         data: [],
         meta: {

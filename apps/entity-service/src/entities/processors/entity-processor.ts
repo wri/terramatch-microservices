@@ -73,6 +73,22 @@ export abstract class EntityProcessor<
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;
 
+  async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
+    const results: DtoResult<FullDto>[] = [];
+    for (const model of models) {
+      results.push(await this.getFullDto(model));
+    }
+    return results;
+  }
+
+  async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
+    const results: DtoResult<LightDto>[] = [];
+    for (const model of models) {
+      results.push(await this.getLightDto(model));
+    }
+    return results;
+  }
+
   /* eslint-disable @typescript-eslint/no-unused-vars */
   async processSideload(
     document: DocumentBuilder,
@@ -92,8 +108,9 @@ export abstract class EntityProcessor<
     if (models.length !== 0) {
       await this.entitiesService.authorize("read", models);
 
-      for (const model of models) {
-        const { id, dto } = await this.getLightDto(model);
+      const dtoResults = await this.getLightDtos(models);
+
+      for (const { id, dto } of dtoResults) {
         indexIds.push(id);
         if (sideloaded) document.addIncluded(id, dto);
         else document.addData(id, dto);

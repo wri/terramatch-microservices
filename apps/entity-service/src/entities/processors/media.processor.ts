@@ -126,8 +126,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return models;
   }
 
-  private async getSiteReportModels(siteReport: SiteReport) {
-    return [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [siteReport.id] }];
+  private async getBaseEntityModels(baseEntity: EntityModel) {
+    return [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [baseEntity.id] }];
   }
 
   private async buildQuery(baseEntity: EntityModel, query: MediaQueryDto) {
@@ -147,10 +147,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       models = await this.getNurseryModels(baseEntity);
     } else if (baseEntity instanceof ProjectReport) {
       models = await this.getProjectReportModels(baseEntity);
-    } else if (baseEntity instanceof SiteReport) {
-      models = await this.getSiteReportModels(baseEntity);
-    } else if (baseEntity instanceof NurseryReport) {
-      models = [{ modelType: this.entityModelClass.LARAVEL_TYPE, subquery: [baseEntity.id] }];
+    } else {
+      models = await this.getBaseEntityModels(baseEntity);
     }
 
     builder.where({

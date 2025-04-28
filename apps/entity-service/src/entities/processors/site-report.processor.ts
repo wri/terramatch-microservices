@@ -161,7 +161,7 @@ export class SiteReportProcessor extends EntityProcessor<
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
       projectReport: undefined,
-      ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA) as SiteReportMedia)
+      ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA, "siteReports") as SiteReportMedia)
     };
 
     return { id: siteReport.uuid, dto: new SiteReportFullDto(siteReport, props) };

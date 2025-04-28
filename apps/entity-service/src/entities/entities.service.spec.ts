@@ -89,7 +89,7 @@ describe("EntitiesService", () => {
 
     it("returns a valid DTO", async () => {
       const media = await MediaFactory.forProject.create();
-      const dto = service.mediaDto(media);
+      const dto = service.mediaDto(media, { modelType: "projects" });
       expectMediaMatchesDto(dto, media);
     });
   });
@@ -102,7 +102,7 @@ describe("EntitiesService", () => {
       media.push(
         await MediaFactory.forProject.create({ collectionName: Project.MEDIA.detailedProjectBudget.dbCollection })
       );
-      const result = service.mapMediaCollection(media, Project.MEDIA);
+      const result = service.mapMediaCollection(media, Project.MEDIA, "projects");
       expect(Object.keys(result)).toMatchObject(Object.keys(Project.MEDIA));
       // multi media
       expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);

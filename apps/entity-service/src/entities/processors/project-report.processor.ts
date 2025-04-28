@@ -159,7 +159,8 @@ export class ProjectReportProcessor extends EntityProcessor<
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(projectReport).findAll(),
-        ProjectReport.MEDIA
+        ProjectReport.MEDIA,
+        "projectReports"
       ) as ProjectReportMedia)
     };
 

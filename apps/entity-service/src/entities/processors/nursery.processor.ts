@@ -113,7 +113,11 @@ export class NurseryProcessor extends EntityProcessor<
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(nursery).findAll(), Nursery.MEDIA) as NurseryMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(nursery).findAll(),
+        Nursery.MEDIA,
+        "nurseries"
+      ) as NurseryMedia)
     };
 
     return { id: nursery.uuid, dto: new NurseryFullDto(nursery, props) };

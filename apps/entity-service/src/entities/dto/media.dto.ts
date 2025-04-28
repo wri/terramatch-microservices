@@ -11,6 +11,10 @@ export class MediaDto extends AssociationDto<MediaDto> {
     super({
       ...pickApiProperties(media, MediaDto),
       ...additional,
+      entityType: additional.entityType,
+      entityUuid: additional.entityUuid,
+      url: additional.url,
+      thumbUrl: additional.thumbUrl,
       createdAt: media.createdAt
     });
   }

@@ -27,6 +27,7 @@ import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
+import { MediaAssociationDtoAdditionalProps } from "./dto/media-association.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 const ENTITY_PROCESSORS = {
@@ -159,25 +160,24 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto(media: Media) {
+  mediaDto(media: Media, additional: MediaAssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),
-      entityType: media.modelType as EntityType,
-      entityUuid: media.modelId.toString()
+      ...additional
     });
   }
 
-  mapMediaCollection(media: Media[], collection: MediaCollection) {
+  mapMediaCollection(media: Media[], collection: MediaCollection, entityType: EntityType) {
     const grouped = groupBy(media, "collectionName");
     return Object.entries(collection).reduce(
       (dtoMap, [collection, { multiple, dbCollection }]) => ({
         ...dtoMap,
         [collection]: multiple
-          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media))
+          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media, { modelType: entityType }))
           : grouped[dbCollection] == null
           ? null
-          : this.mediaDto(grouped[dbCollection][0])
+          : this.mediaDto(grouped[dbCollection][0], { modelType: entityType })
       }),
       {}
     );

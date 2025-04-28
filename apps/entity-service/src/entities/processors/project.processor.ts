@@ -191,7 +191,11 @@ export class ProjectProcessor extends EntityProcessor<
 
       application: project.application == null ? null : new ProjectApplicationDto(project.application),
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(project).findAll(), Project.MEDIA) as ProjectMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(project).findAll(),
+        Project.MEDIA,
+        "projects"
+      ) as ProjectMedia)
     };
 
     return { id: project.uuid, dto: new ProjectFullDto(project, props) };

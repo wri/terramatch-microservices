@@ -225,7 +225,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
         entityType: this.entityType,
         entityUuid: this.entityUuid,
         url: this.entitiesService.fullUrl(media),
-        thumbUrl: this.entitiesService.thumbnailUrl(media)
+        thumbUrl: this.entitiesService.thumbnailUrl(media),
+        modelType: this.entityType
       };
 
       document.addData(association.uuid, new this.DTO(association, additionalProps));

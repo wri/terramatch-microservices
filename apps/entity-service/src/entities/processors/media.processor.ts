@@ -66,22 +66,13 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const siteSubquery = Subquery.select(Site, "id").eq("projectId", project.id);
     models.push({ modelType: Site.LARAVEL_TYPE, subquery: siteSubquery.literal });
 
-    const sites = await Site.findAll({ where: { projectId: project.id }, attributes: ["id"] });
-
-    const siteReportSubquery = Subquery.select(SiteReport, "id").in(
-      "siteId",
-      sites.map(site => site.id)
-    );
+    const siteReportSubquery = Subquery.select(SiteReport, "id").in("siteId", siteSubquery.literal);
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReportSubquery.literal });
 
-    const nurseries = await Nursery.findAll({ where: { projectId: project.id }, attributes: ["id"] });
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", project.id);
     models.push({ modelType: Nursery.LARAVEL_TYPE, subquery: nurserySubquery.literal });
 
-    const nurseryReportSubquery = Subquery.select(NurseryReport, "id").in(
-      "nurseryId",
-      nurseries.map(nursery => nursery.id)
-    );
+    const nurseryReportSubquery = Subquery.select(NurseryReport, "id").in("nurseryId", nurserySubquery.literal);
     models.push({ modelType: NurseryReport.LARAVEL_TYPE, subquery: nurseryReportSubquery.literal });
 
     return models;
@@ -90,10 +81,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   private async getProjectReportModels(projectReport: ProjectReport) {
     const models: QueryModelType[] = this.getBaseEntityModels(projectReport);
 
-    const project = await Project.findOne({ where: { id: projectReport.projectId }, attributes: ["id"] });
-
-    const siteSubquery = Subquery.select(Site, "id").eq("projectId", project.id);
-    const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", project.id);
+    const siteSubquery = Subquery.select(Site, "id").eq("projectId", projectReport.projectId);
+    const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", projectReport.projectId);
 
     let siteReports = [];
     if (projectReport.dueAt != null) {

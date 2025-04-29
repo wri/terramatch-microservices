@@ -120,7 +120,9 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return models;
   }
 
+  _queryBuilder: PaginatedQueryBuilder<Media> | null = null;
   private async getQueryBuilder() {
+    if (this._queryBuilder != null) return this._queryBuilder;
     const baseEntity: EntityModel = await this.getBaseEntity();
 
     const userAssociations: Includeable = {
@@ -128,7 +130,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       attributes: ["firstName", "lastName"]
     };
 
-    const builder = await this.entitiesService.buildQuery(Media, this.query, [userAssociations]);
+    this._queryBuilder = await this.entitiesService.buildQuery(Media, this.query, [userAssociations]);
 
     let models: QueryModelType[] = [];
     if (baseEntity instanceof Project) {
@@ -143,7 +145,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       models = this.getBaseEntityModels(baseEntity);
     }
 
-    builder.where({
+    this._queryBuilder.where({
       [Op.or]: models.map(model => {
         return {
           modelType: model.modelType,
@@ -155,7 +157,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     });
 
     if (this.query.isGeotagged != null) {
-      builder.where({
+      this._queryBuilder.where({
         [Op.and]: [
           {
             lat: {
@@ -170,13 +172,13 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     }
 
     if (this.query.isPublic != null) {
-      builder.where({
+      this._queryBuilder.where({
         isPublic: this.query.isPublic
       });
     }
 
     if (this.query.search != null) {
-      builder.where({
+      this._queryBuilder.where({
         [Op.or]: [
           { name: { [Op.like]: `%${this.query.search}%` } },
           { fileName: { [Op.like]: `%${this.query.search}%` } }
@@ -185,24 +187,24 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     }
 
     if (this.query.fileType != null) {
-      builder.where({
+      this._queryBuilder.where({
         fileType: this.query.fileType
       });
     }
 
     if (this.query.direction) {
-      builder.order(["createdAt", this.query.direction]);
+      this._queryBuilder.order(["createdAt", this.query.direction]);
     }
-    return builder;
+    return this._queryBuilder;
   }
 
   public async getAssociations() {
-    const builder = await this.queryBuilder;
+    const builder = await this.getQueryBuilder();
     return builder.execute();
   }
 
   public async getTotal() {
-    const builder = await this.queryBuilder;
+    const builder = await this.getQueryBuilder();
     return builder.paginationTotal();
   }
 
@@ -217,8 +219,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
         entityType: this.entityType,
         entityUuid: this.entityUuid,
         url: this.entitiesService.fullUrl(media),
-        thumbUrl: this.entitiesService.thumbnailUrl(media),
-        modelType: this.entityType
+        thumbUrl: this.entitiesService.thumbnailUrl(media)
       };
 
       document.addData(association.uuid, new this.DTO(association, additionalProps));
@@ -234,14 +235,5 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       pageNumber: this.query?.page?.number,
       ids: indexIds
     });
-  }
-
-  _queryBuilder: Promise<PaginatedQueryBuilder<Media>> | null = null;
-
-  get queryBuilder() {
-    if (this._queryBuilder == null) {
-      this._queryBuilder = this.getQueryBuilder();
-    }
-    return this._queryBuilder;
   }
 }

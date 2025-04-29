@@ -225,7 +225,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA, "sites") as SiteMedia)
+      ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA) as SiteMedia)
     };
 
     return { id: site.uuid, dto: new SiteFullDto(site, props) };

@@ -17,13 +17,8 @@ describe("EntitiesService", () => {
   let service: EntitiesService;
 
   function expectMediaMatchesDto(dto: object, media: Media) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { modelType: _, ...dtoWithoutModelType } = dto as MediaDto;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { modelType: __, ...mediaWithoutModelType } = media;
-
-    expect(dtoWithoutModelType).toMatchObject({
-      ...pickApiProperties(mediaWithoutModelType, MediaDto),
+    expect(dto).toMatchObject({
+      ...pickApiProperties(media, MediaDto),
       url: service.fullUrl(media),
       thumbUrl: service.thumbnailUrl(media),
       createdAt: media.createdAt
@@ -107,7 +102,7 @@ describe("EntitiesService", () => {
       media.push(
         await MediaFactory.forProject.create({ collectionName: Project.MEDIA.detailedProjectBudget.dbCollection })
       );
-      const result = service.mapMediaCollection(media, Project.MEDIA, "projects");
+      const result = service.mapMediaCollection(media, Project.MEDIA);
       expect(Object.keys(result)).toMatchObject(Object.keys(Project.MEDIA));
       // multi media
       expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);

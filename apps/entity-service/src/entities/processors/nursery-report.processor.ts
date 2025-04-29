@@ -145,11 +145,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     const props: AdditionalNurseryReportFullProps = {
       reportTitle,
       projectReportTitle,
-      ...(this.entitiesService.mapMediaCollection(
-        mediaCollection,
-        NurseryReport.MEDIA,
-        "nurseryReports"
-      ) as NurseryReportMedia)
+      ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
     };
 
     return { id: nurseryReport.uuid, dto: new NurseryReportFullDto(nurseryReport, props) };

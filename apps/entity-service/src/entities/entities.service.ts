@@ -164,7 +164,7 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto(media: Media, additional: MediaAssociationDtoAdditionalProps) {
+  mediaDto(media: Media, additional?: MediaAssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),
@@ -172,16 +172,16 @@ export class EntitiesService {
     });
   }
 
-  mapMediaCollection(media: Media[], collection: MediaCollection, entityType: EntityType) {
+  mapMediaCollection(media: Media[], collection: MediaCollection) {
     const grouped = groupBy(media, "collectionName");
     return Object.entries(collection).reduce(
       (dtoMap, [collection, { multiple, dbCollection }]) => ({
         ...dtoMap,
         [collection]: multiple
-          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media, { modelType: entityType }))
+          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media))
           : grouped[dbCollection] == null
           ? null
-          : this.mediaDto(grouped[dbCollection][0], { modelType: entityType })
+          : this.mediaDto(grouped[dbCollection][0])
       }),
       {}
     );

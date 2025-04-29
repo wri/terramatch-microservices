@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {

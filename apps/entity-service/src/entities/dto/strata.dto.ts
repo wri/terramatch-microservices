@@ -1,6 +1,5 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { ApiProperty } from "@nestjs/swagger";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
 import { AllowNull, Column } from "sequelize-typescript";

@@ -7,7 +7,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
@@ -18,13 +18,13 @@ import {
   SiteReportLightDto,
   SiteReportMedia
 } from "../dto/site-report.dto";
-import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class SiteReportProcessor extends EntityProcessor<
+export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
   SiteReportLightDto,
   SiteReportFullDto,
-  EntityUpdateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;
@@ -60,7 +60,7 @@ export class SiteReportProcessor extends EntityProcessor<
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number) {
+  async findMany(query: EntityQueryDto) {
     const siteAssociation: Includeable = {
       association: "site",
       attributes: ["id", "uuid", "name"],
@@ -93,9 +93,13 @@ export class SiteReportProcessor extends EntityProcessor<
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({
+        "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({
+        "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+      });
     }
 
     const associationFieldMap = {

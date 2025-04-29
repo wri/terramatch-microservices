@@ -74,13 +74,14 @@ export class EntityStatusUpdateEmail extends EmailSender {
     }
 
     const entityTypeName = isReport(entity) ? "Report" : entity.constructor.name;
+    const feedback = await this.getFeedback(entity);
     const i18nReplacements: Dictionary<string> = {
       "{entityTypeName}": entityTypeName,
       "{lowerEntityTypeName}": entityTypeName.toLowerCase(),
       "{entityName}": (isReport(entity) ? "" : entity.name) ?? "",
-      "{feedback}": (await this.getFeedback(entity)) ?? "(No feedback)"
+      "{feedback}": feedback == null || feedback === "" ? "(No feedback)" : feedback
     };
-    if (isReport(entity)) i18nReplacements["{parentEntityName"] = this.getParentName(entity) ?? "";
+    if (isReport(entity)) i18nReplacements["{parentEntityName}"] = this.getParentName(entity) ?? "";
 
     const additionalValues = {
       link: getViewLinkPath(entity),
@@ -127,9 +128,11 @@ export class EntityStatusUpdateEmail extends EmailSender {
       throw new InternalServerErrorException(`Entity model class not found for entity type [${this.type}]`);
     }
 
-    const attributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"];
     const include = [];
     const attributeKeys = Object.keys(entityClass.getAttributes());
+    const attributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"].filter(field =>
+      attributeKeys.includes(field)
+    );
     for (const parentId of ["projectId", "siteId", "nurseryId"]) {
       if (attributeKeys.includes(parentId)) {
         attributes.push(parentId);

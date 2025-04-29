@@ -66,14 +66,18 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
     return this._baseEntity;
   }
 
-  async addDtos(document: DocumentBuilder): Promise<void> {
+  async addDtos(document: DocumentBuilder, asIncluded = false): Promise<void> {
     const associations = await this.getAssociations(await this.getBaseEntity());
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
-      document.addData(association.uuid, new this.DTO(association, additionalProps));
+      if (asIncluded) {
+        document.addIncluded(association.uuid, new this.DTO(association, additionalProps));
+      } else {
+        document.addData(association.uuid, new this.DTO(association, additionalProps));
+      }
     }
 
     const resource = getDtoType(this.DTO);

@@ -31,14 +31,14 @@ import { MediaAssociationDtoAdditionalProps } from "./dto/media-association.dto"
 import { MediaQueryDto } from "./dto/media-query.dto";
 
 // The keys of this array must match the type in the resulting DTO.
-const ENTITY_PROCESSORS = {
+export const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
   sites: SiteProcessor,
   nurseries: NurseryProcessor,
   projectReports: ProjectReportProcessor,
   nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor
-};
+} as const;
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
@@ -49,7 +49,9 @@ export const POLYGON_STATUSES_FILTERS = [
   "needs-more-information",
   "draft"
 ] as const;
+
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
+
 const ASSOCIATION_PROCESSORS = {
   demographics: AssociationProcessor.buildSimpleProcessor(
     DemographicDto,

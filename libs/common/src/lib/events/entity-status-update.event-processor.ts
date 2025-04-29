@@ -1,4 +1,4 @@
-import { FeedbackModel, LaravelModel, laravelType, StatusModel } from "@terramatch-microservices/database/types/util";
+import { laravelType, StatusUpdateModel } from "@terramatch-microservices/database/types/util";
 import { EventProcessor } from "./event.processor";
 import { TMLogger } from "../util/tm-logger";
 import {
@@ -7,16 +7,25 @@ import {
   EntityType,
   getOrganisationId,
   getProjectId,
-  isReport
+  isReport,
+  ReportModel
 } from "@terramatch-microservices/database/constants/entities";
 import { StatusUpdateData } from "../email/email.processor";
 import { EventService } from "./event.service";
-import { Action, AuditStatus, FormQuestion } from "@terramatch-microservices/database/entities";
-import { get, isEmpty, map } from "lodash";
+import { Action, AuditStatus, FormQuestion, Task } from "@terramatch-microservices/database/entities";
+import { flatten, get, isEmpty, map, uniq } from "lodash";
 import { Op } from "sequelize";
-import { STATUS_DISPLAY_STRINGS } from "@terramatch-microservices/database/constants/status";
+import {
+  APPROVED,
+  AWAITING_APPROVAL,
+  DUE,
+  NEEDS_MORE_INFORMATION,
+  STARTED,
+  STATUS_DISPLAY_STRINGS
+} from "@terramatch-microservices/database/constants/status";
+import { InternalServerErrorException } from "@nestjs/common";
 
-export type StatusUpdateModel = LaravelModel & StatusModel & FeedbackModel;
+const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
 export class EntityStatusUpdate extends EventProcessor {
   private readonly logger = new TMLogger(EntityStatusUpdate.name);
@@ -43,6 +52,14 @@ export class EntityStatusUpdate extends EventProcessor {
       await this.updateActions();
     }
     await this.createAuditStatus();
+
+    if (
+      entityType != null &&
+      isReport(this.model as EntityModel) &&
+      TASK_UPDATE_REPORT_STATUSES.includes(this.model.status)
+    ) {
+      await this.checkTaskStatus();
+    }
   }
 
   private async sendStatusUpdateEmail(type: EntityType) {
@@ -124,5 +141,61 @@ export class EntityStatusUpdate extends EventProcessor {
     return `Request More Information on the following fields: ${labels.join(", ")}. Feedback: ${
       feedback ?? "(No feedback)"
     }`;
+  }
+
+  private async checkTaskStatus() {
+    const { taskId } = this.model as ReportModel;
+    if (taskId == null) {
+      this.logger.warn(`No task found for status changed report [${this.model.constructor.name}, ${this.model.id}]`);
+      return;
+    }
+
+    const attributes = ["id", "status", "updateRequestStatus"];
+    const task = await Task.findOne({
+      where: { id: taskId },
+      include: [
+        { association: "projectReport", attributes },
+        { association: "siteReports", attributes },
+        { association: "nurseryReports", attributes }
+      ]
+    });
+    if (task == null) {
+      this.logger.error(`No task found for task id [${taskId}]`);
+      return;
+    }
+
+    if (task.status === DUE) {
+      // No further processing needed; nothing automatic happens until the task has been submitted.
+      return;
+    }
+
+    const reports = flatten<ReportModel | null>([task.projectReport, task.siteReports, task.nurseryReports]).filter(
+      report => report != null
+    );
+
+    const reportStatuses = uniq(reports.map(({ status }) => status));
+    if (reportStatuses.length === 1 && reportStatuses[0] === APPROVED) {
+      await task.update({ status: APPROVED });
+      return;
+    }
+
+    if (reportStatuses.includes(DUE) || reportStatuses.includes(STARTED)) {
+      throw new InternalServerErrorException(`Task has unsubmitted reports [${taskId}]`);
+    }
+
+    const moreInfoReport = reports.find(
+      ({ status, updateRequestStatus }) =>
+        (status === NEEDS_MORE_INFORMATION && updateRequestStatus !== AWAITING_APPROVAL) ||
+        updateRequestStatus === NEEDS_MORE_INFORMATION
+    );
+    if (moreInfoReport != null) {
+      // A report in needs-more-information causes the task to go to needs-more-information
+      await task.update({ status: NEEDS_MORE_INFORMATION });
+      return;
+    }
+
+    // If there are no reports or update requests in needs-more-information, the only option left is that
+    // something is in awaiting-approval.
+    await task.update({ status: AWAITING_APPROVAL });
   }
 }

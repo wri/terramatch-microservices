@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {
@@ -39,6 +39,20 @@ export class Disturbance extends Model<Disturbance> {
   @AllowNull
   @Column(TEXT)
   description: string | null;
+
+  /**
+   * @deprecated This property is no longer in use and will be removed in future versions.
+   */
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  oldId: number;
+
+  /**
+   * @deprecated This property is no longer in use and will be removed in future versions.
+   */
+  @AllowNull
+  @Column(STRING)
+  oldModel: string | null;
 
   @Column(TINYINT)
   hidden: number | null;

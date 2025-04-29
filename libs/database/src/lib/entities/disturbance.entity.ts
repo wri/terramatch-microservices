@@ -40,14 +40,6 @@ export class Disturbance extends Model<Disturbance> {
   @Column(TEXT)
   description: string | null;
 
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  oldId: number;
-
-  @AllowNull
-  @Column(STRING)
-  oldModel: string | null;
-
   @Column(TINYINT)
   hidden: number | null;
 }

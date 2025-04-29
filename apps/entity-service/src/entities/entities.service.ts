@@ -119,10 +119,7 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
-  async isFrameworkAdmin<T extends EntityModel>(T: EntityModel) {
-    if (T instanceof Disturbance) return;
-    if (T instanceof Invasive) return;
-    const { frameworkKey } = T;
+  async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
   }
 

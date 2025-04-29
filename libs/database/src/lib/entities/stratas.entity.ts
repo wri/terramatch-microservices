@@ -14,7 +14,7 @@ export class Strata extends Model<Strata> {
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  owner_id: number | null;
+  ownerId: number | null;
 
   @Column(STRING)
   stratasableType: string;

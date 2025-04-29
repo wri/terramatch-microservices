@@ -22,7 +22,4 @@ export class StrataDto extends AssociationDto<StrataDto> {
   @AllowNull
   @Column(INTEGER)
   extent: string | null;
-
-  @ApiProperty({ nullable: true })
-  hidden: number | null;
 }

@@ -27,13 +27,4 @@ export class DisturbanceDto extends AssociationDto<DisturbanceDto> {
 
   @ApiProperty({ nullable: true })
   description: string | null;
-
-  @ApiProperty({ nullable: true })
-  oldId: number;
-
-  @ApiProperty({ nullable: true })
-  oldModel: string | null;
-
-  @ApiProperty({ nullable: true })
-  hidden: number | null;
 }

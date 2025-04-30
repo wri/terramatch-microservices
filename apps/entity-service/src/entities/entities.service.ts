@@ -5,7 +5,14 @@ import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { Demographic, Media, Seeding, TreeSpecies, User } from "@terramatch-microservices/database/entities";
+import {
+  Demographic,
+  Disturbance,
+  Media,
+  Seeding,
+  TreeSpecies,
+  User
+} from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
@@ -26,6 +33,11 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
+import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
+import { DisturbanceDto } from "./dto/disturbance.dto";
+import { InvasiveDto } from "./dto/invasive.dto";
+import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
+import { StrataDto } from "./dto/strata.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -68,6 +80,17 @@ const ASSOCIATION_PROCESSORS = {
       attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
       group: ["taxonId", "name", "collection"]
     })
+  ),
+  disturbances: AssociationProcessor.buildSimpleProcessor(
+    DisturbanceDto,
+    ({ id: disturbanceableId }, disturbanceableType) =>
+      Disturbance.findAll({ where: { disturbanceableType, disturbanceableId, hidden: false } })
+  ),
+  invasives: AssociationProcessor.buildSimpleProcessor(InvasiveDto, ({ id: invasiveableId }, invasiveableType) =>
+    Invasive.findAll({ where: { invasiveableType, invasiveableId, hidden: false } })
+  ),
+  stratas: AssociationProcessor.buildSimpleProcessor(StrataDto, ({ id: stratasableId }, stratasableType) =>
+    Strata.findAll({ where: { stratasableType, stratasableId, hidden: false } })
   )
 };
 

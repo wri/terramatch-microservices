@@ -8,6 +8,9 @@ import { DemographicCollections, DemographicDto, DemographicEntryDto } from "./d
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
+import { DisturbanceDto } from "./dto/disturbance.dto";
+import { InvasiveDto } from "./dto/invasive.dto";
+import { StrataDto } from "./dto/strata.dto";
 
 @Controller("entities/v3/:entity/:uuid")
 @ApiExtraModels(DemographicEntryDto, DemographicCollections)
@@ -22,7 +25,10 @@ export class EntityAssociationsController {
   @JsonApiResponse([
     { data: DemographicDto, hasMany: true },
     { data: SeedingDto, hasMany: true },
-    { data: TreeSpeciesDto, hasMany: true }
+    { data: TreeSpeciesDto, hasMany: true },
+    { data: DisturbanceDto, hasMany: true },
+    { data: InvasiveDto, hasMany: true },
+    { data: StrataDto, hasMany: true }
   ])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Base entity not found" })

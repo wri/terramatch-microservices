@@ -54,7 +54,11 @@ export class SiteReport extends Model<SiteReport> {
     photos: { dbCollection: "photos", multiple: true },
     treeSpecies: { dbCollection: "tree_species", multiple: true },
     siteSubmission: { dbCollection: "site_submission", multiple: true },
-    documentFiles: { dbCollection: "document_files", multiple: true }
+    documentFiles: { dbCollection: "document_files", multiple: true },
+    treePlantingUpload: { dbCollection: "tree_planting_upload", multiple: true },
+    anrPhotos: { dbCollection: "anr_photos", multiple: true },
+    soilWaterConservationUpload: { dbCollection: "soil_water_conservation_upload", multiple: true },
+    soilWaterConservationPhotos: { dbCollection: "soil_water_conservation_photos", multiple: true }
   } as const;
 
   static incomplete() {

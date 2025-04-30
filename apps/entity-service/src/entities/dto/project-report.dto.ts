@@ -304,4 +304,52 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   photos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  baselineReportUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  localGovernanceOrderLetterUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  eventsMeetingsPhotos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  localGovernanceProofOfPartnershipUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  topThreeSuccessesUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  directJobsUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  convergenceJobsUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  convergenceSchemesUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  livelihoodActivitiesUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  directLivelihoodImpactsUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  certifiedDatabaseUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  physicalAssetsPhotos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  indirectCommunityPartnersUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  trainingCapacityBuildingUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  trainingCapacityBuildingPhotos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  financialReportUpload: MediaDto[];
 }

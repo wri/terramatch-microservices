@@ -32,10 +32,16 @@ export class Invasive extends Model<Invasive> {
   @Column(TEXT)
   name: string | null;
 
+  /**
+   * @deprecated This property is no longer in use and will be removed in future versions.
+   */
   @AllowNull
   @Column(INTEGER.UNSIGNED)
   oldId: number;
 
+  /**
+   * @deprecated This property is no longer in use and will be removed in future versions.
+   */
   @AllowNull
   @Column(STRING)
   oldModel: string | null;

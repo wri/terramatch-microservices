@@ -18,13 +18,4 @@ export class InvasiveDto extends AssociationDto<InvasiveDto> {
 
   @ApiProperty({ nullable: true })
   name: string | null;
-
-  @ApiProperty({ nullable: true })
-  oldId: number;
-
-  @ApiProperty({ nullable: true })
-  oldModel: string | null;
-
-  @ApiProperty({ nullable: true })
-  hidden: number | null;
 }

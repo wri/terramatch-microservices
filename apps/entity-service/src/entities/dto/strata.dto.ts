@@ -1,6 +1,5 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { ApiProperty } from "@nestjs/swagger";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
 import { AllowNull, Column } from "sequelize-typescript";
@@ -22,7 +21,4 @@ export class StrataDto extends AssociationDto<StrataDto> {
   @AllowNull
   @Column(INTEGER)
   extent: string | null;
-
-  @ApiProperty({ nullable: true })
-  hidden: number | null;
 }

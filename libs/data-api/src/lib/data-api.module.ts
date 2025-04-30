@@ -9,10 +9,13 @@ import { RedisModule } from "@nestjs-modules/ioredis";
     RedisModule.forRootAsync({
       imports: [ConfigModule.forRoot({ isGlobal: true })],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: "single",
-        url: `redis://${configService.get("REDIS_HOST")}:${configService.get("REDIS_PORT")}`
-      })
+      useFactory: (configService: ConfigService) => {
+        const protocol = process.env["NODE_ENV"] === "development" ? "redis://" : "rediss://";
+        return {
+          type: "single",
+          url: `${protocol}${configService.get("REDIS_HOST")}:${configService.get("REDIS_PORT")}`
+        };
+      }
     })
   ],
   providers: [DataApiService],

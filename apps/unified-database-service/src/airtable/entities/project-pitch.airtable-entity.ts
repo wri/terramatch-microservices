@@ -1,8 +1,14 @@
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { ProjectPitch } from "@terramatch-microservices/database/entities";
+import { filter, flatten, uniq } from "lodash";
 
-const COLUMNS: ColumnMapping<ProjectPitch>[] = [
-  ...commonEntityColumns<ProjectPitch>("pitch"),
+type ProjectPitchAssociations = {
+  projectCountryName: string;
+  stateNames: string[];
+};
+
+const COLUMNS: ColumnMapping<ProjectPitch, ProjectPitchAssociations>[] = [
+  ...commonEntityColumns<ProjectPitch, ProjectPitchAssociations>("pitch"),
   "totalTrees",
   "totalHectares",
   "restorationInterventionTypes",
@@ -10,6 +16,9 @@ const COLUMNS: ColumnMapping<ProjectPitch>[] = [
   "restorationStrategy",
   "projectObjectives",
   "projectCountry",
+  associatedValueColumn("projectCountryName", "projectCountry"),
+  "states",
+  associatedValueColumn("stateNames", "states"),
   "projectName",
   "projectBudget",
   "status",
@@ -43,8 +52,27 @@ const COLUMNS: ColumnMapping<ProjectPitch>[] = [
   "goalTreesRestoredDirectSeeding"
 ];
 
-export class ProjectPitchEntity extends AirtableEntity<ProjectPitch> {
+export class ProjectPitchEntity extends AirtableEntity<ProjectPitch, ProjectPitchAssociations> {
   readonly TABLE_NAME = "Project Pitches";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = ProjectPitch;
+
+  async loadAssociations(pitches: ProjectPitch[]) {
+    const countryNames = await this.gadmCountryNames();
+    const stateCountries = filter(
+      uniq(flatten(pitches.map(({ states }) => states?.map(state => state.split(".")[0]))))
+    );
+    const stateNames = await this.gadmStateNames(stateCountries);
+
+    return pitches.reduce(
+      (associations, { id, projectCountry, states }) => ({
+        ...associations,
+        [id]: {
+          projectCountryName: projectCountry == null ? null : countryNames[projectCountry],
+          stateNames: filter(states?.map(state => stateNames[state]))
+        }
+      }),
+      {} as Record<number, ProjectPitchAssociations>
+    );
+  }
 }

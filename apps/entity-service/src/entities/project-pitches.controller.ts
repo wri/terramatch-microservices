@@ -1,5 +1,4 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param } from "@nestjs/common";
-import { EntityAssociationIndexParamsDto } from "./dto/entity-association-index-params.dto";
+import { BadRequestException, Controller, Get, NotFoundException, Param, Request } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
@@ -15,6 +14,35 @@ export class ProjectPitchesController {
     private readonly policyService: PolicyService
   ) {}
 
+  @Get()
+  @ApiOperation({
+    operationId: "ProjectPitchesIndex",
+    summary: "Get projects pitches."
+  })
+  @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
+  @ExceptionResponse(NotFoundException, { description: "Records not found" })
+  async getPitches(@Request() { authenticatedUserId }) {
+    const result = await this.projectPitchService.getProjectPitches(authenticatedUserId);
+    const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
+    for (const pitch of result) {
+      const pitchDto = new ProjectPitchDto(pitch);
+      document.addData(pitchDto.uuid, pitchDto);
+    }
+    return document.serialize();
+  }
+
+  @Get("/admin")
+  @ApiOperation({
+    operationId: "AdminProjectPitchesIndex",
+    summary: "Get admin projects pitches."
+  })
+  @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
+  @ExceptionResponse(NotFoundException, { description: "Records not found" })
+  async getAdminPitches() {
+    const result = await this.projectPitchService.getAdminProjectPitches();
+    return buildJsonApi(ProjectPitchDto, { forceDataArray: true }).addData("dummy", result).document.serialize();
+  }
+
   @Get(":uuid")
   @ApiOperation({
     operationId: "ProjectPitchesGetUUIDIndex",
@@ -25,17 +53,5 @@ export class ProjectPitchesController {
   async getByUUID(@Param() { uuid }: ProjectPitchParamDto) {
     const result = await this.projectPitchService.getProjectPitch(uuid);
     return buildJsonApi(ProjectPitchDto).addData(uuid, new ProjectPitchDto(result)).document.serialize();
-  }
-
-  @Get()
-  @ApiOperation({
-    operationId: "ProjectPitchesIndex",
-    summary: "Get projects pitches."
-  })
-  @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
-  @ExceptionResponse(NotFoundException, { description: "Records not found" })
-  async getPitches() {
-    const result = await this.projectPitchService.getProjectPitches();
-    return buildJsonApi(ProjectPitchDto, { forceDataArray: true }).addData("dummy", result).document.serialize();
   }
 }

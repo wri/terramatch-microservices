@@ -1,11 +1,16 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsDate, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from "class-validator";
+import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { ProjectPitch } from "@terramatch-microservices/database/entities";
 
 @JsonApiDto({ type: "projectPitches" })
-export class ProjectPitchDto {
-  constructor(data: Partial<ProjectPitchDto>) {
-    Object.assign(this, data);
+export class ProjectPitchDto extends JsonApiAttributes<ProjectPitchDto> {
+  constructor(data: ProjectPitch) {
+    pickApiProperties(data, ProjectPitchDto);
+    super({
+      ...pickApiProperties(data, ProjectPitchDto)
+    });
   }
 
   @ApiProperty()

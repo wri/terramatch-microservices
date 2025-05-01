@@ -6,6 +6,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
 import { ProjectPitchService } from "./project-pitch.service";
 import { ProjectPitchDto } from "./dto/project-pitch.dto";
+import { ProjectPitchParamDto } from "./dto/project-pitch-param.dto";
 
 @Controller("entities/v3/projectPitches")
 export class ProjectPitchesController {
@@ -16,14 +17,25 @@ export class ProjectPitchesController {
 
   @Get(":uuid")
   @ApiOperation({
-    operationId: "ProjectPitchesAssociationIndex",
+    operationId: "ProjectPitchesGetUUIDIndex",
     summary: "Get an project pitch by uuid."
   })
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
-  @ExceptionResponse(NotFoundException, { description: "Base entity not found" })
-  async getByUUID(@Param() { uuid }: EntityAssociationIndexParamsDto) {
+  @ExceptionResponse(NotFoundException, { description: "Project pitch not found" })
+  async getByUUID(@Param() { uuid }: ProjectPitchParamDto) {
     const result = await this.projectPitchService.getProjectPitch(uuid);
+    return buildJsonApi(ProjectPitchDto).addData(uuid, new ProjectPitchDto(result)).document.serialize();
+  }
 
-    return buildJsonApi(ProjectPitchDto).addData(uuid, result).document.serialize();
+  @Get()
+  @ApiOperation({
+    operationId: "ProjectPitchesIndex",
+    summary: "Get projects pitches."
+  })
+  @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
+  @ExceptionResponse(NotFoundException, { description: "Records not found" })
+  async getPitches() {
+    const result = await this.projectPitchService.getProjectPitches();
+    return buildJsonApi(ProjectPitchDto, { forceDataArray: true }).addData("dummy", result).document.serialize();
   }
 }

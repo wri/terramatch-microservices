@@ -10,7 +10,6 @@ import {
 } from "aws-cdk-lib/aws-ecs-patterns";
 import { Role } from "aws-cdk-lib/aws-iam";
 import { upperFirst } from "lodash";
-import { Dictionary } from "factory-girl-ts";
 
 const extractFromEnv = (...names: string[]) =>
   names.map(name => {
@@ -24,7 +23,7 @@ type Mutable<T> = {
 };
 
 // Recommendations for optimal pricing from AWs
-const RIGHTSIZE_RECOMMENDATIONS: Dictionary<Dictionary<{ cpu: number; memoryLimitMiB: number }>> = {
+const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, { cpu: number; memoryLimitMiB: number }>> = {
   "research-service": {
     prod: {
       cpu: 1024,

@@ -22,11 +22,20 @@ type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
 
+// Recommendations for optimal pricing from AWs
+const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, { cpu: number; memoryLimitMiB: number }>> = {
+  "research-service": {
+    prod: {
+      cpu: 1024,
+      memoryLimitMiB: 2048
+    }
+  }
+};
+
 const customizeFargate = (service: string, env: string, props: Mutable<ApplicationLoadBalancedFargateServiceProps>) => {
-  if (service === "research-service" && ["prod", "staging"].includes(env)) {
-    // Beef up the research service in staging and prod
-    props.cpu = 2048;
-    props.memoryLimitMiB = 4096;
+  const recommendation = RIGHTSIZE_RECOMMENDATIONS[service]?.[env];
+  if (recommendation != null) {
+    return { ...props, ...recommendation };
   }
 
   return props;
@@ -82,7 +91,9 @@ export class ServiceStack extends Stack {
       customizeFargate(service, env, {
         serviceName: `terramatch-${service}-${env}`,
         cluster,
-        cpu: 512,
+        // These are the recommended defaults by Amazon Rightsize in the billing console
+        cpu: 256,
+        memoryLimitMiB: 512,
         desiredCount: 1,
         enableExecuteCommand: true,
         taskImageOptions: {
@@ -97,7 +108,6 @@ export class ServiceStack extends Stack {
         },
         securityGroups: securityGroups,
         taskSubnets: { subnets: privateSubnets },
-        memoryLimitMiB: 2048,
         assignPublicIp: false,
         publicLoadBalancer: false,
         loadBalancerName: `${service}-${env}`

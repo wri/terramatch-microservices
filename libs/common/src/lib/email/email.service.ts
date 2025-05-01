@@ -82,9 +82,11 @@ export class EmailService {
     i18nKeys: Dictionary<string>,
     { i18nReplacements, additionalValues }: I18nEmailOptions = {}
   ) {
-    if (i18nKeys["subject"] == null && i18nKeys["subjectKey"] == null)
-      throw new InternalServerErrorException("Email subject is required");
-    const { subject, ...translated } = await this.localizationService.translateKeys(
+    if (!this.hasSubject(i18nKeys)) throw new InternalServerErrorException("Email subject is required");
+
+    const subjectKey = this.getSubjectKey(i18nKeys);
+
+    const { [subjectKey]: subject, ...translated } = await this.localizationService.translateKeys(
       i18nKeys,
       locale,
       i18nReplacements ?? {}
@@ -108,5 +110,13 @@ export class EmailService {
 
     const body = this.templateService.render(EMAIL_TEMPLATE, data);
     return { subject, body };
+  }
+
+  private hasSubject(i18nKeys: Dictionary<string>) {
+    return i18nKeys["subject"] != null || i18nKeys["subjectKey"] != null;
+  }
+
+  private getSubjectKey(i18nKeys: Dictionary<string>) {
+    return i18nKeys["subject"] == null ? "subjectKey" : "subject";
   }
 }

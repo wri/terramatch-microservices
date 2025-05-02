@@ -14,6 +14,9 @@ export class ProjectPitchDto extends JsonApiAttributes<ProjectPitchDto> {
   }
 
   @ApiProperty()
+  id: number;
+
+  @ApiProperty()
   @IsUUID()
   uuid: string;
 

@@ -1,8 +1,8 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Request } from "@nestjs/common";
+import { BadRequestException, Controller, Get, HttpStatus, NotFoundException, Param, Request } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
-import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ProjectPitchService } from "./project-pitch.service";
 import { ProjectPitchDto } from "./dto/project-pitch.dto";
 import { ProjectPitchParamDto } from "./dto/project-pitch-param.dto";
@@ -48,6 +48,7 @@ export class ProjectPitchesController {
     operationId: "ProjectPitchesGetUUIDIndex",
     summary: "Get an project pitch by uuid."
   })
+  @JsonApiResponse(ProjectPitchDto, { status: HttpStatus.OK })
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Project pitch not found" })
   async getByUUID(@Param() { uuid }: ProjectPitchParamDto) {

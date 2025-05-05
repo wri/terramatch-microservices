@@ -11,6 +11,8 @@ import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
+  Demographic,
+  DemographicEntry,
   Media,
   NurseryReport,
   Project,
@@ -22,6 +24,7 @@ import {
 import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { Literal } from "sequelize/lib/utils";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
 
@@ -152,19 +155,17 @@ export class ProjectReportProcessor extends ReportProcessor<
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const regeneratedTreesCount = await SiteReport.approved().task(taskId).sum("numTreesRegenerating");
-    const siteReportsCount = await SiteReport.task(taskId).count();
-    const nurseryReportsCount = await NurseryReport.task(taskId).count();
-    const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
     const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const createdByUser = projectReport.user ?? null;
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
+      taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReport.id, siteReportsIdsTask),
       seedsPlantedCount,
       treesPlantedCount,
       regeneratedTreesCount,
-      siteReportsCount,
-      nurseryReportsCount,
-      seedlingsGrown,
+      siteReportsCount: await SiteReport.task(taskId).count(),
+      nurseryReportsCount: await NurseryReport.task(taskId).count(),
+      seedlingsGrown: await this.getSeedlingsGrown(projectReport),
       nonTreeTotal,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
@@ -207,5 +208,23 @@ export class ProjectReportProcessor extends ReportProcessor<
     }
 
     return 0;
+  }
+
+  protected async getTaskTotalWorkdays(projectReportId: number, siteIds: Literal) {
+    const projectReportDemographics = Demographic.idsSubquery(
+      [projectReportId],
+      ProjectReport.LARAVEL_TYPE,
+      Demographic.WORKDAYS_TYPE
+    );
+    const siteReportDemographics = Demographic.idsSubquery(siteIds, SiteReport.LARAVEL_TYPE, Demographic.WORKDAYS_TYPE);
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.or]: [{ [Op.in]: projectReportDemographics }, { [Op.in]: siteReportDemographics }]
+          }
+        }
+      })) ?? 0
+    );
   }
 }

@@ -218,6 +218,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty({ nullable: true })
   volunteerSmallholderFarmers: number | null;
 
+  @ApiProperty()
+  taskTotalWorkdays: number;
+
   @ApiProperty({ nullable: true })
   plantedTrees: number | null;
 

@@ -36,7 +36,7 @@ export class Demographic extends Model<Demographic> {
     Demographic.INDIRECT_BENEFICIARIES_TYPE
   ] as const;
 
-  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: DemographicType) {
+  static idsSubquery(demographicalIds: Literal | number[], demographicalType: string, type: DemographicType) {
     return Subquery.select(Demographic, "id")
       .eq("demographicalType", demographicalType)
       .in("demographicalId", demographicalIds)

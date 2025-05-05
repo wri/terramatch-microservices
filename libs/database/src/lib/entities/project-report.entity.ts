@@ -19,8 +19,6 @@ import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateReque
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
-import { SiteReport } from "./site-report.entity";
-import { Literal } from "sequelize/types/utils";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
 import { StateMachineColumn } from "../util/model-column-state-machine";
@@ -95,27 +93,6 @@ export class ProjectReport extends Model<ProjectReport> {
       .in("status", ProjectReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
-    return builder.literal;
-  }
-
-  static siteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
-    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds);
-    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
-    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
-    return builder.literal;
-  }
-
-  static approvedSiteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
-    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds).in("status", SiteReport.APPROVED_STATUSES);
-    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
-    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
-    return builder.literal;
-  }
-
-  static siteReportsUnsubmittedIdsTaskSubquery(taskIds: number[] | Literal) {
-    const builder = Subquery.select(SiteReport, "id")
-      .in("taskId", taskIds)
-      .in("status", SiteReport.UNSUBMITTED_STATUSES);
     return builder.literal;
   }
 

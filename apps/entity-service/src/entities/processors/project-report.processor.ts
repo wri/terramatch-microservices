@@ -19,12 +19,11 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { sumBy } from "lodash";
 import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
-import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
@@ -146,22 +145,17 @@ export class ProjectReportProcessor extends ReportProcessor<
   }
 
   async getFullDto(projectReport: ProjectReport) {
-    const taskId = projectReport.taskId;
+    const { taskId } = projectReport;
     const reportTitle = await this.getReportTitle(projectReport);
-    const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
+    const siteReportsIdsTask = SiteReport.approvedIdsForTaskSubquery(taskId);
     const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
-    const approvedSiteReportsFromTask = await SiteReport.approved()
-      .task(taskId)
-      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
-    const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
+    const regeneratedTreesCount = await SiteReport.approved().task(taskId).sum("numTreesRegenerating");
     const siteReportsCount = await SiteReport.task(taskId).count();
     const nurseryReportsCount = await NurseryReport.task(taskId).count();
     const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
-    const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
-    const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
-    const readableCompletionStatus = await this.getReadableCompletionStatus(projectReport.completion);
+    const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const createdByUser = projectReport.user ?? null;
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
@@ -172,7 +166,6 @@ export class ProjectReportProcessor extends ReportProcessor<
       nurseryReportsCount,
       seedlingsGrown,
       nonTreeTotal,
-      readableCompletionStatus,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(projectReport).findAll(),
@@ -214,9 +207,5 @@ export class ProjectReportProcessor extends ReportProcessor<
     }
 
     return 0;
-  }
-
-  protected async getReadableCompletionStatus(completion: number) {
-    return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
   }
 }

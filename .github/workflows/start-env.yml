@@ -25,6 +25,7 @@ jobs:
 
   start-api-gateway:
     uses: ./.github/workflows/deploy-api-gateway.yml
+    needs: start-services
     with:
       env: ${{ inputs.env }}
     secrets: inherit

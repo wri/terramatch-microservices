@@ -1,4 +1,13 @@
-import { BadRequestException, Controller, Get, HttpStatus, NotFoundException, Param, Request } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Query,
+  Request
+} from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
@@ -22,13 +31,22 @@ export class ProjectPitchesController {
   })
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
-  async getPitches(@Request() { authenticatedUserId }, @Param() { perPage, search }: ProjectsPitchesParamDto) {
-    const result = await this.projectPitchService.getProjectPitches(authenticatedUserId);
+  async getPitches(@Request() { authenticatedUserId }, @Query() params: ProjectsPitchesParamDto) {
+    const { data, paginationTotal } = await this.projectPitchService.getProjectPitches(authenticatedUserId, params);
     const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
-    for (const pitch of result) {
+    const indexIds: string[] = [];
+    for (const pitch of data) {
+      indexIds.push(pitch.uuid);
       const pitchDto = new ProjectPitchDto(pitch);
       document.addData(pitchDto.uuid, pitchDto);
     }
+
+    document.addIndexData({
+      resource: "projectPitches",
+      requestPath: `/entities/v3/projectPitches`,
+      ids: indexIds,
+      total: paginationTotal
+    });
     return document.serialize();
   }
 
@@ -39,13 +57,21 @@ export class ProjectPitchesController {
   })
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
-  async getAdminPitches() {
-    const result = await this.projectPitchService.getAdminProjectPitches();
+  async getAdminPitches(@Query() params: ProjectsPitchesParamDto) {
+    const { data, paginationTotal } = await this.projectPitchService.getAdminProjectPitches(params);
     const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
-    for (const pitch of result) {
+    const indexIds: string[] = [];
+    for (const pitch of data) {
+      indexIds.push(pitch.uuid);
       const pitchDto = new ProjectPitchDto(pitch);
       document.addData(pitchDto.uuid, pitchDto);
     }
+    document.addIndexData({
+      resource: "projectPitches",
+      requestPath: `/entities/v3/projectPitches`,
+      ids: indexIds,
+      total: paginationTotal
+    });
     return document.serialize();
   }
 

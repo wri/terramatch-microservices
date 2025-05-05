@@ -1,0 +1,66 @@
+name: Stop Environment
+run-name: "Stop Environment [env: ${{ inputs.env }}]"
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Target environment"
+        type: choice
+        required: true
+        options:
+          - dev
+          - test
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.service }}
+
+jobs:
+  stop-service:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Stop Deployed Services
+        run: |
+          aws cloudformation delete-stack --stack-name UserServiceStack-${{ inputs.env }}
+          aws cloudformation delete-stack --stack-name EntityServiceStack-${{ inputs.env }}
+          aws cloudformation delete-stack --stack-name JobServiceStack-${{ inputs.env }}
+          aws cloudformation delete-stack --stack-name UnifiedDatabaseServiceStack-${{ inputs.env }}
+          aws cloudformation delete-stack --stack-name ResearchServiceStack-${{ inputs.env }}
+
+      - name: Wait for Service Stack Deletion
+        run: |
+          aws cloudformation wait stack-delete-complete --stack-name UserServiceStack-${{ inputs.env }}
+          aws cloudformation wait stack-delete-complete --stack-name EntityServiceStack-${{ inputs.env }}
+          aws cloudformation wait stack-delete-complete --stack-name JobServiceStack-${{ inputs.env }}
+          aws cloudformation wait stack-delete-complete --stack-name UnifiedDatabaseServiceStack-${{ inputs.env }}
+          aws cloudformation wait stack-delete-complete --stack-name ResearchServiceStack-${{ inputs.env }}
+
+      - name: Stop ApiGateway
+        run: |
+          aws cloudformation delete-stack --stack-name ApiGatewayStack-${{ inputs.env }}
+
+      - name: Wait for ApiGateway Stack Deletion
+        run: |
+          aws cloudformation wait stack-delete-complete --stack-name ApiGatewayStack-${{ inputs.env }}

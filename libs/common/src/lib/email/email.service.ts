@@ -26,7 +26,7 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>("MAIL_HOST"),
       port: this.configService.get<number>("MAIL_PORT"),
-      secure: this.configService.get<number>("MAIN_PORT") === 465,
+      secure: this.configService.get<number>("MAIL_PORT") === 465,
       auth: {
         user: this.configService.get<string>("MAIL_USERNAME"),
         pass: this.configService.get<string>("MAIL_PASSWORD")
@@ -82,8 +82,11 @@ export class EmailService {
     i18nKeys: Dictionary<string>,
     { i18nReplacements, additionalValues }: I18nEmailOptions = {}
   ) {
-    if (i18nKeys["subject"] == null) throw new InternalServerErrorException("Email subject is required");
-    const { subject, ...translated } = await this.localizationService.translateKeys(
+    if (!this.hasSubject(i18nKeys)) throw new InternalServerErrorException("Email subject is required");
+
+    const subjectKey = this.getSubjectKey(i18nKeys);
+
+    const { [subjectKey]: subject, ...translated } = await this.localizationService.translateKeys(
       i18nKeys,
       locale,
       i18nReplacements ?? {}
@@ -107,5 +110,13 @@ export class EmailService {
 
     const body = this.templateService.render(EMAIL_TEMPLATE, data);
     return { subject, body };
+  }
+
+  private hasSubject(i18nKeys: Dictionary<string>) {
+    return i18nKeys["subject"] != null || i18nKeys["subjectKey"] != null;
+  }
+
+  private getSubjectKey(i18nKeys: Dictionary<string>) {
+    return i18nKeys["subject"] == null ? "subjectKey" : "subject";
   }
 }

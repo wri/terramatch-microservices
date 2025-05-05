@@ -24,7 +24,7 @@ permissions:
 env:
   AWS_REGION: eu-west-1
   AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
-  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.service }}
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-stop-${{ inputs.env }}
 
 jobs:
   stop-service:

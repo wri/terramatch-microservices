@@ -7,11 +7,12 @@ import { AdditionalProjectFullProps, ProjectFullDto, ProjectLightDto } from "./d
 import { Project } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
+import { EntityUpdateData } from "./dto/entity-update.dto";
 
-class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto> {
+class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
   FULL_DTO = ProjectFullDto;
 
@@ -22,6 +23,7 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
   );
   getLightDto = jest.fn(() => Promise.resolve({ id: faker.string.uuid(), dto: new ProjectLightDto() }));
   delete = jest.fn(() => Promise.resolve());
+  update = jest.fn(() => Promise.resolve());
 }
 
 describe("EntitiesController", () => {
@@ -114,6 +116,66 @@ describe("EntitiesController", () => {
       expect(result.meta.resourceType).toBe("projects");
       expect(result.meta.resourceId).toBe(project.uuid);
       expect(result.data).toBeUndefined();
+    });
+  });
+
+  describe("entityUpdate", () => {
+    it("should throw if the entity payload type does not match the path type", async () => {
+      await expect(
+        controller.entityUpdate(
+          { entity: "sites", uuid: "asdf" },
+          { data: { type: "projects", id: "asdf", attributes: {} } }
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw if the entity payload id does not match the path uuid", async () => {
+      await expect(
+        controller.entityUpdate(
+          { entity: "projects", uuid: "asdf" },
+          { data: { type: "projects", id: "qwerty", attributes: {} } }
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw if the model is not found", async () => {
+      jest.spyOn(processor, "findOne").mockResolvedValue(null);
+      await expect(
+        controller.entityUpdate(
+          { entity: "projects", uuid: "asdf" },
+          { data: { type: "projects", id: "asdf", attributes: {} } }
+        )
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("authorizes access to the model", async () => {
+      const project = await ProjectFactory.create();
+      processor.findOne.mockResolvedValue(project);
+      const { id, uuid } = project;
+      policyService.authorize.mockRejectedValueOnce(new UnauthorizedException());
+      await expect(
+        controller.entityUpdate({ entity: "projects", uuid }, { data: { type: "projects", id: uuid, attributes: {} } })
+      ).rejects.toThrow(UnauthorizedException);
+
+      policyService.authorize.mockReset();
+      policyService.authorize.mockResolvedValueOnce(undefined);
+      await controller.entityUpdate(
+        { entity: "projects", uuid },
+        { data: { type: "projects", id: uuid, attributes: {} } }
+      );
+      expect(policyService.authorize).toHaveBeenCalledWith("update", expect.objectContaining({ id, uuid }));
+    });
+
+    it("calls update on the processor and creates the DTO", async () => {
+      const project = await ProjectFactory.create();
+      processor.findOne.mockResolvedValue(project);
+      const { uuid } = project;
+      policyService.authorize.mockResolvedValueOnce(undefined);
+      const attributes = { status: "approved", feedback: "foo" };
+      await controller.entityUpdate({ entity: "projects", uuid }, { data: { type: "projects", id: uuid, attributes } });
+
+      expect(processor.update).toHaveBeenCalledWith(project, attributes);
+      expect(processor.getFullDto).toHaveBeenCalledWith(project);
     });
   });
 });

@@ -15,13 +15,20 @@ import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from ".
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
-import { sumBy } from "lodash";
+import { sumBy, groupBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { Action } from "@terramatch-microservices/database/entities/action.entity";
+import { SiteUpdateAttributes } from "../dto/entity-update.dto";
+import {
+  APPROVED,
+  NEEDS_MORE_INFORMATION,
+  RESTORATION_IN_PROGRESS
+} from "@terramatch-microservices/database/constants/status";
 
-export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto> {
+export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, SiteUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
+
+  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, RESTORATION_IN_PROGRESS];
 
   async findOne(uuid: string) {
     return await Site.findOne({
@@ -123,6 +130,72 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
+  private async getHectaresRestoredSum(siteUuids: string[]): Promise<Record<string, number>> {
+    if (siteUuids.length === 0) return {};
+
+    const polygons = await SitePolygon.findAll({
+      where: {
+        siteUuid: { [Op.in]: siteUuids },
+        status: "approved",
+        isActive: true,
+        deletedAt: null
+      },
+      attributes: ["siteUuid", "calcArea"]
+    });
+
+    const hectaresMap: Record<string, number> = {};
+    const polygonsBySite = groupBy(polygons, "siteUuid");
+
+    for (const siteUuid of siteUuids) {
+      const sitesPolygons = polygonsBySite[siteUuid] ?? [];
+      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => Number(polygon.calcArea) ?? 0);
+    }
+
+    return hectaresMap;
+  }
+
+  private async getTreesPlantedCount(sites: Site[]): Promise<Record<string, number>> {
+    if (sites.length === 0) return {};
+
+    const siteIds = sites.map(site => site.id);
+    const approvedReports = await SiteReport.findAll({
+      where: {
+        siteId: { [Op.in]: siteIds },
+        status: "approved"
+      },
+      attributes: ["id", "siteId"]
+    });
+
+    if (approvedReports.length === 0) {
+      return sites.reduce((acc, site) => ({ ...acc, [site.uuid]: 0 }), {});
+    }
+
+    const reportIds = approvedReports.map(r => r.id);
+    const reportBySiteId = groupBy(approvedReports, "siteId");
+
+    const treesPlanted = await TreeSpecies.findAll({
+      where: {
+        speciesableId: { [Op.in]: reportIds },
+        speciesableType: SiteReport.LARAVEL_TYPE,
+        collection: "tree-planted",
+        hidden: false
+      },
+      attributes: ["speciesableId", "amount"]
+    });
+
+    const result: Record<string, number> = {};
+
+    for (const site of sites) {
+      const siteId = site.id;
+      const siteReports = reportBySiteId[siteId] ?? [];
+      const siteReportIds = siteReports.map(r => r.id);
+      const treesForSite = treesPlanted.filter(t => siteReportIds.includes(t.speciesableId));
+      result[site.uuid] = sumBy(treesForSite, "amount") ?? 0;
+    }
+
+    return result;
+  }
+
   async getFullDto(site: Site) {
     const siteId = site.id;
 
@@ -137,8 +210,11 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
+    const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
+    const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
+
     const props: AdditionalSiteFullProps = {
-      totalHectaresRestoredSum: await SitePolygon.active().approved().sites([site.uuid]).sum("calcArea"),
+      totalHectaresRestoredSum,
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
         (await this.getWorkdayCount(siteId, true)) + (await this.getSelfReportedWorkdayCount(siteId, true)),
@@ -149,19 +225,41 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
 
-      ...(this.entitiesService.mapMediaCollection(await Media.site(siteId).findAll(), Site.MEDIA) as SiteMedia)
+      ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA) as SiteMedia)
     };
 
     return { id: site.uuid, dto: new SiteFullDto(site, props) };
   }
 
   async getLightDto(site: Site) {
-    const siteId = site.id;
-    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery([siteId]);
-    const treesPlantedCount =
-      (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const [hectaresData, treesPlantedData] = await Promise.all([
+      this.getHectaresRestoredSum([site.uuid]),
+      this.getTreesPlantedCount([site])
+    ]);
 
-    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount }) };
+    const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
+    const treesPlantedCount = treesPlantedData[site.uuid] ?? 0;
+
+    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount, totalHectaresRestoredSum }) };
+  }
+
+  async getLightDtos(sites: Site[]): Promise<{ id: string; dto: SiteLightDto }[]> {
+    if (sites.length === 0) return [];
+
+    const siteUuids = sites.map(site => site.uuid);
+
+    const [hectaresData, treesPlantedData] = await Promise.all([
+      this.getHectaresRestoredSum(siteUuids),
+      this.getTreesPlantedCount(sites)
+    ]);
+
+    return sites.map(site => ({
+      id: site.uuid,
+      dto: new SiteLightDto(site, {
+        treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
+        totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0
+      })
+    }));
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
@@ -216,7 +314,6 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
-    await Action.targetable(Site.LARAVEL_TYPE, site.id).destroy();
-    await site.destroy();
+    await super.delete(site);
   }
 }

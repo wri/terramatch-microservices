@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { OrganisationStatus } from "../constants/status";
 
@@ -13,7 +13,7 @@ export class Organisation extends Model<Organisation> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Default("draft")

@@ -7,7 +7,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
@@ -18,8 +18,14 @@ import {
   SiteReportLightDto,
   SiteReportMedia
 } from "../dto/site-report.dto";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportLightDto, SiteReportFullDto> {
+export class SiteReportProcessor extends ReportProcessor<
+  SiteReport,
+  SiteReportLightDto,
+  SiteReportFullDto,
+  ReportUpdateAttributes
+> {
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;
 
@@ -54,7 +60,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     });
   }
 
-  async findMany(query: EntityQueryDto, userId?: number) {
+  async findMany(query: EntityQueryDto) {
     const siteAssociation: Includeable = {
       association: "site",
       attributes: ["id", "uuid", "name"],
@@ -87,9 +93,13 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
+      builder.where({
+        "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
+      builder.where({
+        "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+      });
     }
 
     const associationFieldMap = {
@@ -146,7 +156,7 @@ export class SiteReportProcessor extends EntityProcessor<SiteReport, SiteReportL
       (await TreeSpecies.visible().collection("non-tree").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
-    const mediaCollection = await Media.siteReport(siteReportId).findAll();
+    const mediaCollection = await Media.for(siteReport).findAll();
     const props: AdditionalSiteReportFullProps = {
       reportTitle,
       projectReportTitle,

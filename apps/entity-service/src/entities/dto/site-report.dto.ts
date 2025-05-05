@@ -87,6 +87,9 @@ export class SiteReportLightDto extends EntityDto {
 
   @ApiProperty()
   createdAt: Date;
+
+  @ApiProperty({ nullable: true })
+  nothingToReport: boolean | null;
 }
 
 export type AdditionalSiteReportLightProps = Pick<SiteReportLightDto, "reportTitle">;
@@ -151,9 +154,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ nullable: true })
   feedbackFields: string[] | null;
-
-  @ApiProperty()
-  nothingToReport: boolean;
 
   @ApiProperty({ nullable: true })
   completion: number | null;
@@ -292,4 +292,16 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   documentFiles: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  treePlantingUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  anrPhotos: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  soilWaterConservationUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  soilWaterConservationPhotos: MediaDto[];
 }

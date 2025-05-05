@@ -35,7 +35,6 @@ describe("EntityAssociationsController", () => {
     }).compile();
 
     controller = module.get(EntityAssociationsController);
-    // @ts-expect-error union type complexity
     entitiesService.createAssociationProcessor.mockImplementation((entity, uuid) => {
       return new StubProcessor(entity, uuid, ProjectReport);
     });
@@ -50,7 +49,6 @@ describe("EntityAssociationsController", () => {
       policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
       const pr = await ProjectReportFactory.create();
       const processor = new StubProcessor("projectReports", pr.uuid, ProjectReport);
-      // @ts-expect-error union type complexity
       entitiesService.createAssociationProcessor.mockImplementation(() => processor);
       const spy = jest.spyOn(processor, "getBaseEntity");
       await controller.associationIndex({

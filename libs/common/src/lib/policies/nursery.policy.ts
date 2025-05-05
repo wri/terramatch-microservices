@@ -9,8 +9,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can("read", Nursery, { frameworkKey: { $in: this.frameworks } });
-      this.builder.can("delete", Nursery, { frameworkKey: { $in: this.frameworks } });
+      this.builder.can(["read", "delete", "update", "approve"], Nursery, { frameworkKey: { $in: this.frameworks } });
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -24,8 +23,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can("read", Nursery, { projectId: { $in: projectIds } });
-          this.builder.can("delete", Nursery, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "delete", "update"], Nursery, { projectId: { $in: projectIds } });
         }
       }
     }
@@ -35,8 +33,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can("read", Nursery, { projectId: { $in: projectIds } });
-          this.builder.can("delete", Nursery, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "delete", "update", "approve"], Nursery, { projectId: { $in: projectIds } });
         }
       }
     }

@@ -5,7 +5,7 @@ import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/
 import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 
-export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
+export abstract class AssociationProcessor<M extends UuidModel, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
   constructor(
@@ -19,7 +19,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
    * are simple enough that providing a reference to the DTO class, and a getter of associations based on the
    * base entity is enough.
    */
-  static buildSimpleProcessor<M extends UuidModel<M>, D extends AssociationDto<D>>(
+  static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto<D>>(
     dtoClass: Type<D>,
     associationGetter: (entity: EntityModel, entityLaravelType: string) => Promise<M[]>
   ) {
@@ -53,14 +53,18 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     return this._baseEntity;
   }
 
-  async addDtos(document: DocumentBuilder): Promise<void> {
+  async addDtos(document: DocumentBuilder, asIncluded = false): Promise<void> {
     const associations = await this.getAssociations(await this.getBaseEntity());
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
-      document.addData(association.uuid, new this.DTO(association, additionalProps));
+      if (asIncluded) {
+        document.addIncluded(association.uuid, new this.DTO(association, additionalProps));
+      } else {
+        document.addData(association.uuid, new this.DTO(association, additionalProps));
+      }
     }
 
     const resource = getDtoType(this.DTO);

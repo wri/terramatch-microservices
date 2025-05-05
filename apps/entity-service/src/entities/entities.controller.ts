@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   NotFoundException,
   Param,
+  Patch,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
@@ -24,10 +26,12 @@ import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
-import { SiteReportLightDto, SiteReportFullDto } from "./dto/site-report.dto";
+import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
+import { EntityUpdateBody } from "./dto/entity-update.dto";
+import { SupportedEntities } from "./dto/entity.dto";
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload)
+@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
 export class EntitiesController {
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 
@@ -107,5 +111,43 @@ export class EntitiesController {
     await processor.delete(model);
 
     return buildDeletedResponse(getDtoType(processor.FULL_DTO), model.uuid);
+  }
+
+  @Patch(":entity/:uuid")
+  @ApiOperation({
+    operationId: "entityUpdate",
+    summary: "Update various supported entity fields directly. Typically used for status transitions"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
+  async entityUpdate<T extends EntityModel>(
+    @Param() { entity, uuid }: SpecificEntityDto,
+    @Body() updatePayload: EntityUpdateBody
+  ) {
+    // The structure of the EntityUpdateBody ensures that the `type` field in the body controls
+    // which update body is used for validation, but it doesn't make sure that the body of the
+    // request matches the type in the URL path.
+    if (entity !== updatePayload.data.type) {
+      throw new BadRequestException("Entity type in path and payload do not match");
+    }
+    if (uuid !== updatePayload.data.id) {
+      throw new BadRequestException("Entity id in path and payload do not match");
+    }
+
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    const model = await processor.findOne(uuid);
+    if (model == null) throw new NotFoundException();
+
+    await this.policyService.authorize("update", model);
+
+    await processor.update(model, updatePayload.data.attributes);
+
+    const document = buildJsonApi(processor.FULL_DTO);
+    const { id, dto } = await processor.getFullDto(model);
+    document.addData(id, dto);
+    return document.serialize();
   }
 }

@@ -16,7 +16,6 @@ export const POLYGON = {
 };
 
 export const PolygonGeometryFactory = FactoryGirl.define(PolygonGeometry, async () => ({
-  uuid: crypto.randomUUID(),
   polygon: POLYGON,
   createdBy: UserFactory.associate("id")
 }));

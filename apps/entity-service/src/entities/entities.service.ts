@@ -5,7 +5,14 @@ import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { Demographic, Media, Seeding, TreeSpecies, User } from "@terramatch-microservices/database/entities";
+import {
+  Demographic,
+  Disturbance,
+  Media,
+  Seeding,
+  TreeSpecies,
+  User
+} from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
@@ -23,18 +30,24 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
+import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
+import { DisturbanceDto } from "./dto/disturbance.dto";
+import { InvasiveDto } from "./dto/invasive.dto";
+import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
+import { StrataDto } from "./dto/strata.dto";
 
 // The keys of this array must match the type in the resulting DTO.
-const ENTITY_PROCESSORS = {
+export const ENTITY_PROCESSORS = {
   projects: ProjectProcessor,
   sites: SiteProcessor,
   nurseries: NurseryProcessor,
   projectReports: ProjectReportProcessor,
   nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor
-};
+} as const;
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
@@ -45,7 +58,9 @@ export const POLYGON_STATUSES_FILTERS = [
   "needs-more-information",
   "draft"
 ] as const;
+
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
+
 const ASSOCIATION_PROCESSORS = {
   demographics: AssociationProcessor.buildSimpleProcessor(
     DemographicDto,
@@ -65,6 +80,17 @@ const ASSOCIATION_PROCESSORS = {
       attributes: ["uuid", "name", "taxonId", "collection", [fn("SUM", col("amount")), "amount"]],
       group: ["taxonId", "name", "collection"]
     })
+  ),
+  disturbances: AssociationProcessor.buildSimpleProcessor(
+    DisturbanceDto,
+    ({ id: disturbanceableId }, disturbanceableType) =>
+      Disturbance.findAll({ where: { disturbanceableType, disturbanceableId, hidden: false } })
+  ),
+  invasives: AssociationProcessor.buildSimpleProcessor(InvasiveDto, ({ id: invasiveableId }, invasiveableType) =>
+    Invasive.findAll({ where: { invasiveableType, invasiveableId, hidden: false } })
+  ),
+  stratas: AssociationProcessor.buildSimpleProcessor(StrataDto, ({ id: stratasableId }, stratasableType) =>
+    Strata.findAll({ where: { stratasableType, stratasableId, hidden: false } })
   )
 };
 
@@ -93,6 +119,10 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
+  async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
+    return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+  }
+
   private _userLocale?: string;
   async getUserLocale() {
     if (this._userLocale == null) {
@@ -111,10 +141,10 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createAssociationProcessor<T extends UuidModel<T>, D extends AssociationDto<D>>(
+  createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation

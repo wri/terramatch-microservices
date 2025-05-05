@@ -9,7 +9,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, Op, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DOUBLE, Op, STRING, UUID, UUIDV4 } from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
@@ -46,7 +46,7 @@ export class Seeding extends Model<Seeding> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull

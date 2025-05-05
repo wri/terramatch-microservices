@@ -1,8 +1,15 @@
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Organisation } from "@terramatch-microservices/database/entities";
+import { filter, flatten, uniq } from "lodash";
 
-const COLUMNS: ColumnMapping<Organisation>[] = [
-  ...commonEntityColumns<Organisation>("organisation"),
+type OrganisationAssociations = {
+  hqCountryName: string;
+  countryNames: string[];
+  stateNames: string[];
+};
+
+const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = [
+  ...commonEntityColumns<Organisation, OrganisationAssociations>("organisation"),
   "status",
   "type",
   "private",
@@ -15,10 +22,12 @@ const COLUMNS: ColumnMapping<Organisation>[] = [
   "hqState",
   "hqZipcode",
   "hqCountry",
+  associatedValueColumn("hqCountryName", "hqCountry"),
   "leadershipTeamTxt",
   "foundingDate",
   "description",
   "countries",
+  associatedValueColumn("countryNames", "countries"),
   "languages",
   "treeCareApproach",
   "relevantExperienceYears",
@@ -51,6 +60,7 @@ const COLUMNS: ColumnMapping<Organisation>[] = [
   "engagementYouth",
   "currency",
   "states",
+  associatedValueColumn("stateNames", "states"),
   "district",
   "accountNumber1",
   "accountNumber2",
@@ -87,8 +97,28 @@ const COLUMNS: ColumnMapping<Organisation>[] = [
   "additionalComments"
 ];
 
-export class OrganisationEntity extends AirtableEntity<Organisation> {
+export class OrganisationEntity extends AirtableEntity<Organisation, OrganisationAssociations> {
   readonly TABLE_NAME = "Organisations";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Organisation;
+
+  async loadAssociations(organisations: Organisation[]) {
+    const countryNames = await this.gadmCountryNames();
+    const stateCountries = filter(
+      uniq(flatten(organisations.map(({ states }) => states?.map(state => state.split(".")[0]))))
+    );
+    const stateNames = await this.gadmStateNames(stateCountries);
+
+    return organisations.reduce(
+      (associations, { id, hqCountry, countries, states }) => ({
+        ...associations,
+        [id]: {
+          hqCountryName: hqCountry == null ? null : countryNames[hqCountry],
+          countryNames: filter(countries?.map(country => countryNames[country])),
+          stateNames: filter(states?.map(state => stateNames[state]))
+        }
+      }),
+      {} as Record<number, OrganisationAssociations>
+    );
+  }
 }

@@ -1,12 +1,12 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import {
   AdditionalProjectReportFullProps,
   ProjectReportFullDto,
   ProjectReportLightDto,
   ProjectReportMedia
 } from "../dto/project-report.dto";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -20,11 +20,17 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { sumBy } from "lodash";
+import { ProcessableAssociation } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
-export class ProjectReportProcessor extends EntityProcessor<
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+
+export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
-  ProjectReportFullDto
+  ProjectReportFullDto,
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;
@@ -126,8 +132,20 @@ export class ProjectReportProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
+  async processSideload(document: DocumentBuilder, model: ProjectReport, entity: SideloadType): Promise<void> {
+    if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
+      const processor = this.entitiesService.createAssociationProcessor(
+        "projectReports",
+        model.uuid,
+        entity as ProcessableAssociation
+      );
+      await processor.addDtos(document, true);
+    } else {
+      throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
+    }
+  }
+
   async getFullDto(projectReport: ProjectReport) {
-    const projectReportId = projectReport.id;
     const taskId = projectReport.taskId;
     const reportTitle = await this.getReportTitle(projectReport);
     const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
@@ -157,7 +175,7 @@ export class ProjectReportProcessor extends EntityProcessor<
       readableCompletionStatus,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
-        await Media.projectReport(projectReportId).findAll(),
+        await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
     };

@@ -32,7 +32,10 @@ export class ProjectPitchesController {
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async getPitches(@Request() { authenticatedUserId }, @Query() params: ProjectsPitchesParamDto) {
-    const { data, paginationTotal } = await this.projectPitchService.getProjectPitches(authenticatedUserId, params);
+    const { data, paginationTotal, pageNumber } = await this.projectPitchService.getProjectPitches(
+      authenticatedUserId,
+      params
+    );
     const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
     const indexIds: string[] = [];
     for (const pitch of data) {
@@ -45,7 +48,8 @@ export class ProjectPitchesController {
       resource: "projectPitches",
       requestPath: `/entities/v3/projectPitches`,
       ids: indexIds,
-      total: paginationTotal
+      total: paginationTotal,
+      pageNumber: pageNumber
     });
     return document.serialize();
   }
@@ -58,7 +62,7 @@ export class ProjectPitchesController {
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async getAdminPitches(@Query() params: ProjectsPitchesParamDto) {
-    const { data, paginationTotal } = await this.projectPitchService.getAdminProjectPitches(params);
+    const { data, paginationTotal, pageNumber } = await this.projectPitchService.getAdminProjectPitches(params);
     const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
     const indexIds: string[] = [];
     for (const pitch of data) {
@@ -68,9 +72,10 @@ export class ProjectPitchesController {
     }
     document.addIndexData({
       resource: "projectPitches",
-      requestPath: `/entities/v3/projectPitches`,
+      requestPath: `/entities/v3/projectPitches/admin`,
       ids: indexIds,
-      total: paginationTotal
+      total: paginationTotal,
+      pageNumber: pageNumber
     });
     return document.serialize();
   }

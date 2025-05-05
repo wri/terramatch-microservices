@@ -3,6 +3,7 @@ import { ProjectPitch, User } from "@terramatch-microservices/database/entities"
 import { Includeable, Op } from "sequelize";
 import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { MAX_PAGE_SIZE } from "./entities.service";
 
 @Injectable()
 export class ProjectPitchService {
@@ -15,12 +16,13 @@ export class ProjectPitchService {
       include: ["roles", "organisations", "frameworks"],
       where: { id: userId }
     });
-    const pageNumber = params.page ?? 1;
+    const pageNumber = params.pageNumber ?? 1;
+    const pageSize = params.pageSize ?? MAX_PAGE_SIZE;
     const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["uuid", "name"]
     };
-    const builder = new PaginatedQueryBuilder(ProjectPitch, pageNumber, [organisationAssociation]);
+    const builder = new PaginatedQueryBuilder(ProjectPitch, pageSize, [organisationAssociation]);
     if (pageNumber > 1) {
       builder.pageNumber(pageNumber);
     }
@@ -40,16 +42,17 @@ export class ProjectPitchService {
       }
     });
 
-    return { data: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+    return { data: await builder.execute(), paginationTotal: await builder.paginationTotal(), pageNumber };
   }
 
   async getAdminProjectPitches(params: ProjectsPitchesParamDto) {
-    const pageNumber = params.page ?? 1;
+    const pageNumber = params.pageNumber ?? 1;
+    const pageSize = params.pageSize ?? MAX_PAGE_SIZE;
     const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["uuid", "name"]
     };
-    const builder = new PaginatedQueryBuilder(ProjectPitch, pageNumber, [organisationAssociation]);
+    const builder = new PaginatedQueryBuilder(ProjectPitch, pageSize, [organisationAssociation]);
     if (pageNumber > 1) {
       builder.pageNumber(pageNumber);
     }
@@ -62,6 +65,6 @@ export class ProjectPitchService {
         ]
       });
     }
-    return { data: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+    return { data: await builder.execute(), paginationTotal: await builder.paginationTotal(), pageNumber };
   }
 }

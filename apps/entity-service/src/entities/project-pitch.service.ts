@@ -11,11 +11,16 @@ export class ProjectPitchService {
     return await ProjectPitch.findOne({ where: { uuid } });
   }
 
-  async getProjectPitches(userId: string, params: ProjectsPitchesParamDto) {
+  async getProjectPitches(userId: number, params: ProjectsPitchesParamDto) {
     const user = await User.findOne({
       include: ["roles", "organisations", "frameworks"],
       where: { id: userId }
     });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     const pageNumber = params.pageNumber ?? 1;
     const pageSize = params.pageSize ?? MAX_PAGE_SIZE;
     const organisationAssociation: Includeable = {

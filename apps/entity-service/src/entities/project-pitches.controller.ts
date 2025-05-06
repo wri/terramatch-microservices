@@ -25,6 +25,7 @@ export class ProjectPitchesController {
     operationId: "ProjectPitchesIndex",
     summary: "Get projects pitches."
   })
+  @JsonApiResponse([{ data: ProjectPitchDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async getPitches(@Request() { authenticatedUserId }, @Query() params: ProjectsPitchesParamDto) {
@@ -32,7 +33,7 @@ export class ProjectPitchesController {
       authenticatedUserId,
       params
     );
-    const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
+    const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
     const indexIds: string[] = [];
     for (const pitch of data) {
       indexIds.push(pitch.uuid);
@@ -59,7 +60,7 @@ export class ProjectPitchesController {
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async getAdminPitches(@Query() params: ProjectsPitchesParamDto) {
     const { data, paginationTotal, pageNumber } = await this.projectPitchService.getAdminProjectPitches(params);
-    const document = buildJsonApi(ProjectPitchDto, { forceDataArray: true });
+    const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
     const indexIds: string[] = [];
     for (const pitch of data) {
       indexIds.push(pitch.uuid);

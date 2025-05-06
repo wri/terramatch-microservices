@@ -8,7 +8,6 @@ import {
   Query,
   Request
 } from "@nestjs/common";
-import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -19,10 +18,7 @@ import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
 
 @Controller("entities/v3/projectPitches")
 export class ProjectPitchesController {
-  constructor(
-    private readonly projectPitchService: ProjectPitchService,
-    private readonly policyService: PolicyService
-  ) {}
+  constructor(private readonly projectPitchService: ProjectPitchService) {}
 
   @Get()
   @ApiOperation({

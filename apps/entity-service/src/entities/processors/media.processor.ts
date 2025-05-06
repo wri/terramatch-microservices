@@ -222,7 +222,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
         thumbUrl: this.entitiesService.thumbnailUrl(media)
       };
 
-      document.addData(association.uuid, new this.DTO(association, additionalProps));
+      document.addData(association.uuid, this.entitiesService.mediaDto(media, additionalProps));
     }
 
     const total = await this.getTotal();

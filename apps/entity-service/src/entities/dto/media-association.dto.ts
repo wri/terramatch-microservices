@@ -1,20 +1,20 @@
 import { Media } from "@terramatch-microservices/database/entities";
 import { AssociationDto } from "./association.dto";
-import { JsonApiAttributesInput, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 
 export type MediaAssociationDtoAdditionalProps = {
-  entityType?: EntityType;
-  entityUuid?: string;
-  url?: string;
-  thumbUrl?: string;
+  entityType: EntityType;
+  entityUuid: string;
+  url: string;
+  thumbUrl: string;
 };
 
 export class MediaAssociationDto extends AssociationDto<MediaAssociationDto> {
   constructor(media: Media, additional: MediaAssociationDtoAdditionalProps) {
     super({
       ...pickApiProperties(media, MediaAssociationDto),
-      ...(additional as JsonApiAttributesInput<MediaAssociationDto>)
+      ...additional
     });
   }
 }

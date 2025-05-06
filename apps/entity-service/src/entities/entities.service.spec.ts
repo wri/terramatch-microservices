@@ -86,12 +86,6 @@ describe("EntitiesService", () => {
       expect(service.fullUrl(media)).toEqual("https://example.com//foo.jpg");
       expect(service.thumbnailUrl(media)).toEqual("https://example.com/thumbnail/foo.jpg");
     });
-
-    it("returns a valid DTO", async () => {
-      const media = await MediaFactory.forProject.create();
-      const dto = service.mediaDto(media, {});
-      expectMediaMatchesDto(dto, media);
-    });
   });
 
   describe("mapMediaCollection", () => {

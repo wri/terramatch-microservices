@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { JsonApiAttributesInput, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Media } from "@terramatch-microservices/database/entities";
 import { AssociationDto } from "./association.dto";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
@@ -10,7 +10,7 @@ export class MediaDto extends AssociationDto<MediaDto> {
   constructor(media: Media, additional: MediaAssociationDtoAdditionalProps) {
     super({
       ...pickApiProperties(media, MediaDto),
-      ...(additional as JsonApiAttributesInput<MediaDto>),
+      ...additional,
       createdAt: media.createdAt
     });
   }

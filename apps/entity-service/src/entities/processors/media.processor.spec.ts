@@ -10,7 +10,8 @@ import {
   SiteFactory,
   NurseryFactory,
   ProjectReportFactory,
-  SiteReportFactory
+  SiteReportFactory,
+  NurseryReportFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
 import { MediaDto } from "../dto/media.dto";
@@ -100,7 +101,12 @@ describe("MediaProcessor", () => {
     });
 
     it("should include media entries for the project report associated to the processor at creation", async () => {
-      const projectReport = await ProjectReportFactory.create();
+      const project = await ProjectFactory.create();
+      const projectReport = await ProjectReportFactory.create({ projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SiteReportFactory.create({ siteId: site.id, dueAt: projectReport.dueAt });
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+      await NurseryReportFactory.create({ nurseryId: nursery.id, dueAt: projectReport.dueAt });
       const media = await MediaFactory.forProjectReport.create({ modelId: projectReport.id });
 
       processor = module
@@ -129,6 +135,20 @@ describe("MediaProcessor", () => {
       await MediaFactory.forProject.create({ modelId: project.id });
 
       const query: MediaQueryDto = { isGeotagged: true };
+
+      processor = module
+        .get(EntitiesService)
+        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+
+      await expectMediasEntries([media], "projects", project.uuid, query);
+    });
+
+    it("should filter by isGeotagged false", async () => {
+      const project = await ProjectFactory.create();
+      await MediaFactory.forProject.create({ modelId: project.id, lat: 1, lng: 1 });
+      const media = await MediaFactory.forProject.create({ modelId: project.id });
+
+      const query: MediaQueryDto = { isGeotagged: false };
 
       processor = module
         .get(EntitiesService)
@@ -193,6 +213,24 @@ describe("MediaProcessor", () => {
         .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media2, media], "projects", project.uuid, query);
+    });
+  });
+
+  describe("it searches", () => {
+    it("should search by fileName", async () => {
+      const project = await ProjectFactory.create();
+
+      const search = "test";
+      const media = await MediaFactory.forProject.create({ modelId: project.id, fileName: search });
+      await MediaFactory.forProject.create({ modelId: project.id });
+
+      const query: MediaQueryDto = { search };
+
+      processor = module
+        .get(EntitiesService)
+        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+
+      await expectMediasEntries([media], "projects", project.uuid, query);
     });
   });
 });

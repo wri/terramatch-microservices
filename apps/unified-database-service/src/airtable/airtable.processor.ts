@@ -21,6 +21,7 @@ import {
 import * as Sentry from "@sentry/node";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { DataApiService } from "@terramatch-microservices/data-api";
 
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
@@ -66,7 +67,11 @@ export class AirtableProcessor extends WorkerHost {
   private readonly logger = new TMLogger(AirtableProcessor.name);
   private readonly base: Airtable.Base;
 
-  constructor(private readonly config: ConfigService, private readonly slack: SlackService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly slack: SlackService,
+    private readonly dataApi: DataApiService
+  ) {
     super();
     this.base = new Airtable({ apiKey: this.config.get("AIRTABLE_API_KEY") }).base(this.config.get("AIRTABLE_BASE_ID"));
   }
@@ -104,7 +109,7 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    const entity = new entityClass();
+    const entity = new entityClass(this.dataApi);
     await entity.updateBase(this.base, { startPage, updatedSince });
 
     this.logger.log(`Completed entity update: ${JSON.stringify({ entityType, updatedSince })}`);
@@ -119,7 +124,7 @@ export class AirtableProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Entity mapping not found for entity type ${entityType}`);
     }
 
-    const entity = new entityClass();
+    const entity = new entityClass(this.dataApi);
     await entity.deleteStaleRecords(this.base, deletedSince);
 
     this.logger.log(`Completed entity delete: ${JSON.stringify({ entityType, deletedSince })}`);

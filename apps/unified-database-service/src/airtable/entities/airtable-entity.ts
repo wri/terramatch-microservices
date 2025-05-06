@@ -1,9 +1,11 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, uniq } from "lodash";
+import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { DataApiService } from "@terramatch-microservices/data-api";
+import { Dictionary } from "factory-girl-ts";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -22,6 +24,8 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   readonly FILTER_FLAGS: string[] = [];
 
   protected readonly logger = new TMLogger(AirtableEntity.name);
+
+  constructor(protected dataApi: DataApiService) {}
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden
@@ -248,6 +252,23 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     }
 
     return associations;
+  }
+
+  protected _gadmCountryNames: Dictionary<string>;
+  protected async gadmCountryNames() {
+    return (this._gadmCountryNames ??= mapValues(keyBy(await this.dataApi.gadmLevel0(), "iso"), "name"));
+  }
+
+  protected _gadmStateNames: Dictionary<Dictionary<string>> = {};
+  protected async gadmStateNames(countryIsos: string[]) {
+    return merge(
+      {},
+      ...(await Promise.all(
+        countryIsos.map(async iso => {
+          return (this._gadmStateNames[iso] ??= mapValues(keyBy(await this.dataApi.gadmLevel1(iso), "id"), "name"));
+        })
+      ))
+    );
   }
 }
 

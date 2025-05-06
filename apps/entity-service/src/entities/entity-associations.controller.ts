@@ -10,6 +10,10 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { MediaDto } from "./dto/media.dto";
 import { MediaQueryDto } from "./dto/media-query.dto";
+import { DisturbanceDto } from "./dto/disturbance.dto";
+import { InvasiveDto } from "./dto/invasive.dto";
+import { StrataDto } from "./dto/strata.dto";
+
 @Controller("entities/v3/:entity/:uuid")
 @ApiExtraModels(DemographicEntryDto, DemographicCollections)
 export class EntityAssociationsController {
@@ -24,7 +28,10 @@ export class EntityAssociationsController {
     { data: DemographicDto, hasMany: true },
     { data: SeedingDto, hasMany: true },
     { data: TreeSpeciesDto, hasMany: true },
-    { data: MediaDto, hasMany: true }
+    { data: MediaDto, hasMany: true },
+    { data: DisturbanceDto, hasMany: true },
+    { data: InvasiveDto, hasMany: true },
+    { data: StrataDto, hasMany: true }
   ])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Base entity not found" })

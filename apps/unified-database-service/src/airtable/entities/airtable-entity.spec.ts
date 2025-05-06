@@ -5,6 +5,7 @@ import {
   Demographic,
   DemographicEntry,
   Framework,
+  FundingProgramme,
   Nursery,
   NurseryReport,
   Organisation,
@@ -39,10 +40,12 @@ import {
   ApplicationEntity,
   DemographicEntity,
   DemographicEntryEntity,
+  FundingProgrammeEntity,
   NurseryEntity,
   NurseryReportEntity,
   OrganisationEntity,
   ProjectEntity,
+  ProjectPitchEntity,
   ProjectReportEntity,
   SiteEntity,
   SiteReportEntity,
@@ -53,6 +56,14 @@ import { Model } from "sequelize-typescript";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { FindOptions, Op } from "sequelize";
 import { DateTime } from "luxon";
+import { DataApiService } from "@terramatch-microservices/data-api";
+import { createMock } from "@golevelup/ts-jest";
+import {
+  COUNTRIES,
+  gadmLevel0Mock,
+  gadmLevel1Mock,
+  STATES
+} from "@terramatch-microservices/database/util/gadm-mock-data";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
 const airtableSelectFirstPage = jest.fn<Promise<unknown>, never>(() => Promise.resolve([]));
@@ -63,6 +74,8 @@ const Base = jest.fn(() => ({
   select: airtableSelect,
   destroy: airtableDestroy
 })) as unknown as Airtable.Base;
+
+const dataApi = createMock<DataApiService>({ gadmLevel0: gadmLevel0Mock, gadmLevel1: gadmLevel1Mock });
 
 const mapEntityColumns = jest.fn(() => Promise.resolve({}));
 export class StubEntity extends AirtableEntity<Site> {
@@ -121,18 +134,18 @@ describe("AirtableEntity", () => {
 
       it("re-raises mapping errors", async () => {
         mapEntityColumns.mockRejectedValue(new Error("mapping error"));
-        await expect(new StubEntity().updateBase(null, { startPage: 0 })).rejects.toThrow("mapping error");
+        await expect(new StubEntity(dataApi).updateBase(null, { startPage: 0 })).rejects.toThrow("mapping error");
         mapEntityColumns.mockReset();
       });
 
       it("re-raises airtable errors", async () => {
         airtableUpdate.mockRejectedValue(new Error("airtable error"));
-        await expect(new StubEntity().updateBase(Base)).rejects.toThrow("airtable error");
+        await expect(new StubEntity(dataApi).updateBase(Base)).rejects.toThrow("airtable error");
         airtableUpdate.mockReset();
       });
 
       it("includes the updatedSince timestamp in the query", async () => {
-        const entity = new StubEntity();
+        const entity = new StubEntity(dataApi);
         const spy = jest.spyOn(entity as never, "getUpdatePageFindOptions") as jest.SpyInstance<FindOptions<Site>>;
         const updatedSince = new Date();
         await entity.updateBase(Base, { updatedSince });
@@ -143,7 +156,7 @@ describe("AirtableEntity", () => {
       });
 
       it("skips the updatedSince timestamp if the model doesn't support it", async () => {
-        const entity = new StubEntity();
+        const entity = new StubEntity(dataApi);
         // @ts-expect-error overriding readonly property for test.
         (entity as never).SUPPORTS_UPDATED_SINCE = false;
         const spy = jest.spyOn(entity as never, "getUpdatePageFindOptions") as jest.SpyInstance<FindOptions<Site>>;
@@ -180,13 +193,13 @@ describe("AirtableEntity", () => {
 
       it("re-raises search errors", async () => {
         airtableSelectFirstPage.mockRejectedValue(new Error("select error"));
-        await expect(new SiteEntity().deleteStaleRecords(Base, deletedSince)).rejects.toThrow("select error");
+        await expect(new SiteEntity(dataApi).deleteStaleRecords(Base, deletedSince)).rejects.toThrow("select error");
       });
 
       it("re-raises delete errors", async () => {
         airtableSelectFirstPage.mockResolvedValue([{ id: "fakeid", fields: { uuid: "fakeuuid" } }]);
         airtableDestroy.mockRejectedValue(new Error("delete error"));
-        await expect(new SiteEntity().deleteStaleRecords(Base, deletedSince)).rejects.toThrow("delete error");
+        await expect(new SiteEntity(dataApi).deleteStaleRecords(Base, deletedSince)).rejects.toThrow("delete error");
         airtableDestroy.mockReset();
       });
 
@@ -196,7 +209,7 @@ describe("AirtableEntity", () => {
           fields: { uuid }
         }));
         airtableSelectFirstPage.mockResolvedValue(searchResult);
-        await new SiteEntity().deleteStaleRecords(Base, deletedSince);
+        await new SiteEntity(dataApi).deleteStaleRecords(Base, deletedSince);
         expect(airtableSelect).toHaveBeenCalledTimes(1);
         expect(airtableSelect).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -254,7 +267,7 @@ describe("AirtableEntity", () => {
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new ApplicationEntity(),
+        new ApplicationEntity(dataApi),
         applications,
         ({ uuid, organisationUuid, fundingProgrammeUuid }) => ({
           fields: {
@@ -327,7 +340,7 @@ describe("AirtableEntity", () => {
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new DemographicEntity(),
+        new DemographicEntity(dataApi),
         demographics,
         ({ uuid, collection, demographicalType, demographicalId }) => ({
           fields: {
@@ -385,7 +398,7 @@ describe("AirtableEntity", () => {
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new DemographicEntryEntity(),
+        new DemographicEntryEntity(dataApi),
         entries,
         ({ id, type, subtype, name, amount, demographicId }) => ({
           fields: {
@@ -398,6 +411,21 @@ describe("AirtableEntity", () => {
           }
         })
       );
+    });
+  });
+
+  describe("FundingProgrammeEntity", () => {
+    let fundingProgrammes: FundingProgramme[];
+
+    beforeAll(async () => {
+      await FundingProgramme.truncate();
+      fundingProgrammes = await FundingProgrammeFactory.createMany(2);
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(new FundingProgrammeEntity(dataApi), fundingProgrammes, ({ uuid, name }) => ({
+        fields: { uuid, name }
+      }));
     });
   });
 
@@ -422,7 +450,7 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new NurseryEntity(), nurseries, ({ uuid, name, projectId, status }) => ({
+      await testAirtableUpdates(new NurseryEntity(dataApi), nurseries, ({ uuid, name, projectId, status }) => ({
         fields: {
           uuid,
           name,
@@ -454,7 +482,7 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new NurseryReportEntity(), reports, ({ uuid, nurseryId, status, dueAt }) => ({
+      await testAirtableUpdates(new NurseryReportEntity(dataApi), reports, ({ uuid, nurseryId, status, dueAt }) => ({
         fields: {
           uuid,
           nurseryUuid: nurseryUuids[nurseryId],
@@ -479,7 +507,7 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new OrganisationEntity(), organisations, ({ uuid, name, status }) => ({
+      await testAirtableUpdates(new OrganisationEntity(dataApi), organisations, ({ uuid, name, status }) => ({
         fields: {
           uuid,
           name,
@@ -574,7 +602,7 @@ describe("AirtableEntity", () => {
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new ProjectEntity(),
+        new ProjectEntity(dataApi),
         projects,
         ({ uuid, name, frameworkKey, organisationId, applicationId }) => ({
           fields: {
@@ -587,6 +615,27 @@ describe("AirtableEntity", () => {
           }
         })
       );
+    });
+  });
+
+  describe("ProjectPitchEntity", () => {
+    let pitches: ProjectPitch[];
+
+    beforeAll(async () => {
+      await ProjectPitch.truncate();
+      pitches = await ProjectPitchFactory.createMany(3);
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(new ProjectPitchEntity(dataApi), pitches, ({ uuid, projectCountry, states }) => ({
+        fields: {
+          uuid,
+          projectCountry,
+          projectCountryName: COUNTRIES[projectCountry],
+          states,
+          stateNames: states.map(state => STATES[state.split(".")[0]][state])
+        }
+      }));
     });
   });
 
@@ -654,7 +703,7 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new ProjectReportEntity(), reports, ({ uuid, projectId, status, dueAt }) => ({
+      await testAirtableUpdates(new ProjectReportEntity(dataApi), reports, ({ uuid, projectId, status, dueAt }) => ({
         fields: {
           uuid,
           projectUuid: projectUuids[projectId],
@@ -684,7 +733,7 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new SiteEntity(), sites, ({ uuid, name, projectId, status }) => ({
+      await testAirtableUpdates(new SiteEntity(dataApi), sites, ({ uuid, name, projectId, status }) => ({
         fields: {
           uuid,
           name,
@@ -720,7 +769,7 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new SiteReportEntity(), reports, ({ id, uuid, siteId, status, dueAt }) => ({
+      await testAirtableUpdates(new SiteReportEntity(dataApi), reports, ({ id, uuid, siteId, status, dueAt }) => ({
         fields: {
           uuid,
           siteUuid: siteUuids[siteId],
@@ -796,7 +845,7 @@ describe("AirtableEntity", () => {
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new TreeSpeciesEntity(),
+        new TreeSpeciesEntity(dataApi),
         trees,
         ({ uuid, name, amount, collection, speciesableType, speciesableId }) => ({
           fields: {
@@ -826,7 +875,7 @@ describe("AirtableEntity", () => {
           super.getDeletePageFindOptions(deletedSince, page);
       }
       const deletedSince = new Date();
-      const result = new Test().getDeletePageFindOptions(deletedSince, 0);
+      const result = new Test(dataApi).getDeletePageFindOptions(deletedSince, 0);
       expect(result.where[Op.or]).not.toBeNull();
       expect(result.where[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
     });

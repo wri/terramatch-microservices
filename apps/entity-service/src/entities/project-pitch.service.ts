@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Param } from "@nestjs/common";
 import { ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
-import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
 import { MAX_PAGE_SIZE } from "./entities.service";
+import { EntityQueryDto } from "./dto/entity-query.dto";
 
 @Injectable()
 export class ProjectPitchService {
@@ -11,7 +11,7 @@ export class ProjectPitchService {
     return await ProjectPitch.findOne({ where: { uuid } });
   }
 
-  async getProjectPitches(userId: number, params: ProjectsPitchesParamDto) {
+  async getProjectPitches(userId: number, params: EntityQueryDto) {
     const user = await User.findOne({
       include: ["roles", "organisations", "frameworks"],
       where: { id: userId }
@@ -21,8 +21,8 @@ export class ProjectPitchService {
       throw new Error("User not found");
     }
 
-    const pageNumber = params.pageNumber ?? 1;
-    const pageSize = params.pageSize ?? MAX_PAGE_SIZE;
+    const pageNumber = params.page ? params.page.number : 1;
+    const pageSize = params.page ? params.page.size : MAX_PAGE_SIZE;
     const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["uuid", "name"]
@@ -50,9 +50,9 @@ export class ProjectPitchService {
     return { data: await builder.execute(), paginationTotal: await builder.paginationTotal(), pageNumber };
   }
 
-  async getAdminProjectPitches(params: ProjectsPitchesParamDto) {
-    const pageNumber = params.pageNumber ?? 1;
-    const pageSize = params.pageSize ?? MAX_PAGE_SIZE;
+  async getAdminProjectPitches(params: EntityQueryDto) {
+    const pageNumber = params.page ? params.page.number : 1;
+    const pageSize = params.page ? params.page.size : MAX_PAGE_SIZE;
     const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["uuid", "name"]

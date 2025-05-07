@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ProjectsPitchesParamDto {
+  // TODO delete
   @ApiProperty({ description: "pagination page" })
   pageNumber?: number;
 

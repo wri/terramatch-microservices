@@ -8,13 +8,15 @@ import {
   Query,
   Request
 } from "@nestjs/common";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ProjectPitchService } from "./project-pitch.service";
 import { ProjectPitchDto } from "./dto/project-pitch.dto";
 import { ProjectPitchParamDto } from "./dto/project-pitch-param.dto";
 import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
+import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
+import { EntityQueryDto } from "./dto/entity-query.dto";
 
 @Controller("entities/v3/projectPitches")
 export class ProjectPitchesController {
@@ -28,7 +30,7 @@ export class ProjectPitchesController {
   @JsonApiResponse([{ data: ProjectPitchDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
-  async getPitches(@Request() { authenticatedUserId }, @Query() params: ProjectsPitchesParamDto) {
+  async getPitches(@Request() { authenticatedUserId }, @Query() params: EntityQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.projectPitchService.getProjectPitches(
       authenticatedUserId,
       params
@@ -56,9 +58,10 @@ export class ProjectPitchesController {
     operationId: "AdminProjectPitchesIndex",
     summary: "Get admin projects pitches."
   })
+  @JsonApiResponse([{ data: ProjectPitchDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
-  async getAdminPitches(@Query() params: ProjectsPitchesParamDto) {
+  async getAdminPitches(@Query() params: EntityQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.projectPitchService.getAdminProjectPitches(params);
     const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
     const indexIds: string[] = [];
@@ -69,7 +72,7 @@ export class ProjectPitchesController {
     }
     document.addIndexData({
       resource: "projectPitches",
-      requestPath: `/entities/v3/projectPitches/admin`,
+      requestPath: `/entities/v3/projectPitches/admin${getStableRequestQuery(params)}`,
       ids: indexIds,
       total: paginationTotal,
       pageNumber: pageNumber

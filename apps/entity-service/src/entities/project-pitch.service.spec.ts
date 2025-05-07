@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { ProjectPitchService } from "./project-pitch.service";
 import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
-import { Organisation, OrganisationUser, ProjectPitch, User } from "@terramatch-microservices/database/entities";
+import { ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("ProjectPitchService", () => {

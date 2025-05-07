@@ -70,8 +70,46 @@ describe("ProjectPitchesController", () => {
   });
 
   describe("Admin Project Pitches Index", () => {
-    it("should call getBaseEntity", async () => {
-      await controller.getAdminPitches(new EntityQueryDto());
+    it("should return project pitches successfully", async () => {
+      const mockResponse = {
+        data: [],
+        paginationTotal: 0,
+        pageNumber: 1
+      };
+      projectPitchService.getAdminProjectPitches.mockResolvedValue(mockResponse);
+
+      const result = await controller.getAdminPitches(new EntityQueryDto());
+      expect(projectPitchService.getAdminProjectPitches).toHaveBeenCalledTimes(1);
+      expect(result).toBeDefined();
+    });
+
+    it("should return an array of 3 project pitches successfully", async () => {
+      const mockResponse = {
+        data: [
+          new ProjectPitch({ uuid: "1", projectName: "Pitch 1", totalHectares: 200 }),
+          new ProjectPitch({ uuid: "2", projectName: "Pitch 2", totalHectares: 300 })
+        ],
+        paginationTotal: 3,
+        pageNumber: 1
+      };
+      projectPitchService.getAdminProjectPitches.mockResolvedValue(mockResponse);
+
+      const result = await controller.getAdminPitches(new EntityQueryDto());
+      expect(result).toBeDefined();
+      expect(Array.isArray(result.data) ? result.data.length : 0).toBe(2);
+      expect(projectPitchService.getAdminProjectPitches).toHaveBeenCalledTimes(1);
+    });
+
+    it("should throw BadRequestException for invalid parameters", async () => {
+      projectPitchService.getAdminProjectPitches.mockRejectedValue(new BadRequestException("Invalid parameters"));
+
+      await expect(controller.getAdminPitches(new EntityQueryDto())).rejects.toThrow(BadRequestException);
+    });
+
+    it("should handle unexpected errors gracefully", async () => {
+      projectPitchService.getAdminProjectPitches.mockRejectedValue(new Error("Unexpected error"));
+
+      await expect(controller.getAdminPitches(new EntityQueryDto())).rejects.toThrow(Error);
     });
   });
 

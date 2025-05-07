@@ -26,4 +26,8 @@ export class MediaQueryDto extends EntityQueryDto {
 
   @IsOptional()
   search?: string;
+
+  @ApiProperty({ required: false, default: false })
+  @TransformBooleanString()
+  isCover?: boolean;
 }

@@ -177,6 +177,12 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       });
     }
 
+    if (this.query.isCover != null) {
+      this._queryBuilder.where({
+        isCover: this.query.isCover
+      });
+    }
+
     if (this.query.search != null) {
       this._queryBuilder.where({
         [Op.or]: [

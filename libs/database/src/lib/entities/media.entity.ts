@@ -1,6 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
   DefaultScope,
   ForeignKey,
@@ -115,6 +116,22 @@ export class Media extends Model<Media> {
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   createdBy: number | null;
+
+  @BelongsTo(() => User, { constraints: false })
+  createdByUser: User | null;
+
+  get createdByUserName() {
+    const { firstName, lastName } = this.createdByUser ?? {};
+    if (firstName != null && lastName != null) {
+      return `${firstName} ${lastName}`;
+    } else if (firstName != null) {
+      return firstName;
+    } else if (lastName != null) {
+      return lastName;
+    } else {
+      return null;
+    }
+  }
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored

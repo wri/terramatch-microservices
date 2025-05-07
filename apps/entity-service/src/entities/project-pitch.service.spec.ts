@@ -1,8 +1,23 @@
 import { Test } from "@nestjs/testing";
 import { ProjectPitchService } from "./project-pitch.service";
-import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
-import { ProjectPitch, User } from "@terramatch-microservices/database/entities";
+import { Organisation, ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { EntityQueryDto } from "./dto/entity-query.dto";
+import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { OrganisationUserFactory } from "@terramatch-microservices/database/factories/organisation-user.factory";
+import { NotFoundException } from "@nestjs/common";
+
+async function getUserWithOrganisation() {
+  const user = await UserFactory.create();
+  const org = await OrganisationFactory.create();
+  const orgUser = await OrganisationUserFactory.create({
+    organisationId: org.id,
+    userId: user.id,
+    status: "approved"
+  });
+  user.organisations = [{ ...orgUser, ...org } as unknown as Organisation & { OrganisationUser: typeof orgUser }];
+  return user;
+}
 
 describe("ProjectPitchService", () => {
   let service: ProjectPitchService;
@@ -19,16 +34,35 @@ describe("ProjectPitchService", () => {
     jest.restoreAllMocks();
   });
 
+  describe("Get ProjectPitch by UUID", () => {
+    it("returns a project pitch for a valid UUID", async () => {
+      const mockProjectPitch = new ProjectPitch({ uuid: "uuid", projectName: "Test Project" });
+      jest.spyOn(ProjectPitch, "findOne").mockImplementation(() => Promise.resolve(mockProjectPitch));
+
+      const result = await service.getProjectPitch("uuid");
+
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe("uuid");
+      expect(result.projectName).toBe("Test Project");
+    });
+
+    it("throws an error if no project pitch not found for the given UUID", async () => {
+      jest.spyOn(ProjectPitch, "findOne").mockImplementation(() => Promise.resolve(null));
+      await expect(service.getProjectPitch("invalid-uuid")).rejects.toThrow(
+        new NotFoundException("ProjectPitch not found")
+      );
+    });
+  });
+
   describe("Get ProjectsPitches", () => {
     it("throws an error if the user is not found", async () => {
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
 
-      await expect(service.getProjectPitches(-1, new ProjectsPitchesParamDto())).rejects.toThrow("User not found");
+      await expect(service.getProjectPitches(-1, new EntityQueryDto())).rejects.toThrow("User not found");
     });
 
     it("returns paginated project pitches for a valid user", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create({ organisationId: org.id });
+      const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
       const projectPitches = [
         new ProjectPitch({ uuid: "pitch1", projectName: "Project 1" }),
@@ -36,9 +70,10 @@ describe("ProjectPitchService", () => {
       ];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
-      const params = new ProjectsPitchesParamDto();
-      params.pageNumber = 1;
-      params.pageSize = 2;
+      const params = new EntityQueryDto();
+      params.page = new NumberPage();
+      params.page.number = 1;
+      params.page.size = 10;
 
       const result = await service.getProjectPitches(user.id, params);
 
@@ -48,25 +83,64 @@ describe("ProjectPitchService", () => {
       expect(result.pageNumber).toBe(1);
     });
 
-    /*
     it("applies search filters correctly", async () => {
-      const userModel = module.get("UserModel");
-      const projectPitchModel = module.get("ProjectPitchModel");
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [new ProjectPitch({ uuid: "pitch2", projectName: "Filtered" })];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
-      userModel.findOne.mockResolvedValue({
-        id: "validUserId",
-        organisations: [{ uuid: "org1" }]
-      });
+      const params = new EntityQueryDto();
+      params.page = new NumberPage();
+      params.page.number = 1;
+      params.page.size = 10;
+      params.search = "filtered";
 
-      projectPitchModel.findAll.mockResolvedValue([{ uuid: "pitch1", projectName: "Filtered Project" }]);
-
-      const params = new ProjectsPitchesParamDto();
-      params.search = "Filtered";
-
-      const result = await service.getProjectPitches("validUserId", params);
+      const result = await service.getProjectPitches(user.id, params);
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].projectName).toContain("Filtered");
-    });*/
+    });
+  });
+
+  describe("Get Admin ProjectsPitches", () => {
+    it("returns paginated admin project pitches", async () => {
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [
+        new ProjectPitch({ uuid: "pitch y", projectName: "Project y" }),
+        new ProjectPitch({ uuid: "pitch x", projectName: "Project x" })
+      ];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
+
+      const params = new EntityQueryDto();
+      params.page = new NumberPage();
+      params.page.number = 1;
+      params.page.size = 10;
+
+      const result = await service.getAdminProjectPitches(params);
+
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].uuid).toBe("pitch y");
+      expect(result.data[1].uuid).toBe("pitch x");
+      expect(result.pageNumber).toBe(1);
+    });
+
+    it("applies search filters correctly", async () => {
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
+
+      const params = new EntityQueryDto();
+      params.page = new NumberPage();
+      params.page.number = 1;
+      params.page.size = 10;
+      params.search = "filtered";
+
+      const result = await service.getAdminProjectPitches(params);
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].projectName).toContain("Filtered");
+    });
   });
 });

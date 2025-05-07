@@ -1,4 +1,4 @@
-import { Injectable, Param } from "@nestjs/common";
+import { Injectable, NotFoundException, Param } from "@nestjs/common";
 import { ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
@@ -7,18 +7,22 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 
 @Injectable()
 export class ProjectPitchService {
-  async getProjectPitch(uuid: string): Promise<ProjectPitch> {
-    return await ProjectPitch.findOne({ where: { uuid } });
+  async getProjectPitch(uuid: string) {
+    const projectPitch = ProjectPitch.findOne({ where: { uuid } });
+    if (!projectPitch) {
+      throw new NotFoundException("ProjectPitch not found");
+    }
+    return projectPitch;
   }
 
   async getProjectPitches(userId: number, params: EntityQueryDto) {
     const user = await User.findOne({
-      include: ["roles", "organisations", "frameworks"],
+      include: ["organisations"],
       where: { id: userId }
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new NotFoundException("User not found");
     }
 
     const pageNumber = params.page ? params.page.number : 1;

@@ -3,8 +3,8 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { ProjectPitchesController } from "./project-pitches.controller";
 import { ProjectPitchService } from "./project-pitch.service";
-import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { EntityQueryDto } from "./dto/entity-query.dto";
 
 describe("ProjectPitchesController", () => {
   let controller: ProjectPitchesController;
@@ -32,9 +32,9 @@ describe("ProjectPitchesController", () => {
       };
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
-      const result = await controller.getPitches({ authenticatedUserId: 1 }, new ProjectsPitchesParamDto());
+      const result = await controller.getPitches({ authenticatedUserId: 1 }, new EntityQueryDto());
       expect(result).toBeDefined();
-      expect(projectPitchService.getProjectPitches).toHaveBeenCalledWith(1, expect.any(ProjectsPitchesParamDto));
+      expect(projectPitchService.getProjectPitches).toHaveBeenCalledWith(1, expect.any(EntityQueryDto));
     });
 
     it("should return an array of 3 project pitches successfully", async () => {
@@ -48,16 +48,16 @@ describe("ProjectPitchesController", () => {
       };
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
-      const result = await controller.getPitches({ authenticatedUserId: 1 }, new ProjectsPitchesParamDto());
+      const result = await controller.getPitches({ authenticatedUserId: 1 }, new EntityQueryDto());
       expect(result).toBeDefined();
       expect(Array.isArray(result.data) ? result.data.length : 0).toBe(2);
-      expect(projectPitchService.getProjectPitches).toHaveBeenCalledWith(1, expect.any(ProjectsPitchesParamDto));
+      expect(projectPitchService.getProjectPitches).toHaveBeenCalledWith(1, expect.any(EntityQueryDto));
     });
 
     it("should throw BadRequestException for invalid parameters", async () => {
       projectPitchService.getProjectPitches.mockRejectedValue(new BadRequestException("Invalid parameters"));
 
-      await expect(controller.getPitches({ authenticatedUserId: 1 }, new ProjectsPitchesParamDto())).rejects.toThrow(
+      await expect(controller.getPitches({ authenticatedUserId: 1 }, new EntityQueryDto())).rejects.toThrow(
         BadRequestException
       );
     });
@@ -65,15 +65,13 @@ describe("ProjectPitchesController", () => {
     it("should handle unexpected errors gracefully", async () => {
       projectPitchService.getProjectPitches.mockRejectedValue(new Error("Unexpected error"));
 
-      await expect(controller.getPitches({ authenticatedUserId: 1 }, new ProjectsPitchesParamDto())).rejects.toThrow(
-        Error
-      );
+      await expect(controller.getPitches({ authenticatedUserId: 1 }, new EntityQueryDto())).rejects.toThrow(Error);
     });
   });
 
   describe("Admin Project Pitches Index", () => {
     it("should call getBaseEntity", async () => {
-      await controller.getAdminPitches(new ProjectsPitchesParamDto());
+      await controller.getAdminPitches(new EntityQueryDto());
     });
   });
 

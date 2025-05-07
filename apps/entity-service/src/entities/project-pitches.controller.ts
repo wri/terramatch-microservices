@@ -14,8 +14,6 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { ProjectPitchService } from "./project-pitch.service";
 import { ProjectPitchDto } from "./dto/project-pitch.dto";
 import { ProjectPitchParamDto } from "./dto/project-pitch-param.dto";
-import { ProjectsPitchesParamDto } from "./dto/projects-pitches-param.dto";
-import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 
 @Controller("entities/v3/projectPitches")
@@ -45,7 +43,7 @@ export class ProjectPitchesController {
 
     document.addIndexData({
       resource: "projectPitches",
-      requestPath: `/entities/v3/projectPitches`,
+      requestPath: `/entities/v3/projectPitches/admin${getStableRequestQuery(params)}`,
       ids: indexIds,
       total: paginationTotal,
       pageNumber: pageNumber

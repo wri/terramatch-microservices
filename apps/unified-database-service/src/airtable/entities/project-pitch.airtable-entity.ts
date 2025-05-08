@@ -58,11 +58,11 @@ export class ProjectPitchEntity extends AirtableEntity<ProjectPitch, ProjectPitc
   readonly MODEL = ProjectPitch;
 
   async loadAssociations(pitches: ProjectPitch[]) {
-    const countryNames = await this.gadmCountryNames();
+    const countryNames = await this.gadmLevel0Names();
     const stateCountries = filter(
       uniq(flatten(pitches.map(({ states }) => states?.map(state => state.split(".")[0]))))
     );
-    const stateNames = await this.gadmStateNames(stateCountries);
+    const stateNames = await this.gadmLevel1Names(stateCountries);
 
     return pitches.reduce(
       (associations, { id, projectCountry, states }) => ({

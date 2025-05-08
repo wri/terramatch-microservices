@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
 
@@ -337,4 +337,96 @@ export class ProjectPitch extends Model<ProjectPitch> {
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", constraints: false })
   organisation: Organisation | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_0_proposed" })
+  level0Proposed: string[] | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_1_proposed" })
+  level1Proposed: string[] | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_2_proposed" })
+  level2Proposed: string[] | null;
+
+  @AllowNull
+  @Column(DECIMAL(15, 8))
+  latProposed: number | null;
+
+  @AllowNull
+  @Column({ type: DECIMAL(15, 8), field: "long_proposed" })
+  lngProposed: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  stakeholderEngagement: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  landownerAgreement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landownerAgreementDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landTenureDistribution: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landTenureRisks: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  nonTreeInterventionsDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  complementExistingRestoration: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landUseTypeDistribution: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  restorationStrategyDistribution: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  totalTreeSecondYr: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  projSurvivalRate: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  anrApproach: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  anrRights: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  projectSiteModel: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  indigenousImpact: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  barriersProjectActivity: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  barriersProjectActivityDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  otherEngageWomenYouth: string | null;
 }

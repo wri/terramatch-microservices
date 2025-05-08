@@ -2,6 +2,11 @@ name: Api Gateway Deploy
 run-name: "Api Gateway Deploy [env: ${{ inputs.env }}]"
 
 on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       env:

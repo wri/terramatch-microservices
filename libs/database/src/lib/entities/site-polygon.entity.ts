@@ -107,10 +107,6 @@ export class SitePolygon extends Model<SitePolygon> {
   plantStart: Date | null;
 
   @AllowNull
-  @Column({ type: DATE, field: "plantend" })
-  plantEnd: Date | null;
-
-  @AllowNull
   @Column(STRING)
   practice: string | null;
 
@@ -170,25 +166,25 @@ export class SitePolygon extends Model<SitePolygon> {
   indicatorsTreeCoverLoss: IndicatorOutputTreeCoverLoss[] | null;
 
   private _indicators: Indicator[] | null;
-  async getIndicators(refresh = false) {
-    if (!refresh && this._indicators != null) return this._indicators;
+  async getIndicators() {
+    if (this._indicators != null) return this._indicators;
 
-    if (refresh || this.indicatorsFieldMonitoring == null) {
+    if (this.indicatorsFieldMonitoring == null) {
       this.indicatorsFieldMonitoring = await this.$get("indicatorsFieldMonitoring");
     }
-    if (refresh || this.indicatorsHectares == null) {
+    if (this.indicatorsHectares == null) {
       this.indicatorsHectares = await this.$get("indicatorsHectares");
     }
-    if (refresh || this.indicatorsMsuCarbon == null) {
+    if (this.indicatorsMsuCarbon == null) {
       this.indicatorsMsuCarbon = await this.$get("indicatorsMsuCarbon");
     }
-    if (refresh || this.indicatorsTreeCount == null) {
+    if (this.indicatorsTreeCount == null) {
       this.indicatorsTreeCount = await this.$get("indicatorsTreeCount");
     }
-    if (refresh || this.indicatorsTreeCover == null) {
+    if (this.indicatorsTreeCover == null) {
       this.indicatorsTreeCover = await this.$get("indicatorsTreeCover");
     }
-    if (refresh || this.indicatorsTreeCoverLoss == null) {
+    if (this.indicatorsTreeCoverLoss == null) {
       this.indicatorsTreeCoverLoss = await this.$get("indicatorsTreeCoverLoss");
     }
 

@@ -3,6 +3,7 @@ import { AirtableService } from "./airtable.service";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
+import { DataApiService } from "@terramatch-microservices/data-api";
 
 describe("AirtableService", () => {
   let service: AirtableService;
@@ -15,6 +16,10 @@ describe("AirtableService", () => {
         {
           provide: getQueueToken("airtable"),
           useValue: (queue = createMock<Queue>())
+        },
+        {
+          provide: DataApiService,
+          useValue: createMock<DataApiService>()
         }
       ]
     }).compile();

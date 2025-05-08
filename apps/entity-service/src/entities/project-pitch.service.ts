@@ -8,7 +8,7 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 @Injectable()
 export class ProjectPitchService {
   async getProjectPitch(uuid: string) {
-    const projectPitch = ProjectPitch.findOne({ where: { uuid } });
+    const projectPitch = await ProjectPitch.findOne({ where: { uuid } });
     if (!projectPitch) {
       throw new NotFoundException("ProjectPitch not found");
     }

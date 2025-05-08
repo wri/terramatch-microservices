@@ -5,7 +5,6 @@ import { OrganisationFactory, UserFactory } from "@terramatch-microservices/data
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { OrganisationUserFactory } from "@terramatch-microservices/database/factories/organisation-user.factory";
-import { NotFoundException } from "@nestjs/common";
 
 async function getUserWithOrganisation() {
   const user = await UserFactory.create();
@@ -17,6 +16,14 @@ async function getUserWithOrganisation() {
   });
   user.organisations = [{ ...orgUser, ...org } as unknown as Organisation & { OrganisationUser: typeof orgUser }];
   return user;
+}
+
+function getDefaultPagination() {
+  const params = new EntityQueryDto();
+  params.page = new NumberPage();
+  params.page.number = 1;
+  params.page.size = 10;
+  return params;
 }
 
 describe("ProjectPitchService", () => {
@@ -48,9 +55,7 @@ describe("ProjectPitchService", () => {
 
     it("throws an error if no project pitch not found for the given UUID", async () => {
       jest.spyOn(ProjectPitch, "findOne").mockImplementation(() => Promise.resolve(null));
-      await expect(service.getProjectPitch("invalid-uuid")).rejects.toThrow(
-        new NotFoundException("ProjectPitch not found")
-      );
+      await expect(service.getProjectPitch("invalid-uuid")).rejects.toThrow("ProjectPitch not found");
     });
   });
 
@@ -70,11 +75,7 @@ describe("ProjectPitchService", () => {
       ];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
-      const params = new EntityQueryDto();
-      params.page = new NumberPage();
-      params.page.number = 1;
-      params.page.size = 10;
-
+      const params = getDefaultPagination();
       const result = await service.getProjectPitches(user.id, params);
 
       expect(result.data).toHaveLength(2);
@@ -89,10 +90,7 @@ describe("ProjectPitchService", () => {
       const projectPitches = [new ProjectPitch({ uuid: "pitch2", projectName: "Filtered" })];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
-      const params = new EntityQueryDto();
-      params.page = new NumberPage();
-      params.page.number = 1;
-      params.page.size = 10;
+      const params = getDefaultPagination();
       params.search = "filtered";
 
       const result = await service.getProjectPitches(user.id, params);
@@ -112,10 +110,7 @@ describe("ProjectPitchService", () => {
       ];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
-      const params = new EntityQueryDto();
-      params.page = new NumberPage();
-      params.page.number = 1;
-      params.page.size = 10;
+      const params = getDefaultPagination();
 
       const result = await service.getAdminProjectPitches(params);
 
@@ -131,10 +126,7 @@ describe("ProjectPitchService", () => {
       const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
-      const params = new EntityQueryDto();
-      params.page = new NumberPage();
-      params.page.number = 1;
-      params.page.size = 10;
+      const params = getDefaultPagination();
       params.search = "filtered";
 
       const result = await service.getAdminProjectPitches(params);

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Param } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";

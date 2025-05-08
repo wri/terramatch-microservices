@@ -1,7 +1,7 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
+import { Organisation } from "./organisation.entity";
 
 @Table({ tableName: "project_pitches", underscored: true, paranoid: true })
 export class ProjectPitch extends Model<ProjectPitch> {

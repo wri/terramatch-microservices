@@ -2,6 +2,11 @@ name: Services Deploy (all)
 run-name: "Services Deploy (all) [env: ${{ inputs.env }}]"
 
 on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       env:

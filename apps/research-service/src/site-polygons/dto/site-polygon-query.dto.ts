@@ -1,5 +1,5 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsDate, IsEnum, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -7,9 +7,10 @@ import {
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
 import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
-import { Transform, Type } from "class-transformer";
+import { Type } from "class-transformer";
 import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
 export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
@@ -93,12 +94,10 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @ApiProperty({
     required: false,
     default: false,
-    type: "boolean",
     description: "Include polygons for test projects in the results."
   })
-  @IsBoolean()
-  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
-  includeTestProjects? = false;
+  @TransformBooleanString()
+  includeTestProjects?: boolean;
 
   @ValidateNested()
   @Type(({ object }) => {
@@ -121,7 +120,6 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     type: "boolean",
     description: "Whether to include the complete sitePolygon Dto or not"
   })
-  @IsBoolean()
-  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : undefined))
-  lightResource? = false;
+  @TransformBooleanString()
+  lightResource?: boolean;
 }

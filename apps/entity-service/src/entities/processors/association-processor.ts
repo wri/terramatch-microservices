@@ -4,14 +4,18 @@ import { DocumentBuilder, getDtoType } from "@terramatch-microservices/common/ut
 import { EntityClass, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { intersection } from "lodash";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
+import { MediaQueryDto } from "../dto/media-query.dto";
+import { EntitiesService } from "../entities.service";
 
-export abstract class AssociationProcessor<M extends UuidModel<M>, D extends AssociationDto<D>> {
+export abstract class AssociationProcessor<M extends UuidModel, D extends AssociationDto<D>> {
   abstract readonly DTO: Type<D>;
 
   constructor(
     protected readonly entityType: EntityType,
     protected readonly entityUuid: string,
-    protected readonly entityModelClass: EntityClass<EntityModel>
+    protected readonly entityModelClass: EntityClass<EntityModel>,
+    protected readonly entitiesService: EntitiesService,
+    protected readonly query?: MediaQueryDto
   ) {}
 
   /**
@@ -19,7 +23,7 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
    * are simple enough that providing a reference to the DTO class, and a getter of associations based on the
    * base entity is enough.
    */
-  static buildSimpleProcessor<M extends UuidModel<M>, D extends AssociationDto<D>>(
+  static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto<D>>(
     dtoClass: Type<D>,
     associationGetter: (entity: EntityModel, entityLaravelType: string) => Promise<M[]>
   ) {
@@ -35,15 +39,24 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
 
   protected abstract getAssociations(baseEntity: EntityModel): Promise<M[]>;
 
+  /**
+   * Returns all attributes that should be loaded on the base model load.
+   *
+   * Note: The code that uses this attribute will perform an intersection between this list and the available
+   * attributes on the model class so it's OK to include attributes here that are not available on all Entity
+   * classes.
+   */
+  get baseModelAttributes() {
+    // Only pull the attributes that are needed by the entity policies.
+    return ["id", "frameworkKey", "projectId", "siteId", "nurseryId"];
+  }
+
   private _baseEntity: EntityModel;
   async getBaseEntity(): Promise<EntityModel> {
     if (this._baseEntity != null) return this._baseEntity;
 
     // Only pull the attributes that are needed by the entity policies.
-    const attributes = intersection(
-      ["id", "frameworkKey", "projectId", "siteId", "nurseryId"],
-      Object.keys(this.entityModelClass.getAttributes())
-    );
+    const attributes = intersection(this.baseModelAttributes, Object.keys(this.entityModelClass.getAttributes()));
 
     this._baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
     if (this._baseEntity == null) {
@@ -53,14 +66,18 @@ export abstract class AssociationProcessor<M extends UuidModel<M>, D extends Ass
     return this._baseEntity;
   }
 
-  async addDtos(document: DocumentBuilder): Promise<void> {
+  async addDtos(document: DocumentBuilder, asIncluded = false): Promise<void> {
     const associations = await this.getAssociations(await this.getBaseEntity());
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
-      document.addData(association.uuid, new this.DTO(association, additionalProps));
+      if (asIncluded) {
+        document.addIncluded(association.uuid, new this.DTO(association, additionalProps));
+      } else {
+        document.addData(association.uuid, new this.DTO(association, additionalProps));
+      }
     }
 
     const resource = getDtoType(this.DTO);

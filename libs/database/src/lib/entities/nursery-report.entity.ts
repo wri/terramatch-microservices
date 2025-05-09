@@ -11,10 +11,10 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, UpdateRequestStatus } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
@@ -22,13 +22,14 @@ import { Subquery } from "../util/subquery.builder";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 // Incomplete stub
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: NurseryReport.APPROVED_STATUSES } } },
-  task: (taskId: number) => ({ where: { taskId: taskId } })
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
 export class NurseryReport extends Model<NurseryReport> {
@@ -72,7 +73,7 @@ export class NurseryReport extends Model<NurseryReport> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull
@@ -102,9 +103,6 @@ export class NurseryReport extends Model<NurseryReport> {
 
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
-
-  @BelongsTo(() => Task)
-  task: Task | null;
 
   get projectName() {
     return this.nursery?.project?.name;
@@ -155,7 +153,10 @@ export class NurseryReport extends Model<NurseryReport> {
   @Column(BIGINT.UNSIGNED)
   taskId: number;
 
-  @Column(STRING)
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
+
+  @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
   @AllowNull
@@ -171,7 +172,7 @@ export class NurseryReport extends Model<NurseryReport> {
   seedlingsYoungTrees: number | null;
 
   @AllowNull
-  @Column(TINYINT)
+  @Column(BOOLEAN)
   nothingToReport: boolean;
 
   @AllowNull

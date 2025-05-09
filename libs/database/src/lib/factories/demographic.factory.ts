@@ -16,7 +16,6 @@ import { ProjectPitchFactory } from "./project-pitch.factory";
 import { ProjectFactory } from "./project.factory";
 
 const defaultAttributesFactory = async () => ({
-  uuid: crypto.randomUUID(),
   description: null,
   hidden: false
 });

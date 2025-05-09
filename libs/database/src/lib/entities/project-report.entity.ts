@@ -11,18 +11,18 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
-import { COMPLETE_REPORT_STATUSES } from "../constants/status";
+import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
-import { SiteReport } from "./site-report.entity";
-import { Literal } from "sequelize/types/utils";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
+import { StateMachineColumn } from "../util/model-column-state-machine";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -34,7 +34,8 @@ type ApprovedIdsSubqueryOptions = {
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
   project: (id: number) => ({ where: { projectId: id } }),
-  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } })
+  dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
 export class ProjectReport extends Model<ProjectReport> {
@@ -48,7 +49,26 @@ export class ProjectReport extends Model<ProjectReport> {
     media: { dbCollection: "media", multiple: true },
     file: { dbCollection: "file", multiple: true },
     otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true }
+    photos: { dbCollection: "photos", multiple: true },
+    baselineReportUpload: { dbCollection: "baseline_report_upload", multiple: true },
+    localGovernanceOrderLetterUpload: { dbCollection: "local_governance_order_letter_upload", multiple: true },
+    eventsMeetingsPhotos: { dbCollection: "events_meetings_photos", multiple: true },
+    localGovernanceProofOfPartnershipUpload: {
+      dbCollection: "local_governance_proof_of_partnership_upload",
+      multiple: true
+    },
+    topThreeSuccessesUpload: { dbCollection: "top_three_successes_upload", multiple: true },
+    directJobsUpload: { dbCollection: "direct_jobs_upload", multiple: true },
+    convergenceJobsUpload: { dbCollection: "convergence_jobs_upload", multiple: true },
+    convergenceSchemesUpload: { dbCollection: "convergence_schemes_upload", multiple: true },
+    livelihoodActivitiesUpload: { dbCollection: "livelihood_activities_upload", multiple: true },
+    directLivelihoodImpactsUpload: { dbCollection: "direct_livelihood_impacts_upload", multiple: true },
+    certifiedDatabaseUpload: { dbCollection: "certified_database_upload", multiple: true },
+    physicalAssetsPhotos: { dbCollection: "physical_assets_photos", multiple: true },
+    indirectCommunityPartnersUpload: { dbCollection: "indirect_community_partners_upload", multiple: true },
+    trainingCapacityBuildingUpload: { dbCollection: "training_capacity_building_upload", multiple: true },
+    trainingCapacityBuildingPhotos: { dbCollection: "training_capacity_building_photos", multiple: true },
+    financialReportUpload: { dbCollection: "financial_report_upload", multiple: true }
   } as const;
 
   static incomplete() {
@@ -76,25 +96,8 @@ export class ProjectReport extends Model<ProjectReport> {
     return builder.literal;
   }
 
-  static siteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
-    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds);
-    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
-    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
-    return builder.literal;
-  }
-
-  static approvedSiteReportIdsTaskSubquery(taskIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
-    const builder = Subquery.select(SiteReport, "id").in("taskId", taskIds).in("status", SiteReport.APPROVED_STATUSES);
-    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
-    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
-    return builder.literal;
-  }
-
-  static siteReportsUnsubmittedIdsTaskSubquery(taskIds: number[] | Literal) {
-    const builder = Subquery.select(SiteReport, "id")
-      .in("taskId", taskIds)
-      .in("status", SiteReport.UNSUBMITTED_STATUSES);
-    return builder.literal;
+  static task(taskId: number) {
+    return chainScope(this, "task", taskId) as typeof ProjectReport;
   }
 
   @PrimaryKey
@@ -103,7 +106,7 @@ export class ProjectReport extends Model<ProjectReport> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @AllowNull
@@ -130,9 +133,6 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @BelongsTo(() => User)
   user: User | null;
-
-  @BelongsTo(() => Task)
-  task: Task | null;
 
   get projectName() {
     return this.project?.name;
@@ -161,21 +161,24 @@ export class ProjectReport extends Model<ProjectReport> {
   @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  taskId: number;
+  taskId: number | null;
 
-  @Column(STRING)
-  status: string;
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
+
+  @StateMachineColumn(ReportStatusStates)
+  status: ReportStatus;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: string;
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(TEXT)
   feedback: string | null;
 
   @AllowNull
-  @Column(TEXT)
+  @JsonColumn()
   feedbackFields: string[] | null;
 
   @AllowNull

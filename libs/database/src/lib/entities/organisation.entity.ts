@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { OrganisationStatus } from "../constants/status";
 
@@ -13,7 +13,7 @@ export class Organisation extends Model<Organisation> {
   override id: number;
 
   @Index
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Default("draft")
@@ -432,4 +432,48 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(TEXT)
   additionalComments: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  consortium: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  femaleYouthLeadershipExample: string | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_0_past_restoration" })
+  level0PastRestoration: string[] | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_1_past_restoration" })
+  level1PastRestoration: string[] | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_2_past_restoration" })
+  level2PastRestoration: string[] | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  treesNaturallyRegeneratedTotal: number | null;
+
+  @AllowNull
+  @Column({ type: INTEGER.UNSIGNED, field: "trees_naturally_regenerated_3year" })
+  treesNaturallyRegenerated3Year: number | null;
+
+  @AllowNull
+  @Column(TINYINT)
+  carbonCredits: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  externalTechnicalAssistance: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  barriersToFunding: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  capacityBuildingSupportNeeded: string | null;
 }

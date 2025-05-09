@@ -10,13 +10,16 @@ import {
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
-  UserFactory
+  UserFactory,
+  DemographicFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { ProjectReportProcessor } from "./project-report.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { ProjectReportLightDto } from "../dto/project-report.dto";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
@@ -430,6 +433,24 @@ describe("ProjectReportProcessor", () => {
         lightResource: false,
         projectUuid: project.uuid
       });
+    });
+  });
+
+  describe("processSideload", () => {
+    it("should include sideloaded demographics", async () => {
+      const projectReport = await ProjectReportFactory.create();
+      await DemographicFactory.forProjectReportWorkday.create({ demographicalId: projectReport.id });
+      await DemographicFactory.forProjectReportJobs.create({ demographicalId: projectReport.id });
+
+      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      const document = buildJsonApi(ProjectReportLightDto);
+      await processor.addIndex(document, {
+        sideloads: [{ entity: "demographics", pageSize: 5 }]
+      });
+
+      const result = document.serialize();
+      expect(result.included?.length).toBe(2);
+      expect(result.included.filter(({ type }) => type === "demographics").length).toBe(2);
     });
   });
 });

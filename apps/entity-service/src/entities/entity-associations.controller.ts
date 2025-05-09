@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param } from "@nestjs/common";
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
 import { EntityAssociationIndexParamsDto } from "./dto/entity-association-index-params.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -8,6 +8,11 @@ import { DemographicCollections, DemographicDto, DemographicEntryDto } from "./d
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
+import { MediaDto } from "./dto/media.dto";
+import { MediaQueryDto } from "./dto/media-query.dto";
+import { DisturbanceDto } from "./dto/disturbance.dto";
+import { InvasiveDto } from "./dto/invasive.dto";
+import { StrataDto } from "./dto/strata.dto";
 
 @Controller("entities/v3/:entity/:uuid")
 @ApiExtraModels(DemographicEntryDto, DemographicCollections)
@@ -22,15 +27,21 @@ export class EntityAssociationsController {
   @JsonApiResponse([
     { data: DemographicDto, hasMany: true },
     { data: SeedingDto, hasMany: true },
-    { data: TreeSpeciesDto, hasMany: true }
+    { data: TreeSpeciesDto, hasMany: true },
+    { data: MediaDto, hasMany: true },
+    { data: DisturbanceDto, hasMany: true },
+    { data: InvasiveDto, hasMany: true },
+    { data: StrataDto, hasMany: true }
   ])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Base entity not found" })
-  async associationIndex(@Param() { entity, uuid, association }: EntityAssociationIndexParamsDto) {
-    const processor = this.entitiesService.createAssociationProcessor(entity, uuid, association);
+  async associationIndex(
+    @Param() { entity, uuid, association }: EntityAssociationIndexParamsDto,
+    @Query() query: MediaQueryDto
+  ) {
+    const processor = this.entitiesService.createAssociationProcessor(entity, uuid, association, query);
     const baseEntity = await processor.getBaseEntity();
     await this.policyService.authorize("read", baseEntity);
-
     const document = buildJsonApi(processor.DTO, { forceDataArray: true });
     await processor.addDtos(document);
     return document.serialize();

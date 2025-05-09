@@ -90,8 +90,7 @@ export class DelayedJobsController {
     const jobs = await DelayedJob.findAll({
       where: {
         uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
-        createdBy: authenticatedUserId,
-        status: { [Op.ne]: "pending" }
+        createdBy: authenticatedUserId
       },
       order: [["createdAt", "DESC"]]
     });

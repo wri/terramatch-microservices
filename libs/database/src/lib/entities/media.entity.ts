@@ -1,6 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
   DefaultScope,
   ForeignKey,
@@ -10,54 +11,19 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
-import { Project } from "./project.entity";
 import { chainScope } from "../util/chain-scope";
-import { Nursery } from "./nursery.entity";
-import { Site } from "./site.entity";
-import { NurseryReport } from "./nursery-report.entity";
-import { ProjectReport } from "./project-report.entity";
-import { SiteReport } from "./site-report.entity";
+import { LaravelModel, laravelType } from "../types/util";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
   collection: (collectionName: string) => ({ where: { collectionName } }),
-  project: (id: number) => ({
+  association: (association: LaravelModel) => ({
     where: {
-      modelType: Project.LARAVEL_TYPE,
-      modelId: id
-    }
-  }),
-  nursery: (id: number) => ({
-    where: {
-      modelType: Nursery.LARAVEL_TYPE,
-      modelId: id
-    }
-  }),
-  site: (id: number) => ({
-    where: {
-      modelType: Site.LARAVEL_TYPE,
-      modelId: id
-    }
-  }),
-  nurseryReport: (id: number) => ({
-    where: {
-      modelType: NurseryReport.LARAVEL_TYPE,
-      modelId: id
-    }
-  }),
-  projectReport: (id: number) => ({
-    where: {
-      modelType: ProjectReport.LARAVEL_TYPE,
-      modelId: id
-    }
-  }),
-  siteReport: (id: number) => ({
-    where: {
-      modelType: SiteReport.LARAVEL_TYPE,
-      modelId: id
+      modelType: laravelType(association),
+      modelId: association.id
     }
   })
 }))
@@ -75,28 +41,8 @@ export class Media extends Model<Media> {
     return chainScope(this, "collection", collectionName) as typeof Media;
   }
 
-  static project(id: number) {
-    return chainScope(this, "project", id) as typeof Media;
-  }
-
-  static site(id: number) {
-    return chainScope(this, "site", id) as typeof Media;
-  }
-
-  static nursery(id: number) {
-    return chainScope(this, "nursery", id) as typeof Media;
-  }
-
-  static nurseryReport(id: number) {
-    return chainScope(this, "nurseryReport", id) as typeof Media;
-  }
-
-  static projectReport(id: number) {
-    return chainScope(this, "projectReport", id) as typeof Media;
-  }
-
-  static siteReport(id: number) {
-    return chainScope(this, "siteReport", id) as typeof Media;
+  static for(model: LaravelModel) {
+    return chainScope(this, "association", model) as typeof Media;
   }
 
   @PrimaryKey
@@ -105,7 +51,7 @@ export class Media extends Model<Media> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)
@@ -170,6 +116,22 @@ export class Media extends Model<Media> {
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   createdBy: number | null;
+
+  @BelongsTo(() => User, { constraints: false })
+  createdByUser: User | null;
+
+  get createdByUserName() {
+    const { firstName, lastName } = this.createdByUser ?? {};
+    if (firstName != null && lastName != null) {
+      return `${firstName} ${lastName}`;
+    } else if (firstName != null) {
+      return firstName;
+    } else if (lastName != null) {
+      return lastName;
+    } else {
+      return null;
+    }
+  }
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored

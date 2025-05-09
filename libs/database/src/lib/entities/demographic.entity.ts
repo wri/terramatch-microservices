@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
@@ -36,7 +36,7 @@ export class Demographic extends Model<Demographic> {
     Demographic.INDIRECT_BENEFICIARIES_TYPE
   ] as const;
 
-  static idsSubquery(demographicalIds: Literal, demographicalType: string, type: DemographicType) {
+  static idsSubquery(demographicalIds: Literal | number[], demographicalType: string, type: DemographicType) {
     return Subquery.select(Demographic, "id")
       .eq("demographicalType", demographicalType)
       .in("demographicalId", demographicalIds)
@@ -50,7 +50,7 @@ export class Demographic extends Model<Demographic> {
   override id: number;
 
   @Unique
-  @Column(UUID)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @Column(STRING)

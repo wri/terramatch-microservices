@@ -37,11 +37,10 @@ export class ProjectLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({
-    nullable: true,
     description: "Entity status for this project",
     enum: ENTITY_STATUSES
   })
-  status: EntityStatus | null;
+  status: EntityStatus;
 
   @ApiProperty({
     nullable: true,
@@ -118,10 +117,16 @@ export class ProjectFullDto extends ProjectLightDto {
   feedbackFields: string[] | null;
 
   @ApiProperty({ nullable: true })
+  cohort: string | null;
+
+  @ApiProperty({ nullable: true })
   continent: string | null;
 
   @ApiProperty({ nullable: true })
   country: string | null;
+
+  @ApiProperty({ nullable: true, description: "The associated organisation type" })
+  organisationType: string | null;
 
   @ApiProperty({ nullable: true })
   states: string[] | null;

@@ -6,8 +6,8 @@ import {
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { flatten, groupBy } from "lodash";
+import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { filter, flatten, groupBy, uniq } from "lodash";
 
 const loadApprovedSites = async (projectIds: number[]) =>
   groupBy(
@@ -29,6 +29,8 @@ const loadSitePolygons = async (siteUuids: string[]) =>
 
 type ProjectAssociations = {
   sitePolygons: SitePolygon[];
+  countryName: string;
+  stateNames: string[];
 };
 
 const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
@@ -53,6 +55,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   },
   "status",
   "country",
+  associatedValueColumn("countryName", "country"),
   "description",
   "plantingStartDate",
   "plantingEndDate",
@@ -90,6 +93,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "descriptionOfProjectTimeline",
   "landholderCommEngage",
   "states",
+  associatedValueColumn("stateNames", "states"),
   "detailedInterventionTypes",
   "waterSource",
   "baselineBiodiversity",
@@ -112,19 +116,25 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
     const approvedSites = await loadApprovedSites(projectIds);
     const allSiteUuids = flatten(Object.values(approvedSites).map(sites => sites.map(({ uuid }) => uuid)));
     const sitePolygons = await loadSitePolygons(allSiteUuids);
+    const countryNames = await this.gadmLevel0Names();
+    const stateCountries = filter(
+      uniq(flatten(projects.map(({ states }) => states?.map(state => state.split(".")[0]))))
+    );
+    const stateNames = await this.gadmLevel1Names(stateCountries);
 
-    return projectIds.reduce((associations, projectId) => {
-      const sites = approvedSites[projectId] ?? [];
-
-      return {
+    return projects.reduce(
+      (associations, { id, country, states }) => ({
         ...associations,
-        [projectId]: {
-          sitePolygons: sites.reduce(
+        [id]: {
+          sitePolygons: (approvedSites[id] ?? []).reduce(
             (polygons, { uuid }) => [...polygons, ...(sitePolygons[uuid] ?? [])],
             [] as SitePolygon[]
-          )
+          ),
+          countryName: country == null ? null : countryNames[country],
+          stateNames: filter(states?.map(state => stateNames[state]))
         }
-      };
-    }, {} as Record<number, ProjectAssociations>);
+      }),
+      {} as Record<number, ProjectAssociations>
+    );
   }
 }

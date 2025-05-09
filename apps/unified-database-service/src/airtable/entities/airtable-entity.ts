@@ -1,9 +1,11 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, uniq } from "lodash";
+import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
 import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { DataApiService } from "@terramatch-microservices/data-api";
+import { Dictionary } from "factory-girl-ts";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -22,6 +24,8 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
   readonly FILTER_FLAGS: string[] = [];
 
   protected readonly logger = new TMLogger(AirtableEntity.name);
+
+  constructor(protected dataApi: DataApiService) {}
 
   /**
    * If an airtable entity provides a concrete type for Associations, this method should be overridden
@@ -159,7 +163,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     try {
       const records = (await this.MODEL.findAll(
         this.getDeletePageFindOptions(deletedSince, page)
-      )) as unknown as UuidModel<ModelType>[];
+      )) as unknown as UuidModel[];
 
       // Page had no records, halt processing.
       if (records.length === 0) return false;
@@ -249,6 +253,35 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
 
     return associations;
   }
+
+  protected _gadmLevel0Names: Dictionary<string>;
+  protected async gadmLevel0Names() {
+    return (this._gadmLevel0Names ??= mapValues(keyBy(await this.dataApi.gadmLevel0(), "iso"), "name"));
+  }
+
+  protected _gadmLevel1Names: Dictionary<Dictionary<string>> = {};
+  protected async gadmLevel1Names(level0Codes: string[]) {
+    return merge(
+      {},
+      ...(await Promise.all(
+        level0Codes.map(async code => {
+          return (this._gadmLevel1Names[code] ??= mapValues(keyBy(await this.dataApi.gadmLevel1(code), "id"), "name"));
+        })
+      ))
+    );
+  }
+
+  protected _gadmLevel2Names: Dictionary<Dictionary<string>> = {};
+  protected async gadmLevel2Names(level1Codes: string[]) {
+    return merge(
+      {},
+      ...(await Promise.all(
+        level1Codes.map(async code => {
+          return (this._gadmLevel2Names[code] ??= mapValues(keyBy(await this.dataApi.gadmLevel2(code), "id"), "name"));
+        })
+      ))
+    );
+  }
 }
 
 export type Include = {
@@ -324,7 +357,7 @@ const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =
     return mapping.include.reduce(mergeInclude, includes);
   }, [] as Include[]);
 
-export const commonEntityColumns = <T extends UuidModel<T>, A = Record<string, never>>(adminSiteType: string) =>
+export const commonEntityColumns = <T extends UuidModel, A = Record<string, never>>(adminSiteType: string) =>
   [
     "uuid",
     "createdAt",

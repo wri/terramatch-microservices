@@ -1,16 +1,18 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import {
   AdditionalProjectReportFullProps,
   ProjectReportFullDto,
   ProjectReportLightDto,
   ProjectReportMedia
 } from "../dto/project-report.dto";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
+  Demographic,
+  DemographicEntry,
   Media,
   NurseryReport,
   Project,
@@ -19,12 +21,18 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { sumBy } from "lodash";
+import { ProcessableAssociation } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { Literal } from "sequelize/lib/utils";
 
-export class ProjectReportProcessor extends EntityProcessor<
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
+
+export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
-  ProjectReportFullDto
+  ProjectReportFullDto,
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;
@@ -126,38 +134,42 @@ export class ProjectReportProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
+  async processSideload(document: DocumentBuilder, model: ProjectReport, entity: SideloadType): Promise<void> {
+    if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
+      const processor = this.entitiesService.createAssociationProcessor(
+        "projectReports",
+        model.uuid,
+        entity as ProcessableAssociation
+      );
+      await processor.addDtos(document, true);
+    } else {
+      throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
+    }
+  }
+
   async getFullDto(projectReport: ProjectReport) {
-    const projectReportId = projectReport.id;
-    const taskId = projectReport.taskId;
+    const { taskId } = projectReport;
     const reportTitle = await this.getReportTitle(projectReport);
-    const siteReportsIdsTask = ProjectReport.siteReportIdsTaskSubquery([taskId]);
+    const siteReportsIdsTask = SiteReport.approvedIdsForTaskSubquery(taskId);
     const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
-    const approvedSiteReportsFromTask = await SiteReport.approved()
-      .task(taskId)
-      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
-    const regeneratedTreesCount = sumBy(approvedSiteReportsFromTask, "numTreesRegenerating");
-    const siteReportsCount = await SiteReport.task(taskId).count();
-    const nurseryReportsCount = await NurseryReport.task(taskId).count();
-    const seedlingsGrown = await this.getSeedlingsGrown(projectReport);
-    const siteReportsUnsubmittedIdsTask = await ProjectReport.siteReportsUnsubmittedIdsTaskSubquery([taskId]);
-    const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsUnsubmittedIdsTask).sum("amount")) ?? 0;
-    const readableCompletionStatus = await this.getReadableCompletionStatus(projectReport.completion);
+    const regeneratedTreesCount = await SiteReport.approved().task(taskId).sum("numTreesRegenerating");
+    const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const createdByUser = projectReport.user ?? null;
     const props: AdditionalProjectReportFullProps = {
       reportTitle,
+      taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReport.id, siteReportsIdsTask),
       seedsPlantedCount,
       treesPlantedCount,
       regeneratedTreesCount,
-      siteReportsCount,
-      nurseryReportsCount,
-      seedlingsGrown,
+      siteReportsCount: await SiteReport.task(taskId).count(),
+      nurseryReportsCount: await NurseryReport.task(taskId).count(),
+      seedlingsGrown: await this.getSeedlingsGrown(projectReport),
       nonTreeTotal,
-      readableCompletionStatus,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
-        await Media.projectReport(projectReportId).findAll(),
+        await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
     };
@@ -198,7 +210,21 @@ export class ProjectReportProcessor extends EntityProcessor<
     return 0;
   }
 
-  protected async getReadableCompletionStatus(completion: number) {
-    return completion === 0 ? "Not Started" : completion === 100 ? "Complete" : "Started";
+  protected async getTaskTotalWorkdays(projectReportId: number, siteIds: Literal) {
+    const projectReportDemographics = Demographic.idsSubquery(
+      [projectReportId],
+      ProjectReport.LARAVEL_TYPE,
+      Demographic.WORKDAYS_TYPE
+    );
+    const siteReportDemographics = Demographic.idsSubquery(siteIds, SiteReport.LARAVEL_TYPE, Demographic.WORKDAYS_TYPE);
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.or]: [{ [Op.in]: projectReportDemographics }, { [Op.in]: siteReportDemographics }]
+          }
+        }
+      })) ?? 0
+    );
   }
 }

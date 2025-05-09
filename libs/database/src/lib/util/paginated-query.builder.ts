@@ -77,6 +77,6 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   async paginationTotal() {
-    return await this.MODEL.count(this.findOptions);
+    return await this.MODEL.count({ distinct: true, ...this.findOptions });
   }
 }

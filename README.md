@@ -83,11 +83,29 @@ to take effect.
 Once this project is live in production, we can explore continuous deployment to at least staging and prod envs on the staging
 and main branches.
 
+# Environment
+
+The Environment for a given service deployment is configured in Github Actions secrets / variables. Some are repo-wide, and
+some apply only to a given environment. During the build process, the contents of the variables applied to .env are visible
+to the general public, so we need to be very careful about what is included there. Nothing sensitive (passwords, email
+addresses, API tokens, etc) may be included in Variables, and must instead be in Secrets
+
+- If you need to update a _non-secret_ ENV variable, add / update it in the given environment's ENV variable
+- If you need to add a _secret_ ENV variable, create the secret in Github actions, and then add a line to `deploy-service.yml`
+  to append that secret to the generated `.env` variable.
+- The current value of secrets in GitHub actions may not be read by anyone, including repository admins. If you need to
+  inspect the current value of a configured secret, the recommended approach is to access that deployed service's REPL, and
+  pull the value using the `ConfigService`:
+
+```
+> $(ConfigService).get("SUPER_SECRETE_ENV_VALUE");
+```
+
 # Creating a new service
 
 - In the root directory: `nx g @nx/nest:app apps/foo-service`
 - Set up the new `main.ts` similarly to existing services.
-  - Make sure swagger docs and the `/health` endpoint are implemented
+  - Make sure swagger docs are implemented
   - Pick a default local port that is unique from other services
   - Make sure the top of `main.ts` has these two lines:
   ```
@@ -95,6 +113,7 @@ and main branches.
   import "../../../instrument-sentry";
   ```
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
+  - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
 - Set up REPL access:
   - Copy `repl.ts` from an existing service (and modify to specify the new service's name)
   - Add the `build-repl` target to `project.json`, which an empty definition.
@@ -106,6 +125,7 @@ and main branches.
   - Add the new service name to the "service" workflow input options in `deploy-service.yml`
   - Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
     - Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.
+  - Make sure this service is covered in `stop-env.yml` by adding a line to both the `Stop Deployed Services` step and the `Wait for Service Stack Deletion step`.
   - In AWS:
     - Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
       - Set the repo to Immutable

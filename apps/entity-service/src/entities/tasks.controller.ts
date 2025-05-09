@@ -2,11 +2,17 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { TaskDto } from "./dto/task.dto";
-import { IndexQueryDto } from "./dto/index-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Task } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
+import { TaskQueryDto } from "./dto/task-query.dto";
+
+const FILTER_PROPS = {
+  status: "status",
+  frameworkKey: "$project.framework_key$",
+  projectUuid: "$project.uuid$"
+};
 
 @Controller("entities/v3/tasks")
 export class TasksController {
@@ -18,12 +24,28 @@ export class TasksController {
     summary: "Get a paginated and filtered list of tasks"
   })
   @JsonApiResponse({ data: TaskDto, pagination: "number" })
-  async taskIndex(@Query() query: IndexQueryDto) {
+  async taskIndex(@Query() query: TaskQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [
       // required: true avoids loading tasks attached to deleted projects or orgs
       { association: "organisation", attributes: ["name"], required: true },
       { association: "project", attributes: ["name", "frameworkKey"], required: true }
     ]);
+
+    for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS)) {
+      if (query[filterProp] != null) {
+        builder.where({ [sqlProp]: query[filterProp] });
+      }
+    }
+
+    if (query.sort != null) {
+      if (["dueAt", "updatedAt"].includes(query.sort.field)) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organisationName") {
+        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "projectName") {
+        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+      }
+    }
 
     const document = buildJsonApi(TaskDto, { pagination: "number" });
     const tasks = await builder.execute();

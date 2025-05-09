@@ -1,6 +1,6 @@
 import { IndexQueryDto } from "./index-query.dto";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional } from "class-validator";
+import { IsOptional, IsUUID } from "class-validator";
 
 export class TaskQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
@@ -14,4 +14,10 @@ export class TaskQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+}
+
+export class TaskGetDto {
+  @IsUUID()
+  @ApiProperty({ description: "Task UUID for task to retrieve" })
+  uuid: string;
 }

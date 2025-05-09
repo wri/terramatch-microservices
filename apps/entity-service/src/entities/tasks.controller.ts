@@ -1,12 +1,20 @@
-import { Controller, Get, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { TaskDto } from "./dto/task.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Task } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
-import { TaskQueryDto } from "./dto/task-query.dto";
+import { TaskGetDto, TaskQueryDto } from "./dto/task-query.dto";
 
 const FILTER_PROPS = {
   status: "status",
@@ -24,6 +32,7 @@ export class TasksController {
     summary: "Get a paginated and filtered list of tasks"
   })
   @JsonApiResponse({ data: TaskDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async taskIndex(@Query() query: TaskQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [
       // required: true avoids loading tasks attached to deleted projects or orgs
@@ -67,6 +76,33 @@ export class TasksController {
       pageNumber: query.page?.number ?? 1
     });
 
+    return document.serialize();
+  }
+
+  @Get(":uuid")
+  @ApiOperation({
+    operationId: "taskGet",
+    summary: "Get a single task by UUID"
+  })
+  @JsonApiResponse(TaskDto)
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async taskGet(@Param() { uuid }: TaskGetDto) {
+    const task = await Task.findOne({
+      where: { uuid },
+      include: [
+        { association: "organisation", attributes: ["name"], required: true },
+        { association: "project", attributes: ["name", "frameworkKey"], required: true }
+      ]
+    });
+    if (task == null) throw new NotFoundException();
+
+    await this.policyService.authorize("read", task);
+
+    const document = buildJsonApi(TaskDto);
+    document.addData(task.uuid, new TaskDto(task));
     return document.serialize();
   }
 }

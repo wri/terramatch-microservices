@@ -1,6 +1,7 @@
 import {
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
   ForeignKey,
   HasMany,
@@ -37,10 +38,28 @@ export class Task extends Model<Task> {
   @Column(BIGINT.UNSIGNED)
   organisationId: number | null;
 
+  @BelongsTo(() => Organisation, { constraints: false })
+  organisation: Organisation | null;
+
+  get organisationName() {
+    return this.organisation?.name ?? "";
+  }
+
   @AllowNull
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   projectId: number | null;
+
+  @BelongsTo(() => Project, { constraints: false })
+  project: Project | null;
+
+  get projectName() {
+    return this.project?.name ?? "";
+  }
+
+  get frameworkKey() {
+    return this.project?.frameworkKey ?? "";
+  }
 
   /** @deprecated this field is null for all rows in the production DB. */
   @AllowNull

@@ -3,7 +3,7 @@ import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Demographic,
@@ -101,8 +101,6 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-export const MAX_PAGE_SIZE = 100 as const;
-
 @Injectable()
 export class EntitiesService {
   constructor(
@@ -168,20 +166,7 @@ export class EntitiesService {
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
-    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
-      throw new BadRequestException("Page size is invalid");
-    }
-    if (pageNumber < 1) {
-      throw new BadRequestException("Page number is invalid");
-    }
-
-    const builder = new PaginatedQueryBuilder(modelClass, pageSize, include);
-    if (pageNumber > 1) {
-      builder.pageNumber(pageNumber);
-    }
-
-    return builder;
+    return PaginatedQueryBuilder.forNumberPage(modelClass, query.page, include);
   }
 
   fullUrl = (media: Media) => this.mediaService.getUrl(media);

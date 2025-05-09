@@ -10,6 +10,7 @@ import {
   Site,
   SitePolygon,
   SiteReport,
+  Task,
   User
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
@@ -24,6 +25,7 @@ import { SitePolicy } from "./site.policy";
 import { NurseryReportPolicy } from "./nursery-report.policy";
 import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
+import { TaskPolicy } from "./task.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +45,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
+  [Task, TaskPolicy],
   [User, UserPolicy]
 ];
 

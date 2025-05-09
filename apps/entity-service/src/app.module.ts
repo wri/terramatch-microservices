@@ -8,10 +8,14 @@ import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
+import { TasksController } from "./entities/tasks.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
-  controllers: [EntitiesController, EntityAssociationsController, TreesController],
+  // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
+  // needs to be provided in this list before EntitiesController, or it will be superseded by the
+  // wildcard route on EntitiesController.
+  controllers: [TasksController, EntitiesController, EntityAssociationsController, TreesController],
   providers: [
     {
       provide: APP_FILTER,

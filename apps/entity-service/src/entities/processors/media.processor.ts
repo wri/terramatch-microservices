@@ -17,7 +17,7 @@ import { col, fn, Includeable, Op, Sequelize } from "sequelize";
 import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 type QueryModelType = {
   modelType: string;

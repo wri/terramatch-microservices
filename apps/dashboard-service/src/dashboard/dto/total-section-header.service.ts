@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
+  Demographic,
+  DemographicEntry,
   Project,
   ProjectReport,
   Site,
@@ -7,7 +9,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { literal } from "sequelize";
+import { Op } from "sequelize";
 import { DashboardQueryDto } from "./dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "@terramatch-microservices/database/util/dashboard-query.builder";
 
@@ -28,7 +30,7 @@ export class TotalSectionHeaderService {
     return {
       totalNonProfitCount: await this.getTotalNonProfitCount(projects),
       totalEnterpriseCount: await this.getTotalEnterpriseCount(projects),
-      totalEntries: await this.getTotalJobsCreatedSum(projectIds),
+      totalEntries: await this.getTotalJobs(projectIds),
       totalHectaresRestored: await this.getTotalHectaresSum(projectIds),
       totalHectaresRestoredGoal:
         (await projects.select(["totalHectaresRestoredGoal"]).sum("totalHectaresRestoredGoal")) ?? 0,
@@ -51,15 +53,20 @@ export class TotalSectionHeaderService {
     return totalForProfit ?? 0;
   }
 
-  async getTotalJobsCreatedSum(projectsIds) {
-    const totalJobs = await ProjectReport.approved()
-      .projectsIds(projectsIds)
-      .findOne({
-        attributes: [[literal("SUM(COALESCE(ft_total, 0) + COALESCE(pt_total, 0))"), "totalJobs"]],
-        raw: true
-      });
-
-    return (totalJobs as any)?.totalJobs ?? 0;
+  async getTotalJobs(projectIds: number[]) {
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.in]: Demographic.idsSubquery(
+              ProjectReport.approvedProjectsIdsSubquery(projectIds),
+              ProjectReport.LARAVEL_TYPE,
+              Demographic.JOBS_TYPE
+            )
+          }
+        }
+      })) ?? 0
+    );
   }
 
   async getTotalHectaresSum(projectsIds) {

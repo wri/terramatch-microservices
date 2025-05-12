@@ -15,6 +15,10 @@ import { Task } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TaskGetDto, TaskQueryDto } from "./dto/task-query.dto";
+import { ProjectReportLightDto } from "./dto/project-report.dto";
+import { SiteReportLightDto } from "./dto/site-report.dto";
+import { NurseryReportLightDto } from "./dto/nursery-report.dto";
+import { EntitiesService, ProcessableEntity } from "./entities.service";
 
 const FILTER_PROPS = {
   status: "status",
@@ -24,7 +28,7 @@ const FILTER_PROPS = {
 
 @Controller("entities/v3/tasks")
 export class TasksController {
-  constructor(private readonly policyService: PolicyService) {}
+  constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 
   @Get()
   @ApiOperation({
@@ -82,9 +86,19 @@ export class TasksController {
   @Get(":uuid")
   @ApiOperation({
     operationId: "taskGet",
-    summary: "Get a single task by UUID"
+    summary: "Get a single task by UUID. Includes all reports light DTOs sideloaded on the response."
   })
-  @JsonApiResponse(TaskDto)
+  @JsonApiResponse({
+    data: {
+      type: TaskDto,
+      relationships: [
+        { name: "projectReports", type: ProjectReportLightDto },
+        { name: "siteReports", type: SiteReportLightDto },
+        { name: "nurseryReports", type: NurseryReportLightDto }
+      ]
+    },
+    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto]
+  })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
@@ -102,7 +116,18 @@ export class TasksController {
     await this.policyService.authorize("read", task);
 
     const document = buildJsonApi(TaskDto);
-    document.addData(task.uuid, new TaskDto(task));
+    const taskResource = document.addData(task.uuid, new TaskDto(task));
+
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports"]) {
+      const processor = this.entitiesService.createEntityProcessor(entityType as ProcessableEntity);
+      const reports = await processor.findMany({ taskId: task.id });
+      for (const report of reports.models) {
+        const { id, dto: reportDto } = await processor.getLightDto(report);
+        const reportResource = document.addIncluded(id, reportDto);
+        taskResource.relateTo(entityType, reportResource);
+      }
+    }
+
     return document.serialize();
   }
 }

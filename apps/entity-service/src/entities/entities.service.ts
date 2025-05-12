@@ -166,6 +166,10 @@ export class EntitiesService {
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
+    if (query.taskId != null) {
+      // special case for internal sideloading.
+      return new PaginatedQueryBuilder(modelClass, undefined, include);
+    }
     return PaginatedQueryBuilder.forNumberPage(modelClass, query.page, include);
   }
 

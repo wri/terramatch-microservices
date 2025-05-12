@@ -59,8 +59,10 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   };
   protected pageAfterId: number | undefined;
 
-  constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize: number, include?: Includeable[]) {
-    this.findOptions.limit = this.pageSize;
+  constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize?: number, include?: Includeable[]) {
+    if (this.pageSize != null) {
+      this.findOptions.limit = this.pageSize;
+    }
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }

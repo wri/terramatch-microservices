@@ -118,6 +118,10 @@ export class NurseryReportProcessor extends ReportProcessor<
       }
     });
 
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
+    }
+
     if (query.search != null) {
       builder.where({
         [Op.or]: [

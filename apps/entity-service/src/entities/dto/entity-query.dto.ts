@@ -81,4 +81,7 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   @IsIn(POLYGON_STATUSES_FILTERS)
   polygonStatus?: PolygonStatusFilter;
+
+  // This one is internal use only, not exposed to the API surface
+  taskId?: number;
 }

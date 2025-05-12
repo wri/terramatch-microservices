@@ -32,7 +32,7 @@ export class Project extends Model<Project> {
 
   static readonly MEDIA = {
     media: { dbCollection: "media", multiple: true },
-    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true },
     otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
     photos: { dbCollection: "photos", multiple: true },

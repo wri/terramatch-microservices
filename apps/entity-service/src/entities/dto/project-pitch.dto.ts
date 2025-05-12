@@ -7,14 +7,10 @@ import { ProjectPitch } from "@terramatch-microservices/database/entities";
 @JsonApiDto({ type: "projectPitches" })
 export class ProjectPitchDto extends JsonApiAttributes<ProjectPitchDto> {
   constructor(data: ProjectPitch) {
-    pickApiProperties(data, ProjectPitchDto);
     super({
       ...pickApiProperties(data, ProjectPitchDto)
     });
   }
-
-  @ApiProperty()
-  id: number;
 
   @ApiProperty()
   @IsUUID()

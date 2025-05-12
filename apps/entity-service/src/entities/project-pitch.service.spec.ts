@@ -2,9 +2,9 @@ import { Test } from "@nestjs/testing";
 import { ProjectPitchService } from "./project-pitch.service";
 import { Organisation, ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
-import { EntityQueryDto } from "./dto/entity-query.dto";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { OrganisationUserFactory } from "@terramatch-microservices/database/factories/organisation-user.factory";
+import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 
 async function getUserWithOrganisation() {
   const user = await UserFactory.create();
@@ -19,7 +19,7 @@ async function getUserWithOrganisation() {
 }
 
 function getDefaultPagination() {
-  const params = new EntityQueryDto();
+  const params = new ProjectPitchQueryDto();
   params.page = new NumberPage();
   params.page.number = 1;
   params.page.size = 10;
@@ -60,48 +60,7 @@ describe("ProjectPitchService", () => {
   });
 
   describe("Get ProjectsPitches", () => {
-    it("throws an error if the user is not found", async () => {
-      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-
-      await expect(service.getProjectPitches(-1, new EntityQueryDto())).rejects.toThrow("User not found");
-    });
-
-    it("returns paginated project pitches for a valid user", async () => {
-      const user = await getUserWithOrganisation();
-      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [
-        new ProjectPitch({ uuid: "pitch1", projectName: "Project 1" }),
-        new ProjectPitch({ uuid: "pitch2", projectName: "Project 2" })
-      ];
-      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
-
-      const params = getDefaultPagination();
-      const result = await service.getProjectPitches(user.id, params);
-
-      expect(result.data).toHaveLength(2);
-      expect(result.data[0].uuid).toBe("pitch1");
-      expect(result.data[1].uuid).toBe("pitch2");
-      expect(result.pageNumber).toBe(1);
-    });
-
-    it("applies search filters correctly", async () => {
-      const user = await getUserWithOrganisation();
-      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [new ProjectPitch({ uuid: "pitch2", projectName: "Filtered" })];
-      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
-
-      const params = getDefaultPagination();
-      params.search = "filtered";
-
-      const result = await service.getProjectPitches(user.id, params);
-
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].projectName).toContain("Filtered");
-    });
-  });
-
-  describe("Get Admin ProjectsPitches", () => {
-    it("returns paginated admin project pitches", async () => {
+    it("returns paginated project pitches", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
       const projectPitches = [
@@ -112,7 +71,7 @@ describe("ProjectPitchService", () => {
 
       const params = getDefaultPagination();
 
-      const result = await service.getAdminProjectPitches(params);
+      const result = await service.getProjectPitches(params);
 
       expect(result.data).toHaveLength(2);
       expect(result.data[0].uuid).toBe("pitch y");
@@ -120,7 +79,7 @@ describe("ProjectPitchService", () => {
       expect(result.pageNumber).toBe(1);
     });
 
-    it("applies search filters correctly", async () => {
+    it("applies search correctly", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
       const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
@@ -129,10 +88,60 @@ describe("ProjectPitchService", () => {
       const params = getDefaultPagination();
       params.search = "filtered";
 
-      const result = await service.getAdminProjectPitches(params);
+      const result = await service.getProjectPitches(params);
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].projectName).toContain("Filtered");
+    });
+
+    it("deny filters", async () => {
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
+
+      const params = getDefaultPagination();
+      params.filter = { invalid_filter: "foo" };
+
+      await expect(service.getProjectPitches(params)).rejects.toThrow("Invalid filter key: invalid_filter");
+    });
+
+    it("applies filters correctly", async () => {
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
+
+      const params = getDefaultPagination();
+      params.filter = { restoration_intervention_types: "foo" };
+
+      const result = await service.getProjectPitches(params);
+      expect(result.data).toHaveLength(1);
+    });
+
+    it("deny orders fields", async () => {
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
+
+      const params = getDefaultPagination();
+      params.sort = { field: "no_exist_column", direction: "ASC" };
+
+      await expect(service.getProjectPitches(params)).rejects.toThrow("Invalid sort field: no_exist_column");
+    });
+
+    it("applies order correctly", async () => {
+      const user = await getUserWithOrganisation();
+      jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
+
+      const params = getDefaultPagination();
+      params.sort = { field: "organisation_id", direction: "ASC" };
+
+      const result = await service.getProjectPitches(params);
+      expect(result.data).toHaveLength(1);
     });
   });
 });

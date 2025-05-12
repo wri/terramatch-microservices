@@ -9,9 +9,8 @@ import {
 } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { TaskDto } from "./dto/task.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { Task } from "@terramatch-microservices/database/entities";
+import { SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TaskGetDto, TaskQueryDto } from "./dto/task-query.dto";
@@ -20,6 +19,7 @@ import { SiteReportLightDto } from "./dto/site-report.dto";
 import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { EntitiesService, ProcessableEntity } from "./entities.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
 
 const FILTER_PROPS = {
   status: "status",
@@ -38,7 +38,7 @@ export class TasksController {
     operationId: "taskIndex",
     summary: "Get a paginated and filtered list of tasks"
   })
-  @JsonApiResponse({ data: TaskDto, pagination: "number" })
+  @JsonApiResponse({ data: TaskLightDto, pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async taskIndex(@Query() query: TaskQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [
@@ -63,7 +63,7 @@ export class TasksController {
       }
     }
 
-    const document = buildJsonApi(TaskDto, { pagination: "number" });
+    const document = buildJsonApi(TaskLightDto, { pagination: "number" });
     const tasks = await builder.execute();
     const indexIds: string[] = [];
     if (tasks.length !== 0) {
@@ -71,7 +71,7 @@ export class TasksController {
 
       for (const task of tasks) {
         indexIds.push(task.uuid);
-        document.addData(task.uuid, new TaskDto(task));
+        document.addData(task.uuid, new TaskLightDto(task));
       }
     }
 
@@ -93,7 +93,7 @@ export class TasksController {
   })
   @JsonApiResponse({
     data: {
-      type: TaskDto,
+      type: TaskFullDto,
       relationships: [
         { name: "projectReport", type: ProjectReportLightDto },
         { name: "siteReports", type: SiteReportLightDto, multiple: true },
@@ -118,8 +118,14 @@ export class TasksController {
 
     await this.policyService.authorize("read", task);
 
-    const document = buildJsonApi(TaskDto);
-    const taskResource = document.addData(task.uuid, new TaskDto(task));
+    const treesPlantedCount =
+      (await TreeSpecies.visible()
+        .collection("tree-planted")
+        .siteReports(SiteReport.approvedIdsForTaskSubquery(task.id))
+        .sum("amount")) ?? 0;
+
+    const document = buildJsonApi(TaskFullDto);
+    const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
 
     for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
       const processor = this.entitiesService.createEntityProcessor(entityType);

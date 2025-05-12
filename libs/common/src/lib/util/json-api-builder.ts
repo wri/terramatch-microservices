@@ -65,7 +65,11 @@ export class ResourceBuilder {
     return this.documentBuilder;
   }
 
-  relateTo(label: string, resource: { id: string; type: string }, meta?: Attributes): ResourceBuilder {
+  relateTo(
+    label: string,
+    resource: { id: string; type: string },
+    { meta, forceMultiple = false }: { meta?: Attributes; forceMultiple?: boolean } = {}
+  ): ResourceBuilder {
     if (this.relationships == null) this.relationships = {};
 
     // This method signature was created so that another resource builder could be passed in for the
@@ -74,7 +78,7 @@ export class ResourceBuilder {
     const { id, type } = resource;
     const relationship = { id, type, meta };
     if (this.relationships[label] == null) {
-      this.relationships[label] = { data: relationship };
+      this.relationships[label] = forceMultiple ? { data: [relationship] } : { data: relationship };
     } else if (Array.isArray(this.relationships[label].data)) {
       this.relationships[label].data.push(relationship);
     } else {

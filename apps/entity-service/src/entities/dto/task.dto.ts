@@ -16,9 +16,6 @@ export class TaskDto extends JsonApiAttributes<TaskDto> {
   uuid: string;
 
   @ApiProperty()
-  projectUuid: string;
-
-  @ApiProperty()
   projectName: string;
 
   @ApiProperty()

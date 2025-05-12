@@ -116,7 +116,7 @@ export class UsersController {
     if (org != null) {
       const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
       const userStatus = org.OrganisationUser?.status ?? "na";
-      userResource.relateTo("org", orgResource, { userStatus });
+      userResource.relateTo("org", orgResource, { meta: { userStatus } });
     }
 
     return document;

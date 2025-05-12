@@ -19,6 +19,7 @@ import { ProjectReportLightDto } from "./dto/project-report.dto";
 import { SiteReportLightDto } from "./dto/site-report.dto";
 import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { EntitiesService, ProcessableEntity } from "./entities.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 const FILTER_PROPS = {
   status: "status",
@@ -28,6 +29,8 @@ const FILTER_PROPS = {
 
 @Controller("entities/v3/tasks")
 export class TasksController {
+  private readonly logger = new TMLogger(TasksController.name);
+
   constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
 
   @Get()
@@ -92,9 +95,9 @@ export class TasksController {
     data: {
       type: TaskDto,
       relationships: [
-        { name: "projectReports", type: ProjectReportLightDto },
-        { name: "siteReports", type: SiteReportLightDto },
-        { name: "nurseryReports", type: NurseryReportLightDto }
+        { name: "projectReport", type: ProjectReportLightDto },
+        { name: "siteReports", type: SiteReportLightDto, multiple: true },
+        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true }
       ]
     },
     included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto]
@@ -118,13 +121,20 @@ export class TasksController {
     const document = buildJsonApi(TaskDto);
     const taskResource = document.addData(task.uuid, new TaskDto(task));
 
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports"]) {
-      const processor = this.entitiesService.createEntityProcessor(entityType as ProcessableEntity);
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
+      const processor = this.entitiesService.createEntityProcessor(entityType);
       const reports = await processor.findMany({ taskId: task.id });
+      if (entityType === "projectReports" && reports.models.length > 1) {
+        this.logger.error(`More than one project report found for task ${task.id}`);
+        // Make sure we don't accidentally turn the `projectReport` member into an array, as the FE expects an object.
+        reports.models.length = 1;
+      }
       for (const report of reports.models) {
         const { id, dto: reportDto } = await processor.getLightDto(report);
         const reportResource = document.addIncluded(id, reportDto);
-        taskResource.relateTo(entityType, reportResource);
+        taskResource.relateTo(entityType === "projectReports" ? "projectReport" : entityType, reportResource, {
+          forceMultiple: true
+        });
       }
     }
 

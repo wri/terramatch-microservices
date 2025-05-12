@@ -49,6 +49,7 @@ export class ProjectPitchService {
     if (query.sort != null) {
       if (
         [
+          "id",
           "organisation_id",
           "project_name",
           "project_objectives",

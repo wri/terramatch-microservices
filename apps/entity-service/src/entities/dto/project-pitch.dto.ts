@@ -463,4 +463,9 @@ export class ProjectPitchDto extends JsonApiAttributes<ProjectPitchDto> {
   @IsNumber()
   @Min(0)
   directSeedingSurvivalRate: number | null;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsDate()
+  createdAt?: Date | null;
 }

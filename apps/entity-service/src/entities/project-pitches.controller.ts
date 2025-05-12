@@ -38,7 +38,7 @@ export class ProjectPitchesController {
     }
     document.addIndexData({
       resource: "projectPitches",
-      requestPath: `/entities/v3/projectPitches/admin${getStableRequestQuery(params)}`,
+      requestPath: `/entities/v3/projectPitches${getStableRequestQuery(params)}`,
       ids: indexIds,
       total: paginationTotal,
       pageNumber: pageNumber

@@ -25,8 +25,7 @@ import { Op } from "sequelize";
 const FILTER_PROPS = {
   status: "status",
   frameworkKey: "$project.framework_key$",
-  projectUuid: "$project.uuid$",
-  organisationUuid: "$organisation.uuid$"
+  projectUuid: "$project.uuid$"
 };
 
 @Controller("entities/v3/tasks")
@@ -56,8 +55,8 @@ export class TasksController {
     if (frameworkPermissions?.length > 0) {
       builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
     } else {
-      if (query.projectUuid == null && query.organisationUuid == null) {
-        // non-admin users should typically be filtering on a project or org, but to cover our bases,
+      if (query.projectUuid == null) {
+        // non-admin users should typically be filtering on a project, but to cover our bases,
         // return all tasks they have direct access to if they aren't.
         if (permissions?.includes("manage-own")) {
           builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.policyService.userId) } });

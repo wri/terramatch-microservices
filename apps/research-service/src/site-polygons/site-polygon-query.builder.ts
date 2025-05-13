@@ -10,8 +10,7 @@ import {
   PolygonGeometry,
   Project,
   Site,
-  SitePolygon,
-  SiteReport
+  SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
@@ -43,37 +42,18 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
   msuCarbon: IndicatorOutputMsuCarbon
 };
 
-const INDICATOR_EXCLUDE_COLUMNS = ["id", "sitePolygonId", "createdAt", "updatedAt", "deletedAt"];
-
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   private siteJoin: IncludeOptions = {
     model: Site,
-    include: [
-      { association: "treesPlanted", attributes: ["name", "amount"] },
-      {
-        model: SiteReport,
-        include: [{ association: "treesPlanted", attributes: ["name", "amount"] }],
-        attributes: ["dueAt", "submittedAt"]
-      },
-      { association: "project", attributes: ["uuid"] }
-    ],
-    attributes: ["projectId", "name"],
+    include: [{ association: "project", attributes: ["uuid"] }],
+    attributes: ["id", "projectId", "name"],
     required: true
   };
 
   constructor(pageSize: number) {
     super(SitePolygon, pageSize);
 
-    this.findOptions.include = [
-      { model: IndicatorOutputFieldMonitoring, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
-      { model: IndicatorOutputHectares, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
-      { model: IndicatorOutputMsuCarbon, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
-      { model: IndicatorOutputTreeCount, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
-      { model: IndicatorOutputTreeCover, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
-      { model: IndicatorOutputTreeCoverLoss, attributes: { exclude: INDICATOR_EXCLUDE_COLUMNS } },
-      { model: PolygonGeometry, attributes: ["polygon"], required: true },
-      this.siteJoin
-    ];
+    this.findOptions.include = [{ model: PolygonGeometry, attributes: ["polygon"], required: true }, this.siteJoin];
 
     this.where({ isActive: true });
   }

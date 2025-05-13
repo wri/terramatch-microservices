@@ -113,7 +113,7 @@ describe("ProjectPitchService", () => {
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();
-      params.filter = { restoration_intervention_types: "foo" };
+      params.filter = { restorationInterventionTypes: "foo" };
 
       const result = await service.getProjectPitches(params);
       expect(result.data).toHaveLength(1);
@@ -138,7 +138,7 @@ describe("ProjectPitchService", () => {
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();
-      params.sort = { field: "organisation_id", direction: "ASC" };
+      params.sort = { field: "organisationId", direction: "ASC" };
 
       const result = await service.getProjectPitches(params);
       expect(result.data).toHaveLength(1);

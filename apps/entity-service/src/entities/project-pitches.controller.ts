@@ -28,7 +28,7 @@ export class ProjectPitchesController {
     const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
     const indexIds: string[] = [];
     if (data.length !== 0) {
-      // await this.policyService.authorize("read", data);
+      await this.policyService.authorize("read", data);
       for (const pitch of data) {
         indexIds.push(pitch.uuid);
         const pitchDto = new ProjectPitchDto(pitch);

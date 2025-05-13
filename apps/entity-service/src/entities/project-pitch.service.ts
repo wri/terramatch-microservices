@@ -37,7 +37,7 @@ export class ProjectPitchService {
     }
     if (query.filter) {
       Object.keys(query.filter).forEach(key => {
-        if (!["restoration_intervention_types", "project_country"].includes(key)) {
+        if (!["restorationInterventionTypes", "projectCountry"].includes(key)) {
           throw new BadRequestException(`Invalid filter key: ${key}`);
         }
         const value = query.filter[key];
@@ -48,21 +48,9 @@ export class ProjectPitchService {
     }
     if (query.sort != null) {
       if (
-        [
-          "id",
-          "organisation_id",
-          "project_name",
-          "project_objectives",
-          "project_country",
-          "project_county_district",
-          "restoration_intervention_types",
-          "total_hectares",
-          "total_trees",
-          "capacity_building_needs",
-          "created_at",
-          "updated_at",
-          "deleted_at"
-        ].includes(query.sort.field)
+        ["id", "organisationId", "projectName", "projectCountry", "restorationInterventionTypes", "createdAt"].includes(
+          query.sort.field
+        )
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else {

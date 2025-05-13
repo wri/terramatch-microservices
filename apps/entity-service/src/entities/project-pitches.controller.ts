@@ -24,17 +24,16 @@ export class ProjectPitchesController {
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async projectPitchIndex(@Query() params: ProjectPitchQueryDto) {
-    const permissions = await this.policyService.getPermissions();
-    if (!permissions.some(permission => permission.startsWith("framework-"))) {
-      throw new BadRequestException("User does not have permission to access this resource");
-    }
     const { data, paginationTotal, pageNumber } = await this.projectPitchService.getProjectPitches(params);
     const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
     const indexIds: string[] = [];
-    for (const pitch of data) {
-      indexIds.push(pitch.uuid);
-      const pitchDto = new ProjectPitchDto(pitch);
-      document.addData(pitchDto.uuid, pitchDto);
+    if (data.length !== 0) {
+      // await this.policyService.authorize("read", data);
+      for (const pitch of data) {
+        indexIds.push(pitch.uuid);
+        const pitchDto = new ProjectPitchDto(pitch);
+        document.addData(pitchDto.uuid, pitchDto);
+      }
     }
     document.addIndexData({
       resource: "projectPitches",

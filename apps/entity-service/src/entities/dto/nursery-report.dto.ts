@@ -33,6 +33,9 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty()
   status: string;
 
+  @ApiProperty({ nullable: true })
+  completion: number | null;
+
   @ApiProperty()
   updateRequestStatus: string;
 
@@ -137,9 +140,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
 
   @ApiProperty({ nullable: true })
   feedbackFields: string[] | null;
-
-  @ApiProperty({ nullable: true })
-  completion: number | null;
 
   @ApiProperty({ nullable: true })
   title: string | null;

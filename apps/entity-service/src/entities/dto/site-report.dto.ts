@@ -36,6 +36,9 @@ export class SiteReportLightDto extends EntityDto {
   @ApiProperty()
   updateRequestStatus: string;
 
+  @ApiProperty({ nullable: true })
+  completion: number | null;
+
   @ApiProperty({
     nullable: true,
     description: "The associated project name"
@@ -134,9 +137,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ nullable: true })
   feedbackFields: string[] | null;
-
-  @ApiProperty({ nullable: true })
-  completion: number | null;
 
   @ApiProperty({ nullable: true })
   title: string | null;

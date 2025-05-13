@@ -41,6 +41,9 @@ export class ProjectReportLightDto extends EntityDto {
   status: string;
 
   @ApiProperty({ nullable: true })
+  completion: number | null;
+
+  @ApiProperty({ nullable: true })
   submittedAt: Date | null;
 
   @ApiProperty({
@@ -87,9 +90,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true })
   feedbackFields: string[] | null;
-
-  @ApiProperty({ nullable: true })
-  completion: number | null;
 
   @ApiProperty({ nullable: true })
   localEngagementDescription: string | null;

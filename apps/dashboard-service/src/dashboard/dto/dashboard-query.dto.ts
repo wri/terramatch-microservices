@@ -32,7 +32,7 @@ export class DashboardQueryDto extends IntersectionType(QuerySort, NumberPage) {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  programmes?: string;
+  programmes?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -40,11 +40,11 @@ export class DashboardQueryDto extends IntersectionType(QuerySort, NumberPage) {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  landscapes?: string;
+  landscapes?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
-  organisationType?: string;
+  organisationType?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -25,8 +25,7 @@ import { SitePolicy } from "./site.policy";
 import { NurseryReportPolicy } from "./nursery-report.policy";
 import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
-import { ProjectPitchPolicy } from "@terramatch-microservices/common/policies/project-pitch.policy";
-import * as console from "node:console";
+import { ProjectPitchPolicy } from "./project-pitch.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

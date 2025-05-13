@@ -10,7 +10,7 @@ import {
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { ProjectUser, SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TaskGetDto, TaskQueryDto } from "./dto/task-query.dto";
@@ -20,11 +20,13 @@ import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { EntitiesService, ProcessableEntity } from "./entities.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
+import { Op } from "sequelize";
 
 const FILTER_PROPS = {
   status: "status",
   frameworkKey: "$project.framework_key$",
-  projectUuid: "$project.uuid$"
+  projectUuid: "$project.uuid$",
+  organisationUuid: "$organisation.uuid$"
 };
 
 @Controller("entities/v3/tasks")
@@ -47,6 +49,29 @@ export class TasksController {
       { association: "project", attributes: ["name", "frameworkKey"], required: true }
     ]);
 
+    const permissions = await this.policyService.getPermissions();
+    const frameworkPermissions = permissions
+      ?.filter(name => name.startsWith("framework-"))
+      ?.map(name => name.substring("framework-".length) as string);
+    if (frameworkPermissions?.length > 0) {
+      builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
+    } else {
+      if (query.projectUuid == null && query.organisationUuid == null) {
+        // non-admin users should typically be filtering on a project or org, but to cover our bases,
+        // return all tasks they have direct access to if they aren't.
+        if (permissions?.includes("manage-own")) {
+          builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.policyService.userId) } });
+        } else if (permissions?.includes("projects-manage")) {
+          builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.policyService.userId) } });
+        }
+      }
+
+      if (query.sort == null) {
+        // For non-admins, the default sort is dueAt descending
+        builder.order(["dueAt", "DESC"]);
+      }
+    }
+
     for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS)) {
       if (query[filterProp] != null) {
         builder.where({ [sqlProp]: query[filterProp] });
@@ -54,7 +79,7 @@ export class TasksController {
     }
 
     if (query.sort != null) {
-      if (["dueAt", "updatedAt"].includes(query.sort.field)) {
+      if (["dueAt", "updatedAt", "status"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);

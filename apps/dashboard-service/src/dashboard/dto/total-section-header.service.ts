@@ -25,7 +25,7 @@ export class TotalSectionHeaderService {
       }
     ]).queryFilters(query);
     const projects = await projectsBuilder;
-    const projectIds = await projects.pluckIds();
+    const projectIds: number[] = await projects.pluckIds();
 
     return {
       totalNonProfitCount: await this.getTotalNonProfitCount(projects),
@@ -59,7 +59,7 @@ export class TotalSectionHeaderService {
         where: {
           demographicId: {
             [Op.in]: Demographic.idsSubquery(
-              ProjectReport.approvedProjectsIdsSubquery(projectIds),
+              ProjectReport.approvedIdsSubqueryProjects(projectIds),
               ProjectReport.LARAVEL_TYPE,
               Demographic.JOBS_TYPE
             )
@@ -69,21 +69,21 @@ export class TotalSectionHeaderService {
     );
   }
 
-  async getTotalHectaresSum(projectsIds) {
+  async getTotalHectaresSum(projectsIds: number[]) {
     if (!projectsIds.length) {
       return 0;
     }
     const totalHectaresRestoredSum =
-      (await SitePolygon.active().approved().sites(Site.approvedUuidsProjectsSubquery(projectsIds)).sum("calcArea")) ??
+      (await SitePolygon.active().approved().sites(Site.approvedUuidsSubqueryProjects(projectsIds)).sum("calcArea")) ??
       0;
     return totalHectaresRestoredSum;
   }
 
-  async getTotalTreesRestoredSum(projectsIds) {
+  async getTotalTreesRestoredSum(projectsIds: number[]) {
     if (!projectsIds.length) {
       return 0;
     }
-    const approvedSitesQuery = await Site.approvedIdsProjectsSubquery(projectsIds);
+    const approvedSitesQuery = await Site.approvedIdsSubqueryProjects(projectsIds);
     const approvedSiteReportsQuery = await SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
     const treesPlantedCount =

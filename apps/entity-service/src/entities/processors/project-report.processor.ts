@@ -1,11 +1,6 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
 import { ReportProcessor } from "./entity-processor";
-import {
-  AdditionalProjectReportFullProps,
-  ProjectReportFullDto,
-  ProjectReportLightDto,
-  ProjectReportMedia
-} from "../dto/project-report.dto";
+import { ProjectReportFullDto, ProjectReportLightDto, ProjectReportMedia } from "../dto/project-report.dto";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
@@ -145,7 +140,7 @@ export class ProjectReportProcessor extends ReportProcessor<
         model.uuid,
         entity as ProcessableAssociation
       );
-      await processor.addDtos(document, true);
+      await processor.addDtos(document);
     } else {
       throw new BadRequestException(`Project reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
     }
@@ -161,7 +156,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     const regeneratedTreesCount = await SiteReport.approved().task(taskId).sum("numTreesRegenerating");
     const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
     const createdByUser = projectReport.user ?? null;
-    const props: AdditionalProjectReportFullProps = {
+    const dto = new ProjectReportFullDto(projectReport, {
       reportTitle,
       taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReport.id, siteReportsIdsTask),
       seedsPlantedCount,
@@ -176,9 +171,9 @@ export class ProjectReportProcessor extends ReportProcessor<
         await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA
       ) as ProjectReportMedia)
-    };
+    });
 
-    return { id: projectReport.uuid, dto: new ProjectReportFullDto(projectReport, props) };
+    return { id: projectReport.uuid, dto };
   }
 
   async getLightDto(projectReport: ProjectReport) {

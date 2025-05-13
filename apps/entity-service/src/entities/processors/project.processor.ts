@@ -16,20 +16,14 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { Op } from "sequelize";
-import {
-  AdditionalProjectFullProps,
-  ANRDto,
-  ProjectApplicationDto,
-  ProjectFullDto,
-  ProjectLightDto,
-  ProjectMedia
-} from "../dto/project.dto";
+import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export class ProjectProcessor extends EntityProcessor<
   Project,
@@ -170,7 +164,7 @@ export class ProjectProcessor extends EntityProcessor<
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
-    const props: AdditionalProjectFullProps = {
+    const dto = new ProjectFullDto(project, {
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -194,12 +188,12 @@ export class ProjectProcessor extends EntityProcessor<
         (await this.getWorkdayCount(project.id, true)) + (await this.getSelfReportedWorkdayCount(project.id, true)),
       totalJobsCreated: await this.getTotalJobs(project.id),
 
-      application: project.application == null ? null : new ProjectApplicationDto(project.application),
+      application: project.application == null ? null : populateDto(new ProjectApplicationDto(), project.application),
 
       ...(this.entitiesService.mapMediaCollection(await Media.for(project).findAll(), Project.MEDIA) as ProjectMedia)
-    };
+    });
 
-    return { id: project.uuid, dto: new ProjectFullDto(project, props) };
+    return { id: project.uuid, dto };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

@@ -1,4 +1,4 @@
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   SITE_STATUSES,
@@ -8,22 +8,16 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
-import { AdditionalProps, EntityDto } from "./entity.dto";
+import { EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
-  constructor(site?: Site, props?: AdditionalSiteLightProps) {
+  constructor(site?: Site, props?: HybridSupportProps<SiteLightDto, Site>) {
     super();
     if (site != null) {
-      this.populate(SiteLightDto, {
-        ...pickApiProperties(site, SiteLightDto),
-        lightResource: true,
-        ...props,
-        // these two are untyped and marked optional in the base model.
-        createdAt: site.createdAt as Date,
-        updatedAt: site.createdAt as Date
-      });
+      populateDto<SiteLightDto, Site>(this, site, { lightResource: true, ...props });
     }
   }
 
@@ -69,30 +63,13 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalSiteLightProps = Pick<SiteLightDto, "treesPlantedCount" | "totalHectaresRestoredSum">;
-export type AdditionalSiteFullProps = AdditionalSiteLightProps &
-  AdditionalProps<SiteFullDto, SiteLightDto & Omit<Site, "project">>;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
-  constructor(site: Site, props: AdditionalSiteFullProps) {
+  constructor(site: Site, props: HybridSupportProps<SiteFullDto, Site>) {
     super();
-    this.populate(SiteFullDto, {
-      ...pickApiProperties(site, SiteFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: site.createdAt as Date,
-      updatedAt: site.updatedAt as Date,
-      ...props
-    });
+    populateDto<SiteLightDto, Site>(this, site, { lightResource: false, ...props });
   }
-
-  @ApiProperty({
-    type: Boolean,
-    example: false,
-    description: "Indicates that this resource has the full resource definition."
-  })
-  lightResource = false;
 
   @ApiProperty()
   totalSiteReports: number;

@@ -1,4 +1,4 @@
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
@@ -13,6 +13,7 @@ import {
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
+
 export type IndicatorDto =
   | IndicatorTreeCoverLossDto
   | IndicatorHectaresDto
@@ -49,8 +50,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
   constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
     super();
     if (sitePolygon != null) {
-      this.populate(SitePolygonLightDto, {
-        ...pickApiProperties(sitePolygon, SitePolygonLightDto),
+      populateDto<SitePolygonLightDto, SitePolygon>(this, sitePolygon, {
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
         projectId: sitePolygon.site?.project?.uuid,
@@ -107,23 +107,19 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     establishmentTreeSpecies: TreeSpeciesDto[],
     reportingPeriods: ReportingPeriodDto[]
   ) {
-    // Call super() without arguments
     super();
 
-    if (sitePolygon != null) {
-      this.populate(SitePolygonFullDto, {
-        ...pickApiProperties(sitePolygon, SitePolygonFullDto),
-        name: sitePolygon.polyName,
-        siteId: sitePolygon.siteUuid,
-        projectId: sitePolygon.site?.project?.uuid,
-        indicators: indicators,
-        siteName: sitePolygon.site?.name,
-        geometry: sitePolygon.polygon?.polygon,
-        establishmentTreeSpecies,
-        reportingPeriods,
-        lightResource: false
-      });
-    }
+    populateDto<SitePolygonFullDto, SitePolygon>(this, sitePolygon, {
+      name: sitePolygon.polyName,
+      siteId: sitePolygon.siteUuid,
+      projectId: sitePolygon.site?.project?.uuid,
+      indicators: indicators,
+      siteName: sitePolygon.site?.name,
+      geometry: sitePolygon.polygon?.polygon,
+      establishmentTreeSpecies,
+      reportingPeriods,
+      lightResource: false
+    });
   }
 
   @ApiProperty()

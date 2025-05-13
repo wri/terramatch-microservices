@@ -1,23 +1,18 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities";
-import { EntityDto, AdditionalProps } from "./entity.dto";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { EntityDto } from "./entity.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
 import { User } from "@sentry/nestjs";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "projectReports" })
 export class ProjectReportLightDto extends EntityDto {
   constructor(projectReport?: ProjectReport) {
     super();
     if (projectReport != null) {
-      this.populate(ProjectReportLightDto, {
-        ...pickApiProperties(projectReport, ProjectReportLightDto),
-        lightResource: true,
-        // these two are untyped and marked optional in the base model.
-        createdAt: projectReport.createdAt as Date,
-        updatedAt: projectReport.createdAt as Date
-      });
+      populateDto<ProjectReportLightDto, ProjectReport>(this, projectReport, { lightResource: true });
     }
   }
 
@@ -73,23 +68,12 @@ export class ProjectReportLightDto extends EntityDto {
   pctSurvivalToDate: number | null;
 }
 
-export type AdditionalProjectReportFullProps = AdditionalProps<
-  ProjectReportFullDto,
-  ProjectReportLightDto & Omit<ProjectReport, "project">
->;
 export type ProjectReportMedia = Pick<ProjectReportFullDto, keyof typeof ProjectReport.MEDIA>;
 
 export class ProjectReportFullDto extends ProjectReportLightDto {
-  constructor(projectReport: ProjectReport, props: AdditionalProjectReportFullProps) {
+  constructor(projectReport: ProjectReport, props: HybridSupportProps<ProjectReportFullDto, ProjectReport>) {
     super();
-    this.populate(ProjectReportFullDto, {
-      ...pickApiProperties(projectReport, ProjectReportFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: projectReport.createdAt as Date,
-      updatedAt: projectReport.createdAt as Date,
-      ...props
-    });
+    populateDto<ProjectReportFullDto, ProjectReport>(this, projectReport, { lightResource: false, ...props });
   }
 
   @ApiProperty({ nullable: true })

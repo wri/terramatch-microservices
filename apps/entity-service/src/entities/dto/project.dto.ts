@@ -1,4 +1,4 @@
-import { JsonApiAttributes, pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   ENTITY_STATUSES,
@@ -8,22 +8,16 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
-import { AdditionalProps, EntityDto } from "./entity.dto";
+import { EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "projects" })
 export class ProjectLightDto extends EntityDto {
-  constructor(project?: Project, props?: AdditionalProjectLightProps) {
+  constructor(project?: Project, props?: HybridSupportProps<ProjectLightDto, Project>) {
     super();
     if (project != null) {
-      this.populate(ProjectLightDto, {
-        ...pickApiProperties(project, ProjectLightDto),
-        lightResource: true,
-        // these two are untyped and marked optional in the base model.
-        createdAt: project.createdAt as Date,
-        updatedAt: project.updatedAt as Date,
-        ...props
-      });
+      populateDto<ProjectLightDto, Project>(this, project, { lightResource: true, ...props });
     }
   }
 
@@ -68,9 +62,6 @@ export class ProjectLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalProjectLightProps = Pick<ProjectLightDto, "totalHectaresRestoredSum">;
-export type AdditionalProjectFullProps = AdditionalProjectLightProps &
-  AdditionalProps<ProjectFullDto, ProjectLightDto & Omit<Project, "application">>;
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;
 
 export class ANRDto {
@@ -81,7 +72,7 @@ export class ANRDto {
   treeCount: number;
 }
 
-export class ProjectApplicationDto extends JsonApiAttributes<ProjectApplicationDto> {
+export class ProjectApplicationDto {
   @ApiProperty()
   uuid: string;
 
@@ -93,16 +84,9 @@ export class ProjectApplicationDto extends JsonApiAttributes<ProjectApplicationD
 }
 
 export class ProjectFullDto extends ProjectLightDto {
-  constructor(project: Project, props: AdditionalProjectFullProps) {
+  constructor(project: Project, props: HybridSupportProps<ProjectFullDto, Omit<Project, "application">>) {
     super();
-    this.populate(ProjectFullDto, {
-      ...pickApiProperties(project, ProjectFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: project.createdAt as Date,
-      updatedAt: project.updatedAt as Date,
-      ...props
-    });
+    populateDto<ProjectFullDto, Project>(this, project, { lightResource: false, ...props });
   }
 
   @ApiProperty({

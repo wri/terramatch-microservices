@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
-import { JsonApiAttributes, pickApiProperties } from "./json-api-attributes";
+import { populateDto } from "./json-api-attributes";
 import { Framework, User } from "@terramatch-microservices/database/entities";
 
 class UserFramework {
@@ -12,10 +12,9 @@ class UserFramework {
 }
 
 @JsonApiDto({ type: "users" })
-export class UserDto extends JsonApiAttributes<UserDto> {
+export class UserDto {
   constructor(user: User, frameworks: Framework[]) {
-    super({
-      ...pickApiProperties(user as Omit<User, "uuid" | "frameworks">, UserDto),
+    populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
       frameworks: frameworks.map(({ name, slug }) => ({ name, slug }))
     });

@@ -6,6 +6,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("auth/v3/logins")
 export class LoginController {
@@ -29,6 +30,6 @@ export class LoginController {
       throw new UnauthorizedException();
     }
 
-    return buildJsonApi(LoginDto).addData(userUuid, new LoginDto({ token })).document.serialize();
+    return buildJsonApi(LoginDto).addData(userUuid, populateDto(new LoginDto(), { token })).document.serialize();
   }
 }

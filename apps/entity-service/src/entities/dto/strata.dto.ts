@@ -1,17 +1,15 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
 import { AllowNull, Column } from "sequelize-typescript";
 import { INTEGER, STRING } from "sequelize";
 
 @JsonApiDto({ type: "stratas" })
-export class StrataDto extends AssociationDto<StrataDto> {
+export class StrataDto extends AssociationDto {
   constructor(strata: Strata, additional: AssociationDtoAdditionalProps) {
-    super({
-      ...pickApiProperties(strata, StrataDto),
-      ...additional
-    });
+    super();
+    populateDto<StrataDto, Strata>(this, strata, additional);
   }
 
   @AllowNull

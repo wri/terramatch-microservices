@@ -112,7 +112,7 @@ export abstract class EntityProcessor<
 
       for (const { id, dto } of dtoResults) {
         indexIds.push(id);
-        if (sideloaded) document.addIncluded(id, dto);
+        if (sideloaded) document.addData(id, dto);
         else document.addData(id, dto);
       }
     }

@@ -1,4 +1,3 @@
-import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { PlantingCountMap } from "./planting-count.dto";
 import { ApiProperty } from "@nestjs/swagger";
@@ -7,7 +6,7 @@ import { Dictionary } from "lodash";
 // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
 // backed by a single DB table.
 @JsonApiDto({ type: "treeReportCounts", id: "string" })
-export class TreeReportCountsDto extends JsonApiAttributes<TreeReportCountsDto> {
+export class TreeReportCountsDto {
   @ApiProperty({
     type: "object",
     additionalProperties: { type: "array", items: { type: "string" } },

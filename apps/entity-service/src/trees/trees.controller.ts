@@ -13,6 +13,7 @@ import { TreeEntityTypes } from "./dto/tree-entity-types.dto";
 import { PlantingCountDto } from "./dto/planting-count.dto";
 import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, TreeEntityTypes)
@@ -32,7 +33,7 @@ export class TreesController {
     const indexIds: string[] = [];
     for (const treeSpecies of await this.treeService.searchScientificNames(search)) {
       indexIds.push(treeSpecies.taxonId);
-      document.addData(treeSpecies.taxonId, new ScientificNameDto(treeSpecies));
+      document.addData(treeSpecies.taxonId, populateDto(new ScientificNameDto(), treeSpecies));
     }
 
     document.addIndexData({
@@ -61,7 +62,10 @@ export class TreesController {
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
     return buildJsonApi(EstablishmentsTreesDto)
-      .addData(`${entity}|${uuid}`, new EstablishmentsTreesDto({ establishmentTrees, previousPlantingCounts }))
+      .addData(
+        `${entity}|${uuid}`,
+        populateDto(new EstablishmentsTreesDto(), { establishmentTrees, previousPlantingCounts })
+      )
       .document.serialize();
   }
 
@@ -86,7 +90,7 @@ export class TreesController {
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
     return buildJsonApi(TreeReportCountsDto)
-      .addData(`${entity}|${uuid}`, new TreeReportCountsDto({ establishmentTrees, reportCounts }))
+      .addData(`${entity}|${uuid}`, populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts }))
       .document.serialize();
   }
 

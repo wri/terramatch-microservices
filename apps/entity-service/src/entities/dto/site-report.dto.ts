@@ -1,24 +1,17 @@
 import { SiteReport } from "@terramatch-microservices/database/entities";
-import { EntityDto, AdditionalProps } from "./entity.dto";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { EntityDto } from "./entity.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
-import { ProjectReportLightDto } from "./project-report.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "siteReports" })
 export class SiteReportLightDto extends EntityDto {
-  constructor(siteReport?: SiteReport, props?: AdditionalSiteReportLightProps) {
+  constructor(siteReport?: SiteReport, props?: HybridSupportProps<SiteReportLightDto, SiteReport>) {
     super();
     if (siteReport != null) {
-      this.populate(SiteReportLightDto, {
-        ...pickApiProperties(siteReport, SiteReportLightDto),
-        lightResource: true,
-        // these two are untyped and marked optional in the base model.
-        createdAt: siteReport.createdAt as Date,
-        updatedAt: siteReport.updatedAt as Date,
-        ...props
-      });
+      populateDto<SiteReportLightDto, SiteReport>(this, siteReport, { lightResource: true, ...props });
     }
   }
 
@@ -36,9 +29,6 @@ export class SiteReportLightDto extends EntityDto {
 
   @ApiProperty()
   frameworkKey: string | null;
-
-  @ApiProperty()
-  frameworkUuid: string | null;
 
   @ApiProperty()
   status: string;
@@ -92,22 +82,12 @@ export class SiteReportLightDto extends EntityDto {
   nothingToReport: boolean | null;
 }
 
-export type AdditionalSiteReportLightProps = Pick<SiteReportLightDto, "reportTitle">;
-export type AdditionalSiteReportFullProps = AdditionalSiteReportLightProps &
-  AdditionalProps<SiteReportFullDto, SiteReportLightDto & Omit<SiteReport, "site">>;
 export type SiteReportMedia = Pick<SiteReportFullDto, keyof typeof SiteReport.MEDIA>;
 
 export class SiteReportFullDto extends SiteReportLightDto {
-  constructor(siteReport: SiteReport, props?: AdditionalSiteReportFullProps) {
+  constructor(siteReport: SiteReport, props: HybridSupportProps<SiteReportFullDto, SiteReport>) {
     super();
-    this.populate(SiteReportFullDto, {
-      ...pickApiProperties(siteReport, SiteReportFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: siteReport.createdAt as Date,
-      updatedAt: siteReport.updatedAt as Date,
-      ...props
-    });
+    populateDto<SiteReportFullDto, SiteReport>(this, siteReport, { lightResource: false, ...props });
   }
 
   @ApiProperty({ nullable: true })
@@ -265,9 +245,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty()
   pctSurvivalToDate: number | null;
-
-  @ApiProperty({ nullable: true })
-  projectReport: ProjectReportLightDto | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   socioeconomicBenefits: MediaDto[];

@@ -1,20 +1,15 @@
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { Task } from "@terramatch-microservices/database/entities";
-import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { AdditionalProps } from "./entity.dto";
+import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "tasks" })
 export class TaskLightDto extends HybridSupportDto {
   constructor(task?: Task) {
     super();
     if (task != null) {
-      this.populate(TaskLightDto, {
-        ...pickApiProperties(task, TaskLightDto),
-        lightResource: true,
-        updatedAt: task.updatedAt as Date
-      });
+      populateDto<TaskLightDto, Task>(this, task, { lightResource: true });
     }
   }
 
@@ -40,17 +35,10 @@ export class TaskLightDto extends HybridSupportDto {
   updatedAt: Date;
 }
 
-type AdditionalTaskFullProps = AdditionalProps<TaskFullDto, TaskLightDto>;
-
 export class TaskFullDto extends TaskLightDto {
-  constructor(task: Task, props: AdditionalTaskFullProps) {
+  constructor(task: Task, props: HybridSupportProps<TaskFullDto, Task>) {
     super();
-    this.populate(TaskFullDto, {
-      ...pickApiProperties(task, TaskFullDto),
-      lightResource: false,
-      updatedAt: task.updatedAt as Date,
-      ...props
-    });
+    populateDto<TaskFullDto, Task>(this, task, { lightResource: false, ...props });
   }
 
   @ApiProperty()

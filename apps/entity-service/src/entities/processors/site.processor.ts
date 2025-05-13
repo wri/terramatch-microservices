@@ -11,7 +11,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
+import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
@@ -213,7 +213,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
 
-    const props: AdditionalSiteFullProps = {
+    const dto = new SiteFullDto(site, {
       totalHectaresRestoredSum,
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
@@ -226,9 +226,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       treesPlantedCount,
 
       ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA) as SiteMedia)
-    };
+    });
 
-    return { id: site.uuid, dto: new SiteFullDto(site, props) };
+    return { id: site.uuid, dto };
   }
 
   async getLightDto(site: Site) {

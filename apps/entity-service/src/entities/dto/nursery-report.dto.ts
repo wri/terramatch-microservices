@@ -1,23 +1,17 @@
 import { NurseryReport } from "@terramatch-microservices/database/entities";
-import { EntityDto, AdditionalProps } from "./entity.dto";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { EntityDto } from "./entity.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "nurseryReports" })
 export class NurseryReportLightDto extends EntityDto {
-  constructor(nurseryReport?: NurseryReport, props?: AdditionalNurseryReportLightProps) {
+  constructor(nurseryReport?: NurseryReport, props?: HybridSupportProps<NurseryReportLightDto, NurseryReport>) {
     super();
     if (nurseryReport != null) {
-      this.populate(NurseryReportLightDto, {
-        ...pickApiProperties(nurseryReport, NurseryReportLightDto),
-        lightResource: true,
-        // these two are untyped and marked optional in the base model.
-        createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.updatedAt as Date,
-        ...props
-      });
+      populateDto<NurseryReportLightDto, NurseryReport>(this, nurseryReport, { lightResource: true, ...props });
     }
   }
 
@@ -35,9 +29,6 @@ export class NurseryReportLightDto extends EntityDto {
 
   @ApiProperty()
   frameworkKey: string | null;
-
-  @ApiProperty()
-  frameworkUuid: string | null;
 
   @ApiProperty()
   status: string;
@@ -94,24 +85,12 @@ export class NurseryReportLightDto extends EntityDto {
   nothingToReport: boolean | null;
 }
 
-export type AdditionalNurseryReportLightProps = Pick<NurseryReportLightDto, "reportTitle">;
-export type AdditionalNurseryReportFullProps = AdditionalNurseryReportLightProps &
-  AdditionalProps<NurseryReportFullDto, NurseryReportLightDto & Omit<NurseryReport, "nursery">>;
 export type NurseryReportMedia = Pick<NurseryReportFullDto, keyof typeof NurseryReport.MEDIA>;
 
 export class NurseryReportFullDto extends NurseryReportLightDto {
-  constructor(nurseryReport: NurseryReport, props?: AdditionalNurseryReportFullProps) {
+  constructor(nurseryReport: NurseryReport, props: HybridSupportProps<NurseryReportFullDto, NurseryReport>) {
     super();
-    if (nurseryReport != null) {
-      this.populate(NurseryReportFullDto, {
-        ...pickApiProperties(nurseryReport, NurseryReportFullDto),
-        lightResource: false,
-        // these two are untyped and marked optional in the base model.
-        createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.updatedAt as Date,
-        ...props
-      });
-    }
+    populateDto<NurseryReportFullDto, NurseryReport>(this, nurseryReport, { lightResource: false, ...props });
   }
 
   @ApiProperty({ nullable: true })

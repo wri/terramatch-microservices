@@ -7,6 +7,7 @@ import { ResetPasswordRequest } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { ResetPasswordResponseDto } from "./dto/reset-password-response.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("auth/v3/passwordResets")
 export class ResetPasswordController {
@@ -23,7 +24,7 @@ export class ResetPasswordController {
   async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
     return buildJsonApi(ResetPasswordResponseDto)
-      .addData(uuid, new ResetPasswordResponseDto({ emailAddress: email }))
+      .addData(uuid, populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
       .document.serialize();
   }
 
@@ -41,7 +42,7 @@ export class ResetPasswordController {
   ): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.resetPassword(token, newPassword);
     return buildJsonApi(ResetPasswordResponseDto)
-      .addData(uuid, new ResetPasswordResponseDto({ emailAddress: email }))
+      .addData(uuid, populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
       .document.serialize();
   }
 }

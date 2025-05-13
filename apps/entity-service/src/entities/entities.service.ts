@@ -19,7 +19,7 @@ import { groupBy } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
-import { AssociationDto } from "./dto/association.dto";
+import { AssociationDto, AssociationDtoAdditionalProps } from "./dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
@@ -34,7 +34,6 @@ import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
-import { MediaAssociationDtoAdditionalProps } from "./dto/media-association.dto";
 import { MediaQueryDto } from "./dto/media-query.dto";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { DisturbanceDto } from "./dto/disturbance.dto";
@@ -146,7 +145,7 @@ export class EntitiesService {
     return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
+  createAssociationProcessor<T extends UuidModel, D extends AssociationDto>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation,
@@ -176,7 +175,7 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto(media: Media, additional?: MediaAssociationDtoAdditionalProps) {
+  mediaDto(media: Media, additional?: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),

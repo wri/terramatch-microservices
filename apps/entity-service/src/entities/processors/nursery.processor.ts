@@ -1,5 +1,5 @@
 import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
-import { AdditionalNurseryFullProps, NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
+import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { col, fn, Includeable, Op } from "sequelize";
@@ -108,15 +108,14 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
     const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
-    const props: AdditionalNurseryFullProps = {
+    const dto = new NurseryFullDto(nursery, {
       seedlingsGrownCount,
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
-
       ...(this.entitiesService.mapMediaCollection(await Media.for(nursery).findAll(), Nursery.MEDIA) as NurseryMedia)
-    };
+    });
 
-    return { id: nursery.uuid, dto: new NurseryFullDto(nursery, props) };
+    return { id: nursery.uuid, dto };
   }
 
   async getLightDto(nursery: Nursery) {

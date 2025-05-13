@@ -14,7 +14,6 @@ import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
 import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { col, fn, Includeable, Op, Sequelize } from "sequelize";
-import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -221,14 +220,10 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       indexIds.push(association.uuid);
       const media = association as unknown as Media;
 
-      const additionalProps: MediaAssociationDtoAdditionalProps = {
-        entityType: this.entityType,
-        entityUuid: this.entityUuid,
-        url: this.entitiesService.fullUrl(media),
-        thumbUrl: this.entitiesService.thumbnailUrl(media)
-      };
-
-      document.addData(association.uuid, this.entitiesService.mediaDto(media, additionalProps));
+      document.addData(
+        association.uuid,
+        this.entitiesService.mediaDto(media, { entityType: this.entityType, entityUuid: this.entityUuid })
+      );
     }
 
     const total = await this.getTotal();

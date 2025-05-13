@@ -1,7 +1,7 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { AdditionalProps, EntityDto } from "./entity.dto";
+import { EntityDto } from "./entity.dto";
 import { Nursery } from "@terramatch-microservices/database/entities";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import {
   ENTITY_STATUSES,
@@ -10,20 +10,14 @@ import {
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
 import { MediaDto } from "./media.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "nurseries" })
 export class NurseryLightDto extends EntityDto {
-  constructor(nursery?: Nursery, props?: AdditionalNurseryLightProps) {
+  constructor(nursery?: Nursery, props?: HybridSupportProps<NurseryLightDto, Nursery>) {
     super();
     if (nursery != null) {
-      this.populate(NurseryLightDto, {
-        ...pickApiProperties(nursery, NurseryLightDto),
-        lightResource: true,
-        ...props,
-        // these two are untyped and marked optional in the base model.
-        createdAt: nursery.createdAt as Date,
-        updatedAt: nursery.updatedAt as Date
-      });
+      populateDto<NurseryLightDto, Nursery>(this, nursery, { lightResource: true, ...props });
     }
   }
 
@@ -75,22 +69,12 @@ export class NurseryLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalNurseryLightProps = Pick<NurseryLightDto, "seedlingsGrownCount">;
-export type AdditionalNurseryFullProps = AdditionalNurseryLightProps &
-  AdditionalProps<NurseryFullDto, NurseryLightDto & Omit<Nursery, "project">>;
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
 
 export class NurseryFullDto extends NurseryLightDto {
-  constructor(nursery: Nursery, props: AdditionalNurseryFullProps) {
+  constructor(nursery: Nursery, props: HybridSupportProps<NurseryFullDto, Nursery>) {
     super();
-    this.populate(NurseryFullDto, {
-      ...pickApiProperties(nursery, NurseryFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: nursery.createdAt as Date,
-      updatedAt: nursery.updatedAt as Date,
-      ...props
-    });
+    populateDto<NurseryFullDto, Nursery>(this, nursery, { lightResource: false, ...props });
   }
 
   @ApiProperty({ nullable: true })

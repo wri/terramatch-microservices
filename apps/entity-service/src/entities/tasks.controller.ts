@@ -162,7 +162,7 @@ export class TasksController {
       }
       for (const report of reports.models) {
         const { id, dto: reportDto } = await processor.getLightDto(report);
-        const reportResource = document.addIncluded(id, reportDto);
+        const reportResource = document.addData(id, reportDto);
         taskResource.relateTo(entityType === "projectReports" ? "projectReport" : entityType, reportResource, {
           forceMultiple: true
         });

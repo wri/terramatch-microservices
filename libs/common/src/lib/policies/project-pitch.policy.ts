@@ -3,7 +3,7 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class ProjectPitchPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.some(permission => permission.startsWith("framework-"))) {
+    if (this.frameworks.length > 0) {
       this.builder.can("read", ProjectPitch);
       return;
     }

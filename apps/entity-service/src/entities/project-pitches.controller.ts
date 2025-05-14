@@ -55,6 +55,7 @@ export class ProjectPitchesController {
   @ExceptionResponse(NotFoundException, { description: "Project pitch not found" })
   async projectPitchGet(@Param() { uuid }: ProjectPitchParamDto) {
     const result = await this.projectPitchService.getProjectPitch(uuid);
+    await this.policyService.authorize("read", result);
     return buildJsonApi(ProjectPitchDto).addData(uuid, new ProjectPitchDto(result)).document.serialize();
   }
 }

@@ -9,15 +9,20 @@ import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 export class ProjectPitchService {
   async getProjectPitch(uuid: string) {
     const projectPitch = await ProjectPitch.findOne({ where: { uuid } });
-    if (!projectPitch) {
+    if (projectPitch == null) {
       throw new NotFoundException("ProjectPitch not found");
     }
     return projectPitch;
   }
 
   async getProjectPitches(query: ProjectPitchQueryDto) {
-    const pageNumber = query.page ? query.page.number : 1;
-    const pageSize = query.page ? query.page.size : MAX_PAGE_SIZE;
+    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
+    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+      throw new BadRequestException(`Invalid page size: ${pageSize}`);
+    }
+    if (pageNumber < 1) {
+      throw new BadRequestException(`Invalid page number: ${pageNumber}`);
+    }
     const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["uuid", "name"]
@@ -27,7 +32,7 @@ export class ProjectPitchService {
       builder.pageNumber(pageNumber);
     }
 
-    if (query.search) {
+    if (query.search != null) {
       builder.where({
         [Op.or]: [
           { projectName: { [Op.like]: `%${query.search}%` } },
@@ -35,7 +40,7 @@ export class ProjectPitchService {
         ]
       });
     }
-    if (query.filter) {
+    if (query.filter != null) {
       Object.keys(query.filter).forEach(key => {
         if (!["restorationInterventionTypes", "projectCountry"].includes(key)) {
           throw new BadRequestException(`Invalid filter key: ${key}`);

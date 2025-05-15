@@ -42,7 +42,7 @@ const getTaskId = async (service: Service, env: Environment) => {
   const command = new ListTasksCommand({ cluster: CLUSTER, family: `terramatch-${service}-${env}` });
   try {
     const { taskArns } = await client.send(command);
-    return taskArns[0]?.split("/").pop();
+    return taskArns?.[0]?.split("/").pop();
   } catch (e) {
     debugError(`Failed to get task id ${e}`);
   }
@@ -72,9 +72,14 @@ const startRemoteRepl = async (taskId: string, service: Service, remoteCommand: 
     interactive: true,
     command
   });
+  const sessionResponse = await client.send(executionCommand);
+  if (sessionResponse?.session?.streamUrl == null) {
+    debugError("Failed to start remote session");
+    process.exit(1);
+  }
   const {
     session: { streamUrl, tokenValue }
-  } = await client.send(executionCommand);
+  } = sessionResponse;
 
   const textDecoder = new TextDecoder();
   const textEncoder = new TextEncoder();

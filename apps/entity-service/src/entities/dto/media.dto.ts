@@ -17,11 +17,11 @@ export class MediaDto extends AssociationDto {
   @ApiProperty()
   collectionName: string;
 
-  @ApiProperty()
-  url: string;
+  @ApiProperty({ nullable: true })
+  url: string | null;
 
-  @ApiProperty()
-  thumbUrl: string;
+  @ApiProperty({ nullable: true })
+  thumbUrl: string | null;
 
   @ApiProperty()
   name: string;

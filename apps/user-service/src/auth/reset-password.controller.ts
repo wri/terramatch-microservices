@@ -24,7 +24,7 @@ export class ResetPasswordController {
   async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
     return buildJsonApi(ResetPasswordResponseDto)
-      .addData(uuid, populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
+      .addData(uuid ?? "no-uuid", populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
       .document.serialize();
   }
 
@@ -42,7 +42,7 @@ export class ResetPasswordController {
   ): Promise<JsonApiDocument> {
     const { email, uuid } = await this.resetPasswordService.resetPassword(token, newPassword);
     return buildJsonApi(ResetPasswordResponseDto)
-      .addData(uuid, populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
+      .addData(uuid ?? "no-uuid", populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
       .document.serialize();
   }
 }

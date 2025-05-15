@@ -50,7 +50,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     required: true
   };
 
-  constructor(pageSize: number) {
+  constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
 
     this.findOptions.include = [{ model: PolygonGeometry, attributes: ["polygon"], required: true }, this.siteJoin];
@@ -119,7 +119,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {
         const model = INDICATOR_MODEL_CLASSES[slug];
-        if (!model) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+        if (model == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sequelize = model.sequelize!;
@@ -139,7 +139,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {
         const model = INDICATOR_MODEL_CLASSES[slug];
-        if (!model) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+        if (model == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sequelize = model.sequelize!;

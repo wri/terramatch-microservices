@@ -10,7 +10,7 @@ import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-
 export class SiteReportLightDto extends EntityDto {
   constructor(siteReport?: SiteReport, props?: HybridSupportProps<SiteReportLightDto, SiteReport>) {
     super();
-    if (siteReport != null) {
+    if (siteReport != null && props != null) {
       populateDto<SiteReportLightDto, SiteReport>(this, siteReport, { lightResource: true, ...props });
     }
   }

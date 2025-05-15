@@ -30,7 +30,6 @@ type ApprovedIdsSubqueryOptions = {
   dueBefore?: string | Date;
 };
 
-// A quick stub for the research endpoints
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
@@ -321,7 +320,7 @@ export class SiteReport extends Model<SiteReport> {
 
   async loadTreesPlanted() {
     this.treesPlanted ??= await this.$get("treesPlanted");
-    return this.treesPlanted;
+    return this.treesPlanted ?? [];
   }
 
   @HasMany(() => TreeSpecies, {

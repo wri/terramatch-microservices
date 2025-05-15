@@ -31,11 +31,11 @@ export class TreeSpeciesDto {
 }
 
 export class ReportingPeriodDto {
-  @ApiProperty()
-  dueAt: Date;
+  @ApiProperty({ nullable: true })
+  dueAt: Date | null;
 
-  @ApiProperty()
-  submittedAt: Date;
+  @ApiProperty({ nullable: true })
+  submittedAt: Date | null;
 
   @ApiProperty({
     type: () => TreeSpeciesDto,
@@ -54,24 +54,24 @@ export class SitePolygonLightDto extends HybridSupportDto {
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
         projectId: sitePolygon.site?.project?.uuid,
-        indicators: indicators,
+        indicators: indicators ?? [],
         siteName: sitePolygon.site?.name,
         lightResource: true
       });
     }
   }
 
-  @ApiProperty()
-  name: string;
+  @ApiProperty({ nullable: true })
+  name: string | null;
 
   @ApiProperty({ enum: POLYGON_STATUSES })
   status: PolygonStatus;
 
-  @ApiProperty({ description: "If this ID points to a deleted site, the indicators will be empty." })
-  siteId: string;
+  @ApiProperty({ description: "If this ID points to a deleted site, the indicators will be empty.", nullable: true })
+  siteId: string | null;
 
-  @ApiProperty()
-  projectId: string;
+  @ApiProperty({ nullable: true })
+  projectId?: string;
 
   @ApiProperty({ nullable: true })
   plantStart: Date | null;
@@ -95,8 +95,8 @@ export class SitePolygonLightDto extends HybridSupportDto {
   })
   indicators: IndicatorDto[];
 
-  @ApiProperty({ description: "The name of the associated Site." })
-  siteName: string;
+  @ApiProperty({ description: "The name of the associated Site.", nullable: true })
+  siteName?: string;
 }
 
 @JsonApiDto({ type: "sitePolygons" })
@@ -122,8 +122,8 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     });
   }
 
-  @ApiProperty()
-  geometry: Polygon;
+  @ApiProperty({ nullable: true })
+  geometry?: Polygon;
 
   @ApiProperty({ nullable: true })
   practice: string | null;

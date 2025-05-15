@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import FakeTimers from "@sinonjs/fake-timers";
 import { SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
@@ -19,6 +20,7 @@ import {
   Indicator,
   PolygonGeometry,
   Project,
+  Site,
   SitePolygon,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
@@ -27,7 +29,7 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
-import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 describe("SitePolygonsService", () => {
@@ -72,13 +74,13 @@ describe("SitePolygonsService", () => {
     for (const indicator of indicators) {
       const dto = findDto(indicator);
       expect(dto).not.toBeNull();
-      expect(indicator).toMatchObject(dto);
+      expect(indicator).toMatchObject(dto!);
     }
   });
 
   it("should return all establishment tree species", async () => {
     const sitePolygon = await SitePolygonFactory.create();
-    const site = await sitePolygon.loadSite();
+    const site = (await sitePolygon.loadSite()) as Site;
     await TreeSpeciesFactory.forSiteTreePlanted.createMany(3, { speciesableId: site.id });
 
     const treeSpecies = await site.loadTreesPlanted();
@@ -89,13 +91,13 @@ describe("SitePolygonsService", () => {
     for (const tree of treeSpecies) {
       const dto = findDto(tree);
       expect(dto).not.toBeNull();
-      expect(tree).toMatchObject(dto);
+      expect(tree).toMatchObject(dto!);
     }
   });
 
   it("should return all reporting periods", async () => {
     const sitePolygon = await SitePolygonFactory.create();
-    const site = await sitePolygon.loadSite();
+    const site = (await sitePolygon.loadSite()) as Site;
     await SiteReportFactory.createMany(2, { siteId: site.id });
     const siteReports = await site.loadReports();
     await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReports[0].id });
@@ -140,7 +142,7 @@ describe("SitePolygonsService", () => {
     await PolygonGeometry.truncate();
     await SitePolygonFactory.createMany(15);
     const first = await SitePolygon.findOne();
-    const query = await service.buildQuery({ size: 20, after: first.uuid });
+    const query = await service.buildQuery({ size: 20, after: first!.uuid });
     const result = await query.execute();
     expect(result.length).toBe(14);
   });
@@ -150,7 +152,7 @@ describe("SitePolygonsService", () => {
   });
 
   it("Should return empty arrays from utility methods if no associated records exist", async () => {
-    const sitePolygon = await SitePolygonFactory.create({ siteUuid: null });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: undefined });
     expect(await service.getEstablishmentTreeSpecies(sitePolygon)).toEqual([]);
     expect(await service.getReportingPeriods(sitePolygon)).toEqual([]);
   });
@@ -509,7 +511,7 @@ describe("SitePolygonsService", () => {
   });
 
   it("should throw if the site polygon is not found", async () => {
-    await expect(service.updateIndicator("asdfasdf", null)).rejects.toThrow(NotFoundException);
+    await expect(service.updateIndicator("asdfasdf", {} as IndicatorDto)).rejects.toThrow(NotFoundException);
   });
 
   it("should throw if the indicator slug is invalid", async () => {

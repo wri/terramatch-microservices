@@ -17,7 +17,7 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
   LIGHT_DTO = ProjectLightDto;
   FULL_DTO = ProjectFullDto;
 
-  findOne = jest.fn(() => Promise.resolve(null));
+  findOne = jest.fn(() => Promise.resolve<Project | null>(null));
   findMany = jest.fn(() => Promise.resolve({ models: [], paginationTotal: 0 }));
   getFullDto = jest.fn(() =>
     Promise.resolve({
@@ -63,14 +63,15 @@ describe("EntitiesController", () => {
     });
 
     it("should add DTOs to the document", async () => {
+      // @ts-expect-error stub processor type issues
       processor.findMany.mockResolvedValue({ models: await ProjectFactory.createMany(2), paginationTotal: 2 });
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       policyService.authorize.mockResolvedValue();
 
       const result = await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto);
       expect(processor.getLightDto).toHaveBeenCalledTimes(2);
-      expect(result.meta.indices[0]?.pageNumber).toBe(1);
-      expect(result.meta.indices[0]?.total).toBe(2);
+      expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
+      expect(result.meta.indices?.[0]?.total).toBe(2);
       expect(result.meta.resourceType).toBe("projects");
     });
   });

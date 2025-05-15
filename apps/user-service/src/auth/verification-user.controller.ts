@@ -23,7 +23,7 @@ export class VerificationUserController {
   async verifyUser(@Body() { token }: VerificationUserRequest): Promise<JsonApiDocument> {
     const { uuid, isVerified } = await this.verificationUserService.verify(token);
     return buildJsonApi(VerificationUserResponseDto)
-      .addData(uuid, populateDto(new VerificationUserResponseDto(), { verified: isVerified }))
+      .addData(uuid ?? "no-uuid", populateDto(new VerificationUserResponseDto(), { verified: isVerified }))
       .document.serialize();
   }
 }

@@ -109,7 +109,8 @@ export class EntitiesService {
   ) {}
 
   get userId() {
-    return this.policyService.userId;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.policyService.userId!;
   }
 
   async getPermissions() {
@@ -127,7 +128,8 @@ export class EntitiesService {
   private _userLocale?: string;
   async getUserLocale() {
     if (this._userLocale == null) {
-      this._userLocale = (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] })).locale ?? "en-GB";
+      this._userLocale =
+        (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] }))?.locale ?? "en-GB";
     }
     return this._userLocale;
   }
@@ -175,7 +177,7 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto(media: Media, additional?: AssociationDtoAdditionalProps) {
+  mediaDto(media: Media, additional: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),
@@ -183,16 +185,16 @@ export class EntitiesService {
     });
   }
 
-  mapMediaCollection(media: Media[], collection: MediaCollection) {
+  mapMediaCollection(media: Media[], collection: MediaCollection, entityType: EntityType, entityUuid: string) {
     const grouped = groupBy(media, "collectionName");
     return Object.entries(collection).reduce(
       (dtoMap, [collection, { multiple, dbCollection }]) => ({
         ...dtoMap,
         [collection]: multiple
-          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media))
+          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media, { entityType, entityUuid }))
           : grouped[dbCollection] == null
           ? null
-          : this.mediaDto(grouped[dbCollection][0])
+          : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
       }),
       {}
     );

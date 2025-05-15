@@ -52,7 +52,7 @@ export class ProjectProcessor extends EntityProcessor<
       { association: "organisation", attributes: ["uuid", "name", "type"] }
     ]);
 
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["name", "plantingStartDate", "country"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -190,7 +190,12 @@ export class ProjectProcessor extends EntityProcessor<
 
       application: project.application == null ? null : populateDto(new ProjectApplicationDto(), project.application),
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(project).findAll(), Project.MEDIA) as ProjectMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(project).findAll(),
+        Project.MEDIA,
+        "projects",
+        project.uuid
+      ) as ProjectMedia)
     });
 
     return { id: project.uuid, dto };
@@ -238,7 +243,12 @@ export class ProjectProcessor extends EntityProcessor<
     ];
     const site = await aggregateColumns(SR, aggregates as Aggregate<SiteReport>[]);
     const project = await aggregateColumns(PR, aggregates as Aggregate<ProjectReport>[]);
-    return site.workdaysPaid + site.workdaysVolunteer + project.workdaysPaid + project.workdaysVolunteer;
+    return (
+      (site.workdaysPaid ?? 0) +
+      (site.workdaysVolunteer ?? 0) +
+      (project.workdaysPaid ?? 0) +
+      (project.workdaysVolunteer ?? 0)
+    );
   }
 
   protected async getTotalJobs(projectId: number) {

@@ -60,7 +60,7 @@ export class SiteReportProcessor extends ReportProcessor<
     };
     const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -154,7 +154,12 @@ export class SiteReportProcessor extends ReportProcessor<
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
-      ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA) as SiteReportMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        mediaCollection,
+        SiteReport.MEDIA,
+        "siteReports",
+        siteReport.uuid
+      ) as SiteReportMedia)
     });
 
     return { id: siteReport.uuid, dto };

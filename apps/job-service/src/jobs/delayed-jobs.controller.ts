@@ -103,7 +103,7 @@ export class DelayedJobsController {
     const updatePromises = jobUpdates
       .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
       .map(async ({ uuid, attributes }) => {
-        const job = jobs.find(job => job.uuid === uuid);
+        const job = jobs.find(job => job.uuid === uuid) as DelayedJob;
         job.isAcknowledged = attributes.isAcknowledged;
         await job.save();
 

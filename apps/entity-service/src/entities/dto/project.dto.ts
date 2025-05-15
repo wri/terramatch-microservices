@@ -16,7 +16,7 @@ import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-
 export class ProjectLightDto extends EntityDto {
   constructor(project?: Project, props?: HybridSupportProps<ProjectLightDto, Project>) {
     super();
-    if (project != null) {
+    if (project != null && props != null) {
       populateDto<ProjectLightDto, Project>(this, project, { lightResource: true, ...props });
     }
   }
@@ -76,11 +76,11 @@ export class ProjectApplicationDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty()
-  fundingProgrammeName: string;
+  @ApiProperty({ nullable: true })
+  fundingProgrammeName: string | null;
 
-  @ApiProperty()
-  projectPitchUuid: string;
+  @ApiProperty({ nullable: true })
+  projectPitchUuid: string | null;
 }
 
 export class ProjectFullDto extends ProjectLightDto {

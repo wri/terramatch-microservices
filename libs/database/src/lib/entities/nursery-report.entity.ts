@@ -24,7 +24,6 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 
-// Incomplete stub
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   nurseries: (ids: number[] | Literal) => ({ where: { nurseryId: { [Op.in]: ids } } }),

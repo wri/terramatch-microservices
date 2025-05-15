@@ -1,4 +1,12 @@
-import { BadRequestException, Controller, Get, Param, Query, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
 import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
@@ -81,10 +89,10 @@ export class TreesController {
     await this.authorizeRead(entity, uuid);
 
     const establishmentTrees = !isEstablishmentEntity(entity)
-      ? null
+      ? undefined
       : await this.treeService.getEstablishmentTrees(entity, uuid);
     const reportCounts = !isReportCountEntity(entity)
-      ? null
+      ? undefined
       : await this.treeService.getAssociatedReportCounts(entity, uuid);
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
@@ -103,6 +111,7 @@ export class TreesController {
       Object.keys(modelClass.getAttributes())
     );
     const entityModel = await modelClass.findOne({ where: { uuid }, attributes });
+    if (entityModel == null) throw new NotFoundException("Entity not found");
     // For this controller, the data about a given entity may be calculated and read if the base
     // entity may be read.
     await this.policyService.authorize("read", entityModel);

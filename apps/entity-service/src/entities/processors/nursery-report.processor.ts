@@ -52,7 +52,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     };
 
     const builder = await this.entitiesService.buildQuery(NurseryReport, query, [nurseryAssociation]);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -135,7 +135,12 @@ export class NurseryReportProcessor extends ReportProcessor<
     const dto = new NurseryReportFullDto(nurseryReport, {
       reportTitle,
       projectReportTitle,
-      ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        mediaCollection,
+        NurseryReport.MEDIA,
+        "nurseryReports",
+        nurseryReport.uuid
+      ) as NurseryReportMedia)
     });
 
     return { id: nurseryReport.uuid, dto };

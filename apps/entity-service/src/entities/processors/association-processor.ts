@@ -58,12 +58,12 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
     // Only pull the attributes that are needed by the entity policies.
     const attributes = intersection(this.baseModelAttributes, Object.keys(this.entityModelClass.getAttributes()));
 
-    this._baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
-    if (this._baseEntity == null) {
+    const baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
+    if (baseEntity == null) {
       throw new NotFoundException(`Base entity not found: [${this.entityModelClass.name}, ${this.entityUuid}]`);
     }
 
-    return this._baseEntity;
+    return (this._baseEntity = baseEntity);
   }
 
   async addDtos(document: DocumentBuilder) {

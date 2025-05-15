@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
 import * as Mail from "nodemailer/lib/mailer";
-import { Dictionary, isEmpty, isString } from "lodash";
+import { Dictionary, isString } from "lodash";
 import { LocalizationService } from "../localization/localization.service";
 import { User } from "@terramatch-microservices/database/entities";
 import { TemplateService } from "../templates/template.service";
@@ -35,8 +35,8 @@ export class EmailService {
   }
 
   filterEntityEmailRecipients(recipients: User[]) {
-    const entityDoNotEmailList = this.configService.get("ENTITY_UPDATE_DO_NOT_EMAIL");
-    if (isEmpty(entityDoNotEmailList)) return recipients;
+    const entityDoNotEmailList = this.configService.get<string>("ENTITY_UPDATE_DO_NOT_EMAIL");
+    if (entityDoNotEmailList == null || entityDoNotEmailList.length == 0) return recipients;
 
     const doNotEmail = entityDoNotEmailList.split(",");
     return recipients.filter(({ emailAddress }) => !doNotEmail.includes(emailAddress));

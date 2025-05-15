@@ -13,6 +13,7 @@
     "lib": ["es2022"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
+    "strictNullChecks": true,
     "baseUrl": ".",
     "paths": {
       "@terramatch-microservices/common": ["libs/common/src/index.ts"],

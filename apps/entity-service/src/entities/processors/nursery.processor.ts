@@ -37,7 +37,7 @@ export class NurseryProcessor extends EntityProcessor<
     };
 
     const builder = await this.entitiesService.buildQuery(Nursery, query, [projectAssociation]);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -112,7 +112,12 @@ export class NurseryProcessor extends EntityProcessor<
       seedlingsGrownCount,
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
-      ...(this.entitiesService.mapMediaCollection(await Media.for(nursery).findAll(), Nursery.MEDIA) as NurseryMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(nursery).findAll(),
+        Nursery.MEDIA,
+        "nurseries",
+        nursery.uuid
+      ) as NurseryMedia)
     });
 
     return { id: nursery.uuid, dto };

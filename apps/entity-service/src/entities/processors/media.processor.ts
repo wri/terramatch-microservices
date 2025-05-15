@@ -31,7 +31,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     protected readonly entityUuid: string,
     protected readonly entityModelClass: EntityClass<EntityModel>,
     protected readonly entitiesService: EntitiesService,
-    protected readonly query?: MediaQueryDto
+    protected readonly query: MediaQueryDto = {}
   ) {
     super(entityType, entityUuid, entityModelClass, entitiesService, query);
   }
@@ -85,7 +85,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const siteSubquery = Subquery.select(Site, "id").eq("projectId", projectReport.projectId);
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", projectReport.projectId);
 
-    let siteReports = [];
+    let siteReports: SiteReport[] = [];
     if (projectReport.dueAt != null) {
       siteReports = await SiteReport.findAll({
         where: {
@@ -101,7 +101,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReports.map(report => report.id) });
 
-    let nurseryReports = [];
+    let nurseryReports: NurseryReport[] = [];
     if (projectReport.dueAt != null) {
       nurseryReports = await NurseryReport.findAll({
         where: {
@@ -131,7 +131,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     this._queryBuilder = await this.entitiesService.buildQuery(Media, this.query, [userAssociations]);
 
-    let models: QueryModelType[] = [];
+    let models: QueryModelType[];
     if (baseEntity instanceof Project) {
       models = await this.getProjectModels(baseEntity);
     } else if (baseEntity instanceof Site) {
@@ -197,7 +197,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       });
     }
 
-    if (this.query.direction) {
+    if (this.query.direction != null) {
       this._queryBuilder.order(["createdAt", this.query.direction]);
     }
     return this._queryBuilder;

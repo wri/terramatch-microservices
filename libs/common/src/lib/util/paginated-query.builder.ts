@@ -84,6 +84,9 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   pageNumber(pageNumber: number) {
+    if (this.pageSize == null) {
+      throw new BadRequestException("Cannot set page number without page size");
+    }
     this.findOptions.offset = (pageNumber - 1) * this.pageSize;
     return this;
   }

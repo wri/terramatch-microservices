@@ -19,7 +19,7 @@ import {
 import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { Literal } from "sequelize/lib/utils";
+import { Literal } from "sequelize/types/utils";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
 
@@ -61,7 +61,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     };
     const associations = [projectAssociation];
     const builder = await this.entitiesService.buildQuery(ProjectReport, query, associations);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (
         ["title", "status", "updateRequestStatus", "createdAt", "dueAt", "updatedAt", "submittedAt"].includes(
           query.sort.field
@@ -147,33 +147,49 @@ export class ProjectReportProcessor extends ReportProcessor<
   }
 
   async getFullDto(projectReport: ProjectReport) {
-    const { taskId } = projectReport;
     const reportTitle = await this.getReportTitle(projectReport);
-    const siteReportsIdsTask = SiteReport.approvedIdsForTaskSubquery(taskId);
-    const seedsPlantedCount = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
-    const treesPlantedCount =
-      (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
-    const regeneratedTreesCount = await SiteReport.approved().task(taskId).sum("numTreesRegenerating");
-    const nonTreeTotal = (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0;
+
     const createdByUser = projectReport.user ?? null;
     const dto = new ProjectReportFullDto(projectReport, {
+      ...(await this.getTaskDependentAggregates(projectReport.id, projectReport.taskId)),
       reportTitle,
-      taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReport.id, siteReportsIdsTask),
-      seedsPlantedCount,
-      treesPlantedCount,
-      regeneratedTreesCount,
-      siteReportsCount: await SiteReport.task(taskId).count(),
-      nurseryReportsCount: await NurseryReport.task(taskId).count(),
       seedlingsGrown: await this.getSeedlingsGrown(projectReport),
-      nonTreeTotal,
       createdByUser,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(projectReport).findAll(),
-        ProjectReport.MEDIA
+        ProjectReport.MEDIA,
+        "projectReports",
+        projectReport.uuid
       ) as ProjectReportMedia)
     });
 
     return { id: projectReport.uuid, dto };
+  }
+
+  async getTaskDependentAggregates(projectReportId: number, taskId: number | null) {
+    if (taskId == null) {
+      return {
+        seedsPlantedCount: 0,
+        treesPlantedCount: 0,
+        regeneratedTreesCount: 0,
+        nonTreeTotal: 0,
+        taskTotalWorkdays: 0,
+        siteReportsCount: 0,
+        nurseryReportsCount: 0
+      };
+    }
+
+    const siteReportsIdsTask = SiteReport.approvedIdsForTaskSubquery(taskId);
+    return {
+      seedsPlantedCount: (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
+      treesPlantedCount:
+        (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
+      regeneratedTreesCount: await SiteReport.approved().task(taskId).sum("numTreesRegenerating"),
+      nonTreeTotal: (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
+      taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReportId, siteReportsIdsTask),
+      siteReportsCount: await SiteReport.task(taskId).count(),
+      nurseryReportsCount: await NurseryReport.task(taskId).count()
+    };
   }
 
   async getLightDto(projectReport: ProjectReport) {
@@ -202,7 +218,7 @@ export class ProjectReportProcessor extends ReportProcessor<
       );
     }
 
-    if (projectReport.frameworkKey == "terrafund") {
+    if (projectReport.frameworkKey == "terrafund" && projectReport.taskId != null) {
       return (await NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees")) ?? 0;
     }
 

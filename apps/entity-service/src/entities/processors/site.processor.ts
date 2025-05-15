@@ -55,7 +55,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     };
     const builder = await this.entitiesService.buildQuery(Site, query, [projectAssociation, frameworkAssociation]);
 
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
@@ -225,7 +225,12 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA) as SiteMedia)
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(site).findAll(),
+        Site.MEDIA,
+        "sites",
+        site.uuid
+      ) as SiteMedia)
     });
 
     return { id: site.uuid, dto };
@@ -292,7 +297,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       { func: "SUM", attr: "workdaysVolunteer" }
     ];
     const site = await aggregateColumns(SR, aggregates as Aggregate<SiteReport>[]);
-    return site.workdaysPaid + site.workdaysVolunteer;
+    return (site.workdaysPaid ?? 0) + (site.workdaysVolunteer ?? 0);
   }
 
   protected async getTotalSiteReports(siteId: number) {

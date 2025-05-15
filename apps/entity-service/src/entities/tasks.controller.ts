@@ -56,12 +56,14 @@ export class TasksController {
       builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
     } else {
       if (query.projectUuid == null) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const userId = this.policyService.userId!;
         // non-admin users should typically be filtering on a project, but to cover our bases,
         // return all tasks they have direct access to if they aren't.
         if (permissions?.includes("manage-own")) {
-          builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.policyService.userId) } });
+          builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
         } else if (permissions?.includes("projects-manage")) {
-          builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.policyService.userId) } });
+          builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
         }
       }
 
@@ -77,7 +79,7 @@ export class TasksController {
       }
     }
 
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["dueAt", "updatedAt", "status"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {

@@ -10,7 +10,7 @@ import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-
 export class NurseryReportLightDto extends EntityDto {
   constructor(nurseryReport?: NurseryReport, props?: HybridSupportProps<NurseryReportLightDto, NurseryReport>) {
     super();
-    if (nurseryReport != null) {
+    if (nurseryReport != null && props != null) {
       populateDto<NurseryReportLightDto, NurseryReport>(this, nurseryReport, { lightResource: true, ...props });
     }
   }

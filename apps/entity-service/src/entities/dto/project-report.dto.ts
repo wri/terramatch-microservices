@@ -79,9 +79,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
     populateDto<ProjectReportFullDto, ProjectReport>(this, projectReport, { lightResource: false, ...props });
   }
 
-  @ApiProperty({ nullable: true })
-  status: string | null;
-
   @ApiProperty()
   updateRequestStatus: string;
 

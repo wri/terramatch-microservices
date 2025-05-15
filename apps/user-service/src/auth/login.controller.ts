@@ -22,7 +22,7 @@ export class LoginController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async create(@Body() { emailAddress, password }: LoginRequest): Promise<JsonApiDocument> {
     const { token, userUuid } = (await this.authService.login(emailAddress, password)) ?? {};
-    if (token == null) {
+    if (token == null || userUuid == null) {
       // there are multiple reasons for the token to be null (bad email address, wrong password),
       // but we don't want to report on the specifics because it opens an attack vector: if we
       // report that an email address isn't valid, that lets an attacker know which email addresses

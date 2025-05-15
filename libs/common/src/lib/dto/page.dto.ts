@@ -39,7 +39,7 @@ export class NumberPage extends Page {
   number?: number;
 }
 
-export const isCursorPage = (page?: CursorPage | NumberPage): page is CursorPage =>
+export const isCursorPage = (page?: CursorPage | NumberPage): page is Required<CursorPage> =>
   page != null && (page as CursorPage).after != null;
-export const isNumberPage = (page?: CursorPage | NumberPage): page is NumberPage =>
+export const isNumberPage = (page?: CursorPage | NumberPage): page is Required<NumberPage> =>
   page != null && (page as NumberPage).number != null;

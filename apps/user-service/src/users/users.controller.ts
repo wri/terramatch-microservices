@@ -76,7 +76,7 @@ export class UsersController {
   @ExceptionResponse(BadRequestException, { description: "Something is malformed about the request" })
   async update(@Param("uuid") uuid: string, @Body() updatePayload: UserUpdateBody) {
     if (uuid !== updatePayload.data.id) {
-      throw new BadRequestException(`Path uuid and payload id do not match`);
+      throw new BadRequestException("Path uuid and payload id do not match");
     }
 
     const user = await User.findOne({

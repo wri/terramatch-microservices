@@ -1,38 +1,29 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
+  Patch,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { ProjectUser, SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
-import { TaskGetDto, TaskQueryDto } from "./dto/task-query.dto";
+import { SingleTaskDto, TaskQueryDto } from "./dto/task-query.dto";
 import { ProjectReportLightDto } from "./dto/project-report.dto";
 import { SiteReportLightDto } from "./dto/site-report.dto";
 import { NurseryReportLightDto } from "./dto/nursery-report.dto";
-import { EntitiesService, ProcessableEntity } from "./entities.service";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
-import { Op } from "sequelize";
-
-const FILTER_PROPS = {
-  status: "status",
-  frameworkKey: "$project.framework_key$",
-  projectUuid: "$project.uuid$"
-};
+import { TaskUpdateBody } from "./dto/task-update.dto";
+import { TasksService } from "./tasks.service";
 
 @Controller("entities/v3/tasks")
 export class TasksController {
-  private readonly logger = new TMLogger(TasksController.name);
-
-  constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
+  constructor(private readonly policyService: PolicyService, private readonly tasksService: TasksService) {}
 
   @Get()
   @ApiOperation({
@@ -42,55 +33,8 @@ export class TasksController {
   @JsonApiResponse({ data: TaskLightDto, pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async taskIndex(@Query() query: TaskQueryDto) {
-    const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [
-      // required: true avoids loading tasks attached to deleted projects or orgs
-      { association: "organisation", attributes: ["name"], required: true },
-      { association: "project", attributes: ["name", "frameworkKey"], required: true }
-    ]);
-
-    const permissions = await this.policyService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      ?.map(name => name.substring("framework-".length) as string);
-    if (frameworkPermissions?.length > 0) {
-      builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
-    } else {
-      if (query.projectUuid == null) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const userId = this.policyService.userId!;
-        // non-admin users should typically be filtering on a project, but to cover our bases,
-        // return all tasks they have direct access to if they aren't.
-        if (permissions?.includes("manage-own")) {
-          builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(userId) } });
-        } else if (permissions?.includes("projects-manage")) {
-          builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(userId) } });
-        }
-      }
-
-      if (query.sort == null) {
-        // For non-admins, the default sort is dueAt descending
-        builder.order(["dueAt", "DESC"]);
-      }
-    }
-
-    for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS)) {
-      if (query[filterProp] != null) {
-        builder.where({ [sqlProp]: query[filterProp] });
-      }
-    }
-
-    if (query.sort?.field != null) {
-      if (["dueAt", "updatedAt", "status"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
-      } else if (query.sort.field === "organisationName") {
-        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
-      } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
-      }
-    }
-
+    const { tasks, total } = await this.tasksService.getTasks(query);
     const document = buildJsonApi(TaskLightDto, { pagination: "number" });
-    const tasks = await builder.execute();
     const indexIds: string[] = [];
     if (tasks.length !== 0) {
       await this.policyService.authorize("read", tasks);
@@ -105,7 +49,7 @@ export class TasksController {
       resource: "tasks",
       requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
       ids: indexIds,
-      total: await builder.paginationTotal(),
+      total,
       pageNumber: query.page?.number ?? 1
     });
 
@@ -132,44 +76,53 @@ export class TasksController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async taskGet(@Param() { uuid }: TaskGetDto) {
-    const task = await Task.findOne({
-      where: { uuid },
-      include: [
-        { association: "organisation", attributes: ["name"], required: true },
-        { association: "project", attributes: ["name", "frameworkKey"], required: true }
-      ]
-    });
-    if (task == null) throw new NotFoundException();
-
+  async taskGet(@Param() { uuid }: SingleTaskDto) {
+    const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("read", task);
+    return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
+  }
 
-    const treesPlantedCount =
-      (await TreeSpecies.visible()
-        .collection("tree-planted")
-        .siteReports(SiteReport.approvedIdsForTaskSubquery(task.id))
-        .sum("amount")) ?? 0;
+  @Patch(":uuid")
+  @ApiOperation({
+    operationId: "taskUpdate",
+    summary: "Update a single task by UUID. Includes all reports light DTOs sideloaded on the response."
+  })
+  @JsonApiResponse({
+    data: {
+      type: TaskFullDto,
+      relationships: [
+        { name: "projectReport", type: ProjectReportLightDto },
+        { name: "siteReports", type: SiteReportLightDto, multiple: true },
+        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true }
+      ]
+    },
+    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto]
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async taskUpdate(@Param() { uuid }: SingleTaskDto, @Body() updatePayload: TaskUpdateBody) {
+    if (uuid !== updatePayload.data.id) {
+      throw new BadRequestException("Task id in path and payload do not match");
+    }
 
-    const document = buildJsonApi(TaskFullDto);
-    const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
+    const task = await this.tasksService.getTask(uuid);
+    await this.policyService.authorize("update", task);
 
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      const reports = await processor.findMany({ taskId: task.id });
-      if (entityType === "projectReports" && reports.models.length > 1) {
-        this.logger.error(`More than one project report found for task ${task.id}`);
-        // Make sure we don't accidentally turn the `projectReport` member into an array, as the FE expects an object.
-        reports.models.length = 1;
-      }
-      for (const report of reports.models) {
-        const { id, dto: reportDto } = await processor.getLightDto(report);
-        const reportResource = document.addData(id, reportDto);
-        taskResource.relateTo(entityType === "projectReports" ? "projectReport" : entityType, reportResource, {
-          forceMultiple: true
-        });
+    // the only field updateable on Task is status
+    const { status } = updatePayload.data.attributes;
+
+    if (status != null) {
+      if (status === "awaiting-approval") {
+        await this.tasksService.submitForApproval(task);
+      } else {
+        throw new BadRequestException(`Status not supported by this controller: ${status}`);
       }
     }
 
-    return document.serialize();
+    await task.save();
+
+    return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
   }
 }

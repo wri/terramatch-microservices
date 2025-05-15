@@ -15,13 +15,19 @@ import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
+import {
+  COMPLETE_REPORT_STATUSES,
+  CompleteReportStatus,
+  ReportStatus,
+  ReportStatusStates,
+  UpdateRequestStatus
+} from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
-import { StateMachineColumn } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn, StateMachineException } from "../util/model-column-state-machine";
 import { JsonColumn } from "../decorators/json-column.decorator";
 
 type ApprovedIdsSubqueryOptions = {
@@ -168,6 +174,25 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
+
+  get isComplete() {
+    return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
+  }
+
+  /**
+   * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
+   * transition to it.
+   */
+  get isCompletable() {
+    if (this.isComplete) return true;
+    try {
+      getStateMachine(this, "status")?.validateTransition("awaiting-approval");
+      return true;
+    } catch (e) {
+      if (e instanceof StateMachineException) return false;
+      throw e;
+    }
+  }
 
   @AllowNull
   @Column(STRING)

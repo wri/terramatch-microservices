@@ -16,7 +16,7 @@ export class TaskQueryDto extends IndexQueryDto {
   projectUuid?: string;
 }
 
-export class TaskGetDto {
+export class SingleTaskDto {
   @IsUUID()
   @ApiProperty({ description: "Task UUID for task to retrieve" })
   uuid: string;

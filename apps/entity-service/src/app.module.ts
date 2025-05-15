@@ -9,6 +9,7 @@ import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { TasksController } from "./entities/tasks.controller";
+import { TasksService } from "./entities/tasks.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -22,7 +23,8 @@ import { TasksController } from "./entities/tasks.controller";
       useClass: SentryGlobalFilter
     },
     EntitiesService,
-    TreeService
+    TreeService,
+    TasksService
   ]
 })
 export class AppModule {}

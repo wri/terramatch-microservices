@@ -15,7 +15,7 @@ import { BIGINT, DATE, STRING, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { TaskStatus, TaskStatusStates } from "../constants/status";
-import { StateMachineColumn } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { ProjectReport } from "./project-report.entity";
 import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -72,6 +72,10 @@ export class Task extends Model<Task> {
 
   @StateMachineColumn(TaskStatusStates)
   status: TaskStatus;
+
+  statusCanBe(status: TaskStatus) {
+    return getStateMachine(this, "status")?.canBe(this.status, status) ?? false;
+  }
 
   // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
   // make that a real constraint when the schema is controlled by v3 code.

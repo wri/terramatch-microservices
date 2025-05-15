@@ -14,7 +14,13 @@ import {
 import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
+import {
+  COMPLETE_REPORT_STATUSES,
+  CompleteReportStatus,
+  ReportStatus,
+  ReportStatusStates,
+  UpdateRequestStatus
+} from "../constants/status";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
@@ -22,7 +28,7 @@ import { Subquery } from "../util/subquery.builder";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
-import { StateMachineColumn } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn, StateMachineException } from "../util/model-column-state-machine";
 
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
@@ -157,6 +163,25 @@ export class NurseryReport extends Model<NurseryReport> {
 
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
+
+  get isComplete() {
+    return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
+  }
+
+  /**
+   * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
+   * transition to it.
+   */
+  get isCompletable() {
+    if (this.isComplete) return true;
+    try {
+      getStateMachine(this, "status")?.validateTransition("awaiting-approval");
+      return true;
+    } catch (e) {
+      if (e instanceof StateMachineException) return false;
+      throw e;
+    }
+  }
 
   @AllowNull
   @Column(STRING)

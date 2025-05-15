@@ -3,12 +3,8 @@ import { Project, Task, User } from "@terramatch-microservices/database/entities
 
 export class TaskPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.includes("projects-manage") || this.frameworks.length > 0) {
-      this.builder.can("read", Task);
-    }
-
     if (this.frameworks.length > 0) {
-      this.builder.can("read", Task, { frameworkKey: { $in: this.frameworks } });
+      this.builder.can(["read", "update"], Task, { frameworkKey: { $in: this.frameworks } });
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -22,7 +18,7 @@ export class TaskPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can("read", Task, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "update"], Task, { projectId: { $in: projectIds } });
         }
       }
     }
@@ -32,7 +28,7 @@ export class TaskPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can("read", Task, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "update"], Task, { projectId: { $in: projectIds } });
         }
       }
     }

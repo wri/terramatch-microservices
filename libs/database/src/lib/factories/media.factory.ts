@@ -1,6 +1,10 @@
-import { Media, Project } from "../entities";
+import { Media, Project, Site, Nursery, ProjectReport, SiteReport } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { ProjectFactory } from "./project.factory";
+import { SiteFactory } from "./site.factory";
+import { NurseryFactory } from "./nursery.factory";
+import { ProjectReportFactory } from "./project-report.factory";
+import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
 
 const defaultAttributesFactory = async () => ({
@@ -22,5 +26,25 @@ export const MediaFactory = {
     ...(await defaultAttributesFactory()),
     modelType: Project.LARAVEL_TYPE,
     modelId: ProjectFactory.associate("id")
+  })),
+  forSite: FactoryGirl.define(Media, async () => ({
+    ...(await defaultAttributesFactory()),
+    modelType: Site.LARAVEL_TYPE,
+    modelId: SiteFactory.associate("id")
+  })),
+  forNursery: FactoryGirl.define(Media, async () => ({
+    ...(await defaultAttributesFactory()),
+    modelType: Nursery.LARAVEL_TYPE,
+    modelId: NurseryFactory.associate("id")
+  })),
+  forProjectReport: FactoryGirl.define(Media, async () => ({
+    ...(await defaultAttributesFactory()),
+    modelType: ProjectReport.LARAVEL_TYPE,
+    modelId: ProjectReportFactory.associate("id")
+  })),
+  forSiteReport: FactoryGirl.define(Media, async () => ({
+    ...(await defaultAttributesFactory()),
+    modelType: SiteReport.LARAVEL_TYPE,
+    modelId: SiteReportFactory.associate("id")
   }))
 };

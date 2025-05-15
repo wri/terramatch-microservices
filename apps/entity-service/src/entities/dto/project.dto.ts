@@ -117,10 +117,16 @@ export class ProjectFullDto extends ProjectLightDto {
   feedbackFields: string[] | null;
 
   @ApiProperty({ nullable: true })
+  cohort: string | null;
+
+  @ApiProperty({ nullable: true })
   continent: string | null;
 
   @ApiProperty({ nullable: true })
   country: string | null;
+
+  @ApiProperty({ nullable: true, description: "The associated organisation type" })
+  organisationType: string | null;
 
   @ApiProperty({ nullable: true })
   states: string[] | null;

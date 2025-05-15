@@ -30,9 +30,12 @@ import { SeedingDto } from "./dto/seeding.dto";
 import { TreeSpeciesDto } from "./dto/tree-species.dto";
 import { DemographicDto } from "./dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
+import { MediaAssociationDtoAdditionalProps } from "./dto/media-association.dto";
+import { MediaQueryDto } from "./dto/media-query.dto";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { DisturbanceDto } from "./dto/disturbance.dto";
 import { InvasiveDto } from "./dto/invasive.dto";
@@ -81,6 +84,7 @@ const ASSOCIATION_PROCESSORS = {
       group: ["taxonId", "name", "collection"]
     })
   ),
+  media: MediaProcessor,
   disturbances: AssociationProcessor.buildSimpleProcessor(
     DisturbanceDto,
     ({ id: disturbanceableId }, disturbanceableType) =>
@@ -147,7 +151,8 @@ export class EntitiesService {
   createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
     entityType: EntityType,
     uuid: string,
-    association: ProcessableAssociation
+    association: ProcessableAssociation,
+    query?: MediaQueryDto
   ) {
     const processorClass = ASSOCIATION_PROCESSORS[association];
     if (processorClass == null) {
@@ -159,7 +164,7 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entityType}`);
     }
 
-    return new processorClass(entityType, uuid, entityModelClass) as unknown as AssociationProcessor<T, D>;
+    return new processorClass(entityType, uuid, entityModelClass, this, query) as unknown as AssociationProcessor<T, D>;
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
@@ -182,7 +187,13 @@ export class EntitiesService {
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto = (media: Media) => new MediaDto(media, this.fullUrl(media), this.thumbnailUrl(media));
+  mediaDto(media: Media, additional?: MediaAssociationDtoAdditionalProps) {
+    return new MediaDto(media, {
+      url: this.fullUrl(media),
+      thumbUrl: this.thumbnailUrl(media),
+      ...additional
+    });
+  }
 
   mapMediaCollection(media: Media[], collection: MediaCollection) {
     const grouped = groupBy(media, "collectionName");

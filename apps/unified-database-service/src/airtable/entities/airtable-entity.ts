@@ -254,18 +254,30 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     return associations;
   }
 
-  protected _gadmCountryNames: Dictionary<string>;
-  protected async gadmCountryNames() {
-    return (this._gadmCountryNames ??= mapValues(keyBy(await this.dataApi.gadmLevel0(), "iso"), "name"));
+  protected _gadmLevel0Names: Dictionary<string>;
+  protected async gadmLevel0Names() {
+    return (this._gadmLevel0Names ??= mapValues(keyBy(await this.dataApi.gadmLevel0(), "iso"), "name"));
   }
 
-  protected _gadmStateNames: Dictionary<Dictionary<string>> = {};
-  protected async gadmStateNames(countryIsos: string[]) {
+  protected _gadmLevel1Names: Dictionary<Dictionary<string>> = {};
+  protected async gadmLevel1Names(level0Codes: string[]) {
     return merge(
       {},
       ...(await Promise.all(
-        countryIsos.map(async iso => {
-          return (this._gadmStateNames[iso] ??= mapValues(keyBy(await this.dataApi.gadmLevel1(iso), "id"), "name"));
+        level0Codes.map(async code => {
+          return (this._gadmLevel1Names[code] ??= mapValues(keyBy(await this.dataApi.gadmLevel1(code), "id"), "name"));
+        })
+      ))
+    );
+  }
+
+  protected _gadmLevel2Names: Dictionary<Dictionary<string>> = {};
+  protected async gadmLevel2Names(level1Codes: string[]) {
+    return merge(
+      {},
+      ...(await Promise.all(
+        level1Codes.map(async code => {
+          return (this._gadmLevel2Names[code] ??= mapValues(keyBy(await this.dataApi.gadmLevel2(code), "id"), "name"));
         })
       ))
     );

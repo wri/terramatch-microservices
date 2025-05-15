@@ -44,7 +44,7 @@ export class ProjectProcessor extends EntityProcessor<
     return await Project.findOne({
       where: { uuid },
       include: [
-        { association: "organisation", attributes: ["uuid", "name"] },
+        { association: "organisation", attributes: ["uuid", "name", "type"] },
         {
           association: "application",
           include: [{ association: "fundingProgramme" }, { association: "formSubmissions" }]
@@ -55,7 +55,7 @@ export class ProjectProcessor extends EntityProcessor<
 
   async findMany(query: EntityQueryDto) {
     const builder = await this.entitiesService.buildQuery(Project, query, [
-      { association: "organisation", attributes: ["uuid", "name"] }
+      { association: "organisation", attributes: ["uuid", "name", "type"] }
     ]);
 
     if (query.sort != null) {
@@ -134,7 +134,12 @@ export class ProjectProcessor extends EntityProcessor<
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
-    return { id: project.uuid, dto: new ProjectLightDto(project, { totalHectaresRestoredSum }) };
+    return {
+      id: project.uuid,
+      dto: new ProjectLightDto(project, {
+        totalHectaresRestoredSum
+      })
+    };
   }
 
   async getFullDto(project: Project) {

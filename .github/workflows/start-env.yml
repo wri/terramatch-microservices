@@ -1,0 +1,31 @@
+name: Start Environment
+run-name: "Start Environment [env: ${{ inputs.env }}]"
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Deployment target environment"
+        type: choice
+        required: true
+        options:
+          - dev
+          - test
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  start-services:
+    uses: ./.github/workflows/deploy-services.yml
+    with:
+      env: ${{ inputs.env }}
+    secrets: inherit
+
+  start-api-gateway:
+    uses: ./.github/workflows/deploy-api-gateway.yml
+    needs: start-services
+    with:
+      env: ${{ inputs.env }}
+    secrets: inherit

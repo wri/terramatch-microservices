@@ -126,9 +126,6 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     }
   }
 
-  @ApiProperty({ nullable: true })
-  plantEnd: Date | null;
-
   @ApiProperty()
   geometry: Polygon;
 

@@ -62,6 +62,7 @@ import {
   COUNTRIES,
   gadmLevel0Mock,
   gadmLevel1Mock,
+  gadmLevel2Mock,
   STATES
 } from "@terramatch-microservices/database/util/gadm-mock-data";
 
@@ -75,7 +76,11 @@ const Base = jest.fn(() => ({
   destroy: airtableDestroy
 })) as unknown as Airtable.Base;
 
-const dataApi = createMock<DataApiService>({ gadmLevel0: gadmLevel0Mock, gadmLevel1: gadmLevel1Mock });
+const dataApi = createMock<DataApiService>({
+  gadmLevel0: gadmLevel0Mock,
+  gadmLevel1: gadmLevel1Mock,
+  gadmLevel2: gadmLevel2Mock
+});
 
 const mapEntityColumns = jest.fn(() => Promise.resolve({}));
 export class StubEntity extends AirtableEntity<Site> {
@@ -502,6 +507,13 @@ describe("AirtableEntity", () => {
       const allOrgs = await OrganisationFactory.createMany(16);
       await allOrgs[5].destroy();
       await allOrgs[12].destroy();
+      allOrgs.push(
+        await OrganisationFactory.create({
+          level0PastRestoration: ["ESP", "MEX"],
+          level1PastRestoration: ["ESP.1_1", "MEX.31_1"],
+          level2PastRestoration: ["ESP.1.4_1", "MEX.31.1_2"]
+        })
+      );
 
       organisations = allOrgs.filter(org => !org.isSoftDeleted());
     });
@@ -624,6 +636,13 @@ describe("AirtableEntity", () => {
     beforeAll(async () => {
       await ProjectPitch.truncate();
       pitches = await ProjectPitchFactory.createMany(3);
+      pitches.push(
+        await ProjectPitchFactory.create({
+          level0Proposed: ["ESP", "MEX"],
+          level1Proposed: ["ESP.1_1", "MEX.31_1"],
+          level2Proposed: ["ESP.1.7_1", "MEX.31.9_2"]
+        })
+      );
     });
 
     it("sends all records to airtable", async () => {

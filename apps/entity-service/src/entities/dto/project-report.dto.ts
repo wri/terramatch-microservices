@@ -64,9 +64,6 @@ export class ProjectReportLightDto extends EntityDto {
   dueAt: Date | null;
 
   @ApiProperty()
-  workdaysPaid: number | null;
-
-  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -221,6 +218,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty({ nullable: true })
   volunteerSmallholderFarmers: number | null;
 
+  @ApiProperty()
+  taskTotalWorkdays: number;
+
   @ApiProperty({ nullable: true })
   plantedTrees: number | null;
 
@@ -274,9 +274,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true })
   nonTreeTotal: number | null;
-
-  @ApiProperty()
-  readableCompletionStatus: string;
 
   @ApiProperty({ nullable: true })
   createdBy: number | null;

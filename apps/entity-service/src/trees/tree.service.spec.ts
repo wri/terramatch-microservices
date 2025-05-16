@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { ReportCountEntity, TreeService } from "./tree.service";
 import { Test } from "@nestjs/testing";
 import {
@@ -166,30 +167,30 @@ describe("TreeService", () => {
       const projectReport1 = await ProjectReportFactory.create({ projectId: project.id });
       const projectReport2 = await ProjectReportFactory.create({
         projectId: project.id,
-        dueAt: DateTime.fromJSDate(projectReport1.dueAt).plus({ months: 3 }).toJSDate()
+        dueAt: DateTime.fromJSDate(projectReport1.dueAt!).plus({ months: 3 }).toJSDate()
       });
       const site = await SiteFactory.create({ projectId: project.id });
       const siteReport1 = await SiteReportFactory.create({ siteId: site.id });
       const siteReport2 = await SiteReportFactory.create({
         siteId: site.id,
-        dueAt: DateTime.fromJSDate(siteReport1.dueAt).plus({ months: 3 }).toJSDate()
+        dueAt: DateTime.fromJSDate(siteReport1.dueAt!).plus({ months: 3 }).toJSDate()
       });
       const siteReport3 = await SiteReportFactory.create({
         siteId: site.id,
-        dueAt: DateTime.fromJSDate(siteReport2.dueAt).plus({ months: 3 }).toJSDate()
+        dueAt: DateTime.fromJSDate(siteReport2.dueAt!).plus({ months: 3 }).toJSDate()
       });
       const nursery = await NurseryFactory.create({ projectId: project.id });
       const nurseryReport1 = await NurseryReportFactory.create({ nurseryId: nursery.id });
       const nurseryReport2 = await NurseryReportFactory.create({
         nurseryId: nursery.id,
-        dueAt: DateTime.fromJSDate(nurseryReport1.dueAt).plus({ months: 3 }).toJSDate()
+        dueAt: DateTime.fromJSDate(nurseryReport1.dueAt!).plus({ months: 3 }).toJSDate()
       });
 
       const reduceTreeCounts = (counts: Record<string, PlantingCountDto>, tree: TreeSpecies | Seeding) => ({
         ...counts,
-        [tree.name]: {
-          taxonId: counts[tree.name]?.taxonId ?? tree.taxonId ?? null,
-          amount: (counts[tree.name]?.amount ?? 0) + (tree.amount ?? 0)
+        [tree.name!]: {
+          taxonId: counts[tree.name!]?.taxonId ?? tree.taxonId ?? undefined,
+          amount: (counts[tree.name!]?.amount ?? 0) + (tree.amount ?? 0)
         }
       });
       const projectReportTreesPlanted = await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, {
@@ -208,9 +209,9 @@ describe("TreeService", () => {
       });
 
       let result = await service.getPreviousPlanting("projectReports", projectReport2.uuid);
-      expect(Object.keys(result)).toMatchObject(["nursery-seedling"]);
+      expect(Object.keys(result ?? {})).toMatchObject(["nursery-seedling"]);
       expect(result).toMatchObject({ "nursery-seedling": projectReportTreesPlanted.reduce(reduceTreeCounts, {}) });
-      expect(Object.keys(result["nursery-seedling"])).not.toContain(hidden.name);
+      expect(Object.keys(result!["nursery-seedling"])).not.toContain(hidden.name);
 
       const siteReport1TreesPlanted = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, {
         speciesableId: siteReport1.id
@@ -239,17 +240,17 @@ describe("TreeService", () => {
       expect(result).toMatchObject({});
       result = await service.getPreviousPlanting("siteReports", siteReport2.uuid);
       const siteReport1TreesPlantedReduced = siteReport1TreesPlanted.reduce(reduceTreeCounts, {});
-      expect(Object.keys(result).sort()).toMatchObject(["seeds", "tree-planted"]);
+      expect(Object.keys(result ?? {}).sort()).toMatchObject(["seeds", "tree-planted"]);
       expect(result).toMatchObject({ "tree-planted": siteReport1TreesPlantedReduced, seeds: {} });
-      expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
+      expect(Object.keys(result!["tree-planted"])).not.toContain(hidden.name);
       result = await service.getPreviousPlanting("siteReports", siteReport3.uuid);
-      expect(Object.keys(result).sort()).toMatchObject(["non-tree", "seeds", "tree-planted"]);
+      expect(Object.keys(result ?? {}).sort()).toMatchObject(["non-tree", "seeds", "tree-planted"]);
       expect(result).toMatchObject({
         "tree-planted": siteReport2TreesPlanted.reduce(reduceTreeCounts, siteReport1TreesPlantedReduced),
         "non-tree": siteReport2NonTrees.reduce(reduceTreeCounts, {}),
         seeds: siteReport2Seedings.reduce(reduceTreeCounts, {})
       });
-      expect(Object.keys(result["tree-planted"])).not.toContain(hidden.name);
+      expect(Object.keys(result!["tree-planted"])).not.toContain(hidden.name);
 
       result = await service.getPreviousPlanting("nurseryReports", nurseryReport2.uuid);
       expect(result).toMatchObject({});
@@ -263,9 +264,9 @@ describe("TreeService", () => {
       });
 
       result = await service.getPreviousPlanting("nurseryReports", nurseryReport2.uuid);
-      expect(Object.keys(result)).toMatchObject(["nursery-seedling"]);
+      expect(Object.keys(result ?? {})).toMatchObject(["nursery-seedling"]);
       expect(result).toMatchObject({ "nursery-seedling": nurseryReportSeedlings.reduce(reduceTreeCounts, {}) });
-      expect(Object.keys(result["nursery-seedling"])).not.toContain(hidden.name);
+      expect(Object.keys(result!["nursery-seedling"])).not.toContain(hidden.name);
     });
 
     it("handles bad input with undefined or an exception", async () => {

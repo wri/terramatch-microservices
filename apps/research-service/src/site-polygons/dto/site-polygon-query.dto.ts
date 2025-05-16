@@ -7,7 +7,7 @@ import {
   PolygonStatus
 } from "@terramatch-microservices/database/constants";
 import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
-import { Type } from "class-transformer";
+import { Type, TypeHelpOptions } from "class-transformer";
 import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
@@ -100,7 +100,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   includeTestProjects?: boolean;
 
   @ValidateNested()
-  @Type(({ object }) => {
+  @Type(({ object } = {} as TypeHelpOptions) => {
     // Surprisingly, the object here is the whole query DTO.
     const keys = Object.keys(object.page ?? {});
     if (keys.includes("after")) return CursorPage;

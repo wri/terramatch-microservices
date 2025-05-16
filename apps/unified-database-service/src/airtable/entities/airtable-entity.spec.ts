@@ -65,6 +65,7 @@ import {
   gadmLevel2Mock,
   STATES
 } from "@terramatch-microservices/database/util/gadm-mock-data";
+import { AirtableBase } from "airtable/lib/airtable_base";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
 const airtableSelectFirstPage = jest.fn<Promise<unknown>, never>(() => Promise.resolve([]));
@@ -103,7 +104,7 @@ async function testAirtableUpdates<M extends Model<M>, A>(
 ) {
   await entity.updateBase(Base);
 
-  const batches = [];
+  const batches: M[][] = [];
   for (let ii = 0; ii < Math.ceil(records.length / 10); ii++) {
     batches.push(sortBy(records.slice(ii * 10, (ii + 1) * 10), ["uuid"]));
   }
@@ -139,7 +140,9 @@ describe("AirtableEntity", () => {
 
       it("re-raises mapping errors", async () => {
         mapEntityColumns.mockRejectedValue(new Error("mapping error"));
-        await expect(new StubEntity(dataApi).updateBase(null, { startPage: 0 })).rejects.toThrow("mapping error");
+        await expect(
+          new StubEntity(dataApi).updateBase(null as unknown as AirtableBase, { startPage: 0 })
+        ).rejects.toThrow("mapping error");
         mapEntityColumns.mockReset();
       });
 
@@ -239,7 +242,7 @@ describe("AirtableEntity", () => {
 
       const org = await OrganisationFactory.create({});
       const fundingProgrammes = await FundingProgrammeFactory.createMany(3);
-      const allApplications = [];
+      const allApplications: Application[] = [];
       for (let ii = 0; ii < 15; ii++) {
         allApplications.push(
           await ApplicationFactory.create({
@@ -340,7 +343,7 @@ describe("AirtableEntity", () => {
       );
       allDemographics.push(await DemographicFactory.forSiteReportWorkday.create({ demographicalId: 0 }));
 
-      demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && workday.hidden === false);
+      demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && !workday.hidden);
     });
 
     it("sends all records to airtable", async () => {
@@ -385,7 +388,7 @@ describe("AirtableEntity", () => {
         () => DemographicEntryFactory.create({ demographicId: projectPartner.id })
       ];
 
-      const allDemographics = [];
+      const allDemographics: DemographicEntry[] = [];
       for (const factory of factories) {
         allDemographics.push(await factory());
       }
@@ -444,11 +447,11 @@ describe("AirtableEntity", () => {
       const projects = await ProjectFactory.createMany(2);
       projectUuids = projects.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
       const projectIds = projects.map(({ id }) => id);
-      const allNurseries = [];
+      const allNurseries: Nursery[] = [];
       for (let ii = 0; ii < 15; ii++) {
         allNurseries.push(await NurseryFactory.create({ projectId: faker.helpers.arrayElement(projectIds) }));
       }
-      allNurseries.push(await NurseryFactory.create({ projectId: null }));
+      allNurseries.push(await NurseryFactory.create({ projectId: undefined }));
 
       await allNurseries[2].destroy();
       nurseries = allNurseries.filter(nursery => !nursery.isSoftDeleted());
@@ -476,11 +479,11 @@ describe("AirtableEntity", () => {
       const nurseries = await NurseryFactory.createMany(2);
       nurseryUuids = nurseries.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
       const nurseryIds = nurseries.reduce((ids, { id }) => [...ids, id], [] as number[]);
-      const allReports = [];
+      const allReports: NurseryReport[] = [];
       for (let ii = 0; ii < 15; ii++) {
         allReports.push(await NurseryReportFactory.create({ nurseryId: faker.helpers.arrayElement(nurseryIds) }));
       }
-      allReports.push(await NurseryReportFactory.create({ nurseryId: null }));
+      allReports.push(await NurseryReportFactory.create({ nurseryId: undefined }));
 
       await allReports[6].destroy();
       reports = allReports.filter(report => !report.isSoftDeleted());
@@ -547,6 +550,7 @@ describe("AirtableEntity", () => {
         await framework.destroy();
       }
       for (const [slug, name] of Object.entries(FRAMEWORK_NAMES)) {
+        // @ts-expect-error fake framework creation
         await Framework.create({ uuid: faker.string.uuid(), slug, name });
       }
 
@@ -580,7 +584,7 @@ describe("AirtableEntity", () => {
       projects = allProjects.filter(project => !project.isSoftDeleted());
       applicationUuids = (
         await Application.findAll({
-          where: { id: projects.map(({ applicationId }) => applicationId) },
+          where: { id: projects.map(({ applicationId }) => applicationId) as number[] },
           attributes: ["id", "uuid"]
         })
       ).reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
@@ -600,10 +604,10 @@ describe("AirtableEntity", () => {
 
       // won't count because siteReport1 is not approved
       await SitePolygonFactory.create({ siteUuid: startedSiteUuid });
-      let hectaresRestoredToDate = (await SitePolygonFactory.create({ siteUuid: site1Uuid })).calcArea;
+      let hectaresRestoredToDate = (await SitePolygonFactory.create({ siteUuid: site1Uuid })).calcArea ?? 0;
       // won't count because it's not active
       await SitePolygonFactory.create({ siteUuid: site2Uuid, isActive: false });
-      hectaresRestoredToDate += (await SitePolygonFactory.create({ siteUuid: site2Uuid })).calcArea;
+      hectaresRestoredToDate += (await SitePolygonFactory.create({ siteUuid: site2Uuid })).calcArea ?? 0;
 
       calculatedValues = {
         [projects[0].uuid]: {
@@ -620,9 +624,9 @@ describe("AirtableEntity", () => {
           fields: {
             uuid,
             name,
-            framework: FRAMEWORK_NAMES[frameworkKey] ?? frameworkKey,
-            organisationUuid: organisationUuids[organisationId],
-            applicationUuid: applicationUuids[applicationId],
+            framework: FRAMEWORK_NAMES[frameworkKey ?? ""] ?? frameworkKey,
+            organisationUuid: organisationUuids[organisationId ?? 0],
+            applicationUuid: applicationUuids[applicationId ?? 0],
             hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0
           }
         })
@@ -650,9 +654,9 @@ describe("AirtableEntity", () => {
         fields: {
           uuid,
           projectCountry,
-          projectCountryName: COUNTRIES[projectCountry],
+          projectCountryName: COUNTRIES[projectCountry ?? ""],
           states,
-          stateNames: states.map(state => STATES[state.split(".")[0]][state])
+          stateNames: states?.map(state => STATES[state.split(".")[0]][state])
         }
       }));
     });
@@ -670,11 +674,11 @@ describe("AirtableEntity", () => {
       const tasks = await TaskFactory.createMany(2);
       projectUuids = projects.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
       const projectIds = projects.reduce((ids, { id }) => [...ids, id], [] as number[]);
-      const allReports = [];
+      const allReports: ProjectReport[] = [];
       for (let ii = 0; ii < 15; ii++) {
         allReports.push(await ProjectReportFactory.create({ projectId: faker.helpers.arrayElement(projectIds) }));
       }
-      allReports.push(await ProjectReportFactory.create({ projectId: null }));
+      allReports.push(await ProjectReportFactory.create({ projectId: undefined }));
 
       const ppcReport = await ProjectReportFactory.create({
         projectId: faker.helpers.arrayElement(projectIds),
@@ -683,7 +687,7 @@ describe("AirtableEntity", () => {
       allReports.push(ppcReport);
       const ppcSeedlings = (
         await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, { speciesableId: ppcReport.id })
-      ).reduce((total, { amount }) => total + amount, 0);
+      ).reduce((total, { amount }) => total + (amount ?? 0), 0);
       // make sure hidden is ignored
       await TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: ppcReport.id, hidden: true });
       await TaskFactory.create();
@@ -696,14 +700,14 @@ describe("AirtableEntity", () => {
       allReports.push(terrafundReport);
       const terrafundSeedlings = (
         await NurseryReportFactory.createMany(2, {
-          taskId: terrafundReport.taskId,
+          taskId: terrafundReport.taskId ?? 0,
           seedlingsYoungTrees: faker.number.int({ min: 10, max: 100 }),
           status: "approved"
         })
-      ).reduce((total, { seedlingsYoungTrees }) => total + seedlingsYoungTrees, 0);
+      ).reduce((total, { seedlingsYoungTrees }) => total + (seedlingsYoungTrees ?? 0), 0);
       // make sure non-approved reports are ignored
       await NurseryReportFactory.create({
-        taskId: terrafundReport.taskId,
+        taskId: terrafundReport.taskId ?? 0,
         seedlingsYoungTrees: faker.number.int({ min: 10, max: 100 }),
         status: "due"
       });
@@ -747,7 +751,7 @@ describe("AirtableEntity", () => {
       await sites1[2].destroy();
       const sites2 = await SiteFactory.createMany(8, { projectId: projects[1].id });
       await sites2[1].destroy();
-      const siteWithoutProject = await SiteFactory.create({ projectId: null });
+      const siteWithoutProject = await SiteFactory.create({ projectId: undefined });
       sites = [...sites1, ...sites2, siteWithoutProject].filter(site => !site.isSoftDeleted());
     });
 
@@ -774,14 +778,14 @@ describe("AirtableEntity", () => {
       const sites = await SiteFactory.createMany(2);
       siteUuids = sites.reduce((uuids, { id, uuid }) => ({ ...uuids, [id]: uuid }), {});
       const siteIds = sites.reduce((ids, { id }) => [...ids, id], [] as number[]);
-      const allReports = [];
+      const allReports: SiteReport[] = [];
       for (let ii = 0; ii < 15; ii++) {
         allReports.push(await SiteReportFactory.create({ siteId: faker.helpers.arrayElement(siteIds) }));
       }
-      allReports.push(await SiteReportFactory.create({ siteId: null }));
+      allReports.push(await SiteReportFactory.create({ siteId: undefined }));
 
       const seedings = await SeedingFactory.forSiteReport.createMany(3, { seedableId: allReports[0].id });
-      totalSeedsPlanted = { [allReports[0].id]: seedings.reduce((total, { amount }) => total + amount, 0) };
+      totalSeedsPlanted = { [allReports[0].id]: seedings.reduce((total, { amount }) => total + (amount ?? 0), 0) };
 
       await allReports[6].destroy();
       reports = allReports.filter(report => !report.isSoftDeleted());
@@ -859,7 +863,7 @@ describe("AirtableEntity", () => {
       // create one with a bad association id for testing
       allTrees.push(await TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: 0 }));
 
-      trees = allTrees.filter(tree => !tree.isSoftDeleted() && tree.hidden === false);
+      trees = allTrees.filter(tree => !tree.isSoftDeleted() && !tree.hidden);
     });
 
     it("sends all records to airtable", async () => {
@@ -895,8 +899,8 @@ describe("AirtableEntity", () => {
       }
       const deletedSince = new Date();
       const result = new Test(dataApi).getDeletePageFindOptions(deletedSince, 0);
-      expect(result.where[Op.or]).not.toBeNull();
-      expect(result.where[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
+      expect(result.where?.[Op.or]).not.toBeNull();
+      expect(result.where?.[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
     });
   });
 });

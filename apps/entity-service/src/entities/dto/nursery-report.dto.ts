@@ -1,70 +1,70 @@
 import { NurseryReport } from "@terramatch-microservices/database/entities";
-import { EntityDto, AdditionalProps } from "./entity.dto";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { EntityDto } from "./entity.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { MediaDto } from "./media.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "nurseryReports" })
 export class NurseryReportLightDto extends EntityDto {
-  constructor(nurseryReport?: NurseryReport, props?: AdditionalNurseryReportLightProps) {
+  constructor(nurseryReport?: NurseryReport, props?: HybridSupportProps<NurseryReportLightDto, NurseryReport>) {
     super();
-    if (nurseryReport != null) {
-      this.populate(NurseryReportLightDto, {
-        ...pickApiProperties(nurseryReport, NurseryReportLightDto),
-        lightResource: true,
-        // these two are untyped and marked optional in the base model.
-        createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.updatedAt as Date,
-        ...props
-      });
+    if (nurseryReport != null && props != null) {
+      populateDto<NurseryReportLightDto, NurseryReport>(this, nurseryReport, { lightResource: true, ...props });
     }
   }
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery name"
   })
   nurseryName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery uuid"
   })
   nurseryUuid: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
 
   @ApiProperty()
-  frameworkUuid: string | null;
-
-  @ApiProperty()
   status: string;
+
+  @ApiProperty({ nullable: true, type: Number })
+  completion: number | null;
 
   @ApiProperty()
   updateRequestStatus: string;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project uuid"
   })
   projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation name"
   })
   organisationName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation uuid"
   })
   organisationUuid: string | null;
@@ -72,79 +72,71 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   taskUuid: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   reportTitle: string | null;
 
   @ApiProperty()
   createdAt: Date;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
 }
 
-export type AdditionalNurseryReportLightProps = Pick<NurseryReportLightDto, "reportTitle">;
-export type AdditionalNurseryReportFullProps = AdditionalNurseryReportLightProps &
-  AdditionalProps<NurseryReportFullDto, NurseryReportLightDto & Omit<NurseryReport, "nursery">>;
 export type NurseryReportMedia = Pick<NurseryReportFullDto, keyof typeof NurseryReport.MEDIA>;
 
 export class NurseryReportFullDto extends NurseryReportLightDto {
-  constructor(nurseryReport: NurseryReport, props?: AdditionalNurseryReportFullProps) {
+  constructor(nurseryReport: NurseryReport, props: HybridSupportProps<NurseryReportFullDto, NurseryReport>) {
     super();
-    if (nurseryReport != null) {
-      this.populate(NurseryReportFullDto, {
-        ...pickApiProperties(nurseryReport, NurseryReportFullDto),
-        lightResource: false,
-        // these two are untyped and marked optional in the base model.
-        createdAt: nurseryReport.createdAt as Date,
-        updatedAt: nurseryReport.updatedAt as Date,
-        ...props
-      });
-    }
+    populateDto<NurseryReportFullDto, NurseryReport>(this, nurseryReport, { lightResource: false, ...props });
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   reportTitle: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectReportTitle: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery name"
   })
   nurseryName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery uuid"
   })
   nurseryUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation name"
   })
   organisationName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation uuid"
   })
   organisationUuid: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
 
   @ApiProperty()
@@ -153,61 +145,61 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   @ApiProperty()
   updateRequestStatus: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true })
-  completion: number | null;
-
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   seedlingsYoungTrees: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   interestingFacts: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sitePrep: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sharedDriveLink: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   createdByFirstName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   createdByLastName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   approvedByFirstName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   approvedByLastName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project uuid"
   })
   projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated task uuid"
   })
   taskUuid: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
   @ApiProperty()

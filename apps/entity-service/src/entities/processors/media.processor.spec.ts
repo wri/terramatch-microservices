@@ -43,7 +43,7 @@ describe("MediaProcessor", () => {
       expect(dto).not.toBeNull();
     });
 
-    expect(result.meta.indices[0]).toMatchObject({
+    expect(result.meta.indices?.[0]).toMatchObject({
       resource: "media",
       requestPath: `/entities/v3/${entityType}/${entityUuid}/media${getStableRequestQuery(query)}`,
       ids: response.map(({ uuid }) => uuid)
@@ -176,7 +176,7 @@ describe("MediaProcessor", () => {
       const media = await MediaFactory.forProject.create({ modelId: project.id, fileType: "document" });
       await MediaFactory.forProject.create({ modelId: project.id });
 
-      const query: MediaQueryDto = { fileType: media.fileType };
+      const query: MediaQueryDto = { fileType: media.fileType ?? undefined };
 
       processor = module
         .get(EntitiesService)

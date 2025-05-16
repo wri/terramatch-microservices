@@ -1,4 +1,12 @@
-import { BadRequestException, Controller, Get, Param, Query, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
 import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
@@ -13,6 +21,7 @@ import { TreeEntityTypes } from "./dto/tree-entity-types.dto";
 import { PlantingCountDto } from "./dto/planting-count.dto";
 import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, TreeEntityTypes)
@@ -32,7 +41,7 @@ export class TreesController {
     const indexIds: string[] = [];
     for (const treeSpecies of await this.treeService.searchScientificNames(search)) {
       indexIds.push(treeSpecies.taxonId);
-      document.addData(treeSpecies.taxonId, new ScientificNameDto(treeSpecies));
+      document.addData(treeSpecies.taxonId, populateDto(new ScientificNameDto(), treeSpecies));
     }
 
     document.addIndexData({
@@ -61,7 +70,10 @@ export class TreesController {
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
     return buildJsonApi(EstablishmentsTreesDto)
-      .addData(`${entity}|${uuid}`, new EstablishmentsTreesDto({ establishmentTrees, previousPlantingCounts }))
+      .addData(
+        `${entity}|${uuid}`,
+        populateDto(new EstablishmentsTreesDto(), { establishmentTrees, previousPlantingCounts })
+      )
       .document.serialize();
   }
 
@@ -77,16 +89,16 @@ export class TreesController {
     await this.authorizeRead(entity, uuid);
 
     const establishmentTrees = !isEstablishmentEntity(entity)
-      ? null
+      ? undefined
       : await this.treeService.getEstablishmentTrees(entity, uuid);
     const reportCounts = !isReportCountEntity(entity)
-      ? null
+      ? undefined
       : await this.treeService.getAssociatedReportCounts(entity, uuid);
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
     return buildJsonApi(TreeReportCountsDto)
-      .addData(`${entity}|${uuid}`, new TreeReportCountsDto({ establishmentTrees, reportCounts }))
+      .addData(`${entity}|${uuid}`, populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts }))
       .document.serialize();
   }
 
@@ -99,6 +111,7 @@ export class TreesController {
       Object.keys(modelClass.getAttributes())
     );
     const entityModel = await modelClass.findOne({ where: { uuid }, attributes });
+    if (entityModel == null) throw new NotFoundException("Entity not found");
     // For this controller, the data about a given entity may be calculated and read if the base
     // entity may be read.
     await this.policyService.authorize("read", entityModel);

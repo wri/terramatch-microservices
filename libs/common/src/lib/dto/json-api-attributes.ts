@@ -6,7 +6,7 @@ import { Type } from "@nestjs/common";
 // included union type. This implementation was difficult to track down and get working. Found
 // explanation here: https://nabeelvalley.co.za/blog/2022/08-07/common-object-type/
 type CommonKeys<T, R = object> = R extends T ? keyof T & CommonKeys<Exclude<T, R>> : keyof T;
-type Common<T> = Pick<T, CommonKeys<T>>;
+export type Common<T> = Pick<T, CommonKeys<T>>;
 
 /**
  * Returns an object with only the properties from source that are marked with @ApiProperty in the DTO.
@@ -58,16 +58,22 @@ export function pickApiProperties<Source, DTO>(source: Source, dtoClass: Type<DT
   return pick(source, fields) as Common<Source | DTO>;
 }
 
-export type JsonApiAttributesInput<DTO> = Omit<DTO, "type">;
+// Require all props in the DTO that are not in the base model
+export type AdditionalProps<DTO, BaseType> = Pick<DTO, keyof Omit<DTO, keyof BaseType>>;
 
-/**
- * A simple class to make it easy to create a typed attributes DTO with new()
- *
- * See users.controller.ts findOne and user.dto.ts for a complex example.
- * See auth.controller.ts login for a simple example.
- */
-export class JsonApiAttributes<DTO> {
-  constructor(source: JsonApiAttributesInput<DTO>) {
-    Object.assign(this, pickApiProperties(source, this.constructor as Type<DTO>));
-  }
+export function populateDto<DTO extends object>(dto: DTO, source: DTO): DTO;
+export function populateDto<DTO extends object, Model>(
+  dto: DTO,
+  model: Model,
+  additional: AdditionalProps<DTO, Model>
+): DTO;
+
+export function populateDto<DTO extends object, Model = unknown>(
+  dto: Type<DTO>,
+  source: Model | DTO,
+  additional?: AdditionalProps<DTO, Model>
+) {
+  Object.assign(dto, pickApiProperties(source, dto.constructor as Type<DTO>));
+  if (additional != null) Object.assign(dto, additional);
+  return dto;
 }

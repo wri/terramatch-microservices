@@ -14,10 +14,9 @@ import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
 import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { col, fn, Includeable, Op, Sequelize } from "sequelize";
-import { MediaAssociationDtoAdditionalProps } from "../dto/media-association.dto";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 type QueryModelType = {
   modelType: string;
@@ -32,7 +31,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     protected readonly entityUuid: string,
     protected readonly entityModelClass: EntityClass<EntityModel>,
     protected readonly entitiesService: EntitiesService,
-    protected readonly query?: MediaQueryDto
+    protected readonly query: MediaQueryDto = {}
   ) {
     super(entityType, entityUuid, entityModelClass, entitiesService, query);
   }
@@ -86,7 +85,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const siteSubquery = Subquery.select(Site, "id").eq("projectId", projectReport.projectId);
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", projectReport.projectId);
 
-    let siteReports = [];
+    let siteReports: SiteReport[] = [];
     if (projectReport.dueAt != null) {
       siteReports = await SiteReport.findAll({
         where: {
@@ -102,7 +101,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReports.map(report => report.id) });
 
-    let nurseryReports = [];
+    let nurseryReports: NurseryReport[] = [];
     if (projectReport.dueAt != null) {
       nurseryReports = await NurseryReport.findAll({
         where: {
@@ -132,7 +131,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     this._queryBuilder = await this.entitiesService.buildQuery(Media, this.query, [userAssociations]);
 
-    let models: QueryModelType[] = [];
+    let models: QueryModelType[];
     if (baseEntity instanceof Project) {
       models = await this.getProjectModels(baseEntity);
     } else if (baseEntity instanceof Site) {
@@ -198,7 +197,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       });
     }
 
-    if (this.query.direction) {
+    if (this.query.direction != null) {
       this._queryBuilder.order(["createdAt", this.query.direction]);
     }
     return this._queryBuilder;
@@ -221,14 +220,10 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       indexIds.push(association.uuid);
       const media = association as unknown as Media;
 
-      const additionalProps: MediaAssociationDtoAdditionalProps = {
-        entityType: this.entityType,
-        entityUuid: this.entityUuid,
-        url: this.entitiesService.fullUrl(media),
-        thumbUrl: this.entitiesService.thumbnailUrl(media)
-      };
-
-      document.addData(association.uuid, this.entitiesService.mediaDto(media, additionalProps));
+      document.addData(
+        association.uuid,
+        this.entitiesService.mediaDto(media, { entityType: this.entityType, entityUuid: this.entityUuid })
+      );
     }
 
     const total = await this.getTotal();

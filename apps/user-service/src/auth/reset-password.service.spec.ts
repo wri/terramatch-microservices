@@ -84,6 +84,7 @@ describe("ResetPasswordService", () => {
 
   it("should an error when invalid token", async () => {
     const newPassword = "abc282821";
+    // @ts-expect-error bogus mock value
     jwtService.verifyAsync.mockReturnValue(Promise.resolve(null));
     const token = "fake token";
     await expect(service.resetPassword(token, newPassword)).rejects.toThrow(

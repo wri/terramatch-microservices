@@ -2,7 +2,6 @@
 import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from "@nestjs/swagger";
 import { applyDecorators, HttpStatus } from "@nestjs/common";
 import { DTO_ID_METADATA, DTO_TYPE_METADATA, IdType } from "./json-api-dto.decorator";
-import { JsonApiAttributes } from "../dto/json-api-attributes";
 import { Dictionary, isArray, uniq } from "lodash";
 
 type ExampleTypeProperty = {
@@ -188,7 +187,7 @@ function buildSchema(options: JsonApiOptions) {
   return { document, extraModels };
 }
 
-type ResourceType = new (...props: any[]) => JsonApiAttributes<any>;
+type ResourceType = new (...props: any[]) => object;
 
 type Relationship = {
   name: string;

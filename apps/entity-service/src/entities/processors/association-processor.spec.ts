@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock } from "@golevelup/ts-jest";
@@ -71,8 +72,8 @@ describe("AssociationProcessor", () => {
       );
       expect(dto.entries.find(({ type, subtype }) => type === "age" && subtype === "youth")).toMatchObject(youth);
 
-      expect(result.meta.indices.length).toBe(1);
-      expect(result.meta.indices[0]).toMatchObject({
+      expect(result.meta.indices?.length).toBe(1);
+      expect(result.meta.indices?.[0]).toMatchObject({
         resource: "demographics",
         requestPath: `/entities/v3/projectReports/${projectReportUuid}/demographics`,
         ids: [uuid]
@@ -113,7 +114,7 @@ describe("AssociationProcessor", () => {
         expect(seedingData).not.toBeNull();
 
         const seeding = seedings.find(({ uuid }) => uuid === seedingData.uuid);
-        const data = pickApiProperties(seeding, SeedingDto);
+        const data = pickApiProperties(seeding!, SeedingDto);
         if (data.taxonId === undefined) data.taxonId = null;
         expect(seedingData).toMatchObject(data);
       }

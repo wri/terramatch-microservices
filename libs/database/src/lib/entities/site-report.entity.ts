@@ -17,20 +17,26 @@ import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
-import { COMPLETE_REPORT_STATUSES, ReportStatus, ReportStatusStates, UpdateRequestStatus } from "../constants/status";
+import {
+  AWAITING_APPROVAL,
+  COMPLETE_REPORT_STATUSES,
+  CompleteReportStatus,
+  ReportStatus,
+  ReportStatusStates,
+  UpdateRequestStatus
+} from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { StateMachineColumn } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
   dueBefore?: string | Date;
 };
 
-// A quick stub for the research endpoints
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
@@ -184,6 +190,18 @@ export class SiteReport extends Model<SiteReport> {
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
+  get isComplete() {
+    return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
+  }
+
+  /**
+   * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
+   * transition to it.
+   */
+  get isCompletable() {
+    return this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
+  }
+
   @AllowNull
   @Column(STRING)
   updateRequestStatus: UpdateRequestStatus | null;
@@ -321,7 +339,7 @@ export class SiteReport extends Model<SiteReport> {
 
   async loadTreesPlanted() {
     this.treesPlanted ??= await this.$get("treesPlanted");
-    return this.treesPlanted;
+    return this.treesPlanted ?? [];
   }
 
   @HasMany(() => TreeSpecies, {

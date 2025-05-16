@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { ProjectReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -320,7 +321,7 @@ describe("ProjectReportProcessor", () => {
     it("should return a requested project report", async () => {
       const projectReport = await ProjectReportFactory.create();
       const result = await processor.findOne(projectReport.uuid);
-      expect(result.id).toBe(projectReport.id);
+      expect(result?.id).toBe(projectReport.id);
     });
   });
 
@@ -328,7 +329,7 @@ describe("ProjectReportProcessor", () => {
     it("should serialize a Project Report as a light resource (ProjectReportLightDto)", async () => {
       const { uuid } = await ProjectReportFactory.create();
       const projectReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getLightDto(projectReport);
+      const { id, dto } = await processor.getLightDto(projectReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -351,7 +352,7 @@ describe("ProjectReportProcessor", () => {
         frameworkKey: "hbf"
       });
 
-      const ppcResult = await processor.getFullDto(await processor.findOne(ppcUuid));
+      const ppcResult = await processor.getFullDto((await processor.findOne(ppcUuid))!);
       expect(ppcResult.id).toEqual(ppcUuid);
       expect(ppcResult.dto).toMatchObject({
         uuid: ppcUuid,
@@ -359,7 +360,7 @@ describe("ProjectReportProcessor", () => {
         projectUuid: ppcProject.uuid
       });
 
-      const tfResult = await processor.getFullDto(await processor.findOne(tfUuid));
+      const tfResult = await processor.getFullDto((await processor.findOne(tfUuid))!);
       expect(tfResult.id).toEqual(tfUuid);
       expect(tfResult.dto).toMatchObject({
         uuid: tfUuid,
@@ -367,7 +368,7 @@ describe("ProjectReportProcessor", () => {
         projectUuid: tfProject.uuid
       });
 
-      const hbfResult = await processor.getFullDto(await processor.findOne(hbfUuid));
+      const hbfResult = await processor.getFullDto((await processor.findOne(hbfUuid))!);
       expect(hbfResult.id).toEqual(hbfUuid);
       expect(hbfResult.dto).toMatchObject({
         uuid: hbfUuid,
@@ -386,7 +387,7 @@ describe("ProjectReportProcessor", () => {
       });
 
       const projectReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(projectReport);
+      const { id, dto } = await processor.getFullDto(projectReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -406,7 +407,7 @@ describe("ProjectReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(siteReport);
+      const { id, dto } = await processor.getFullDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -426,7 +427,7 @@ describe("ProjectReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(siteReport);
+      const { id, dto } = await processor.getFullDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -450,7 +451,7 @@ describe("ProjectReportProcessor", () => {
 
       const result = document.serialize();
       expect(result.included?.length).toBe(2);
-      expect(result.included.filter(({ type }) => type === "demographics").length).toBe(2);
+      expect(result.included!.filter(({ type }) => type === "demographics").length).toBe(2);
     });
   });
 });

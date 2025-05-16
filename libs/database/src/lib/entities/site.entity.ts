@@ -236,7 +236,7 @@ export class Site extends Model<Site> {
 
   async loadTreesPlanted() {
     this.treesPlanted ??= await this.$get("treesPlanted");
-    return this.treesPlanted;
+    return this.treesPlanted ?? [];
   }
 
   @HasMany(() => TreeSpecies, {
@@ -258,7 +258,7 @@ export class Site extends Model<Site> {
 
   async loadReports() {
     this.reports ??= await this.$get("reports");
-    return this.reports;
+    return this.reports ?? [];
   }
 
   @HasMany(() => SitePolygon, { foreignKey: "siteUuid", sourceKey: "uuid" })

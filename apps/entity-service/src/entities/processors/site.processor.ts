@@ -11,7 +11,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { AdditionalSiteFullProps, SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
+import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
@@ -55,7 +55,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     };
     const builder = await this.entitiesService.buildQuery(Site, query, [projectAssociation, frameworkAssociation]);
 
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
@@ -213,7 +213,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
 
-    const props: AdditionalSiteFullProps = {
+    const dto = new SiteFullDto(site, {
       totalHectaresRestoredSum,
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:
@@ -225,10 +225,15 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(site).findAll(), Site.MEDIA) as SiteMedia)
-    };
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(site).findAll(),
+        Site.MEDIA,
+        "sites",
+        site.uuid
+      ) as SiteMedia)
+    });
 
-    return { id: site.uuid, dto: new SiteFullDto(site, props) };
+    return { id: site.uuid, dto };
   }
 
   async getLightDto(site: Site) {
@@ -292,7 +297,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       { func: "SUM", attr: "workdaysVolunteer" }
     ];
     const site = await aggregateColumns(SR, aggregates as Aggregate<SiteReport>[]);
-    return site.workdaysPaid + site.workdaysVolunteer;
+    return (site.workdaysPaid ?? 0) + (site.workdaysVolunteer ?? 0);
   }
 
   protected async getTotalSiteReports(siteId: number) {

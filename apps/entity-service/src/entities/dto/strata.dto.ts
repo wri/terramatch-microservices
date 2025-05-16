@@ -1,24 +1,27 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
-import { AllowNull, Column } from "sequelize-typescript";
-import { INTEGER, STRING } from "sequelize";
+import { ApiProperty } from "@nestjs/swagger";
 
 @JsonApiDto({ type: "stratas" })
-export class StrataDto extends AssociationDto<StrataDto> {
+export class StrataDto extends AssociationDto {
   constructor(strata: Strata, additional: AssociationDtoAdditionalProps) {
-    super({
-      ...pickApiProperties(strata, StrataDto),
-      ...additional
-    });
+    super();
+    populateDto<StrataDto, Strata>(this, strata, additional);
   }
 
-  @AllowNull
-  @Column(STRING)
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated nursery name"
+  })
   description: string | null;
 
-  @AllowNull
-  @Column(INTEGER)
-  extent: string | null;
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "The associated nursery name"
+  })
+  extent: number | null;
 }

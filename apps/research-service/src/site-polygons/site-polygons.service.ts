@@ -45,7 +45,7 @@ export class SitePolygonsService {
     const site = await sitePolygon.loadSite();
     if (site == null) return [];
 
-    return (await site.loadTreesPlanted()).map(({ name, amount }) => ({ name, amount }));
+    return (await site.loadTreesPlanted()).map(({ name, amount }) => ({ name: name ?? "", amount: amount ?? 0 }));
   }
 
   async getReportingPeriods(sitePolygon: SitePolygon): Promise<ReportingPeriodDto[]> {
@@ -59,7 +59,10 @@ export class SitePolygonsService {
       reportingPeriods.push({
         dueAt: report.dueAt,
         submittedAt: report.submittedAt,
-        treeSpecies: (await report.loadTreesPlanted()).map(({ name, amount }) => ({ name, amount }))
+        treeSpecies: (await report.loadTreesPlanted()).map(({ name, amount }) => ({
+          name: name ?? "",
+          amount: amount ?? 0
+        }))
       });
     }
 
@@ -91,7 +94,8 @@ export class SitePolygonsService {
   }
 
   async transaction<TReturn>(callback: (transaction: Transaction) => Promise<TReturn>) {
-    const transaction = await SitePolygon.sequelize.transaction();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const transaction = await SitePolygon.sequelize!.transaction();
     try {
       const result = await callback(transaction);
       await transaction.commit();

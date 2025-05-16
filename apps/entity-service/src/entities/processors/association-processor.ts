@@ -7,7 +7,7 @@ import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
 
-export abstract class AssociationProcessor<M extends UuidModel, D extends AssociationDto<D>> {
+export abstract class AssociationProcessor<M extends UuidModel, D extends AssociationDto> {
   abstract readonly DTO: Type<D>;
 
   constructor(
@@ -23,7 +23,7 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
    * are simple enough that providing a reference to the DTO class, and a getter of associations based on the
    * base entity is enough.
    */
-  static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto<D>>(
+  static buildSimpleProcessor<M extends UuidModel, D extends AssociationDto>(
     dtoClass: Type<D>,
     associationGetter: (entity: EntityModel, entityLaravelType: string) => Promise<M[]>
   ) {
@@ -58,26 +58,22 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
     // Only pull the attributes that are needed by the entity policies.
     const attributes = intersection(this.baseModelAttributes, Object.keys(this.entityModelClass.getAttributes()));
 
-    this._baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
-    if (this._baseEntity == null) {
+    const baseEntity = await this.entityModelClass.findOne({ where: { uuid: this.entityUuid }, attributes });
+    if (baseEntity == null) {
       throw new NotFoundException(`Base entity not found: [${this.entityModelClass.name}, ${this.entityUuid}]`);
     }
 
-    return this._baseEntity;
+    return (this._baseEntity = baseEntity);
   }
 
-  async addDtos(document: DocumentBuilder, asIncluded = false): Promise<void> {
+  async addDtos(document: DocumentBuilder) {
     const associations = await this.getAssociations(await this.getBaseEntity());
 
     const additionalProps = { entityType: this.entityType, entityUuid: this.entityUuid };
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
-      if (asIncluded) {
-        document.addIncluded(association.uuid, new this.DTO(association, additionalProps));
-      } else {
-        document.addData(association.uuid, new this.DTO(association, additionalProps));
-      }
+      document.addData(association.uuid, new this.DTO(association, additionalProps));
     }
 
     const resource = getDtoType(this.DTO);

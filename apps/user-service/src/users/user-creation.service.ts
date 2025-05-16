@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnprocessableEntityException
+} from "@nestjs/common";
 import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { UserNewRequest } from "./dto/user-new-request.dto";
@@ -42,13 +47,13 @@ export class UserCreationService {
       const callbackUrl = request.callbackUrl;
       const newUser = omit(request, ["callbackUrl", "role", "password"]);
 
-      const user = await User.create({ ...newUser, password: hashPassword });
+      const user = await User.create({ ...newUser, password: hashPassword } as User);
 
       await user.reload();
 
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },
-        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE }
+        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
       });
 
       const token = crypto.randomBytes(32).toString("hex");
@@ -57,7 +62,7 @@ export class UserCreationService {
       return user;
     } catch (error) {
       this.logger.error(error);
-      return null;
+      throw new InternalServerErrorException("User creation failed");
     }
   }
 
@@ -70,7 +75,7 @@ export class UserCreationService {
   private async saveUserVerification(userId: number, token: string) {
     await Verification.findOrCreate({
       where: { userId },
-      defaults: { token }
+      defaults: { token } as Verification
     });
   }
 }

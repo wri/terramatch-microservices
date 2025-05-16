@@ -1,29 +1,18 @@
-import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsEnum, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
-import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsArray, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
 import {
-  MAX_PAGE_SIZE,
-  PROCESSABLE_ENTITIES,
-  PROCESSABLE_ASSOCIATIONS,
   POLYGON_STATUSES_FILTERS,
-  PolygonStatusFilter
+  PolygonStatusFilter,
+  PROCESSABLE_ASSOCIATIONS,
+  PROCESSABLE_ENTITIES
 } from "../entities.service";
 import { Type } from "class-transformer";
+import { IndexQueryDto } from "./index-query.dto";
+import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
 
 export type SideloadType = (typeof VALID_SIDELOAD_TYPES)[number];
-
-class QuerySort {
-  @ApiProperty({ name: "sort[field]", required: false })
-  @IsOptional()
-  field?: string;
-
-  @ApiProperty({ name: "sort[direction]", required: false, enum: ["ASC", "DESC"], default: "ASC" })
-  @IsEnum(["ASC", "DESC"])
-  @IsOptional()
-  direction?: "ASC" | "DESC";
-}
 
 export class EntitySideload {
   @IsIn(VALID_SIDELOAD_TYPES)
@@ -41,15 +30,7 @@ export class EntitySideload {
   pageSize: number;
 }
 
-export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
-  @ValidateNested()
-  @IsOptional()
-  page?: NumberPage;
-
-  @ValidateNested()
-  @IsOptional()
-  sort?: QuerySort;
-
+export class EntityQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   search?: string;
@@ -100,4 +81,7 @@ export class EntityQueryDto extends IntersectionType(QuerySort, NumberPage) {
   @IsOptional()
   @IsIn(POLYGON_STATUSES_FILTERS)
   polygonStatus?: PolygonStatusFilter;
+
+  // This one is internal use only, not exposed to the API surface
+  taskId?: number;
 }

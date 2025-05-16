@@ -3,7 +3,7 @@ import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Demographic,
@@ -19,7 +19,7 @@ import { groupBy } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
-import { AssociationDto } from "./dto/association.dto";
+import { AssociationDto, AssociationDtoAdditionalProps } from "./dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
@@ -34,7 +34,6 @@ import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
-import { MediaAssociationDtoAdditionalProps } from "./dto/media-association.dto";
 import { MediaQueryDto } from "./dto/media-query.dto";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { DisturbanceDto } from "./dto/disturbance.dto";
@@ -101,8 +100,6 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-export const MAX_PAGE_SIZE = 100 as const;
-
 @Injectable()
 export class EntitiesService {
   constructor(
@@ -112,7 +109,8 @@ export class EntitiesService {
   ) {}
 
   get userId() {
-    return this.policyService.userId;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.policyService.userId!;
   }
 
   async getPermissions() {
@@ -130,7 +128,8 @@ export class EntitiesService {
   private _userLocale?: string;
   async getUserLocale() {
     if (this._userLocale == null) {
-      this._userLocale = (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] })).locale ?? "en-GB";
+      this._userLocale =
+        (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] }))?.locale ?? "en-GB";
     }
     return this._userLocale;
   }
@@ -148,7 +147,7 @@ export class EntitiesService {
     return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createAssociationProcessor<T extends UuidModel, D extends AssociationDto<D>>(
+  createAssociationProcessor<T extends UuidModel, D extends AssociationDto>(
     entityType: EntityType,
     uuid: string,
     association: ProcessableAssociation,
@@ -168,26 +167,17 @@ export class EntitiesService {
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
-    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
-      throw new BadRequestException("Page size is invalid");
+    if (query.taskId != null) {
+      // special case for internal sideloading.
+      return new PaginatedQueryBuilder(modelClass, undefined, include);
     }
-    if (pageNumber < 1) {
-      throw new BadRequestException("Page number is invalid");
-    }
-
-    const builder = new PaginatedQueryBuilder(modelClass, pageSize, include);
-    if (pageNumber > 1) {
-      builder.pageNumber(pageNumber);
-    }
-
-    return builder;
+    return PaginatedQueryBuilder.forNumberPage(modelClass, query.page, include);
   }
 
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 
-  mediaDto(media: Media, additional?: MediaAssociationDtoAdditionalProps) {
+  mediaDto(media: Media, additional: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),
@@ -195,16 +185,16 @@ export class EntitiesService {
     });
   }
 
-  mapMediaCollection(media: Media[], collection: MediaCollection) {
+  mapMediaCollection(media: Media[], collection: MediaCollection, entityType: EntityType, entityUuid: string) {
     const grouped = groupBy(media, "collectionName");
     return Object.entries(collection).reduce(
       (dtoMap, [collection, { multiple, dbCollection }]) => ({
         ...dtoMap,
         [collection]: multiple
-          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media))
+          ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media, { entityType, entityUuid }))
           : grouped[dbCollection] == null
           ? null
-          : this.mediaDto(grouped[dbCollection][0])
+          : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
       }),
       {}
     );

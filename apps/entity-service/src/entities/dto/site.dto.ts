@@ -1,4 +1,4 @@
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   SITE_STATUSES,
@@ -8,26 +8,20 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
-import { AdditionalProps, EntityDto } from "./entity.dto";
+import { EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
-  constructor(site?: Site, props?: AdditionalSiteLightProps) {
+  constructor(site?: Site, props?: HybridSupportProps<SiteLightDto, Site>) {
     super();
-    if (site != null) {
-      this.populate(SiteLightDto, {
-        ...pickApiProperties(site, SiteLightDto),
-        lightResource: true,
-        ...props,
-        // these two are untyped and marked optional in the base model.
-        createdAt: site.createdAt as Date,
-        updatedAt: site.createdAt as Date
-      });
+    if (site != null && props != null) {
+      populateDto<SiteLightDto, Site>(this, site, { lightResource: true, ...props });
     }
   }
 
-  @ApiProperty({ nullable: true, description: "Framework key for this project" })
+  @ApiProperty({ nullable: true, type: String, description: "Framework key for this project" })
   frameworkKey: string | null;
 
   @ApiProperty({
@@ -44,11 +38,12 @@ export class SiteLightDto extends EntityDto {
   })
   updateRequestStatus: UpdateRequestStatus | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
@@ -69,30 +64,13 @@ export class SiteLightDto extends EntityDto {
   updatedAt: Date;
 }
 
-export type AdditionalSiteLightProps = Pick<SiteLightDto, "treesPlantedCount" | "totalHectaresRestoredSum">;
-export type AdditionalSiteFullProps = AdditionalSiteLightProps &
-  AdditionalProps<SiteFullDto, SiteLightDto & Omit<Site, "project">>;
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
-  constructor(site: Site, props: AdditionalSiteFullProps) {
+  constructor(site: Site, props: HybridSupportProps<SiteFullDto, Site>) {
     super();
-    this.populate(SiteFullDto, {
-      ...pickApiProperties(site, SiteFullDto),
-      lightResource: false,
-      // these two are untyped and marked optional in the base model.
-      createdAt: site.createdAt as Date,
-      updatedAt: site.updatedAt as Date,
-      ...props
-    });
+    populateDto<SiteLightDto, Site>(this, site, { lightResource: false, ...props });
   }
-
-  @ApiProperty({
-    type: Boolean,
-    example: false,
-    description: "Indicates that this resource has the full resource definition."
-  })
-  lightResource = false;
 
   @ApiProperty()
   totalSiteReports: number;
@@ -118,79 +96,79 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty()
   workdayCount: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   ppcExternalId: number | null;
 
   @ApiProperty({ nullable: true })
   sitingStrategy: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   descriptionSitingStrategy: string | null;
 
   @ApiProperty({ nullable: true })
   hectaresToRestoreGoal: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Boolean })
   controlSite: boolean | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   history: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   startDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   endDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   landTenures: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   survivalRatePlanted: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aNatRegenerationTreesPerHectare: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aNatRegeneration: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   landscapeCommunityContribution: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   technicalNarrative: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   plantingPattern: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   soilCondition: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aimYearFiveCrownCover: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aimNumberOfMatureTrees: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   landUseTypes: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   restorationStrategy: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   detailedInterventionTypes: string[] | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

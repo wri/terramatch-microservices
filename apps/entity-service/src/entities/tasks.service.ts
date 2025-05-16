@@ -9,6 +9,7 @@ import { TaskQueryDto } from "./dto/task-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
+import { AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 
 const FILTER_PROPS = {
   status: "status",
@@ -39,8 +40,8 @@ export class TasksService {
       builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
     } else {
       if (query.projectUuid == null) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const userId = this.policyService.userId!;
+        const userId = this.policyService.userId;
+        if (userId == null) throw new BadRequestException("Cannot get tasks without a user");
         // non-admin users should typically be filtering on a project, but to cover our bases,
         // return all tasks they have direct access to if they aren't.
         if (permissions?.includes("manage-own")) {
@@ -115,25 +116,6 @@ export class TasksService {
     return document;
   }
 
-  async loadReports(task: Task) {
-    if (task.projectReport != null) return;
-
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      const { models } = await processor.findMany({ taskId: task.id });
-      if (entityType === "projectReports") {
-        if (models.length > 1) {
-          this.logger.error(`More than one project report found for task ${task.id}`);
-          // Make sure we don't accidentally turn the `projectReport` member into an array, as the FE expects an object.
-          models.length = 1;
-        }
-        task.projectReport = models[0] as ProjectReport;
-      } else {
-        task[entityType] = models;
-      }
-    }
-  }
-
   async submitForApproval(task: Task) {
     if (task.status === "awaiting-approval") return;
 
@@ -165,10 +147,28 @@ export class TasksService {
         report.submittedAt = new Date();
       }
 
-      report.status = "awaiting-approval";
+      report.status = AWAITING_APPROVAL;
       await report.save();
     }
 
-    task.status = "awaiting-approval";
+    task.status = AWAITING_APPROVAL;
+  }
+
+  private async loadReports(task: Task) {
+    if (task.projectReport != null) return;
+
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
+      const processor = this.entitiesService.createEntityProcessor(entityType);
+      const { models } = await processor.findMany({ taskId: task.id });
+      if (entityType === "projectReports") {
+        if (models.length > 1) {
+          this.logger.error(`More than one project report found for task ${task.id}`);
+          models.length = 1;
+        }
+        task.projectReport = models[0] as ProjectReport;
+      } else {
+        task[entityType] = models;
+      }
+    }
   }
 }

@@ -15,6 +15,7 @@ import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import {
+  AWAITING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
   ReportStatus,
@@ -28,7 +29,7 @@ import { Subquery } from "../util/subquery.builder";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
-import { getStateMachine, StateMachineColumn, StateMachineException } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
@@ -173,14 +174,7 @@ export class NurseryReport extends Model<NurseryReport> {
    * transition to it.
    */
   get isCompletable() {
-    if (this.isComplete) return true;
-    try {
-      getStateMachine(this, "status")?.canBe(this.status, "awaiting-approval");
-      return true;
-    } catch (e) {
-      if (e instanceof StateMachineException) return false;
-      throw e;
-    }
+    return this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
   }
 
   @AllowNull

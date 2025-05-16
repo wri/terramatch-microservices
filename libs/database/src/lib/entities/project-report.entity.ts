@@ -16,8 +16,10 @@ import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey } from "../constants/framework";
 import {
+  AWAITING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
+  DUE,
   ReportStatus,
   ReportStatusStates,
   UpdateRequestStatus
@@ -27,7 +29,7 @@ import { Subquery } from "../util/subquery.builder";
 import { Framework } from "./framework.entity";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
-import { getStateMachine, StateMachineColumn, StateMachineException } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { JsonColumn } from "../decorators/json-column.decorator";
 
 type ApprovedIdsSubqueryOptions = {
@@ -196,13 +198,8 @@ export class ProjectReport extends Model<ProjectReport> {
    */
   get isCompletable() {
     if (this.isComplete) return true;
-    try {
-      getStateMachine(this, "status")?.canBe(this.status, "awaiting-approval");
-      return true;
-    } catch (e) {
-      if (e instanceof StateMachineException) return false;
-      throw e;
-    }
+    if (this.status === DUE) return false;
+    return getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
   }
 
   @AllowNull

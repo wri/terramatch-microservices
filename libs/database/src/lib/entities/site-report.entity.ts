@@ -18,6 +18,7 @@ import { Seeding } from "./seeding.entity";
 import { FrameworkKey } from "../constants/framework";
 import { Literal } from "sequelize/types/utils";
 import {
+  AWAITING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
   ReportStatus,
@@ -29,7 +30,7 @@ import { Subquery } from "../util/subquery.builder";
 import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { getStateMachine, StateMachineColumn, StateMachineException } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -198,14 +199,7 @@ export class SiteReport extends Model<SiteReport> {
    * transition to it.
    */
   get isCompletable() {
-    if (this.isComplete) return true;
-    try {
-      getStateMachine(this, "status")?.canBe(this.status, "awaiting-approval");
-      return true;
-    } catch (e) {
-      if (e instanceof StateMachineException) return false;
-      throw e;
-    }
+    return this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
   }
 
   @AllowNull

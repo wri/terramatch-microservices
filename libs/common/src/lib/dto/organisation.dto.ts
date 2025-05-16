@@ -9,6 +9,6 @@ export class OrganisationDto {
   @ApiProperty({ enum: STATUSES })
   status: Status;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 }

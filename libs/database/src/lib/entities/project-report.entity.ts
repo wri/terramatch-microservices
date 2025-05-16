@@ -134,6 +134,17 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BIGINT.UNSIGNED)
   createdBy: number;
 
+  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
+  createdByUser: User | null;
+
+  get createdByFirstName() {
+    return this.createdByUser?.firstName;
+  }
+
+  get createdByLastName() {
+    return this.createdByUser?.lastName;
+  }
+
   @BelongsTo(() => Project)
   project: Project | null;
 

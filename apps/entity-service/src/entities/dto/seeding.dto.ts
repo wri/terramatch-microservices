@@ -14,18 +14,18 @@ export class SeedingDto extends AssociationDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ nullable: true, type: Number })
   amount: number | null;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ nullable: true, type: String })
   taxonId: string | null;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ nullable: true, type: Number })
   weightOfSample: number | null;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ nullable: true, type: Number })
   seedsInSample: number | null;
 }

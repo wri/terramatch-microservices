@@ -26,15 +26,15 @@ export class TreeSpeciesDto {
   @ApiProperty({ example: "Acacia binervia" })
   name: string;
 
-  @ApiProperty({ example: 15000, nullable: true })
+  @ApiProperty({ example: 15000, nullable: true, type: Number })
   amount: number | null;
 }
 
 export class ReportingPeriodDto {
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
   @ApiProperty({
@@ -61,22 +61,26 @@ export class SitePolygonLightDto extends HybridSupportDto {
     }
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
   @ApiProperty({ enum: POLYGON_STATUSES })
   status: PolygonStatus;
 
-  @ApiProperty({ description: "If this ID points to a deleted site, the indicators will be empty.", nullable: true })
+  @ApiProperty({
+    description: "If this ID points to a deleted site, the indicators will be empty.",
+    nullable: true,
+    type: String
+  })
   siteId: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectId?: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   plantStart: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   calcArea: number | null;
 
   @ApiProperty({
@@ -125,16 +129,16 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
   @ApiProperty({ nullable: true })
   geometry?: Polygon;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   practice: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   targetSys: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   distr: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   numTrees: number | null;
 
   @ApiProperty({

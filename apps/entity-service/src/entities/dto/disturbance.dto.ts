@@ -11,18 +11,18 @@ export class DisturbanceDto extends AssociationDto {
     populateDto<DisturbanceDto, Disturbance>(this, disturbance, additional);
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   collection: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   type: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   intensity: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   extent: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 }

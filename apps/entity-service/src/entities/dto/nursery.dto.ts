@@ -21,10 +21,10 @@ export class NurseryLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
-  @ApiProperty({ nullable: true, description: "Framework key for this nursery" })
+  @ApiProperty({ nullable: true, type: String, description: "Framework key for this nursery" })
   frameworkKey: string | null;
 
   @ApiProperty({
@@ -43,23 +43,25 @@ export class NurseryLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project organisation name"
   })
   organisationName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   startDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   endDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   seedlingsGrownCount: number | null;
 
   @ApiProperty()
@@ -77,37 +79,37 @@ export class NurseryFullDto extends NurseryLightDto {
     populateDto<NurseryFullDto, Nursery>(this, nursery, { lightResource: false, ...props });
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   type: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   seedlingGrown: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   plantingContribution: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   oldModel: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   nurseryReportsTotal: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   overdueNurseryReportsTotal: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   organisationName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectUuid: string | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

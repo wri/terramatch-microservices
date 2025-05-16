@@ -17,10 +17,10 @@ export class MediaDto extends AssociationDto {
   @ApiProperty()
   collectionName: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   url: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   thumbUrl: string | null;
 
   @ApiProperty()
@@ -29,16 +29,16 @@ export class MediaDto extends AssociationDto {
   @ApiProperty()
   fileName: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   mimeType: string | null;
 
   @ApiProperty()
   size: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   lat: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   lng: number | null;
 
   @ApiProperty()
@@ -50,12 +50,12 @@ export class MediaDto extends AssociationDto {
   @ApiProperty()
   createdAt: Date;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   photographer: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   createdByUserName: string | null;
 }

@@ -11,9 +11,9 @@ export class InvasiveDto extends AssociationDto {
     populateDto<InvasiveDto, Invasive>(this, invasive, additional);
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   type: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 }

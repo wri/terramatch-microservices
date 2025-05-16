@@ -21,11 +21,12 @@ export class ProjectLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty({ nullable: true, description: "Framework key for this project" })
+  @ApiProperty({ nullable: true, type: String, description: "Framework key for this project" })
   frameworkKey: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation name"
   })
   organisationName: string | null;
@@ -43,13 +44,13 @@ export class ProjectLightDto extends EntityDto {
   })
   updateRequestStatus: UpdateRequestStatus | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   country: string | null;
 
   @ApiProperty()
@@ -76,10 +77,10 @@ export class ProjectApplicationDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   fundingProgrammeName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectPitchUuid: string | null;
 }
 
@@ -94,64 +95,64 @@ export class ProjectFullDto extends ProjectLightDto {
   })
   isTest: boolean;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   cohort: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   continent: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   country: string | null;
 
-  @ApiProperty({ nullable: true, description: "The associated organisation type" })
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation type" })
   organisationType: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   states: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectCountyDistrict: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   plantingEndDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   budget: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   history: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   objectives: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   environmentalGoals: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   socioeconomicGoals: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sdgsImpacted: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   totalHectaresRestoredGoal: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   treesGrownGoal: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   survivalRate: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   landUseTypes: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   restorationStrategy: string[] | null;
 
   @ApiProperty()
@@ -187,40 +188,40 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty()
   totalOverdueReports: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   descriptionOfProjectTimeline: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sitingStrategyDescription: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sitingStrategy: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   landholderCommEngage: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projPartnerInfo: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   seedlingsSource: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   landTenureProjectArea: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projImpactBiodiv: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projImpactFoodsec: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   proposedGovPartners: string | null;
 
   @ApiProperty()
   treesRestoredPpc: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   detailedInterventionTypes: string[] | null;
 
   @ApiProperty({
@@ -230,13 +231,13 @@ export class ProjectFullDto extends ProjectLightDto {
   })
   assistedNaturalRegenerationList: ANRDto[];
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   goalTreesRestoredAnr: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: ProjectApplicationDto })
   application: ProjectApplicationDto | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
@@ -260,7 +261,7 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ type: () => MediaDto, isArray: true })
   programmeSubmission: MediaDto[];
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: MediaDto })
   detailedProjectBudget: MediaDto | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

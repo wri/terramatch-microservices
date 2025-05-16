@@ -23,13 +23,17 @@ export class UserDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   firstName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   lastName: string | null;
 
-  @ApiProperty({ nullable: true, description: "Currently just calculated by appending lastName to firstName." })
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Currently just calculated by appending lastName to firstName."
+  })
   fullName: string | null;
 
   @ApiProperty()
@@ -38,10 +42,10 @@ export class UserDto {
   @ApiProperty({ example: "person@foocorp.net" })
   emailAddress: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   emailAddressVerifiedAt: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   locale: string | null;
 
   @ApiProperty({ type: () => UserFramework, isArray: true })

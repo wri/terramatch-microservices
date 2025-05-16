@@ -21,7 +21,7 @@ export class SiteLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty({ nullable: true, description: "Framework key for this project" })
+  @ApiProperty({ nullable: true, type: String, description: "Framework key for this project" })
   frameworkKey: string | null;
 
   @ApiProperty({
@@ -38,11 +38,12 @@ export class SiteLightDto extends EntityDto {
   })
   updateRequestStatus: UpdateRequestStatus | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
@@ -95,79 +96,79 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty()
   workdayCount: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   ppcExternalId: number | null;
 
   @ApiProperty({ nullable: true })
   sitingStrategy: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   descriptionSitingStrategy: string | null;
 
   @ApiProperty({ nullable: true })
   hectaresToRestoreGoal: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Boolean })
   controlSite: boolean | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   history: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   startDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   endDate: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   landTenures: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   survivalRatePlanted: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aNatRegenerationTreesPerHectare: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aNatRegeneration: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   landscapeCommunityContribution: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   technicalNarrative: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   plantingPattern: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   soilCondition: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aimYearFiveCrownCover: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   aimNumberOfMatureTrees: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   landUseTypes: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   restorationStrategy: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   detailedInterventionTypes: string[] | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

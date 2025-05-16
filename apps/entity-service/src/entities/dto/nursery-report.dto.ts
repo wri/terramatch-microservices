@@ -17,23 +17,25 @@ export class NurseryReportLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery name"
   })
   nurseryName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery uuid"
   })
   nurseryUuid: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
 
   @ApiProperty()
   status: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
 
   @ApiProperty()
@@ -41,24 +43,28 @@ export class NurseryReportLightDto extends EntityDto {
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project uuid"
   })
   projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation name"
   })
   organisationName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation uuid"
   })
   organisationUuid: string | null;
@@ -66,25 +72,25 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   taskUuid: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   reportTitle: string | null;
 
   @ApiProperty()
   createdAt: Date;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
 }
 
@@ -96,37 +102,41 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
     populateDto<NurseryReportFullDto, NurseryReport>(this, nurseryReport, { lightResource: false, ...props });
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   reportTitle: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   projectReportTitle: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery name"
   })
   nurseryName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated nursery uuid"
   })
   nurseryUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation name"
   })
   organisationName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated organisation uuid"
   })
   organisationUuid: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
 
   @ApiProperty()
@@ -135,58 +145,61 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   @ApiProperty()
   updateRequestStatus: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   seedlingsYoungTrees: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   interestingFacts: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sitePrep: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   sharedDriveLink: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   createdByFirstName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   createdByLastName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   approvedByFirstName: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   approvedByLastName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project name"
   })
   projectName: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project uuid"
   })
   projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated task uuid"
   })
   taskUuid: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
   @ApiProperty()

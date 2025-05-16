@@ -41,14 +41,9 @@ export class ProjectReportProcessor extends ReportProcessor<
           attributes: ["uuid", "name", "country"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
         },
-        {
-          association: "user",
-          attributes: ["uuid", "firstName", "lastName"]
-        },
-        {
-          association: "task",
-          attributes: ["uuid"]
-        }
+        { association: "user", attributes: ["uuid", "firstName", "lastName"] },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
+        { association: "task", attributes: ["uuid"] }
       ]
     });
   }
@@ -149,12 +144,10 @@ export class ProjectReportProcessor extends ReportProcessor<
   async getFullDto(projectReport: ProjectReport) {
     const reportTitle = await this.getReportTitle(projectReport);
 
-    const createdByUser = projectReport.user ?? null;
     const dto = new ProjectReportFullDto(projectReport, {
       ...(await this.getTaskDependentAggregates(projectReport.id, projectReport.taskId)),
       reportTitle,
       seedlingsGrown: await this.getSeedlingsGrown(projectReport),
-      createdByUser,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(projectReport).findAll(),
         ProjectReport.MEDIA,

@@ -10,10 +10,18 @@ import { EntityAssociationsController } from "./entities/entity-associations.con
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
+import { BoundingBoxController } from "./entities/controllers/bounding-box.controller";
+import { BoundingBoxService } from "./entities/services/bounding-box.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
-  controllers: [ProjectPitchesController, EntitiesController, EntityAssociationsController, TreesController],
+  controllers: [
+    ProjectPitchesController,
+    EntitiesController,
+    EntityAssociationsController,
+    TreesController,
+    BoundingBoxController
+  ],
   providers: [
     {
       provide: APP_FILTER,
@@ -21,7 +29,8 @@ import { ProjectPitchService } from "./entities/project-pitch.service";
     },
     EntitiesService,
     TreeService,
-    ProjectPitchService
+    ProjectPitchService,
+    BoundingBoxService
   ]
 })
 export class AppModule {}

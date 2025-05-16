@@ -120,15 +120,16 @@ export class TasksService {
 
     for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
-      const reports = await processor.findMany({ taskId: task.id });
-      if (entityType === "projectReports" && reports.models.length > 1) {
-        this.logger.error(`More than one project report found for task ${task.id}`);
-        // Make sure we don't accidentally turn the `projectReport` member into an array, as the FE expects an object.
-        reports.models.length = 1;
-      }
-      for (const report of reports.models) {
-        if (entityType === "projectReports") task.projectReport = report as ProjectReport;
-        else task[entityType] = reports;
+      const { models } = await processor.findMany({ taskId: task.id });
+      if (entityType === "projectReports") {
+        if (models.length > 1) {
+          this.logger.error(`More than one project report found for task ${task.id}`);
+          // Make sure we don't accidentally turn the `projectReport` member into an array, as the FE expects an object.
+          models.length = 1;
+        }
+        task.projectReport = models[0] as ProjectReport;
+      } else {
+        task[entityType] = models;
       }
     }
   }

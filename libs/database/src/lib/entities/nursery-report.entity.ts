@@ -175,7 +175,7 @@ export class NurseryReport extends Model<NurseryReport> {
   get isCompletable() {
     if (this.isComplete) return true;
     try {
-      getStateMachine(this, "status")?.validateTransition("awaiting-approval");
+      getStateMachine(this, "status")?.canBe(this.status, "awaiting-approval");
       return true;
     } catch (e) {
       if (e instanceof StateMachineException) return false;

@@ -25,6 +25,13 @@ interface BoundingBoxCoordinates {
   maxLat: number;
 }
 
+interface BoundingBoxQueryResult {
+  minLng: string;
+  minLat: string;
+  maxLng: string;
+  maxLat: string;
+}
+
 @Injectable()
 export class BoundingBoxService {
   private createBoundingBoxDto(minLng: number, minLat: number, maxLng: number, maxLat: number): BoundingBoxDto {
@@ -217,10 +224,20 @@ export class BoundingBoxService {
         [Sequelize.fn("MIN", Sequelize.fn("ST_Y", Sequelize.col("point"))), "minLat"],
         [Sequelize.fn("MAX", Sequelize.fn("ST_X", Sequelize.col("point"))), "maxLng"],
         [Sequelize.fn("MAX", Sequelize.fn("ST_Y", Sequelize.col("point"))), "maxLat"]
-      ]
+      ],
+      raw: true
     });
 
-    const { minLng, minLat, maxLng, maxLat } = result.get({ plain: true }) as any;
+    if (!result) {
+      throw new NotFoundException("Could not calculate bounding box for the provided points");
+    }
+
+    // Type assertion with proper handling of the raw result
+    const minLng = String(result["minLng"]);
+    const minLat = String(result["minLat"]);
+    const maxLng = String(result["maxLng"]);
+    const maxLat = String(result["maxLat"]);
+
     return this.createBoundingBoxDto(parseFloat(minLng), parseFloat(minLat), parseFloat(maxLng), parseFloat(maxLat));
   }
 

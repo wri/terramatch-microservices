@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { BoundingBoxService } from "../services/bounding-box.service";
 import { BoundingBoxQueryDto } from "../dto/bounding-box-query.dto";

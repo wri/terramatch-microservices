@@ -48,7 +48,8 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
   [User, UserPolicy],
-  [ProjectPitch, ProjectPitchPolicy][(Task, TaskPolicy)]
+  [ProjectPitch, ProjectPitchPolicy],
+  [Task, TaskPolicy]
 ];
 
 /**

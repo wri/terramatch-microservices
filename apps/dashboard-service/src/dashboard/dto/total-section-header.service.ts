@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import {
   Demographic,
   DemographicEntry,
-  Project,
   ProjectReport,
   Site,
   SitePolygon,
@@ -11,19 +10,19 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { DashboardQueryDto } from "./dashboard-query.dto";
-import { DashboardProjectsQueryBuilder } from "@terramatch-microservices/database/util/dashboard-query.builder";
+import { DashboardService } from "../dashboard.service";
 
 @Injectable()
 export class TotalSectionHeaderService {
-  constructor() {}
+  constructor(private readonly dashboardService: DashboardService) {}
 
   async getTotalSectionHeader(query: DashboardQueryDto) {
-    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
+    const projectsBuilder = await this.dashboardService.buildQuery(query, [
       {
         association: "organisation",
         attributes: ["uuid", "name", "type"]
       }
-    ]).queryFilters(query);
+    ]);
     const projects = await projectsBuilder;
     const projectIds: number[] = await projects.pluckIds();
 
@@ -59,7 +58,7 @@ export class TotalSectionHeaderService {
         where: {
           demographicId: {
             [Op.in]: Demographic.idsSubquery(
-              ProjectReport.approvedIdsSubqueryProjects(projectIds),
+              ProjectReport.approvedProjectsIdsSubquery(projectIds),
               ProjectReport.LARAVEL_TYPE,
               Demographic.JOBS_TYPE
             )
@@ -74,7 +73,7 @@ export class TotalSectionHeaderService {
       return 0;
     }
     const totalHectaresRestoredSum =
-      (await SitePolygon.active().approved().sites(Site.approvedUuidsSubqueryProjects(projectsIds)).sum("calcArea")) ??
+      (await SitePolygon.active().approved().sites(Site.approvedUuidsProjectsSubquery(projectsIds)).sum("calcArea")) ??
       0;
     return totalHectaresRestoredSum;
   }
@@ -83,7 +82,7 @@ export class TotalSectionHeaderService {
     if (!projectsIds.length) {
       return 0;
     }
-    const approvedSitesQuery = await Site.approvedIdsSubqueryProjects(projectsIds);
+    const approvedSitesQuery = await Site.approvedIdsProjectsSubquery(projectsIds);
     const approvedSiteReportsQuery = await SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
     const treesPlantedCount =

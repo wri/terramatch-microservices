@@ -375,10 +375,6 @@ export class Project extends Model<Project> {
     return this.organisation?.name;
   }
 
-  get organisationType() {
-    return this.organisation?.type;
-  }
-
   get organisationUuid() {
     return this.organisation?.uuid;
   }

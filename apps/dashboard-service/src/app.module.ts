@@ -9,6 +9,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { CacheService } from "./dashboard/dto/cache.service";
 import { WorkerProcessor } from "./dashboard/worker/worker.processor";
 import { RedisModule } from "@nestjs-modules/ioredis";
+import { DashboardService } from "./dashboard/dashboard.service";
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { RedisModule } from "@nestjs-modules/ioredis";
     },
     TotalSectionHeaderService,
     CacheService,
-    WorkerProcessor
+    WorkerProcessor,
+    DashboardService
   ]
 })
 export class AppModule {}

@@ -5,13 +5,17 @@ import { DashboardQueryDto } from "./dashboard-query.dto";
 
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
+import { InjectRedis } from "@nestjs-modules/ioredis";
 
 @Injectable()
 export class CacheService {
   private cache: Cache;
 
-  constructor(@InjectQueue("dashboard") private readonly dashboardQueue: Queue) {
-    this.cache = new Cache(new Redis());
+  constructor(
+    @InjectQueue("dashboard") private readonly dashboardQueue: Queue,
+    @InjectRedis() private readonly redis: Redis
+  ) {
+    this.cache = new Cache(this.redis);
   }
 
   async getTotalSectionHeader(cacheKey: string, query: DashboardQueryDto, delayedJobId: number) {

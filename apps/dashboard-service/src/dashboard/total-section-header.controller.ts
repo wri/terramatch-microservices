@@ -6,7 +6,7 @@ import { DelayedJobDto } from "./dto/delayed-job.dto";
 import { CacheService } from "./dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 
-@Controller("v3/dashboard/totalSectionHeader")
+@Controller("dashboard/v3/totalSectionHeaders")
 export class TotalSectionHeaderController {
   constructor(private readonly cacheService: CacheService) {}
 

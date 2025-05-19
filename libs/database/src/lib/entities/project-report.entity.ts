@@ -105,8 +105,6 @@ export class ProjectReport extends Model<ProjectReport> {
     const builder = Subquery.select(ProjectReport, "id")
       .in("projectId", projectIds)
       .in("status", ProjectReport.APPROVED_STATUSES);
-    if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
-    if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
     return builder.literal;
   }
 

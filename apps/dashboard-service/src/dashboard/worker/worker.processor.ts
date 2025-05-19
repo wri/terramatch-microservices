@@ -6,8 +6,8 @@ import { DashboardQueryDto } from "../dto/dashboard-query.dto";
 import { CacheService } from "../dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 @Processor("dashboard")
-export class WorkerProcessor extends WorkerHost {
-  private readonly logger = new TMLogger(WorkerProcessor.name);
+export class DashboardProcessor extends WorkerHost {
+  private readonly logger = new TMLogger(DashboardProcessor.name);
 
   constructor(
     private readonly totalSectionHeaderService: TotalSectionHeaderService,

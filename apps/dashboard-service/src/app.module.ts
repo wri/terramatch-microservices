@@ -7,18 +7,27 @@ import { TotalSectionHeaderController } from "./dashboard/total-section-header.c
 import { TotalSectionHeaderService } from "./dashboard/dto/total-section-header.service";
 import { BullModule } from "@nestjs/bullmq";
 import { CacheService } from "./dashboard/dto/cache.service";
-import { WorkerProcessor } from "./dashboard/worker/worker.processor";
 import { RedisModule } from "@nestjs-modules/ioredis";
 import { DashboardService } from "./dashboard/dashboard.service";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { DashboardProcessor } from "./dashboard/worker/worker.processor";
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     CommonModule,
     HealthModule,
-    RedisModule.forRoot({
-      type: "single",
-      url: "redis://127.0.0.1:6379"
+    ConfigModule.forRoot({ isGlobal: true }),
+    RedisModule.forRootAsync({
+      imports: [ConfigModule.forRoot({ isGlobal: true })],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const protocol = process.env["NODE_ENV"] === "development" ? "redis://" : "rediss://";
+        return {
+          type: "single",
+          url: `${protocol}${configService.get("REDIS_HOST")}:${configService.get("REDIS_PORT")}`
+        };
+      }
     }),
     BullModule.registerQueue({ name: "dashboard" })
   ],
@@ -30,7 +39,7 @@ import { DashboardService } from "./dashboard/dashboard.service";
     },
     TotalSectionHeaderService,
     CacheService,
-    WorkerProcessor,
+    DashboardProcessor,
     DashboardService
   ]
 })

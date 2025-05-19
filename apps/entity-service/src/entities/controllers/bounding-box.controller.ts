@@ -26,10 +26,6 @@ export class BoundingBoxController {
       return this.boundingBoxService.getProjectBoundingBox(query.projectUuid);
     }
 
-    if (query.projectUuids && query.projectUuids.length) {
-      return this.boundingBoxService.getProjectsCentroidBoundingBox(query.projectUuids);
-    }
-
     if (query.country || (query.landscapes && query.landscapes.length)) {
       return this.boundingBoxService.getCountryLandscapeBoundingBox(query.country, query.landscapes || []);
     }

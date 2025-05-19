@@ -30,12 +30,8 @@ export class BoundingBoxController {
       return this.boundingBoxService.getProjectsCentroidBoundingBox(query.projectUuids);
     }
 
-    if (query.country && query.landscapes && query.landscapes.length) {
-      return this.boundingBoxService.getCountryLandscapeBoundingBox(query.country, query.landscapes);
-    }
-
-    if (query.country) {
-      return this.boundingBoxService.getCountryBoundingBox(query.country);
+    if (query.country || (query.landscapes && query.landscapes.length)) {
+      return this.boundingBoxService.getCountryLandscapeBoundingBox(query.country, query.landscapes || []);
     }
 
     throw new Error(

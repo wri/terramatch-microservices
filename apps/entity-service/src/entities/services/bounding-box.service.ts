@@ -23,9 +23,6 @@ export class BoundingBoxService {
     });
   }
 
-  /**
-   * Get bounding box for a single polygon by UUID
-   */
   async getPolygonBoundingBox(polygonUuid: string): Promise<BoundingBoxDto> {
     const polygon = await PolygonGeometry.findOne({
       where: { uuid: polygonUuid },
@@ -59,9 +56,6 @@ export class BoundingBoxService {
     return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
   }
 
-  /**
-   * Get bounding box for all polygons of a site by site UUID
-   */
   async getSiteBoundingBox(siteUuid: string): Promise<BoundingBoxDto> {
     const site = await Site.findOne({ where: { uuid: siteUuid } });
 
@@ -120,9 +114,6 @@ export class BoundingBoxService {
     return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
   }
 
-  /**
-   * Get bounding box for all site polygons of a project by project UUID
-   */
   async getProjectBoundingBox(projectUuid: string): Promise<BoundingBoxDto> {
     const project = await Project.findOne({
       where: { uuid: projectUuid },
@@ -256,29 +247,6 @@ export class BoundingBoxService {
     const { minLng, minLat, maxLng, maxLat } = result.get({ plain: true }) as any;
     return this.createBoundingBoxDto(parseFloat(minLng), parseFloat(minLat), parseFloat(maxLng), parseFloat(maxLat));
   }
-
-  /**
-   * Get bounding box for a landscape by slug
-   */
-  async getLandscapeBoundingBox(slug: string): Promise<BoundingBoxDto> {
-    const landscape = await LandscapeGeometry.findOne({
-      where: { slug },
-      attributes: [
-        [Sequelize.fn("ST_XMin", Sequelize.fn("ST_Envelope", Sequelize.col("geometry"))), "minLng"],
-        [Sequelize.fn("ST_YMin", Sequelize.fn("ST_Envelope", Sequelize.col("geometry"))), "minLat"],
-        [Sequelize.fn("ST_XMax", Sequelize.fn("ST_Envelope", Sequelize.col("geometry"))), "maxLng"],
-        [Sequelize.fn("ST_YMax", Sequelize.fn("ST_Envelope", Sequelize.col("geometry"))), "maxLat"]
-      ]
-    });
-
-    if (!landscape) {
-      throw new NotFoundException(`Landscape with slug ${slug} not found`);
-    }
-
-    const { minLng, minLat, maxLng, maxLat } = landscape.get({ plain: true }) as any;
-    return this.createBoundingBoxDto(parseFloat(minLng), parseFloat(minLat), parseFloat(maxLng), parseFloat(maxLat));
-  }
-
   /**
    * Get bounding box for a country-landscape combination
    */
@@ -291,43 +259,35 @@ export class BoundingBoxService {
     // This is currently referenced as worldcountriesgenerated in the requirements
     // For now, we'll only use landscapes
 
-    const landscapeGeometries = await LandscapeGeometry.findAll({
+    // Get envelopes for each landscape individually
+    const envelopes = await LandscapeGeometry.findAll({
       where: { slug: { [Op.in]: landscapes } },
-      attributes: [
-        [
-          Sequelize.fn("MIN", Sequelize.fn("ST_XMin", Sequelize.fn("ST_Envelope", Sequelize.col("geometry")))),
-          "minLng"
-        ],
-        [
-          Sequelize.fn("MIN", Sequelize.fn("ST_YMin", Sequelize.fn("ST_Envelope", Sequelize.col("geometry")))),
-          "minLat"
-        ],
-        [
-          Sequelize.fn("MAX", Sequelize.fn("ST_XMax", Sequelize.fn("ST_Envelope", Sequelize.col("geometry")))),
-          "maxLng"
-        ],
-        [Sequelize.fn("MAX", Sequelize.fn("ST_YMax", Sequelize.fn("ST_Envelope", Sequelize.col("geometry")))), "maxLat"]
-      ]
+      attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geometry"))), "envelope"]]
     });
 
-    if (!landscapeGeometries.length) {
+    if (envelopes.length === 0) {
       throw new NotFoundException(`No landscapes found with the provided slugs`);
     }
 
-    const { minLng, minLat, maxLng, maxLat } = landscapeGeometries[0].get({ plain: true }) as any;
-    return this.createBoundingBoxDto(parseFloat(minLng), parseFloat(minLat), parseFloat(maxLng), parseFloat(maxLat));
-  }
+    let maxLng = -Infinity;
+    let minLng = Infinity;
+    let maxLat = -Infinity;
+    let minLat = Infinity;
 
-  /**
-   * Get bounding box for a country by ISO code
-   * Note: This requires a WorldCountries entity which isn't yet in the model
-   * This is a placeholder that needs to be updated with the real model
-   */
-  async getCountryBoundingBox(countryIso: string): Promise<BoundingBoxDto> {
-    // TODO: Once the WorldCountriesGenerated entity is available, implement this
-    // For now, we'll return a mock response
-    throw new NotFoundException(
-      "Country bounding box lookups not yet implemented - need WorldCountriesGenerated entity"
-    );
+    // Process each envelope to find the overall min/max values
+    for (const envelope of envelopes) {
+      const geojson = JSON.parse(envelope.get("envelope") as string);
+      const coordinates = geojson.coordinates[0];
+
+      for (const point of coordinates) {
+        const [lng, lat] = point;
+        maxLng = Math.max(maxLng, lng);
+        minLng = Math.min(minLng, lng);
+        maxLat = Math.max(maxLat, lat);
+        minLat = Math.min(minLat, lat);
+      }
+    }
+
+    return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
   }
 }

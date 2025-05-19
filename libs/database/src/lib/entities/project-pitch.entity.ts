@@ -1,6 +1,7 @@
-import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Organisation } from "./organisation.entity";
 
 @Table({ tableName: "project_pitches", underscored: true, paranoid: true })
 export class ProjectPitch extends Model<ProjectPitch> {
@@ -268,7 +269,7 @@ export class ProjectPitch extends Model<ProjectPitch> {
 
   @AllowNull
   @Column(TEXT)
-  solutionMarketSite: string | null;
+  solutionMarketSize: string | null;
 
   @AllowNull
   @Column(TEXT)
@@ -333,6 +334,9 @@ export class ProjectPitch extends Model<ProjectPitch> {
   @AllowNull
   @Column(INTEGER.UNSIGNED)
   directSeedingSurvivalRate: number | null;
+
+  @BelongsTo(() => Organisation, { foreignKey: "organisationId", constraints: false })
+  organisation: Organisation | null;
 
   @AllowNull
   @JsonColumn({ field: "level_0_proposed" })

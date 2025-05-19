@@ -6,6 +6,7 @@ import {
   NurseryReport,
   Permission,
   Project,
+  ProjectPitch,
   ProjectReport,
   Site,
   SitePolygon,
@@ -25,6 +26,7 @@ import { SitePolicy } from "./site.policy";
 import { NurseryReportPolicy } from "./nursery-report.policy";
 import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
+import { ProjectPitchPolicy } from "./project-pitch.policy";
 import { TaskPolicy } from "./task.policy";
 
 type EntityClass = {
@@ -45,8 +47,8 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
-  [Task, TaskPolicy],
-  [User, UserPolicy]
+  [User, UserPolicy],
+  [ProjectPitch, ProjectPitchPolicy][(Task, TaskPolicy)]
 ];
 
 /**

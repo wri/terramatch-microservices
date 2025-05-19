@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ProjectPitch } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
-import { MAX_PAGE_SIZE } from "./entities.service";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 @Injectable()
 export class ProjectPitchService {
@@ -16,21 +15,11 @@ export class ProjectPitchService {
   }
 
   async getProjectPitches(query: ProjectPitchQueryDto) {
-    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = query.page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
-      throw new BadRequestException(`Invalid page size: ${pageSize}`);
-    }
-    if (pageNumber < 1) {
-      throw new BadRequestException(`Invalid page number: ${pageNumber}`);
-    }
     const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["uuid", "name"]
     };
-    const builder = new PaginatedQueryBuilder(ProjectPitch, pageSize, [organisationAssociation]);
-    if (pageNumber > 1) {
-      builder.pageNumber(pageNumber);
-    }
+    const builder = PaginatedQueryBuilder.forNumberPage(ProjectPitch, query, [organisationAssociation]);
 
     if (query.search != null) {
       builder.where({
@@ -41,17 +30,16 @@ export class ProjectPitchService {
       });
     }
     if (query.filter != null) {
-      Object.keys(query.filter).forEach(key => {
+      Object.entries(query.filter).forEach(([key, value]) => {
         if (!["restorationInterventionTypes", "projectCountry"].includes(key)) {
           throw new BadRequestException(`Invalid filter key: ${key}`);
         }
-        const value = query.filter[key];
         builder.where({
           [key]: { [Op.like]: `%${value}%` }
         });
       });
     }
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (
         ["id", "organisationId", "projectName", "projectCountry", "restorationInterventionTypes", "createdAt"].includes(
           query.sort.field
@@ -62,6 +50,10 @@ export class ProjectPitchService {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
-    return { data: await builder.execute(), paginationTotal: await builder.paginationTotal(), pageNumber };
+    return {
+      data: await builder.execute(),
+      paginationTotal: await builder.paginationTotal(),
+      pageNumber: query.page?.number ?? 1
+    };
   }
 }

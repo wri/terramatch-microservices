@@ -269,7 +269,7 @@ export class ProjectPitch extends Model<ProjectPitch> {
 
   @AllowNull
   @Column(TEXT)
-  solutionMarketSite: string | null;
+  solutionMarketSize: string | null;
 
   @AllowNull
   @Column(TEXT)

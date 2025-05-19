@@ -13,7 +13,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { Op } from "sequelize";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getDtoType, JsonApiDocument } from "@terramatch-microservices/common/util";
-import { DelayedJobDto } from "./dto/delayed-job.dto";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 

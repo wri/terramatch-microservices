@@ -2,9 +2,9 @@ import { Get, Query, Controller } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { DelayedJobDto } from "./dto/delayed-job.dto";
 import { CacheService } from "./dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 
 @Controller("dashboard/v3/totalSectionHeaders")
 export class TotalSectionHeaderController {

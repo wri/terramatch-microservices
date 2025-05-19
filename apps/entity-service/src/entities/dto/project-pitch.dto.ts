@@ -372,7 +372,7 @@ export class ProjectPitchDto extends JsonApiAttributes<ProjectPitchDto> {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  solutionMarketSite: string | null;
+  solutionMarketSize: string | null;
 
   @ApiProperty({ required: false })
   @IsOptional()

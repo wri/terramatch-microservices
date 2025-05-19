@@ -8,62 +8,98 @@ import {
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { Op, Sequelize, fn, col, literal, QueryTypes } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { Model, ModelStatic, Op, Sequelize, WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
+
+enum EntityType {
+  POLYGON = "Polygon",
+  SITE = "Site",
+  PROJECT = "Project",
+  LANDSCAPE = "Landscape"
+}
+
+interface BoundingBoxCoordinates {
+  minLng: number;
+  minLat: number;
+  maxLng: number;
+  maxLat: number;
+}
 
 @Injectable()
 export class BoundingBoxService {
-  /**
-   * Creates a new BoundingBoxDto with the specified coordinates
-   */
   private createBoundingBoxDto(minLng: number, minLat: number, maxLng: number, maxLat: number): BoundingBoxDto {
     return new BoundingBoxDto({
       bbox: [minLng, minLat, maxLng, maxLat]
     });
   }
 
-  async getPolygonBoundingBox(polygonUuid: string): Promise<BoundingBoxDto> {
-    const polygon = await PolygonGeometry.findOne({
-      where: { uuid: polygonUuid },
-      attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
-    });
-
-    if (!polygon) {
-      throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
-    }
-
-    const geojson = JSON.parse(polygon.get("envelope") as string);
-    const coordinates = geojson.coordinates[0];
-
+  private extractBoundingBoxFromEnvelopes(envelopes: Model[]): BoundingBoxCoordinates {
     let maxLng = -Infinity;
     let minLng = Infinity;
     let maxLat = -Infinity;
     let minLat = Infinity;
 
-    for (const point of coordinates) {
-      const [lng, lat] = point;
-      maxLng = Math.max(maxLng, lng);
-      minLng = Math.min(minLng, lng);
-      maxLat = Math.max(maxLat, lat);
-      minLat = Math.min(minLat, lat);
+    for (const envelope of envelopes) {
+      const geojson = JSON.parse(envelope.get("envelope") as string);
+      const coordinates = geojson.coordinates[0];
+
+      for (const point of coordinates) {
+        const [lng, lat] = point;
+        maxLng = Math.max(maxLng, lng);
+        minLng = Math.min(minLng, lng);
+        maxLat = Math.max(maxLat, lat);
+        minLat = Math.min(minLat, lat);
+      }
     }
 
-    if (!polygon) {
-      throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
+    return { minLng, minLat, maxLng, maxLat };
+  }
+
+  private async getBoundingBoxFromGeometries<T extends Model>(
+    model: ModelStatic<T>,
+    whereCondition: WhereOptions,
+    geometryColumn: string,
+    entityType: EntityType,
+    identifier?: string
+  ): Promise<BoundingBoxDto> {
+    const envelopes = await model.findAll({
+      where: whereCondition,
+      attributes: [
+        [Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col(geometryColumn))), "envelope"]
+      ]
+    });
+
+    if (envelopes.length === 0) {
+      const errorMsg = identifier
+        ? `No ${entityType.toLowerCase()} found with UUID ${identifier}`
+        : `No ${entityType.toLowerCase()} found with the provided criteria`;
+      throw new NotFoundException(errorMsg);
     }
 
+    const { minLng, minLat, maxLng, maxLat } = this.extractBoundingBoxFromEnvelopes(envelopes);
     return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
   }
 
+  async getPolygonBoundingBox(polygonUuid: string): Promise<BoundingBoxDto> {
+    return this.getBoundingBoxFromGeometries(
+      PolygonGeometry,
+      { uuid: polygonUuid },
+      "geom",
+      EntityType.POLYGON,
+      polygonUuid
+    );
+  }
+
   async getSiteBoundingBox(siteUuid: string): Promise<BoundingBoxDto> {
-    const site = await Site.findOne({ where: { uuid: siteUuid } });
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["uuid"]
+    });
 
     if (!site) {
-      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+      throw new NotFoundException(`${EntityType.SITE} with UUID ${siteUuid} not found`);
     }
 
-    // Get all site polygon UUIDs
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid,
@@ -80,38 +116,12 @@ export class BoundingBoxService {
 
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid);
 
-    // Get envelopes for each polygon individually instead of using ST_UNION
-    const envelopes = await PolygonGeometry.findAll({
-      where: {
-        uuid: { [Op.in]: polygonUuids }
-      },
-      attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
-    });
-
-    if (envelopes.length === 0) {
-      throw new NotFoundException(`Could not calculate bounding box for site with UUID ${siteUuid}`);
-    }
-
-    let maxLng = -Infinity;
-    let minLng = Infinity;
-    let maxLat = -Infinity;
-    let minLat = Infinity;
-
-    // Process each envelope to find the overall min/max values
-    for (const envelope of envelopes) {
-      const geojson = JSON.parse(envelope.get("envelope") as string);
-      const coordinates = geojson.coordinates[0];
-
-      for (const point of coordinates) {
-        const [lng, lat] = point;
-        maxLng = Math.max(maxLng, lng);
-        minLng = Math.min(minLng, lng);
-        maxLat = Math.max(maxLat, lat);
-        minLat = Math.min(minLat, lat);
-      }
-    }
-
-    return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
+    return this.getBoundingBoxFromGeometries(
+      PolygonGeometry,
+      { uuid: { [Op.in]: polygonUuids } },
+      "geom",
+      EntityType.POLYGON
+    );
   }
 
   async getProjectBoundingBox(projectUuid: string): Promise<BoundingBoxDto> {
@@ -121,10 +131,9 @@ export class BoundingBoxService {
     });
 
     if (!project) {
-      throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
+      throw new NotFoundException(`${EntityType.PROJECT} with UUID ${projectUuid} not found`);
     }
 
-    // First get all sites for this project
     const sites = await Site.findAll({
       where: { projectId: project.id },
       attributes: ["uuid"]
@@ -136,7 +145,6 @@ export class BoundingBoxService {
 
     const siteUuids = sites.map(site => site.uuid);
 
-    // Get all polygon UUIDs from site polygons
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid: { [Op.in]: siteUuids },
@@ -151,43 +159,14 @@ export class BoundingBoxService {
 
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid);
 
-    // Get envelopes for each polygon individually instead of using ST_UNION
-    const envelopes = await PolygonGeometry.findAll({
-      where: {
-        uuid: { [Op.in]: polygonUuids }
-      },
-      attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
-    });
-
-    if (envelopes.length === 0) {
-      throw new NotFoundException(`Could not calculate bounding box for project with UUID ${projectUuid}`);
-    }
-
-    let maxLng = -Infinity;
-    let minLng = Infinity;
-    let maxLat = -Infinity;
-    let minLat = Infinity;
-
-    // Process each envelope to find the overall min/max values
-    for (const envelope of envelopes) {
-      const geojson = JSON.parse(envelope.get("envelope") as string);
-      const coordinates = geojson.coordinates[0];
-
-      for (const point of coordinates) {
-        const [lng, lat] = point;
-        maxLng = Math.max(maxLng, lng);
-        minLng = Math.min(minLng, lng);
-        maxLat = Math.max(maxLat, lat);
-        minLat = Math.min(minLat, lat);
-      }
-    }
-
-    return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
+    return this.getBoundingBoxFromGeometries(
+      PolygonGeometry,
+      { uuid: { [Op.in]: polygonUuids } },
+      "geom",
+      EntityType.POLYGON
+    );
   }
 
-  /**
-   * Get bounding box for project centroids by array of project UUIDs
-   */
   async getProjectsCentroidBoundingBox(projectUuids: string[]): Promise<BoundingBoxDto> {
     if (!projectUuids.length) {
       throw new BadRequestException("At least one project UUID is required");
@@ -204,7 +183,6 @@ export class BoundingBoxService {
 
     const projectIds = projects.map(project => project.id);
 
-    // Get all sites for these projects
     const sites = await Site.findAll({
       where: { projectId: { [Op.in]: projectIds } },
       attributes: ["uuid"]
@@ -216,7 +194,6 @@ export class BoundingBoxService {
 
     const siteUuids = sites.map(site => site.uuid);
 
-    // Get all point UUIDs from site polygons
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid: { [Op.in]: siteUuids },
@@ -231,7 +208,6 @@ export class BoundingBoxService {
 
     const pointUuids = sitePolygons.map(sp => sp.pointUuid);
 
-    // Calculate the bounding box of all points (centroids)
     const result = await PointGeometry.findOne({
       where: {
         uuid: { [Op.in]: pointUuids }
@@ -247,47 +223,17 @@ export class BoundingBoxService {
     const { minLng, minLat, maxLng, maxLat } = result.get({ plain: true }) as any;
     return this.createBoundingBoxDto(parseFloat(minLng), parseFloat(minLat), parseFloat(maxLng), parseFloat(maxLat));
   }
-  /**
-   * Get bounding box for a country-landscape combination
-   */
+
   async getCountryLandscapeBoundingBox(country: string, landscapes: string[]): Promise<BoundingBoxDto> {
     if (!landscapes || landscapes.length === 0) {
       throw new BadRequestException("At least one landscape slug is required");
     }
-
-    // For country part, we'll need to add the country geometry model
-    // This is currently referenced as worldcountriesgenerated in the requirements
-    // For now, we'll only use landscapes
-
-    // Get envelopes for each landscape individually
-    const envelopes = await LandscapeGeometry.findAll({
-      where: { slug: { [Op.in]: landscapes } },
-      attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geometry"))), "envelope"]]
-    });
-
-    if (envelopes.length === 0) {
-      throw new NotFoundException(`No landscapes found with the provided slugs`);
-    }
-
-    let maxLng = -Infinity;
-    let minLng = Infinity;
-    let maxLat = -Infinity;
-    let minLat = Infinity;
-
-    // Process each envelope to find the overall min/max values
-    for (const envelope of envelopes) {
-      const geojson = JSON.parse(envelope.get("envelope") as string);
-      const coordinates = geojson.coordinates[0];
-
-      for (const point of coordinates) {
-        const [lng, lat] = point;
-        maxLng = Math.max(maxLng, lng);
-        minLng = Math.min(minLng, lng);
-        maxLat = Math.max(maxLat, lat);
-        minLat = Math.min(minLat, lat);
-      }
-    }
-
-    return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
+    // TODO: Add country geometry model to obtain the bounding box of the country
+    return this.getBoundingBoxFromGeometries(
+      LandscapeGeometry,
+      { slug: { [Op.in]: landscapes } },
+      "geometry",
+      EntityType.LANDSCAPE
+    );
   }
 }

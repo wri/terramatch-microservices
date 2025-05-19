@@ -25,13 +25,6 @@ interface BoundingBoxCoordinates {
   maxLat: number;
 }
 
-interface BoundingBoxQueryResult {
-  minLng: string;
-  minLat: string;
-  maxLng: string;
-  maxLat: string;
-}
-
 @Injectable()
 export class BoundingBoxService {
   private createBoundingBoxDto(minLng: number, minLat: number, maxLng: number, maxLat: number): BoundingBoxDto {
@@ -232,7 +225,6 @@ export class BoundingBoxService {
       throw new NotFoundException("Could not calculate bounding box for the provided points");
     }
 
-    // Type assertion with proper handling of the raw result
     const minLng = String(result["minLng"]);
     const minLat = String(result["minLat"]);
     const maxLng = String(result["maxLng"]);

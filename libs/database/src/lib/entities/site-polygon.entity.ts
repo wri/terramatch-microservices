@@ -107,10 +107,6 @@ export class SitePolygon extends Model<SitePolygon> {
   plantStart: Date | null;
 
   @AllowNull
-  @Column({ type: DATE, field: "plantend" })
-  plantEnd: Date | null;
-
-  @AllowNull
   @Column(STRING)
   practice: string | null;
 

@@ -116,11 +116,11 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
     const approvedSites = await loadApprovedSites(projectIds);
     const allSiteUuids = flatten(Object.values(approvedSites).map(sites => sites.map(({ uuid }) => uuid)));
     const sitePolygons = await loadSitePolygons(allSiteUuids);
-    const countryNames = await this.gadmCountryNames();
+    const countryNames = await this.gadmLevel0Names();
     const stateCountries = filter(
       uniq(flatten(projects.map(({ states }) => states?.map(state => state.split(".")[0]))))
     );
-    const stateNames = await this.gadmStateNames(stateCountries);
+    const stateNames = await this.gadmLevel1Names(stateCountries);
 
     return projects.reduce(
       (associations, { id, country, states }) => ({

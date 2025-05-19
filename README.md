@@ -125,6 +125,7 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
   - Add the new service name to the "service" workflow input options in `deploy-service.yml`
   - Add a new job to `deploy-services.yml` to include the new services in the "all" service deployment workflow.
     - Make sure to update the `check-services` step and follow the pattern for the `if` conditions on the individual service deploy jobs.
+  - Make sure this service is covered in `stop-env.yml` by adding a line to both the `Stop Deployed Services` step and the `Wait for Service Stack Deletion step`.
   - In AWS:
     - Add ECR repositories for each env (follow the naming scheme from user-service, e.g. `terramatch-microservices/foo-service-staging`, etc)
       - Set the repo to Immutable

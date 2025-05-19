@@ -6,6 +6,9 @@ type OrganisationAssociations = {
   hqCountryName: string;
   countryNames: string[];
   stateNames: string[];
+  level0PastRestorationNames: string[];
+  level1PastRestorationNames: string[];
+  level2PastRestorationNames: string[];
 };
 
 const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = [
@@ -94,7 +97,21 @@ const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = [
   "socioeconomicImpact",
   "environmentalImpact",
   "growthStage",
-  "additionalComments"
+  "additionalComments",
+  "consortium",
+  "femaleYouthLeadershipExample",
+  "level0PastRestoration",
+  associatedValueColumn("level0PastRestorationNames", "level0PastRestoration"),
+  "level1PastRestoration",
+  associatedValueColumn("level1PastRestorationNames", "level1PastRestoration"),
+  "level2PastRestoration",
+  associatedValueColumn("level2PastRestorationNames", "level2PastRestoration"),
+  "treesNaturallyRegeneratedTotal",
+  "treesNaturallyRegenerated3Year",
+  "carbonCredits",
+  "externalTechnicalAssistance",
+  "barriersToFunding",
+  "capacityBuildingSupportNeeded"
 ];
 
 export class OrganisationEntity extends AirtableEntity<Organisation, OrganisationAssociations> {
@@ -103,19 +120,39 @@ export class OrganisationEntity extends AirtableEntity<Organisation, Organisatio
   readonly MODEL = Organisation;
 
   async loadAssociations(organisations: Organisation[]) {
-    const countryNames = await this.gadmCountryNames();
+    const countryNames = await this.gadmLevel0Names();
     const stateCountries = filter(
       uniq(flatten(organisations.map(({ states }) => states?.map(state => state.split(".")[0]))))
     );
-    const stateNames = await this.gadmStateNames(stateCountries);
+    const stateNames = await this.gadmLevel1Names(stateCountries);
+    const level1Parents = filter(
+      uniq(
+        flatten(
+          organisations.map(({ level1PastRestoration }) => level1PastRestoration?.map(code => code.split(".")[0]))
+        )
+      )
+    );
+    const leve1Names = await this.gadmLevel1Names(level1Parents);
+    // for level 2, we can't trivially extract the parent code from the child codes, so we have to work with the assumption
+    // that the data is clean and the level 2 codes are all a direct child of one of the selected level 1 codes.
+    const level2Parents = filter(
+      uniq(flatten(organisations.map(({ level1PastRestoration }) => level1PastRestoration)))
+    );
+    const level2Names = await this.gadmLevel2Names(level2Parents);
 
     return organisations.reduce(
-      (associations, { id, hqCountry, countries, states }) => ({
+      (
+        associations,
+        { id, hqCountry, countries, states, level0PastRestoration, level1PastRestoration, level2PastRestoration }
+      ) => ({
         ...associations,
         [id]: {
           hqCountryName: hqCountry == null ? null : countryNames[hqCountry],
           countryNames: filter(countries?.map(country => countryNames[country])),
-          stateNames: filter(states?.map(state => stateNames[state]))
+          stateNames: filter(states?.map(state => stateNames[state])),
+          level0PastRestorationNames: filter((level0PastRestoration ?? []).map(code => countryNames[code])),
+          level1PastRestorationNames: filter((level1PastRestoration ?? []).map(code => leve1Names[code])),
+          level2PastRestorationNames: filter((level2PastRestoration ?? []).map(code => level2Names[code]))
         }
       }),
       {} as Record<number, OrganisationAssociations>

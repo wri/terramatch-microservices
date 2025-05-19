@@ -2,9 +2,6 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsArray, IsOptional, IsString, IsUUID } from "class-validator";
 import { Transform } from "class-transformer";
 
-/**
- * Query parameters for fetching bounding boxes
- */
 export class BoundingBoxQueryDto {
   @ApiPropertyOptional({
     description: "UUID of a polygon to get its bounding box",

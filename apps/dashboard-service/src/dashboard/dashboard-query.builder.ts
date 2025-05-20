@@ -1,8 +1,8 @@
 import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
-import { combineWheresWithAnd } from "../../../../libs/database/src/lib/util/paginated-query.builder";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { Project } from "../../../../libs/database/src/lib/entities";
+import { Project } from "@terramatch-microservices/database/entities/project.entity";
+import { isObject, flatten } from "lodash";
 
 export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
   protected findOptions: FindOptions<Attributes<T>> = {
@@ -22,7 +22,7 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
 
   where(options: WhereOptions, filterable?: Filterable) {
     if (filterable == null) filterable = this.findOptions;
-    filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);
+    filterable.where = this.combineWheresWithAnd(filterable.where ?? {}, options);
     return this;
   }
 
@@ -90,5 +90,29 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     });
 
     return results.map(r => r.id);
+  }
+
+  private operatorSet = new Set(Object.values(Op));
+
+  private getComplexKeys(obj: object) {
+    const symbols = Object.getOwnPropertySymbols(obj).filter(s => this.operatorSet.has(s)) as (symbol | string)[];
+    return symbols.concat(Object.keys(obj));
+  }
+
+  private unpackAnd(where: WhereOptions) {
+    if (!isObject(where)) return where;
+
+    const keys = this.getComplexKeys(where);
+    if (keys.length === 0) return;
+    if (keys.length !== 1 || keys[0] !== Op.and) return where;
+    return where[Op.and];
+  }
+
+  private combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions): WhereOptions {
+    const unpackedA = this.unpackAnd(whereA);
+    if (unpackedA === undefined) return whereB;
+    const unpackedB = this.unpackAnd(whereB);
+    if (unpackedB === undefined) return whereA;
+    return { [Op.and]: flatten([unpackedA, unpackedB]) };
   }
 }

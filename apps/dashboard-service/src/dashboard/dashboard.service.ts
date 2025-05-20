@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Project } from "@terramatch-microservices/database/entities";
 import { Includeable } from "sequelize";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { DashboardProjectsQueryBuilder } from "apps/dashboard-service/src/dashboard/dashboard-query.builder";
+import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 
 @Injectable()
 export class DashboardService {

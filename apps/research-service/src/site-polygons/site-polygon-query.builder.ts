@@ -59,9 +59,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   async excludeTestProjects() {
-    // avoid joining against the entire project table by doing a quick query first. The number of test projects is small
-    const testProjects = await Project.findAll({ where: { isTest: true }, attributes: ["id"] });
-    return this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
+    // Avoid joining against the entire project table by doing a quick query first. The number of test projects is small
+    const testProjects = Subquery.select(Project, "id").eq("isTest", true).literal;
+    return this.where({ projectId: { [Op.notIn]: testProjects } }, this.siteJoin);
   }
 
   async filterSiteUuids(siteUuids: string[]) {

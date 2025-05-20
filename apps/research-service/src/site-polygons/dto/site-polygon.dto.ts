@@ -107,9 +107,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
 export class SitePolygonFullDto extends SitePolygonLightDto {
   constructor(
     sitePolygon: SitePolygon,
-    indicators: IndicatorDto[],
-    establishmentTreeSpecies: TreeSpeciesDto[],
-    reportingPeriods: ReportingPeriodDto[]
+    indicators?: IndicatorDto[],
+    establishmentTreeSpecies?: TreeSpeciesDto[],
+    reportingPeriods?: ReportingPeriodDto[]
   ) {
     super();
 
@@ -117,11 +117,11 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
       projectId: sitePolygon.site?.project?.uuid,
-      indicators: indicators,
+      indicators: indicators ?? [],
       siteName: sitePolygon.site?.name,
       geometry: sitePolygon.polygon?.polygon,
-      establishmentTreeSpecies,
-      reportingPeriods,
+      establishmentTreeSpecies: establishmentTreeSpecies ?? [],
+      reportingPeriods: reportingPeriods ?? [],
       lightResource: false
     });
   }

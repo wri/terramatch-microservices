@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { SitePolygonsController } from "./site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -123,8 +124,8 @@ describe("SitePolygonsController", () => {
       mockQueryBuilder([sitePolygon], 1);
       const result = await controller.findMany({});
       expect(result.meta).not.toBe(null);
-      expect(result.meta.indices[0].total).toBe(1);
-      expect(result.meta.indices[0].cursor).toBe(sitePolygon.uuid);
+      expect(result.meta!.indices?.[0].total).toBe(1);
+      expect(result.meta!.indices?.[0].cursor).toBe(sitePolygon.uuid);
 
       const resources = result.data as Resource[];
       expect(resources.length).toBe(1);
@@ -137,8 +138,8 @@ describe("SitePolygonsController", () => {
       mockQueryBuilder([sitePolygon], 1);
       const result = await controller.findMany({ page: { size: 5, number: 1 } });
       expect(result.meta).not.toBe(null);
-      expect(result.meta.indices[0].total).toBe(1);
-      expect(result.meta.indices[0].pageNumber).toBe(1);
+      expect(result.meta!.indices?.[0].total).toBe(1);
+      expect(result.meta!.indices?.[0].pageNumber).toBe(1);
 
       const resources = result.data as Resource[];
       expect(resources.length).toBe(1);
@@ -149,7 +150,7 @@ describe("SitePolygonsController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
       const result = await controller.findMany({});
-      expect(result.meta.indices[0].total).toBe(0);
+      expect(result.meta?.indices?.[0].total).toBe(0);
 
       expect(builder.excludeTestProjects).toHaveBeenCalled();
     });
@@ -220,7 +221,7 @@ describe("SitePolygonsController", () => {
   describe("bulkUpdate", () => {
     it("Should authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      await expect(controller.bulkUpdate(null)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.bulkUpdate({} as SitePolygonBulkUpdateBodyDto)).rejects.toThrow(UnauthorizedException);
     });
 
     it("should use a transaction for updates", async () => {

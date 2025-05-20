@@ -13,6 +13,7 @@ export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 
 const emitStatusUpdateHook = (from: string, model: Model) => {
+  // Processed in event.service.ts in the common lib
   DatabaseModule.emitModelEvent("statusUpdated", model);
 };
 
@@ -70,6 +71,7 @@ export const ReportStatusStates: States<ReportModel, ReportStatus> = {
 };
 
 export const COMPLETE_REPORT_STATUSES = [APPROVED, AWAITING_APPROVAL] as const;
+export type CompleteReportStatus = (typeof COMPLETE_REPORT_STATUSES)[number];
 
 export const TASK_STATUSES = [DUE, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL, APPROVED] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];

@@ -5,7 +5,7 @@ import { EmailService } from "@terramatch-microservices/common/email/email.servi
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
 import { UserNewRequest } from "./dto/user-new-request.dto";
-import { NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { InternalServerErrorException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { RoleFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
@@ -106,6 +106,7 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
+    // @ts-expect-error bogus mock value
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     const reloadSpy = jest.spyOn(user, "reload").mockResolvedValue(user);
@@ -179,8 +180,7 @@ describe("UserCreationService", () => {
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.reject());
 
-    const result = await service.createNewUser(userNewRequest);
-    expect(result).toBeNull();
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
 
   it("should generate a error when save token verification in DB", async () => {
@@ -201,12 +201,11 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
+    // @ts-expect-error bogus mock value
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     jest.spyOn(Verification, "findOrCreate").mockImplementation(() => Promise.reject());
-    const result = await service.createNewUser(userNewRequest);
-
-    expect(result).toBeNull();
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
 
   it("should generate a error when send email verification", async () => {
@@ -223,6 +222,7 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
+    // @ts-expect-error bogus mock value
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     localizationService.getLocalizationKeys.mockReturnValue(
@@ -230,9 +230,7 @@ describe("UserCreationService", () => {
     );
 
     emailService.sendI18nTemplateEmail.mockRejectedValue(null);
-    const result = await service.createNewUser(userNewRequest);
-
-    expect(result).toBeNull();
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
 
   it("should return an error when User.create fails", async () => {
@@ -254,7 +252,7 @@ describe("UserCreationService", () => {
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockRejectedValue(new Error("User creation failed"));
 
-    await expect(service.createNewUser(userNewRequest)).resolves.toBeNull();
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
 
   it("should return an error when ModelHasRole.findOrCreate fails", async () => {
@@ -277,7 +275,7 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
     jest.spyOn(ModelHasRole, "findOrCreate").mockRejectedValue(new Error("ModelHasRole creation failed"));
 
-    await expect(service.createNewUser(userNewRequest)).resolves.toBeNull();
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
 
   it("should return an error when Verification.findOrCreate fails", async () => {
@@ -298,10 +296,11 @@ describe("UserCreationService", () => {
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
     jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
+    // @ts-expect-error bogus mock value
     jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     jest.spyOn(Verification, "findOrCreate").mockRejectedValue(new Error("Verification creation failed"));
 
-    await expect(service.createNewUser(userNewRequest)).resolves.toBeNull();
+    await expect(service.createNewUser(userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
 });

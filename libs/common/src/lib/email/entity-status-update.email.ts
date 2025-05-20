@@ -18,7 +18,7 @@ import {
   UpdateRequest,
   User
 } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import { TMLogger } from "../util/tm-logger";
 import { InternalServerErrorException } from "@nestjs/common";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
@@ -128,7 +128,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
       throw new InternalServerErrorException(`Entity model class not found for entity type [${this.type}]`);
     }
 
-    const include = [];
+    const include: Includeable[] = [];
     const attributeKeys = Object.keys(entityClass.getAttributes());
     const attributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"].filter(field =>
       attributeKeys.includes(field)

@@ -52,8 +52,8 @@ describe("AuthService", () => {
     const result = await service.login(emailAddress, "fakepassword");
 
     expect(jwtService.signAsync).toHaveBeenCalled();
-    expect(result.token).toBe(token);
-    expect(result.userUuid).toBe(uuid);
+    expect(result?.token).toBe(token);
+    expect(result?.userUuid).toBe(uuid);
   });
 
   it("should update the last logged in date on the user", async () => {

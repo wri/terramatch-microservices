@@ -20,6 +20,7 @@ import { UserUpdateBody } from "./dto/user-update.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserNewRequest } from "./dto/user-new-request.dto";
 import { UserCreationService } from "./user-creation.service";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 const USER_RESPONSE_SHAPE = {
   data: {
@@ -75,7 +76,7 @@ export class UsersController {
   @ExceptionResponse(BadRequestException, { description: "Something is malformed about the request" })
   async update(@Param("uuid") uuid: string, @Body() updatePayload: UserUpdateBody) {
     if (uuid !== updatePayload.data.id) {
-      throw new BadRequestException(`Path uuid and payload id do not match`);
+      throw new BadRequestException("Path uuid and payload id do not match");
     }
 
     const user = await User.findOne({
@@ -110,13 +111,13 @@ export class UsersController {
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {
-    const userResource = document.addData(user.uuid, new UserDto(user, await user.myFrameworks()));
+    const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
 
     const org = await user.primaryOrganisation();
     if (org != null) {
-      const orgResource = document.addIncluded(org.uuid, new OrganisationDto(org));
+      const orgResource = document.addData(org.uuid, populateDto(new OrganisationDto(), org));
       const userStatus = org.OrganisationUser?.status ?? "na";
-      userResource.relateTo("org", orgResource, { userStatus });
+      userResource.relateTo("org", orgResource, { meta: { userStatus } });
     }
 
     return document;

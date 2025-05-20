@@ -4,10 +4,10 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
-import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-serction-header.dto";
 import { randomUUID } from "crypto";
+import { DelayedJobDto } from "./delayed-job.dto";
 
 @Controller("dashboard/v3/totalSectionHeaders")
 export class TotalSectionHeaderController {

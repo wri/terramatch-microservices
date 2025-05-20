@@ -1,8 +1,8 @@
 import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
-import { combineWheresWithAnd } from "./paginated-query.builder";
-import { DashboardQueryDto } from "../../../../../apps/dashboard-service/src/dashboard/dto/dashboard-query.dto";
-import { Project } from "../entities";
+import { combineWheresWithAnd } from "../../../../libs/database/src/lib/util/paginated-query.builder";
+import { DashboardQueryDto } from "./dto/dashboard-query.dto";
+import { Project } from "../../../../libs/database/src/lib/entities";
 
 export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
   protected findOptions: FindOptions<Attributes<T>> = {

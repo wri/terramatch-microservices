@@ -12,6 +12,6 @@
     "noFallthroughCasesInSwitch": true,
     "strictPropertyInitialization": false
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "../../apps/dashboard-service/src/dashboard/dashboard-query.builder.ts"],
   "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }

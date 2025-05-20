@@ -4,7 +4,7 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
-import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-serction-header.dto";
 import { DelayedJobDto } from "./delayed-job.dto";
 
@@ -13,8 +13,7 @@ export class TotalSectionHeaderController {
   constructor(private readonly cacheService: CacheService) {}
 
   @Get()
-  @JsonApiResponse(TotalSectionHeaderDto)
-  @JsonApiResponse(DelayedJobDto)
+  @JsonApiResponse([TotalSectionHeaderDto, DelayedJobDto])
   @ApiOperation({ summary: "Get total section header" })
   async getTotalSectionHeader(@Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:total-section-header|${this.cacheService.getCacheKeyFromQuery(query)}`;
@@ -34,22 +33,30 @@ export class TotalSectionHeaderController {
       totalHectaresRestored,
       totalHectaresRestoredGoal,
       totalTreesRestored,
-      totalTreesRestoredGoal
+      totalTreesRestoredGoal,
+      uuids
     } = parseCachedData;
+    const document = buildJsonApi(TotalSectionHeaderDto);
+    const stableQuery = getStableRequestQuery(query);
+    document.addData(
+      stableQuery,
+      new TotalSectionHeaderDto({
+        totalNonProfitCount,
+        totalEnterpriseCount,
+        totalEntries,
+        totalHectaresRestored,
+        totalHectaresRestoredGoal,
+        totalTreesRestored,
+        totalTreesRestoredGoal
+      })
+    );
 
-    return buildJsonApi(TotalSectionHeaderDto)
-      .addData(
-        "total-section-header",
-        new TotalSectionHeaderDto({
-          totalNonProfitCount,
-          totalEnterpriseCount,
-          totalEntries,
-          totalHectaresRestored,
-          totalHectaresRestoredGoal,
-          totalTreesRestored,
-          totalTreesRestoredGoal
-        })
-      )
-      .document.serialize();
+    document.addIndexData({
+      resource: "totalSectionHeaders",
+      requestPath: `/dashboard/v3/totalSectionHeaders${stableQuery}`,
+      ids: uuids
+    });
+
+    return document.serialize();
   }
 }

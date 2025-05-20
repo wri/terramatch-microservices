@@ -4,7 +4,7 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException } from "@nestjs/common";
 import { Media, Project } from "@terramatch-microservices/database/entities";
-import { MediaFactory } from "@terramatch-microservices/database/factories";
+import { MediaFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MediaDto } from "./dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
@@ -90,13 +90,20 @@ describe("EntitiesService", () => {
 
   describe("mapMediaCollection", () => {
     it("maps a MediaCollection to a dto mapping", async () => {
+      const project = await ProjectFactory.create();
       const media = [
-        await MediaFactory.forProject.create({ collectionName: Project.MEDIA.otherAdditionalDocuments.dbCollection })
+        await MediaFactory.forProject.create({
+          modelId: project.id,
+          collectionName: Project.MEDIA.otherAdditionalDocuments.dbCollection
+        })
       ];
       media.push(
-        await MediaFactory.forProject.create({ collectionName: Project.MEDIA.detailedProjectBudget.dbCollection })
+        await MediaFactory.forProject.create({
+          modelId: project.id,
+          collectionName: Project.MEDIA.detailedProjectBudget.dbCollection
+        })
       );
-      const result = service.mapMediaCollection(media, Project.MEDIA);
+      const result = service.mapMediaCollection(media, Project.MEDIA, "projects", project.uuid);
       expect(Object.keys(result)).toMatchObject(Object.keys(Project.MEDIA));
       // multi media
       expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);

@@ -12,12 +12,7 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import {
-  AdditionalSiteReportFullProps,
-  SiteReportFullDto,
-  SiteReportLightDto,
-  SiteReportMedia
-} from "../dto/site-report.dto";
+import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 export class SiteReportProcessor extends ReportProcessor<
@@ -44,18 +39,9 @@ export class SiteReportProcessor extends ReportProcessor<
             }
           ]
         },
-        {
-          association: "task",
-          attributes: ["uuid"]
-        },
-        {
-          association: "createdByUser",
-          attributes: ["id", "uuid", "firstName", "lastName"]
-        },
-        {
-          association: "approvedByUser",
-          attributes: ["id", "uuid", "firstName", "lastName"]
-        }
+        { association: "task", attributes: ["uuid"] },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
+        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -74,7 +60,7 @@ export class SiteReportProcessor extends ReportProcessor<
     };
     const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -124,6 +110,10 @@ export class SiteReportProcessor extends ReportProcessor<
       }
     }
 
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
+    }
+
     if (query.search != null) {
       builder.where({
         [Op.or]: [
@@ -157,18 +147,22 @@ export class SiteReportProcessor extends ReportProcessor<
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
-    const props: AdditionalSiteReportFullProps = {
+    const dto = new SiteReportFullDto(siteReport, {
       reportTitle,
       projectReportTitle,
       totalTreesPlantedCount,
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
-      projectReport: undefined,
-      ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA) as SiteReportMedia)
-    };
+      ...(this.entitiesService.mapMediaCollection(
+        mediaCollection,
+        SiteReport.MEDIA,
+        "siteReports",
+        siteReport.uuid
+      ) as SiteReportMedia)
+    });
 
-    return { id: siteReport.uuid, dto: new SiteReportFullDto(siteReport, props) };
+    return { id: siteReport.uuid, dto };
   }
 
   async getLightDto(siteReport: SiteReport) {

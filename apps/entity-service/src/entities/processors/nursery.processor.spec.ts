@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Nursery } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -310,7 +311,7 @@ describe("NurseryProcessor", () => {
     it("should return the nursery with the specified UUID", async () => {
       const nursery = await NurseryFactory.create();
       const result = await processor.findOne(nursery.uuid);
-      expect(result.id).toBe(nursery.id);
+      expect(result?.id).toBe(nursery.id);
     });
 
     it("should return null when uuid does not exist", async () => {
@@ -324,7 +325,7 @@ describe("NurseryProcessor", () => {
     it("should return a light resource representation of the nursery in NurseryLightDto", async () => {
       const { uuid } = await NurseryFactory.create();
       const nursery = await processor.findOne(uuid);
-      const { id, dto } = await processor.getLightDto(nursery);
+      const { id, dto } = await processor.getLightDto(nursery!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -339,8 +340,8 @@ describe("NurseryProcessor", () => {
       });
 
       const nursery = await processor.findOne(uuid);
-      nursery.project = await nursery.$get("project");
-      const { id, dto } = await processor.getFullDto(nursery);
+      nursery!.project = await nursery!.$get("project");
+      const { id, dto } = await processor.getFullDto(nursery!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,

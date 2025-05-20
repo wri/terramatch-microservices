@@ -1,18 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Media } from "@terramatch-microservices/database/entities";
 import { AssociationDto } from "./association.dto";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { MediaAssociationDtoAdditionalProps } from "./media-association.dto";
 
 @JsonApiDto({ type: "media" })
-export class MediaDto extends AssociationDto<MediaDto> {
-  constructor(media: Media, additional: MediaAssociationDtoAdditionalProps) {
-    super({
-      ...pickApiProperties(media, MediaDto),
-      ...additional,
-      createdAt: media.createdAt
-    });
+export class MediaDto extends AssociationDto {
+  constructor(media: Media, additional: AdditionalProps<MediaDto, Media>) {
+    super();
+    populateDto<MediaDto, Media>(this, media, additional);
   }
 
   @ApiProperty()
@@ -21,11 +17,11 @@ export class MediaDto extends AssociationDto<MediaDto> {
   @ApiProperty()
   collectionName: string;
 
-  @ApiProperty()
-  url: string;
+  @ApiProperty({ nullable: true, type: String })
+  url: string | null;
 
-  @ApiProperty()
-  thumbUrl: string;
+  @ApiProperty({ nullable: true, type: String })
+  thumbUrl: string | null;
 
   @ApiProperty()
   name: string;
@@ -33,16 +29,16 @@ export class MediaDto extends AssociationDto<MediaDto> {
   @ApiProperty()
   fileName: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   mimeType: string | null;
 
   @ApiProperty()
   size: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   lat: number | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   lng: number | null;
 
   @ApiProperty()
@@ -54,12 +50,12 @@ export class MediaDto extends AssociationDto<MediaDto> {
   @ApiProperty()
   createdAt: Date;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   photographer: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   createdByUserName: string | null;
 }

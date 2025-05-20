@@ -16,6 +16,7 @@ import { buildJsonApi, getDtoType, JsonApiDocument } from "@terramatch-microserv
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { DelayedJobDto } from "./dto/delayed-job.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("jobs/v3/delayedJobs")
 export class DelayedJobsController {
@@ -46,7 +47,7 @@ export class DelayedJobsController {
     const indexIds: string[] = [];
     jobsWithEntityNames.forEach(job => {
       indexIds.push(job.uuid);
-      document.addData(job.uuid, new DelayedJobDto(job));
+      document.addData(job.uuid, populateDto(new DelayedJobDto(), job));
     });
     document.addIndexData({ resource: getDtoType(DelayedJobDto), requestPath: "/jobs/v3/delayedJobs", ids: indexIds });
     return document.serialize();
@@ -67,7 +68,7 @@ export class DelayedJobsController {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();
 
-    return buildJsonApi(DelayedJobDto).addData(pathUUID, new DelayedJobDto(job)).document.serialize();
+    return buildJsonApi(DelayedJobDto).addData(pathUUID, populateDto(new DelayedJobDto(), job)).document.serialize();
   }
 
   @Patch("bulk-update")
@@ -102,7 +103,7 @@ export class DelayedJobsController {
     const updatePromises = jobUpdates
       .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
       .map(async ({ uuid, attributes }) => {
-        const job = jobs.find(job => job.uuid === uuid);
+        const job = jobs.find(job => job.uuid === uuid) as DelayedJob;
         job.isAcknowledged = attributes.isAcknowledged;
         await job.save();
 
@@ -115,7 +116,7 @@ export class DelayedJobsController {
 
     const jsonApiBuilder = buildJsonApi(DelayedJobDto);
     updatedJobs.forEach(job => {
-      jsonApiBuilder.addData(job.uuid, new DelayedJobDto(job));
+      jsonApiBuilder.addData(job.uuid, populateDto(new DelayedJobDto(), job));
     });
 
     return jsonApiBuilder.serialize();

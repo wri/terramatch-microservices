@@ -10,10 +10,21 @@ import { EntityAssociationsController } from "./entities/entity-associations.con
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
+import { TasksController } from "./entities/tasks.controller";
+import { TasksService } from "./entities/tasks.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
-  controllers: [ProjectPitchesController, EntitiesController, EntityAssociationsController, TreesController],
+  // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
+  // needs to be provided in this list before EntitiesController, or it will be superseded by the
+  // wildcard route on EntitiesController.
+  controllers: [
+    ProjectPitchesController,
+    TasksController,
+    EntitiesController,
+    EntityAssociationsController,
+    TreesController
+  ],
   providers: [
     {
       provide: APP_FILTER,
@@ -21,7 +32,8 @@ import { ProjectPitchService } from "./entities/project-pitch.service";
     },
     EntitiesService,
     TreeService,
-    ProjectPitchService
+    ProjectPitchService,
+    TasksService
   ]
 })
 export class AppModule {}

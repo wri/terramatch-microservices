@@ -1,21 +1,19 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 
 @JsonApiDto({ type: "invasives" })
-export class InvasiveDto extends AssociationDto<InvasiveDto> {
+export class InvasiveDto extends AssociationDto {
   constructor(invasive: Invasive, additional: AssociationDtoAdditionalProps) {
-    super({
-      ...pickApiProperties(invasive, InvasiveDto),
-      ...additional
-    });
+    super();
+    populateDto<InvasiveDto, Invasive>(this, invasive, additional);
   }
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   type: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 }

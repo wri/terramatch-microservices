@@ -54,6 +54,14 @@ export class CacheService {
   }
 
   getCacheParameterForLandscapes(landscapes: string[]) {
+    if (landscapes && typeof landscapes === "object" && !Array.isArray(landscapes)) {
+      landscapes = Object.values(landscapes);
+    }
+
+    if (typeof landscapes === "string") {
+      landscapes = [landscapes];
+    }
+
     if (landscapes == null || landscapes.length === 0) {
       return "";
     }
@@ -66,6 +74,14 @@ export class CacheService {
   }
 
   getCacheParameterForOrganisationType(organisationType: string[]) {
+    if (organisationType && typeof organisationType === "object" && !Array.isArray(organisationType)) {
+      organisationType = Object.values(organisationType);
+    }
+
+    if (typeof organisationType === "string") {
+      organisationType = [organisationType];
+    }
+
     if (organisationType == null || organisationType.length === 0) {
       return "all-orgs";
     }

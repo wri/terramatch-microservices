@@ -1,8 +1,8 @@
 import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { Project } from "@terramatch-microservices/database/entities/project.entity";
 import { isObject, flatten } from "lodash";
+import { Project } from "@terramatch-microservices/database/entities";
 
 export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
   protected findOptions: FindOptions<Attributes<T>> = {

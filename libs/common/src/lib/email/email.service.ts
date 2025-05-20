@@ -84,13 +84,16 @@ export class EmailService {
   ) {
     if (!this.hasSubject(i18nKeys)) throw new InternalServerErrorException("Email subject is required");
 
-    const subjectKey = this.getSubjectKey(i18nKeys);
+    const subjectKey = this.getPropertyKey("subject", i18nKeys);
+    const titleKey = this.getPropertyKey("title", i18nKeys);
+    const ctaKey = this.getPropertyKey("cta", i18nKeys);
 
-    const { [subjectKey]: subject, ...translated } = await this.localizationService.translateKeys(
-      i18nKeys,
-      locale,
-      i18nReplacements ?? {}
-    );
+    const {
+      [subjectKey]: subject,
+      [titleKey]: title,
+      [ctaKey]: cta,
+      ...translated
+    } = await this.localizationService.translateKeys(i18nKeys, locale, i18nReplacements ?? {});
 
     const data: Dictionary<string | null | undefined | number> = {
       backendUrl: this.configService.get<string>("EMAIL_IMAGE_BASE_URL"),
@@ -100,6 +103,8 @@ export class EmailService {
       transactional: null,
       year: new Date().getFullYear(),
       ...translated,
+      title,
+      cta,
       ...(additionalValues ?? {})
     };
     if (isString(data["link"]) && data["link"].substring(0, 4).toLowerCase() !== "http") {
@@ -116,7 +121,7 @@ export class EmailService {
     return i18nKeys["subject"] != null || i18nKeys["subjectKey"] != null;
   }
 
-  private getSubjectKey(i18nKeys: Dictionary<string>) {
-    return i18nKeys["subject"] == null ? "subjectKey" : "subject";
+  private getPropertyKey(property: string, i18nKeys: Dictionary<string>) {
+    return i18nKeys[property] == null ? `${property}Key` : property;
   }
 }

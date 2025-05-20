@@ -6,7 +6,6 @@ import { CacheService } from "./dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-serction-header.dto";
-import { randomUUID } from "crypto";
 import { DelayedJobDto } from "./delayed-job.dto";
 
 @Controller("dashboard/v3/totalSectionHeaders")
@@ -40,7 +39,7 @@ export class TotalSectionHeaderController {
 
     return buildJsonApi(TotalSectionHeaderDto)
       .addData(
-        randomUUID(),
+        "total-section-header",
         new TotalSectionHeaderDto({
           totalNonProfitCount,
           totalEnterpriseCount,

@@ -101,7 +101,7 @@ export class ProjectReport extends Model<ProjectReport> {
     return builder.literal;
   }
 
-  static approvedProjectsIdsSubquery(projectIds: number[], opts: ApprovedIdsSubqueryOptions = {}) {
+  static approvedProjectsIdsSubquery(projectIds: number[]) {
     const builder = Subquery.select(ProjectReport, "id")
       .in("projectId", projectIds)
       .in("status", ProjectReport.APPROVED_STATUSES);

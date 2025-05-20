@@ -47,8 +47,8 @@ describe("ProjectPitchesController", () => {
     it("should return an array of 3 project pitches successfully", async () => {
       const mockResponse = {
         data: [
-          new ProjectPitch({ uuid: "1", projectName: "Pitch 1", totalHectares: 200 }),
-          new ProjectPitch({ uuid: "2", projectName: "Pitch 2", totalHectares: 300 })
+          new ProjectPitch({ uuid: "1", projectName: "Pitch 1", totalHectares: 200 } as ProjectPitch),
+          new ProjectPitch({ uuid: "2", projectName: "Pitch 2", totalHectares: 300 } as ProjectPitch)
         ],
         paginationTotal: 3,
         pageNumber: 1
@@ -78,12 +78,16 @@ describe("ProjectPitchesController", () => {
   describe("Project Pitch UUID", () => {
     describe("Project Pitch UUID", () => {
       it("should return a project pitch successfully", async () => {
-        const mockProjectPitch = new ProjectPitch({ uuid: "1", projectName: "Pitch 1", totalHectares: 200 });
+        const mockProjectPitch = new ProjectPitch({
+          uuid: "1",
+          projectName: "Pitch 1",
+          totalHectares: 200
+        } as ProjectPitch);
         projectPitchService.getProjectPitch.mockResolvedValue(mockProjectPitch);
 
         const result = await controller.projectPitchGet({ uuid: "1" });
         expect(result).toBeDefined();
-        expect(result.data["id"]).toBe("1");
+        expect(result.data?.["id"]).toBe("1");
         expect(projectPitchService.getProjectPitch).toHaveBeenCalledWith("1");
       });
 

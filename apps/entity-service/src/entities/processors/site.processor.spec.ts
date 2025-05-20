@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Site } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -194,7 +195,7 @@ describe("SiteProcessor", () => {
     it("should return a requested site", async () => {
       const site = await SiteFactory.create();
       const result = await processor.findOne(site.uuid);
-      expect(result.id).toBe(site.id);
+      expect(result?.id).toBe(site.id);
     });
   });
 
@@ -202,7 +203,7 @@ describe("SiteProcessor", () => {
     it("should serialize a Site as a light resource (SiteLightDto)", async () => {
       const { uuid } = await SiteFactory.create();
       const site = await processor.findOne(uuid);
-      const { id, dto } = await processor.getLightDto(site);
+      const { id, dto } = await processor.getLightDto(site!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -217,7 +218,7 @@ describe("SiteProcessor", () => {
       });
 
       const site = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(site);
+      const { id, dto } = await processor.getFullDto(site!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,

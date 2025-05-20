@@ -73,7 +73,14 @@ export class AirtableProcessor extends WorkerHost {
     private readonly dataApi: DataApiService
   ) {
     super();
-    this.base = new Airtable({ apiKey: this.config.get("AIRTABLE_API_KEY") }).base(this.config.get("AIRTABLE_BASE_ID"));
+
+    const apiKey = this.config.get<string>("AIRTABLE_API_KEY");
+    const baseId = this.config.get<string>("AIRTABLE_BASE_ID");
+    if (apiKey == null || baseId == null) {
+      throw new InternalServerErrorException("Airtable API key and base ID must be set");
+    }
+
+    this.base = new Airtable({ apiKey }).base(baseId);
   }
 
   async process(job: Job) {

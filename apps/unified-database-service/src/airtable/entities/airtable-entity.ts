@@ -285,7 +285,8 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
 }
 
 export type Include = {
-  model?: ModelType<unknown, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model?: ModelType<any, any>;
   association?: string;
   attributes?: string[];
 };
@@ -301,7 +302,7 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
       dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
       // Include if this mapping should eager load an association on the DB query
       include?: Include[];
-      valueMap: (entity: T, associations: A) => Promise<null | string | number | boolean | Date>;
+      valueMap: (entity: T, associations: A) => Promise<null | undefined | string | number | boolean | Date>;
     };
 
 export type PolymorphicUuidAssociation<AssociationType> = {

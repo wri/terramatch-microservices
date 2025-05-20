@@ -6,6 +6,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("auth/v3/logins")
 export class LoginController {
@@ -21,7 +22,7 @@ export class LoginController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   async create(@Body() { emailAddress, password }: LoginRequest): Promise<JsonApiDocument> {
     const { token, userUuid } = (await this.authService.login(emailAddress, password)) ?? {};
-    if (token == null) {
+    if (token == null || userUuid == null) {
       // there are multiple reasons for the token to be null (bad email address, wrong password),
       // but we don't want to report on the specifics because it opens an attack vector: if we
       // report that an email address isn't valid, that lets an attacker know which email addresses
@@ -29,6 +30,6 @@ export class LoginController {
       throw new UnauthorizedException();
     }
 
-    return buildJsonApi(LoginDto).addData(userUuid, new LoginDto({ token })).document.serialize();
+    return buildJsonApi(LoginDto).addData(userUuid, populateDto(new LoginDto(), { token })).document.serialize();
   }
 }

@@ -1,6 +1,6 @@
 import { NurseryReport, Project, ProjectReport, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { groupBy, uniq } from "lodash";
+import { filter, groupBy, uniq } from "lodash";
 
 type ProjectReportAssociations = {
   projectUuid?: string;
@@ -50,9 +50,9 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
     dbColumn: ["frameworkKey", "taskId"],
     valueMap: async ({ frameworkKey }, { trees, associatedNurseryReports }) =>
       frameworkKey === "ppc"
-        ? trees.reduce((total, { amount }) => total + amount, 0)
+        ? trees.reduce((total, { amount }) => total + (amount ?? 0), 0)
         : frameworkKey === "terrafund"
-        ? associatedNurseryReports.reduce((total, { seedlingsYoungTrees }) => total + seedlingsYoungTrees, 0)
+        ? associatedNurseryReports.reduce((total, { seedlingsYoungTrees }) => total + (seedlingsYoungTrees ?? 0), 0)
         : 0
   },
   "technicalNarrative",
@@ -74,7 +74,7 @@ export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectRe
       where: { id: projectIds },
       attributes: ["id", "uuid"]
     });
-    const taskIds = projectReports.map(({ taskId }) => taskId);
+    const taskIds = filter(projectReports.map(({ taskId }) => taskId)) as number[];
     const nurseryReportsByTaskId = groupBy(
       await NurseryReport.findAll({
         where: { taskId: taskIds, status: NurseryReport.APPROVED_STATUSES },
@@ -95,7 +95,7 @@ export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectRe
         ...associations,
         [id]: {
           projectUuid: projects.find(({ id }) => id === projectId)?.uuid,
-          associatedNurseryReports: nurseryReportsByTaskId[taskId] ?? [],
+          associatedNurseryReports: (taskId == null ? null : nurseryReportsByTaskId[taskId]) ?? [],
           trees: treesByReportId[id] ?? []
         }
       }),

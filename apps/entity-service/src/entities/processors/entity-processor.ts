@@ -29,7 +29,10 @@ export async function aggregateColumns<M extends Model<M>>(
     await model.findAll({
       where,
       raw: true,
-      attributes: aggregates.map(({ func, attr }) => [fn(func, col(model.getAttributes()[attr].field)), attr as string])
+      attributes: aggregates.map(({ func, attr }) => [
+        fn(func, col(model.getAttributes()[attr].field as string)),
+        attr as string
+      ])
     })
   )[0];
 }
@@ -112,7 +115,7 @@ export abstract class EntityProcessor<
 
       for (const { id, dto } of dtoResults) {
         indexIds.push(id);
-        if (sideloaded) document.addIncluded(id, dto);
+        if (sideloaded) document.addData(id, dto);
         else document.addData(id, dto);
       }
     }
@@ -146,8 +149,8 @@ export abstract class EntityProcessor<
         // If an admin is doing an update, set the feedback / feedbackFields to whatever is in the
         // request, even if it's null. We ignore feedback / feedbackFields if the status is not
         // also being updated.
-        model.feedback = update.feedback;
-        model.feedbackFields = update.feedbackFields;
+        model.feedback = update.feedback ?? null;
+        model.feedbackFields = update.feedbackFields ?? null;
       }
 
       model.status = update.status as ModelType["status"];

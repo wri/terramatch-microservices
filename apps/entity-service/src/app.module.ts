@@ -10,13 +10,19 @@ import { EntityAssociationsController } from "./entities/entity-associations.con
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
+import { TasksController } from "./entities/tasks.controller";
+import { TasksService } from "./entities/tasks.service";
 import { BoundingBoxController } from "./entities/controllers/bounding-box.controller";
 import { BoundingBoxService } from "./entities/services/bounding-box.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
+  // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
+  // needs to be provided in this list before EntitiesController, or it will be superseded by the
+  // wildcard route on EntitiesController.
   controllers: [
     ProjectPitchesController,
+    TasksController,
     EntitiesController,
     EntityAssociationsController,
     TreesController,
@@ -30,7 +36,8 @@ import { BoundingBoxService } from "./entities/services/bounding-box.service";
     EntitiesService,
     TreeService,
     ProjectPitchService,
-    BoundingBoxService
+    BoundingBoxService,
+    TasksService
   ]
 })
 export class AppModule {}

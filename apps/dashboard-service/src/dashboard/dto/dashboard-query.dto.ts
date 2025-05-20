@@ -14,14 +14,6 @@ class QuerySort {
 }
 
 export class DashboardQueryDto extends IntersectionType(QuerySort, NumberPage) {
-  @ValidateNested()
-  @IsOptional()
-  page?: NumberPage;
-
-  @ValidateNested()
-  @IsOptional()
-  sort?: QuerySort;
-
   @ApiProperty({ required: false })
   @IsOptional()
   search?: string;

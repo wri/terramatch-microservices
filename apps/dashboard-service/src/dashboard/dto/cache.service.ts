@@ -22,7 +22,7 @@ export class CacheService {
     return await this.dashboardQueue.add("totalSectionHeader", { ...query, cacheKey, delayedJobId });
   }
 
-  async set(key: string, value: any) {
+  async set(key: string, value: string | number | Buffer<ArrayBufferLike>) {
     return this.cache.redis.set(key, value);
   }
 

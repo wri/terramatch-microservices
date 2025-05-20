@@ -1,6 +1,5 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @JsonApiDto({ type: "totalSectionHeaders" })

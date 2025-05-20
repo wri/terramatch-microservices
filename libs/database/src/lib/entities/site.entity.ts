@@ -70,10 +70,6 @@ export class Site extends Model<Site> {
     return Subquery.select(Site, "uuid").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
   }
 
-  static idsForUuidsSubquery(uuids: string[]) {
-    return Subquery.select(Site, "id").in("uuid", uuids).literal;
-  }
-
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

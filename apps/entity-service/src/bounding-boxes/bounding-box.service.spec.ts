@@ -12,6 +12,19 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Model, Sequelize, Op } from "sequelize";
 
+// Store original console.error
+const originalConsoleError = console.error;
+
+// Mock console.error before all tests
+beforeAll(() => {
+  console.error = jest.fn();
+});
+
+// Restore console.error after all tests
+afterAll(() => {
+  console.error = originalConsoleError;
+});
+
 jest.mock("@terramatch-microservices/database/entities", () => ({
   LandscapeGeometry: {
     findAll: jest.fn()

@@ -1,7 +1,7 @@
 import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { isObject, flatten } from "lodash";
+import { isObject, flatten, isEmpty } from "lodash";
 import { Project } from "@terramatch-microservices/database/entities";
 
 export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
@@ -41,12 +41,12 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }
     };
 
-    if (filters?.country) where["country"] = filters.country;
-    if (filters?.programmes) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
-    if (filters?.cohort) where["cohort"] = filters.cohort;
-    if (filters?.landscapes) where["landscape"] = { [Op.in]: [filters.landscapes] };
-    if (filters?.organisationType) organisationWhere["type"] = { [Op.in]: [filters.organisationType] };
-    if (filters?.projectUuid)
+    if (!isEmpty(filters?.country)) where["country"] = filters.country;
+    if (!isEmpty(filters?.programmes)) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
+    if (!isEmpty(filters?.cohort)) where["cohort"] = filters.cohort;
+    if (!isEmpty(filters?.landscapes)) where["landscape"] = { [Op.in]: [filters.landscapes] };
+    if (!isEmpty(filters?.organisationType)) organisationWhere["type"] = { [Op.in]: [filters.organisationType] };
+    if (!isEmpty(filters?.projectUuid))
       where["uuid"] = Array.isArray(filters.projectUuid) ? { [Op.in]: filters.projectUuid } : filters.projectUuid;
 
     this.where(where);

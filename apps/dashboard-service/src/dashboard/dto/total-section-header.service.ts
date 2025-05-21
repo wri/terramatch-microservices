@@ -69,7 +69,7 @@ export class TotalSectionHeaderService {
   }
 
   async getTotalHectaresSum(projectsIds: number[]) {
-    if (!projectsIds.length) {
+    if (projectsIds.length === 0) {
       return 0;
     }
     const totalHectaresRestoredSum =
@@ -79,7 +79,7 @@ export class TotalSectionHeaderService {
   }
 
   async getTotalTreesRestoredSum(projectsIds: number[]) {
-    if (!projectsIds.length) {
+    if (projectsIds.length === 0) {
       return 0;
     }
     const approvedSitesQuery = await Site.approvedIdsProjectsSubquery(projectsIds);

@@ -59,7 +59,7 @@ export class CacheService {
   }
 
   getCacheParameterForLandscapes(landscapes: string[]) {
-    if (landscapes && typeof landscapes === "object" && !Array.isArray(landscapes)) {
+    if (landscapes != null && typeof landscapes === "object" && !Array.isArray(landscapes)) {
       landscapes = Object.values(landscapes);
     }
 
@@ -79,7 +79,7 @@ export class CacheService {
   }
 
   getCacheParameterForOrganisationType(organisationType: string[]) {
-    if (organisationType && typeof organisationType === "object" && !Array.isArray(organisationType)) {
+    if (organisationType != null && typeof organisationType === "object" && !Array.isArray(organisationType)) {
       organisationType = Object.values(organisationType);
     }
 

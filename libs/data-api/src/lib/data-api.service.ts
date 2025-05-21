@@ -72,7 +72,7 @@ export class DataApiService {
     return await this.getDataset(`gadm-level-2:${level1}`, GADM_QUERY, gadmLevel2(level1), GADM_CACHE_DURATION);
   }
 
-  async getCountryEnvelope(country: string): Promise<any[]> {
+  async getCountryEnvelope(country: string): Promise<{ envelope: string }[]> {
     return await this.getDataset(
       `country-envelope:${country}`,
       GADM_QUERY,

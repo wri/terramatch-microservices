@@ -107,7 +107,7 @@ export class BoundingBoxService {
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid,
-        polygonUuid: { [Op.ne]: "" as any },
+        polygonUuid: { [Op.ne]: "" },
         isActive: true,
         deletedAt: null
       },
@@ -152,7 +152,7 @@ export class BoundingBoxService {
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid: { [Op.in]: siteUuids },
-        polygonUuid: { [Op.ne]: "" as any }
+        polygonUuid: { [Op.ne]: "" }
       },
       attributes: ["polygonUuid"]
     });

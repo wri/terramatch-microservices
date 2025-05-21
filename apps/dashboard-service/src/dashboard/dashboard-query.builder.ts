@@ -41,10 +41,6 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }
     };
 
-    if (filters?.organisationType) {
-      organisationWhere["type"] = { [Op.in]: [filters.organisationType] };
-    }
-
     if (filters?.country) where["country"] = filters.country;
     if (filters?.programmes) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
     if (filters?.cohort) where["cohort"] = filters.cohort;

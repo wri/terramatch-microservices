@@ -136,6 +136,49 @@ describe("ProjectProcessor", () => {
       await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
     });
 
+    it("filters by landscape, cohort and organisationType", async () => {
+      const orgForProfit = await OrganisationFactory.create({ type: "for-profit-organisation" });
+      const orgNonProfit = await OrganisationFactory.create({ type: "non-profit-organisation" });
+      const orgOther = await OrganisationFactory.create({ type: "other-organisation" });
+
+      const project1 = await ProjectFactory.create({
+        landscape: "Landscape A",
+        cohort: "Cohort 1",
+        organisationId: orgForProfit.id
+      });
+      const project2 = await ProjectFactory.create({
+        landscape: "Landscape B",
+        cohort: "Cohort 1",
+        organisationId: orgNonProfit.id
+      });
+      const project3 = await ProjectFactory.create({
+        landscape: "Landscape A",
+        cohort: "Cohort 2",
+        organisationId: orgOther.id
+      });
+      const project4 = await ProjectFactory.create({
+        landscape: "Landscape C",
+        cohort: "Cohort 3",
+        organisationId: orgForProfit.id
+      });
+
+      // Required to get the organisationType filter to work in test
+      for (const p of [project1, project2, project3, project4]) {
+        p.organisation = await p.$get("organisation");
+      }
+
+      await expectProjects([project1, project3], { landscape: ["Landscape A"] });
+      await expectProjects([project1, project2], { cohort: "Cohort 1" });
+      await expectProjects([project1, project4], { organisationType: "for-profit-organisation" });
+      await expectProjects([project2], { organisationType: "non-profit-organisation" });
+      await expectProjects([project1], {
+        landscape: ["Landscape A"],
+        cohort: "Cohort 1",
+        organisationType: "for-profit-organisation"
+      });
+      await expectProjects([project1, project3, project4], { landscape: ["Landscape A", "Landscape C"] });
+    });
+
     it("searches", async () => {
       const p1 = await ProjectFactory.create({ name: "Foo Bar" });
       const p2 = await ProjectFactory.create({ name: "Baz Foo" });

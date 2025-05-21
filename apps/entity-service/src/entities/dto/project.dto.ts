@@ -32,6 +32,13 @@ export class ProjectLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation type"
+  })
+  organisationType: string | null;
+
+  @ApiProperty({
     description: "Entity status for this project",
     enum: ENTITY_STATUSES
   })
@@ -52,6 +59,12 @@ export class ProjectLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: String })
   country: string | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Latitude coordinate" })
+  lat: number | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Longitude coordinate" })
+  long: number | null;
 
   @ApiProperty()
   totalHectaresRestoredSum: number;

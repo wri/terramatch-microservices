@@ -76,7 +76,8 @@ export class ProjectProcessor extends EntityProcessor<
 
     const associationFieldMap = {
       projectUuid: "uuid",
-      organisationUuid: "$organisation.uuid$"
+      organisationUuid: "$organisation.uuid$",
+      organisationType: "$organisation.type$"
     };
 
     for (const term of [
@@ -89,6 +90,18 @@ export class ProjectProcessor extends EntityProcessor<
     ]) {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
+    }
+
+    if (query.landscape != null && query.landscape.length > 0) {
+      builder.where({ landscape: { [Op.in]: query.landscape } });
+    }
+
+    if (query.organisationType != null && query.organisationType.length > 0) {
+      builder.where({ "$organisation.type$": { [Op.in]: query.organisationType } });
+    }
+
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ cohort: { [Op.in]: query.cohort } });
     }
 
     if (query.search != null || query.searchFilter != null) {

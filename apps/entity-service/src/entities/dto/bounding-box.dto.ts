@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { IsArray, IsNumber } from "class-validator";
 
 /**
@@ -8,7 +8,13 @@ import { IsArray, IsNumber } from "class-validator";
  * Format: [minLng, minLat, maxLng, maxLat]
  */
 @JsonApiDto({ type: "boundingBoxes" })
-export class BoundingBoxDto extends JsonApiAttributes<BoundingBoxDto> {
+export class BoundingBoxDto {
+  constructor(data?: { bbox: number[] }) {
+    if (data !== undefined && data !== null) {
+      populateDto(this, data);
+    }
+  }
+
   @ApiProperty({
     description: "The bounding box coordinates in [minLng, minLat, maxLng, maxLat] format",
     type: [Number],

@@ -6,7 +6,7 @@ import { BoundingBoxDto } from "../dto/bounding-box.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 
-@Controller("v3/boundingBoxes")
+@Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
 export class BoundingBoxController {
   constructor(private readonly boundingBoxService: BoundingBoxService) {}
@@ -20,25 +20,35 @@ export class BoundingBoxController {
   async getBoundingBox(@Query() query: BoundingBoxQueryDto): Promise<JsonApiDocument> {
     let result: BoundingBoxDto;
 
-    if (query.polygonUuid) {
+    if (query.polygonUuid !== undefined && query.polygonUuid !== null && query.polygonUuid !== "") {
       result = await this.boundingBoxService.getPolygonBoundingBox(query.polygonUuid);
       return buildJsonApi(BoundingBoxDto).addData(query.polygonUuid, result).document.serialize();
     }
 
-    if (query.siteUuid) {
+    if (query.siteUuid !== undefined && query.siteUuid !== null && query.siteUuid !== "") {
       result = await this.boundingBoxService.getSiteBoundingBox(query.siteUuid);
       return buildJsonApi(BoundingBoxDto).addData(query.siteUuid, result).document.serialize();
     }
 
-    if (query.projectUuid) {
+    if (query.projectUuid !== undefined && query.projectUuid !== null && query.projectUuid !== "") {
       result = await this.boundingBoxService.getProjectBoundingBox(query.projectUuid);
       return buildJsonApi(BoundingBoxDto).addData(query.projectUuid, result).document.serialize();
     }
 
-    if (query.country || (query.landscapes && query.landscapes.length)) {
-      result = await this.boundingBoxService.getCountryLandscapeBoundingBox(query.country, query.landscapes || []);
+    const hasCountry = query.country !== undefined && query.country !== null && query.country !== "";
+    const hasLandscapes =
+      query.landscapes !== undefined &&
+      query.landscapes !== null &&
+      Array.isArray(query.landscapes) &&
+      query.landscapes.length > 0;
+
+    if (hasCountry || hasLandscapes) {
+      const landscapes: string[] = hasLandscapes && Array.isArray(query.landscapes) ? query.landscapes : [];
+      const country = hasCountry ? query.country : "global";
+
+      result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country as string, landscapes);
       // Generate a stable ID for this bounding box
-      const id = `${query.country || "global"}-${(query.landscapes || []).join("-")}`;
+      const id = `${country}-${landscapes.join("-")}`;
       return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
     }
 

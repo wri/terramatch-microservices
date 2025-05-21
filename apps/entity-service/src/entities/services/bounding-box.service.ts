@@ -69,9 +69,10 @@ export class BoundingBoxService {
     });
 
     if (envelopes.length === 0) {
-      const errorMsg = identifier
-        ? `No ${entityType.toLowerCase()} found with UUID ${identifier}`
-        : `No ${entityType.toLowerCase()} found with the provided criteria`;
+      const errorMsg =
+        identifier !== undefined && identifier !== null && identifier !== ""
+          ? `No ${entityType.toLowerCase()} found with UUID ${identifier}`
+          : `No ${entityType.toLowerCase()} found with the provided criteria`;
       throw new NotFoundException(errorMsg);
     }
 
@@ -95,14 +96,14 @@ export class BoundingBoxService {
       attributes: ["uuid"]
     });
 
-    if (!site) {
+    if (site === null || site === undefined) {
       throw new NotFoundException(`${EntityType.SITE} with UUID ${siteUuid} not found`);
     }
 
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid,
-        polygonUuid: { [Op.ne]: null },
+        polygonUuid: { [Op.ne]: "" as any },
         isActive: true,
         deletedAt: null
       },
@@ -129,7 +130,7 @@ export class BoundingBoxService {
       attributes: ["id"]
     });
 
-    if (!project) {
+    if (project === null || project === undefined) {
       throw new NotFoundException(`${EntityType.PROJECT} with UUID ${projectUuid} not found`);
     }
 
@@ -147,7 +148,7 @@ export class BoundingBoxService {
     const sitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid: { [Op.in]: siteUuids },
-        polygonUuid: { [Op.ne]: null }
+        polygonUuid: { [Op.ne]: "" as any }
       },
       attributes: ["polygonUuid"]
     });
@@ -167,7 +168,7 @@ export class BoundingBoxService {
   }
 
   async getCountryLandscapeBoundingBox(country: string, landscapes: string[]): Promise<BoundingBoxDto> {
-    if (!landscapes || landscapes.length === 0) {
+    if (landscapes === undefined || landscapes === null || landscapes.length === 0) {
       throw new BadRequestException("At least one landscape slug is required");
     }
     // TODO: Add country geometry model to obtain the bounding box of the country

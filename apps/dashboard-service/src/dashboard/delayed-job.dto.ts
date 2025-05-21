@@ -1,12 +1,17 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "delayedJobs" })
-export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
+export class DelayedJobDto {
+  constructor(entry: DelayedJob) {
+    populateDto<DelayedJobDto>(this, entry);
+  }
+
   @ApiProperty({
     description: "The unique identifier for the delayed job.",
     type: String

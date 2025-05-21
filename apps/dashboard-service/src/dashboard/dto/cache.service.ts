@@ -18,6 +18,11 @@ export class CacheService {
     this.cache = new Cache(this.redis);
   }
 
+  async getTimestampForTotalSectionHeader(cacheParameter: string) {
+    const timestampKey = `dashboard:total-section-header|${cacheParameter}:timestamp`;
+    return this.redis.get(timestampKey);
+  }
+
   async getTotalSectionHeader(cacheKey: string, query: DashboardQueryDto, delayedJobId: number) {
     return await this.dashboardQueue.add("totalSectionHeader", { ...query, cacheKey, delayedJobId });
   }
@@ -35,12 +40,12 @@ export class CacheService {
   }
 
   getCacheKeyFromQuery(query: DashboardQueryDto) {
-    const frameworkValue = this.getCacheParameterForProgrammes(query.programmes);
-    const landscapeValue = this.getCacheParameterForLandscapes(query.landscapes);
-    const countryValue = this.getCacheParameterForCountry(query.country);
-    const organisationValue = this.getCacheParameterForOrganisationType(query.organisationType);
-    const cohortValue = this.getCacheParameterForCohort(query.cohort);
-    const projectUuidValue = this.getCacheParameterForProjectUudid(query.projectUuid);
+    const frameworkValue = this.getCacheParameterForProgrammes(query.programmes ?? []);
+    const landscapeValue = this.getCacheParameterForLandscapes(query.landscapes ?? []);
+    const countryValue = this.getCacheParameterForCountry(query.country ?? "");
+    const organisationValue = this.getCacheParameterForOrganisationType(query.organisationType ?? []);
+    const cohortValue = this.getCacheParameterForCohort(query.cohort ?? "");
+    const projectUuidValue = this.getCacheParameterForProjectUudid(query.projectUuid ?? "");
 
     return `${frameworkValue}|${landscapeValue}|${countryValue}|${organisationValue}|${cohortValue}|${projectUuidValue}`;
   }

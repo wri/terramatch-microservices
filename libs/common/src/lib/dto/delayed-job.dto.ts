@@ -1,12 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { JsonApiAttributes } from "./json-api-attributes";
+import { populateDto } from "./json-api-attributes";
 import { JsonApiDto } from "../decorators";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "delayedJobs" })
-export class DelayedJobDto extends JsonApiAttributes<DelayedJobDto> {
+export class DelayedJobDto {
+  constructor(data: DelayedJobDto) {
+    populateDto<DelayedJobDto>(this, data);
+  }
   @ApiProperty({
     description: "The unique identifier for the delayed job.",
     type: String

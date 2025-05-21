@@ -1,9 +1,12 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { JsonApiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @JsonApiDto({ type: "totalSectionHeaders" })
-export class TotalSectionHeaderDto extends JsonApiAttributes<TotalSectionHeaderDto> {
+export class TotalSectionHeaderDto {
+  constructor(data: TotalSectionHeaderDto) {
+    populateDto<TotalSectionHeaderDto>(this, data);
+  }
   @ApiProperty()
   totalNonProfitCount: number | null;
 
@@ -24,4 +27,7 @@ export class TotalSectionHeaderDto extends JsonApiAttributes<TotalSectionHeaderD
 
   @ApiProperty()
   totalTreesRestoredGoal: number | null;
+
+  @ApiProperty()
+  lastUpdatedAt: string | null;
 }

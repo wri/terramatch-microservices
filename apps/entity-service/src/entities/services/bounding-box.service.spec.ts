@@ -35,8 +35,14 @@ describe("BoundingBoxService", () => {
   // We need to inject this for the service to work, but don't use it directly in tests
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let configService: DeepMocked<ConfigService>;
+  // Store original console.error
+  let originalConsoleError: typeof console.error;
 
   beforeEach(async () => {
+    // Store original console.error and replace it with a mock
+    originalConsoleError = console.error;
+    console.error = jest.fn();
+
     const module = await Test.createTestingModule({
       providers: [
         BoundingBoxService,
@@ -61,6 +67,11 @@ describe("BoundingBoxService", () => {
 
     // Reset the mocks for each test
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    // Restore original console.error after each test
+    console.error = originalConsoleError;
   });
 
   // Helper method to mock the Sequelize.fn used in the service
@@ -281,15 +292,15 @@ describe("BoundingBoxService", () => {
       expect(result.bbox).toEqual([0, 0, 10, 10]);
     });
 
-    it("should return only landscape bounding box when country is not found", async () => {
+    it("should return only landscape bounding box when country is not a valid ISO code", async () => {
       const country = "INVALID";
       const landscapes = ["landscape-1"];
 
       (LandscapeGeometry.findAll as jest.Mock).mockResolvedValue([mockEnvelopeData()]);
 
-      dataApiService.getCountryEnvelope.mockRejectedValue(new Error("Country not found"));
-
       const result = await service.getCountryLandscapeBoundingBox(country, landscapes);
+
+      expect(dataApiService.getCountryEnvelope).not.toHaveBeenCalled();
 
       expect(result.bbox).toEqual([0, 0, 10, 10]);
     });
@@ -321,15 +332,20 @@ describe("BoundingBoxService", () => {
       expect(result.bbox).toEqual([0, 0, 10, 10]);
     });
 
-    it("should throw NotFoundException when neither country nor landscapes are found", async () => {
-      const country = "INVALID";
+    it("should throw NotFoundException when neither valid country nor landscapes are found", async () => {
+      const country = "XYZ"; // Valid format but not a real country code
       const landscapes: string[] = ["non-existent"];
 
+      // Landscape not found
       (LandscapeGeometry.findAll as jest.Mock).mockResolvedValue([]);
 
-      dataApiService.getCountryEnvelope.mockRejectedValue(new Error("Country not found"));
+      // Country API returns empty response
+      dataApiService.getCountryEnvelope.mockResolvedValue([]);
 
       await expect(service.getCountryLandscapeBoundingBox(country, landscapes)).rejects.toThrow(NotFoundException);
+
+      // Verify API was called
+      expect(dataApiService.getCountryEnvelope).toHaveBeenCalledWith("XYZ");
     });
   });
 });

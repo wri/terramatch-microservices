@@ -133,12 +133,20 @@ export class SitePolygonsController {
 
     const indexIds: string[] = [];
     const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
-    for (const sitePolygon of await queryBuilder.execute()) {
+    const sitePolygons = await queryBuilder.execute();
+    const associations = await this.sitePolygonService.loadAssociationDtos(sitePolygons, lightResource ?? false);
+    for (const sitePolygon of sitePolygons) {
       indexIds.push(sitePolygon.uuid);
       if (lightResource) {
-        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon));
+        document.addData(
+          sitePolygon.uuid,
+          await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+        );
       } else {
-        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildFullDto(sitePolygon));
+        document.addData(
+          sitePolygon.uuid,
+          await this.sitePolygonService.buildFullDto(sitePolygon, associations[sitePolygon.id] ?? {})
+        );
       }
     }
 

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
 import {
   IndicatorDto,
   ReportingPeriodDto,
@@ -9,10 +9,18 @@ import {
 } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
-import { pick } from "lodash";
+import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
-import { Transaction } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { INDICATOR_SLUGS } from "@terramatch-microservices/database/constants";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+
+type AssociationDtos = {
+  indicators?: IndicatorDto[];
+  establishmentTreeSpecies?: TreeSpeciesDto[];
+  reportingPeriods?: ReportingPeriodDto[];
+};
 
 @Injectable()
 export class SitePolygonsService {
@@ -27,47 +35,6 @@ export class SitePolygonsService {
     return builder;
   }
 
-  async getIndicators(sitePolygon: SitePolygon): Promise<IndicatorDto[]> {
-    const accessor = new ModelPropertiesAccessor();
-    const indicators: IndicatorDto[] = [];
-    for (const indicator of await sitePolygon.getIndicators()) {
-      const DtoPrototype = INDICATOR_DTOS[indicator.indicatorSlug];
-      const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
-      indicators.push(pick(indicator, fields) as typeof DtoPrototype.prototype);
-    }
-
-    return indicators;
-  }
-
-  async getEstablishmentTreeSpecies(sitePolygon: SitePolygon): Promise<TreeSpeciesDto[]> {
-    // These associations are expected to be eager loaded, so this should not result in new SQL
-    // queries.
-    const site = await sitePolygon.loadSite();
-    if (site == null) return [];
-
-    return (await site.loadTreesPlanted()).map(({ name, amount }) => ({ name: name ?? "", amount: amount ?? 0 }));
-  }
-
-  async getReportingPeriods(sitePolygon: SitePolygon): Promise<ReportingPeriodDto[]> {
-    // These associations are expected to be eager loaded, so this should not result in new SQL
-    // queries
-    const site = await sitePolygon.loadSite();
-    if (site == null) return [];
-
-    const reportingPeriods: ReportingPeriodDto[] = [];
-    for (const report of await site.loadReports()) {
-      reportingPeriods.push({
-        dueAt: report.dueAt,
-        submittedAt: report.submittedAt,
-        treeSpecies: (await report.loadTreesPlanted()).map(({ name, amount }) => ({
-          name: name ?? "",
-          amount: amount ?? 0
-        }))
-      });
-    }
-
-    return reportingPeriods;
-  }
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
     const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } = (await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } })) ?? {};
@@ -106,15 +73,146 @@ export class SitePolygonsService {
     }
   }
 
-  async buildLightDto(sitePolygon: SitePolygon): Promise<SitePolygonLightDto> {
-    const indicators = await this.getIndicators(sitePolygon);
+  async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {
+    const associationDtos: Record<number, AssociationDtos> = {};
+    for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
+      associationDtos[sitePolygonId] = { indicators };
+    }
+    if (lightResource) return associationDtos;
+
+    const sites = await this.getSites(sitePolygons);
+    const reports = await this.getSiteReports(sitePolygons);
+    const { siteTrees, reportTrees } = await this.getTreeSpecies(sitePolygons);
+    for (const { id, siteUuid } of sitePolygons) {
+      const siteId = sites[siteUuid];
+      if (siteId == null) continue;
+
+      associationDtos[id] ??= {};
+      associationDtos[id].establishmentTreeSpecies = siteTrees[siteId]?.map(({ name, amount }) => ({
+        name: name ?? "",
+        amount: amount ?? 0
+      }));
+      associationDtos[id].reportingPeriods = reports[siteId]?.map(({ id, dueAt, submittedAt }) => {
+        const treeSpecies = reportTrees[id]?.map(({ name, amount }) => ({ name: name ?? "", amount: amount ?? 0 }));
+        return { dueAt, submittedAt, treeSpecies };
+      });
+    }
+
+    return associationDtos;
+  }
+
+  async buildLightDto(sitePolygon: SitePolygon, { indicators }: AssociationDtos): Promise<SitePolygonLightDto> {
     return new SitePolygonLightDto(sitePolygon, indicators);
   }
 
-  async buildFullDto(sitePolygon: SitePolygon): Promise<SitePolygonFullDto> {
-    const indicators = await this.getIndicators(sitePolygon);
-    const establishmentTreeSpecies = await this.getEstablishmentTreeSpecies(sitePolygon);
-    const reportingPeriods = await this.getReportingPeriods(sitePolygon);
+  async buildFullDto(
+    sitePolygon: SitePolygon,
+    { indicators, establishmentTreeSpecies, reportingPeriods }: AssociationDtos
+  ): Promise<SitePolygonFullDto> {
     return new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods);
+  }
+
+  /**
+   * Get a mapping from site polygon ID to the sorted list of indicators for the polygon.
+   */
+  private async getIndicators(sitePolygons: SitePolygon[]) {
+    const accessor = new ModelPropertiesAccessor();
+    const results: Record<number, IndicatorDto[]> = {};
+    const sitePolygonIds = sitePolygons.map(({ id }) => id);
+    for (const modelClass of uniq(Object.values(INDICATOR_MODEL_CLASSES))) {
+      let fields: string[] | undefined = undefined;
+      for (const indicator of await modelClass.findAll({ where: { sitePolygonId: { [Op.in]: sitePolygonIds } } })) {
+        if (fields === undefined) {
+          const DTO = INDICATOR_DTOS[indicator.indicatorSlug];
+          fields = accessor.getModelProperties(DTO.prototype as unknown as Type<unknown>);
+        }
+
+        results[indicator.sitePolygonId] ??= [];
+        results[indicator.sitePolygonId].push(pick(indicator, fields) as IndicatorDto);
+      }
+    }
+
+    for (const indicators of Object.values(results)) {
+      indicators.sort(({ indicatorSlug: slugA }, { indicatorSlug: slugB }) => {
+        const indexA = INDICATOR_SLUGS.indexOf(slugA);
+        const indexB = INDICATOR_SLUGS.indexOf(slugB);
+        return indexA < indexB ? -1 : indexB < indexA ? 1 : 0;
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Since site polygons use Site UUID, but everything else uses Site ID, we need to pull a mapping
+   * between the two to correctly deal with the aggregate data from getTreeSpecies() and getReportingPeriods()
+   */
+  private async getSites(sitePolygons: SitePolygon[]) {
+    const sites = await Site.findAll({
+      where: { uuid: { [Op.in]: sitePolygons.map(({ siteUuid }) => siteUuid) } },
+      attributes: ["id", "uuid"]
+    });
+    return sites.reduce(
+      (mapping, { id, uuid }) => ({
+        ...mapping,
+        [uuid]: id
+      }),
+      {} as Record<string, number>
+    );
+  }
+
+  /**
+   * Get two mappings of tree species sets: one of reports by report id, and the other of sites by site id.
+   */
+  private async getTreeSpecies(sitePolygons: SitePolygon[]) {
+    const siteIds = Subquery.select(Site, "id").in(
+      "uuid",
+      sitePolygons.map(({ siteUuid }) => siteUuid)
+    ).literal;
+    const siteReportIds = Subquery.select(SiteReport, "id").in("siteId", siteIds).literal;
+    const trees = await TreeSpecies.visible()
+      .collection("tree-planted")
+      .findAll({
+        where: {
+          [Op.or]: [
+            {
+              speciesableType: Site.LARAVEL_TYPE,
+              speciesableId: { [Op.in]: siteIds }
+            },
+            {
+              speciesableType: SiteReport.LARAVEL_TYPE,
+              speciesableId: { [Op.in]: siteReportIds }
+            }
+          ]
+        },
+        attributes: ["speciesableType", "speciesableId", "name", "amount"]
+      });
+    const siteTrees = groupBy(
+      trees.filter(({ speciesableType }) => speciesableType === Site.LARAVEL_TYPE),
+      "speciesableId"
+    ) as Record<number, TreeSpecies[]>;
+    const reportTrees = groupBy(
+      trees.filter(({ speciesableType }) => speciesableType === SiteReport.LARAVEL_TYPE),
+      "speciesableId"
+    ) as Record<number, TreeSpecies[]>;
+    return { siteTrees, reportTrees };
+  }
+
+  /**
+   * Get a mapping of site id to a list of site reports. Only id, siteId, dueAt and submittedAt are loaded
+   * on the resulting reports.
+   */
+  private async getSiteReports(sitePolygons: SitePolygon[]) {
+    const siteIds = Subquery.select(Site, "id").in(
+      "uuid",
+      sitePolygons.map(({ siteUuid }) => siteUuid)
+    ).literal;
+    return groupBy(
+      await SiteReport.findAll({
+        where: { siteId: { [Op.in]: siteIds } },
+        attributes: ["id", "siteId", "dueAt", "submittedAt"]
+      }),
+      "siteId"
+    ) as Record<number, SiteReport[]>;
   }
 }

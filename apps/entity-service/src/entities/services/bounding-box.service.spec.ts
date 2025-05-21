@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
 import { BoundingBoxService } from "./bounding-box.service";
 import { DataApiService } from "@terramatch-microservices/data-api";
+import { ConfigService } from "@nestjs/config";
 import {
   PolygonGeometry,
   Site,
@@ -31,12 +32,26 @@ jest.mock("@terramatch-microservices/database/entities", () => {
 describe("BoundingBoxService", () => {
   let service: BoundingBoxService;
   let dataApiService: DeepMocked<DataApiService>;
+  let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         BoundingBoxService,
-        { provide: DataApiService, useValue: (dataApiService = createMock<DataApiService>()) }
+        {
+          provide: DataApiService,
+          useValue: (dataApiService = createMock<DataApiService>())
+        },
+        {
+          provide: ConfigService,
+          useValue: (configService = createMock<ConfigService>({
+            get: (key: string): PartialFuncReturn<unknown> => {
+              if (key === "APP_FRONT_END") return "https://unittests.terramatch.org";
+              if (key === "DATA_API_KEY") return "test-api-key";
+              return "";
+            }
+          }))
+        }
       ]
     }).compile();
 
@@ -278,7 +293,7 @@ describe("BoundingBoxService", () => {
     });
 
     it("should return only country bounding box when no landscapes are provided", async () => {
-      const country = "KEN";
+      const country = "BEN";
       const landscapes: string[] = [];
 
       dataApiService.getCountryEnvelope.mockResolvedValue([

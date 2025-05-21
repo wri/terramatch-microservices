@@ -33,6 +33,12 @@ export const gadmLevel2 = (level1: string) => `
     AND type_2 NOT IN ('Waterbody', 'Water body', 'Water Body')
 `;
 
+export const gadmCountryEnvelope = (country: string) => `
+  SELECT ST_AsGeoJSON(ST_Envelope(geom)) as envelope
+  FROM gadm_administrative_boundaries
+  WHERE adm_level='0' AND gid_0='${country}'
+`;
+
 type GadmCountry = {
   name: string;
   iso: string;
@@ -64,6 +70,15 @@ export class DataApiService {
 
   async gadmLevel2(level1: string): Promise<GadmLevelCode[]> {
     return await this.getDataset(`gadm-level-2:${level1}`, GADM_QUERY, gadmLevel2(level1), GADM_CACHE_DURATION);
+  }
+
+  async getCountryEnvelope(country: string): Promise<any[]> {
+    return await this.getDataset(
+      `country-envelope:${country}`,
+      GADM_QUERY,
+      gadmCountryEnvelope(country),
+      GADM_CACHE_DURATION
+    );
   }
 
   private async getDataset(key: string, queryPath: string, query: string, cacheDuration: number) {

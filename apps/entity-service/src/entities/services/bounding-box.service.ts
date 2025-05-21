@@ -8,13 +8,15 @@ import {
   SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { Model, ModelStatic, Op, Sequelize, WhereOptions } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { DataApiService } from "@terramatch-microservices/data-api";
+import { ConfigService } from "@nestjs/config";
 
 enum EntityType {
   POLYGON = "Polygon",
   SITE = "Site",
   PROJECT = "Project",
-  LANDSCAPE = "Landscape"
+  LANDSCAPE = "Landscape",
+  COUNTRY = "Country"
 }
 
 interface BoundingBoxCoordinates {
@@ -26,6 +28,8 @@ interface BoundingBoxCoordinates {
 
 @Injectable()
 export class BoundingBoxService {
+  constructor(private readonly dataApiService: DataApiService, private readonly configService: ConfigService) {}
+
   private createBoundingBoxDto(minLng: number, minLat: number, maxLng: number, maxLat: number): BoundingBoxDto {
     return new BoundingBoxDto({
       bbox: [minLng, minLat, maxLng, maxLat]
@@ -168,15 +172,100 @@ export class BoundingBoxService {
   }
 
   async getCountryLandscapeBoundingBox(country: string, landscapes: string[]): Promise<BoundingBoxDto> {
-    if (landscapes === undefined || landscapes === null || landscapes.length === 0) {
-      throw new BadRequestException("At least one landscape slug is required");
+    let maxLng = -Infinity;
+    let minLng = Infinity;
+    let maxLat = -Infinity;
+    let minLat = Infinity;
+    let hasBounds = false;
+
+    // Get bounding box from landscapes if provided
+    if (Array.isArray(landscapes) && landscapes.length > 0) {
+      try {
+        const landscapeBbox = await this.getBoundingBoxFromGeometries(
+          LandscapeGeometry,
+          { slug: { [Op.in]: landscapes } },
+          "geometry",
+          EntityType.LANDSCAPE
+        );
+
+        // Extract coordinates from landscapes bounding box
+        const [west, south, east, north] = landscapeBbox.bbox;
+        maxLng = Math.max(maxLng, east);
+        minLng = Math.min(minLng, west);
+        maxLat = Math.max(maxLat, north);
+        minLat = Math.min(minLat, south);
+        hasBounds = true;
+      } catch (error) {
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+      }
     }
-    // TODO: Add country geometry model to obtain the bounding box of the country
-    return this.getBoundingBoxFromGeometries(
-      LandscapeGeometry,
-      { slug: { [Op.in]: landscapes } },
-      "geometry",
-      EntityType.LANDSCAPE
-    );
+    if (typeof country === "string" && country !== "") {
+      try {
+        const countryIso = country.toUpperCase();
+
+        try {
+          const envelopeData = await this.dataApiService.getCountryEnvelope(countryIso);
+
+          if (
+            envelopeData.length > 0 &&
+            typeof envelopeData[0] === "object" &&
+            envelopeData[0] !== null &&
+            "envelope" in envelopeData[0] &&
+            typeof envelopeData[0].envelope === "string"
+          ) {
+            try {
+              const geojson = JSON.parse(envelopeData[0].envelope);
+
+              if (
+                geojson !== null &&
+                geojson !== undefined &&
+                typeof geojson === "object" &&
+                "coordinates" in geojson &&
+                geojson.coordinates !== null &&
+                geojson.coordinates !== undefined &&
+                Array.isArray(geojson.coordinates) &&
+                geojson.coordinates.length > 0 &&
+                geojson.coordinates[0] !== null &&
+                geojson.coordinates[0] !== undefined &&
+                Array.isArray(geojson.coordinates[0])
+              ) {
+                const coordinates = geojson.coordinates[0];
+
+                for (const point of coordinates) {
+                  if (Array.isArray(point) && point.length >= 2) {
+                    const [lng, lat] = point;
+                    if (typeof lng === "number" && typeof lat === "number") {
+                      maxLng = Math.max(maxLng, lng);
+                      minLng = Math.min(minLng, lng);
+                      maxLat = Math.max(maxLat, lat);
+                      minLat = Math.min(minLat, lat);
+                    }
+                  }
+                }
+                hasBounds = true;
+              }
+            } catch (jsonParseError) {
+              console.error("Error parsing envelope JSON:", jsonParseError);
+            }
+          }
+        } catch (apiError) {
+          console.error("Error fetching country envelope:", apiError);
+          if (!hasBounds) {
+            throw apiError;
+          }
+        }
+      } catch (error) {
+        if (!hasBounds) {
+          throw error;
+        }
+      }
+    }
+    if (!hasBounds) {
+      throw new NotFoundException("No valid bounding box found. Please provide valid country code or landscape names.");
+    }
+
+    return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
   }
 }

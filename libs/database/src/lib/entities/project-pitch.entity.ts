@@ -60,6 +60,9 @@ export class ProjectPitch extends Model<ProjectPitch> {
   @Column(UUID)
   organisationId: string | null;
 
+  @BelongsTo(() => Organisation, { foreignKey: "organisationId", constraints: false })
+  organisation: Organisation | null;
+
   @AllowNull
   @Column(UUID)
   fundingProgrammeId: string | null;
@@ -334,9 +337,6 @@ export class ProjectPitch extends Model<ProjectPitch> {
   @AllowNull
   @Column(INTEGER.UNSIGNED)
   directSeedingSurvivalRate: number | null;
-
-  @BelongsTo(() => Organisation, { foreignKey: "organisationId", constraints: false })
-  organisation: Organisation | null;
 
   @AllowNull
   @JsonColumn({ field: "level_0_proposed" })

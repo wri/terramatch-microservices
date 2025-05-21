@@ -1,5 +1,5 @@
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { ProjectPitch } from "@terramatch-microservices/database/entities";
+import { Organisation, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { filter, flatten, uniq } from "lodash";
 
 type ProjectPitchAssociations = {
@@ -12,6 +12,11 @@ type ProjectPitchAssociations = {
 
 const COLUMNS: ColumnMapping<ProjectPitch, ProjectPitchAssociations>[] = [
   ...commonEntityColumns<ProjectPitch, ProjectPitchAssociations>("pitch"),
+  {
+    airtableColumn: "organisationUuid",
+    include: [{ model: Organisation, attributes: ["uuid"] }],
+    valueMap: async ({ organisation }) => organisation?.uuid
+  },
   "totalTrees",
   "totalHectares",
   "restorationInterventionTypes",

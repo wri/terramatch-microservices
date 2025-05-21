@@ -8,7 +8,6 @@ import { BadRequestException } from "@nestjs/common";
 
 describe("BoundingBoxController", () => {
   let controller: BoundingBoxController;
-  let service: BoundingBoxService;
 
   const sampleBoundingBox = new BoundingBoxDto({
     bbox: [-74.006, 40.7128, -73.9538, 40.8075]
@@ -35,7 +34,6 @@ describe("BoundingBoxController", () => {
     }).compile();
 
     controller = module.get<BoundingBoxController>(BoundingBoxController);
-    service = module.get<BoundingBoxService>(BoundingBoxService);
   });
 
   it("should be defined", () => {

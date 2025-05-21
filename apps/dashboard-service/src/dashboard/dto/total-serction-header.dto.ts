@@ -8,25 +8,25 @@ export class TotalSectionHeaderDto {
     populateDto<TotalSectionHeaderDto>(this, data);
   }
   @ApiProperty()
-  totalNonProfitCount: number | null;
+  totalNonProfitCount: number;
 
   @ApiProperty()
-  totalEnterpriseCount: number | null;
+  totalEnterpriseCount: number;
 
   @ApiProperty()
-  totalEntries: number | null;
+  totalEntries: number;
 
   @ApiProperty()
-  totalHectaresRestored: number | null;
+  totalHectaresRestored: number;
 
   @ApiProperty()
-  totalHectaresRestoredGoal: number | null;
+  totalHectaresRestoredGoal: number;
 
   @ApiProperty()
-  totalTreesRestored: number | null;
+  totalTreesRestored: number;
 
   @ApiProperty()
-  totalTreesRestoredGoal: number | null;
+  totalTreesRestoredGoal: number;
 
   @ApiProperty()
   lastUpdatedAt: string | null;

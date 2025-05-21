@@ -26,7 +26,8 @@ export class TotalSectionHeaderController {
       const delayedJob = await DelayedJob.create();
       await this.cacheService.getTotalSectionHeader(cacheKey, query, delayedJob.id);
       const delayedJobDto = new DelayedJobDto(delayedJob);
-      return delayedJobDto;
+
+      return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto).document.serialize();
     }
 
     const {

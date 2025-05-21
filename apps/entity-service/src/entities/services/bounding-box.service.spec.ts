@@ -32,6 +32,8 @@ jest.mock("@terramatch-microservices/database/entities", () => {
 describe("BoundingBoxService", () => {
   let service: BoundingBoxService;
   let dataApiService: DeepMocked<DataApiService>;
+  // We need to inject this for the service to work, but don't use it directly in tests
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
@@ -315,7 +317,7 @@ describe("BoundingBoxService", () => {
 
       const result = await service.getCountryLandscapeBoundingBox(country, landscapes);
 
-      expect(dataApiService.getCountryEnvelope).toHaveBeenCalledWith("KEN");
+      expect(dataApiService.getCountryEnvelope).toHaveBeenCalledWith("BEN");
       expect(result.bbox).toEqual([0, 0, 10, 10]);
     });
 

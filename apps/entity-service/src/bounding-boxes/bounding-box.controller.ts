@@ -1,8 +1,8 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
-import { BoundingBoxService } from "../services/bounding-box.service";
-import { BoundingBoxQueryDto } from "../dto/bounding-box-query.dto";
-import { BoundingBoxDto } from "../dto/bounding-box.dto";
+import { BoundingBoxService } from "./bounding-box.service";
+import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
+import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 

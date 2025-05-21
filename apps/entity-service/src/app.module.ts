@@ -12,8 +12,8 @@ import { ProjectPitchesController } from "./entities/project-pitches.controller"
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
 import { TasksService } from "./entities/tasks.service";
-import { BoundingBoxController } from "./entities/controllers/bounding-box.controller";
-import { BoundingBoxService } from "./entities/services/bounding-box.service";
+import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
+import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
 
 @Module({

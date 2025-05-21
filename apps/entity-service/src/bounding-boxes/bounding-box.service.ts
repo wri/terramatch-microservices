@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { BoundingBoxDto } from "../dto/bounding-box.dto";
+import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import {
   LandscapeGeometry,
   PolygonGeometry,

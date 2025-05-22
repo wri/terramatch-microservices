@@ -14,7 +14,6 @@ import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
-import * as console from "node:console";
 
 export class SiteReportProcessor extends ReportProcessor<
   SiteReport,

@@ -1,6 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsArray, IsOptional, IsString, IsUUID } from "class-validator";
-import { Transform } from "class-transformer";
 
 export class BoundingBoxQueryDto {
   @ApiPropertyOptional({
@@ -28,23 +27,12 @@ export class BoundingBoxQueryDto {
   projectUuid?: string;
 
   @ApiPropertyOptional({
-    description: "Array of project UUIDs to get the combined bounding box of their centroids",
-    type: [String]
-  })
-  @IsOptional()
-  @IsArray()
-  @IsUUID(undefined, { each: true })
-  @Transform(({ value }) => (typeof value === "string" ? [value] : value))
-  projectUuids?: string[];
-
-  @ApiPropertyOptional({
     description: "Array of landscape slugs for combined bounding box (used with country)",
     type: [String]
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @Transform(({ value }) => (typeof value === "string" ? [value] : value))
   landscapes?: string[];
 
   @ApiPropertyOptional({

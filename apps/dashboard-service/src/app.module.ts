@@ -8,9 +8,8 @@ import { TotalSectionHeaderService } from "./dashboard/dto/total-section-header.
 import { BullModule } from "@nestjs/bullmq";
 import { CacheService } from "./dashboard/dto/cache.service";
 import { RedisModule } from "@nestjs-modules/ioredis";
-import { DashboardService } from "./dashboard/dashboard.service";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { DashboardProcessor } from "./dashboard/worker/worker.processor";
+import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
 
 @Module({
   imports: [
@@ -39,8 +38,7 @@ import { DashboardProcessor } from "./dashboard/worker/worker.processor";
     },
     TotalSectionHeaderService,
     CacheService,
-    DashboardProcessor,
-    DashboardService
+    DashboardProcessor
   ]
 })
 export class AppModule {}

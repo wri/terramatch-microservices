@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   Demographic,
   DemographicEntry,
+  Project,
   ProjectReport,
   Site,
   SitePolygon,
@@ -10,46 +11,44 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { DashboardQueryDto } from "./dashboard-query.dto";
-import { DashboardService } from "../dashboard.service";
+import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
 
 @Injectable()
 export class TotalSectionHeaderService {
-  constructor(private readonly dashboardService: DashboardService) {}
-
   async getTotalSectionHeader(query: DashboardQueryDto) {
-    const projectsBuilder = await this.dashboardService.buildQuery(query, [
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
       {
         association: "organisation",
         attributes: ["uuid", "name", "type"]
       }
-    ]);
-    const projects = await projectsBuilder;
-    const projectIds: number[] = await projects.pluckIds();
+    ]).queryFilters(query);
+
+    const projectIds: number[] = await projectsBuilder.pluckIds();
 
     return {
-      totalNonProfitCount: await this.getTotalNonProfitCount(projects),
-      totalEnterpriseCount: await this.getTotalEnterpriseCount(projects),
+      totalNonProfitCount: await this.getTotalNonProfitCount(projectsBuilder),
+      totalEnterpriseCount: await this.getTotalEnterpriseCount(projectsBuilder),
       totalEntries: await this.getTotalJobs(projectIds),
       totalHectaresRestored: await this.getTotalHectaresSum(projectIds),
-      totalHectaresRestoredGoal:
-        (await projects.select(["totalHectaresRestoredGoal"]).sum("totalHectaresRestoredGoal")) ?? 0,
+      totalHectaresRestoredGoal: (await projectsBuilder.sum("totalHectaresRestoredGoal")) ?? 0,
       totalTreesRestored: await this.getTotalTreesRestoredSum(projectIds),
-      totalTreesRestoredGoal: (await projects.select(["treesGrownGoal"]).sum("treesGrownGoal")) ?? 0
+      totalTreesRestoredGoal: (await projectsBuilder.sum("treesGrownGoal")) ?? 0
     };
   }
 
-  async getTotalNonProfitCount(projects) {
-    const totalNonProfit = (await projects.select(["organisation.type"]).execute()).filter(
-      project => project.organisationType == "non-profit-organization"
-    ).length;
+  async getTotalNonProfitCount(projectsBuilder: DashboardProjectsQueryBuilder) {
+    const projects = await projectsBuilder.execute();
+
+    const totalNonProfit = projects.filter(project => project.organisation?.type === "non-profit-organization").length;
+
     return totalNonProfit ?? 0;
   }
 
-  async getTotalEnterpriseCount(projects) {
-    const totalForProfit = (await projects.select(["organisation.type"]).execute()).filter(
-      project => project.organisationType == "for-profit-organization"
-    ).length;
-    return totalForProfit ?? 0;
+  async getTotalEnterpriseCount(projectsBuilder: DashboardProjectsQueryBuilder) {
+    const projects = await projectsBuilder.execute();
+    const totalEnterprise = projects.filter(project => project.organisation?.type === "for-profit-organization").length;
+
+    return totalEnterprise ?? 0;
   }
 
   async getTotalJobs(projectIds: number[]) {
@@ -72,10 +71,11 @@ export class TotalSectionHeaderService {
     if (projectsIds.length === 0) {
       return 0;
     }
-    const totalHectaresRestoredSum =
+
+    return (
       (await SitePolygon.active().approved().sites(Site.approvedUuidsProjectsSubquery(projectsIds)).sum("calcArea")) ??
-      0;
-    return totalHectaresRestoredSum;
+      0
+    );
   }
 
   async getTotalTreesRestoredSum(projectsIds: number[]) {

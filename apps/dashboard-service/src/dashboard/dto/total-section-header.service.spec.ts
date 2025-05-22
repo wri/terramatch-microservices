@@ -4,7 +4,7 @@ import { NotFoundException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { TotalSectionHeaderController } from "../total-section-header.controller";
 import { TotalSectionHeaderService } from "./total-section-header.service";
-import { TotalSectionHeaderDto } from "./total-serction-header.dto";
+import { TotalSectionHeaderDto } from "./total-section-header.dto";
 import { DashboardQueryDto } from "./dashboard-query.dto";
 
 describe("TotalSectionHeaderController", () => {

@@ -26,9 +26,11 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     return this;
   }
 
-  select(attributes: (keyof Attributes<T>)[]) {
-    this.findOptions.attributes = attributes as string[];
-    return this;
+  async select(attributes: (keyof Attributes<T>)[]) {
+    return await this.MODEL.findAll({
+      ...this.findOptions,
+      attributes: attributes as string[]
+    });
   }
 
   queryFilters(filters: DashboardQueryDto) {

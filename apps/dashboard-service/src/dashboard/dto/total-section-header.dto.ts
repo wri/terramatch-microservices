@@ -28,6 +28,6 @@ export class TotalSectionHeaderDto {
   @ApiProperty()
   totalTreesRestoredGoal: number;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: String })
   lastUpdatedAt: string | null;
 }

@@ -4,19 +4,14 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { DashboardQueryDto } from "./dashboard-query.dto";
 
 import Redis from "ioredis";
-import Cache from "ioredis-cache";
 import { InjectRedis } from "@nestjs-modules/ioredis";
 
 @Injectable()
 export class CacheService {
-  private cache: Cache;
-
   constructor(
     @InjectQueue("dashboard") private readonly dashboardQueue: Queue,
     @InjectRedis() private readonly redis: Redis
-  ) {
-    this.cache = new Cache(this.redis);
-  }
+  ) {}
 
   async getTimestampForTotalSectionHeader(cacheParameter: string) {
     const timestampKey = `dashboard:total-section-header|${cacheParameter}:timestamp`;
@@ -27,16 +22,24 @@ export class CacheService {
     return await this.dashboardQueue.add("totalSectionHeader", { ...query, cacheKey, delayedJobId });
   }
 
-  async set(key: string, value: string | number | Buffer<ArrayBufferLike>) {
-    return this.cache.redis.set(key, value);
+  async set(key: string, value: string) {
+    await this.redis.set(key, JSON.stringify(value));
   }
 
   async get(key: string) {
-    return this.cache.redis.get(key);
+    const data = await this.redis.get(key);
+    if (typeof data === "string") {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return data;
+      }
+    }
+    return data;
   }
 
   async del(key: string) {
-    return this.cache.redis.del(key);
+    return this.redis.del(key);
   }
 
   getCacheKeyFromQuery(query: DashboardQueryDto) {
@@ -59,19 +62,7 @@ export class CacheService {
   }
 
   getCacheParameterForLandscapes(landscapes: string[]) {
-    if (landscapes != null && typeof landscapes === "object" && !Array.isArray(landscapes)) {
-      landscapes = Object.values(landscapes);
-    }
-
-    if (typeof landscapes === "string") {
-      landscapes = [landscapes];
-    }
-
-    if (landscapes == null || landscapes.length === 0) {
-      return "";
-    }
-    const sortedLandscapes = landscapes.sort();
-    return sortedLandscapes.join(",");
+    return landscapes.length === 0 ? "" : landscapes.sort().join(",");
   }
 
   getCacheParameterForCountry(country: string) {
@@ -79,22 +70,17 @@ export class CacheService {
   }
 
   getCacheParameterForOrganisationType(organisationType: string[]) {
-    if (organisationType != null && typeof organisationType === "object" && !Array.isArray(organisationType)) {
-      organisationType = Object.values(organisationType);
-    }
-
-    if (typeof organisationType === "string") {
-      organisationType = [organisationType];
-    }
-
-    if (organisationType == null || organisationType.length === 0) {
+    if (organisationType.length === 0) {
       return "all-orgs";
     }
+
     const sortedOrganisations = organisationType.sort();
     const callOrgTypes = ["for-profit-organization", "non-profit-organization"];
+
     if (sortedOrganisations.join(",") === callOrgTypes.join(",")) {
       return "all-orgs";
     }
+
     return sortedOrganisations.join(",");
   }
 

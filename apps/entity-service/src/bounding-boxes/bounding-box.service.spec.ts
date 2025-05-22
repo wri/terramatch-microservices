@@ -11,18 +11,19 @@ import {
   SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { Model, Sequelize, Op } from "sequelize";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
-// Store original console.error
-const originalConsoleError = console.error;
-
-// Mock console.error before all tests
-beforeAll(() => {
-  console.error = jest.fn();
-});
-
-// Restore console.error after all tests
-afterAll(() => {
-  console.error = originalConsoleError;
+// Mock TMLogger
+jest.mock("@terramatch-microservices/common/util/tm-logger", () => {
+  return {
+    TMLogger: jest.fn().mockImplementation(() => ({
+      error: jest.fn(),
+      warn: jest.fn(),
+      log: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn()
+    }))
+  };
 });
 
 jest.mock("@terramatch-microservices/database/entities", () => ({

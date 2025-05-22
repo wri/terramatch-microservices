@@ -9,12 +9,6 @@ import { IsArray, IsNumber } from "class-validator";
  */
 @JsonApiDto({ type: "boundingBoxes" })
 export class BoundingBoxDto {
-  constructor(data?: { bbox: number[] }) {
-    if (data !== undefined && data !== null) {
-      populateDto(this, data);
-    }
-  }
-
   @ApiProperty({
     description: "The bounding box coordinates in [minLng, minLat, maxLng, maxLat] format",
     type: [Number],

@@ -10,7 +10,10 @@ import {
 import { Model, ModelStatic, Op, Sequelize, WhereOptions } from "sequelize";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { ConfigService } from "@nestjs/config";
-import { isEmpty } from "lodash";
+import { isEmpty, isObject, isString } from "lodash";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { PolicyService } from "@terramatch-microservices/common";
 
 enum EntityType {
   POLYGON = "Polygon",
@@ -29,12 +32,17 @@ interface BoundingBoxCoordinates {
 
 @Injectable()
 export class BoundingBoxService {
-  constructor(private readonly dataApiService: DataApiService, private readonly configService: ConfigService) {}
+  private readonly logger = new TMLogger(BoundingBoxService.name);
+
+  constructor(
+    private readonly dataApiService: DataApiService,
+    private readonly configService: ConfigService,
+    private readonly policyService: PolicyService
+  ) {}
 
   private createBoundingBoxDto(minLng: number, minLat: number, maxLng: number, maxLat: number): BoundingBoxDto {
-    return new BoundingBoxDto({
-      bbox: [minLng, minLat, maxLng, maxLat]
-    });
+    const dto = new BoundingBoxDto();
+    return populateDto(dto, { bbox: [minLng, minLat, maxLng, maxLat] });
   }
 
   private extractBoundingBoxFromEnvelopes(envelopes: Model[]): BoundingBoxCoordinates {
@@ -85,6 +93,30 @@ export class BoundingBoxService {
   }
 
   async getPolygonBoundingBox(polygonUuid: string): Promise<BoundingBoxDto> {
+    const polygon = await PolygonGeometry.findOne({
+      where: { uuid: polygonUuid },
+      attributes: ["uuid"]
+    });
+
+    if (polygon === null) {
+      throw new NotFoundException(`${EntityType.POLYGON} with UUID ${polygonUuid} not found`);
+    }
+
+    const sitePolygon = await SitePolygon.findOne({
+      where: {
+        polygonUuid,
+        isActive: true,
+        deletedAt: null
+      },
+      attributes: ["id", "siteUuid", "polygonUuid"]
+    });
+
+    if (sitePolygon === null) {
+      throw new NotFoundException(`No active site polygon found for polygon with UUID ${polygonUuid}`);
+    }
+
+    await this.policyService.authorize("read", sitePolygon);
+
     return this.getBoundingBoxFromGeometries(
       PolygonGeometry,
       { uuid: polygonUuid },
@@ -97,12 +129,22 @@ export class BoundingBoxService {
   async getSiteBoundingBox(siteUuid: string): Promise<BoundingBoxDto> {
     const site = await Site.findOne({
       where: { uuid: siteUuid },
-      attributes: ["uuid"]
+      attributes: ["uuid", "frameworkKey", "projectId"]
     });
 
-    if (site == null) {
+    if (site === null) {
       throw new NotFoundException(`${EntityType.SITE} with UUID ${siteUuid} not found`);
     }
+
+    this.logger.debug(
+      `Attempting to authorize site: ${JSON.stringify({
+        uuid: site.uuid,
+        frameworkKey: site.frameworkKey,
+        projectId: site.projectId
+      })}`
+    );
+
+    await this.policyService.authorize("read", site);
 
     const sitePolygons = await SitePolygon.findAll({
       where: {
@@ -131,12 +173,24 @@ export class BoundingBoxService {
   async getProjectBoundingBox(projectUuid: string): Promise<BoundingBoxDto> {
     const project = await Project.findOne({
       where: { uuid: projectUuid },
-      attributes: ["id"]
+      attributes: ["id", "uuid", "frameworkKey", "organisationId", "status"]
     });
 
-    if (project == null) {
+    if (project === null) {
       throw new NotFoundException(`${EntityType.PROJECT} with UUID ${projectUuid} not found`);
     }
+
+    this.logger.debug(
+      `Attempting to authorize project: ${JSON.stringify({
+        id: project.id,
+        uuid: project.uuid,
+        frameworkKey: project.frameworkKey,
+        organisationId: project.organisationId,
+        status: project.status
+      })}`
+    );
+
+    await this.policyService.authorize("read", project);
 
     const sites = await Site.findAll({
       where: { projectId: project.id },
@@ -210,22 +264,18 @@ export class BoundingBoxService {
 
           if (
             envelopeData.length > 0 &&
-            typeof envelopeData[0] === "object" &&
-            envelopeData[0] !== null &&
+            isObject(envelopeData[0]) &&
             "envelope" in envelopeData[0] &&
-            typeof envelopeData[0].envelope === "string"
+            isString(envelopeData[0].envelope)
           ) {
             try {
               const geojson = JSON.parse(envelopeData[0].envelope);
 
               if (
-                geojson != null &&
-                typeof geojson === "object" &&
+                isObject(geojson) &&
                 "coordinates" in geojson &&
-                geojson.coordinates != null &&
                 Array.isArray(geojson.coordinates) &&
                 geojson.coordinates.length > 0 &&
-                geojson.coordinates[0] != null &&
                 Array.isArray(geojson.coordinates[0])
               ) {
                 const coordinates = geojson.coordinates[0];
@@ -244,11 +294,11 @@ export class BoundingBoxService {
                 hasBounds = true;
               }
             } catch (jsonParseError) {
-              console.error("Error parsing envelope JSON:", jsonParseError);
+              this.logger.error(`Error parsing envelope JSON: ${jsonParseError}`);
             }
           }
         } catch (apiError) {
-          console.error("Error fetching country envelope:", apiError);
+          this.logger.error(`Error fetching country envelope: ${apiError}`);
           if (!hasBounds) {
             throw apiError;
           }

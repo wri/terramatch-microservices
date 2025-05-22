@@ -7,6 +7,8 @@ import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 
+type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "country/landscapes";
+
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
 export class BoundingBoxController {
@@ -19,7 +21,7 @@ export class BoundingBoxController {
   })
   @JsonApiResponse(BoundingBoxDto)
   async getBoundingBox(@Query() query: BoundingBoxQueryDto): Promise<JsonApiDocument> {
-    const providedParams: string[] = [];
+    const providedParams: ParameterType[] = [];
 
     if (!isEmpty(query.polygonUuid)) {
       providedParams.push("polygonUuid");
@@ -46,35 +48,39 @@ export class BoundingBoxController {
       );
     }
 
-    if (!isEmpty(query.polygonUuid)) {
-      const polygonUuid = query.polygonUuid as string;
-      const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
-      return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
+    if (providedParams.length === 0) {
+      throw new BadRequestException(
+        "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, country, or landscapes."
+      );
     }
 
-    if (!isEmpty(query.siteUuid)) {
-      const siteUuid = query.siteUuid as string;
-      const result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
-      return buildJsonApi(BoundingBoxDto).addData(siteUuid, result).document.serialize();
+    switch (providedParams[0]) {
+      case "polygonUuid": {
+        const polygonUuid = query.polygonUuid as string;
+        const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
+        return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
+      }
+
+      case "siteUuid": {
+        const siteUuid = query.siteUuid as string;
+        const result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
+        return buildJsonApi(BoundingBoxDto).addData(siteUuid, result).document.serialize();
+      }
+
+      case "projectUuid": {
+        const projectUuid = query.projectUuid as string;
+        const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
+        return buildJsonApi(BoundingBoxDto).addData(projectUuid, result).document.serialize();
+      }
+
+      case "country/landscapes": {
+        const landscapes: string[] = hasLandscapes && Array.isArray(query.landscapes) ? query.landscapes : [];
+        const country = hasCountry ? (query.country as string) : "global";
+
+        const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
+        const id = `${country}-${landscapes.join("-")}`;
+        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+      }
     }
-
-    if (!isEmpty(query.projectUuid)) {
-      const projectUuid = query.projectUuid as string;
-      const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
-      return buildJsonApi(BoundingBoxDto).addData(projectUuid, result).document.serialize();
-    }
-
-    if (hasCountry || hasLandscapes) {
-      const landscapes: string[] = hasLandscapes && Array.isArray(query.landscapes) ? query.landscapes : [];
-      const country = hasCountry ? (query.country as string) : "global";
-
-      const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
-      const id = `${country}-${landscapes.join("-")}`;
-      return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
-    }
-
-    throw new BadRequestException(
-      "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, country, or landscapes."
-    );
   }
 }

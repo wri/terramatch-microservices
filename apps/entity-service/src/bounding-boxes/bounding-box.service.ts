@@ -10,6 +10,7 @@ import {
 import { Model, ModelStatic, Op, Sequelize, WhereOptions } from "sequelize";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { ConfigService } from "@nestjs/config";
+import { isEmpty } from "lodash";
 
 enum EntityType {
   POLYGON = "Polygon",
@@ -73,10 +74,9 @@ export class BoundingBoxService {
     });
 
     if (envelopes.length === 0) {
-      const errorMsg =
-        identifier !== undefined && identifier !== null && identifier !== ""
-          ? `No ${entityType.toLowerCase()} found with UUID ${identifier}`
-          : `No ${entityType.toLowerCase()} found with the provided criteria`;
+      const errorMsg = !isEmpty(identifier)
+        ? `No ${entityType.toLowerCase()} found with UUID ${identifier}`
+        : `No ${entityType.toLowerCase()} found with the provided criteria`;
       throw new NotFoundException(errorMsg);
     }
 
@@ -100,7 +100,7 @@ export class BoundingBoxService {
       attributes: ["uuid"]
     });
 
-    if (site === null || site === undefined) {
+    if (site == null) {
       throw new NotFoundException(`${EntityType.SITE} with UUID ${siteUuid} not found`);
     }
 
@@ -134,7 +134,7 @@ export class BoundingBoxService {
       attributes: ["id"]
     });
 
-    if (project === null || project === undefined) {
+    if (project == null) {
       throw new NotFoundException(`${EntityType.PROJECT} with UUID ${projectUuid} not found`);
     }
 
@@ -201,7 +201,7 @@ export class BoundingBoxService {
         }
       }
     }
-    if (typeof country === "string" && country !== "") {
+    if (!isEmpty(country)) {
       try {
         const countryIso = country.toUpperCase();
 
@@ -219,16 +219,13 @@ export class BoundingBoxService {
               const geojson = JSON.parse(envelopeData[0].envelope);
 
               if (
-                geojson !== null &&
-                geojson !== undefined &&
+                geojson != null &&
                 typeof geojson === "object" &&
                 "coordinates" in geojson &&
-                geojson.coordinates !== null &&
-                geojson.coordinates !== undefined &&
+                geojson.coordinates != null &&
                 Array.isArray(geojson.coordinates) &&
                 geojson.coordinates.length > 0 &&
-                geojson.coordinates[0] !== null &&
-                geojson.coordinates[0] !== undefined &&
+                geojson.coordinates[0] != null &&
                 Array.isArray(geojson.coordinates[0])
               ) {
                 const coordinates = geojson.coordinates[0];

@@ -5,6 +5,7 @@ import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { isEmpty } from "lodash";
 
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
@@ -20,24 +21,20 @@ export class BoundingBoxController {
   async getBoundingBox(@Query() query: BoundingBoxQueryDto): Promise<JsonApiDocument> {
     const providedParams: string[] = [];
 
-    if (query.polygonUuid !== undefined && query.polygonUuid !== null && query.polygonUuid !== "") {
+    if (!isEmpty(query.polygonUuid)) {
       providedParams.push("polygonUuid");
     }
 
-    if (query.siteUuid !== undefined && query.siteUuid !== null && query.siteUuid !== "") {
+    if (!isEmpty(query.siteUuid)) {
       providedParams.push("siteUuid");
     }
 
-    if (query.projectUuid !== undefined && query.projectUuid !== null && query.projectUuid !== "") {
+    if (!isEmpty(query.projectUuid)) {
       providedParams.push("projectUuid");
     }
 
-    const hasCountry = query.country !== undefined && query.country !== null && query.country !== "";
-    const hasLandscapes =
-      query.landscapes !== undefined &&
-      query.landscapes !== null &&
-      Array.isArray(query.landscapes) &&
-      query.landscapes.length > 0;
+    const hasCountry = !isEmpty(query.country);
+    const hasLandscapes = !isEmpty(query.landscapes) && Array.isArray(query.landscapes);
 
     if (hasCountry || hasLandscapes) {
       providedParams.push("country/landscapes");
@@ -51,26 +48,29 @@ export class BoundingBoxController {
 
     let result: BoundingBoxDto;
 
-    if (query.polygonUuid !== undefined && query.polygonUuid !== null && query.polygonUuid !== "") {
-      result = await this.boundingBoxService.getPolygonBoundingBox(query.polygonUuid);
-      return buildJsonApi(BoundingBoxDto).addData(query.polygonUuid, result).document.serialize();
+    if (!isEmpty(query.polygonUuid)) {
+      const polygonUuid = query.polygonUuid as string;
+      result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
+      return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
     }
 
-    if (query.siteUuid !== undefined && query.siteUuid !== null && query.siteUuid !== "") {
-      result = await this.boundingBoxService.getSiteBoundingBox(query.siteUuid);
-      return buildJsonApi(BoundingBoxDto).addData(query.siteUuid, result).document.serialize();
+    if (!isEmpty(query.siteUuid)) {
+      const siteUuid = query.siteUuid as string;
+      result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
+      return buildJsonApi(BoundingBoxDto).addData(siteUuid, result).document.serialize();
     }
 
-    if (query.projectUuid !== undefined && query.projectUuid !== null && query.projectUuid !== "") {
-      result = await this.boundingBoxService.getProjectBoundingBox(query.projectUuid);
-      return buildJsonApi(BoundingBoxDto).addData(query.projectUuid, result).document.serialize();
+    if (!isEmpty(query.projectUuid)) {
+      const projectUuid = query.projectUuid as string;
+      result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
+      return buildJsonApi(BoundingBoxDto).addData(projectUuid, result).document.serialize();
     }
 
     if (hasCountry || hasLandscapes) {
       const landscapes: string[] = hasLandscapes && Array.isArray(query.landscapes) ? query.landscapes : [];
-      const country = hasCountry ? query.country : "global";
+      const country = hasCountry ? (query.country as string) : "global";
 
-      result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country as string, landscapes);
+      result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
       const id = `${country}-${landscapes.join("-")}`;
       return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
     }

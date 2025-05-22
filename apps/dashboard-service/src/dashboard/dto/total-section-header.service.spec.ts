@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { NotFoundException } from "@nestjs/common";
-import { Resource } from "@terramatch-microservices/common/util";
 import { TotalSectionHeaderController } from "../total-section-header.controller";
 import { TotalSectionHeaderService } from "./total-section-header.service";
 import { TotalSectionHeaderDto } from "./total-section-header.dto";

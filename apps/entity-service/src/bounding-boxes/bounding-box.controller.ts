@@ -46,23 +46,21 @@ export class BoundingBoxController {
       );
     }
 
-    let result: BoundingBoxDto;
-
     if (!isEmpty(query.polygonUuid)) {
       const polygonUuid = query.polygonUuid as string;
-      result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
+      const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
       return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
     }
 
     if (!isEmpty(query.siteUuid)) {
       const siteUuid = query.siteUuid as string;
-      result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
+      const result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
       return buildJsonApi(BoundingBoxDto).addData(siteUuid, result).document.serialize();
     }
 
     if (!isEmpty(query.projectUuid)) {
       const projectUuid = query.projectUuid as string;
-      result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
+      const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
       return buildJsonApi(BoundingBoxDto).addData(projectUuid, result).document.serialize();
     }
 
@@ -70,7 +68,7 @@ export class BoundingBoxController {
       const landscapes: string[] = hasLandscapes && Array.isArray(query.landscapes) ? query.landscapes : [];
       const country = hasCountry ? (query.country as string) : "global";
 
-      result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
+      const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
       const id = `${country}-${landscapes.join("-")}`;
       return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
     }

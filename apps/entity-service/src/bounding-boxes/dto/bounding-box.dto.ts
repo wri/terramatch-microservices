@@ -1,6 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { IsArray, IsNumber } from "class-validator";
 
 /**

@@ -23,7 +23,7 @@ export class CacheService {
   }
 
   async set(key: string, value: string) {
-    await this.redis.set(key, JSON.stringify(value));
+    await this.redis.set(key, value);
   }
 
   async get(key: string) {

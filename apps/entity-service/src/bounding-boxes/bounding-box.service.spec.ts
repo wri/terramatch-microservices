@@ -11,20 +11,6 @@ import {
   SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { Model, Sequelize, Op } from "sequelize";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-
-// Mock TMLogger
-jest.mock("@terramatch-microservices/common/util/tm-logger", () => {
-  return {
-    TMLogger: jest.fn().mockImplementation(() => ({
-      error: jest.fn(),
-      warn: jest.fn(),
-      log: jest.fn(),
-      debug: jest.fn(),
-      verbose: jest.fn()
-    }))
-  };
-});
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   LandscapeGeometry: {

@@ -3,7 +3,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
+import { buildFixedOrderedQueryString, buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-serction-header.dto";
 import { DelayedJobDto } from "./delayed-job.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
@@ -40,8 +40,11 @@ export class TotalSectionHeaderController {
       totalTreesRestoredGoal,
       uuids
     } = parseCachedData;
+
+    const keyParams = ["country", "programmes", "cohort", "landscapes", "organisationType", "projectUuid"];
     const document = buildJsonApi(TotalSectionHeaderDto);
-    const stableQuery = getStableRequestQuery(query);
+    const stableQuery = buildFixedOrderedQueryString(query, keyParams);
+
     document.addData(
       stableQuery,
       new TotalSectionHeaderDto({

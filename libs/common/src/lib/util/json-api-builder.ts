@@ -210,3 +210,21 @@ export const getStableRequestQuery = (originalQuery: object) => {
   const query = searchParams.toString();
   return query.length === 0 ? query : `?${query}`;
 };
+
+export const buildFixedOrderedQueryString = (params: Record<string, any>, keysOrder: string[]): string => {
+  const pairs = keysOrder.map(key => {
+    const value = params[key];
+    if (value == null) {
+      return `${encodeURIComponent(key)}=`;
+    }
+    if (Array.isArray(value)) {
+      const sorted = value.map(String).sort((a, b) => a.localeCompare(b));
+      const joined = sorted.join("+");
+      return `${encodeURIComponent(key)}=${encodeURIComponent(joined)}`;
+    }
+    return `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+  });
+
+  const queryString = pairs.join("&");
+  return queryString.length === 0 ? "" : `?${queryString}`;
+};

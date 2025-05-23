@@ -42,6 +42,7 @@ type ApprovedIdsSubqueryOptions = {
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
   project: (id: number) => ({ where: { projectId: id } }),
+  projectsIds: (ids: number[]) => ({ where: { projectId: { [Op.in]: ids } } }),
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } })
 }))
@@ -91,6 +92,10 @@ export class ProjectReport extends Model<ProjectReport> {
     return chainScope(this, "project", id) as typeof ProjectReport;
   }
 
+  static projectsIds(ids: number[]) {
+    return chainScope(this, "projectsIds", ids) as typeof ProjectReport;
+  }
+
   static dueBefore(date: Date | string) {
     return chainScope(this, "dueBefore", date) as typeof ProjectReport;
   }
@@ -101,6 +106,13 @@ export class ProjectReport extends Model<ProjectReport> {
       .in("status", ProjectReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static approvedProjectsIdsSubquery(projectIds: number[]) {
+    const builder = Subquery.select(ProjectReport, "id")
+      .in("projectId", projectIds)
+      .in("status", ProjectReport.APPROVED_STATUSES);
     return builder.literal;
   }
 

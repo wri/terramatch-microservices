@@ -66,8 +66,16 @@ export class Site extends Model<Site> {
     return Subquery.select(Site, "id").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
   }
 
+  static approvedIdsProjectsSubquery(projectIds: number[]) {
+    return Subquery.select(Site, "id").in("projectId", projectIds).in("status", Site.APPROVED_STATUSES).literal;
+  }
+
   static approvedUuidsSubquery(projectId: number) {
     return Subquery.select(Site, "uuid").eq("projectId", projectId).in("status", Site.APPROVED_STATUSES).literal;
+  }
+
+  static approvedUuidsProjectsSubquery(projectIds: number[]) {
+    return Subquery.select(Site, "uuid").in("projectId", projectIds).in("status", Site.APPROVED_STATUSES).literal;
   }
 
   @PrimaryKey

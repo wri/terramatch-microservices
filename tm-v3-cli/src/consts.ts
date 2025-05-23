@@ -5,7 +5,8 @@ export const SERVICES = [
   "user-service",
   "job-service",
   "research-service",
-  "unified-database-service"
+  "unified-database-service",
+  "dashboard-service"
 ] as const;
 export type Service = (typeof SERVICES)[number];
 

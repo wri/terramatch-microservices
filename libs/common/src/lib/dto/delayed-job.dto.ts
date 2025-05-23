@@ -1,5 +1,5 @@
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
+import { JsonApiDto } from "../decorators";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];

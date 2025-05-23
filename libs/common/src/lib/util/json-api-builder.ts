@@ -205,8 +205,11 @@ export const getStableRequestQuery = (originalQuery: object) => {
   const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };
   if (normalizedQuery.page?.number != null) delete normalizedQuery.page.number;
   if (normalizedQuery.sideloads != null) delete normalizedQuery.sideloads;
-  const searchParams = new URLSearchParams(qs.stringify(normalizedQuery));
-  searchParams.sort();
-  const query = searchParams.toString();
+
+  // guarantee order of array query params.
+  for (const value of Object.values(normalizedQuery)) {
+    if (Array.isArray(value)) value.sort();
+  }
+  const query = qs.stringify(normalizedQuery, { arrayFormat: "repeat", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;
 };

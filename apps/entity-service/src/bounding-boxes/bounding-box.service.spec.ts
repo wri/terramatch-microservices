@@ -18,7 +18,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findAll: jest.fn()
   },
   PolygonGeometry: {
-    findAll: jest.fn()
+    findAll: jest.fn(),
+    findOne: jest.fn()
   },
   Project: {
     findOne: jest.fn()
@@ -340,7 +341,7 @@ describe("BoundingBoxService", () => {
       // Assert
       expect(Project.findOne).toHaveBeenCalledWith({
         where: { uuid: projectUuid },
-        attributes: ["id"]
+        attributes: ["id", "uuid", "frameworkKey", "organisationId", "status"]
       });
 
       expect(Site.findAll).toHaveBeenCalledWith({

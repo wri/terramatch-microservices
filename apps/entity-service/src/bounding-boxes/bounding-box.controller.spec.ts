@@ -44,7 +44,12 @@ describe("BoundingBoxController", () => {
   const mockPolygon = { uuid: "polygon-123" };
   const mockSite = { uuid: "site-123", project: { uuid: "project-123", frameworkKey: "ppc" } };
   const mockProject = { uuid: "project-123", frameworkKey: "ppc", organisationId: 1 };
-  const mockSitePolygon = { uuid: "site-polygon-123", siteUuid: "site-123", polygonUuid: "polygon-123" };
+  const mockSitePolygon = {
+    uuid: "site-polygon-123",
+    siteUuid: "site-123",
+    polygonUuid: "polygon-123",
+    site: { uuid: "site-123" }
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -170,7 +175,7 @@ describe("BoundingBoxController", () => {
 
       expect(Project.findOne).toHaveBeenCalledWith({
         where: { uuid: "project-123" },
-        attributes: ["uuid", "frameworkKey", "organisationId"]
+        attributes: ["id", "uuid", "frameworkKey", "organisationId"]
       });
 
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockProject);
@@ -195,7 +200,7 @@ describe("BoundingBoxController", () => {
       (PolygonGeometry.findOne as jest.Mock).mockResolvedValue(null);
 
       await expect(controller.getBoundingBox({ polygonUuid: "non-existent" })).rejects.toThrow(
-        new NotFoundException("Polygon with UUID non-existent not found")
+        new NotFoundException("SitePolygon with polygon UUID non-existent not found or has no associated site")
       );
     });
 

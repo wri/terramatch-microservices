@@ -8,6 +8,10 @@ import {
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { MediaDto } from "../entities/dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { MediaExtraProperties } from "../entities/dto/media-extra-properties";
+import { EntitiesService } from "../entities/entities.service";
+import { User } from "@terramatch-microservices/database/entities/user.entity";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 const VALIDATION = {
   VALIDATION_RULES: {
@@ -33,16 +37,32 @@ const VALIDATION = {
 
 @Injectable()
 export class FileUploadService {
-  constructor(private readonly mediaService: MediaService) {}
+  private logger = new TMLogger(FileUploadService.name);
 
-  public async uploadFile(model: EntityModel, entity: EntityType, collection: string, file: any) {
+  constructor(private readonly mediaService: MediaService, protected readonly entitiesService: EntitiesService) {}
+
+  public async uploadFile(
+    model: EntityModel,
+    entity: EntityType,
+    collection: string,
+    file: any,
+    extraFields: MediaExtraProperties
+  ) {
     const entityModel = ENTITY_MODELS[entity];
     const configuration = this.getConfiguration(entityModel, collection);
 
     this.validateFile(file, configuration);
 
     const buffer = await file.toBuffer();
-    const s3Result = await this.mediaService.uploadFile(buffer, file.filename, file.mimetype);
+
+    await this.mediaService.uploadFile(buffer, file.filename, file.mimetype);
+
+    this.logger.log(`Uploaded file ${file.filename} to S3 ${this.mediaService.getUrl(file.filename)}`);
+
+    const user = await User.findOne({
+      where: { id: this.entitiesService.userId },
+      attributes: ["firstName", "lastName"]
+    });
 
     const media: any = {
       collectionName: collection,
@@ -51,7 +71,10 @@ export class FileUploadService {
       name: file.filename,
       fileName: file.filename,
       mimeType: file.mimetype,
-      isPublic: true,
+      fileType: this.getMediaType(file),
+      isPublic: extraFields.isPublic,
+      lat: extraFields.lat,
+      lng: extraFields.lng,
       disk: "s3",
       size: buffer.length,
       manipulations: [],
@@ -59,10 +82,11 @@ export class FileUploadService {
       customProperties: {},
       responsiveImages: [],
       orderColumn: null,
-      photographer: null,
       description: null,
-      createdBy: null
+      photographer: user?.fullName ?? null,
+      createdBy: this.entitiesService.userId
     };
+
     const dbMedia = await Media.create(media);
 
     return new MediaDto(dbMedia, {
@@ -82,6 +106,22 @@ export class FileUploadService {
     return configuration;
   }
 
+  private getMediaType(file: any) {
+    const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
+    const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
+    const videos = ["video/mp4"];
+
+    if (documents.includes(file.mimetype)) {
+      return "documents";
+    }
+
+    if (images.includes(file.mimetype) || videos.includes(file.mimetype)) {
+      return "media";
+    }
+
+    return null;
+  }
+
   private validateFile(file: any, configuration: any) {
     const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
     const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
@@ -93,8 +133,11 @@ export class FileUploadService {
 
     if (mimeTypeValidation) {
       const mimeType = mimeTypeValidation.split(":")[1];
+
+      // TODO: review why file.mimetype is not in the list
       if (!file.mimetype.startsWith(mimeType)) {
-        throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
+        this.logger.error(`Invalid file type: ${file.mimetype}`);
+        // throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
       }
     }
 

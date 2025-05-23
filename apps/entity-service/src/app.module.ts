@@ -17,9 +17,6 @@ import { TasksService } from "./entities/tasks.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
-  // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
-  // needs to be provided in this list before EntitiesController, or it will be superseded by the
-  // wildcard route on EntitiesController.
   controllers: [
     ProjectPitchesController,
     TasksController,

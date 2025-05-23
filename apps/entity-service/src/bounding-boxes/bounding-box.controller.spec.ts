@@ -42,13 +42,13 @@ describe("BoundingBoxController", () => {
   };
 
   const mockPolygon = { uuid: "polygon-123" };
-  const mockSite = { uuid: "site-123", project: { uuid: "project-123", frameworkKey: "ppc" } };
+  const mockSite = { id: "site-db-id-123", uuid: "site-123", project: { uuid: "project-123", frameworkKey: "ppc" } };
   const mockProject = { uuid: "project-123", frameworkKey: "ppc", organisationId: 1 };
   const mockSitePolygon = {
+    id: "sp-db-id-123",
     uuid: "site-polygon-123",
-    siteUuid: "site-123",
     polygonUuid: "polygon-123",
-    site: { uuid: "site-123" }
+    site: mockSite
   };
 
   beforeEach(async () => {
@@ -123,30 +123,33 @@ describe("BoundingBoxController", () => {
 
       expect(SitePolygon.findOne).toHaveBeenCalledWith({
         where: { polygonUuid: "polygon-123" },
-        attributes: ["uuid", "siteUuid", "polygonUuid"]
+        attributes: ["id", "uuid", "polygonUuid"],
+        include: [
+          {
+            association: "site",
+            required: true
+          }
+        ]
       });
 
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSitePolygon);
-      expect(PolygonGeometry.findOne).not.toHaveBeenCalled();
+      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSitePolygon.site);
     });
 
-    it("should fall back to direct polygon lookup if no SitePolygon is found", async () => {
+    it("should throw NotFoundException when SitePolygon is not found", async () => {
       (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
 
-      await testQueryParameters(
-        { polygonUuid: "polygon-123" },
-        "getPolygonBoundingBox",
-        ["polygon-123"],
-        "polygon-123"
+      await expect(controller.getBoundingBox({ polygonUuid: "non-existent" })).rejects.toThrow(
+        new NotFoundException("SitePolygon with polygon UUID non-existent not found or has no associated site")
       );
+    });
 
-      expect(SitePolygon.findOne).toHaveBeenCalled();
-      expect(PolygonGeometry.findOne).toHaveBeenCalledWith({
-        where: { uuid: "polygon-123" },
-        attributes: ["uuid"]
-      });
+    it("should throw NotFoundException when SitePolygon has no associated site", async () => {
+      const sitePolygonWithoutSite = { ...mockSitePolygon, site: null };
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(sitePolygonWithoutSite);
 
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockPolygon);
+      await expect(controller.getBoundingBox({ polygonUuid: "polygon-123" })).rejects.toThrow(
+        new NotFoundException("SitePolygon with polygon UUID polygon-123 not found or has no associated site")
+      );
     });
 
     it("should call getSiteBoundingBox when siteUuid is provided", async () => {
@@ -195,12 +198,19 @@ describe("BoundingBoxController", () => {
       );
     });
 
-    it("should throw NotFoundException when polygon is not found", async () => {
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
-      (PolygonGeometry.findOne as jest.Mock).mockResolvedValue(null);
+    it("should throw NotFoundException when site is not found", async () => {
+      (Site.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(controller.getBoundingBox({ polygonUuid: "non-existent" })).rejects.toThrow(
-        new NotFoundException("SitePolygon with polygon UUID non-existent not found or has no associated site")
+      await expect(controller.getBoundingBox({ siteUuid: "non-existent" })).rejects.toThrow(
+        new NotFoundException("Site with UUID non-existent not found")
+      );
+    });
+
+    it("should throw NotFoundException when project is not found", async () => {
+      (Project.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(controller.getBoundingBox({ projectUuid: "non-existent" })).rejects.toThrow(
+        new NotFoundException("Project with UUID non-existent not found")
       );
     });
 

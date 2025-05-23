@@ -44,7 +44,7 @@ describe("TotalSectionHeaderController", () => {
 
     expect(response).toBeDefined();
     expect(response.data).toBeDefined();
-    if (response.data && !Array.isArray(response.data)) {
+    if (response.data !== undefined && !Array.isArray(response.data)) {
       expect(response.data.type).toBe("delayedJobs");
       expect(response.data.id).toBe("fake-uuid");
       expect(response.data.attributes.uuid).toBe("fake-uuid");
@@ -70,7 +70,7 @@ describe("TotalSectionHeaderController", () => {
 
     expect(response).toBeDefined();
     expect(response.data).toBeDefined();
-    if (response.data && !Array.isArray(response.data)) {
+    if (response.data !== undefined && !Array.isArray(response.data)) {
       expect(response.data.type).toBe("totalSectionHeaders");
       expect(response.data.attributes.totalNonProfitCount).toBe(5);
     } else {

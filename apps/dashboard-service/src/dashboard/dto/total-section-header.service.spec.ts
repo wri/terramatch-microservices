@@ -61,13 +61,12 @@ describe("TotalSectionHeaderService - filters", () => {
 
   it("should apply basic filters in DashboardProjectsQueryBuilder", async () => {
     const filters: DashboardQueryDto = {
-      organisationId: "org-uuid-1",
-      country: "Argentina",
-      state: "Buenos Aires",
-      dateFrom: "2023-01-01",
-      dateTo: "2023-12-31",
-      someOtherFilter: "value"
-    } as any;
+      organisationType: ["org-uuid-1"],
+      country: "BJ",
+      programmes: ["terrafund"],
+      projectUuid: "uuid",
+      landscapes: ["terrafund"]
+    };
 
     const mockBuilder = {
       queryFilters: jest.fn().mockReturnThis(),
@@ -118,7 +117,7 @@ describe("TotalSectionHeaderService - filters", () => {
   });
 
   it("should handle empty filters (no filters)", async () => {
-    const filters: DashboardQueryDto = {} as any;
+    const filters: DashboardQueryDto = {};
 
     const mockBuilder = {
       queryFilters: jest.fn().mockReturnThis(),
@@ -197,7 +196,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
     const mockBuilder = baseMocks();
 
-    const result = await service.getTotalSectionHeader(filters);
+    await service.getTotalSectionHeader(filters);
 
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
   });
@@ -209,7 +208,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
     const mockBuilder = baseMocks();
 
-    const result = await service.getTotalSectionHeader(filters);
+    await service.getTotalSectionHeader(filters);
 
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
   });
@@ -221,7 +220,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
     const mockBuilder = baseMocks();
 
-    const result = await service.getTotalSectionHeader(filters);
+    await service.getTotalSectionHeader(filters);
 
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
   });
@@ -236,7 +235,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
     const mockBuilder = baseMocks();
 
-    const result = await service.getTotalSectionHeader(filters);
+    await service.getTotalSectionHeader(filters);
 
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
   });
@@ -245,7 +244,7 @@ describe("TotalSectionHeaderService - filters", () => {
     const mockBuilder = baseMocks();
     mockBuilder.execute.mockResolvedValue([{ foo: "bar" }]);
 
-    const result = await service.getTotalSectionHeader({} as any);
+    const result = await service.getTotalSectionHeader({});
 
     expect(result.totalNonProfitCount).toBe(0);
     expect(result.totalEnterpriseCount).toBe(0);

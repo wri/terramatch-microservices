@@ -1,5 +1,7 @@
 import { Op } from "sequelize";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
+import { Project } from "@terramatch-microservices/database/entities";
+import { ModelCtor } from "sequelize-typescript";
 
 describe("DashboardProjectsQueryBuilder", () => {
   let builder: DashboardProjectsQueryBuilder;
@@ -7,7 +9,7 @@ describe("DashboardProjectsQueryBuilder", () => {
     findAll: jest.fn(),
     count: jest.fn(),
     sum: jest.fn()
-  } as any;
+  };
 
   beforeEach(() => {
     mockModel = {
@@ -15,7 +17,7 @@ describe("DashboardProjectsQueryBuilder", () => {
       count: jest.fn().mockResolvedValue(42),
       sum: jest.fn().mockResolvedValue(100)
     };
-    builder = new DashboardProjectsQueryBuilder(mockModel);
+    builder = new DashboardProjectsQueryBuilder(mockModel as unknown as ModelCtor<Project>);
   });
 
   it("should set order in findOptions", () => {
@@ -40,7 +42,7 @@ describe("DashboardProjectsQueryBuilder", () => {
   });
 
   it("should handle queryFilters with partial filters", () => {
-    builder.queryFilters({ country: "MX" } as any);
+    builder.queryFilters({ country: "MX" });
     expect(builder["findOptions"].where).toMatchObject({ country: "MX" });
     expect(builder["findOptions"].include).toBeDefined();
   });

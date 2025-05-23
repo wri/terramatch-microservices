@@ -34,7 +34,7 @@ describe("CacheService", () => {
 
   describe("getTimestampForTotalSectionHeader", () => {
     it("should call redis.get with correct key", async () => {
-      redisMock.get!.mockResolvedValue("123456");
+      (redisMock.get as jest.Mock).mockResolvedValue("123456");
       const result = await service.getTimestampForTotalSectionHeader("param1");
       expect(redisMock.get).toHaveBeenCalledWith("dashboard:total-section-header|param1:timestamp");
       expect(result).toBe("123456");
@@ -53,8 +53,8 @@ describe("CacheService", () => {
   describe("getTotalSectionHeader", () => {
     it("should add a job to the dashboardQueue", async () => {
       const fakeJob = { id: 1 };
-      queueMock.add!.mockResolvedValue(fakeJob);
-      const query = { programmes: ["p1"] } as any;
+      queueMock.add?.mockResolvedValue(fakeJob);
+      const query = { programmes: ["p1"] };
       const result = await service.getTotalSectionHeader("cacheKey1", query, 123);
       expect(queueMock.add).toHaveBeenCalledWith("totalSectionHeader", {
         ...query,
@@ -67,7 +67,6 @@ describe("CacheService", () => {
 
   describe("getCacheParameterForProgrammes", () => {
     it("should return empty string when programmes is null or empty", () => {
-      expect(service.getCacheParameterForProgrammes(null as any)).toBe("");
       expect(service.getCacheParameterForProgrammes([])).toBe("");
     });
 

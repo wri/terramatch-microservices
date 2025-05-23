@@ -94,12 +94,6 @@ export class BoundingBoxController {
 
         const site = await Site.findOne({
           where: { uuid: siteUuid },
-          include: [
-            {
-              association: "project",
-              attributes: ["id", "uuid", "frameworkKey"]
-            }
-          ],
           attributes: ["frameworkKey", "projectId"]
         });
 

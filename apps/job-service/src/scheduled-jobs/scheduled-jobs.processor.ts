@@ -4,6 +4,8 @@ import { Job, Queue } from "bullmq";
 import { Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
+import { ReportGenerationService } from "@terramatch-microservices/common/tasks/report-generation-service";
+import { DateTime } from "luxon";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 type TaskDue = {
@@ -25,7 +27,10 @@ type SiteAndNurseryReminder = {
 export class ScheduledJobsProcessor extends WorkerHost {
   private readonly logger = new TMLogger(ScheduledJobsProcessor.name);
 
-  constructor(@InjectQueue("email") readonly emailQueue: Queue) {
+  constructor(
+    @InjectQueue("email") private readonly emailQueue: Queue,
+    private readonly reportGenerationService: ReportGenerationService
+  ) {
     super();
   }
 
@@ -55,7 +60,15 @@ export class ScheduledJobsProcessor extends WorkerHost {
     }
   }
 
-  private async processTaskDue({ framework_key: frameworkKey, due_at: dueAt }: TaskDue) {}
+  private async processTaskDue({ framework_key: frameworkKey, due_at: dueAtString }: TaskDue) {
+    const where = { frameworkKey, status: { [Op.ne]: "started" } };
+    const count = await Project.count({ where });
+    const dueAt = DateTime.fromISO(dueAtString).toJSDate();
+    for (let ii = 0; ii < count; ii += 100) {
+      const projects = await Project.findAll({ where, limit: 100, offset: ii, attributes: ["id"] });
+      await Promise.allSettled(projects.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)));
+    }
+  }
 
   private async processReportReminder({ framework_key: frameworkKey }: ReportReminder) {
     if (frameworkKey !== "terrafund") {

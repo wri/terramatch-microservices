@@ -29,7 +29,7 @@ describe("SitePolygonPolicy", () => {
     const site = await SiteFactory.create({ frameworkKey: "ppc" });
 
     mockUserId(123);
-    mockPermissions("polygons-manage", "framework-ppc");
+    mockPermissions("framework-ppc");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 

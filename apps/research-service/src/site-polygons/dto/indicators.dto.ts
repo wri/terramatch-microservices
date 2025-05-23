@@ -47,42 +47,42 @@ export class IndicatorTreeCountDto {
 
   @IsString()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   surveyType: string | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   surveyId: number | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   treeCount: number | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty({ example: "types TBD" })
+  @ApiProperty({ type: String, nullable: true, example: "types TBD" })
   uncertaintyType: string | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   imagerySource: string | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty({ type: "string" })
+  @ApiProperty({ type: String, nullable: true })
   imageryId: string | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   projectPhase: string | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   confidence: number | null;
 }
 
@@ -96,17 +96,17 @@ export class IndicatorTreeCoverDto {
 
   @IsString()
   @IsOptional()
-  @ApiProperty({ example: "2024" })
+  @ApiProperty({ type: String, example: "2024", nullable: true })
   projectPhase: string | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   percentCover: number | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   plusMinusPercent: number | null;
 }
 
@@ -120,22 +120,22 @@ export class IndicatorFieldMonitoringDto {
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   treeCount: number | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   projectPhase: string | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   species: string | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   survivalRate: number | null;
 }
 
@@ -149,17 +149,17 @@ export class IndicatorMsuCarbonDto {
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   carbonOutput: number | null;
 
   @IsString()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   projectPhase: string | null;
 
   @IsNumber()
   @IsOptional()
-  @ApiProperty()
+  @ApiProperty({ type: Number, nullable: true })
   confidence: number | null;
 }
 

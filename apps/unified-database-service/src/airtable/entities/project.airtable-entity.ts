@@ -29,7 +29,7 @@ const loadSitePolygons = async (siteUuids: string[]) =>
 
 type ProjectAssociations = {
   sitePolygons: SitePolygon[];
-  countryName: string;
+  countryName?: string;
   stateNames: string[];
 };
 
@@ -82,7 +82,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   {
     airtableColumn: "hectaresRestoredToDate",
     valueMap: async (_, { sitePolygons }) =>
-      Math.round(sitePolygons.reduce((total, { calcArea }) => total + calcArea, 0))
+      Math.round(sitePolygons.reduce((total, { calcArea }) => total + (calcArea ?? 0), 0))
   },
   {
     airtableColumn: "continent",
@@ -119,7 +119,7 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
     const countryNames = await this.gadmLevel0Names();
     const stateCountries = filter(
       uniq(flatten(projects.map(({ states }) => states?.map(state => state.split(".")[0]))))
-    );
+    ) as string[];
     const stateNames = await this.gadmLevel1Names(stateCountries);
 
     return projects.reduce(
@@ -130,7 +130,7 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
             (polygons, { uuid }) => [...polygons, ...(sitePolygons[uuid] ?? [])],
             [] as SitePolygon[]
           ),
-          countryName: country == null ? null : countryNames[country],
+          countryName: country == null ? undefined : countryNames[country],
           stateNames: filter(states?.map(state => stateNames[state]))
         }
       }),

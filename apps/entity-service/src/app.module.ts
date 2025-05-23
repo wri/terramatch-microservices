@@ -10,10 +10,21 @@ import { EntityAssociationsController } from "./entities/entity-associations.con
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { FileUploadController } from "./entities/file-upload.controller";
 import { FileUploadService } from "./trees/file-upload.service";
+import { ProjectPitchesController } from "./entities/project-pitches.controller";
+import { ProjectPitchService } from "./entities/project-pitch.service";
+import { TasksController } from "./entities/tasks.controller";
+import { TasksService } from "./entities/tasks.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
-  controllers: [EntitiesController, EntityAssociationsController, TreesController, FileUploadController],
+  controllers: [
+    ProjectPitchesController,
+    TasksController,
+    EntitiesController,
+    EntityAssociationsController,
+    TreesController,
+    FileUploadController
+  ],
   providers: [
     {
       provide: APP_FILTER,
@@ -21,7 +32,9 @@ import { FileUploadService } from "./trees/file-upload.service";
     },
     EntitiesService,
     TreeService,
-    FileUploadService
+    FileUploadService,
+    ProjectPitchService,
+    TasksService
   ]
 })
 export class AppModule {}

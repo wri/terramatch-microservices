@@ -1,6 +1,7 @@
-import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Organisation } from "./organisation.entity";
 
 @Table({ tableName: "project_pitches", underscored: true, paranoid: true })
 export class ProjectPitch extends Model<ProjectPitch> {
@@ -58,6 +59,9 @@ export class ProjectPitch extends Model<ProjectPitch> {
   @AllowNull
   @Column(UUID)
   organisationId: string | null;
+
+  @BelongsTo(() => Organisation, { foreignKey: "organisationId", constraints: false })
+  organisation: Organisation | null;
 
   @AllowNull
   @Column(UUID)
@@ -268,7 +272,7 @@ export class ProjectPitch extends Model<ProjectPitch> {
 
   @AllowNull
   @Column(TEXT)
-  solutionMarketSite: string | null;
+  solutionMarketSize: string | null;
 
   @AllowNull
   @Column(TEXT)
@@ -425,4 +429,16 @@ export class ProjectPitch extends Model<ProjectPitch> {
   @AllowNull
   @Column(TEXT)
   otherEngageWomenYouth: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  forestFragmentsDistance: number | null;
+
+  @AllowNull
+  @JsonColumn()
+  anrPracticesProposed: string[] | null;
+
+  @AllowNull
+  @Column(BOOLEAN)
+  informationAuthorization: boolean;
 }

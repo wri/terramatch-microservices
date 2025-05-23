@@ -46,7 +46,7 @@ export class ResetPasswordService {
     }
 
     const user = await User.findOne({ where: { uuid: userGuid }, attributes: ["id", "uuid", "emailAddress"] });
-    if (!user) {
+    if (user == null) {
       throw new NotFoundException("User not found");
     }
 

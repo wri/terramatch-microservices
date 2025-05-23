@@ -44,7 +44,7 @@ export class FileUploadService {
     const buffer = await file.toBuffer();
     const s3Result = await this.mediaService.uploadFile(buffer, file.filename, file.mimetype);
 
-    const media: Partial<Media> = {
+    const media: any = {
       collectionName: collection,
       modelType: entityModel.LARAVEL_TYPE,
       modelId: model.id,

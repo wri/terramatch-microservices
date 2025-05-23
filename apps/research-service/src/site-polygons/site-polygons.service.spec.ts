@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion,@typescript-eslint/no-non-null-asserted-optional-chain */
 import FakeTimers from "@sinonjs/fake-timers";
 import { SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
@@ -19,6 +20,7 @@ import {
   Indicator,
   PolygonGeometry,
   Project,
+  Site,
   SitePolygon,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
@@ -27,7 +29,7 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
-import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 describe("SitePolygonsService", () => {
@@ -64,38 +66,40 @@ describe("SitePolygonsService", () => {
     await IndicatorOutputTreeCoverLossFactory.create({ sitePolygonId: sitePolygon.id });
 
     const indicators = await sitePolygon.getIndicators();
-    const indicatorsDto = await service.getIndicators(sitePolygon);
-    expect(indicators.length).toBe(indicatorsDto.length);
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const indicatorDtos = associations[sitePolygon.id]?.indicators;
+    expect(indicatorDtos?.length).toBe(indicators.length);
 
     const findDto = ({ yearOfAnalysis, indicatorSlug }: Indicator) =>
-      indicatorsDto.find(dto => dto.yearOfAnalysis === yearOfAnalysis && dto.indicatorSlug === indicatorSlug);
+      indicatorDtos?.find(dto => dto.yearOfAnalysis === yearOfAnalysis && dto.indicatorSlug === indicatorSlug);
     for (const indicator of indicators) {
       const dto = findDto(indicator);
       expect(dto).not.toBeNull();
-      expect(indicator).toMatchObject(dto);
+      expect(indicator).toMatchObject(dto!);
     }
   });
 
   it("should return all establishment tree species", async () => {
     const sitePolygon = await SitePolygonFactory.create();
-    const site = await sitePolygon.loadSite();
+    const site = (await sitePolygon.loadSite()) as Site;
     await TreeSpeciesFactory.forSiteTreePlanted.createMany(3, { speciesableId: site.id });
 
     const treeSpecies = await site.loadTreesPlanted();
-    const treeSpeciesDto = await service.getEstablishmentTreeSpecies(sitePolygon);
-    expect(treeSpeciesDto.length).toBe(treeSpecies.length);
+    const associations = await service.loadAssociationDtos([sitePolygon], false);
+    const treeSpeciesDtos = associations[sitePolygon.id]?.establishmentTreeSpecies;
+    expect(treeSpeciesDtos?.length).toBe(treeSpecies.length);
 
-    const findDto = ({ name }: TreeSpecies) => treeSpeciesDto.find(dto => dto.name === name);
+    const findDto = ({ name }: TreeSpecies) => treeSpeciesDtos?.find(dto => dto.name === name);
     for (const tree of treeSpecies) {
       const dto = findDto(tree);
       expect(dto).not.toBeNull();
-      expect(tree).toMatchObject(dto);
+      expect(tree).toMatchObject(dto!);
     }
   });
 
   it("should return all reporting periods", async () => {
     const sitePolygon = await SitePolygonFactory.create();
-    const site = await sitePolygon.loadSite();
+    const site = (await sitePolygon.loadSite()) as Site;
     await SiteReportFactory.createMany(2, { siteId: site.id });
     const siteReports = await site.loadReports();
     await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReports[0].id });
@@ -103,18 +107,19 @@ describe("SitePolygonsService", () => {
 
     await siteReports[0].loadTreesPlanted();
     await siteReports[1].loadTreesPlanted();
-    const reportingPeriodsDto = await service.getReportingPeriods(sitePolygon);
-    expect(reportingPeriodsDto.length).toBe(siteReports.length);
+    const associations = await service.loadAssociationDtos([sitePolygon], false);
+    const reportingPeriodsDtos = associations[sitePolygon.id]?.reportingPeriods;
+    expect(reportingPeriodsDtos?.length).toBe(siteReports.length);
     expect({
       dueAt: siteReports[0].dueAt,
       submittedAt: siteReports[0].submittedAt,
       treeSpecies: siteReports[0].treesPlanted
-    }).toMatchObject(reportingPeriodsDto[0]);
+    }).toMatchObject(reportingPeriodsDtos?.[0]!);
     expect({
       dueAt: siteReports[1].dueAt,
       submittedAt: siteReports[1].submittedAt,
       treeSpecies: siteReports[1].treesPlanted
-    }).toMatchObject(reportingPeriodsDto[1]);
+    }).toMatchObject(reportingPeriodsDtos?.[1]!);
   });
 
   it("should return all polygons when there are fewer than the page size", async () => {
@@ -140,19 +145,13 @@ describe("SitePolygonsService", () => {
     await PolygonGeometry.truncate();
     await SitePolygonFactory.createMany(15);
     const first = await SitePolygon.findOne();
-    const query = await service.buildQuery({ size: 20, after: first.uuid });
+    const query = await service.buildQuery({ size: 20, after: first!.uuid });
     const result = await query.execute();
     expect(result.length).toBe(14);
   });
 
   it("Should throw when pageAfter polygon not found", async () => {
     await expect(service.buildQuery({ size: 20, after: "asdfasdf" })).rejects.toThrow(BadRequestException);
-  });
-
-  it("Should return empty arrays from utility methods if no associated records exist", async () => {
-    const sitePolygon = await SitePolygonFactory.create({ siteUuid: null });
-    expect(await service.getEstablishmentTreeSpecies(sitePolygon)).toEqual([]);
-    expect(await service.getReportingPeriods(sitePolygon)).toEqual([]);
   });
 
   it("Should filter out test projects", async () => {
@@ -509,7 +508,7 @@ describe("SitePolygonsService", () => {
   });
 
   it("should throw if the site polygon is not found", async () => {
-    await expect(service.updateIndicator("asdfasdf", null)).rejects.toThrow(NotFoundException);
+    await expect(service.updateIndicator("asdfasdf", {} as IndicatorDto)).rejects.toThrow(NotFoundException);
   });
 
   it("should throw if the indicator slug is invalid", async () => {
@@ -593,9 +592,11 @@ describe("SitePolygonsService", () => {
       indicatorSlug: "restorationByStrategy"
     });
 
-    const lightDto = await service.buildLightDto(sitePolygon);
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, associations[sitePolygon.id]);
 
     expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
+    expect(lightDto.name).toBe(sitePolygon.polyName);
   });
 
   it("should build FullDto correctly when lightResource is false", async () => {
@@ -607,19 +608,12 @@ describe("SitePolygonsService", () => {
       sitePolygonId: sitePolygon.id,
       indicatorSlug: "restorationByStrategy"
     });
-    const fullDto = await service.buildFullDto(sitePolygon);
+
+    const associations = await service.loadAssociationDtos([sitePolygon], false);
+    const fullDto = await service.buildFullDto(sitePolygon, associations[sitePolygon.id]);
 
     expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
-  });
-
-  it("should return SitePolygonLightDto when lightResource is true", async () => {
-    const project = await ProjectFactory.create();
-    const site = await SiteFactory.create({ projectId: project.id });
-    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
-
-    const lightDto = await service.buildLightDto(sitePolygon);
-    expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
-    expect(lightDto.name).toBe(sitePolygon.polyName);
+    expect(fullDto.name).toBe(sitePolygon.polyName);
   });
 
   it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {

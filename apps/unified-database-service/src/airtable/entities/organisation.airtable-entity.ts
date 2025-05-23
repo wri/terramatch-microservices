@@ -3,7 +3,7 @@ import { Organisation } from "@terramatch-microservices/database/entities";
 import { filter, flatten, uniq } from "lodash";
 
 type OrganisationAssociations = {
-  hqCountryName: string;
+  hqCountryName: string | null;
   countryNames: string[];
   stateNames: string[];
   level0PastRestorationNames: string[];
@@ -123,7 +123,7 @@ export class OrganisationEntity extends AirtableEntity<Organisation, Organisatio
     const countryNames = await this.gadmLevel0Names();
     const stateCountries = filter(
       uniq(flatten(organisations.map(({ states }) => states?.map(state => state.split(".")[0]))))
-    );
+    ) as string[];
     const stateNames = await this.gadmLevel1Names(stateCountries);
     const level1Parents = filter(
       uniq(
@@ -131,13 +131,13 @@ export class OrganisationEntity extends AirtableEntity<Organisation, Organisatio
           organisations.map(({ level1PastRestoration }) => level1PastRestoration?.map(code => code.split(".")[0]))
         )
       )
-    );
+    ) as string[];
     const leve1Names = await this.gadmLevel1Names(level1Parents);
     // for level 2, we can't trivially extract the parent code from the child codes, so we have to work with the assumption
     // that the data is clean and the level 2 codes are all a direct child of one of the selected level 1 codes.
     const level2Parents = filter(
       uniq(flatten(organisations.map(({ level1PastRestoration }) => level1PastRestoration)))
-    );
+    ) as string[];
     const level2Names = await this.gadmLevel2Names(level2Parents);
 
     return organisations.reduce(

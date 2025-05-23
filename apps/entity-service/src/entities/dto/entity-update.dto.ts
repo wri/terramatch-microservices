@@ -16,7 +16,7 @@ export class EntityUpdateAttributes {
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: "Specific feedback for the PD", nullable: true })
+  @ApiProperty({ description: "Specific feedback for the PD", nullable: true, type: String })
   feedback?: string | null;
 
   @IsOptional()

@@ -1,4 +1,4 @@
-import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
@@ -13,6 +13,7 @@ import {
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
+
 export type IndicatorDto =
   | IndicatorTreeCoverLossDto
   | IndicatorHectaresDto
@@ -25,16 +26,16 @@ export class TreeSpeciesDto {
   @ApiProperty({ example: "Acacia binervia" })
   name: string;
 
-  @ApiProperty({ example: 15000, nullable: true })
+  @ApiProperty({ example: 15000, nullable: true, type: Number })
   amount: number | null;
 }
 
 export class ReportingPeriodDto {
-  @ApiProperty()
-  dueAt: Date;
+  @ApiProperty({ nullable: true, type: Date })
+  dueAt: Date | null;
 
-  @ApiProperty()
-  submittedAt: Date;
+  @ApiProperty({ nullable: true, type: Date })
+  submittedAt: Date | null;
 
   @ApiProperty({
     type: () => TreeSpeciesDto,
@@ -49,34 +50,37 @@ export class SitePolygonLightDto extends HybridSupportDto {
   constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
     super();
     if (sitePolygon != null) {
-      this.populate(SitePolygonLightDto, {
-        ...pickApiProperties(sitePolygon, SitePolygonLightDto),
+      populateDto<SitePolygonLightDto, SitePolygon>(this, sitePolygon, {
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
         projectId: sitePolygon.site?.project?.uuid,
-        indicators: indicators,
+        indicators: indicators ?? [],
         siteName: sitePolygon.site?.name,
         lightResource: true
       });
     }
   }
 
-  @ApiProperty()
-  name: string;
+  @ApiProperty({ nullable: true, type: String })
+  name: string | null;
 
   @ApiProperty({ enum: POLYGON_STATUSES })
   status: PolygonStatus;
 
-  @ApiProperty({ description: "If this ID points to a deleted site, the indicators will be empty." })
-  siteId: string;
+  @ApiProperty({
+    description: "If this ID points to a deleted site, the indicators will be empty.",
+    nullable: true,
+    type: String
+  })
+  siteId: string | null;
 
-  @ApiProperty()
-  projectId: string;
+  @ApiProperty({ nullable: true, type: String })
+  projectId?: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Date })
   plantStart: Date | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   calcArea: number | null;
 
   @ApiProperty({
@@ -95,50 +99,46 @@ export class SitePolygonLightDto extends HybridSupportDto {
   })
   indicators: IndicatorDto[];
 
-  @ApiProperty({ description: "The name of the associated Site." })
-  siteName: string;
+  @ApiProperty({ description: "The name of the associated Site.", nullable: true })
+  siteName?: string;
 }
 
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonFullDto extends SitePolygonLightDto {
   constructor(
     sitePolygon: SitePolygon,
-    indicators: IndicatorDto[],
-    establishmentTreeSpecies: TreeSpeciesDto[],
-    reportingPeriods: ReportingPeriodDto[]
+    indicators?: IndicatorDto[],
+    establishmentTreeSpecies?: TreeSpeciesDto[],
+    reportingPeriods?: ReportingPeriodDto[]
   ) {
-    // Call super() without arguments
     super();
 
-    if (sitePolygon != null) {
-      this.populate(SitePolygonFullDto, {
-        ...pickApiProperties(sitePolygon, SitePolygonFullDto),
-        name: sitePolygon.polyName,
-        siteId: sitePolygon.siteUuid,
-        projectId: sitePolygon.site?.project?.uuid,
-        indicators: indicators,
-        siteName: sitePolygon.site?.name,
-        geometry: sitePolygon.polygon?.polygon,
-        establishmentTreeSpecies,
-        reportingPeriods,
-        lightResource: false
-      });
-    }
+    populateDto<SitePolygonFullDto, SitePolygon>(this, sitePolygon, {
+      name: sitePolygon.polyName,
+      siteId: sitePolygon.siteUuid,
+      projectId: sitePolygon.site?.project?.uuid,
+      indicators: indicators ?? [],
+      siteName: sitePolygon.site?.name,
+      geometry: sitePolygon.polygon?.polygon,
+      establishmentTreeSpecies: establishmentTreeSpecies ?? [],
+      reportingPeriods: reportingPeriods ?? [],
+      lightResource: false
+    });
   }
 
-  @ApiProperty()
-  geometry: Polygon;
-
   @ApiProperty({ nullable: true })
+  geometry?: Polygon;
+
+  @ApiProperty({ nullable: true, type: String })
   practice: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   targetSys: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   distr: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   numTrees: number | null;
 
   @ApiProperty({

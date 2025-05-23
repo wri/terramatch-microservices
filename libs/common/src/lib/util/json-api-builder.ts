@@ -65,7 +65,11 @@ export class ResourceBuilder {
     return this.documentBuilder;
   }
 
-  relateTo(label: string, resource: { id: string; type: string }, meta?: Attributes): ResourceBuilder {
+  relateTo(
+    label: string,
+    resource: { id: string; type: string },
+    { meta, forceMultiple = false }: { meta?: Attributes; forceMultiple?: boolean } = {}
+  ): ResourceBuilder {
     if (this.relationships == null) this.relationships = {};
 
     // This method signature was created so that another resource builder could be passed in for the
@@ -74,7 +78,7 @@ export class ResourceBuilder {
     const { id, type } = resource;
     const relationship = { id, type, meta };
     if (this.relationships[label] == null) {
-      this.relationships[label] = { data: relationship };
+      this.relationships[label] = forceMultiple ? { data: [relationship] } : { data: relationship };
     } else if (Array.isArray(this.relationships[label].data)) {
       this.relationships[label].data.push(relationship);
     } else {
@@ -136,33 +140,25 @@ export class DocumentBuilder {
 
   constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
 
-  addData(id: string, attributes: any): ResourceBuilder {
-    const builder = new ResourceBuilder(id, attributes, this);
+  addData<DTO>(id: string, attributes: DTO): ResourceBuilder {
+    const builder = new ResourceBuilder(id, attributes as Attributes, this);
 
-    if (builder.type !== this.resourceType) {
-      throw new ApiBuilderException(
-        `This resource does not match the data type [${builder.type}, ${this.resourceType}]`
-      );
+    if (builder.type === this.resourceType) {
+      const collision = this.data.find(({ id: existingId }) => existingId === id);
+      if (collision != null) {
+        throw new ApiBuilderException(`This resource is already in data [${id}]`);
+      }
+
+      this.data.push(builder);
+    } else {
+      const collision = this.included.find(({ type, id: existingId }) => existingId === id && type === builder.type);
+      if (collision != null) {
+        throw new ApiBuilderException(`This resource is already included [${id}, ${builder.type}]`);
+      }
+
+      this.included.push(builder);
     }
 
-    const collision = this.data.find(({ id: existingId }) => existingId === id);
-    if (collision != null) {
-      throw new ApiBuilderException(`This resource is already in data [${id}]`);
-    }
-
-    this.data.push(builder);
-    return builder;
-  }
-
-  addIncluded(id: string, attributes: any): ResourceBuilder {
-    const builder = new ResourceBuilder(id, attributes, this);
-
-    const collision = this.included.find(({ type, id: existingId }) => existingId === id && type === builder.type);
-    if (collision != null) {
-      throw new ApiBuilderException(`This resource is already included [${id}, ${builder.type}]`);
-    }
-
-    this.included.push(builder);
     return builder;
   }
 

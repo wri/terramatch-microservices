@@ -1,9 +1,9 @@
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
-import { ProjectPitch } from "@terramatch-microservices/database/entities";
+import { Organisation, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { filter, flatten, uniq } from "lodash";
 
 type ProjectPitchAssociations = {
-  projectCountryName: string;
+  projectCountryName: string | null;
   stateNames: string[];
   level0ProposedNames: string[];
   level1ProposedNames: string[];
@@ -12,6 +12,11 @@ type ProjectPitchAssociations = {
 
 const COLUMNS: ColumnMapping<ProjectPitch, ProjectPitchAssociations>[] = [
   ...commonEntityColumns<ProjectPitch, ProjectPitchAssociations>("pitch"),
+  {
+    airtableColumn: "organisationUuid",
+    include: [{ model: Organisation, attributes: ["uuid"] }],
+    valueMap: async ({ organisation }) => organisation?.uuid
+  },
   "totalTrees",
   "totalHectares",
   "restorationInterventionTypes",
@@ -90,15 +95,15 @@ export class ProjectPitchEntity extends AirtableEntity<ProjectPitch, ProjectPitc
     const countryNames = await this.gadmLevel0Names();
     const stateCountries = filter(
       uniq(flatten(pitches.map(({ states }) => states?.map(state => state.split(".")[0]))))
-    );
+    ) as string[];
     const stateNames = await this.gadmLevel1Names(stateCountries);
     const level1Parents = filter(
       uniq(flatten(pitches.map(({ level1Proposed }) => level1Proposed?.map(code => code.split(".")[0]))))
-    );
+    ) as string[];
     const leve1Names = await this.gadmLevel1Names(level1Parents);
     // for level 2, we can't trivially extract the parent code from the child codes, so we have to work with the assumption
     // that the data is clean and the level 2 codes are all a direct child of one of the selected level 1 codes.
-    const level2Parents = filter(uniq(flatten(pitches.map(({ level1Proposed }) => level1Proposed))));
+    const level2Parents = filter(uniq(flatten(pitches.map(({ level1Proposed }) => level1Proposed)))) as string[];
     const level2Names = await this.gadmLevel2Names(level2Parents);
 
     return pitches.reduce(

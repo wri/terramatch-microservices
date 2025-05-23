@@ -6,13 +6,20 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { NestExpressApplication } from "@nestjs/platform-express";
+import { NestFastifyApplication } from "@nestjs/platform-fastify";
+import { FastifyAdapter } from "@nestjs/platform-fastify";
+import multipart from "@fastify/multipart";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  const adapter = new FastifyAdapter();
+
+  await adapter.register(multipart);
+
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
     logger: new TMLogger()
   });
-  app.set("query parser", "extended");
+  // TODO: register back this query parser
+  // app.set("query parser", "extended");
 
   if (process.env.NODE_ENV === "development") {
     // CORS is handled by the Api Gateway in AWS

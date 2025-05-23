@@ -56,6 +56,11 @@ describe("SitePolygonsService", () => {
     expect((result as unknown as { findOptions: { offset: number } }).findOptions.offset).toBe(12);
   });
 
+  it("should succeed when there are 0 polygons in the filtered request", async () => {
+    const associations = await service.loadAssociationDtos([], false);
+    expect(associations).toEqual({});
+  });
+
   it("should return all indicators", async () => {
     const sitePolygon = await SitePolygonFactory.create();
     await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: sitePolygon.id });

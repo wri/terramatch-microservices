@@ -75,7 +75,8 @@ export class BoundingBoxController {
             uuid: {
               [Op.in]: Subquery.select(SitePolygon, "siteUuid").eq("polygonUuid", polygonUuid).literal
             }
-          }
+          },
+          attributes: ["frameworkKey", "projectId"]
         });
 
         if (site === null) {
@@ -98,7 +99,8 @@ export class BoundingBoxController {
               association: "project",
               attributes: ["id", "uuid", "frameworkKey"]
             }
-          ]
+          ],
+          attributes: ["frameworkKey", "projectId"]
         });
 
         if (site === null) {

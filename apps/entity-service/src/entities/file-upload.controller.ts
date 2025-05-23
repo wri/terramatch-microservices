@@ -6,7 +6,7 @@ import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { FastifyRequest } from "fastify";
 
-@Controller("entities/v3/file/upload")
+@Controller("entities/v3/files")
 export class FileUploadController {
   constructor(
     private readonly fileUploadService: FileUploadService,

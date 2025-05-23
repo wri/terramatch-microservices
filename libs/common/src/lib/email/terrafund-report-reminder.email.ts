@@ -1,33 +1,13 @@
-import { EmailSender } from "./email-sender";
-import { TerrafundReportReminderEmailData } from "./email.processor";
 import { EmailService } from "./email.service";
-import { Notification, Project, ProjectUser, User } from "@terramatch-microservices/database/entities";
+import { Notification, Project, User } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../util/tm-logger";
-import { Op } from "sequelize";
 import { groupBy } from "lodash";
+import { ProjectEmailSender } from "./project-email-sender";
 
-export class TerrafundReportReminderEmail extends EmailSender {
-  private readonly logger = new TMLogger(TerrafundReportReminderEmail.name);
+export class TerrafundReportReminderEmail extends ProjectEmailSender {
+  override logger = new TMLogger(TerrafundReportReminderEmail.name);
 
-  private readonly projectIds: number[];
-
-  constructor({ projectIds }: TerrafundReportReminderEmailData) {
-    super();
-    this.projectIds = projectIds;
-  }
-
-  async send(emailService: EmailService) {
-    const results = await Promise.allSettled(
-      this.projectIds.map(projectId => this.sendForProject(projectId, emailService))
-    );
-
-    const failed = results.filter(({ status }) => status === "rejected");
-    if (failed.length > 0) {
-      this.logger.error(`Failed to send terrafund report reminder emails: ${JSON.stringify(failed)}`);
-    }
-  }
-
-  async sendForProject(projectId: number, emailService: EmailService) {
+  async sendForProject(projectId: number, users: User[], emailService: EmailService) {
     const project = await Project.findOne({ where: { id: projectId }, attributes: ["frameworkKey"] });
     if (project?.frameworkKey !== "terrafund") {
       this.logger.error(
@@ -36,10 +16,6 @@ export class TerrafundReportReminderEmail extends EmailSender {
       return;
     }
 
-    const users = await User.findAll({
-      where: { id: { [Op.in]: ProjectUser.projectUsersSubquery(projectId) } },
-      attributes: ["emailAddress", "locale"]
-    });
     if (users.length === 0) {
       const notificationProps = {
         title: "Terrafund Report Reminder",

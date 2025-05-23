@@ -13,13 +13,14 @@ export type StatusUpdateData = {
   id: number;
 };
 
-export type TerrafundReportReminderEmailData = {
+export type ProjectEmailData = {
   projectIds: number[];
 };
 
 const EMAIL_PROCESSORS = {
   statusUpdate: EntityStatusUpdateEmail,
-  terrafundReportReminder: TerrafundReportReminderEmail
+  terrafundReportReminder: TerrafundReportReminderEmail,
+  terrafundSiteAndNurseryReminder: TerrafundReportReminderEmail
 };
 
 /**

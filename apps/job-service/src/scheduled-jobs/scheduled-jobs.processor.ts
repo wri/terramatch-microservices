@@ -1,10 +1,9 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { Job } from "bullmq";
+import { Job, Queue } from "bullmq";
 import { Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
-import { EventService } from "@terramatch-microservices/common/events/event.service";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 type TaskDue = {
@@ -26,7 +25,7 @@ type SiteAndNurseryReminder = {
 export class ScheduledJobsProcessor extends WorkerHost {
   private readonly logger = new TMLogger(ScheduledJobsProcessor.name);
 
-  constructor(private readonly eventService: EventService) {
+  constructor(@InjectQueue("email") readonly emailQueue: Queue) {
     super();
   }
 
@@ -77,8 +76,27 @@ export class ScheduledJobsProcessor extends WorkerHost {
       })
     ).map(({ id }) => id);
 
-    await this.eventService.emailQueue.add("terrafundReportReminder", { projectIds });
+    await this.emailQueue.add("terrafundReportReminder", { projectIds });
   }
 
-  private async processSiteAndNurseryReminder({ framework_key: frameworkKey }: SiteAndNurseryReminder) {}
+  private async processSiteAndNurseryReminder({ framework_key: frameworkKey }: SiteAndNurseryReminder) {
+    if (frameworkKey !== "terrafund") {
+      this.logger.warn(`Site and Nursery reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
+      return;
+    }
+
+    const projectIds = (
+      await Project.findAll({
+        where: {
+          frameworkKey,
+          [Op.and]: [
+            { id: { [Op.notIn]: Subquery.select(Site, "projectId").literal } },
+            { id: { [Op.notIn]: Subquery.select(Nursery, "projectId").literal } }
+          ]
+        }
+      })
+    ).map(({ id }) => id);
+
+    await this.emailQueue.add("terrafundSiteAndNurseryReminder", { projectIds });
+  }
 }

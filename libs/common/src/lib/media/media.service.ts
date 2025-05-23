@@ -2,9 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media } from "@terramatch-microservices/database/entities";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { TMLogger } from "../util/tm-logger";
 
 @Injectable()
 export class MediaService {
+  private logger = new TMLogger(MediaService.name);
+
   private readonly s3: S3Client;
 
   constructor(private readonly configService: ConfigService) {
@@ -32,7 +35,7 @@ export class MediaService {
     });
 
     await this.s3.send(command);
-    console.log(`Uploaded ${key}`);
+    this.logger.log(`Uploaded ${key} to S3`);
   }
 
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some

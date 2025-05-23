@@ -69,7 +69,7 @@ export class BoundingBoxController {
 
     switch (providedParams[0]) {
       case "polygonUuid": {
-        const polygonUuid = query.polygonUuid as string;
+        const polygonUuid = query.polygonUuid ?? "";
         const site = await Site.findOne({
           where: {
             uuid: {
@@ -89,7 +89,7 @@ export class BoundingBoxController {
       }
 
       case "siteUuid": {
-        const siteUuid = query.siteUuid as string;
+        const siteUuid = query.siteUuid ?? "";
 
         const site = await Site.findOne({
           where: { uuid: siteUuid },
@@ -112,7 +112,7 @@ export class BoundingBoxController {
       }
 
       case "projectUuid": {
-        const projectUuid = query.projectUuid as string;
+        const projectUuid = query.projectUuid ?? "";
 
         const project = await Project.findOne({
           where: { uuid: projectUuid },
@@ -130,8 +130,8 @@ export class BoundingBoxController {
       }
 
       case "country/landscapes": {
-        const country = hasCountry ? (query.country as string) : "global";
-        const landscapes: string[] = hasLandscapes ? (query.landscapes as string[]) : [];
+        const country = query.country ?? "global";
+        const landscapes: string[] = query.landscapes ?? [];
 
         const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
         const id = `${country}-${landscapes.join("-")}`;

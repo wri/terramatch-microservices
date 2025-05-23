@@ -66,6 +66,21 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   siteUuid?: string;
 
+  @ApiProperty({ required: false, isArray: true, description: "Filter by landscape names" })
+  @IsOptional()
+  @IsArray()
+  landscape?: string[];
+
+  @ApiProperty({ required: false, isArray: true, description: "Filter by organisation types" })
+  @IsOptional()
+  @IsArray()
+  organisationType?: string[];
+
+  @ApiProperty({ required: false, isArray: true, description: "Filter by cohorts" })
+  @IsOptional()
+  @IsArray()
+  cohort?: string[];
+
   @ApiProperty({
     required: false,
     description: "If the base entity supports it, this will load the first page of associated entities",

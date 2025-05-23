@@ -131,7 +131,7 @@ export class FileUploadService {
     const mimeTypeValidation = validations.find(validation => validation.startsWith("mimes:"));
     const sizeValidation = validations.find(validation => validation.startsWith("size:"));
 
-    if (mimeTypeValidation) {
+    if (mimeTypeValidation != null) {
       const mimeType = mimeTypeValidation.split(":")[1];
 
       // TODO: review why file.mimetype is not in the list
@@ -141,7 +141,7 @@ export class FileUploadService {
       }
     }
 
-    if (sizeValidation) {
+    if (sizeValidation != null) {
       const size = sizeValidation.split(":")[1];
       const removeSuffix = size.replace("MB", "");
       const sizeInBytes = parseInt(removeSuffix) * 1024 * 1024;

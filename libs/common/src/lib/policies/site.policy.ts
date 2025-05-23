@@ -11,7 +11,6 @@ export class SitePolicy extends UserPermissionsPolicy {
     if (this.frameworks.length > 0) {
       this.builder.can(["read", "delete", "update", "approve"], Site, { frameworkKey: { $in: this.frameworks } });
     }
-
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
@@ -22,6 +21,7 @@ export class SitePolicy extends UserPermissionsPolicy {
           ).map(({ id }) => id),
           ...user.projects.map(({ id }) => id)
         ];
+
         if (projectIds.length > 0) {
           this.builder.can(["read", "delete", "update"], Site, { projectId: { $in: projectIds } });
         }

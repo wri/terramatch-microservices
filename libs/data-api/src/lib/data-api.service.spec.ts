@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
-import { DataApiService, gadmLevel2 } from "./data-api.service";
+import { DataApiService, gadmLevel2, gadmCountryEnvelope } from "./data-api.service";
 import { ConfigService } from "@nestjs/config";
 import Redis from "ioredis";
 import { getRedisConnectionToken } from "@nestjs-modules/ioredis";
@@ -83,6 +83,51 @@ describe("DataApiService", () => {
     expect(redis.set).toHaveBeenCalledWith(
       "data-api:gadm-level-2:USA.CA",
       JSON.stringify({ foo: "mocked data" }),
+      "EX",
+      60 * 60 * 3
+    );
+  });
+
+  it("should fetch country envelope using the correct query", async () => {
+    const mockEnvelope = {
+      envelope: JSON.stringify({
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 10],
+            [10, 10],
+            [10, 0],
+            [0, 0]
+          ]
+        ]
+      })
+    };
+
+    fetchMock.mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ data: [mockEnvelope] })
+    } as Response);
+
+    const result = await service.getCountryEnvelope("KEN");
+    expect(result).toEqual([mockEnvelope]);
+
+    const params = new URLSearchParams();
+    params.append("sql", gadmCountryEnvelope("KEN"));
+    expect(fetch).toHaveBeenCalledWith(
+      `https://data-api.globalforestwatch.org/dataset/gadm_administrative_boundaries/v4.1.85/query?${params}`,
+      expect.objectContaining({
+        headers: {
+          Origin: "unittests.terramatch.org",
+          "x-api-key": "test-api-key"
+        }
+      })
+    );
+
+    expect(redis.set).toHaveBeenCalledWith(
+      "data-api:country-envelope:KEN",
+      JSON.stringify([mockEnvelope]),
       "EX",
       60 * 60 * 3
     );

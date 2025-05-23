@@ -12,9 +12,12 @@ import { ProjectPitchesController } from "./entities/project-pitches.controller"
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
 import { TasksService } from "./entities/tasks.service";
+import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
+import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
+import { DataApiModule } from "@terramatch-microservices/data-api";
 
 @Module({
-  imports: [SentryModule.forRoot(), CommonModule, HealthModule],
+  imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
   // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
   // needs to be provided in this list before EntitiesController, or it will be superseded by the
   // wildcard route on EntitiesController.
@@ -23,7 +26,8 @@ import { TasksService } from "./entities/tasks.service";
     TasksController,
     EntitiesController,
     EntityAssociationsController,
-    TreesController
+    TreesController,
+    BoundingBoxController
   ],
   providers: [
     {
@@ -33,6 +37,7 @@ import { TasksService } from "./entities/tasks.service";
     EntitiesService,
     TreeService,
     ProjectPitchService,
+    BoundingBoxService,
     TasksService
   ]
 })

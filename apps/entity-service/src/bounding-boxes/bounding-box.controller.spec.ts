@@ -138,7 +138,8 @@ describe("BoundingBoxController", () => {
           uuid: {
             [Op.in]: "mocked-subquery-literal"
           }
-        }
+        },
+        attributes: ["frameworkKey", "projectId"]
       });
 
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);
@@ -156,7 +157,8 @@ describe("BoundingBoxController", () => {
           uuid: {
             [Op.in]: "mocked-subquery-literal"
           }
-        }
+        },
+        attributes: ["frameworkKey", "projectId"]
       });
     });
 
@@ -170,7 +172,8 @@ describe("BoundingBoxController", () => {
             association: "project",
             attributes: ["id", "uuid", "frameworkKey"]
           }
-        ]
+        ],
+        attributes: ["frameworkKey", "projectId"]
       });
 
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);

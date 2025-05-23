@@ -1,19 +1,12 @@
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { populateDto } from "./json-api-attributes";
-import { JsonApiDto } from "../decorators";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "delayedJobs" })
 export class DelayedJobDto {
-  constructor(data: DelayedJobDto) {
-    populateDto<DelayedJobDto>(this, data);
-  }
-  @ApiProperty({
-    description: "The unique identifier for the delayed job.",
-    type: String
-  })
+  @ApiProperty({ description: "The unique identifier for the delayed job." })
   uuid: string;
 
   @ApiProperty({
@@ -25,50 +18,58 @@ export class DelayedJobDto {
 
   @ApiProperty({
     description: "If the job is out of pending state, this is the HTTP status code for the completed process",
-    nullable: true
+    nullable: true,
+    type: Number
   })
   statusCode: number | null;
 
   @ApiProperty({
     description: "If the job is out of pending state, this is the JSON payload for the completed process",
-    nullable: true
+    nullable: true,
+    type: Object
   })
   payload: object | null;
 
   @ApiProperty({
     description: "If the job is in progress, this is the total content to process",
-    nullable: true
+    nullable: true,
+    type: Number
   })
   totalContent: number | null;
 
   @ApiProperty({
     description: "If the job is in progress, this is the total content processed",
-    nullable: true
+    nullable: true,
+    type: Number
   })
   processedContent: number | null;
 
   @ApiProperty({
     description: "If the job is in progress, this is the progress message",
-    nullable: true
+    nullable: true,
+    type: String
   })
   progressMessage: string | null;
 
   @ApiProperty({
     description: "Indicates whether the jobs have been acknowledged (cleared)",
-    nullable: true
+    nullable: true,
+    type: Boolean
   })
   isAcknowledged: boolean | null;
 
   @ApiProperty({
     description: "The name of the delayedJob",
-    nullable: true
+    nullable: true,
+    type: String
   })
   name: string | null;
 
   @ApiProperty({
     description: "The name of the related entity (e.g., Kerrawarra, New Site, etc).",
     nullable: true,
-    required: false
+    required: false,
+    type: String
   })
   entityName?: string | null;
 }

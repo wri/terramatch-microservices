@@ -3,11 +3,12 @@ import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
-import { buildFixedOrderedQueryString, buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-section-header.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("dashboard/v3/totalSectionHeaders")
 export class TotalSectionHeaderController {
@@ -26,7 +27,7 @@ export class TotalSectionHeaderController {
     if (cachedData == null) {
       const delayedJob = await DelayedJob.create();
       await this.cacheService.getTotalSectionHeader(cacheKey, query, delayedJob.id);
-      const delayedJobDto = new DelayedJobDto(delayedJob);
+      const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
 
       return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto).document.serialize();
     }
@@ -41,9 +42,8 @@ export class TotalSectionHeaderController {
       totalTreesRestoredGoal
     } = cachedData;
 
-    const keyParams = ["country", "programmes", "cohort", "landscapes", "organisationType", "projectUuid"];
     const document = buildJsonApi(TotalSectionHeaderDto);
-    const stableQuery = buildFixedOrderedQueryString(query, keyParams);
+    const stableQuery = getStableRequestQuery(query);
 
     document.addData(
       stableQuery,

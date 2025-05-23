@@ -205,26 +205,11 @@ export const getStableRequestQuery = (originalQuery: object) => {
   const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };
   if (normalizedQuery.page?.number != null) delete normalizedQuery.page.number;
   if (normalizedQuery.sideloads != null) delete normalizedQuery.sideloads;
-  const searchParams = new URLSearchParams(qs.stringify(normalizedQuery));
-  searchParams.sort();
-  const query = searchParams.toString();
+
+  // guarantee order of array query params.
+  for (const value of Object.values(normalizedQuery)) {
+    if (Array.isArray(value)) value.sort();
+  }
+  const query = qs.stringify(normalizedQuery, { arrayFormat: "repeat", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;
-};
-
-export const buildFixedOrderedQueryString = (params: Record<string, any>, keysOrder: string[]): string => {
-  const pairs = keysOrder.map(key => {
-    const value = params[key];
-    if (value == null) {
-      return `${encodeURIComponent(key)}=`;
-    }
-    if (Array.isArray(value)) {
-      const sorted = value.map(String).sort((a, b) => a.localeCompare(b));
-      const joined = sorted.join("+");
-      return `${encodeURIComponent(key)}=${encodeURIComponent(joined)}`;
-    }
-    return `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
-  });
-
-  const queryString = pairs.join("&");
-  return queryString.length === 0 ? "" : `?${queryString}`;
 };

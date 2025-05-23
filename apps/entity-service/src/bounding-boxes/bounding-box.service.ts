@@ -105,17 +105,25 @@ export class BoundingBoxService {
     const sitePolygon = await SitePolygon.findOne({
       where: {
         polygonUuid,
+
         isActive: true,
         deletedAt: null
       },
-      attributes: ["id", "siteUuid", "polygonUuid"]
+      attributes: ["id", "siteUuid", "polygonUuid"],
+      include: [
+        {
+          association: "site",
+          required: true
+        }
+      ]
     });
 
     if (sitePolygon === null) {
       throw new NotFoundException(`No active site polygon found for polygon with UUID ${polygonUuid}`);
     }
-
-    await this.policyService.authorize("read", sitePolygon);
+    if (sitePolygon.site === null) {
+      throw new NotFoundException(`No site found for polygon with UUID ${polygonUuid}`);
+    }
 
     return this.getBoundingBoxFromGeometries(
       PolygonGeometry,
@@ -135,16 +143,6 @@ export class BoundingBoxService {
     if (site === null) {
       throw new NotFoundException(`${EntityType.SITE} with UUID ${siteUuid} not found`);
     }
-
-    this.logger.debug(
-      `Attempting to authorize site: ${JSON.stringify({
-        uuid: site.uuid,
-        frameworkKey: site.frameworkKey,
-        projectId: site.projectId
-      })}`
-    );
-
-    await this.policyService.authorize("read", site);
 
     const sitePolygons = await SitePolygon.findAll({
       where: {
@@ -179,18 +177,6 @@ export class BoundingBoxService {
     if (project === null) {
       throw new NotFoundException(`${EntityType.PROJECT} with UUID ${projectUuid} not found`);
     }
-
-    this.logger.debug(
-      `Attempting to authorize project: ${JSON.stringify({
-        id: project.id,
-        uuid: project.uuid,
-        frameworkKey: project.frameworkKey,
-        organisationId: project.organisationId,
-        status: project.status
-      })}`
-    );
-
-    await this.policyService.authorize("read", project);
 
     const sites = await Site.findAll({
       where: { projectId: project.id },

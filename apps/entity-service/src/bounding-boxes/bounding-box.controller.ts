@@ -7,7 +7,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 import { PolicyService } from "@terramatch-microservices/common";
-import { PolygonGeometry, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 
 type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "country/landscapes";
 
@@ -70,27 +70,24 @@ export class BoundingBoxController {
         const polygonUuid = query.polygonUuid as string;
         const sitePolygon = await SitePolygon.findOne({
           where: { polygonUuid },
-          attributes: ["id", "uuid", "siteUuid", "polygonUuid"]
+          include: [
+            {
+              association: "site",
+              required: true
+            }
+          ],
+          attributes: ["id", "uuid", "polygonUuid"]
         });
 
-        if (sitePolygon !== null) {
-          await this.policyService.authorize("read", sitePolygon);
+        if (sitePolygon !== null && sitePolygon.site !== null) {
+          await this.policyService.authorize("read", sitePolygon.site);
 
           const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
           return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
         } else {
-          const polygon = await PolygonGeometry.findOne({
-            where: { uuid: polygonUuid },
-            attributes: ["uuid"]
-          });
-
-          if (polygon === null) {
-            throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
-          }
-          await this.policyService.authorize("read", polygon);
-
-          const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
-          return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
+          throw new NotFoundException(
+            `SitePolygon with polygon UUID ${polygonUuid} not found or has no associated site`
+          );
         }
       }
 

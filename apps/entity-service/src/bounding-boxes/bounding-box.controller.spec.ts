@@ -7,6 +7,7 @@ import { JsonApiDocument } from "@terramatch-microservices/common/util";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { PolygonGeometry, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
@@ -26,9 +27,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
 describe("BoundingBoxController", () => {
   let controller: BoundingBoxController;
 
-  const sampleBoundingBox = new BoundingBoxDto({
-    bbox: [-74.006, 40.7128, -73.9538, 40.8075]
-  });
+  const sampleBoundingBox = new BoundingBoxDto();
+  populateDto(sampleBoundingBox, { bbox: [-74.006, 40.7128, -73.9538, 40.8075] });
 
   const mockBoundingBoxService = {
     getPolygonBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),

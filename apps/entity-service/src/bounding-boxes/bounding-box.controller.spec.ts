@@ -167,12 +167,6 @@ describe("BoundingBoxController", () => {
 
       expect(Site.findOne).toHaveBeenCalledWith({
         where: { uuid: "site-123" },
-        include: [
-          {
-            association: "project",
-            attributes: ["id", "uuid", "frameworkKey"]
-          }
-        ],
         attributes: ["frameworkKey", "projectId"]
       });
 

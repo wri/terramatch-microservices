@@ -41,6 +41,7 @@ export class TerrafundReportReminderEmail extends ProjectEmailSender {
           },
           {
             additionalValues: {
+              transactional: "transactional",
               link: `/terrafund/programmeOverview/${projectId}`
             }
           }

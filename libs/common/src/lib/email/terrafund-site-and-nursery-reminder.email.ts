@@ -29,6 +29,7 @@ export class TerrafundSiteAndNurseryReminderEmail extends ProjectEmailSender {
           },
           {
             additionalValues: {
+              transactional: "transactional",
               link: `/terrafund/programmeOverview/${projectId}`
             }
           }

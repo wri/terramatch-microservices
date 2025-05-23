@@ -16,7 +16,7 @@ import { buildJsonApi, getDtoType, JsonApiDocument } from "@terramatch-microserv
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { DelayedJobDto } from "../../../../libs/common/src/lib/dto/delayed-job.dto";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 
 @Controller("jobs/v3/delayedJobs")
 export class DelayedJobsController {

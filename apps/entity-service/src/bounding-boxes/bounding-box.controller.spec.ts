@@ -8,6 +8,17 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { PolygonGeometry, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { Op } from "sequelize";
+
+jest.mock("@terramatch-microservices/database/util/subquery.builder", () => ({
+  Subquery: {
+    select: jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        literal: "mocked-subquery-literal"
+      })
+    })
+  }
+}));
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
@@ -113,7 +124,7 @@ describe("BoundingBoxController", () => {
       }
     };
 
-    it("should call getPolygonBoundingBox when polygonUuid is provided and authorize using SitePolygon", async () => {
+    it("should call getPolygonBoundingBox when polygonUuid is provided and authorize using Site", async () => {
       await testQueryParameters(
         { polygonUuid: "polygon-123" },
         "getPolygonBoundingBox",
@@ -121,35 +132,32 @@ describe("BoundingBoxController", () => {
         "polygon-123"
       );
 
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: { polygonUuid: "polygon-123" },
-        attributes: ["id", "uuid", "polygonUuid"],
-        include: [
-          {
-            association: "site",
-            required: true
+      // Verify Site.findOne is called with the subquery approach
+      expect(Site.findOne).toHaveBeenCalledWith({
+        where: {
+          uuid: {
+            [Op.in]: "mocked-subquery-literal"
           }
-        ]
+        }
       });
 
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSitePolygon.site);
+      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);
     });
 
-    it("should throw NotFoundException when SitePolygon is not found", async () => {
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
+    it("should throw NotFoundException when Site with associated polygon is not found", async () => {
+      (Site.findOne as jest.Mock).mockResolvedValue(null);
 
       await expect(controller.getBoundingBox({ polygonUuid: "non-existent" })).rejects.toThrow(
-        new NotFoundException("SitePolygon with polygon UUID non-existent not found or has no associated site")
+        new NotFoundException("Site with associated polygon UUID non-existent not found")
       );
-    });
 
-    it("should throw NotFoundException when SitePolygon has no associated site", async () => {
-      const sitePolygonWithoutSite = { ...mockSitePolygon, site: null };
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(sitePolygonWithoutSite);
-
-      await expect(controller.getBoundingBox({ polygonUuid: "polygon-123" })).rejects.toThrow(
-        new NotFoundException("SitePolygon with polygon UUID polygon-123 not found or has no associated site")
-      );
+      expect(Site.findOne).toHaveBeenCalledWith({
+        where: {
+          uuid: {
+            [Op.in]: "mocked-subquery-literal"
+          }
+        }
+      });
     });
 
     it("should call getSiteBoundingBox when siteUuid is provided", async () => {

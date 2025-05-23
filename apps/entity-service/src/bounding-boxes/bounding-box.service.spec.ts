@@ -245,12 +245,11 @@ describe("BoundingBoxService", () => {
   });
 
   describe("getPolygonBoundingBox", () => {
-    it("should return a bounding box for a valid polygon UUID with active site polygon", async () => {
+    it("should return a bounding box for a valid polygon UUID", async () => {
       const polygonUuid = fixtures.polygon.uuid;
 
-      // Setup mocks for the new logic
+      // Setup mocks - service only needs to verify polygon exists and get bounding box
       (PolygonGeometry.findOne as jest.Mock).mockResolvedValue({ uuid: polygonUuid });
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(fixtures.sitePolygon);
       (PolygonGeometry.findAll as jest.Mock).mockResolvedValue([fixtures.polygon.envelope]);
 
       const result = await service.getPolygonBoundingBox(polygonUuid);
@@ -261,27 +260,14 @@ describe("BoundingBoxService", () => {
         attributes: ["uuid"]
       });
 
-      // Verify the site polygon check
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: {
-          polygonUuid,
-          isActive: true,
-          deletedAt: null
-        },
-        attributes: ["id", "siteUuid", "polygonUuid"],
-        include: [
-          {
-            association: "site",
-            required: true
-          }
-        ]
-      });
-
       // Verify the bounding box query
       expect(PolygonGeometry.findAll).toHaveBeenCalledWith({
         where: { uuid: polygonUuid },
         attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
       });
+
+      // SitePolygon validation is handled by controller, not service
+      expect(SitePolygon.findOne).not.toHaveBeenCalled();
 
       expect(result).toBeDefined();
       expect(result.bbox).toEqual([-74.006, 40.7128, -73.9538, 40.8075]);
@@ -297,35 +283,6 @@ describe("BoundingBoxService", () => {
 
       expect(PolygonGeometry.findOne).toHaveBeenCalled();
       expect(SitePolygon.findOne).not.toHaveBeenCalled();
-    });
-
-    it("should throw NotFoundException when no active site polygon is found", async () => {
-      const polygonUuid = fixtures.polygon.uuid;
-
-      (PolygonGeometry.findOne as jest.Mock).mockResolvedValue({ uuid: polygonUuid });
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
-
-      await expect(service.getPolygonBoundingBox(polygonUuid)).rejects.toThrow(
-        new NotFoundException(`No active site polygon found for polygon with UUID ${polygonUuid}`)
-      );
-
-      expect(PolygonGeometry.findOne).toHaveBeenCalled();
-      expect(SitePolygon.findOne).toHaveBeenCalled();
-    });
-
-    it("should throw NotFoundException when site polygon has no associated site", async () => {
-      const polygonUuid = fixtures.polygon.uuid;
-      const sitePolygonWithoutSite = { ...fixtures.sitePolygon, site: null };
-
-      (PolygonGeometry.findOne as jest.Mock).mockResolvedValue({ uuid: polygonUuid });
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(sitePolygonWithoutSite);
-
-      await expect(service.getPolygonBoundingBox(polygonUuid)).rejects.toThrow(
-        new NotFoundException(`No site found for polygon with UUID ${polygonUuid}`)
-      );
-
-      expect(PolygonGeometry.findOne).toHaveBeenCalled();
-      expect(SitePolygon.findOne).toHaveBeenCalled();
     });
   });
 

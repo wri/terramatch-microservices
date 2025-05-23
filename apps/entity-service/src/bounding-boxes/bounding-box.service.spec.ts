@@ -11,6 +11,7 @@ import {
   SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { Model, Sequelize, Op } from "sequelize";
+import { PolicyService } from "@terramatch-microservices/common";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   LandscapeGeometry: {
@@ -191,6 +192,10 @@ describe("BoundingBoxService", () => {
     get: jest.fn()
   };
 
+  const mockPolicyService = {
+    authorize: jest.fn()
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -204,6 +209,10 @@ describe("BoundingBoxService", () => {
         {
           provide: ConfigService,
           useValue: mockConfigService
+        },
+        {
+          provide: PolicyService,
+          useValue: mockPolicyService
         }
       ]
     }).compile();

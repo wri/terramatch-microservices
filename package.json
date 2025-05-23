@@ -41,7 +41,6 @@
     "geojson": "^0.5.0",
     "hbs": "^4.2.0",
     "ioredis": "^5.6.1",
-    "ioredis-cache": "^2.0.3",
     "lodash": "^4.17.21",
     "luxon": "^3.5.0",
     "mariadb": "^3.4.0",

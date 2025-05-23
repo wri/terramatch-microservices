@@ -9,7 +9,7 @@ import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { FileUploadController } from "./entities/file-upload.controller";
-import { FileUploadService } from "./trees/file-upload.service";
+import { FileUploadService } from "./file/file-upload.service";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";

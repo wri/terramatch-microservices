@@ -8,6 +8,8 @@ import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/
 import { isEmpty } from "lodash";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "country/landscapes";
 
@@ -47,7 +49,7 @@ export class BoundingBoxController {
     }
 
     const hasCountry = !isEmpty(query.country);
-    const hasLandscapes = !isEmpty(query.landscapes) && Array.isArray(query.landscapes);
+    const hasLandscapes = !isEmpty(query.landscapes);
 
     if (hasCountry || hasLandscapes) {
       providedParams.push("country/landscapes");
@@ -68,27 +70,22 @@ export class BoundingBoxController {
     switch (providedParams[0]) {
       case "polygonUuid": {
         const polygonUuid = query.polygonUuid as string;
-        const sitePolygon = await SitePolygon.findOne({
-          where: { polygonUuid },
-          include: [
-            {
-              association: "site",
-              required: true
+        const site = await Site.findOne({
+          where: {
+            uuid: {
+              [Op.in]: Subquery.select(SitePolygon, "siteUuid").eq("polygonUuid", polygonUuid).literal
             }
-          ],
-          attributes: ["id", "uuid", "polygonUuid"]
+          }
         });
 
-        if (sitePolygon !== null && sitePolygon.site !== null) {
-          await this.policyService.authorize("read", sitePolygon.site);
-
-          const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
-          return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
-        } else {
-          throw new NotFoundException(
-            `SitePolygon with polygon UUID ${polygonUuid} not found or has no associated site`
-          );
+        if (site === null) {
+          throw new NotFoundException(`Site with associated polygon UUID ${polygonUuid} not found`);
         }
+
+        await this.policyService.authorize("read", site);
+
+        const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
+        return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
       }
 
       case "siteUuid": {
@@ -133,8 +130,8 @@ export class BoundingBoxController {
       }
 
       case "country/landscapes": {
-        const landscapes: string[] = hasLandscapes && Array.isArray(query.landscapes) ? query.landscapes : [];
         const country = hasCountry ? (query.country as string) : "global";
+        const landscapes: string[] = hasLandscapes ? (query.landscapes as string[]) : [];
 
         const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
         const id = `${country}-${landscapes.join("-")}`;

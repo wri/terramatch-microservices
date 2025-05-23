@@ -102,29 +102,6 @@ export class BoundingBoxService {
       throw new NotFoundException(`${EntityType.POLYGON} with UUID ${polygonUuid} not found`);
     }
 
-    const sitePolygon = await SitePolygon.findOne({
-      where: {
-        polygonUuid,
-
-        isActive: true,
-        deletedAt: null
-      },
-      attributes: ["id", "siteUuid", "polygonUuid"],
-      include: [
-        {
-          association: "site",
-          required: true
-        }
-      ]
-    });
-
-    if (sitePolygon === null) {
-      throw new NotFoundException(`No active site polygon found for polygon with UUID ${polygonUuid}`);
-    }
-    if (sitePolygon.site === null) {
-      throw new NotFoundException(`No site found for polygon with UUID ${polygonUuid}`);
-    }
-
     return this.getBoundingBoxFromGeometries(
       PolygonGeometry,
       { uuid: polygonUuid },

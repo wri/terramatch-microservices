@@ -101,12 +101,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     termsToFilter.forEach(term => {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) {
-        builder.where({
-          [field]:
-            term === "nothingToReport"
-              ? this.nothingToReportConditions([query[term]] as unknown as string)
-              : query[term]
-        });
+        builder.where({ [field]: query[term] });
       }
     });
 

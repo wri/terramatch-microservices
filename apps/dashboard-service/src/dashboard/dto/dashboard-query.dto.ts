@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsOptional } from "class-validator";
+import { IsOptional } from "class-validator";
 
 export class DashboardQueryDto {
   @ApiProperty({ required: false })

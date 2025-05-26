@@ -7,12 +7,10 @@ export class DashboardQueryDto {
   country?: string;
 
   @ApiProperty({
-    isArray: true,
     required: false,
     description: "Filter results by programmes"
   })
   @IsOptional()
-  @IsArray()
   programmes?: string[];
 
   @ApiProperty({ required: false })
@@ -25,16 +23,13 @@ export class DashboardQueryDto {
     description: "Filter results by landscapes"
   })
   @IsOptional()
-  @IsArray()
   landscapes?: string[];
 
   @ApiProperty({
-    isArray: true,
     required: false,
     description: "Filter results by organisationType"
   })
   @IsOptional()
-  @IsArray()
   organisationType?: string[];
 
   @ApiProperty({ required: false })

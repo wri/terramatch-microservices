@@ -483,7 +483,7 @@ describe("SiteReportProcessor", () => {
       const siteReport = await SiteReportFactory.create();
 
       const document = buildJsonApi(SiteReportLightDto);
-      await expect(processor.processSideload(document, siteReport, "sites", 5)).rejects.toThrow(BadRequestException);
+      await expect(processor.processSideload(document, siteReport, "sites")).rejects.toThrow(BadRequestException);
     });
   });
 });

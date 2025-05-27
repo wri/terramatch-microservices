@@ -139,12 +139,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async processSideload(
-    document: DocumentBuilder,
-    model: SiteReport,
-    entity: SideloadType,
-    pageSize: number
-  ): Promise<void> {
+  async processSideload(document: DocumentBuilder, model: SiteReport, entity: SideloadType): Promise<void> {
     if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
       const processor = this.entitiesService.createAssociationProcessor(
         "siteReports",

@@ -65,7 +65,7 @@ export class CacheService {
     return country ?? "";
   }
 
-  getCacheParameterForOrganisationType(organisationType: string[] | string) {
+  getCacheParameterForOrganisationType(organisationType: string[]) {
     if (typeof organisationType === "string") {
       return (organisationType = [organisationType]);
     }

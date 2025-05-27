@@ -9,6 +9,7 @@ import {
 import { Type } from "class-transformer";
 import { IndexQueryDto } from "./index-query.dto";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
 export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
 
@@ -81,6 +82,10 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   @IsIn(POLYGON_STATUSES_FILTERS)
   polygonStatus?: PolygonStatusFilter;
+
+  @ApiProperty({ required: false })
+  @TransformBooleanString({ optional: true })
+  nothingToReport?: boolean;
 
   // This one is internal use only, not exposed to the API surface
   taskId?: number;

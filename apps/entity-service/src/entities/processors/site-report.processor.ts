@@ -107,7 +107,9 @@ export class SiteReportProcessor extends ReportProcessor<
     ]) {
       if (query[term] != null) {
         const field = associationFieldMap[term] ?? term;
-        builder.where({ [field]: query[term] });
+        builder.where({
+          [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
+        });
       }
     }
 

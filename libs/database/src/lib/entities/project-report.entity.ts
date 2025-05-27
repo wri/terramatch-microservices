@@ -322,38 +322,38 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   equitableOpportunities: string | null;
 
-  @Column(TEXT)
-  resilienceProgress = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  resilienceProgress: string;
 
-  @Column(TEXT)
-  localGovernance = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  localGovernance: string;
 
-  @Column(TEXT)
-  adaptiveManagement = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  adaptiveManagement: string;
 
-  @Column(TEXT)
-  scalabilityReplicability = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  scalabilityReplicability: string;
 
-  @Column(TEXT)
-  convergenceJobsDescription = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  convergenceJobsDescription: string;
 
-  @Column(TEXT)
-  convergenceSchemes = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  convergenceSchemes: string;
 
-  @Column(INTEGER.UNSIGNED)
-  convergenceAmount = 0;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  convergenceAmount: number;
 
-  @Column(INTEGER.UNSIGNED)
-  volunteerScstobc = 0;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  volunteerScstobc: number;
 
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesScstobc = 0;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  beneficiariesScstobc: number;
 
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesScstobcFarmers = 0;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  beneficiariesScstobcFarmers: number;
 
-  @Column(TEXT)
-  communityPartnersAssetsDescription = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  communityPartnersAssetsDescription: string;
 
   @AllowNull
   @Column(INTEGER)
@@ -367,8 +367,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   publicNarrative: string | null;
 
-  @Column(INTEGER.UNSIGNED)
-  totalUniqueRestorationPartners = 0;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  totalUniqueRestorationPartners: number;
 
   @AllowNull
   @Column(TEXT)
@@ -418,8 +418,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BOOLEAN)
   siteAddition: boolean;
 
-  @Column(TEXT)
-  paidOtherActivityDescription = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  paidOtherActivityDescription: string;
 
   @AllowNull
   @Column(TEXT("long"))

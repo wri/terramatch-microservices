@@ -205,8 +205,8 @@ export class NurseryReport extends Model<NurseryReport> {
   @Column(DATE)
   submittedAt: Date | null;
 
-  @Column(INTEGER)
-  completion = 0;
+  @Column({ type: INTEGER, defaultValue: 0 })
+  completion: number;
 
   @AllowNull
   @Column(STRING)

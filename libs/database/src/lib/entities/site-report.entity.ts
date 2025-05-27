@@ -254,11 +254,11 @@ export class SiteReport extends Model<SiteReport> {
   @Column(INTEGER)
   numTreesRegenerating: number | null;
 
-  @Column(TEXT)
-  soilWaterRestorationDescription = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  soilWaterRestorationDescription: string;
 
-  @Column(TEXT)
-  waterStructures = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  waterStructures: string;
 
   @AllowNull
   @Column(STRING)
@@ -268,8 +268,8 @@ export class SiteReport extends Model<SiteReport> {
   @Column(TEXT)
   disturbanceDetails: string | null;
 
-  @Column(INTEGER)
-  completion = 0;
+  @Column({ type: INTEGER, defaultValue: 0 })
+  completion: number;
 
   @AllowNull
   @Column(DATE)
@@ -299,17 +299,17 @@ export class SiteReport extends Model<SiteReport> {
   @Column(TEXT)
   paidOtherActivityDescription: string | null;
 
-  @Column(TEXT)
-  invasiveSpeciesRemoved = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  invasiveSpeciesRemoved: string;
 
-  @Column(TEXT)
-  invasiveSpeciesManagement = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  invasiveSpeciesManagement: string;
 
-  @Column(TEXT)
-  siteCommunityPartnersDescription = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  siteCommunityPartnersDescription: string;
 
-  @Column(TEXT)
-  siteCommunityPartnersIncomeIncreaseDescription = "";
+  @Column({ type: TEXT, defaultValue: "" })
+  siteCommunityPartnersIncomeIncreaseDescription: string;
 
   @AllowNull
   @Column(TEXT)

@@ -15,21 +15,21 @@ import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
-import { EntityStatus, EntityStatusStates, UpdateRequestStatus } from "../constants/status";
+import { APPROVED, EntityStatus, EntityStatusStates, STARTED, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { FrameworkKey } from "../constants/framework";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 
-// Incomplete stub
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
-  approved: { where: { status: { [Op.in]: Nursery.APPROVED_STATUSES } } }
+  approved: { where: { status: { [Op.in]: Nursery.APPROVED_STATUSES } } },
+  nonDraft: { where: { status: { [Op.ne]: STARTED } } }
 }))
 @Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
 export class Nursery extends Model<Nursery> {
-  static readonly APPROVED_STATUSES = ["approved"];
+  static readonly APPROVED_STATUSES = [APPROVED];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
 
@@ -41,6 +41,10 @@ export class Nursery extends Model<Nursery> {
 
   static approved() {
     return chainScope(this, "approved") as typeof Nursery;
+  }
+
+  static nonDraft() {
+    return chainScope(this, "nonDraft") as typeof Nursery;
   }
 
   static project(id: number) {

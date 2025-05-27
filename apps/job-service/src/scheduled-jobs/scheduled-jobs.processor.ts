@@ -64,9 +64,18 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const where = { frameworkKey, status: { [Op.ne]: "started" } };
     const count = await Project.count({ where });
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
+    const failed: PromiseSettledResult<void>[] = [];
     for (let ii = 0; ii < count; ii += 100) {
       const projects = await Project.findAll({ where, limit: 100, offset: ii, attributes: ["id"] });
-      await Promise.allSettled(projects.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)));
+      failed.push(
+        ...(
+          await Promise.allSettled(projects.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))
+        ).filter(({ status }) => status === "rejected")
+      );
+    }
+
+    if (failed.length > 0) {
+      this.logger.error(`Failed to create task for some projects: ${JSON.stringify(failed)}`);
     }
   }
 

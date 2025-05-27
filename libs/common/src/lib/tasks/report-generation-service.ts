@@ -1,6 +1,17 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { TMLogger } from "../util/tm-logger";
-import { Task } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport,
+  Task
+} from "@terramatch-microservices/database/entities";
+import { DUE, PENDING } from "@terramatch-microservices/database/constants/status";
+import { DateTime } from "luxon";
 
 @Injectable()
 export class ReportGenerationService {
@@ -16,66 +27,79 @@ export class ReportGenerationService {
       return;
     }
 
-    //         $task = Task::create([
-    //             'organisation_id' => $project->organisation_id,
-    //             'project_id' => $project->id,
-    //             'status' => TaskStatusStateMachine::DUE,
-    //             'period_key' => $this->period_key,
-    //             'due_at' => $this->due_at,
-    //         ]);
-    //
-    //         $projectReport = $task->projectReport()->create([
-    //             'framework_key' => $this->framework_key,
-    //             'project_id' => $project->id,
-    //             'status' => ReportStatusStateMachine::DUE,
-    //             'due_at' => $this->due_at,
-    //         ]);
-    //
-    //         $hasSite = false;
-    //         foreach ($project->nonDraftSites as $site) {
-    //             $hasSite = true;
-    //             $task->siteReports()->create([
-    //                 'framework_key' => $this->framework_key,
-    //                 'site_id' => $site->id,
-    //                 'status' => ReportStatusStateMachine::DUE,
-    //                 'due_at' => $this->due_at,
-    //             ]);
-    //         }
-    //
-    //         $hasNursery = false;
-    //         foreach ($project->nonDraftNurseries as $nursery) {
-    //             $hasNursery = true;
-    //             $task->nurseryReports()->create([
-    //                 'framework_key' => $this->framework_key,
-    //                 'nursery_id' => $nursery->id,
-    //                 'status' => ReportStatusStateMachine::DUE,
-    //                 'due_at' => $this->due_at,
-    //             ]);
-    //         }
-    //
-    //         $labels = ['Project'];
-    //         if ($hasSite) {
-    //             $labels[] = 'site';
-    //         }
-    //         if ($hasNursery) {
-    //             $labels[] = 'nursery';
-    //         }
-    //         $message = printf(
-    //             '%s %s available',
-    //             implode(', ', $labels),
-    //             count($labels) > 1 ? 'reports' : 'report'
-    //         );
-    //
-    //         Action::create([
-    //             'status' => Action::STATUS_PENDING,
-    //             'targetable_type' => ProjectReport::class,
-    //             'targetable_id' => $projectReport->id,
-    //             'type' => Action::TYPE_NOTIFICATION,
-    //             'title' => 'Project report',
-    //             'sub_title' => '',
-    //             'text' => $message,
-    //             'project_id' => $project->id,
-    //             'organisation_id' => $project->organisation_id,
-    //         ]);
+    const project = await Project.findOne({ where: { id: projectId }, attributes: ["id", "organisationId"] });
+    if (project == null) {
+      throw new NotFoundException(`Project not found [${projectId}]`);
+    }
+
+    const dueDateTime = DateTime.fromJSDate(dueAt);
+    const periodKey = `${dueDateTime.year}-${dueDateTime.month}`;
+
+    const task = await Task.create({
+      organisationId: project.organisationId,
+      projectId: project.id,
+      status: DUE,
+      periodKey,
+      dueAt
+    } as Task);
+
+    const labels = ["Project"];
+    const projectReport = await ProjectReport.create({
+      taskId: task.id,
+      frameworkKey: project.frameworkKey,
+      projectId: project.id,
+      status: DUE,
+      dueAt
+    } as ProjectReport);
+
+    const sites = await Site.nonDraft()
+      .project(projectId)
+      .findAll({ attributes: ["id"] });
+    if (sites.length > 0) {
+      labels.push("site");
+      await SiteReport.bulkCreate(
+        sites.map(
+          ({ id }) =>
+            ({
+              taskId: task.id,
+              frameworkKey: project.frameworkKey,
+              siteId: id,
+              status: DUE,
+              dueAt
+            } as SiteReport)
+        )
+      );
+    }
+
+    const nurseries = await Nursery.nonDraft()
+      .project(projectId)
+      .findAll({ attributes: ["id"] });
+    if (nurseries.length > 0) {
+      labels.push("nursery");
+      await NurseryReport.bulkCreate(
+        nurseries.map(
+          ({ id }) =>
+            ({
+              taskId: task.id,
+              frameworkKey: project.frameworkKey,
+              nurseryId: id,
+              status: DUE,
+              dueAt
+            } as NurseryReport)
+        )
+      );
+    }
+
+    await Action.create({
+      status: PENDING,
+      targetableType: ProjectReport.LARAVEL_TYPE,
+      targetableId: projectReport.id,
+      type: "notification",
+      title: "Project report",
+      subTitle: "",
+      text: `${labels.join(", ")} ${labels.length > 1 ? "reports" : "report"} available`,
+      projectId: project.id,
+      organisationId: project.organisationId
+    } as Action);
   }
 }

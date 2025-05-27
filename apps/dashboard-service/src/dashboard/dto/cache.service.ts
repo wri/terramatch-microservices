@@ -66,10 +66,6 @@ export class CacheService {
   }
 
   getCacheParameterForOrganisationType(organisationType: string[]) {
-    if (typeof organisationType === "string") {
-      return (organisationType = [organisationType]);
-    }
-
     if (organisationType.length === 0) {
       return "all-orgs";
     }

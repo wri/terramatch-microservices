@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsOptional } from "class-validator";
 import {
-  FRAMEWORK_TF_TYPES,
   FrameworkType,
+  FRAMEWORK_TF_TYPES,
   LANDSCAPE_TYPES,
   LandscapeType,
   ORGANISATION_TYPES,

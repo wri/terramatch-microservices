@@ -50,7 +50,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
           break;
 
         default:
-          this.logger.error(`Unrecognised job type: ${name}`, taskDefinition);
+          this.logger.error(`Unrecognized job type: ${name}`, taskDefinition);
       }
     } catch (error) {
       this.logger.error("Error processing job", error);

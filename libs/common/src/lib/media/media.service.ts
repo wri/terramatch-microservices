@@ -21,7 +21,7 @@ export class MediaService {
   }
 
   async uploadFile(
-    buffer: any,
+    buffer: Buffer<ArrayBufferLike>,
     key: string,
     contentType: string,
     bucket: string = this.configService.get<string>("AWS_BUCKET") ?? ""

@@ -8,10 +8,17 @@ import {
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { MediaDto } from "../entities/dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { MediaExtraProperties } from "../entities/dto/media-extra-properties";
 import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { FastifyRequest, MultipartFile, MultipartValue, Part } from "fastify";
+
+interface ExtractedRequestData {
+  file: MultipartFile | null;
+  isPublic: boolean;
+  lat: number;
+  lng: number;
+}
 
 const VALIDATION = {
   VALIDATION_RULES: {
@@ -41,14 +48,15 @@ export class FileUploadService {
 
   constructor(private readonly mediaService: MediaService, protected readonly entitiesService: EntitiesService) {}
 
-  public async uploadFile(
-    model: EntityModel,
-    entity: EntityType,
-    collection: string,
-    file: any,
-    extraFields: MediaExtraProperties
-  ) {
+  public async uploadFile(model: EntityModel, entity: EntityType, collection: string, req: FastifyRequest) {
+    const { file, ...extraFields } = await this.extractRequestData(req);
+
+    if (file == null) {
+      throw new BadRequestException("No file provided");
+    }
+
     const entityModel = ENTITY_MODELS[entity];
+
     const configuration = this.getConfiguration(entityModel, collection);
 
     this.validateFile(file, configuration);
@@ -56,8 +64,6 @@ export class FileUploadService {
     const buffer = await file.toBuffer();
 
     await this.mediaService.uploadFile(buffer, file.filename, file.mimetype);
-
-    this.logger.log(`Uploaded file ${file.filename} to S3 ${this.mediaService.getUrl(file.filename)}`);
 
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
@@ -152,5 +158,26 @@ export class FileUploadService {
 
       return true;
     }
+  }
+
+  private async extractRequestData(req: FastifyRequest): Promise<ExtractedRequestData> {
+    const parts = req.parts();
+
+    const extraFields: ExtractedRequestData = {
+      file: null,
+      isPublic: false,
+      lat: 0,
+      lng: 0
+    };
+
+    for await (const part of parts) {
+      if ((part as Part).file != null) {
+        extraFields.file = part as MultipartFile;
+      } else {
+        extraFields[part.fieldname] = (part as MultipartValue).value;
+      }
+    }
+
+    return extraFields;
   }
 }

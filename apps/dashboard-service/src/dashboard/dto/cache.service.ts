@@ -74,7 +74,7 @@ export class CacheService {
       return "all-orgs";
     }
 
-    const sortedOrganisations = organisationType?.sort();
+    const sortedOrganisations = organisationType.sort();
     const callOrgTypes = ["for-profit-organization", "non-profit-organization"];
 
     if (sortedOrganisations.join(",") === callOrgTypes.join(",")) {

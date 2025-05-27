@@ -35,26 +35,21 @@ export class ScheduledJobsService {
     await job.destroy();
     const { id, type, taskDefinition } = job;
     this.logger.log(`Adding job to the queue: [${type}, ${JSON.stringify(taskDefinition)}]`);
-    try {
-      switch (job.type) {
-        case TASK_DUE:
-          await this.scheduledJobsQueue.add(TASK_DUE_EVENT, { jobId: id, taskDefinition });
-          break;
+    switch (job.type) {
+      case TASK_DUE:
+        await this.scheduledJobsQueue.add(TASK_DUE_EVENT, { jobId: id, taskDefinition });
+        break;
 
-        case REPORT_REMINDER:
-          await this.scheduledJobsQueue.add(REPORT_REMINDER_EVENT, { jobId: id, taskDefinition });
-          break;
+      case REPORT_REMINDER:
+        await this.scheduledJobsQueue.add(REPORT_REMINDER_EVENT, { jobId: id, taskDefinition });
+        break;
 
-        case SITE_AND_NURSERY_REMINDER:
-          await this.scheduledJobsQueue.add(SITE_AND_NURSERY_REMINDER_EVENT, { jobId: id, taskDefinition });
-          break;
+      case SITE_AND_NURSERY_REMINDER:
+        await this.scheduledJobsQueue.add(SITE_AND_NURSERY_REMINDER_EVENT, { jobId: id, taskDefinition });
+        break;
 
-        default:
-          this.logger.error(`Unrecognised job type: ${job.type}`, job);
-      }
-    } catch (e) {
-      await job.restore();
-      this.logger.error("Error processing job", e);
+      default:
+        this.logger.error(`Unrecognized job type: ${job.type}`, job);
     }
   }
 }

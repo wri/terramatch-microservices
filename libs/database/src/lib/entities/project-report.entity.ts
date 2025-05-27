@@ -322,45 +322,38 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   equitableOpportunities: string | null;
 
-  @AllowNull
   @Column(TEXT)
-  resilienceProgress: string | null;
+  resilienceProgress = "";
 
-  @AllowNull
   @Column(TEXT)
-  localGovernance: string | null;
+  localGovernance = "";
 
-  @AllowNull
   @Column(TEXT)
-  adaptiveManagement: string | null;
+  adaptiveManagement = "";
 
-  @AllowNull
   @Column(TEXT)
-  scalabilityReplicability: string | null;
+  scalabilityReplicability = "";
 
-  @AllowNull
   @Column(TEXT)
-  convergenceJobsDescription: string | null;
+  convergenceJobsDescription = "";
 
-  @AllowNull
   @Column(TEXT)
-  convergenceSchemes: string | null;
+  convergenceSchemes = "";
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  convergenceAmount: number | null;
+  convergenceAmount = 0;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesScstobc: number | null;
+  volunteerScstobc = 0;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesScstobcFarmers: number | null;
+  beneficiariesScstobc = 0;
 
-  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesScstobcFarmers = 0;
+
   @Column(TEXT)
-  communityPartnersAssetsDescription: string | null;
+  communityPartnersAssetsDescription = "";
 
   @AllowNull
   @Column(INTEGER)
@@ -374,9 +367,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   publicNarrative: string | null;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  totalUniqueRestorationPartners: number | null;
+  totalUniqueRestorationPartners = 0;
 
   @AllowNull
   @Column(TEXT)
@@ -426,9 +418,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BOOLEAN)
   siteAddition: boolean;
 
-  @AllowNull
   @Column(TEXT)
-  paidOtherActivityDescription: string | null;
+  paidOtherActivityDescription = "";
 
   @AllowNull
   @Column(TEXT("long"))

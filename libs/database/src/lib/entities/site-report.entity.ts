@@ -254,13 +254,11 @@ export class SiteReport extends Model<SiteReport> {
   @Column(INTEGER)
   numTreesRegenerating: number | null;
 
-  @AllowNull
   @Column(TEXT)
-  soilWaterRestorationDescription: string | null;
+  soilWaterRestorationDescription = "";
 
-  @AllowNull
   @Column(TEXT)
-  waterStructures: string | null;
+  waterStructures = "";
 
   @AllowNull
   @Column(STRING)
@@ -270,9 +268,8 @@ export class SiteReport extends Model<SiteReport> {
   @Column(TEXT)
   disturbanceDetails: string | null;
 
-  @AllowNull
   @Column(INTEGER)
-  completion: number | null;
+  completion = 0;
 
   @AllowNull
   @Column(DATE)
@@ -302,21 +299,17 @@ export class SiteReport extends Model<SiteReport> {
   @Column(TEXT)
   paidOtherActivityDescription: string | null;
 
-  @AllowNull
   @Column(TEXT)
-  invasiveSpeciesRemoved: string | null;
+  invasiveSpeciesRemoved = "";
 
-  @AllowNull
   @Column(TEXT)
-  invasiveSpeciesManagement: string | null;
+  invasiveSpeciesManagement = "";
 
-  @AllowNull
   @Column(TEXT)
-  siteCommunityPartnersDescription: string | null;
+  siteCommunityPartnersDescription = "";
 
-  @AllowNull
   @Column(TEXT)
-  siteCommunityPartnersIncomeIncreaseDescription: string | null;
+  siteCommunityPartnersIncomeIncreaseDescription = "";
 
   @AllowNull
   @Column(TEXT)

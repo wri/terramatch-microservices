@@ -14,6 +14,7 @@ declare module "fastify" {
     encoding: string;
     mimetype: string;
     fields: MultipartFields;
+    size: number;
   }
 
   export interface MultipartValue<T = unknown> {

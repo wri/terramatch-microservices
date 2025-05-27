@@ -20,6 +20,11 @@ interface ExtractedRequestData {
   lng: number;
 }
 
+interface MediaConfiguration {
+  validation: string;
+  validationFileTypes: string;
+}
+
 const VALIDATION = {
   VALIDATION_RULES: {
     "logo-image": "mimes:jpg,png",
@@ -70,7 +75,7 @@ export class FileUploadService {
       attributes: ["firstName", "lastName"]
     });
 
-    const media: any = {
+    const media: Partial<Media> = {
       collectionName: collection,
       modelType: entityModel.LARAVEL_TYPE,
       modelId: model.id,
@@ -93,7 +98,7 @@ export class FileUploadService {
       createdBy: this.entitiesService.userId
     };
 
-    const dbMedia = await Media.create(media);
+    const dbMedia = await Media.create(media as Media);
 
     return new MediaDto(dbMedia, {
       url: this.mediaService.getUrl(dbMedia),
@@ -103,7 +108,7 @@ export class FileUploadService {
     });
   }
 
-  private getConfiguration(entity: EntityClass<EntityModel>, collection: string) {
+  private getConfiguration(entity: EntityClass<EntityModel>, collection: string): MediaConfiguration {
     const configuration = (entity as any).MEDIA[collection];
     if (configuration == null) {
       throw new Error(`Configuration for collection ${collection} not found`);
@@ -112,13 +117,13 @@ export class FileUploadService {
     return configuration;
   }
 
-  private getMediaType(file: any) {
+  private getMediaType(file: MultipartFile) {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
     const videos = ["video/mp4"];
 
     if (documents.includes(file.mimetype)) {
-      return "documents";
+      return "document";
     }
 
     if (images.includes(file.mimetype) || videos.includes(file.mimetype)) {
@@ -128,7 +133,7 @@ export class FileUploadService {
     return null;
   }
 
-  private validateFile(file: any, configuration: any) {
+  private validateFile(file: MultipartFile, configuration: MediaConfiguration) {
     const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
     const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
 
@@ -172,7 +177,8 @@ export class FileUploadService {
 
     for await (const part of parts) {
       if ((part as Part).file != null) {
-        extraFields.file = part as MultipartFile;
+        // @ts-ignore
+        extraFields.file = part;
       } else {
         extraFields[part.fieldname] = (part as MultipartValue).value;
       }

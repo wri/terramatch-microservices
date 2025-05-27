@@ -22,6 +22,7 @@ on:
           - entity-service
           - research-service
           - unified-database-service
+          - dashboard-service
       env:
         description: "Deployment target environment"
         type: choice

@@ -54,18 +54,10 @@ export class CacheService {
   }
 
   getCacheParameterForProgrammes(programmes: string[]) {
-    if (typeof programmes === "string") {
-      return (programmes = [programmes]);
-    }
-
     return programmes.length === 0 ? "" : programmes.sort().join(",");
   }
 
   getCacheParameterForLandscapes(landscapes: string[]) {
-    if (typeof landscapes === "string") {
-      return (landscapes = [landscapes]);
-    }
-
     return landscapes.length === 0 ? "" : landscapes.sort().join(",");
   }
 
@@ -73,7 +65,7 @@ export class CacheService {
     return country ?? "";
   }
 
-  getCacheParameterForOrganisationType(organisationType: string[]) {
+  getCacheParameterForOrganisationType(organisationType: string[] | string) {
     if (typeof organisationType === "string") {
       return (organisationType = [organisationType]);
     }
@@ -82,7 +74,7 @@ export class CacheService {
       return "all-orgs";
     }
 
-    const sortedOrganisations = organisationType.sort();
+    const sortedOrganisations = organisationType?.sort();
     const callOrgTypes = ["for-profit-organization", "non-profit-organization"];
 
     if (sortedOrganisations.join(",") === callOrgTypes.join(",")) {

@@ -1,5 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional } from "class-validator";
+import { IsArray, IsOptional } from "class-validator";
+import {
+  FRAMEWORK_TF_TYPES,
+  FrameworkType,
+  LANDSCAPE_TYPES,
+  LandscapeType,
+  ORGANISATION_TYPES,
+  OrganisationType
+} from "@terramatch-microservices/database/constants";
 
 export class DashboardQueryDto {
   @ApiProperty({ required: false })
@@ -7,30 +15,41 @@ export class DashboardQueryDto {
   country?: string;
 
   @ApiProperty({
+    enum: FRAMEWORK_TF_TYPES,
+    isArray: true,
     required: false,
+    name: "programmesType[]",
     description: "Filter results by programmes"
   })
   @IsOptional()
-  programmes?: string[];
+  @IsArray()
+  programmes?: FrameworkType[];
 
   @ApiProperty({ required: false })
   @IsOptional()
   cohort?: string;
 
   @ApiProperty({
+    enum: LANDSCAPE_TYPES,
     isArray: true,
     required: false,
+    name: "landscapesType[]",
     description: "Filter results by landscapes"
   })
   @IsOptional()
-  landscapes?: string[];
+  @IsArray()
+  landscapes?: LandscapeType[];
 
   @ApiProperty({
+    enum: ORGANISATION_TYPES,
+    isArray: true,
     required: false,
+    name: "organisationType[]",
     description: "Filter results by organisationType"
   })
   @IsOptional()
-  organisationType?: string[];
+  @IsArray()
+  organisationType?: OrganisationType[];
 
   @ApiProperty({ required: false })
   @IsOptional()

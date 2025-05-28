@@ -1,5 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, col, fn, WhereOptions } from "sequelize";
+import { Attributes, col, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
@@ -195,4 +195,12 @@ export abstract class ReportProcessor<
 
     await super.update(model, update);
   }
+
+  protected nothingToReportConditions = (queryValue: boolean) => {
+    if (queryValue) {
+      return true;
+    } else {
+      return { [Op.or]: [null, false] };
+    }
+  };
 }

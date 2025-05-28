@@ -126,11 +126,21 @@ export class BoundingBoxController {
       }
 
       case "country/landscapes": {
-        const country = query.country ?? "global";
+        const country = query.country;
         const landscapes: string[] = query.landscapes ?? [];
 
-        const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country, landscapes);
-        const id = `${country}-${landscapes.join("-")}`;
+        const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country ?? "", landscapes);
+
+        let id: string;
+        if (!isEmpty(country) && landscapes.length > 0) {
+          id = `${country},${landscapes.join(",")}`;
+        } else if (!isEmpty(country)) {
+          id = country as string;
+        } else if (landscapes.length > 0) {
+          id = landscapes.join(",");
+        } else {
+          id = "global";
+        }
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
     }

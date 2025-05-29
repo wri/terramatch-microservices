@@ -7,7 +7,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 import { PolicyService } from "@terramatch-microservices/common";
-import { Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Project, Site, SitePolygon, LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
@@ -128,6 +128,20 @@ export class BoundingBoxController {
       case "country/landscapes": {
         const country = query.country;
         const landscapes: string[] = query.landscapes ?? [];
+
+        if (landscapes.length > 0) {
+          const validLandscapes = LandscapeGeometry.LANDSCAPE_SLUGS;
+          const invalidLandscapes = landscapes.filter(
+            landscape => !validLandscapes.some(validSlug => validSlug === landscape)
+          );
+          if (invalidLandscapes.length > 0) {
+            throw new BadRequestException(
+              `Invalid landscape slugs provided: ${invalidLandscapes.join(
+                ", "
+              )}. Valid landscape slugs are: ${validLandscapes.join(", ")}`
+            );
+          }
+        }
 
         const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country ?? "", landscapes);
 

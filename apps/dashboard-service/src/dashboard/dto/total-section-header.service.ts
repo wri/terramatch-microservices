@@ -25,6 +25,18 @@ export class TotalSectionHeaderService {
 
     const projectIds: number[] = await projectsBuilder.pluckIds();
 
+    // if (projectIds.length === 0) {
+    //   return {
+    //     totalNonProfitCount: 0,
+    //     totalEnterpriseCount: 0,
+    //     totalEntries: 0,
+    //     totalHectaresRestored: 0,
+    //     totalHectaresRestoredGoal: 0,
+    //     totalTreesRestored: 0,
+    //     totalTreesRestoredGoal: 0
+    //   };
+    // }
+
     return {
       totalNonProfitCount: await this.getTotalNonProfitCount(projectsBuilder),
       totalEnterpriseCount: await this.getTotalEnterpriseCount(projectsBuilder),
@@ -52,6 +64,9 @@ export class TotalSectionHeaderService {
   }
 
   async getTotalJobs(projectIds: number[]) {
+    if (projectIds.length === 0) {
+      return 0;
+    }
     return (
       (await DemographicEntry.gender().sum("amount", {
         where: {

@@ -57,7 +57,6 @@ describe("DashboardProjectsQueryBuilder", () => {
       country: "Kenya",
       programmes: ["terrafund"],
       cohort: "2023",
-      landscapes: ["land1"],
       organisationType: ["non-profit-organization"],
       projectUuid: "uuid1"
     });

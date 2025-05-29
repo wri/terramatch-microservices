@@ -43,10 +43,13 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }
     };
 
-    if (!isEmpty(filters?.country)) where["country"] = filters.country;
+    if (!isEmpty(filters?.landscapes)) {
+      where["landscape"] = { [Op.in]: filters.landscapes };
+    } else if (!isEmpty(filters?.country)) {
+      where["country"] = filters.country;
+    }
     if (!isEmpty(filters?.programmes)) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
     if (!isEmpty(filters?.cohort)) where["cohort"] = filters.cohort;
-    if (!isEmpty(filters?.landscapes)) where["landscape"] = { [Op.in]: [filters.landscapes] };
     if (!isEmpty(filters?.organisationType)) organisationWhere["type"] = { [Op.in]: [filters.organisationType] };
     if (!isEmpty(filters?.projectUuid))
       where["uuid"] = Array.isArray(filters.projectUuid) ? { [Op.in]: filters.projectUuid } : filters.projectUuid;

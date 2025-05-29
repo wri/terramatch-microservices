@@ -48,22 +48,8 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     } else if (!isEmpty(filters?.country)) {
       where["country"] = filters.country;
     }
-
     if (!isEmpty(filters?.programmes)) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
     if (!isEmpty(filters?.cohort)) where["cohort"] = filters.cohort;
-    // if (!isEmpty(filters?.landscapes)) {
-    //   const LandscapeNameToSlugMap: Record<string, string> = {
-    //     "Ghana Cocoa Belt": "gcb",
-    //     "Greater Rift Valley of Kenya": "grv",
-    //     "Lake Kivu & Rusizi River Basin": "ikr"
-    //   };
-    //   const transformedLandscapes = filters?.landscapes
-    //   ?.map(name => LandscapeNameToSlugMap[name])
-    //   .filter(Boolean);
-
-    // where["landscape"] = { [Op.in]: transformedLandscapes };
-    // }
-    // if (!isEmpty(filters?.landscapes)) where["landscape"] = { [Op.in]: filters.landscapes };
     if (!isEmpty(filters?.organisationType)) organisationWhere["type"] = { [Op.in]: [filters.organisationType] };
     if (!isEmpty(filters?.projectUuid))
       where["uuid"] = Array.isArray(filters.projectUuid) ? { [Op.in]: filters.projectUuid } : filters.projectUuid;

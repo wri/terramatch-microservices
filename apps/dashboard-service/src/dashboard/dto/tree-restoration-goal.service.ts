@@ -14,13 +14,6 @@ export class TreeRestorationGoalService {
     ]).queryFilters(query);
 
     const projectIds: number[] = await projectsBuilder.pluckIds();
-
-    return {
-      forProfitTreeCount: await this.getForProfitTreeCount(projectIds)
-    };
-  }
-
-  private async getForProfitTreeCount(projectIds: number[]) {
     const projects = await Project.findAll({
       where: { id: projectIds },
       include: [
@@ -35,7 +28,25 @@ export class TreeRestorationGoalService {
       .filter(project => project.organisation?.type === "for-profit-organization")
       .map(project => project.id);
 
-    const approvedSitesQuery = await Site.approvedIdsProjectsSubquery(forProfitProjectIds);
+    const nonProfitProjectIds = projects
+      .filter(project => project.organisation?.type === "non-profit-organization")
+      .map(project => project.id);
+
+    const [forProfitTreeCount, nonProfitTreeCount] = await Promise.all([
+      this.getTreeCount(forProfitProjectIds),
+      this.getTreeCount(nonProfitProjectIds)
+    ]);
+
+    return {
+      forProfitTreeCount,
+      nonProfitTreeCount
+    };
+  }
+
+  private async getTreeCount(projectIds: number[]) {
+    if (projectIds.length === 0) return 0;
+
+    const approvedSitesQuery = await Site.approvedIdsProjectsSubquery(projectIds);
     const approvedSiteReportsQuery = await SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
     return (

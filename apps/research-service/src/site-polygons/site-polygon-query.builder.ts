@@ -15,7 +15,7 @@ import {
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/database/util/paginated-query.builder";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
@@ -50,7 +50,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     required: true
   };
 
-  constructor(pageSize: number) {
+  constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
 
     this.findOptions.include = [{ model: PolygonGeometry, attributes: ["polygon"], required: true }, this.siteJoin];
@@ -59,9 +59,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   async excludeTestProjects() {
-    // avoid joining against the entire project table by doing a quick query first. The number of test projects is small
-    const testProjects = await Project.findAll({ where: { isTest: true }, attributes: ["id"] });
-    return this.where({ projectId: { [Op.notIn]: testProjects.map(({ id }) => id) } }, this.siteJoin);
+    // Avoid joining against the entire project table by doing a quick query first. The number of test projects is small
+    const testProjects = Subquery.select(Project, "id").eq("isTest", true).literal;
+    return this.where({ projectId: { [Op.notIn]: testProjects } }, this.siteJoin);
   }
 
   async filterSiteUuids(siteUuids: string[]) {
@@ -119,7 +119,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {
         const model = INDICATOR_MODEL_CLASSES[slug];
-        if (!model) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+        if (model == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sequelize = model.sequelize!;
@@ -139,7 +139,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {
         const model = INDICATOR_MODEL_CLASSES[slug];
-        if (!model) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
+        if (model == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sequelize = model.sequelize!;

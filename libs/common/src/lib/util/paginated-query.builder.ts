@@ -2,6 +2,7 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { flatten, isObject } from "lodash";
+import { NumberPage } from "../dto/page.dto";
 
 // Some utilities copied from the un-exported bowels of Sequelize to help merge where clauses. Pulled
 // from model.js in the code paths where multiple scopes can be combined with a query's WhereOptions to
@@ -29,14 +30,39 @@ export function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions)
   return { [Op.and]: flatten([unpackedA, unpackedB]) };
 }
 
+export const MAX_PAGE_SIZE = 100 as const;
+
 export class PaginatedQueryBuilder<T extends Model<T>> {
+  public static forNumberPage<T extends Model<T>>(
+    modelClass: ModelCtor<T>,
+    page?: NumberPage,
+    include?: Includeable[]
+  ) {
+    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = page ?? {};
+    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+      throw new BadRequestException(`Invalid page size: ${pageSize}`);
+    }
+    if (pageNumber < 1) {
+      throw new BadRequestException(`Invalid page number: ${pageNumber}`);
+    }
+
+    const builder = new PaginatedQueryBuilder(modelClass, pageSize, include);
+    if (pageNumber > 1) {
+      builder.pageNumber(pageNumber);
+    }
+
+    return builder;
+  }
+
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };
   protected pageAfterId: number | undefined;
 
-  constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize: number, include?: Includeable[]) {
-    this.findOptions.limit = this.pageSize;
+  constructor(private readonly MODEL: ModelCtor<T>, private readonly pageSize?: number, include?: Includeable[]) {
+    if (this.pageSize != null) {
+      this.findOptions.limit = this.pageSize;
+    }
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }
@@ -58,6 +84,9 @@ export class PaginatedQueryBuilder<T extends Model<T>> {
   }
 
   pageNumber(pageNumber: number) {
+    if (this.pageSize == null) {
+      throw new BadRequestException("Cannot set page number without page size");
+    }
     this.findOptions.offset = (pageNumber - 1) * this.pageSize;
     return this;
   }

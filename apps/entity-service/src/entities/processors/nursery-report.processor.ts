@@ -4,12 +4,7 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import {
-  AdditionalNurseryReportFullProps,
-  NurseryReportFullDto,
-  NurseryReportLightDto,
-  NurseryReportMedia
-} from "../dto/nursery-report.dto";
+import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 export class NurseryReportProcessor extends ReportProcessor<
@@ -36,18 +31,9 @@ export class NurseryReportProcessor extends ReportProcessor<
             }
           ]
         },
-        {
-          association: "task",
-          attributes: ["uuid"]
-        },
-        {
-          association: "createdByUser",
-          attributes: ["id", "uuid", "firstName", "lastName"]
-        },
-        {
-          association: "approvedByUser",
-          attributes: ["id", "uuid", "firstName", "lastName"]
-        }
+        { association: "task", attributes: ["uuid"] },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
+        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -66,7 +52,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     };
 
     const builder = await this.entitiesService.buildQuery(NurseryReport, query, [nurseryAssociation]);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -108,15 +94,22 @@ export class NurseryReportProcessor extends ReportProcessor<
       "nurseryUuid",
       "organisationUuid",
       "country",
-      "projectUuid"
+      "projectUuid",
+      "nothingToReport"
     ];
 
     termsToFilter.forEach(term => {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) {
-        builder.where({ [field]: query[term] });
+        builder.where({
+          [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
+        });
       }
     });
+
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
+    }
 
     if (query.search != null) {
       builder.where({
@@ -142,13 +135,18 @@ export class NurseryReportProcessor extends ReportProcessor<
     const mediaCollection = await Media.for(nurseryReport).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
-    const props: AdditionalNurseryReportFullProps = {
+    const dto = new NurseryReportFullDto(nurseryReport, {
       reportTitle,
       projectReportTitle,
-      ...(this.entitiesService.mapMediaCollection(mediaCollection, NurseryReport.MEDIA) as NurseryReportMedia)
-    };
+      ...(this.entitiesService.mapMediaCollection(
+        mediaCollection,
+        NurseryReport.MEDIA,
+        "nurseryReports",
+        nurseryReport.uuid
+      ) as NurseryReportMedia)
+    });
 
-    return { id: nurseryReport.uuid, dto: new NurseryReportFullDto(nurseryReport, props) };
+    return { id: nurseryReport.uuid, dto };
   }
 
   async getLightDto(nurseryReport: NurseryReport) {

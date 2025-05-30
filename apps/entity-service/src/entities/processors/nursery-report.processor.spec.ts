@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { NurseryReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -375,7 +376,7 @@ describe("NurseryReportProcessor", () => {
     it("should return a requested nursery report", async () => {
       const nurseryReport = await NurseryReportFactory.create();
       const result = await processor.findOne(nurseryReport.uuid);
-      expect(result.id).toBe(nurseryReport.id);
+      expect(result?.id).toBe(nurseryReport.id);
     });
   });
 
@@ -383,7 +384,7 @@ describe("NurseryReportProcessor", () => {
     it("should serialize a Nursery Report as a light resource (NurseryReportLightDto)", async () => {
       const { uuid } = await NurseryReportFactory.create();
       const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getLightDto(nurseryReport);
+      const { id, dto } = await processor.getLightDto(nurseryReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -398,12 +399,12 @@ describe("NurseryReportProcessor", () => {
       const { taskId } = await ProjectReportFactory.create({ projectId: project.id });
       const { uuid } = await NurseryReportFactory.create({
         nurseryId: nursery.id,
-        taskId,
+        taskId: taskId!,
         dueAt: null
       });
 
       const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nurseryReport);
+      const { id, dto } = await processor.getFullDto(nurseryReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -420,12 +421,12 @@ describe("NurseryReportProcessor", () => {
 
       const { uuid } = await NurseryReportFactory.create({
         nurseryId: nursery.id,
-        taskId: null,
-        dueAt: null
+        taskId: undefined,
+        dueAt: undefined
       });
 
       const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nurseryReport);
+      const { id, dto } = await processor.getFullDto(nurseryReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -447,7 +448,7 @@ describe("NurseryReportProcessor", () => {
       });
 
       const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nurseryReport);
+      const { id, dto } = await processor.getFullDto(nurseryReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -469,7 +470,7 @@ describe("NurseryReportProcessor", () => {
       });
 
       const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nurseryReport);
+      const { id, dto } = await processor.getFullDto(nurseryReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -491,7 +492,7 @@ describe("NurseryReportProcessor", () => {
       });
 
       const nurseryReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(nurseryReport);
+      const { id, dto } = await processor.getFullDto(nurseryReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,

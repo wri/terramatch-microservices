@@ -8,17 +8,16 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import {
-  AdditionalSiteReportFullProps,
-  SiteReportFullDto,
-  SiteReportLightDto,
-  SiteReportMedia
-} from "../dto/site-report.dto";
+import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { ProcessableAssociation } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
 export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
@@ -44,18 +43,9 @@ export class SiteReportProcessor extends ReportProcessor<
             }
           ]
         },
-        {
-          association: "task",
-          attributes: ["uuid"]
-        },
-        {
-          association: "createdByUser",
-          attributes: ["id", "uuid", "firstName", "lastName"]
-        },
-        {
-          association: "approvedByUser",
-          attributes: ["id", "uuid", "firstName", "lastName"]
-        }
+        { association: "task", attributes: ["uuid"] },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
+        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -74,7 +64,7 @@ export class SiteReportProcessor extends ReportProcessor<
     };
     const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -116,12 +106,19 @@ export class SiteReportProcessor extends ReportProcessor<
       "siteUuid",
       "organisationUuid",
       "country",
-      "projectUuid"
+      "projectUuid",
+      "nothingToReport"
     ]) {
       if (query[term] != null) {
         const field = associationFieldMap[term] ?? term;
-        builder.where({ [field]: query[term] });
+        builder.where({
+          [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
+        });
       }
+    }
+
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
     }
 
     if (query.search != null) {
@@ -145,6 +142,19 @@ export class SiteReportProcessor extends ReportProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
+  async processSideload(document: DocumentBuilder, model: SiteReport, entity: SideloadType): Promise<void> {
+    if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
+      const processor = this.entitiesService.createAssociationProcessor(
+        "siteReports",
+        model.uuid,
+        entity as ProcessableAssociation
+      );
+      await processor.addDtos(document);
+    } else {
+      throw new BadRequestException(`Site reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
+    }
+  }
+
   async getFullDto(siteReport: SiteReport) {
     const siteReportId = siteReport.id;
     const reportTitle = await this.getReportTitle(siteReport);
@@ -157,18 +167,22 @@ export class SiteReportProcessor extends ReportProcessor<
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
-    const props: AdditionalSiteReportFullProps = {
+    const dto = new SiteReportFullDto(siteReport, {
       reportTitle,
       projectReportTitle,
       totalTreesPlantedCount,
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
-      projectReport: undefined,
-      ...(this.entitiesService.mapMediaCollection(mediaCollection, SiteReport.MEDIA) as SiteReportMedia)
-    };
+      ...(this.entitiesService.mapMediaCollection(
+        mediaCollection,
+        SiteReport.MEDIA,
+        "siteReports",
+        siteReport.uuid
+      ) as SiteReportMedia)
+    });
 
-    return { id: siteReport.uuid, dto: new SiteReportFullDto(siteReport, props) };
+    return { id: siteReport.uuid, dto };
   }
 
   async getLightDto(siteReport: SiteReport) {

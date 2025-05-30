@@ -48,14 +48,18 @@ const uniqueTreeNames = (trees: Dictionary<TreeSpecies[]>) =>
     {} as Dictionary<string[]>
   );
 
-const countPlants = (trees: TreeSpecies[] | Seeding[]) =>
+const countPlants = (trees: TreeSpecies[] | Seeding[]): Dictionary<PlantingCountDto> =>
   trees.reduce(
     (counts, { name, taxonId, amount }) => ({
       ...counts,
-      [name]: {
-        taxonId: counts[name]?.taxonId ?? taxonId,
-        amount: (counts[name]?.amount ?? 0) + (amount ?? 0)
-      }
+      ...(name == null
+        ? {}
+        : {
+            [name]: {
+              taxonId: counts[name]?.taxonId ?? taxonId ?? undefined,
+              amount: (counts[name]?.amount ?? 0) + (amount ?? 0)
+            }
+          })
     }),
     {} as Dictionary<PlantingCountDto>
   );
@@ -130,15 +134,15 @@ export class TreeService {
       const parent = report instanceof SiteReport ? report.site : report.nursery;
       const trees = groupBy(
         flattenDeep([
-          parentModel.TREE_ASSOCIATIONS.map(association => parent[association] as TreeSpecies[]),
-          Project.TREE_ASSOCIATIONS.map(association => parent.project[association] as TreeSpecies[])
+          parentModel.TREE_ASSOCIATIONS.map(association => parent?.[association] ?? ([] as TreeSpecies[])),
+          Project.TREE_ASSOCIATIONS.map(association => parent?.project?.[association] ?? ([] as TreeSpecies[]))
         ]),
         "collection"
       );
 
-      const treeNames = uniqueTreeNames(trees);
+      const treeNames = uniqueTreeNames(trees) as Dictionary<string[]>;
       if (entity === "siteReports") {
-        treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name));
+        treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name)) as string[];
       }
       return treeNames;
     } else if (["sites", "nurseries", "projectReports"].includes(entity)) {
@@ -175,8 +179,11 @@ export class TreeService {
       if (entityModel == null) throw new NotFoundException();
 
       const uniqueTrees = uniqueTreeNames(
-        groupBy(flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project[association])), "collection")
-      );
+        groupBy(
+          flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project?.[association] ?? [])),
+          "collection"
+        )
+      ) as Dictionary<string[]>;
       if (entity === "projectReports" && entityModel.frameworkKey === "ppc") {
         // For PPC Project reports, we have to pretend the establishment species are "nursery-seedling" because
         // that's the collection used at the report level, but "tree-planted" is used at the establishment level.
@@ -189,7 +196,7 @@ export class TreeService {
       }
 
       if (entity === "sites") {
-        uniqueTrees["seeds"] = uniq(((entityModel as Site).seedsPlanted ?? []).map(({ name }) => name));
+        uniqueTrees["seeds"] = uniq(((entityModel as Site).seedsPlanted ?? []).map(({ name }) => name)) as string[];
       }
 
       return uniqueTrees;
@@ -198,7 +205,7 @@ export class TreeService {
     }
   }
 
-  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<PlantingCountMap> {
+  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<PlantingCountMap | undefined> {
     if (!isReport(entity)) return undefined;
 
     let model: TreeReportModelType;
@@ -257,7 +264,9 @@ export class TreeService {
 
     const planting = countTreeCollection(trees);
     if (entity === "siteReports") {
-      planting["seeds"] = countPlants(flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted)));
+      planting["seeds"] = countPlants(
+        filter(flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted))) as Seeding[]
+      );
     }
 
     return planting;
@@ -288,22 +297,25 @@ export class TreeService {
   private async getAssociatedReportTreeSpecies(entity: ReportCountEntity, uuid: string) {
     const TS = TreeSpecies.visible();
     if (entity === "projects") {
-      const { id } = await Project.findOne({ where: { uuid }, attributes: ["id"] });
-      const reportIds = SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(id));
+      const project = await Project.findOne({ where: { uuid }, attributes: ["id"] });
+      if (project == null) return {};
+      const reportIds = SiteReport.approvedIdsSubquery(Site.approvedIdsSubquery(project.id));
       return { TS: TS.siteReports(reportIds), reportIds };
     } else if (entity === "sites") {
-      const { id } = await Site.findOne({ where: { uuid }, attributes: ["id"] });
-      const reportIds = SiteReport.approvedIdsSubquery([id]);
+      const site = await Site.findOne({ where: { uuid }, attributes: ["id"] });
+      if (site == null) return {};
+      const reportIds = SiteReport.approvedIdsSubquery([site.id]);
       return { TS: TS.siteReports(reportIds), reportIds };
     } else if (entity === "projectReports") {
-      const { taskId } = await ProjectReport.findOne({ where: { uuid }, attributes: ["taskId"] });
-      if (taskId == null) return {};
+      const projectReport = await ProjectReport.findOne({ where: { uuid }, attributes: ["taskId"] });
+      if (projectReport?.taskId == null) return {};
 
-      const reportIds = SiteReport.approvedIdsForTaskSubquery(taskId);
+      const reportIds = SiteReport.approvedIdsForTaskSubquery(projectReport.taskId);
       return { TS: TS.siteReports(reportIds), reportIds };
     } else if (entity === "nurseries") {
-      const { id } = await Nursery.findOne({ where: { uuid }, attributes: ["id"] });
-      const reportIds = NurseryReport.approvedIdsSubquery([id]);
+      const nursery = await Nursery.findOne({ where: { uuid }, attributes: ["id"] });
+      if (nursery == null) return {};
+      const reportIds = NurseryReport.approvedIdsSubquery([nursery.id]);
       return { TS: TS.nurseryReports(reportIds), reportIds };
     } else {
       throw new BadRequestException(`Invalid entity type [${entity}]`);

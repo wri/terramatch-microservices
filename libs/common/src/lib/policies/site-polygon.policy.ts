@@ -11,11 +11,8 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       const sites = await Site.findAll({
-        where: {
-          frameworkKey: {
-            [Op.in]: this.frameworks
-          }
-        }
+        where: { frameworkKey: { [Op.in]: this.frameworks } },
+        attributes: ["uuid"]
       });
       const siteUuids = sites.map(site => site.uuid);
       this.builder.can("manage", SitePolygon, { siteUuid: { $in: siteUuids } });

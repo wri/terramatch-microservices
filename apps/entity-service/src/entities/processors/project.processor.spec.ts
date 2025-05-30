@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Demographic, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
 import { Test } from "@nestjs/testing";
@@ -135,6 +136,50 @@ describe("ProjectProcessor", () => {
       await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
     });
 
+    it("filters by landscape, cohort and organisationType", async () => {
+      const orgForProfit = await OrganisationFactory.create({ type: "for-profit-organisation" });
+      const orgNonProfit = await OrganisationFactory.create({ type: "non-profit-organisation" });
+      const orgOther = await OrganisationFactory.create({ type: "other-organisation" });
+
+      const project1 = await ProjectFactory.create({
+        landscape: "Greater Rift Valley of Kenya",
+        cohort: "terrafund",
+        organisationId: orgForProfit.id
+      });
+      const project2 = await ProjectFactory.create({
+        landscape: "Ghana Cocoa Belt",
+        cohort: "terrafund",
+        organisationId: orgNonProfit.id
+      });
+      const project3 = await ProjectFactory.create({
+        landscape: "Greater Rift Valley of Kenya",
+        cohort: "terrafund-landscapes",
+        organisationId: orgOther.id
+      });
+      const project4 = await ProjectFactory.create({
+        landscape: "Lake Kivu & Rusizi River Basin",
+        cohort: "enterprise",
+        organisationId: orgForProfit.id
+      });
+
+      for (const p of [project1, project2, project3, project4]) {
+        p.organisation = await p.$get("organisation");
+      }
+
+      await expectProjects([project1, project3], { landscape: ["Greater Rift Valley of Kenya"] });
+      await expectProjects([project1, project2], { cohort: ["terrafund"] });
+      await expectProjects([project1, project4], { organisationType: ["for-profit-organisation"] });
+      await expectProjects([project2], { organisationType: ["non-profit-organisation"] });
+      await expectProjects([project1], {
+        landscape: ["Greater Rift Valley of Kenya"],
+        cohort: ["terrafund"],
+        organisationType: ["for-profit-organisation"]
+      });
+      await expectProjects([project1, project3, project4], {
+        landscape: ["Greater Rift Valley of Kenya", "Lake Kivu & Rusizi River Basin"]
+      });
+    });
+
     it("searches", async () => {
       const p1 = await ProjectFactory.create({ name: "Foo Bar" });
       const p2 = await ProjectFactory.create({ name: "Baz Foo" });
@@ -235,10 +280,10 @@ describe("ProjectProcessor", () => {
 
         const result = document.serialize();
         expect(result.included?.length).toBe(8);
-        expect(result.included.filter(({ type }) => type === "sites").length).toBe(5);
-        expect(result.included.filter(({ type }) => type === "nurseries").length).toBe(3);
-        expect(result.meta.indices.length).toBe(3);
-        expect(result.meta.indices.find(({ resource }) => resource === "sites").total).toBe(12);
+        expect(result.included!.filter(({ type }) => type === "sites").length).toBe(5);
+        expect(result.included!.filter(({ type }) => type === "nurseries").length).toBe(3);
+        expect(result.meta.indices?.length).toBe(3);
+        expect(result.meta.indices!.find(({ resource }) => resource === "sites")?.total).toBe(12);
       });
     });
   });
@@ -247,7 +292,7 @@ describe("ProjectProcessor", () => {
     it("returns the requested project", async () => {
       const project = await ProjectFactory.create({});
       const result = await processor.findOne(project.uuid);
-      expect(result.id).toBe(project.id);
+      expect(result!.id).toBe(project.id);
     });
   });
 
@@ -428,7 +473,7 @@ describe("ProjectProcessor", () => {
       );
 
       const project = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(project);
+      const { id, dto } = await processor.getFullDto(project!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -453,8 +498,8 @@ describe("ProjectProcessor", () => {
         seedsPlantedCount,
         treesRestoredPpc:
           regeneratedTreesCount +
-          (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
-            (seedsPlantedCount * (project.directSeedingSurvivalRate ?? 0)) / 100),
+          (treesPlantedCount * ((project?.survivalRate ?? 0) / 100) +
+            (seedsPlantedCount * (project?.directSeedingSurvivalRate ?? 0)) / 100),
         totalHectaresRestoredSum: sumBy(sitePolygons, "calcArea"),
         workdayCount: workdayCountAfterCutoff + workdayCountBeforeCutoff,
         selfReportedWorkdayCount: selfReportedWorkdayCount([...approvedSiteReports, ...approvedProjectReports]),
@@ -463,7 +508,7 @@ describe("ProjectProcessor", () => {
         totalJobsCreated,
         application: {
           uuid: application.uuid,
-          fundingProgrammeName: (await application.$get("fundingProgramme")).name,
+          fundingProgrammeName: (await application.$get("fundingProgramme"))?.name,
           projectPitchUuid: null
         }
       });

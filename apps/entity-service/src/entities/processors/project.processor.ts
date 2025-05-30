@@ -16,20 +16,14 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { Op } from "sequelize";
-import {
-  AdditionalProjectFullProps,
-  ANRDto,
-  ProjectApplicationDto,
-  ProjectFullDto,
-  ProjectLightDto,
-  ProjectMedia
-} from "../dto/project.dto";
+import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export class ProjectProcessor extends EntityProcessor<
   Project,
@@ -58,7 +52,7 @@ export class ProjectProcessor extends EntityProcessor<
       { association: "organisation", attributes: ["uuid", "name", "type"] }
     ]);
 
-    if (query.sort != null) {
+    if (query.sort?.field != null) {
       if (["name", "plantingStartDate", "country"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
@@ -82,7 +76,8 @@ export class ProjectProcessor extends EntityProcessor<
 
     const associationFieldMap = {
       projectUuid: "uuid",
-      organisationUuid: "$organisation.uuid$"
+      organisationUuid: "$organisation.uuid$",
+      organisationType: "$organisation.type$"
     };
 
     for (const term of [
@@ -95,6 +90,18 @@ export class ProjectProcessor extends EntityProcessor<
     ]) {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
+    }
+
+    if (query.landscape != null && query.landscape.length > 0) {
+      builder.where({ landscape: { [Op.in]: query.landscape } });
+    }
+
+    if (query.organisationType != null && query.organisationType.length > 0) {
+      builder.where({ "$organisation.type$": { [Op.in]: query.organisationType } });
+    }
+
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ cohort: { [Op.in]: query.cohort } });
     }
 
     if (query.search != null || query.searchFilter != null) {
@@ -170,7 +177,7 @@ export class ProjectProcessor extends EntityProcessor<
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
-    const props: AdditionalProjectFullProps = {
+    const dto = new ProjectFullDto(project, {
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -194,12 +201,17 @@ export class ProjectProcessor extends EntityProcessor<
         (await this.getWorkdayCount(project.id, true)) + (await this.getSelfReportedWorkdayCount(project.id, true)),
       totalJobsCreated: await this.getTotalJobs(project.id),
 
-      application: project.application == null ? null : new ProjectApplicationDto(project.application),
+      application: project.application == null ? null : populateDto(new ProjectApplicationDto(), project.application),
 
-      ...(this.entitiesService.mapMediaCollection(await Media.for(project).findAll(), Project.MEDIA) as ProjectMedia)
-    };
+      ...(this.entitiesService.mapMediaCollection(
+        await Media.for(project).findAll(),
+        Project.MEDIA,
+        "projects",
+        project.uuid
+      ) as ProjectMedia)
+    });
 
-    return { id: project.uuid, dto: new ProjectFullDto(project, props) };
+    return { id: project.uuid, dto };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
@@ -244,7 +256,12 @@ export class ProjectProcessor extends EntityProcessor<
     ];
     const site = await aggregateColumns(SR, aggregates as Aggregate<SiteReport>[]);
     const project = await aggregateColumns(PR, aggregates as Aggregate<ProjectReport>[]);
-    return site.workdaysPaid + site.workdaysVolunteer + project.workdaysPaid + project.workdaysVolunteer;
+    return (
+      (site.workdaysPaid ?? 0) +
+      (site.workdaysVolunteer ?? 0) +
+      (project.workdaysPaid ?? 0) +
+      (project.workdaysVolunteer ?? 0)
+    );
   }
 
   protected async getTotalJobs(projectId: number) {

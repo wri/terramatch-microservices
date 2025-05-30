@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -12,6 +13,7 @@ import {
   ProjectUserFactory,
   SiteFactory,
   SiteReportFactory,
+  TreeSpeciesFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -19,6 +21,8 @@ import { DateTime } from "luxon";
 import { SiteReportProcessor } from "./site-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { SiteReportLightDto } from "../dto/site-report.dto";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
@@ -352,7 +356,7 @@ describe("SiteReportProcessor", () => {
     it("should return a requested site report", async () => {
       const siteReport = await SiteReportFactory.create();
       const result = await processor.findOne(siteReport.uuid);
-      expect(result.id).toBe(siteReport.id);
+      expect(result?.id).toBe(siteReport.id);
     });
   });
 
@@ -360,7 +364,7 @@ describe("SiteReportProcessor", () => {
     it("should serialize a Site Report as a light resource (SiteReportLightDto)", async () => {
       const { uuid } = await SiteReportFactory.create();
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getLightDto(siteReport);
+      const { id, dto } = await processor.getLightDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -379,7 +383,7 @@ describe("SiteReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(siteReport);
+      const { id, dto } = await processor.getFullDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -396,14 +400,14 @@ describe("SiteReportProcessor", () => {
       const { taskId } = await ProjectReportFactory.create({ projectId: project.id });
       const { uuid } = await SiteReportFactory.create({
         siteId: site.id,
-        taskId,
+        taskId: taskId!,
         title: null,
         dueAt: null,
         completion: 0
       });
 
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(siteReport);
+      const { id, dto } = await processor.getFullDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -419,14 +423,14 @@ describe("SiteReportProcessor", () => {
 
       const { uuid } = await SiteReportFactory.create({
         siteId: site.id,
-        taskId: null,
-        title: null,
-        dueAt: null,
+        taskId: undefined,
+        title: undefined,
+        dueAt: undefined,
         completion: 0
       });
 
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(siteReport);
+      const { id, dto } = await processor.getFullDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -448,7 +452,7 @@ describe("SiteReportProcessor", () => {
       });
 
       const siteReport = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(siteReport);
+      const { id, dto } = await processor.getFullDto(siteReport!);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -456,6 +460,30 @@ describe("SiteReportProcessor", () => {
         projectUuid: project.uuid,
         siteUuid: site.uuid
       });
+    });
+  });
+
+  describe("processSideload", () => {
+    it("should include sideloaded tree species", async () => {
+      const siteReport = await SiteReportFactory.create();
+      await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReport.id });
+
+      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      const document = buildJsonApi(SiteReportLightDto);
+      await processor.addIndex(document, {
+        sideloads: [{ entity: "treeSpecies", pageSize: 5 }]
+      });
+
+      const result = document.serialize();
+      expect(result.included?.length).toBe(3);
+      expect(result.included!.filter(({ type }) => type === "treeSpecies").length).toBe(3);
+    });
+
+    it("should throw an error for unsupported sideload entities", async () => {
+      const siteReport = await SiteReportFactory.create();
+
+      const document = buildJsonApi(SiteReportLightDto);
+      await expect(processor.processSideload(document, siteReport, "sites")).rejects.toThrow(BadRequestException);
     });
   });
 });

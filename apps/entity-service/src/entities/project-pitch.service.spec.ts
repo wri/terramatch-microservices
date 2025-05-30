@@ -43,7 +43,7 @@ describe("ProjectPitchService", () => {
 
   describe("Get ProjectPitch by UUID", () => {
     it("returns a project pitch for a valid UUID", async () => {
-      const mockProjectPitch = new ProjectPitch({ uuid: "uuid", projectName: "Test Project" });
+      const mockProjectPitch = new ProjectPitch({ uuid: "uuid", projectName: "Test Project" } as ProjectPitch);
       jest.spyOn(ProjectPitch, "findOne").mockImplementation(() => Promise.resolve(mockProjectPitch));
 
       const result = await service.getProjectPitch("uuid");
@@ -64,8 +64,8 @@ describe("ProjectPitchService", () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
       const projectPitches = [
-        new ProjectPitch({ uuid: "pitch y", projectName: "Project y" }),
-        new ProjectPitch({ uuid: "pitch x", projectName: "Project x" })
+        new ProjectPitch({ uuid: "pitch y", projectName: "Project y" } as ProjectPitch),
+        new ProjectPitch({ uuid: "pitch x", projectName: "Project x" } as ProjectPitch)
       ];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
@@ -82,7 +82,7 @@ describe("ProjectPitchService", () => {
     it("applies search correctly", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" } as ProjectPitch)];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();
@@ -97,7 +97,7 @@ describe("ProjectPitchService", () => {
     it("deny filters", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" } as ProjectPitch)];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();
@@ -109,7 +109,7 @@ describe("ProjectPitchService", () => {
     it("applies filters correctly", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" } as ProjectPitch)];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();
@@ -122,7 +122,7 @@ describe("ProjectPitchService", () => {
     it("deny orders fields", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" } as ProjectPitch)];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();
@@ -134,7 +134,7 @@ describe("ProjectPitchService", () => {
     it("applies order correctly", async () => {
       const user = await getUserWithOrganisation();
       jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(user));
-      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" })];
+      const projectPitches = [new ProjectPitch({ uuid: "pitch x", projectName: "Filtered" } as ProjectPitch)];
       jest.spyOn(ProjectPitch, "findAll").mockImplementation(() => Promise.resolve(projectPitches));
 
       const params = getDefaultPagination();

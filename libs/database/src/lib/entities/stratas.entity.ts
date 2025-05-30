@@ -28,7 +28,7 @@ export class Strata extends Model<Strata> {
 
   @AllowNull
   @Column(INTEGER)
-  extent: string | null;
+  extent: number | null;
 
   @Column(TINYINT)
   hidden: number | null;

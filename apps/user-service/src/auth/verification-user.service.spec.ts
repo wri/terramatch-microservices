@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test, TestingModule } from "@nestjs/testing";
 import { User, Verification } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
@@ -39,7 +40,7 @@ describe("VerificationUserService", () => {
     jest.spyOn(Verification, "findOne").mockImplementation(() => Promise.resolve(verification));
     const destroySpy = jest.spyOn(verification, "destroy").mockResolvedValue();
 
-    const result = await service.verify(verification.token);
+    const result = await service.verify(verification.token!);
     expect(user.emailAddressVerifiedAt).toBeDefined();
     expect(destroySpy).toHaveBeenCalled();
     expect(result).toStrictEqual({ uuid: user.uuid, isVerified: true });

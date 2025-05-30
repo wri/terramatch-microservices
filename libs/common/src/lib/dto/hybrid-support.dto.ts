@@ -1,5 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "@nestjs/common";
+import { AdditionalProps } from "./json-api-attributes";
+
+// The DTO constructor is expected to provide lightResource, so omit it from the additional props.
+export type HybridSupportProps<DTO, Model> = Omit<AdditionalProps<DTO, Model>, "lightResource">;
 
 export abstract class HybridSupportDto {
   /**
@@ -11,8 +14,4 @@ export abstract class HybridSupportDto {
     description: "Indicates if this resource has the full resource definition."
   })
   lightResource: boolean;
-
-  protected populate<T>(dtoClass: Type<T>, values: Partial<T>) {
-    Object.assign(this, values);
-  }
 }

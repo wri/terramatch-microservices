@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test, TestingModule } from "@nestjs/testing";
 import { DelayedJobsController } from "./delayed-jobs.controller";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
@@ -36,7 +37,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: null
-      });
+      } as DelayedJob);
 
       const request = { authenticatedUserId };
       const result = await controller.getRunningJobs(request);
@@ -44,8 +45,8 @@ describe("DelayedJobsController", () => {
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
       expect(data).toHaveLength(1);
-      expect(data[0].id).toBe(job.uuid);
-      expect(data[0].attributes.entityName).toBeUndefined();
+      expect(data[0]?.id).toBe(job.uuid);
+      expect(data[0]?.attributes.entityName).toBeUndefined();
     });
     it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
@@ -56,7 +57,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: { entity_name: "TestEntity" }
-      });
+      } as DelayedJob);
 
       const request = { authenticatedUserId };
       const result = await controller.getRunningJobs(request);
@@ -64,9 +65,9 @@ describe("DelayedJobsController", () => {
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
       expect(data).toHaveLength(1);
-      expect(data[0].id).toBe(job.uuid);
+      expect(data[0]?.id).toBe(job.uuid);
 
-      const entityName = data[0].attributes.entityName;
+      const entityName = data[0]?.attributes.entityName;
       expect(entityName).toBe("TestEntity");
     });
 
@@ -79,7 +80,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: {}
-      });
+      } as DelayedJob);
 
       const request = { authenticatedUserId };
       const result = await controller.getRunningJobs(request);
@@ -87,9 +88,9 @@ describe("DelayedJobsController", () => {
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
       expect(data).toHaveLength(1);
-      expect(data[0].id).toBe(job.uuid);
+      expect(data[0]?.id).toBe(job.uuid);
 
-      const entityName = data[0].attributes.entityName;
+      const entityName = data[0]?.attributes.entityName;
       expect(entityName).toBeUndefined();
     });
   });
@@ -103,11 +104,11 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: { entity_name: "TestEntity" } // Adding entity_name
-      });
+      } as DelayedJob);
 
       const result = await controller.findOne(job.uuid);
       const jobData = Array.isArray(result.data) ? result.data[0] : result.data;
-      expect(jobData.id).toBe(job.uuid);
+      expect(jobData?.id).toBe(job.uuid);
     });
     it("should throw NotFoundException when the job does not exist", async () => {
       const nonExistentUuid = uuidv4();
@@ -125,7 +126,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: null
-      });
+      } as DelayedJob);
 
       const job1 = await DelayedJob.create({
         uuid: uuidv4(),
@@ -133,7 +134,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: { entity_name: "TestEntity1" }
-      });
+      } as DelayedJob);
 
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
@@ -154,13 +155,13 @@ describe("DelayedJobsController", () => {
 
       const result = await controller.bulkUpdateJobs(payload, request);
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].id).toBe(job.uuid);
-      expect(result.data[0].attributes.entityName).toBeUndefined();
-      expect(result.data[1].id).toBe(job1.uuid);
-      expect(result.data[1].attributes.entityName).toBe("TestEntity1");
+      expect(result.data![0].id).toBe(job.uuid);
+      expect(result.data![0].attributes.entityName).toBeUndefined();
+      expect(result.data![1].id).toBe(job1.uuid);
+      expect(result.data![1].attributes.entityName).toBe("TestEntity1");
 
       const updatedJob = await DelayedJob.findOne({ where: { uuid: job.uuid } });
-      expect(updatedJob.isAcknowledged).toBe(true);
+      expect(updatedJob?.isAcknowledged).toBe(true);
     });
     it("should successfully bulk update jobs to acknowledged with entity_name", async () => {
       const authenticatedUserId = 130999;
@@ -170,14 +171,14 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "completed",
         metadata: { entity_name: "TestEntity1" } // Adding entity_name
-      });
+      } as DelayedJob);
       const job2 = await DelayedJob.create({
         uuid: uuidv4(),
         createdBy: authenticatedUserId,
         isAcknowledged: false,
         status: "failed",
         metadata: { entity_name: "TestEntity2" } // Adding entity_name
-      });
+      } as DelayedJob);
 
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
@@ -198,15 +199,15 @@ describe("DelayedJobsController", () => {
 
       const result = await controller.bulkUpdateJobs(payload, request);
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].id).toBe(job1.uuid);
-      expect(result.data[1].id).toBe(job2.uuid);
-      expect(result.data[0].attributes.entityName).toBe("TestEntity1"); // Check entity_name for job1
-      expect(result.data[1].attributes.entityName).toBe("TestEntity2"); // Check entity_name for job2
+      expect(result.data![0].id).toBe(job1.uuid);
+      expect(result.data![1].id).toBe(job2.uuid);
+      expect(result.data![0].attributes.entityName).toBe("TestEntity1"); // Check entity_name for job1
+      expect(result.data![1].attributes.entityName).toBe("TestEntity2"); // Check entity_name for job2
 
       const updatedJob1 = await DelayedJob.findOne({ where: { uuid: job1.uuid } });
       const updatedJob2 = await DelayedJob.findOne({ where: { uuid: job2.uuid } });
-      expect(updatedJob1.isAcknowledged).toBe(true);
-      expect(updatedJob2.isAcknowledged).toBe(true);
+      expect(updatedJob1?.isAcknowledged).toBe(true);
+      expect(updatedJob2?.isAcknowledged).toBe(true);
     });
 
     it("should throw NotFoundException for non-existent job", async () => {
@@ -232,7 +233,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "pending",
         metadata: { entity_name: "TestEntityPending" } // Adding entity_name
-      });
+      } as DelayedJob);
 
       const pendingJob2 = await DelayedJob.create({
         uuid: uuidv4(),
@@ -240,7 +241,7 @@ describe("DelayedJobsController", () => {
         isAcknowledged: false,
         status: "pending",
         metadata: { entity_name: "TestEntityPending2" } // Adding entity_name
-      });
+      } as DelayedJob);
 
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
@@ -260,10 +261,10 @@ describe("DelayedJobsController", () => {
 
       const result = await controller.bulkUpdateJobs(payload, request);
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].id).toBe(pendingJob.uuid);
-      expect(result.data[0].attributes.entityName).toBe("TestEntityPending");
-      expect(result.data[1].id).toBe(pendingJob2.uuid);
-      expect(result.data[1].attributes.entityName).toBe("TestEntityPending2");
+      expect(result.data![0].id).toBe(pendingJob.uuid);
+      expect(result.data![0].attributes.entityName).toBe("TestEntityPending");
+      expect(result.data![1].id).toBe(pendingJob2.uuid);
+      expect(result.data![1].attributes.entityName).toBe("TestEntityPending2");
     });
   });
 
@@ -304,7 +305,7 @@ describe("DelayedJobsController", () => {
       expect(invalidResult[0].property).toBe("attributes");
       const nestedErrors = invalidResult[0].children;
       expect(nestedErrors).toHaveLength(1);
-      expect(nestedErrors[0].constraints).toHaveProperty("isBoolean");
+      expect(nestedErrors![0].constraints).toHaveProperty("isBoolean");
     });
   });
 });

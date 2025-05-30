@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Project, Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { DashboardQueryDto } from "./dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
+import { Op } from "sequelize";
 
 @Injectable()
 export class TreeRestorationGoalService {
@@ -32,14 +33,16 @@ export class TreeRestorationGoalService {
       .filter(project => project.organisation?.type === "non-profit-organization")
       .map(project => project.id);
 
-    const [forProfitTreeCount, nonProfitTreeCount] = await Promise.all([
+    const [forProfitTreeCount, nonProfitTreeCount, totalTreesGrownGoal] = await Promise.all([
       this.getTreeCount(forProfitProjectIds),
-      this.getTreeCount(nonProfitProjectIds)
+      this.getTreeCount(nonProfitProjectIds),
+      projectsBuilder.sum("treesGrownGoal")
     ]);
 
     return {
       forProfitTreeCount,
-      nonProfitTreeCount
+      nonProfitTreeCount,
+      totalTreesGrownGoal: totalTreesGrownGoal ?? 0
     };
   }
 

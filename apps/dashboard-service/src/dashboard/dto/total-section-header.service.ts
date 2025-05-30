@@ -52,6 +52,9 @@ export class TotalSectionHeaderService {
   }
 
   async getTotalJobs(projectIds: number[]) {
+    if (projectIds.length === 0) {
+      return 0;
+    }
     return (
       (await DemographicEntry.gender().sum("amount", {
         where: {

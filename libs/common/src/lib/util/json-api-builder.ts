@@ -210,6 +210,6 @@ export const getStableRequestQuery = (originalQuery: object) => {
   for (const value of Object.values(normalizedQuery)) {
     if (Array.isArray(value)) value.sort();
   }
-  const query = qs.stringify(normalizedQuery, { arrayFormat: "repeat", sort: (a, b) => a.localeCompare(b) });
+  const query = qs.stringify(normalizedQuery, { arrayFormat: "indices", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;
 };

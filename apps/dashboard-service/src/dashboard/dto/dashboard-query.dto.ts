@@ -33,7 +33,7 @@ export class DashboardQueryDto {
     enum: LANDSCAPE_TYPES,
     isArray: true,
     required: false,
-    name: "landscapesType[]",
+    name: "landscapes",
     description: "Filter results by landscapes"
   })
   @IsOptional()

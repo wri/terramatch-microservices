@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
+import { IsArray, IsIn, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from "class-validator";
 import {
   POLYGON_STATUSES_FILTERS,
   PolygonStatusFilter,
@@ -101,6 +101,10 @@ export class EntityQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @TransformBooleanString({ optional: true })
   nothingToReport?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  shortName?: string;
 
   // This one is internal use only, not exposed to the API surface
   taskId?: number;

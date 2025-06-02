@@ -75,7 +75,7 @@ export abstract class EntityProcessor<
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;
-  abstract loadAssociationData(id: number): Promise<number>;
+  abstract loadAssociationData(ids: number[]): Promise<any>;
 
   async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
     const results: DtoResult<FullDto>[] = [];

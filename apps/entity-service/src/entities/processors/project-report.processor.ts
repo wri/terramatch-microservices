@@ -236,7 +236,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     );
   }
 
-  loadAssociationData(id: number): Promise<any> {
+  loadAssociationData(ids: number[]): Promise<any> {
     throw new Error("Method not implemented.");
   }
 }

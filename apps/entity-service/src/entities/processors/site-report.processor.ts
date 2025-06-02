@@ -226,7 +226,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return await this.getReportTitleBase(projectReport.dueAt, projectReport.title ?? projectReportTitle);
   }
 
-  loadAssociationData(id: number): Promise<any> {
+  loadAssociationData(ids: number[]): Promise<any> {
     throw new Error("Method not implemented.");
   }
 }

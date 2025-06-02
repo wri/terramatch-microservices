@@ -235,4 +235,8 @@ export class ProjectReportProcessor extends ReportProcessor<
       })) ?? 0
     );
   }
+
+  loadAssociationData(uuids: number[]): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
 }

@@ -160,4 +160,8 @@ export class NurseryProcessor extends EntityProcessor<
 
     await super.delete(nursery);
   }
+
+  loadAssociationData(uuids: number[]): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
 }

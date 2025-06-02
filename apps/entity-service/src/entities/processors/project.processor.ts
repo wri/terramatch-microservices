@@ -288,4 +288,15 @@ export class ProjectProcessor extends EntityProcessor<
 
     return pTotal + sTotal + nTotal;
   }
+
+  async loadAssociationData(Uuids: number[]): Promise<any> {
+    const approvedSitesQuery = Site.approvedIdsProjectsSubquery(Uuids);
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
+    await TreeSpecies.visible()
+      .collection("tree-planted")
+      .siteReports(approvedSiteReportsQuery)
+      .findAll({
+        attributes: ["speciesableId", "amount"]
+      });
+  }
 }

@@ -75,7 +75,7 @@ export abstract class EntityProcessor<
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;
-  abstract loadAssociationData(uuids: number[]): Promise<any>;
+  abstract loadAssociationData(id: number): Promise<number>;
 
   async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
     const results: DtoResult<FullDto>[] = [];
@@ -118,6 +118,8 @@ export abstract class EntityProcessor<
         indexIds.push(id);
         if (sideloaded) document.addData(id, dto);
         else document.addData(id, dto);
+
+        dto.lightResource;
       }
     }
 

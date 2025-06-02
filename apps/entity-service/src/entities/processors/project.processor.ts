@@ -141,10 +141,12 @@ export class ProjectProcessor extends EntityProcessor<
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
+    const treesPlantedCount = (await this.loadAssociationData(projectId)) ?? 0;
     return {
       id: project.uuid,
       dto: new ProjectLightDto(project, {
-        totalHectaresRestoredSum
+        totalHectaresRestoredSum,
+        treesPlantedCount
       })
     };
   }
@@ -289,14 +291,9 @@ export class ProjectProcessor extends EntityProcessor<
     return pTotal + sTotal + nTotal;
   }
 
-  async loadAssociationData(Uuids: number[]): Promise<any> {
-    const approvedSitesQuery = Site.approvedIdsProjectsSubquery(Uuids);
+  async loadAssociationData(projectId: number): Promise<number> {
+    const approvedSitesQuery = Site.approvedIdsSubquery(projectId);
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
-    await TreeSpecies.visible()
-      .collection("tree-planted")
-      .siteReports(approvedSiteReportsQuery)
-      .findAll({
-        attributes: ["speciesableId", "amount"]
-      });
+    return await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount");
   }
 }

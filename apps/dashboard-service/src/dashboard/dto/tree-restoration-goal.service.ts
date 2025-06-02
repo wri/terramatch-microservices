@@ -94,7 +94,7 @@ export class TreeRestorationGoalService {
       raw: true
     })) as unknown as DateResult[];
 
-    return siteReports.map(report => ({
+    return (siteReports ?? []).map(report => ({
       year: report.year,
       month: report.month
     }));
@@ -141,7 +141,7 @@ export class TreeRestorationGoalService {
       }
     });
 
-    const results = distinctDates.map(({ year, month }) => {
+    return distinctDates.map(({ year, month }) => {
       const key = `${year}-${month}`;
       const siteReportsForDate = siteReportsByDate.get(key) ?? [];
 
@@ -159,7 +159,5 @@ export class TreeRestorationGoalService {
         treeSpeciesPercentage: percentage
       };
     });
-
-    return results;
   }
 }

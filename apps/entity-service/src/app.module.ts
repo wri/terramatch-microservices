@@ -15,6 +15,8 @@ import { TasksService } from "./entities/tasks.service";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
+import { DemographicsController } from "./entities/demographics.controller";
+import { DemographicService } from "./entities/demographic.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
@@ -24,6 +26,7 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
   controllers: [
     ProjectPitchesController,
     TasksController,
+    DemographicsController,
     EntitiesController,
     EntityAssociationsController,
     TreesController,
@@ -38,7 +41,8 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
     TreeService,
     ProjectPitchService,
     BoundingBoxService,
-    TasksService
+    TasksService,
+    DemographicService
   ]
 })
 export class AppModule {}

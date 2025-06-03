@@ -13,6 +13,7 @@ import {
   ProjectUserFactory,
   SiteFactory,
   SiteReportFactory,
+  TreeSpeciesFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -20,6 +21,8 @@ import { DateTime } from "luxon";
 import { SiteReportProcessor } from "./site-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { SiteReportLightDto } from "../dto/site-report.dto";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
@@ -457,6 +460,30 @@ describe("SiteReportProcessor", () => {
         projectUuid: project.uuid,
         siteUuid: site.uuid
       });
+    });
+  });
+
+  describe("processSideload", () => {
+    it("should include sideloaded tree species", async () => {
+      const siteReport = await SiteReportFactory.create();
+      await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReport.id });
+
+      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      const document = buildJsonApi(SiteReportLightDto);
+      await processor.addIndex(document, {
+        sideloads: [{ entity: "treeSpecies", pageSize: 5 }]
+      });
+
+      const result = document.serialize();
+      expect(result.included?.length).toBe(3);
+      expect(result.included!.filter(({ type }) => type === "treeSpecies").length).toBe(3);
+    });
+
+    it("should throw an error for unsupported sideload entities", async () => {
+      const siteReport = await SiteReportFactory.create();
+
+      const document = buildJsonApi(SiteReportLightDto);
+      await expect(processor.processSideload(document, siteReport, "sites")).rejects.toThrow(BadRequestException);
     });
   });
 });

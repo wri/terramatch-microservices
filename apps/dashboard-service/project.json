@@ -1,0 +1,27 @@
+{
+  "name": "dashboard-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/dashboard-service/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build-repl": {},
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "dashboard-service:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "dashboard-service:build:development"
+        },
+        "production": {
+          "buildTarget": "dashboard-service:build:production"
+        }
+      }
+    }
+  }
+}

@@ -94,13 +94,16 @@ export class NurseryReportProcessor extends ReportProcessor<
       "nurseryUuid",
       "organisationUuid",
       "country",
-      "projectUuid"
+      "projectUuid",
+      "nothingToReport"
     ];
 
     termsToFilter.forEach(term => {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) {
-        builder.where({ [field]: query[term] });
+        builder.where({
+          [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
+        });
       }
     });
 

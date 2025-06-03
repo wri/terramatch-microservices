@@ -8,12 +8,16 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
-import { EntityQueryDto } from "../dto/entity-query.dto";
+import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { ProcessableAssociation } from "../entities.service";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
 export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
@@ -102,11 +106,14 @@ export class SiteReportProcessor extends ReportProcessor<
       "siteUuid",
       "organisationUuid",
       "country",
-      "projectUuid"
+      "projectUuid",
+      "nothingToReport"
     ]) {
       if (query[term] != null) {
         const field = associationFieldMap[term] ?? term;
-        builder.where({ [field]: query[term] });
+        builder.where({
+          [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
+        });
       }
     }
 
@@ -133,6 +140,19 @@ export class SiteReportProcessor extends ReportProcessor<
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+  }
+
+  async processSideload(document: DocumentBuilder, model: SiteReport, entity: SideloadType): Promise<void> {
+    if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
+      const processor = this.entitiesService.createAssociationProcessor(
+        "siteReports",
+        model.uuid,
+        entity as ProcessableAssociation
+      );
+      await processor.addDtos(document);
+    } else {
+      throw new BadRequestException(`Site reports only support sideloading: ${SUPPORTED_ASSOCIATIONS.join(", ")}`);
+    }
   }
 
   async getFullDto(siteReport: SiteReport) {

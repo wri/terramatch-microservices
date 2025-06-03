@@ -24,10 +24,10 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
   controllers: [
     ProjectPitchesController,
     TasksController,
-    EntitiesController,
-    EntityAssociationsController,
     TreesController,
-    BoundingBoxController
+    BoundingBoxController,
+    EntitiesController,
+    EntityAssociationsController
   ],
   providers: [
     {

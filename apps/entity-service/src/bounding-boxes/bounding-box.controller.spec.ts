@@ -21,7 +21,16 @@ jest.mock("@terramatch-microservices/database/util/subquery.builder", () => ({
 }));
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
+  LandscapeGeometry: {
+    findAll: jest.fn(),
+    LANDSCAPE_SLUGS: [
+      "gcb", // Greater Cape Basin
+      "grv", // Greater Rift Valley of Kenya
+      "ikr" // Lake Kivu & Rusizi River Basin
+    ]
+  },
   PolygonGeometry: {
+    findAll: jest.fn(),
     findOne: jest.fn()
   },
   Site: {
@@ -190,15 +199,15 @@ describe("BoundingBoxController", () => {
     });
 
     it("should call getCountryLandscapeBoundingBox when country is provided without authorization", async () => {
-      await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "US-", false);
+      await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "US", false);
     });
 
     it("should call getCountryLandscapeBoundingBox when landscapes are provided without authorization", async () => {
       await testQueryParameters(
-        { landscapes: ["ikr", "amazon"] },
+        { landscapes: ["ikr", "gcb"] },
         "getCountryLandscapeBoundingBox",
-        ["global", ["ikr", "amazon"]],
-        "global-ikr-amazon",
+        ["", ["ikr", "gcb"]],
+        "ikr,gcb",
         false
       );
     });

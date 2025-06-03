@@ -161,7 +161,7 @@ export class NurseryProcessor extends EntityProcessor<
     await super.delete(nursery);
   }
 
-  loadAssociationData(ids: number[]): Promise<any> {
-    throw new Error("Method not implemented.");
+  loadAssociationData(ids: number[]): Promise<unknown> {
+    throw new Error(`Method not implemented, passing ids: ${ids}`);
   }
 }

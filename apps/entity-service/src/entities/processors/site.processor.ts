@@ -322,7 +322,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     await super.delete(site);
   }
 
-  loadAssociationData(ids: number[]): Promise<any> {
-    throw new Error("Method not implemented.");
+  loadAssociationData(ids: number[]): Promise<unknown> {
+    throw new Error(`Method not implemented, passing ids: ${ids}`);
   }
 }

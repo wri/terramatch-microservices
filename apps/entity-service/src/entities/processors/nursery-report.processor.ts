@@ -190,7 +190,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     return await this.getReportTitleBase(projectReport.dueAt, projectReport.title ?? projectReportTitle);
   }
 
-  loadAssociationData(ids: number[]): Promise<number> {
-    throw new Error("Method not implemented.");
+  loadAssociationData(ids: number[]): Promise<unknown> {
+    throw new Error(`Method not implemented, passing ids: ${ids}`);
   }
 }

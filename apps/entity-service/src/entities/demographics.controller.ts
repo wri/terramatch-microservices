@@ -2,9 +2,8 @@ import { BadRequestException, Controller, Get, HttpStatus, NotFoundException, Pa
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ProjectPitchDto } from "./dto/project-pitch.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DemographicDto } from "./dto/demographic.dto";
+import { DemographicDto, DemographicDtoV2 } from "./dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
 
@@ -22,14 +21,14 @@ export class DemographicsController {
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async demographicsIndex(@Query() params: DemographicQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.demographicService.getDemographics(params);
-    const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
+    const document = buildJsonApi(DemographicDto, { pagination: "number" });
     const indexIds: string[] = [];
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
-      for (const pitch of data) {
-        indexIds.push(pitch.uuid);
-        const pitchDto = new ProjectPitchDto(pitch);
-        document.addData(pitchDto.uuid, pitchDto);
+      for (const demographic of data) {
+        indexIds.push(demographic.uuid);
+        const demographicDto = new DemographicDtoV2(demographic);
+        document.addData(demographicDto.uuid, demographicDto);
       }
     }
     document.addIndexData({

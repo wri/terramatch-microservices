@@ -1,5 +1,5 @@
 import { AssociationDto } from "./association.dto";
-import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
+import { Demographic, DemographicEntry, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { ApiProperty } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
@@ -81,6 +81,25 @@ export class DemographicDto extends AssociationDto {
       ...additional,
       entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
     });
+  }
+
+  @ApiProperty()
+  uuid: string;
+
+  @ApiProperty({ enum: Demographic.VALID_TYPES })
+  type: string;
+
+  @ApiProperty()
+  collection: string;
+
+  @ApiProperty({ type: () => DemographicEntryDto, isArray: true })
+  entries: DemographicEntryDto[];
+}
+
+@JsonApiDto({ type: "demographics" })
+export class DemographicDtoV2 {
+  constructor(data: Demographic) {
+    populateDto<DemographicDtoV2>(this, data as DemographicDtoV2);
   }
 
   @ApiProperty()

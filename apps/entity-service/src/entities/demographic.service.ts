@@ -1,18 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ProjectPitch } from "@terramatch-microservices/database/entities";
-import { Includeable, Op } from "sequelize";
-import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
+import { Demographic, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 
 @Injectable()
 export class DemographicService {
   async getDemographics(query: DemographicQueryDto) {
-    const organisationAssociation: Includeable = {
-      association: "organisation",
-      attributes: ["uuid", "name"]
-    };
-    const builder = PaginatedQueryBuilder.forNumberPage(ProjectPitch, query, [organisationAssociation]);
+    const builder = PaginatedQueryBuilder.forNumberPage(Demographic, query);
 
     if (query.sort?.field != null) {
       if (

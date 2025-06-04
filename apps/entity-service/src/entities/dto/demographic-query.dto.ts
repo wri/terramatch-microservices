@@ -22,8 +22,18 @@ export class DemographicQueryDto extends IntersectionType(QuerySort, NumberPage)
   @IsOptional()
   sort?: QuerySort;
 
+  @ApiProperty({ required: false, isArray: true, description: "project uuid array" })
+  @IsOptional()
+  @IsArray()
+  projectUuid?: string[];
+
   @ApiProperty({ required: false, isArray: true, description: "projectReport uuid array" })
   @IsOptional()
   @IsArray()
   projectReportUuid?: string[];
+
+  @ApiProperty({ required: false, isArray: true, description: "siteReport uuid array" })
+  @IsOptional()
+  @IsArray()
+  siteReportUuid?: string[];
 }

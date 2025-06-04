@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsIn, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from "class-validator";
+import { IsArray, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
 import {
   POLYGON_STATUSES_FILTERS,
   PolygonStatusFilter,

@@ -11,10 +11,9 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { FastifyRequest, MultipartFile, MultipartValue, Part } from "fastify";
+import "multer";
 
-interface ExtractedRequestData {
-  file: MultipartFile | null;
+export interface ExtractedRequestData {
   isPublic: boolean;
   lat: number;
   lng: number;
@@ -53,9 +52,13 @@ export class FileUploadService {
 
   constructor(private readonly mediaService: MediaService, protected readonly entitiesService: EntitiesService) {}
 
-  public async uploadFile(model: EntityModel, entity: EntityType, collection: string, req: FastifyRequest) {
-    const { file, ...extraFields } = await this.extractRequestData(req);
-
+  public async uploadFile(
+    model: EntityModel,
+    entity: EntityType,
+    collection: string,
+    file: Express.Multer.File,
+    body: ExtractedRequestData
+  ) {
     if (file == null) {
       throw new BadRequestException("No file provided");
     }
@@ -66,7 +69,7 @@ export class FileUploadService {
 
     this.validateFile(file, configuration);
 
-    const buffer = await file.toBuffer();
+    const buffer = file.buffer;
 
     await this.mediaService.uploadFile(buffer, file.filename, file.mimetype);
 
@@ -83,9 +86,9 @@ export class FileUploadService {
       fileName: file.filename,
       mimeType: file.mimetype,
       fileType: this.getMediaType(file),
-      isPublic: extraFields.isPublic,
-      lat: extraFields.lat,
-      lng: extraFields.lng,
+      isPublic: body.isPublic,
+      lat: body.lat,
+      lng: body.lng,
       disk: "s3",
       size: buffer.length,
       manipulations: [],
@@ -117,7 +120,7 @@ export class FileUploadService {
     return configuration;
   }
 
-  private getMediaType(file: MultipartFile) {
+  private getMediaType(file: any) {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
     const videos = ["video/mp4"];
@@ -133,7 +136,7 @@ export class FileUploadService {
     return null;
   }
 
-  private validateFile(file: MultipartFile, configuration: MediaConfiguration) {
+  private validateFile(file: any, configuration: MediaConfiguration) {
     const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
     const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
 
@@ -165,25 +168,25 @@ export class FileUploadService {
     }
   }
 
-  private async extractRequestData(req: FastifyRequest): Promise<ExtractedRequestData> {
-    const parts = req.parts();
+  // private async extractRequestData(req: any): Promise<ExtractedRequestData> {
+  //   const parts = req.parts();
 
-    const extraFields: ExtractedRequestData = {
-      file: null,
-      isPublic: false,
-      lat: 0,
-      lng: 0
-    };
+  //   const extraFields: ExtractedRequestData = {
+  //     file: null,
+  //     isPublic: false,
+  //     lat: 0,
+  //     lng: 0
+  //   };
 
-    for await (const part of parts) {
-      if ((part as Part).file != null) {
-        // @ts-ignore
-        extraFields.file = part;
-      } else {
-        extraFields[part.fieldname] = (part as MultipartValue).value;
-      }
-    }
+  //   for await (const part of parts) {
+  //     if ((part as any).file != null) {
+  //       // @ts-ignore
+  //       extraFields.file = part;
+  //     } else {
+  //       extraFields[part.fieldname] = (part as any).value;
+  //     }
+  //   }
 
-    return extraFields;
-  }
+  //   return extraFields;
+  // }
 }

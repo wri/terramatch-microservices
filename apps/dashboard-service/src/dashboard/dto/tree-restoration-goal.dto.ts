@@ -2,6 +2,27 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
+class TreeRestorationData {
+  @ApiProperty({
+    description: "Due date for this restoration data",
+    type: String,
+    example: "2024-01-01T00:00:00.000000Z"
+  })
+  dueDate: string;
+
+  @ApiProperty({
+    description: "Number of tree species for this period",
+    type: Number
+  })
+  treeSpeciesAmount: number;
+
+  @ApiProperty({
+    description: "Percentage of tree species for this period",
+    type: Number
+  })
+  treeSpeciesPercentage: number;
+}
+
 @JsonApiDto({ type: "treeRestorationGoals" })
 export class TreeRestorationGoalDto {
   constructor(data: TreeRestorationGoalDto) {
@@ -27,23 +48,20 @@ export class TreeRestorationGoalDto {
   totalTreesGrownGoal: number;
 
   @ApiProperty({
-    description: "Total number of trees under restoration across all organizations",
-    type: Number
+    description: "Trees under restoration data across all organizations by due date",
+    type: [TreeRestorationData]
   })
-  treesUnderRestorationActualTotal: number;
+  treesUnderRestorationActualTotal: TreeRestorationData[];
 
   @ApiProperty({
-    description: "Total number of trees under restoration for for-profit organizations",
-    type: Number
+    description: "Trees under restoration data for for-profit organizations by due date",
+    type: [TreeRestorationData]
   })
-  treesUnderRestorationActualForProfit: number;
+  treesUnderRestorationActualForProfit: TreeRestorationData[];
 
   @ApiProperty({
-    description: "Total number of trees under restoration for non-profit organizations",
-    type: Number
+    description: "Trees under restoration data for non-profit organizations by due date",
+    type: [TreeRestorationData]
   })
-  treesUnderRestorationActualNonProfit: number;
-
-  @ApiProperty({ nullable: true, type: String })
-  lastUpdatedAt: string | null;
+  treesUnderRestorationActualNonProfit: TreeRestorationData[];
 }

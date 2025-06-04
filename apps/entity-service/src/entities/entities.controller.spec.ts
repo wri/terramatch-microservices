@@ -28,6 +28,7 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
   getLightDto = jest.fn(() => Promise.resolve({ id: faker.string.uuid(), dto: new ProjectLightDto() }));
   delete = jest.fn(() => Promise.resolve());
   update = jest.fn(() => Promise.resolve());
+  loadAssociationData = jest.fn(() => Promise.resolve());
 }
 
 describe("EntitiesController", () => {

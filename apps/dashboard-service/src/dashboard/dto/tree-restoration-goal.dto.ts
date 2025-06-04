@@ -64,4 +64,11 @@ export class TreeRestorationGoalDto {
     type: [TreeRestorationData]
   })
   treesUnderRestorationActualNonProfit: TreeRestorationData[];
+
+  @ApiProperty({
+    description: "Timestamp when the data was last updated",
+    type: String,
+    nullable: true
+  })
+  lastUpdatedAt: string | null;
 }

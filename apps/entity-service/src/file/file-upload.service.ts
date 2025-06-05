@@ -50,7 +50,7 @@ const VALIDATION = {
 export class FileUploadService {
   private logger = new TMLogger(FileUploadService.name);
 
-  constructor(private readonly mediaService: MediaService, protected readonly entitiesService: EntitiesService) {}
+  constructor(private readonly mediaService: MediaService, private readonly entitiesService: EntitiesService) {}
 
   public async uploadFile(
     model: EntityModel,

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ImpactStory, Project, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
+import { ImpactStory, Project } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
@@ -74,18 +74,18 @@ export class ImpactStoryService {
             "$organisation.countries$": {
               [Op.or]: Array.isArray(query[key])
                 ? query[key].map(country => ({
-                    [Op.like]: `%\"${country}\"%`
+                    [Op.like]: `%"${country}"%`
                   }))
                 : [
                     {
-                      [Op.like]: `%\"${query[key]}\"%`
+                      [Op.like]: `%"${query[key]}"%`
                     }
                   ]
             }
           });
         } else if (key === "uuid") {
           const project = await Project.findOne({ where: { uuid: query[key] }, attributes: ["organisationId"] });
-          if (project) {
+          if (project != null) {
             builder.where({
               "$organisation.id$": project.organisationId
             });

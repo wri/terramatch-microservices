@@ -34,6 +34,9 @@ export class ImpactStoriesController {
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const impact of data) {
+        if (typeof impact.category === "string") {
+          impact.category = JSON.parse(impact.category);
+        }
         indexIds.push(impact.uuid);
         const organization = await buildOrganizationLight(impact.organisation, false);
         const mediaCollection = await Media.for(impact).findAll();
@@ -72,6 +75,9 @@ export class ImpactStoriesController {
     const mediaCollection = await Media.for(impactStory).findAll();
     const organization = await buildOrganizationLight(impactStory.organisation, true);
     await this.policyService.authorize("read", impactStory);
+    if (typeof impactStory.category === "string") {
+      impactStory.category = JSON.parse(impactStory.category);
+    }
     return buildJsonApi(ImpactStoryFullDto)
       .addData(
         uuid,
@@ -89,11 +95,11 @@ export class ImpactStoriesController {
   }
 }
 
-export async function buildOrganizationLight(organisation: Organisation, FullDto: boolean = false) {
+export async function buildOrganizationLight(organisation: Organisation, FullDto: boolean) {
   if (organisation?.countries?.length == 0) return null;
 
   let countries;
-  let liteAttrib: Object = {};
+  let liteAttrib: object = {};
   if (Array.isArray(organisation.countries) && organisation.countries.length > 0) {
     countries = await WorldCountryGeneralized.findAll({
       where: {
@@ -119,7 +125,8 @@ export async function buildOrganizationLight(organisation: Organisation, FullDto
     name: organisation.name,
     countries: countries?.map(country => ({
       label: country.country ?? null,
-      icon: country.iso ? `/flags/${country.iso.toLowerCase()}.svg` : null
+      icon:
+        typeof country.iso === "string" && country.iso.trim() !== "" ? `/flags/${country.iso.toLowerCase()}.svg` : null
     }))
   };
 }

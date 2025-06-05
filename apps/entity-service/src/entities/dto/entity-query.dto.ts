@@ -102,6 +102,10 @@ export class EntityQueryDto extends IndexQueryDto {
   @TransformBooleanString({ optional: true })
   nothingToReport?: boolean;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  shortName?: string;
+
   // This one is internal use only, not exposed to the API surface
   taskId?: number;
 }

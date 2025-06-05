@@ -368,6 +368,10 @@ export class Project extends Model<Project> {
   @Column(INTEGER.UNSIGNED)
   directSeedingSurvivalRate: number | null;
 
+  @AllowNull
+  @Column(STRING)
+  shortName: string | null;
+
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

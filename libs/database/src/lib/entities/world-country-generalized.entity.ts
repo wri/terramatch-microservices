@@ -1,5 +1,4 @@
-import { AutoIncrement, Column, DataType, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, UUID, UUIDV4 } from "sequelize";
+import { AutoIncrement, Column, DataType, Model, PrimaryKey, Table } from "sequelize-typescript";
 @Table({ tableName: "world_countries_generalized", timestamps: false, paranoid: false })
 export class WorldCountryGeneralized extends Model<WorldCountryGeneralized> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\WorldCountryGeneralized";

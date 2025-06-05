@@ -28,7 +28,7 @@ export class FileUploadController {
     private readonly policyService: PolicyService
   ) {}
 
-  @Post("/:collection/:entity/:uuid")
+  @Post("/:entity/:uuid/:collection")
   @ApiOperation({
     operationId: "uploadFile",
     summary: "Upload a file to a media collection",

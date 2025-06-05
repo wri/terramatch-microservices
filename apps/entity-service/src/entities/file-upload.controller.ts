@@ -3,7 +3,6 @@ import {
   Post,
   Param,
   NotFoundException,
-  Req,
   UnauthorizedException,
   UseInterceptors,
   UploadedFile,

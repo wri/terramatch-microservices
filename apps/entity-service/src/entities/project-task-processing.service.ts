@@ -4,7 +4,6 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
   ProjectTaskProcessingResponseDto,
-  ReportDto,
   ReportType,
   ApproveReportsResponseDto
 } from "./dto/project-task-processing.dto";
@@ -21,7 +20,7 @@ export class ProjectTaskProcessingService {
       where: { uuid: projectUuid }
     });
 
-    if (!project) {
+    if (project == null) {
       throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
     }
 

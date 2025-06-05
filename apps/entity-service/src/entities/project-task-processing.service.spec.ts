@@ -2,13 +2,12 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ProjectTaskProcessingService } from "./project-task-processing.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Project, Task, SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock } from "@golevelup/ts-jest";
 import { NotFoundException } from "@nestjs/common";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 describe("ProjectTaskProcessingService", () => {
   let service: ProjectTaskProcessingService;
-  let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -16,7 +15,7 @@ describe("ProjectTaskProcessingService", () => {
         ProjectTaskProcessingService,
         {
           provide: PolicyService,
-          useValue: (policyService = createMock<PolicyService>())
+          useValue: createMock<PolicyService>()
         }
       ]
     }).compile();

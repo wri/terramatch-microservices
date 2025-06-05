@@ -113,7 +113,7 @@ export class FileUploadService {
     return configuration;
   }
 
-  private getMediaType(file: any) {
+  private getMediaType(file: Express.Multer.File) {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
     const videos = ["video/mp4"];
@@ -129,7 +129,7 @@ export class FileUploadService {
     return null;
   }
 
-  private validateFile(file: any, configuration: MediaConfiguration) {
+  private validateFile(file: Express.Multer.File, configuration: MediaConfiguration) {
     const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
     const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
 
@@ -160,26 +160,4 @@ export class FileUploadService {
       return true;
     }
   }
-
-  // private async extractRequestData(req: any): Promise<ExtractedRequestData> {
-  //   const parts = req.parts();
-
-  //   const extraFields: ExtractedRequestData = {
-  //     file: null,
-  //     isPublic: false,
-  //     lat: 0,
-  //     lng: 0
-  //   };
-
-  //   for await (const part of parts) {
-  //     if ((part as any).file != null) {
-  //       // @ts-ignore
-  //       extraFields.file = part;
-  //     } else {
-  //       extraFields[part.fieldname] = (part as any).value;
-  //     }
-  //   }
-
-  //   return extraFields;
-  // }
 }

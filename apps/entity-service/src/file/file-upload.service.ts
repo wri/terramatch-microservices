@@ -104,8 +104,10 @@ export class FileUploadService {
     return dbMedia.save();
   }
 
-  private getConfiguration(entity: EntityClass<EntityModel>, collection: string): MediaConfiguration {
-    const configuration = (entity as any).MEDIA[collection];
+  private getConfiguration(entityModel: EntityClass<EntityModel>, collection: string): MediaConfiguration {
+    // TODO: ask Nathan what is the best way to check if a EntityClass has a MEDIA property and how to type it
+    // @ts-ignore
+    const configuration = entityModel.MEDIA[collection];
     if (configuration == null) {
       throw new Error(`Configuration for collection ${collection} not found`);
     }
@@ -141,10 +143,9 @@ export class FileUploadService {
     if (mimeTypeValidation != null) {
       const mimeType = mimeTypeValidation.split(":")[1];
 
-      // TODO: review why file.mimetype is not in the list
       if (!file.mimetype.startsWith(mimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
-        // throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
+        throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
       }
     }
 

@@ -6,7 +6,6 @@ import {
   EntityType
 } from "@terramatch-microservices/database/constants/entities";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
-import { MediaDto } from "../entities/dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
@@ -101,14 +100,8 @@ export class FileUploadService {
       createdBy: this.entitiesService.userId
     };
 
-    const dbMedia = await Media.create(media as Media);
-
-    return new MediaDto(dbMedia, {
-      url: this.mediaService.getUrl(dbMedia),
-      thumbUrl: this.mediaService.getUrl(dbMedia, "thumbnail"),
-      entityType: entity,
-      entityUuid: model.uuid
-    });
+    const dbMedia = new Media(media as Media);
+    return dbMedia.save();
   }
 
   private getConfiguration(entity: EntityClass<EntityModel>, collection: string): MediaConfiguration {

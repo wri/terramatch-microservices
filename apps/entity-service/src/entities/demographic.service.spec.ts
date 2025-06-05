@@ -7,7 +7,7 @@ import { DemographicQueryDto } from "./dto/demographic-query.dto";
 function getDefaultPagination() {
   const params = new DemographicQueryDto();
   params.page = new NumberPage();
-  params.page.number = 2;
+  params.page.number = 1;
   params.page.size = 10;
   return params;
 }

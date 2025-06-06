@@ -26,11 +26,11 @@ import { DemographicService } from "./entities/demographic.service";
   controllers: [
     ProjectPitchesController,
     TasksController,
+    TreesController,
+    BoundingBoxController,
     DemographicsController,
     EntitiesController,
-    EntityAssociationsController,
-    TreesController,
-    BoundingBoxController
+    EntityAssociationsController
   ],
   providers: [
     {

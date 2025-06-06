@@ -18,7 +18,7 @@ type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "country/lands
 export class BoundingBoxController {
   constructor(private readonly boundingBoxService: BoundingBoxService, private readonly policyService: PolicyService) {}
 
-  @Get()
+  @Get("get")
   @ApiOperation({
     operationId: "boundingBoxGet",
     summary: "Get a bounding box for a polygon, site, project, or country/landscape"

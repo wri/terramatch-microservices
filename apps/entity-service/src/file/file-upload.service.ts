@@ -23,6 +23,17 @@ interface MediaConfiguration {
   validationFileTypes: string;
 }
 
+const mappingMimeTypes = {
+  "text/plain": "txt",
+  "application/pdf": "pdf",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "application/vnd.ms-word": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
+};
+
 const VALIDATION = {
   VALIDATION_RULES: {
     "logo-image": "mimes:jpg,png",
@@ -57,7 +68,7 @@ export class FileUploadService {
     collection: string,
     file: Express.Multer.File,
     body: ExtractedRequestData
-  ) {
+  ): Promise<Media> {
     if (file == null) {
       throw new BadRequestException("No file provided");
     }
@@ -68,9 +79,7 @@ export class FileUploadService {
 
     this.validateFile(file, configuration);
 
-    const buffer = file.buffer;
-
-    await this.mediaService.uploadFile(buffer, file.filename, file.mimetype);
+    await this.mediaService.uploadFile(file);
 
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
@@ -81,15 +90,15 @@ export class FileUploadService {
       collectionName: collection,
       modelType: entityModel.LARAVEL_TYPE,
       modelId: model.id,
-      name: file.filename,
-      fileName: file.filename,
+      name: file.originalname,
+      fileName: file.originalname,
       mimeType: file.mimetype,
       fileType: this.getMediaType(file),
       isPublic: body.isPublic,
       lat: body.lat,
       lng: body.lng,
       disk: "s3",
-      size: buffer.length,
+      size: file.size,
       manipulations: [],
       generatedConversions: {},
       customProperties: {},
@@ -99,6 +108,8 @@ export class FileUploadService {
       photographer: user?.fullName ?? null,
       createdBy: this.entitiesService.userId
     };
+
+    console.log(media);
 
     const dbMedia = new Media(media as Media);
     return dbMedia.save();
@@ -119,9 +130,10 @@ export class FileUploadService {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
     const videos = ["video/mp4"];
+    console.log(file.mimetype);
 
     if (documents.includes(file.mimetype)) {
-      return "document";
+      return "documents";
     }
 
     if (images.includes(file.mimetype) || videos.includes(file.mimetype)) {
@@ -141,9 +153,10 @@ export class FileUploadService {
     const sizeValidation = validations.find(validation => validation.startsWith("size:"));
 
     if (mimeTypeValidation != null) {
-      const mimeType = mimeTypeValidation.split(":")[1];
+      const mimeTypes = mimeTypeValidation.split(":")[1].split(",");
 
-      if (!file.mimetype.startsWith(mimeType)) {
+      const abbreviatedMimeType = mappingMimeTypes[file.mimetype];
+      if (!mimeTypes.includes(abbreviatedMimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
         throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
       }

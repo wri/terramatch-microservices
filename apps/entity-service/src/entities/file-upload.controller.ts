@@ -6,7 +6,8 @@ import {
   UnauthorizedException,
   UseInterceptors,
   UploadedFile,
-  Body
+  Body,
+  BadRequestException
 } from "@nestjs/common";
 import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
 import { EntitiesService } from "./entities.service";
@@ -22,7 +23,7 @@ import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
 @Controller("entities/v3/files")
-@ApiExtraModels(MediaCollectionEntityDto)
+@ApiExtraModels(MediaDto)
 export class FileUploadController {
   constructor(
     private readonly fileUploadService: FileUploadService,
@@ -40,6 +41,8 @@ export class FileUploadController {
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
   @UseInterceptors(FileInterceptor("file"))
   async uploadFile<T extends EntityModel>(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,
@@ -51,7 +54,7 @@ export class FileUploadController {
     if (model == null) throw new NotFoundException();
     await this.policyService.authorize("uploadFiles", model);
     const media = await this.fileUploadService.uploadFile(model, entity, collection, file, body);
-    const document = buildJsonApi(MediaCollectionEntityDto);
+    const document = buildJsonApi(MediaDto);
     document.addData(
       media.uuid,
       new MediaDto(media, {

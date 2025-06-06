@@ -140,7 +140,7 @@ export class FileUploadService {
       return "media";
     }
 
-    return null;
+    return undefined;
   }
 
   private validateFile(file: Express.Multer.File, configuration: MediaConfiguration) {

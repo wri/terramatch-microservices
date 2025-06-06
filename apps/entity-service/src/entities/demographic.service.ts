@@ -9,9 +9,9 @@ export class DemographicService {
   async getDemographics(query: DemographicQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Demographic, query);
 
-    type DemographicFilter = {
+    type DemographicFilter<T extends Model = Model> = {
       uuidKey: string;
-      model: ModelStatic<Model<any, any>>;
+      model: ModelStatic<T>;
       laravelType: string;
     };
 

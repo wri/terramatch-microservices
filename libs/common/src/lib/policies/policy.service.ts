@@ -29,7 +29,7 @@ import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
 import { ProjectPitchPolicy } from "./project-pitch.policy";
 import { TaskPolicy } from "./task.policy";
-import { DemographicPolicy } from "@terramatch-microservices/common/policies/demographic.policy";
+import { DemographicPolicy } from "./demographic.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

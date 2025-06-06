@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, HttpStatus, NotFoundException, Param, Query } from "@nestjs/common";
+import { BadRequestException, Controller, Get, NotFoundException, Query } from "@nestjs/common";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -13,8 +13,8 @@ export class DemographicsController {
 
   @Get()
   @ApiOperation({
-    operationId: "projectPitchIndex",
-    summary: "Get projects pitches."
+    operationId: "demographicsIndex",
+    summary: "Get demographics."
   })
   @JsonApiResponse([{ data: DemographicDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })

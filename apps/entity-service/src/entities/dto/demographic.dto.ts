@@ -1,5 +1,5 @@
 import { AssociationDto } from "./association.dto";
-import { Demographic, DemographicEntry, ProjectPitch } from "@terramatch-microservices/database/entities";
+import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
 import { ApiProperty } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";

@@ -1,12 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsDate, IsEnum, IsString, IsUUID } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsOptional, IsString, IsUUID } from "class-validator";
 import { Type } from "class-transformer";
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export enum ReportType {
   SITE_REPORT = "siteReport",
   NURSERY_REPORT = "nurseryReport"
 }
 
+@JsonApiDto({ type: "reports" })
 export class ReportDto {
   @IsUUID()
   @ApiProperty({ description: "Unique identifier of the report" })
@@ -28,9 +31,16 @@ export class ReportDto {
   @IsUUID()
   @ApiProperty({ description: "UUID of the task this report belongs to" })
   taskUuid: string;
+
+  @ApiProperty({ description: "Whether the report has nothing to report" })
+  nothingToReport: boolean;
 }
 
+@JsonApiDto({ type: "processProjectTasks" })
 export class ProjectTaskProcessingResponseDto {
+  constructor(data: ProjectTaskProcessingResponseDto) {
+    populateDto<ProjectTaskProcessingResponseDto>(this, data);
+  }
   @IsUUID()
   @ApiProperty({ description: "UUID of the project" })
   projectUuid: string;
@@ -45,6 +55,7 @@ export class ProjectTaskProcessingResponseDto {
   reports: ReportDto[];
 }
 
+@JsonApiDto({ type: "approveReports" })
 export class ApproveReportsDto {
   @IsArray()
   @IsUUID("4", { each: true })
@@ -54,9 +65,30 @@ export class ApproveReportsDto {
     example: ["123e4567-e89b-12d3-a456-426614174000"]
   })
   reportUuids: string[];
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    description: "Optional feedback for the report approval",
+    example: "Reports look good, approved with no changes needed"
+  })
+  feedback?: string;
+
+  @IsString()
+  @ApiProperty({
+    required: true,
+    description: "uuid from project"
+  })
+  uuid: string;
 }
 
+@JsonApiDto({ type: "approveReportsResponse" })
 export class ApproveReportsResponseDto {
+  constructor(data: ApproveReportsResponseDto) {
+    populateDto<ApproveReportsResponseDto>(this, data);
+  }
+
   @ApiProperty({
     description: "Number of reports that were approved",
     example: 5

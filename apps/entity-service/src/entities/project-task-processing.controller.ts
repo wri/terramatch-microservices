@@ -1,13 +1,15 @@
 import { Body, Controller, Get, Param, Patch } from "@nestjs/common";
-import { ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { ApiOperation } from "@nestjs/swagger";
 import { ProjectTaskProcessingService } from "./project-task-processing.service";
 import {
   ApproveReportsDto,
   ProjectTaskProcessingResponseDto,
   ApproveReportsResponseDto
 } from "./dto/project-task-processing.dto";
+import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 
-@Controller("/v3/reportsProject")
+@Controller("entities/v3/projectTaskProcessing")
 export class ProjectTaskProcessingController {
   constructor(private readonly projectTaskProcessingService: ProjectTaskProcessingService) {}
 
@@ -16,8 +18,12 @@ export class ProjectTaskProcessingController {
     operationId: "processProjectTasks",
     summary: "Process all tasks and their associated reports for a given project"
   })
-  async processProjectTasks(@Param("uuid") projectUuid: string): Promise<ProjectTaskProcessingResponseDto> {
-    return this.projectTaskProcessingService.processProjectTasks(projectUuid);
+  @JsonApiResponse(ProjectTaskProcessingResponseDto)
+  async processProjectTasks(@Param("uuid") projectUuid: string) {
+    const response = await this.projectTaskProcessingService.processProjectTasks(projectUuid);
+    const document = buildJsonApi(ProjectTaskProcessingResponseDto);
+    document.addData(projectUuid, new ProjectTaskProcessingResponseDto(response));
+    return document.serialize();
   }
 
   @Patch("/approveReports")
@@ -25,12 +31,11 @@ export class ProjectTaskProcessingController {
     operationId: "approveReports",
     summary: "Approve reports that are marked with nothingToReport=true"
   })
-  @ApiResponse({
-    status: 200,
-    description: "Reports were successfully approved",
-    type: ApproveReportsResponseDto
-  })
-  async approveReports(@Body() dto: ApproveReportsDto): Promise<ApproveReportsResponseDto> {
-    return this.projectTaskProcessingService.approveReports(dto.reportUuids);
+  @JsonApiResponse(ApproveReportsResponseDto)
+  async approveReports(@Body() dto: ApproveReportsDto) {
+    const response = await this.projectTaskProcessingService.approveReports(dto.reportUuids);
+    const document = buildJsonApi(ApproveReportsResponseDto);
+    document.addData("approve-reports", new ApproveReportsResponseDto(response));
+    return document.serialize();
   }
 }

@@ -65,7 +65,8 @@ describe("ProjectTaskProcessingController", () => {
       service.approveReports.mockResolvedValue(mockResponse);
 
       const result = await controller.approveReports({
-        reportUuids: ["report1-uuid", "report2-uuid"]
+        reportUuids: ["report1-uuid", "report2-uuid"],
+        uuid: "project-uuid"
       });
 
       expect(result).toEqual(mockResponse);
@@ -81,7 +82,8 @@ describe("ProjectTaskProcessingController", () => {
       service.approveReports.mockResolvedValue(mockResponse);
 
       const result = await controller.approveReports({
-        reportUuids: []
+        reportUuids: [],
+        uuid: "project-uuid"
       });
 
       expect(result).toEqual(mockResponse);

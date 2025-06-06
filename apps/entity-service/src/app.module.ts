@@ -27,11 +27,11 @@ import { ProjectTaskProcessingService } from "./entities/project-task-processing
   // wildcard route on EntitiesController.
   controllers: [
     ProjectPitchesController,
+    ProjectTaskProcessingController,
     TasksController,
     FileUploadController,
     TreesController,
     BoundingBoxController,
-    ProjectTaskProcessingController,
     EntitiesController,
     EntityAssociationsController
   ],
@@ -44,9 +44,9 @@ import { ProjectTaskProcessingService } from "./entities/project-task-processing
     TreeService,
     FileUploadService,
     ProjectPitchService,
+    ProjectTaskProcessingService,
     BoundingBoxService,
-    TasksService,
-    ProjectTaskProcessingService
+    TasksService
   ]
 })
 export class AppModule {}

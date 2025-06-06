@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import {
   ENTITY_MODELS,
   EntityClass,
@@ -120,7 +120,7 @@ export class FileUploadService {
     // @ts-ignore
     const configuration = entityModel.MEDIA[collection];
     if (configuration == null) {
-      throw new Error(`Configuration for collection ${collection} not found`);
+      throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
     }
 
     return configuration;

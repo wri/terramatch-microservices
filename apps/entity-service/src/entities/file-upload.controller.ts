@@ -7,7 +7,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Body,
-  BadRequestException
+  BadRequestException,
+  InternalServerErrorException
 } from "@nestjs/common";
 import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
 import { EntitiesService } from "./entities.service";
@@ -43,6 +44,7 @@ export class FileUploadController {
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @ExceptionResponse(InternalServerErrorException, { description: "Internal server error." })
   @UseInterceptors(FileInterceptor("file"))
   async uploadFile<T extends EntityModel>(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,

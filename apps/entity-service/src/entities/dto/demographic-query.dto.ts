@@ -1,27 +1,9 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsEnum, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsOptional } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { IndexQueryDto } from "./index-query.dto";
 
-class QuerySort {
-  @ApiProperty({ name: "sort[field]", required: false })
-  @IsOptional()
-  field?: string;
-
-  @ApiProperty({ name: "sort[direction]", required: false, enum: ["ASC", "DESC"], default: "ASC" })
-  @IsEnum(["ASC", "DESC"])
-  @IsOptional()
-  direction?: "ASC" | "DESC";
-}
-
-export class DemographicQueryDto extends IntersectionType(QuerySort, NumberPage) {
-  @ValidateNested()
-  @IsOptional()
-  page?: NumberPage;
-
-  @ValidateNested()
-  @IsOptional()
-  sort?: QuerySort;
-
+export class DemographicQueryDto extends IntersectionType(IndexQueryDto, NumberPage) {
   @ApiProperty({ required: false, isArray: true, description: "project uuid array" })
   @IsOptional()
   @IsArray()

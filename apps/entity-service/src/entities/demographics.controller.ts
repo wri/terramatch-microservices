@@ -3,7 +3,7 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DemographicDto, DemographicDtoV2 } from "./dto/demographic.dto";
+import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
 
@@ -27,7 +27,7 @@ export class DemographicsController {
       await this.policyService.authorize("read", data);
       for (const demographic of data) {
         indexIds.push(demographic.uuid);
-        const demographicDto = new DemographicDtoV2(demographic);
+        const demographicDto = new DemographicDto(demographic);
         document.addData(demographicDto.uuid, demographicDto);
       }
     }

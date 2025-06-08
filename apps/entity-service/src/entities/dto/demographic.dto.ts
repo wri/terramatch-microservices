@@ -75,31 +75,19 @@ export class DemographicEntryDto {
 
 @JsonApiDto({ type: "demographics" })
 export class DemographicDto extends AssociationDto {
-  constructor(demographic: Demographic, additional: AdditionalProps<DemographicDto, Demographic>) {
+  constructor(demographic: Demographic, additional: AdditionalProps<DemographicDto, Demographic>);
+  constructor(demographic: Demographic);
+  constructor(demographic: Demographic, additional?: AdditionalProps<DemographicDto, Demographic>) {
     super();
-    populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
-      ...additional,
-      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
-    });
-  }
 
-  @ApiProperty()
-  uuid: string;
-
-  @ApiProperty({ enum: Demographic.VALID_TYPES })
-  type: string;
-
-  @ApiProperty()
-  collection: string;
-
-  @ApiProperty({ type: () => DemographicEntryDto, isArray: true })
-  entries: DemographicEntryDto[];
-}
-
-@JsonApiDto({ type: "demographics" })
-export class DemographicDtoV2 {
-  constructor(data: Demographic) {
-    populateDto<DemographicDtoV2>(this, data as DemographicDtoV2);
+    if (additional != null) {
+      populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
+        ...additional,
+        entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+      });
+    } else {
+      populateDto<DemographicDto>(this, demographic as unknown as DemographicDto);
+    }
   }
 
   @ApiProperty()

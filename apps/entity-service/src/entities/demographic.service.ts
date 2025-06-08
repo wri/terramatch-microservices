@@ -4,18 +4,16 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { Model, ModelStatic, Op } from "sequelize";
 
+type DemographicFilter<T extends Model = Model> = {
+  uuidKey: string;
+  model: ModelStatic<T>;
+  laravelType: string;
+};
+
 @Injectable()
 export class DemographicService {
   async getDemographics(query: DemographicQueryDto) {
-    const builder = PaginatedQueryBuilder.forNumberPage(Demographic, query);
-
-    type DemographicFilter<T extends Model = Model> = {
-      uuidKey: string;
-      model: ModelStatic<T>;
-      laravelType: string;
-    };
-
-    const demographicFilters: DemographicFilter[] = [
+    const DEMOGRAPHIC_FILTERS: DemographicFilter[] = [
       {
         uuidKey: "projectUuid",
         model: Project,
@@ -31,16 +29,20 @@ export class DemographicService {
         model: SiteReport,
         laravelType: SiteReport.LARAVEL_TYPE
       }
-    ];
+    ] as const;
 
-    Object.entries(query).forEach(([key]) => {
+    const builder = PaginatedQueryBuilder.forNumberPage(Demographic, query);
+
+    const VALID_FILTER_KEYS = DEMOGRAPHIC_FILTERS.map(({ uuidKey }) => uuidKey);
+
+    Object.keys(query).forEach(key => {
       if (key === "page" || key === "sort") return;
-      if (!demographicFilters.map(d => d.uuidKey).includes(key)) {
+      if (!VALID_FILTER_KEYS.includes(key)) {
         throw new BadRequestException(`Invalid filter key: ${key}`);
       }
     });
 
-    for (const { uuidKey, model, laravelType } of demographicFilters) {
+    for (const { uuidKey, model, laravelType } of DEMOGRAPHIC_FILTERS) {
       const uuids = query[uuidKey];
       if (uuids != null && uuids.length > 0) {
         const records = (await model.findAll({

@@ -46,3 +46,4 @@ export * from "./update-request.entity";
 export * from "./user.entity";
 export * from "./verification.entity";
 export * from "./task.entity";
+export * from "./audit-status.entity";

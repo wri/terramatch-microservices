@@ -11,6 +11,7 @@ import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import "multer";
+import { MediaOwnerModel, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 
 export interface ExtractedRequestData {
   isPublic: boolean;
@@ -63,8 +64,8 @@ export class FileUploadService {
   constructor(private readonly mediaService: MediaService, private readonly entitiesService: EntitiesService) {}
 
   public async uploadFile(
-    model: EntityModel,
-    entity: EntityType,
+    model: MediaOwnerModel,
+    entity: MediaOwnerType,
     collection: string,
     file: Express.Multer.File,
     body: ExtractedRequestData

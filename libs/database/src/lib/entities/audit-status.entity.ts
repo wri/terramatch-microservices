@@ -22,6 +22,8 @@ type AuditStatusType = (typeof TYPES)[number];
   indexes: [{ name: "audit_statuses_auditable_type_auditable_id_index", fields: ["auditable_type", "auditable_id"] }]
 })
 export class AuditStatus extends Model<AuditStatus> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus";
+
   static for(auditable: LaravelModel) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;
   }

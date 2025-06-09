@@ -41,6 +41,7 @@ export class ProjectTaskProcessingResponseDto {
   constructor(data: ProjectTaskProcessingResponseDto) {
     populateDto<ProjectTaskProcessingResponseDto>(this, data);
   }
+
   @IsUUID()
   @ApiProperty({ description: "UUID of the project" })
   projectUuid: string;
@@ -78,7 +79,7 @@ export class ApproveReportsDto {
   @IsString()
   @ApiProperty({
     required: true,
-    description: "uuid from project"
+    description: "UUID of the project these reports belong to"
   })
   uuid: string;
 }

@@ -65,12 +65,17 @@ describe("ProjectTaskProcessingController", () => {
       service.approveReports.mockResolvedValue(mockResponse);
 
       const result = await controller.approveReports({
+        uuid: "project-uuid",
         reportUuids: ["report1-uuid", "report2-uuid"],
-        uuid: "project-uuid"
+        feedback: "Test feedback"
       });
 
       expect(result).toEqual(mockResponse);
-      expect(service.approveReports).toHaveBeenCalledWith(["report1-uuid", "report2-uuid"]);
+      expect(service.approveReports).toHaveBeenCalledWith({
+        uuid: "project-uuid",
+        reportUuids: ["report1-uuid", "report2-uuid"],
+        feedback: "Test feedback"
+      });
     });
 
     it("should handle empty report UUIDs array", async () => {
@@ -82,12 +87,26 @@ describe("ProjectTaskProcessingController", () => {
       service.approveReports.mockResolvedValue(mockResponse);
 
       const result = await controller.approveReports({
-        reportUuids: [],
-        uuid: "project-uuid"
+        uuid: "project-uuid",
+        reportUuids: []
       });
 
       expect(result).toEqual(mockResponse);
-      expect(service.approveReports).toHaveBeenCalledWith([]);
+      expect(service.approveReports).toHaveBeenCalledWith({
+        uuid: "project-uuid",
+        reportUuids: []
+      });
+    });
+
+    it("should propagate NotFoundException from service", async () => {
+      service.approveReports.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        controller.approveReports({
+          uuid: "non-existent-uuid",
+          reportUuids: ["report-uuid"]
+        })
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

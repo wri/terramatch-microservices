@@ -8,8 +8,7 @@ import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { ImpactStoryParamDto } from "./dto/impact-story-param.dto";
 import { ImpactStoryFullDto, ImpactStoryLightDto, ImpactStoryMedia } from "./dto/impact-story.dto";
 import { EntitiesService } from "./entities.service";
-import { ImpactStory, Media, Organisation, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3/impactStories")
 export class ImpactStoriesController {
@@ -31,15 +30,30 @@ export class ImpactStoriesController {
     const { data, paginationTotal, pageNumber } = await this.impactStoryService.getImpactStories(params);
     const document = buildJsonApi(ImpactStoryLightDto, { pagination: "number" });
     const indexIds: string[] = [];
+
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
+
+      const mediaByStory = await this.impactStoryService.getMediaForStories(data);
+
+      const organizationCountries = data.map(story => story.organisation?.countries || []);
+      const countriesMap = await this.impactStoryService.getCountriesForOrganizations(organizationCountries);
+
       for (const impact of data) {
         if (typeof impact.category === "string") {
           impact.category = JSON.parse(impact.category);
         }
         indexIds.push(impact.uuid);
-        const organization = await buildOrganizationLight(impact.organisation, false);
-        const mediaCollection = await Media.for(impact).findAll();
+
+        const mediaCollection = mediaByStory[impact.id] || [];
+        const orgCountries = (impact.organisation?.countries || []).map(iso => countriesMap.get(iso)).filter(Boolean);
+        const organization = {
+          name: impact.organisation?.name,
+          uuid: impact.organisation?.uuid,
+          type: impact.organisation?.type,
+          countries: orgCountries
+        };
+
         const impactDto = new ImpactStoryLightDto(impact, {
           organization,
           ...(this.entitiesService.mapMediaCollection(
@@ -52,6 +66,7 @@ export class ImpactStoriesController {
         document.addData(impactDto.uuid, impactDto);
       }
     }
+
     document.addIndexData({
       resource: "impactStories",
       requestPath: `/entities/v3/impactStories${getStableRequestQuery(params)}`,
@@ -69,15 +84,33 @@ export class ImpactStoriesController {
   })
   @JsonApiResponse(ImpactStoryFullDto, { status: HttpStatus.OK })
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
-  @ExceptionResponse(NotFoundException, { description: "Project pitch not found" })
+  @ExceptionResponse(NotFoundException, { description: "Impact story not found" })
   async impactStoryGet(@Param() { uuid }: ImpactStoryParamDto) {
     const impactStory = await this.impactStoryService.getImpactStory(uuid);
-    const mediaCollection = await Media.for(impactStory).findAll();
-    const organization = await buildOrganizationLight(impactStory.organisation, true);
     await this.policyService.authorize("read", impactStory);
+
+    const mediaCollection = await Media.for(impactStory).findAll();
+
+    const organizationCountries = impactStory.organisation?.countries || [];
+    const countriesMap = await this.impactStoryService.getCountriesForOrganizations([organizationCountries]);
+    const orgCountries = organizationCountries.map(iso => countriesMap.get(iso)).filter(Boolean);
+
     if (typeof impactStory.category === "string") {
       impactStory.category = JSON.parse(impactStory.category);
     }
+
+    const organization = {
+      uuid: impactStory.organisation?.uuid,
+      name: impactStory.organisation?.name,
+      type: impactStory.organisation?.type,
+      countries: orgCountries,
+      webUrl: impactStory.organisation?.webUrl,
+      facebookUrl: impactStory.organisation?.facebookUrl,
+      instagramUrl: impactStory.organisation?.instagramUrl,
+      linkedinUrl: impactStory.organisation?.linkedinUrl,
+      twitterUrl: impactStory.organisation?.twitterUrl
+    };
+
     return buildJsonApi(ImpactStoryFullDto)
       .addData(
         uuid,
@@ -93,40 +126,4 @@ export class ImpactStoriesController {
       )
       .document.serialize();
   }
-}
-
-export async function buildOrganizationLight(organisation: Organisation, FullDto: boolean) {
-  if (organisation?.countries?.length == 0) return null;
-
-  let countries;
-  let liteAttrib: object = {};
-  if (Array.isArray(organisation.countries) && organisation.countries.length > 0) {
-    countries = await WorldCountryGeneralized.findAll({
-      where: {
-        iso: {
-          [Op.in]: organisation.countries
-        }
-      }
-    });
-  }
-
-  if (FullDto) {
-    liteAttrib = {
-      uuid: organisation.uuid,
-      webUrl: organisation.webUrl,
-      facebookUrl: organisation.facebookUrl,
-      instagramUrl: organisation.instagramUrl,
-      linkedinUrl: organisation.linkedinUrl,
-      twitterUrl: organisation.twitterUrl
-    };
-  }
-  return {
-    ...liteAttrib,
-    name: organisation.name,
-    countries: countries?.map(country => ({
-      label: country.country ?? null,
-      icon:
-        typeof country.iso === "string" && country.iso.trim() !== "" ? `/flags/${country.iso.toLowerCase()}.svg` : null
-    }))
-  };
 }

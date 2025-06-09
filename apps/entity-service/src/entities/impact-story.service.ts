@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ImpactStory, Project } from "@terramatch-microservices/database/entities";
+import { ImpactStory, Project, Media, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
+import { groupBy } from "lodash";
 
 @Injectable()
 export class ImpactStoryService {
@@ -28,6 +29,37 @@ export class ImpactStoryService {
     return impactStory;
   }
 
+  async getMediaForStories(stories: ImpactStory[]) {
+    const uuids = stories.map(s => s.id);
+    const allMedia = await Media.findAll({
+      where: { modelType: ImpactStory.LARAVEL_TYPE, modelId: uuids }
+    });
+    return groupBy(allMedia, "modelId");
+  }
+
+  async getCountriesForOrganizations(organizationCountries: string[][]) {
+    const uniqueCountries = [...new Set(organizationCountries.flat())];
+    if (uniqueCountries.length === 0) return new Map();
+
+    const countries = await WorldCountryGeneralized.findAll({
+      where: {
+        iso: {
+          [Op.in]: uniqueCountries
+        }
+      }
+    });
+
+    return new Map(
+      countries.map(country => [
+        country.iso,
+        {
+          label: country.country ?? null,
+          icon: country.iso ? `/flags/${country.iso.toLowerCase()}.svg` : null
+        }
+      ])
+    );
+  }
+
   async getImpactStories(query: ImpactStoryQueryDto) {
     const organisationAssociation: Includeable = {
       association: "organisation",
@@ -49,7 +81,6 @@ export class ImpactStoryService {
       organizationType: "$organisation.type$",
       organizationName: "$organisation.name$",
       country: "$organisation.countries$"
-      // projectUuid: "$project.uuid$"
     };
 
     for (const key of ["status", "projectUuid", "organisationUuid", "country", "uuid"]) {
@@ -109,9 +140,14 @@ export class ImpactStoryService {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
+
+    const result = await builder.execute();
+    // const rows = result as ImpactStory[];
+    const count = await builder.paginationTotal();
+
     return {
-      data: await builder.execute(),
-      paginationTotal: await builder.paginationTotal(),
+      data: result,
+      paginationTotal: count,
       pageNumber: query.page?.number ?? 1
     };
   }

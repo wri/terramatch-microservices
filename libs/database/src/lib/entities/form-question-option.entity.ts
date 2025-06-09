@@ -28,6 +28,6 @@ export class FormQuestionOption extends Model<FormQuestionOption> {
   @Column(STRING)
   label: string;
 
-  @Column(INTEGER)
+  @Column(STRING)
   imageUrl: string;
 }

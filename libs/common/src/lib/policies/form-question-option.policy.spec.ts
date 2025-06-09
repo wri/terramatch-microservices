@@ -27,8 +27,8 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    const form = await FormFactory.create({ updatedBy: user.id });
-    const question = await FormQuestionFactory.create({ formSectionId: form.id });
+    await FormFactory.create({ updatedBy: user.id });
+    const question = await FormQuestionFactory.create();
     const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
     await expectCan(service, ["uploadFiles"], option);
   });
@@ -37,8 +37,8 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    const form = await FormFactory.create({ updatedBy: user.id + 1 }); // Different user
-    const question = await FormQuestionFactory.create({ formSectionId: form.id });
+    await FormFactory.create({ updatedBy: user.id + 1 }); // Different user
+    const question = await FormQuestionFactory.create();
     const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
     await expectCannot(service, ["uploadFiles"], option);
   });
@@ -46,8 +46,8 @@ describe("FormQuestionOptionPolicy", () => {
   it("should disallow managing question options without proper permissions", async () => {
     mockUserId(123);
     mockPermissions();
-    const form = await FormFactory.create();
-    const question = await FormQuestionFactory.create({ formSectionId: form.id });
+    await FormFactory.create();
+    const question = await FormQuestionFactory.create();
     const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
     await expectCannot(service, ["read", "create", "update", "delete"], option);
   });

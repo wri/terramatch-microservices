@@ -78,21 +78,20 @@ export class ImpactStoryService {
 
     const associationFieldMap = {
       organisationUuid: "$organisation.uuid$",
-      organizationType: "$organisation.type$",
-      organizationName: "$organisation.name$",
+      organisationType: "$organisation.type$",
       country: "$organisation.countries$"
     };
 
-    for (const key of ["status", "projectUuid", "organisationUuid", "country", "uuid"]) {
+    for (const key of ["status", "projectUuid", "organisationUuid", "country", "uuid", "organisationType"]) {
       const fieldKey = associationFieldMap[key] ?? key;
-      if (query[key] != null) {
+      if (query[key] != null && query[key] !== "") {
         if (
           ![
             "title",
             "status",
             "createdAt",
             "organisationUuid",
-            "organizationType",
+            "organisationType",
             "country",
             "uuid",
             "projectUuid"
@@ -100,7 +99,17 @@ export class ImpactStoryService {
         ) {
           throw new BadRequestException(`Invalid filter key: ${key}`);
         }
-        if (key == "country") {
+        if (key === "projectUuid") {
+          const project = await Project.findOne({
+            where: { uuid: query[key] },
+            attributes: ["organisationId"]
+          });
+          if (project != null) {
+            builder.where({
+              "$organisation.id$": project.organisationId
+            });
+          }
+        } else if (key == "country") {
           builder.where({
             "$organisation.countries$": {
               [Op.or]: Array.isArray(query[key])
@@ -128,26 +137,22 @@ export class ImpactStoryService {
         }
       }
     }
+
     if (query.sort?.field != null) {
-      if (
-        ["id", "organizationId", "title", "status", "createdAt", "organizationName", "organizationCountry"].includes(
-          query.sort.field
-        )
-      ) {
-        const fieldKey = associationFieldMap[query.sort.field] ?? query.sort.field;
-        builder.order([fieldKey, query.sort.direction ?? "ASC"]);
-      } else {
+      if (["id", "title", "status", "createdAt"].includes(query.sort.field)) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organization.name") {
+        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organization.countries") {
+        builder.order(["organisation", "countries", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
 
-    const result = await builder.execute();
-    // const rows = result as ImpactStory[];
-    const count = await builder.paginationTotal();
-
     return {
-      data: result,
-      paginationTotal: count,
+      data: await builder.execute(),
+      paginationTotal: await builder.paginationTotal(),
       pageNumber: query.page?.number ?? 1
     };
   }

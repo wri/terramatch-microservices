@@ -17,26 +17,26 @@ describe("TreeRestorationGoalController", () => {
       {
         dueDate: new Date("2022-09-01T04:00:00.000Z"),
         treeSpeciesAmount: 3859827,
-        treeSpeciesPercentage: 9.523
+        treeSpeciesGoal: 40532875
       },
       {
         dueDate: new Date("2023-01-01T04:00:00.000Z"),
         treeSpeciesAmount: 2849029,
-        treeSpeciesPercentage: 7.029
+        treeSpeciesGoal: 40532875
       }
     ],
     treesUnderRestorationActualForProfit: [
       {
         dueDate: new Date("2022-09-01T04:00:00.000Z"),
         treeSpeciesAmount: 557880,
-        treeSpeciesPercentage: 1.376
+        treeSpeciesGoal: 40532875
       }
     ],
     treesUnderRestorationActualNonProfit: [
       {
         dueDate: new Date("2022-09-01T04:00:00.000Z"),
         treeSpeciesAmount: 3301947,
-        treeSpeciesPercentage: 8.146
+        treeSpeciesGoal: 40532875
       }
     ]
   };
@@ -49,21 +49,21 @@ describe("TreeRestorationGoalController", () => {
       {
         dueDate: new Date("2023-01-01T04:00:00.000Z"),
         treeSpeciesAmount: 2500000,
-        treeSpeciesPercentage: 7.143
+        treeSpeciesGoal: 35000000
       }
     ],
     treesUnderRestorationActualForProfit: [
       {
         dueDate: new Date("2023-01-01T04:00:00.000Z"),
         treeSpeciesAmount: 500000,
-        treeSpeciesPercentage: 1.429
+        treeSpeciesGoal: 35000000
       }
     ],
     treesUnderRestorationActualNonProfit: [
       {
         dueDate: new Date("2023-01-01T04:00:00.000Z"),
         treeSpeciesAmount: 2000000,
-        treeSpeciesPercentage: 5.714
+        treeSpeciesGoal: 35000000
       }
     ]
   };
@@ -230,7 +230,7 @@ describe("TreeRestorationGoalController", () => {
               treesUnderRestorationActualTotal: Array<{
                 dueDate: Date;
                 treeSpeciesAmount: number;
-                treeSpeciesPercentage: number;
+                treeSpeciesGoal: number;
               }>;
             };
           };
@@ -297,7 +297,7 @@ describe("TreeRestorationGoalController", () => {
           {
             dueDate: new Date("2024-01-01T00:00:00.000Z"),
             treeSpeciesAmount: 0,
-            treeSpeciesPercentage: 0
+            treeSpeciesGoal: 0
           }
         ],
         treesUnderRestorationActualForProfit: [],
@@ -315,7 +315,7 @@ describe("TreeRestorationGoalController", () => {
       expect((result as typeof zeroServiceResponse).nonProfitTreeCount).toBe(0);
       expect((result as typeof zeroServiceResponse).totalTreesGrownGoal).toBe(0);
       expect((result as typeof zeroServiceResponse).treesUnderRestorationActualTotal[0].treeSpeciesAmount).toBe(0);
-      expect((result as typeof zeroServiceResponse).treesUnderRestorationActualTotal[0].treeSpeciesPercentage).toBe(0);
+      expect((result as typeof zeroServiceResponse).treesUnderRestorationActualTotal[0].treeSpeciesGoal).toBe(0);
     });
 
     it("should handle cached data with empty arrays", async () => {

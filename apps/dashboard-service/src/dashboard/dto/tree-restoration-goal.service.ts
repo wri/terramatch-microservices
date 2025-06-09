@@ -150,13 +150,11 @@ export class TreeRestorationGoalService {
       }, 0);
 
       const formattedDate = new Date(year, month - 1, 1);
-      const percentage =
-        totalTreesGrownGoal > 0 ? Number(((treeSpeciesAmount / totalTreesGrownGoal) * 100).toFixed(3)) : 0;
 
       return {
         dueDate: formattedDate,
         treeSpeciesAmount,
-        treeSpeciesPercentage: percentage
+        treeSpeciesGoal: totalTreesGrownGoal
       };
     });
   }

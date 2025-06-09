@@ -14,9 +14,9 @@ class TreeRestorationData {
   treeSpeciesAmount: number;
 
   @ApiProperty({
-    description: "Percentage of tree species for this period"
+    description: "Tree species goal for calculating percentage"
   })
-  treeSpeciesPercentage: number;
+  treeSpeciesGoal: number;
 }
 
 @JsonApiDto({ type: "treeRestorationGoals" })

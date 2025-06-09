@@ -23,12 +23,14 @@ export class TreeRestorationGoalController {
     const lastUpdatedAt = await this.cacheService.get(timestampKey);
     const cachedData = await this.cacheService.get(cacheKey);
 
+    let result;
     if (cachedData == null) {
-      const result = await this.treeRestorationGoalService.getTreeRestorationGoal(query);
+      result = await this.treeRestorationGoalService.getTreeRestorationGoal(query);
       const timestamp = new Date().toISOString();
       await this.cacheService.set(cacheKey, JSON.stringify(result));
       await this.cacheService.set(timestampKey, timestamp);
-      return result;
+    } else {
+      result = JSON.parse(cachedData);
     }
 
     const document = buildJsonApi(TreeRestorationGoalDto);
@@ -37,7 +39,7 @@ export class TreeRestorationGoalController {
     document.addData(
       stableQuery,
       new TreeRestorationGoalDto({
-        ...cachedData,
+        ...result,
         lastUpdatedAt
       })
     );

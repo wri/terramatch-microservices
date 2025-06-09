@@ -308,7 +308,7 @@ describe("TreeRestorationGoalService", () => {
       expect(result).toHaveLength(3);
       expect(result[0]).toHaveProperty("dueDate");
       expect(result[0]).toHaveProperty("treeSpeciesAmount");
-      expect(result[0]).toHaveProperty("treeSpeciesPercentage");
+      expect(result[0]).toHaveProperty("treeSpeciesGoal");
     });
 
     it("should return empty array when no distinct dates", async () => {
@@ -361,7 +361,7 @@ describe("TreeRestorationGoalService", () => {
       expect(result).toHaveLength(3);
     });
 
-    it("should calculate percentage correctly with zero goal", async () => {
+    it("should include goal correctly with zero goal", async () => {
       const mockApprovedSitesQuery = literal("approved-sites");
       const totalTreesGrownGoal = 0;
 
@@ -377,7 +377,7 @@ describe("TreeRestorationGoalService", () => {
 
       expect(result).toHaveLength(3);
       result.forEach((item: unknown) => {
-        expect((item as { treeSpeciesPercentage: number }).treeSpeciesPercentage).toBe(0);
+        expect((item as { treeSpeciesGoal: number }).treeSpeciesGoal).toBe(0);
       });
     });
 
@@ -464,19 +464,19 @@ describe("TreeRestorationGoalService", () => {
       expect(firstResult.dueDate.getDate()).toBe(1);
     });
 
-    it("should round percentage to 3 decimal places", async () => {
+    it("should include goal in each restoration data entry", async () => {
       const mockApprovedSitesQuery = literal("approved-sites");
-      const totalTreesGrownGoal = 333; // Will create repeating decimals
+      const totalTreesGrownGoal = 333;
 
-      const siteReportsForRounding = [
+      const siteReportsForGoalTesting = [
         {
           id: 1,
           dueAt: new Date("2023-01-15T00:00:00.000Z"),
-          treesPlanted: [{ amount: 100 }] // 100/333 = 30.030030...%
+          treesPlanted: [{ amount: 100 }]
         }
       ];
 
-      (SiteReport.findAll as jest.Mock).mockResolvedValue(siteReportsForRounding);
+      (SiteReport.findAll as jest.Mock).mockResolvedValue(siteReportsForGoalTesting);
 
       const result = await (
         service as unknown as {
@@ -489,9 +489,8 @@ describe("TreeRestorationGoalService", () => {
       ).calculateTreesUnderRestoration(mockApprovedSitesQuery, [{ year: 2023, month: 1 }], totalTreesGrownGoal);
 
       expect(result).toHaveLength(1);
-      const percentage = (result[0] as { treeSpeciesPercentage: number }).treeSpeciesPercentage;
-      expect(percentage).toBe(30.03); // Should be rounded to 3 decimal places
-      expect(percentage.toString().split(".")[1]?.length ?? 0).toBeLessThanOrEqual(3);
+      const goal = (result[0] as { treeSpeciesGoal: number }).treeSpeciesGoal;
+      expect(goal).toBe(333); // Should include the exact goal value
     });
   });
 });

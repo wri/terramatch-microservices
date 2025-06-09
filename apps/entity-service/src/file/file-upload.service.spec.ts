@@ -93,6 +93,16 @@ describe("FileUploadService", () => {
       const file = { mimetype: "application/pdf", size: 10 * 1024 * 1024 + 1 } as Express.Multer.File;
       expect(svc.validateFile(file, generalConfig)).toBe(false);
     });
+
+    it("should return true when file size is within limit", () => {
+      const svc = service as unknown as PrivateFileUploadService;
+      const validFile = {
+        mimetype: "application/pdf",
+        size: 4 * 1024 * 1024
+      } as Express.Multer.File;
+
+      expect(svc.validateFile(validFile, generalConfig)).toBe(true);
+    });
   });
 
   describe("uploadFile", () => {

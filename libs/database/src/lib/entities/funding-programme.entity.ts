@@ -7,6 +7,8 @@ import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
 export class FundingProgramme extends Model<FundingProgramme> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingProgramme";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

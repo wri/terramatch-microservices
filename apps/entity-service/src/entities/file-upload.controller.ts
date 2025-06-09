@@ -13,13 +13,13 @@ import {
 import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
-import { ExceptionResponse } from "@terramatch-microservices/common/decorators/exception-response.decorator";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { MEDIA_OWNER_MODELS } from "@terramatch-microservices/database/constants/media-owners";
+import { EntitiesService } from "./entities.service";
 import "multer";
 
 @Controller("entities/v3/files")
@@ -28,7 +28,8 @@ export class FileUploadController {
   constructor(
     private readonly fileUploadService: FileUploadService,
     private readonly policyService: PolicyService,
-    private readonly mediaService: MediaService
+    private readonly mediaService: MediaService,
+    private readonly entitiesService: EntitiesService
   ) {}
 
   @Post("/:entity/:uuid/:collection")
@@ -44,14 +45,14 @@ export class FileUploadController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
   @ExceptionResponse(InternalServerErrorException, { description: "Internal server error." })
   @UseInterceptors(FileInterceptor("uploadFile"))
+  @JsonApiResponse({ data: MediaDto })
   async uploadFile(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: ExtractedRequestData
   ) {
-    const mediaOwnerClass = MEDIA_OWNER_MODELS[entity];
-    const model = await mediaOwnerClass.findOne({ where: { uuid }, attributes: ["id", "frameworkKey"] });
-    if (model == null) throw new NotFoundException();
+    const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
+    const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
     const media = await this.fileUploadService.uploadFile(model, entity, collection, file, body);
     const document = buildJsonApi(MediaDto);

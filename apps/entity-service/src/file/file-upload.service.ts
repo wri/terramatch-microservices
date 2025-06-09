@@ -89,31 +89,22 @@ export class FileUploadService {
       attributes: ["firstName", "lastName"]
     });
 
-    const media: Partial<Media> = {
-      collectionName: collection,
-      modelType: mediaOwnerModel.LARAVEL_TYPE,
-      modelId: model.id,
-      name: file.originalname,
-      fileName: file.originalname,
-      mimeType: file.mimetype,
-      fileType: this.getMediaType(file, configuration),
-      isPublic: body.isPublic,
-      lat: body.lat,
-      lng: body.lng,
-      disk: "s3",
-      size: file.size,
-      manipulations: [],
-      generatedConversions: {},
-      customProperties: {},
-      responsiveImages: [],
-      orderColumn: null,
-      description: null,
-      photographer: user?.fullName ?? null,
-      createdBy: this.entitiesService.userId
-    };
+    const media = new Media();
+    media.collectionName = collection;
+    media.modelType = mediaOwnerModel.LARAVEL_TYPE;
+    media.modelId = model.id;
+    media.name = file.originalname;
+    media.fileName = file.originalname;
+    media.mimeType = file.mimetype;
+    media.fileType = this.getMediaType(file, configuration);
+    media.isPublic = body.isPublic;
+    media.lat = body.lat;
+    media.lng = body.lng;
+    media.size = file.size;
+    media.createdBy = this.entitiesService.userId;
+    media.photographer = user?.fullName ?? null;
 
-    const dbMedia = new Media(media as Media);
-    return dbMedia.save();
+    return await media.save();
   }
 
   private getConfiguration(

@@ -2,7 +2,6 @@ import { BadRequestException, Controller, Get, HttpStatus, NotFoundException, Pa
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { PolicyService } from "@terramatch-microservices/common";
 import { ImpactStoryService } from "./impact-story.service";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { ImpactStoryParamDto } from "./dto/impact-story-param.dto";
@@ -14,7 +13,6 @@ import { ImpactStory, Media } from "@terramatch-microservices/database/entities"
 export class ImpactStoriesController {
   constructor(
     private readonly impactStoryService: ImpactStoryService,
-    private readonly policyService: PolicyService,
     private readonly entitiesService: EntitiesService
   ) {}
 
@@ -32,8 +30,6 @@ export class ImpactStoriesController {
     const indexIds: string[] = [];
 
     if (data.length !== 0) {
-      await this.policyService.authorize("read", data);
-
       const mediaByStory = await this.impactStoryService.getMediaForStories(data);
 
       const organizationCountries = data.map(story => story.organisation?.countries ?? []);
@@ -59,7 +55,7 @@ export class ImpactStoriesController {
           ...(this.entitiesService.mapMediaCollection(
             mediaCollection,
             ImpactStory.MEDIA,
-            "siteReports",
+            "projects",
             impact.uuid
           ) as ImpactStoryMedia)
         });
@@ -87,7 +83,6 @@ export class ImpactStoriesController {
   @ExceptionResponse(NotFoundException, { description: "Impact story not found" })
   async impactStoryGet(@Param() { uuid }: ImpactStoryParamDto) {
     const impactStory = await this.impactStoryService.getImpactStory(uuid);
-    await this.policyService.authorize("read", impactStory);
 
     const mediaCollection = await Media.for(impactStory).findAll();
 
@@ -119,7 +114,7 @@ export class ImpactStoriesController {
           ...(this.entitiesService.mapMediaCollection(
             mediaCollection,
             ImpactStory.MEDIA,
-            "siteReports",
+            "projects",
             impactStory.uuid
           ) as ImpactStoryMedia)
         })

@@ -46,4 +46,8 @@ export class ImpactStoryQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  category?: string;
 }

@@ -82,24 +82,36 @@ export class ImpactStoryService {
       country: "$organisation.countries$"
     };
 
-    for (const key of ["status", "projectUuid", "organisationUuid", "country", "uuid", "organisationType"]) {
+    const validFilterKeys = [
+      "title",
+      "status",
+      "createdAt",
+      "organisationUuid",
+      "organisationType",
+      "country",
+      "uuid",
+      "projectUuid",
+      "category"
+    ];
+
+    for (const key of Object.keys(query)) {
+      if (!["page", "sort", "search", ...validFilterKeys].includes(key)) {
+        throw new BadRequestException(`Invalid filter key: ${key}`);
+      }
+    }
+
+    for (const key of [
+      "status",
+      "projectUuid",
+      "organisationUuid",
+      "country",
+      "uuid",
+      "organisationType",
+      "category"
+    ]) {
       const fieldKey = associationFieldMap[key] ?? key;
       const value = query[key];
       if (value != null && value !== "") {
-        if (
-          ![
-            "title",
-            "status",
-            "createdAt",
-            "organisationUuid",
-            "organisationType",
-            "country",
-            "uuid",
-            "projectUuid"
-          ].includes(key)
-        ) {
-          throw new BadRequestException(`Invalid filter key: ${key}`);
-        }
         if (key === "projectUuid") {
           const project = await Project.findOne({
             where: { uuid: value },

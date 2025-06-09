@@ -82,7 +82,6 @@ describe("ImpactStoriesController", () => {
     policyService = module.get<PolicyService>(PolicyService);
     entitiesService = module.get<EntitiesService>(EntitiesService);
 
-    // Mock service methods
     jest.spyOn(impactStoryService, "getImpactStory").mockResolvedValue(mockImpactStory);
     jest.spyOn(impactStoryService, "getImpactStories").mockResolvedValue({
       data: [mockImpactStory],
@@ -99,12 +98,10 @@ describe("ImpactStoriesController", () => {
       ])
     );
 
-    // Mock Media.for().findAll
     jest.spyOn(Media, "for").mockReturnValue({
       findAll: jest.fn().mockResolvedValue(mockMedia)
     } as unknown as ReturnType<typeof Media.for>);
 
-    // Mock entitiesService.mapMediaCollection
     jest.spyOn(entitiesService, "mapMediaCollection").mockReturnValue({
       media: mockMedia
     });
@@ -128,7 +125,6 @@ describe("ImpactStoriesController", () => {
       expect(impactStoryService.getImpactStories).toHaveBeenCalledWith(query);
       expect(impactStoryService.getMediaForStories).toHaveBeenCalledWith([mockImpactStory]);
       expect(impactStoryService.getCountriesForOrganizations).toHaveBeenCalledWith([["US", "UK"]]);
-      expect(policyService.authorize).toHaveBeenCalledWith("read", [mockImpactStory]);
     });
 
     it("should handle empty results", async () => {
@@ -161,7 +157,6 @@ describe("ImpactStoriesController", () => {
       expect(impactStoryService.getImpactStory).toHaveBeenCalledWith("test-uuid");
       expect(Media.for).toHaveBeenCalledWith(mockImpactStory);
       expect(impactStoryService.getCountriesForOrganizations).toHaveBeenCalled();
-      expect(policyService.authorize).toHaveBeenCalledWith("read", mockImpactStory);
     });
 
     it("should throw NotFoundException when story not found", async () => {

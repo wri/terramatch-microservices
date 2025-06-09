@@ -201,5 +201,21 @@ describe("ImpactStoryService", () => {
         })
       );
     });
+
+    it("should handle category filter", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        category: "test"
+      };
+
+      await service.getImpactStories(query);
+      expect(ImpactStory.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            category: expect.any(Object)
+          })
+        })
+      );
+    });
   });
 });

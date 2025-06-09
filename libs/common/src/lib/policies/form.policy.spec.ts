@@ -19,7 +19,7 @@ describe("FormPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows managing forms in your framework", async () => {
+  it("should allow managing forms in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
     const ppc = await FormFactory.create({ frameworkKey: "ppc" });
@@ -30,14 +30,14 @@ describe("FormPolicy", () => {
     });
   });
 
-  it("allows managing forms with forms-manage permission", async () => {
+  it("should allow managing forms with forms-manage permission", async () => {
     mockUserId(123);
     mockPermissions("forms-manage");
     const form = await FormFactory.create();
     await expectCan(service, ["read", "create", "update", "delete", "uploadFiles"], form);
   });
 
-  it("allows managing forms created/updated by the user", async () => {
+  it("should allow managing forms created/updated by the user", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
@@ -45,7 +45,7 @@ describe("FormPolicy", () => {
     await expectCan(service, ["read", "update", "uploadFiles"], form);
   });
 
-  it("disallows managing forms without proper permissions", async () => {
+  it("should disallow managing forms without proper permissions", async () => {
     mockUserId(123);
     mockPermissions();
     const form = await FormFactory.create();

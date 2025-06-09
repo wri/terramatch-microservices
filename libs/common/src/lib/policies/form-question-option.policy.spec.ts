@@ -19,7 +19,7 @@ describe("FormQuestionOptionPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows managing question options in your framework", async () => {
+  it("should allow managing question options in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
     const ppcForm = await FormFactory.create({ frameworkKey: "ppc" });
@@ -32,7 +32,7 @@ describe("FormQuestionOptionPolicy", () => {
     });
   });
 
-  it("allows managing question options with forms-manage permission", async () => {
+  it("should allow managing question options with forms-manage permission", async () => {
     mockUserId(123);
     mockPermissions("forms-manage");
     const form = await FormFactory.create();
@@ -40,7 +40,7 @@ describe("FormQuestionOptionPolicy", () => {
     await expectCan(service, ["read", "create", "update", "delete", "uploadFiles"], option);
   });
 
-  it("allows managing question options for forms created/updated by the user", async () => {
+  it("should allow managing question options for forms created/updated by the user", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
@@ -49,7 +49,7 @@ describe("FormQuestionOptionPolicy", () => {
     await expectCan(service, ["read", "update", "uploadFiles"], option);
   });
 
-  it("disallows managing question options without proper permissions", async () => {
+  it("should disallow managing question options without proper permissions", async () => {
     mockUserId(123);
     mockPermissions();
     const form = await FormFactory.create();

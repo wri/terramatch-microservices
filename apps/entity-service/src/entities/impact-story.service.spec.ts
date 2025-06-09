@@ -1,12 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ImpactStoryService } from "./impact-story.service";
 import { ImpactStory, Media, Project, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
-import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
-import { OrganisationFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
-import { MediaDto } from "./dto/media.dto";
-import { Model } from "sequelize";
-import { ImpactStoryLightDto } from "./dto/impact-story.dto";
 import { Op } from "sequelize";
 
 describe("ImpactStoryService", () => {

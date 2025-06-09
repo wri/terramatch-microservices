@@ -5,7 +5,6 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { EntitiesService } from "./entities.service";
 import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
-import { Model } from "sequelize";
 import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util/json-api-builder";
 
 describe("ImpactStoriesController", () => {

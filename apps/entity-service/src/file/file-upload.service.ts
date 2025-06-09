@@ -125,7 +125,6 @@ export class FileUploadService {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
     const videos = ["video/mp4"];
-    console.log(file.mimetype);
 
     if (documents.includes(file.mimetype)) {
       return "documents";
@@ -138,9 +137,9 @@ export class FileUploadService {
     return undefined;
   }
 
-  private validateFile(file: Express.Multer.File, configuration: MediaConfiguration) {
+  private validateFile(file: Express.Multer.File, configuration: MediaConfiguration): boolean {
     if (configuration.validation == null) {
-      return;
+      return false;
     }
 
     const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
@@ -172,5 +171,7 @@ export class FileUploadService {
 
       return true;
     }
+
+    return false;
   }
 }

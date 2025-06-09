@@ -2,14 +2,15 @@ import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey,
 import { BIGINT, BOOLEAN, DATE, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants/framework";
 import { User } from "./user.entity";
+import { MediaConfiguration } from "../constants/media-owners";
 
 @Table({ tableName: "v2_forms", underscored: true, paranoid: true })
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 
-  static readonly MEDIA = {
-    banner: { validation: "cover-image-with-svg", multiple: false },
-    document: { validation: "general-documents", multiple: false }
+  static readonly MEDIA: Record<string, MediaConfiguration> = {
+    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" },
+    document: { dbCollection: "document", multiple: false, validation: "general-documents" }
   };
 
   @PrimaryKey

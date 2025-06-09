@@ -46,7 +46,7 @@ export type MediaOwnerModel =
   | ImpactStory
   | FinancialIndicator;
 
-const VALIDATION_KEYS = [
+export const VALIDATION_KEYS = [
   "logo-image",
   "thumbnail",
   "cover-image",
@@ -56,7 +56,7 @@ const VALIDATION_KEYS = [
   "documents",
   "general-documents",
   "spreadsheet"
-];
+] as const;
 
 export type ValidationKey = (typeof VALIDATION_KEYS)[number];
 

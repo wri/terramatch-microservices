@@ -1,12 +1,13 @@
 import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import { MediaConfiguration } from "../constants/media-owners";
 
 @Table({ tableName: "form_question_options", underscored: true, paranoid: true })
 export class FormQuestionOption extends Model<FormQuestionOption> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormQuestionOption";
 
-  static MEDIA = {
-    image: { multiple: true, validation: "photos" }
+  static readonly MEDIA: Record<string, MediaConfiguration> = {
+    image: { dbCollection: "image", multiple: true, validation: "photos" }
   };
 
   @PrimaryKey

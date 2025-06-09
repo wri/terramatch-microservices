@@ -1,6 +1,5 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, UUID, UUIDV4 } from "sequelize";
-import { Organisation } from "./organisation.entity";
 
 @Table({ tableName: "financial_indicators", underscored: true, paranoid: true })
 export class FinancialIndicator extends Model<FinancialIndicator> {

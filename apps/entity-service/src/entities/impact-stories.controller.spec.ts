@@ -11,7 +11,6 @@ import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 describe("ImpactStoriesController", () => {
   let controller: ImpactStoriesController;
   let impactStoryService: ImpactStoryService;
-  let policyService: PolicyService;
   let entitiesService: EntitiesService;
 
   const mockImpactStory = {
@@ -79,7 +78,6 @@ describe("ImpactStoriesController", () => {
 
     controller = module.get<ImpactStoriesController>(ImpactStoriesController);
     impactStoryService = module.get<ImpactStoryService>(ImpactStoryService);
-    policyService = module.get<PolicyService>(PolicyService);
     entitiesService = module.get<EntitiesService>(EntitiesService);
 
     jest.spyOn(impactStoryService, "getImpactStory").mockResolvedValue(mockImpactStory);

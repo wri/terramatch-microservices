@@ -36,7 +36,7 @@ export class ImpactStoriesController {
 
       const mediaByStory = await this.impactStoryService.getMediaForStories(data);
 
-      const organizationCountries = data.map(story => story.organisation?.countries || []);
+      const organizationCountries = data.map(story => story.organisation?.countries ?? []);
       const countriesMap = await this.impactStoryService.getCountriesForOrganizations(organizationCountries);
 
       for (const impact of data) {
@@ -45,8 +45,8 @@ export class ImpactStoriesController {
         }
         indexIds.push(impact.uuid);
 
-        const mediaCollection = mediaByStory[impact.id] || [];
-        const orgCountries = (impact.organisation?.countries || []).map(iso => countriesMap.get(iso)).filter(Boolean);
+        const mediaCollection = mediaByStory[impact.id] ?? [];
+        const orgCountries = (impact.organisation?.countries ?? []).map(iso => countriesMap.get(iso)).filter(Boolean);
         const organization = {
           name: impact.organisation?.name,
           uuid: impact.organisation?.uuid,
@@ -91,7 +91,7 @@ export class ImpactStoriesController {
 
     const mediaCollection = await Media.for(impactStory).findAll();
 
-    const organizationCountries = impactStory.organisation?.countries || [];
+    const organizationCountries = impactStory.organisation?.countries ?? [];
     const countriesMap = await this.impactStoryService.getCountriesForOrganizations([organizationCountries]);
     const orgCountries = organizationCountries.map(iso => countriesMap.get(iso)).filter(Boolean);
 

@@ -84,7 +84,8 @@ export class ImpactStoryService {
 
     for (const key of ["status", "projectUuid", "organisationUuid", "country", "uuid", "organisationType"]) {
       const fieldKey = associationFieldMap[key] ?? key;
-      if (query[key] != null && query[key] !== "") {
+      const value = query[key];
+      if (value != null && value !== "") {
         if (
           ![
             "title",
@@ -101,7 +102,7 @@ export class ImpactStoryService {
         }
         if (key === "projectUuid") {
           const project = await Project.findOne({
-            where: { uuid: query[key] },
+            where: { uuid: value },
             attributes: ["organisationId"]
           });
           if (project != null) {
@@ -109,22 +110,22 @@ export class ImpactStoryService {
               "$organisation.id$": project.organisationId
             });
           }
-        } else if (key == "country") {
+        } else if (key === "country") {
           builder.where({
             "$organisation.countries$": {
-              [Op.or]: Array.isArray(query[key])
-                ? query[key].map(country => ({
+              [Op.or]: Array.isArray(value)
+                ? value.map(country => ({
                     [Op.like]: `%"${country}"%`
                   }))
                 : [
                     {
-                      [Op.like]: `%"${query[key]}"%`
+                      [Op.like]: `%"${value}"%`
                     }
                   ]
             }
           });
         } else if (key === "uuid") {
-          const project = await Project.findOne({ where: { uuid: query[key] }, attributes: ["organisationId"] });
+          const project = await Project.findOne({ where: { uuid: value }, attributes: ["organisationId"] });
           if (project != null) {
             builder.where({
               "$organisation.id$": project.organisationId
@@ -132,7 +133,7 @@ export class ImpactStoryService {
           }
         } else {
           builder.where({
-            [fieldKey]: { [Op.like]: `%${query[key]}%` }
+            [fieldKey]: { [Op.like]: `%${value}%` }
           });
         }
       }

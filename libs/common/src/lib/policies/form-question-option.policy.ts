@@ -4,22 +4,6 @@ import { Op } from "sequelize";
 
 export class FormQuestionOptionPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.frameworks.length > 0) {
-      const forms = await Form.findAll({
-        where: { frameworkKey: { [Op.in]: this.frameworks } },
-        attributes: ["id"]
-      });
-      const formIds = forms.map(form => form.id);
-
-      this.builder.can(["read", "update", "delete", "uploadFiles"], FormQuestionOption, {
-        formQuestionId: { $in: formIds }
-      });
-    }
-
-    if (this.permissions.includes("forms-manage")) {
-      this.builder.can(["read", "create", "update", "delete", "uploadFiles"], FormQuestionOption);
-    }
-
     const user = await this.getUser();
     if (user != null) {
       const forms = await Form.findAll({

@@ -1,7 +1,12 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectAuthority, expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
-import { FormFactory, FormQuestionOptionFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import {
+  FormFactory,
+  FormQuestionFactory,
+  FormQuestionOptionFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 
 describe("FormQuestionOptionPolicy", () => {
   let service: PolicyService;
@@ -18,41 +23,32 @@ describe("FormQuestionOptionPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("should allow managing question options in your framework", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
-    const ppcForm = await FormFactory.create({ frameworkKey: "ppc" });
-    const tfForm = await FormFactory.create({ frameworkKey: "terrafund" });
-    const ppcOption = await FormQuestionOptionFactory.create({ formQuestionId: ppcForm.id });
-    const tfOption = await FormQuestionOptionFactory.create({ formQuestionId: tfForm.id });
-    await expectAuthority(service, {
-      can: [[["read", "update", "delete", "uploadFiles"], ppcOption]],
-      cannot: [[["read", "update", "delete", "uploadFiles"], tfOption]]
-    });
-  });
-
-  it("should allow managing question options with forms-manage permission", async () => {
-    mockUserId(123);
-    mockPermissions("forms-manage");
-    const form = await FormFactory.create();
-    const option = await FormQuestionOptionFactory.create({ formQuestionId: form.id });
-    await expectCan(service, ["read", "create", "update", "delete", "uploadFiles"], option);
-  });
-
-  it("should allow managing question options for forms created/updated by the user", async () => {
+  it("should allow uploading files for question options in forms updated by the user", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
     const form = await FormFactory.create({ updatedBy: user.id });
-    const option = await FormQuestionOptionFactory.create({ formQuestionId: form.id });
-    await expectCan(service, ["read", "update", "uploadFiles"], option);
+    const question = await FormQuestionFactory.create({ formSectionId: form.id });
+    const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
+    await expectCan(service, ["uploadFiles"], option);
+  });
+
+  it("should disallow uploading files for question options in forms not updated by the user", async () => {
+    const user = await UserFactory.create();
+    mockUserId(user.id);
+    mockPermissions();
+    const form = await FormFactory.create({ updatedBy: user.id + 1 }); // Different user
+    const question = await FormQuestionFactory.create({ formSectionId: form.id });
+    const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
+    await expectCannot(service, ["uploadFiles"], option);
   });
 
   it("should disallow managing question options without proper permissions", async () => {
     mockUserId(123);
     mockPermissions();
     const form = await FormFactory.create();
-    const option = await FormQuestionOptionFactory.create({ formQuestionId: form.id });
-    await expectCannot(service, ["read", "update", "delete", "uploadFiles"], option);
+    const question = await FormQuestionFactory.create({ formSectionId: form.id });
+    const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
+    await expectCannot(service, ["read", "create", "update", "delete"], option);
   });
 });

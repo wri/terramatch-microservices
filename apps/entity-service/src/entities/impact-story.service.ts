@@ -54,7 +54,7 @@ export class ImpactStoryService {
         country.iso,
         {
           label: country.country ?? null,
-          icon: country.iso ? `/flags/${country.iso.toLowerCase()}.svg` : null
+          icon: country.iso != null && country.iso !== "" ? `/flags/${country.iso.toLowerCase()}.svg` : null
         }
       ])
     );

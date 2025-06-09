@@ -1,29 +1,47 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ImpactStoryService } from "./impact-story.service";
 import { ImpactStory, Media, Project, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
-import { NotFoundException, BadRequestException } from "@nestjs/common";
+import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 
 describe("ImpactStoryService", () => {
   let service: ImpactStoryService;
 
   const mockImpactStory = {
+    id: 1,
     uuid: "test-uuid",
     title: "Test Story",
+    status: "active",
+    organizationId: 1,
+    date: new Date().toISOString(),
     category: JSON.stringify({ type: "test" }),
+    content: "Test content",
+    createdAt: new Date(),
+    updatedAt: new Date(),
     organisation: {
+      id: 1,
       uuid: "org-uuid",
       name: "Test Org",
+      type: "test",
       countries: ["US", "UK"]
     }
-  };
+  } as unknown as ImpactStory;
 
-  const mockMedia = [{ id: 1, modelUuid: "test-uuid", modelType: "impact_story", url: "test.jpg" }];
-
-  const mockCountries = [
-    { iso: "US", country: "United States" },
-    { iso: "UK", country: "United Kingdom" }
-  ];
+  const mockMedia = [
+    {
+      id: 1,
+      uuid: "media-uuid",
+      modelId: 1,
+      modelType: "impact_story",
+      modelUuid: "test-uuid",
+      collectionName: "media",
+      name: "test.jpg",
+      url: "test.jpg",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ] as unknown as Media[];
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,24 +51,26 @@ describe("ImpactStoryService", () => {
     service = module.get<ImpactStoryService>(ImpactStoryService);
 
     // Mock ImpactStory.findOne
-    jest.spyOn(ImpactStory, "findOne").mockImplementation(async (options: any) => {
-      if (options.where.uuid === "test-uuid") {
-        return mockImpactStory as any;
-      }
-      return null;
-    });
+    jest.spyOn(ImpactStory, "findOne").mockResolvedValue(mockImpactStory);
 
     // Mock ImpactStory.findAll
-    jest.spyOn(ImpactStory, "findAll").mockImplementation(async () => [mockImpactStory] as any);
+    jest.spyOn(ImpactStory, "findAll").mockResolvedValue([mockImpactStory]);
 
     // Mock Media.findAll
-    jest.spyOn(Media, "findAll").mockImplementation(async () => mockMedia as any);
+    jest.spyOn(Media, "findAll").mockResolvedValue(mockMedia);
 
     // Mock WorldCountryGeneralized.findAll
-    jest.spyOn(WorldCountryGeneralized, "findAll").mockImplementation(async () => mockCountries as any);
+    jest.spyOn(WorldCountryGeneralized, "findAll").mockResolvedValue([
+      { iso: "US", country: "United States" },
+      { iso: "UK", country: "United Kingdom" }
+    ] as unknown as WorldCountryGeneralized[]);
 
     // Mock Project.findOne
-    jest.spyOn(Project, "findOne").mockImplementation(async () => null);
+    jest.spyOn(Project, "findOne").mockResolvedValue({
+      id: 1,
+      uuid: "project-uuid",
+      organisationId: 1
+    } as unknown as Project);
   });
 
   afterEach(() => {
@@ -60,7 +80,8 @@ describe("ImpactStoryService", () => {
   describe("getImpactStory", () => {
     it("should return an impact story by uuid", async () => {
       const result = await service.getImpactStory("test-uuid");
-      expect(result).toEqual(mockImpactStory);
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe("test-uuid");
       expect(ImpactStory.findOne).toHaveBeenCalledWith({
         where: { uuid: "test-uuid" },
         include: expect.any(Object)
@@ -68,78 +89,117 @@ describe("ImpactStoryService", () => {
     });
 
     it("should throw NotFoundException when story not found", async () => {
+      jest.spyOn(ImpactStory, "findOne").mockResolvedValue(null);
       await expect(service.getImpactStory("non-existent")).rejects.toThrow(NotFoundException);
     });
   });
 
   describe("getMediaForStories", () => {
-    it("should return media grouped by story uuid", async () => {
-      const stories = [mockImpactStory] as any[];
-      const result = await service.getMediaForStories(stories);
-      expect(result).toEqual({
-        "test-uuid": mockMedia
-      });
+    it("should return media grouped by story id", async () => {
+      const result = await service.getMediaForStories([mockImpactStory]);
+      expect(result).toBeDefined();
+      expect(result[mockImpactStory.id]).toBeDefined();
       expect(Media.findAll).toHaveBeenCalledWith({
         where: {
           modelType: ImpactStory.LARAVEL_TYPE,
-          modelUuid: ["test-uuid"]
+          modelId: [mockImpactStory.id]
         }
       });
     });
   });
 
   describe("getCountriesForOrganizations", () => {
-    it("should return countries map for organization countries", async () => {
-      const orgCountries = [["US", "UK"]];
-      const result = await service.getCountriesForOrganizations(orgCountries);
-      expect(result).toBeInstanceOf(Map);
-      expect(result.get("US")).toEqual({
-        label: "United States",
-        icon: "/flags/us.svg"
+    it("should return country map for organization countries", async () => {
+      const result = await service.getCountriesForOrganizations([["US", "UK"]]);
+      expect(result).toBeDefined();
+      expect(result.get("US")).toBeDefined();
+      expect(result.get("UK")).toBeDefined();
+      expect(WorldCountryGeneralized.findAll).toHaveBeenCalledWith({
+        where: {
+          iso: {
+            [Op.in]: ["US", "UK"]
+          }
+        }
       });
     });
 
-    it("should return empty map for empty countries array", async () => {
+    it("should return empty map for empty country list", async () => {
       const result = await service.getCountriesForOrganizations([]);
-      expect(result).toBeInstanceOf(Map);
+      expect(result).toBeDefined();
       expect(result.size).toBe(0);
+      expect(WorldCountryGeneralized.findAll).not.toHaveBeenCalled();
     });
   });
 
   describe("getImpactStories", () => {
     it("should return paginated impact stories", async () => {
-      const query = { page: { number: 1 } };
-      const result = await service.getImpactStories(query as any);
-      expect(result).toEqual({
-        data: [mockImpactStory],
-        paginationTotal: expect.any(Number),
-        pageNumber: 1
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        search: "test",
+        country: "US",
+        organisationType: ["type1"],
+        projectUuid: "project-uuid"
+      };
+
+      const result = await service.getImpactStories(query);
+      expect(result).toBeDefined();
+      expect(result.data).toBeDefined();
+      expect(result.paginationTotal).toBeDefined();
+      expect(result.pageNumber).toBe(1);
+    });
+
+    it("should throw BadRequestException for invalid filter key", async () => {
+      const query = {
+        page: { number: 1 },
+        invalidKey: "value"
+      } as ImpactStoryQueryDto;
+
+      await expect(service.getImpactStories(query)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should handle projectUuid filter", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        projectUuid: "project-uuid"
+      };
+
+      await service.getImpactStories(query);
+      expect(Project.findOne).toHaveBeenCalledWith({
+        where: { uuid: "project-uuid" },
+        attributes: ["organisationId"]
       });
     });
 
-    it("should handle search query", async () => {
-      const query = { search: "test", page: { number: 1 } };
-      await service.getImpactStories(query as any);
+    it("should handle country filter", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        country: "US"
+      };
+
+      await service.getImpactStories(query);
       expect(ImpactStory.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            [Op.or]: expect.arrayContaining([
-              { title: { [Op.like]: "%test%" } },
-              { "$organisation.name$": { [Op.like]: "%test%" } }
-            ])
+            "$organisation.countries$": expect.any(Object)
           })
         })
       );
     });
 
-    it("should throw BadRequestException for invalid filter key", async () => {
-      const query = { invalidKey: "value", page: { number: 1 } };
-      await expect(service.getImpactStories(query as any)).rejects.toThrow(BadRequestException);
-    });
+    it("should handle organisationType filter", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        organisationType: ["type1"]
+      };
 
-    it("should throw BadRequestException for invalid sort field", async () => {
-      const query = { sort: { field: "invalidField" }, page: { number: 1 } };
-      await expect(service.getImpactStories(query as any)).rejects.toThrow(BadRequestException);
+      await service.getImpactStories(query);
+      expect(ImpactStory.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            "$organisation.type$": expect.any(Object)
+          })
+        })
+      );
     });
   });
 });

@@ -6,6 +6,7 @@ import { EntitiesService } from "./entities.service";
 import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util/json-api-builder";
+import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 
 describe("ImpactStoriesController", () => {
   let controller: ImpactStoriesController;
@@ -101,7 +102,7 @@ describe("ImpactStoriesController", () => {
     // Mock Media.for().findAll
     jest.spyOn(Media, "for").mockReturnValue({
       findAll: jest.fn().mockResolvedValue(mockMedia)
-    } as any);
+    } as unknown as ReturnType<typeof Media.for>);
 
     // Mock entitiesService.mapMediaCollection
     jest.spyOn(entitiesService, "mapMediaCollection").mockReturnValue({
@@ -115,8 +116,8 @@ describe("ImpactStoriesController", () => {
 
   describe("impactStoryIndex", () => {
     it("should return paginated impact stories with media and countries", async () => {
-      const query = { page: { number: 1 } };
-      const result = (await controller.impactStoryIndex(query as any)) as JsonApiDocument;
+      const query: ImpactStoryQueryDto = { page: { number: 1 } };
+      const result = (await controller.impactStoryIndex(query)) as JsonApiDocument;
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
@@ -137,8 +138,8 @@ describe("ImpactStoriesController", () => {
         pageNumber: 1
       });
 
-      const query = { page: { number: 1 } };
-      const result = (await controller.impactStoryIndex(query as any)) as JsonApiDocument;
+      const query: ImpactStoryQueryDto = { page: { number: 1 } };
+      const result = (await controller.impactStoryIndex(query)) as JsonApiDocument;
 
       expect(result.data).toBeDefined();
       expect(result.meta.indices?.[0].total).toBe(0);

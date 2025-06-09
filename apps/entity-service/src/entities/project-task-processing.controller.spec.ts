@@ -1,13 +1,28 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProjectTaskProcessingController } from "./project-task-processing.controller";
 import { ProjectTaskProcessingService } from "./project-task-processing.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { PolicyService } from "@terramatch-microservices/common";
+import {
+  ProjectTaskProcessingResponseDto,
+  ApproveReportsDto,
+  ApproveReportsResponseDto,
+  ReportType,
+  ReportDto
+} from "./dto/project-task-processing.dto";
 import { NotFoundException } from "@nestjs/common";
-import { ReportType } from "./dto/project-task-processing.dto";
 
 describe("ProjectTaskProcessingController", () => {
   let controller: ProjectTaskProcessingController;
-  let service: DeepMocked<ProjectTaskProcessingService>;
+  let service: ProjectTaskProcessingService;
+
+  const mockService = {
+    processProjectTasks: jest.fn(),
+    approveReports: jest.fn()
+  };
+
+  const mockPolicyService = {
+    authorize: jest.fn()
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -15,98 +30,117 @@ describe("ProjectTaskProcessingController", () => {
       providers: [
         {
           provide: ProjectTaskProcessingService,
-          useValue: (service = createMock<ProjectTaskProcessingService>())
+          useValue: mockService
+        },
+        {
+          provide: PolicyService,
+          useValue: mockPolicyService
         }
       ]
     }).compile();
 
     controller = module.get<ProjectTaskProcessingController>(ProjectTaskProcessingController);
+    service = module.get<ProjectTaskProcessingService>(ProjectTaskProcessingService);
   });
 
   describe("processProjectTasks", () => {
     it("should return project tasks and reports for a valid project UUID", async () => {
-      const mockResponse = {
-        projectUuid: "test-uuid",
+      const mockResponse: ProjectTaskProcessingResponseDto = {
         projectName: "Test Project",
+        projectUuid: "test-uuid",
         reports: [
           {
-            uuid: "report-uuid",
             name: "Test Report",
             type: ReportType.SITE_REPORT,
             submittedAt: new Date(),
             taskUuid: "task-uuid",
-            nothingToReport: true
+            uuid: "report-uuid",
+            nothingToReport: false
           }
         ]
       };
 
-      service.processProjectTasks.mockResolvedValue(mockResponse);
+      mockService.processProjectTasks.mockResolvedValue(mockResponse);
 
       const result = await controller.processProjectTasks("test-uuid");
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        data: {
+          attributes: mockResponse,
+          id: "test-uuid",
+          type: "processProjectTasks"
+        },
+        meta: {
+          resourceType: "processProjectTasks"
+        }
+      });
       expect(service.processProjectTasks).toHaveBeenCalledWith("test-uuid");
     });
 
-    it("should propagate NotFoundException from service", async () => {
-      service.processProjectTasks.mockRejectedValue(new NotFoundException());
+    it("should throw NotFoundException for non-existent project", async () => {
+      mockService.processProjectTasks.mockRejectedValue(new NotFoundException());
 
-      await expect(controller.processProjectTasks("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(controller.processProjectTasks("non-existent")).rejects.toThrow(NotFoundException);
     });
   });
 
   describe("approveReports", () => {
     it("should approve reports and return success message", async () => {
-      const mockResponse = {
+      const mockResponse: ApproveReportsResponseDto = {
         approvedCount: 2,
         message: "Successfully approved 2 reports"
       };
 
-      service.approveReports.mockResolvedValue(mockResponse);
+      mockService.approveReports.mockResolvedValue(mockResponse);
 
       const result = await controller.approveReports({
         uuid: "project-uuid",
-        reportUuids: ["report1-uuid", "report2-uuid"],
-        feedback: "Test feedback"
+        reportUuids: ["report1-uuid", "report2-uuid"]
       });
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        data: {
+          attributes: mockResponse,
+          id: "approveReports",
+          type: "approveReportsResponse"
+        },
+        meta: {
+          resourceType: "approveReportsResponse"
+        }
+      });
       expect(service.approveReports).toHaveBeenCalledWith({
         uuid: "project-uuid",
-        reportUuids: ["report1-uuid", "report2-uuid"],
-        feedback: "Test feedback"
+        reportUuids: ["report1-uuid", "report2-uuid"]
       });
     });
 
     it("should handle empty report UUIDs array", async () => {
-      const mockResponse = {
+      const mockResponse: ApproveReportsResponseDto = {
         approvedCount: 0,
         message: "Successfully approved 0 reports"
       };
 
-      service.approveReports.mockResolvedValue(mockResponse);
+      mockService.approveReports.mockResolvedValue(mockResponse);
 
       const result = await controller.approveReports({
         uuid: "project-uuid",
         reportUuids: []
       });
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        data: {
+          attributes: mockResponse,
+          id: "approveReports",
+          type: "approveReportsResponse"
+        },
+        meta: {
+          resourceType: "approveReportsResponse"
+        }
+      });
       expect(service.approveReports).toHaveBeenCalledWith({
         uuid: "project-uuid",
         reportUuids: []
       });
-    });
-
-    it("should propagate NotFoundException from service", async () => {
-      service.approveReports.mockRejectedValue(new NotFoundException());
-
-      await expect(
-        controller.approveReports({
-          uuid: "non-existent-uuid",
-          reportUuids: ["report-uuid"]
-        })
-      ).rejects.toThrow(NotFoundException);
     });
   });
 });

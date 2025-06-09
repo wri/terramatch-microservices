@@ -32,10 +32,10 @@ export class ProjectTaskProcessingController {
     summary: "Approve reports that are marked with nothingToReport=true"
   })
   @JsonApiResponse(ApproveReportsResponseDto)
-  async approveReports(@Body() dto: ApproveReportsDto) {
-    const response = await this.projectTaskProcessingService.approveReports(dto.reportUuids);
+  async approveReports(@Body() params: ApproveReportsDto) {
+    const response = await this.projectTaskProcessingService.approveReports(params);
     const document = buildJsonApi(ApproveReportsResponseDto);
-    document.addData("approve-reports", new ApproveReportsResponseDto(response));
+    document.addData("approveReports", new ApproveReportsResponseDto(response));
     return document.serialize();
   }
 }

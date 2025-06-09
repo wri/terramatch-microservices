@@ -1,7 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectAuthority, expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
-import { Form } from "@terramatch-microservices/database/entities";
 import { FormFactory, UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("FormPolicy", () => {

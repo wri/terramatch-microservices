@@ -54,6 +54,9 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  shortName: string | null;
+
   @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
 

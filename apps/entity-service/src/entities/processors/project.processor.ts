@@ -53,7 +53,7 @@ export class ProjectProcessor extends EntityProcessor<
     ]);
 
     if (query.sort?.field != null) {
-      if (["name", "plantingStartDate", "country"].includes(query.sort.field)) {
+      if (["name", "plantingStartDate", "country", "shortName"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
@@ -102,6 +102,10 @@ export class ProjectProcessor extends EntityProcessor<
 
     if (query.cohort != null && query.cohort.length > 0) {
       builder.where({ cohort: { [Op.in]: query.cohort } });
+    }
+
+    if (query.shortName != null) {
+      builder.where({ shortName: query.shortName });
     }
 
     if (query.search != null || query.searchFilter != null) {

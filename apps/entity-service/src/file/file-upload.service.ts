@@ -106,8 +106,6 @@ export class FileUploadService {
       createdBy: this.entitiesService.userId
     };
 
-    console.log(media);
-
     const dbMedia = new Media(media as Media);
     return dbMedia.save();
   }

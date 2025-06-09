@@ -1,8 +1,9 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants/framework";
 import { User } from "./user.entity";
 
+@Table({ tableName: "v2_forms", underscored: true, paranoid: true })
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 

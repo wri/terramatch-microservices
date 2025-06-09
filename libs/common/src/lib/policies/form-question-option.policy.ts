@@ -1,6 +1,5 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { FormQuestionOption, Form, User } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
 
 export class FormQuestionOptionPolicy extends UserPermissionsPolicy {
   async addRules() {

@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectAuthority, expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import {
   FormFactory,
   FormQuestionFactory,

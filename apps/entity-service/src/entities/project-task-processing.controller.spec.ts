@@ -4,10 +4,8 @@ import { ProjectTaskProcessingService } from "./project-task-processing.service"
 import { PolicyService } from "@terramatch-microservices/common";
 import {
   ProjectTaskProcessingResponseDto,
-  ApproveReportsDto,
   ApproveReportsResponseDto,
-  ReportType,
-  ReportDto
+  ReportType
 } from "./dto/project-task-processing.dto";
 import { NotFoundException } from "@nestjs/common";
 

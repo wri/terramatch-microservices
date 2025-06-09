@@ -14,7 +14,7 @@ import { ExtractedRequestData, FileUploadService } from "../file/file-upload.ser
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
+import { ApiOperation } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { MediaDto } from "./dto/media.dto";
@@ -23,7 +23,6 @@ import { EntitiesService } from "./entities.service";
 import "multer";
 
 @Controller("entities/v3/files")
-@ApiExtraModels(MediaDto)
 export class FileUploadController {
   constructor(
     private readonly fileUploadService: FileUploadService,

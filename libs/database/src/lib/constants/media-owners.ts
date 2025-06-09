@@ -46,10 +46,24 @@ export type MediaOwnerModel =
   | ImpactStory
   | FinancialIndicator;
 
+const VALIDATION_KEYS = [
+  "logo-image",
+  "thumbnail",
+  "cover-image",
+  "cover-image-with-svg",
+  "photos",
+  "pdf",
+  "documents",
+  "general-documents",
+  "spreadsheet"
+];
+
+export type ValidationKey = (typeof VALIDATION_KEYS)[number];
+
 export type MediaConfiguration = {
   dbCollection?: string;
   multiple: boolean;
-  validation?: string;
+  validation: ValidationKey;
 };
 export type EntityMediaOwnerClass<T extends MediaOwnerModel> = ModelCtor<T> &
   ModelStatic<T> & { LARAVEL_TYPE: string } & { MEDIA: Record<string, MediaConfiguration> };

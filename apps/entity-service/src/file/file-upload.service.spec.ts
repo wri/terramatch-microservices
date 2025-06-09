@@ -42,17 +42,11 @@ describe("FileUploadService", () => {
       const file = { mimetype: "image/png" } as Express.Multer.File;
       expect(svc.getMediaType(file)).toBe("media");
     });
-
-    it("should return undefined for an unknown mimetype", () => {
-      const svc = service as unknown as PrivateFileUploadService;
-      const file = { mimetype: "application/zip" } as Express.Multer.File;
-      expect(svc.getMediaType(file)).toBeUndefined();
-    });
   });
 
   describe("getConfiguration", () => {
     const COLLECTION = "testCollection";
-    const config: MediaConfiguration = { multiple: false, validation: undefined };
+    const config: MediaConfiguration = { multiple: false, validation: "documents" };
     let fakeModel: EntityMediaOwnerClass<MediaOwnerModel>;
 
     beforeEach(() => {
@@ -77,9 +71,9 @@ describe("FileUploadService", () => {
 
     it("should do nothing if configuration.validation is not set", () => {
       const svc = service as unknown as PrivateFileUploadService;
-      const cfg: MediaConfiguration = { multiple: true };
+      const cfg: MediaConfiguration = { multiple: true, validation: "documents" };
       const file = { mimetype: "any/type", size: 0 } as Express.Multer.File;
-      expect(svc.validateFile(file, cfg)).toBe(false);
+      expect(() => svc.validateFile(file, cfg)).toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException for unsupported mime type", () => {
@@ -88,10 +82,10 @@ describe("FileUploadService", () => {
       expect(() => svc.validateFile(file, generalConfig)).toThrow(BadRequestException);
     });
 
-    it("should return false for size above limit", () => {
+    it("should throw and error when file size is above limit", () => {
       const svc = service as unknown as PrivateFileUploadService;
       const file = { mimetype: "application/pdf", size: 10 * 1024 * 1024 + 1 } as Express.Multer.File;
-      expect(svc.validateFile(file, generalConfig)).toBe(false);
+      expect(() => svc.validateFile(file, generalConfig)).toThrow(BadRequestException);
     });
   });
 
@@ -105,7 +99,7 @@ describe("FileUploadService", () => {
 
     beforeEach(() => {
       originalModel = MEDIA_OWNER_MODELS[ENTITY];
-      const cfg: MediaConfiguration = { multiple: false, validation: undefined };
+      const cfg: MediaConfiguration = { multiple: false, validation: "documents" };
       const fakeModel = {
         MEDIA: { [COLLECTION]: cfg },
         LARAVEL_TYPE: "laravel"

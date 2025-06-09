@@ -31,15 +31,23 @@ export class Project extends Model<Project> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
   static readonly MEDIA = {
-    media: { dbCollection: "media", multiple: true },
+    media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
-    file: { dbCollection: "file", multiple: true },
-    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true },
-    documentFiles: { dbCollection: "document_files", multiple: true },
-    programmeSubmission: { dbCollection: "programme_submission", multiple: true },
-    detailedProjectBudget: { dbCollection: "detailed_project_budget", multiple: false },
-    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true }
+    file: { dbCollection: "file", multiple: true, validation: "general-documents" },
+    otherAdditionalDocuments: {
+      dbCollection: "other_additional_documents",
+      multiple: true,
+      validation: "general-documents"
+    },
+    photos: { dbCollection: "photos", multiple: true, validation: "photos" },
+    documentFiles: { dbCollection: "document_files", multiple: true, validation: "general-documents" },
+    programmeSubmission: { dbCollection: "programme_submission", multiple: true, validation: "general-documents" },
+    detailedProjectBudget: {
+      dbCollection: "detailed_project_budget",
+      multiple: false,
+      validation: "general-documents"
+    },
+    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
   } as const;
 
   static forOrganisation(organisationId: number) {

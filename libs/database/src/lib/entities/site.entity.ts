@@ -44,14 +44,22 @@ export class Site extends Model<Site> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
   static readonly MEDIA = {
-    media: { dbCollection: "media", multiple: true },
-    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
-    file: { dbCollection: "file", multiple: true },
-    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true },
-    treeSpecies: { dbCollection: "tree_species", multiple: true },
-    documentFiles: { dbCollection: "document_files", multiple: true },
-    stratificationForHeterogeneity: { dbCollection: "stratification_for_heterogeneity", multiple: false }
+    media: { dbCollection: "media", multiple: true, validation: "general-documents" },
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
+    file: { dbCollection: "file", multiple: true, validation: "general-documents" },
+    otherAdditionalDocuments: {
+      dbCollection: "other_additional_documents",
+      multiple: true,
+      validation: "general-documents"
+    },
+    photos: { dbCollection: "photos", multiple: true, validation: "photos" },
+    treeSpecies: { dbCollection: "tree_species", multiple: true, validation: "general-documents" },
+    documentFiles: { dbCollection: "document_files", multiple: true, validation: "general-documents" },
+    stratificationForHeterogeneity: {
+      dbCollection: "stratification_for_heterogeneity",
+      multiple: false,
+      validation: "general-documents"
+    }
   } as const;
 
   static approved() {

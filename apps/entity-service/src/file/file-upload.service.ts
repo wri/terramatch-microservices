@@ -10,7 +10,8 @@ import {
   EntityMediaOwnerClass,
   MediaOwnerModel,
   MediaOwnerType,
-  MediaConfiguration
+  MediaConfiguration,
+  ValidationKey
 } from "@terramatch-microservices/database/constants/media-owners";
 
 export interface ExtractedRequestData {
@@ -30,7 +31,10 @@ const mappingMimeTypes = {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
 };
 
-const VALIDATION = {
+const VALIDATION: {
+  VALIDATION_RULES: Record<ValidationKey, string>;
+  VALIDATION_FILE_TYPES: Record<ValidationKey, "media" | "documents">;
+} = {
   VALIDATION_RULES: {
     "logo-image": "mimes:jpg,png",
     "cover-image": "mimes:jpg,png",
@@ -43,6 +47,7 @@ const VALIDATION = {
   },
   VALIDATION_FILE_TYPES: {
     "logo-image": "media",
+    thumbnail: "media",
     "cover-image": "media",
     "cover-image-with-svg": "media",
     photos: "media",
@@ -89,7 +94,7 @@ export class FileUploadService {
       name: file.originalname,
       fileName: file.originalname,
       mimeType: file.mimetype,
-      fileType: this.getMediaType(file),
+      fileType: this.getMediaType(file, configuration),
       isPublic: body.isPublic,
       lat: body.lat,
       lng: body.lng,
@@ -121,7 +126,7 @@ export class FileUploadService {
     return configuration;
   }
 
-  private getMediaType(file: Express.Multer.File) {
+  private getMediaType(file: Express.Multer.File, configuration: MediaConfiguration) {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
     const videos = ["video/mp4"];
@@ -134,7 +139,7 @@ export class FileUploadService {
       return "media";
     }
 
-    return undefined;
+    return VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
   }
 
   private validateFile(file: Express.Multer.File, configuration: MediaConfiguration): boolean {
@@ -142,8 +147,7 @@ export class FileUploadService {
       return false;
     }
 
-    const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
-    const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
+    const validationRules = VALIDATION.VALIDATION_RULES[configuration.validation];
 
     const validations = validationRules.split("|");
 

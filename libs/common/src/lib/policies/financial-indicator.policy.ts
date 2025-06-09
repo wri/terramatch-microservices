@@ -4,16 +4,11 @@ import { FinancialIndicator, User } from "@terramatch-microservices/database/ent
 
 export class FinancialIndicatorPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.includes("projects-manage")) {
-      const user = await this.getUser();
-      if (user != null) {
-        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
-        if (projectIds.length > 0) {
-          this.builder.can(["uploadFiles"], FinancialIndicator, {
-            id: { $in: projectIds }
-          });
-        }
-      }
+    const user = await this.getUser();
+    if (user?.organisationId != null) {
+      this.builder.can(["uploadFiles"], FinancialIndicator, {
+        organisationId: user.organisationId
+      });
     }
   }
 
@@ -23,8 +18,7 @@ export class FinancialIndicatorPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["id"],
-      include: [{ association: "projects", attributes: ["id"] }]
+      attributes: ["id", "organisationId"]
     }));
   }
 }

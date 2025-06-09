@@ -24,7 +24,7 @@ type AuditStatusType = (typeof TYPES)[number];
 export class AuditStatus extends Model<AuditStatus> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus";
   static readonly MEDIA = {
-    attachments: { multiple: true }
+    attachments: { multiple: true, validation: "general-documents" }
   };
 
   static for(auditable: LaravelModel) {

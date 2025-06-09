@@ -19,15 +19,6 @@ export class MediaOwnerProcessor {
     return ["id", "frameworkKey", "projectId"];
   }
 
-  async process(mediaOwner: MediaOwnerModel) {
-    const baseEntity = await this.getBaseEntity();
-
-    return {
-      ...mediaOwner,
-      ...baseEntity
-    };
-  }
-
   private _baseEntity: MediaOwnerModel;
   async getBaseEntity(): Promise<MediaOwnerModel> {
     if (this._baseEntity != null) return this._baseEntity;

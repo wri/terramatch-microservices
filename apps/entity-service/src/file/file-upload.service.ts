@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
-import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities/entities.service";
@@ -140,7 +139,11 @@ export class FileUploadService {
   }
 
   private validateFile(file: Express.Multer.File, configuration: MediaConfiguration) {
-    const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation!];
+    if (configuration.validation == null) {
+      return;
+    }
+
+    const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
     const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
 
     const validations = validationRules.split("|");

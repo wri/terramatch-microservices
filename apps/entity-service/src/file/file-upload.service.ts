@@ -1,27 +1,23 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
-import {
-  ENTITY_MODELS,
-  EntityClass,
-  EntityModel,
-  EntityType
-} from "@terramatch-microservices/database/constants/entities";
+import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import "multer";
-import { MediaOwnerModel, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import {
+  MEDIA_OWNER_MODELS,
+  EntityMediaOwnerClass,
+  MediaOwnerModel,
+  MediaOwnerType,
+  MediaConfiguration
+} from "@terramatch-microservices/database/constants/media-owners";
 
 export interface ExtractedRequestData {
   isPublic: boolean;
   lat: number;
   lng: number;
-}
-
-interface MediaConfiguration {
-  validation: string;
-  validationFileTypes: string;
 }
 
 const mappingMimeTypes = {
@@ -74,9 +70,9 @@ export class FileUploadService {
       throw new BadRequestException("No file provided");
     }
 
-    const entityModel = ENTITY_MODELS[entity];
+    const mediaOwnerModel = MEDIA_OWNER_MODELS[entity];
 
-    const configuration = this.getConfiguration(entityModel, collection);
+    const configuration = this.getConfiguration(mediaOwnerModel, collection);
 
     this.validateFile(file, configuration);
 
@@ -89,7 +85,7 @@ export class FileUploadService {
 
     const media: Partial<Media> = {
       collectionName: collection,
-      modelType: entityModel.LARAVEL_TYPE,
+      modelType: mediaOwnerModel.LARAVEL_TYPE,
       modelId: model.id,
       name: file.originalname,
       fileName: file.originalname,
@@ -116,9 +112,10 @@ export class FileUploadService {
     return dbMedia.save();
   }
 
-  private getConfiguration(entityModel: EntityClass<EntityModel>, collection: string): MediaConfiguration {
-    // TODO: ask Nathan what is the best way to check if a EntityClass has a MEDIA property and how to type it
-    // @ts-ignore
+  private getConfiguration(
+    entityModel: EntityMediaOwnerClass<MediaOwnerModel>,
+    collection: string
+  ): MediaConfiguration {
     const configuration = entityModel.MEDIA[collection];
     if (configuration == null) {
       throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
@@ -145,7 +142,7 @@ export class FileUploadService {
   }
 
   private validateFile(file: Express.Multer.File, configuration: MediaConfiguration) {
-    const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
+    const validationFileTypes = VALIDATION.VALIDATION_FILE_TYPES[configuration.validation!];
     const validationRules = VALIDATION.VALIDATION_RULES[validationFileTypes];
 
     const validations = validationRules.split("|");

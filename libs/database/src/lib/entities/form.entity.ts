@@ -6,6 +6,11 @@ import { User } from "./user.entity";
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 
+  static readonly MEDIA = {
+    banner: { validation: "cover-image-with-svg", multiple: false },
+    document: { validation: "general-documents", multiple: false }
+  };
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

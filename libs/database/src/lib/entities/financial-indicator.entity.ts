@@ -5,6 +5,10 @@ import { BIGINT, UUID, UUIDV4 } from "sequelize";
 export class FinancialIndicator extends Model<FinancialIndicator> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FinancialIndicator";
 
+  static readonly MEDIA = {
+    documentation: { dbCollection: "documentation", multiple: true, validation: "general-documents" }
+  } as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

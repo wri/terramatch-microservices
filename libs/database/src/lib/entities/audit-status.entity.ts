@@ -23,6 +23,9 @@ type AuditStatusType = (typeof TYPES)[number];
 })
 export class AuditStatus extends Model<AuditStatus> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus";
+  static readonly MEDIA = {
+    attachments: { multiple: true }
+  };
 
   static for(auditable: LaravelModel) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;

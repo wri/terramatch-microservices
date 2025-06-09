@@ -5,6 +5,10 @@ import { BIGINT, UUID, UUIDV4 } from "sequelize";
 export class ImpactStory extends Model<ImpactStory> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ImpactStory";
 
+  static readonly MEDIA = {
+    thumbnail: { dbCollection: "thumbnail", multiple: false, validation: "logo-image" }
+  } as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

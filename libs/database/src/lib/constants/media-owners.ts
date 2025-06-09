@@ -45,7 +45,14 @@ export type MediaOwnerModel =
   | FundingProgramme
   | ImpactStory
   | FinancialIndicator;
-export type EntityMediaOwnerClass<T extends MediaOwnerModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
+
+export type MediaConfiguration = {
+  dbCollection?: string;
+  multiple: boolean;
+  validation?: string;
+};
+export type EntityMediaOwnerClass<T extends MediaOwnerModel> = ModelCtor<T> &
+  ModelStatic<T> & { LARAVEL_TYPE: string } & { MEDIA: Record<string, MediaConfiguration> };
 
 export const MEDIA_OWNER_MODELS: { [E in MediaOwnerType]: EntityMediaOwnerClass<MediaOwnerModel> } = {
   projects: Project,

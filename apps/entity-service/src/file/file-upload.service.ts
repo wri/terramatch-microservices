@@ -43,7 +43,8 @@ const VALIDATION: {
     pdf: "mimes:pdf",
     documents: "mimes:pdf,xls,xlsx,csv,txt,doc,docx,bin",
     "general-documents": "mimes:pdf,xls,xlsx,csv,txt,png,jpg,doc,mp4,docx,bin|size:5MB",
-    spreadsheet: "mimes:pdf,xls,xlsx,csv,txt|size:5MB"
+    spreadsheet: "mimes:pdf,xls,xlsx,csv,txt|size:5MB",
+    thumbnail: "mimes:jpg,png"
   },
   VALIDATION_FILE_TYPES: {
     "logo-image": "media",
@@ -52,6 +53,7 @@ const VALIDATION: {
     "cover-image-with-svg": "media",
     photos: "media",
     pdf: "media",
+    documents: "documents",
     "general-documents": "documents",
     spreadsheet: "documents"
   }

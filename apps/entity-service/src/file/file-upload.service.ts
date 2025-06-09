@@ -154,7 +154,7 @@ export class FileUploadService {
     if (mimeTypeValidation != null) {
       const mimeTypes = mimeTypeValidation.split(":")[1].split(",");
 
-      const abbreviatedMimeType = mappingMimeTypes[file.mimetype];
+      const abbreviatedMimeType = mappingMimeTypes[file.mimetype as keyof typeof mappingMimeTypes];
       if (!mimeTypes.includes(abbreviatedMimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
         throw new BadRequestException(`Invalid file type: ${file.mimetype}`);

@@ -152,7 +152,7 @@ export class FileUploadService {
     const sizeValidation = validations.find(validation => validation.startsWith("size:"));
 
     if (mimeTypeValidation != null) {
-      const mimeTypes = mimeTypeValidation.split(":")[1].split(",");
+      const mimeTypes: string[] = mimeTypeValidation.split(":")[1].split(",");
 
       const abbreviatedMimeType = mappingMimeTypes[file.mimetype as keyof typeof mappingMimeTypes];
       if (!mimeTypes.includes(abbreviatedMimeType)) {

@@ -4,21 +4,17 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 
 class TreeRestorationData {
   @ApiProperty({
-    description: "Due date for this restoration data",
-    type: String,
-    example: "2024-01-01T00:00:00.000000Z"
+    description: "Due date for this restoration data"
   })
-  dueDate: string;
+  dueDate: Date;
 
   @ApiProperty({
-    description: "Number of tree species for this period",
-    type: Number
+    description: "Number of tree species for this period"
   })
   treeSpeciesAmount: number;
 
   @ApiProperty({
-    description: "Percentage of tree species for this period",
-    type: Number
+    description: "Percentage of tree species for this period"
   })
   treeSpeciesPercentage: number;
 }
@@ -30,20 +26,17 @@ export class TreeRestorationGoalDto {
   }
 
   @ApiProperty({
-    description: "Total number of trees grown goal for for-profit organizations",
-    type: Number
+    description: "Total number of trees grown goal for for-profit organizations"
   })
   forProfitTreeCount: number;
 
   @ApiProperty({
-    description: "Total number of trees grown goal for non-profit organizations",
-    type: Number
+    description: "Total number of trees grown goal for non-profit organizations"
   })
   nonProfitTreeCount: number;
 
   @ApiProperty({
-    description: "Total trees grown goal across all organizations",
-    type: Number
+    description: "Total trees grown goal across all organizations"
   })
   totalTreesGrownGoal: number;
 

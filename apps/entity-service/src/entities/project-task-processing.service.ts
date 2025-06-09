@@ -23,7 +23,7 @@ export class ProjectTaskProcessingService {
 
   private async getAuthenticatedUser(): Promise<User | null> {
     const context = RequestContext.currentContext;
-    if (!context?.req?.authenticatedUserId) {
+    if (context?.req?.authenticatedUserId === undefined) {
       return null;
     }
     return User.findByPk(context.req.authenticatedUserId);

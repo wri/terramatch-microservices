@@ -7,10 +7,10 @@ import { NotFoundException } from "@nestjs/common";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import { RequestContext } from "nestjs-request-context";
 import { Op } from "sequelize";
+import { Request, Response } from "express";
 
 describe("ProjectTaskProcessingService", () => {
   let service: ProjectTaskProcessingService;
-  let policyService: jest.Mocked<PolicyService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +24,6 @@ describe("ProjectTaskProcessingService", () => {
     }).compile();
 
     service = module.get<ProjectTaskProcessingService>(ProjectTaskProcessingService);
-    policyService = module.get(PolicyService);
   });
 
   describe("processProjectTasks", () => {
@@ -111,8 +110,9 @@ describe("ProjectTaskProcessingService", () => {
       jest.spyOn(SiteReport, "update").mockResolvedValue([1]);
       jest.spyOn(NurseryReport, "update").mockResolvedValue([1]);
       jest.spyOn(RequestContext, "currentContext", "get").mockReturnValue({
-        req: { authenticatedUserId: 1 }
-      } as any);
+        req: { authenticatedUserId: 1 } as Partial<Request>,
+        res: {} as Partial<Response>
+      });
     });
 
     it("should approve reports and create audit statuses", async () => {
@@ -128,14 +128,14 @@ describe("ProjectTaskProcessingService", () => {
       });
 
       expect(SiteReport.update).toHaveBeenCalledWith({ status: APPROVED }, { where: { id: { [Op.in]: [1] } } });
-
       expect(NurseryReport.update).toHaveBeenCalledWith({ status: APPROVED }, { where: { id: { [Op.in]: [2] } } });
     });
 
     it("should handle missing authenticated user", async () => {
       jest.spyOn(RequestContext, "currentContext", "get").mockReturnValue({
-        req: {}
-      } as any);
+        req: {} as Partial<Request>,
+        res: {} as Partial<Response>
+      });
 
       const result = await service.approveReports({
         uuid: "project-uuid",

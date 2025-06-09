@@ -7,8 +7,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Body,
-  BadRequestException,
-  InternalServerErrorException
+  BadRequestException
 } from "@nestjs/common";
 import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
@@ -42,7 +41,6 @@ export class FileUploadController {
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
-  @ExceptionResponse(InternalServerErrorException, { description: "Internal server error." })
   @UseInterceptors(FileInterceptor("uploadFile"))
   @JsonApiResponse({ data: MediaDto })
   async uploadFile(

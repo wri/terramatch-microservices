@@ -79,7 +79,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
   projectId?: string;
 
   @ApiProperty({ nullable: true, type: String })
-  projectShortName?: string;
+  projectShortName?: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
   plantStart: Date | null;

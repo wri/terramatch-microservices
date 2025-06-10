@@ -370,7 +370,7 @@ export class Project extends Model<Project> {
 
   @AllowNull
   @Column(STRING)
-  shortName?: string;
+  shortName: string | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

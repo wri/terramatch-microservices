@@ -1,5 +1,5 @@
 import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table, DataType } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, TEXT } from "sequelize";
+import { BIGINT, DATE, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 
@@ -17,12 +17,12 @@ export class ImpactStory extends Model<ImpactStory> {
   override id: number;
 
   @Index
+  @Column({ type: UUID, defaultValue: UUIDV4 })
+  uuid: string;
+
   @Column({
     type: DataType.STRING(71)
   })
-  uuid: string;
-
-  @Column(STRING)
   title: string;
 
   @Column(STRING)

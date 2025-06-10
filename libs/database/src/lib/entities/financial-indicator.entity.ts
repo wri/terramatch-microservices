@@ -1,5 +1,5 @@
-import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, DECIMAL, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 
 @Table({ tableName: "financial_indicators", underscored: true, paranoid: true })
 export class FinancialIndicator extends Model<FinancialIndicator> {
@@ -24,5 +24,10 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
   @Column(STRING)
   collection: string;
 
-  // TODO: complete remaining fields
+  @AllowNull
+  @Column(DECIMAL(15, 2))
+  amount: number | null;
+
+  @Column(TEXT)
+  description: string | null;
 }

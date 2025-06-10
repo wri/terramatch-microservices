@@ -7,6 +7,7 @@ import {
   ApplicationEntity,
   DemographicEntity,
   DemographicEntryEntity,
+  FinancialIndicatorEntity,
   FundingProgrammeEntity,
   NurseryEntity,
   NurseryReportEntity,
@@ -27,6 +28,7 @@ export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
   demographics: DemographicEntity,
   demographicEntries: DemographicEntryEntity,
+  financialIndicators: FinancialIndicatorEntity,
   fundingProgrammes: FundingProgrammeEntity,
   nurseries: NurseryEntity,
   nurseryReports: NurseryReportEntity,
@@ -77,6 +79,7 @@ export class AirtableProcessor extends WorkerHost {
     const apiKey = this.config.get<string>("AIRTABLE_API_KEY");
     const baseId = this.config.get<string>("AIRTABLE_BASE_ID");
     if (apiKey == null || baseId == null) {
+      /* istanbul ignore next */
       throw new InternalServerErrorException("Airtable API key and base ID must be set");
     }
 
@@ -101,6 +104,7 @@ export class AirtableProcessor extends WorkerHost {
     }
   }
 
+  /* istanbul ignore next */
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
     Sentry.captureException(error);
@@ -155,7 +159,7 @@ export class AirtableProcessor extends WorkerHost {
 
     try {
       await this.slack.sendTextToChannel(`[${process.env.DEPLOY_ENV}]: ${message}`, channel);
-    } catch (error) {
+    } catch (error) /* istanbul ignore next */ {
       // Don't allow a failure in slack sending to hose our process, but do log it and send it to Sentry
       Sentry.captureException(error);
       this.logger.error("Send to slack failed", error.stack);

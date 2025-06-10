@@ -2,6 +2,7 @@ export * from "./application.factory";
 export * from "./delayed-job.factory";
 export * from "./demographic.factory";
 export * from "./demographic-entry.factory";
+export * from "./financial-indicator.factory";
 export * from "./form-submission.factory";
 export * from "./form.factory";
 export * from "./form-question-option.factory";

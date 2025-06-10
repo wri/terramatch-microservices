@@ -115,10 +115,32 @@ describe("CacheService", () => {
       expect(result).toBe("not-json");
     });
 
-    it("should return null if redis returns null", async () => {
+    it("should return null if redis returns null and no factory provided", async () => {
       (redisMock.get as jest.Mock).mockResolvedValue(null);
       const result = await service.get("key1");
       expect(result).toBeNull();
+    });
+
+    it("should use factory to generate and cache value when cache miss", async () => {
+      (redisMock.get as jest.Mock).mockResolvedValue(null);
+      const factory = jest.fn().mockResolvedValue({ newData: "value" });
+
+      const result = await service.get("key1", factory);
+
+      expect(factory).toHaveBeenCalled();
+      expect(redisMock.set).toHaveBeenCalledWith("key1", JSON.stringify({ newData: "value" }));
+      expect(result).toEqual({ newData: "value" });
+    });
+
+    it("should handle string values from factory", async () => {
+      (redisMock.get as jest.Mock).mockResolvedValue(null);
+      const factory = jest.fn().mockResolvedValue("string value");
+
+      const result = await service.get("key1", factory);
+
+      expect(factory).toHaveBeenCalled();
+      expect(redisMock.set).toHaveBeenCalledWith("key1", "string value");
+      expect(result).toBe("string value");
     });
   });
 

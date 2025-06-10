@@ -3,9 +3,10 @@ import { Form, User } from "@terramatch-microservices/database/entities";
 
 export class FormPolicy extends UserPermissionsPolicy {
   async addRules() {
-    const user = await this.getUser();
-    if (user != null) {
-      this.builder.can(["uploadFiles"], Form, { updatedBy: user.uuid });
+    if (this.frameworks?.length > 0) {
+      this.builder.can(["uploadFiles"], Form, {
+        frameworkKey: { $in: this.frameworks }
+      });
     }
   }
 

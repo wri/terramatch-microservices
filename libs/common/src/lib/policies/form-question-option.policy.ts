@@ -1,19 +1,37 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
-import { FormQuestionOption, Form, User } from "@terramatch-microservices/database/entities";
+import { FormQuestionOption, Form, FormQuestion, User, FormSection } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
 
 export class FormQuestionOptionPolicy extends UserPermissionsPolicy {
   async addRules() {
-    const user = await this.getUser();
-    if (user != null) {
-      const forms = await Form.findAll({
-        where: { updatedBy: user.id },
+    if (this.frameworks.length > 0) {
+      const formQuestion = await FormQuestion.findAll({
+        include: [
+          {
+            model: FormSection,
+            required: true,
+            include: [
+              {
+                model: Form,
+                required: true,
+                where: {
+                  frameworkKey: { [Op.in]: this.frameworks }
+                },
+                attributes: []
+              }
+            ],
+            attributes: []
+          }
+        ],
         attributes: ["id"]
       });
-      const formIds = forms.map(form => form.id);
 
-      this.builder.can(["read", "update", "uploadFiles"], FormQuestionOption, {
-        formQuestionId: { $in: formIds }
-      });
+      const formQuestionsIds = formQuestion.map(q => q.id);
+      if (formQuestionsIds.length > 0) {
+        this.builder.can(["uploadFiles"], FormQuestionOption, {
+          formQuestionId: { $in: formQuestionsIds }
+        });
+      }
     }
   }
 

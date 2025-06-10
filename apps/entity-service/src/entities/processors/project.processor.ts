@@ -144,7 +144,8 @@ export class ProjectProcessor extends EntityProcessor<
     return {
       id: project.uuid,
       dto: new ProjectLightDto(project, {
-        totalHectaresRestoredSum
+        totalHectaresRestoredSum,
+        treesPlantedCount: 0
       })
     };
   }
@@ -289,10 +290,9 @@ export class ProjectProcessor extends EntityProcessor<
     return pTotal + sTotal + nTotal;
   }
 
-  async loadAssociationData(projectIds: string[]): Promise<Record<number, ProjectLightDto>> {
+  async loadAssociationData(projectIds: number[]): Promise<Record<number, ProjectLightDto>> {
     const associationDtos: Record<number, ProjectLightDto> = {};
-    const numericProjectIds = projectIds.map(id => Number(id)).filter(id => !isNaN(id));
-    const sites = await this.getSites(numericProjectIds);
+    const sites = await this.getSites(projectIds);
 
     if (sites.length === 0) {
       return associationDtos;

@@ -87,12 +87,7 @@ export abstract class EntityProcessor<
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
 
-    let associateData: Record<number, LightDto> = {};
-
-    const allowedTypes = [Project];
-    if (allowedTypes.some(type => models[0] instanceof type)) {
-      associateData = (await this.loadAssociationData(models.map(m => String(m.id)))) as Record<number, LightDto>;
-    }
+    const associateData = (await this.loadAssociationData(models.map(m => m.id))) as Record<number, LightDto>;
 
     for (const model of models) {
       let dto = await this.getLightDto(model);
@@ -179,8 +174,8 @@ export abstract class EntityProcessor<
   }
 
   /* istanbul ignore next */
-  loadAssociationData(ids: string[]): Promise<Record<number, object>> {
-    throw new BadRequestException(`This entity does not support loading association data ${ids}`);
+  loadAssociationData(ids: number[]): Promise<Record<number, object>> {
+    return Promise.resolve({});
   }
 }
 

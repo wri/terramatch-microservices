@@ -1,5 +1,5 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
-import { FormQuestionOption, Form, FormQuestion, User, FormSection } from "@terramatch-microservices/database/entities";
+import { FormQuestionOption, Form, FormQuestion, FormSection } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 
 export class FormQuestionOptionPolicy extends UserPermissionsPolicy {
@@ -33,15 +33,5 @@ export class FormQuestionOptionPolicy extends UserPermissionsPolicy {
         });
       }
     }
-  }
-
-  protected _user?: User | null;
-  protected async getUser() {
-    if (this._user != null) return this._user;
-
-    return (this._user = await User.findOne({
-      where: { id: this.userId },
-      attributes: ["id"]
-    }));
   }
 }

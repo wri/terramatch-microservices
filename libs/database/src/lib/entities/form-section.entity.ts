@@ -1,5 +1,15 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, CHAR, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BelongsTo,
+  AllowNull,
+  AutoIncrement,
+  Column,
+  ForeignKey,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
+import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { Form } from "./form.entity";
 
 @Table({ tableName: "form_sections", underscored: true, paranoid: true })
@@ -18,10 +28,12 @@ export class FormSection extends Model<FormSection> {
   @Column(INTEGER)
   order: number;
 
-  @AllowNull
   @ForeignKey(() => Form)
-  @Column(CHAR(36))
-  formId: string | null;
+  @Column(UUID)
+  formId: string;
+
+  @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid" })
+  form: Form | null;
 
   @AllowNull
   @Column(STRING)

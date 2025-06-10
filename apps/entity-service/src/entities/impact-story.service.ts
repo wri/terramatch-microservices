@@ -3,26 +3,25 @@ import { ImpactStory, Project, Media, WorldCountryGeneralized } from "@terramatc
 import { Includeable, Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
-import { groupBy } from "lodash";
+import { groupBy, uniq } from "lodash";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+
+const ORGANISATION_FIELDS_BASE = ["uuid", "name", "type", "countries"] as const;
+
+const ORGANISATION_ASSOCIATION_FULL: Includeable = {
+  association: "organisation",
+  attributes: [...ORGANISATION_FIELDS_BASE, "webUrl", "facebookUrl", "instagramUrl", "linkedinUrl", "twitterUrl"]
+} as const;
+
+const ORGANISATION_ASSOCIATION_LIGHT: Includeable = {
+  association: "organisation",
+  attributes: [...ORGANISATION_FIELDS_BASE]
+} as const;
 
 @Injectable()
 export class ImpactStoryService {
   async getImpactStory(uuid: string) {
-    const organisationAssociation: Includeable = {
-      association: "organisation",
-      attributes: [
-        "uuid",
-        "name",
-        "type",
-        "countries",
-        "webUrl",
-        "facebookUrl",
-        "instagramUrl",
-        "linkedinUrl",
-        "twitterUrl"
-      ]
-    };
-    const impactStory = await ImpactStory.findOne({ where: { uuid }, include: organisationAssociation });
+    const impactStory = await ImpactStory.findOne({ where: { uuid }, include: ORGANISATION_ASSOCIATION_FULL });
     if (impactStory == null) {
       throw new NotFoundException("impactStory not found");
     }
@@ -30,15 +29,15 @@ export class ImpactStoryService {
   }
 
   async getMediaForStories(stories: ImpactStory[]) {
-    const uuids = stories.map(s => s.id);
+    const ids = stories.map(s => s.id);
     const allMedia = await Media.findAll({
-      where: { modelType: ImpactStory.LARAVEL_TYPE, modelId: uuids }
+      where: { modelType: ImpactStory.LARAVEL_TYPE, modelId: { [Op.in]: ids } }
     });
     return groupBy(allMedia, "modelId");
   }
 
   async getCountriesForOrganizations(organizationCountries: string[][]) {
-    const uniqueCountries = [...new Set(organizationCountries.flat())];
+    const uniqueCountries = uniq(organizationCountries.flat());
     if (uniqueCountries.length === 0) return new Map();
 
     const countries = await WorldCountryGeneralized.findAll({
@@ -61,11 +60,7 @@ export class ImpactStoryService {
   }
 
   async getImpactStories(query: ImpactStoryQueryDto) {
-    const organisationAssociation: Includeable = {
-      association: "organisation",
-      attributes: ["uuid", "name", "type", "countries"]
-    };
-    const builder = PaginatedQueryBuilder.forNumberPage(ImpactStory, query.page, [organisationAssociation]);
+    const builder = PaginatedQueryBuilder.forNumberPage(ImpactStory, query.page, [ORGANISATION_ASSOCIATION_LIGHT]);
 
     if (query.search != null) {
       builder.where({
@@ -137,12 +132,9 @@ export class ImpactStoryService {
             }
           });
         } else if (key === "uuid") {
-          const project = await Project.findOne({ where: { uuid: value }, attributes: ["organisationId"] });
-          if (project != null) {
-            builder.where({
-              "$organisation.id$": project.organisationId
-            });
-          }
+          builder.where({
+            "$organisation.id$": Subquery.select(Project, "organisationId").eq("uuid", value).literal
+          });
         } else {
           builder.where({
             [fieldKey]: { [Op.like]: `%${value}%` }

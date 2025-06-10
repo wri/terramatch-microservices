@@ -7,7 +7,7 @@ export class WorldCountryGeneralized extends Model<WorldCountryGeneralized> {
   @AutoIncrement
   @Column({
     field: "OGR_FID",
-    type: DataType.INTEGER.UNSIGNED
+    type: DataType.INTEGER
   })
   OGRFID: number;
 
@@ -20,6 +20,6 @@ export class WorldCountryGeneralized extends Model<WorldCountryGeneralized> {
   @Column({ type: DataType.STRING(50) })
   countryaff: string;
 
-  @Column({ type: DataType.STRING(2) })
-  alpha_2_iso: string;
+  @Column({ type: DataType.STRING(2), field: "alpha_2_iso" })
+  alpha2Iso: string;
 }

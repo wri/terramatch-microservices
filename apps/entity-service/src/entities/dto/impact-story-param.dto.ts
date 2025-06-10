@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ImpactStoryParamDto {
-  @ApiProperty({ description: "Entity UUID for association" })
+  @ApiProperty({ description: "Impact Story UUID" })
   uuid: string;
 }

@@ -1,6 +1,8 @@
-import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table, DataType } from "sequelize-typescript";
 import { BIGINT, DATE, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
+import { JsonColumn } from "../decorators/json-column.decorator";
+import { v4 as uuidv4 } from "uuid";
 
 @Table({ tableName: "impact_stories", underscored: true, paranoid: true })
 export class ImpactStory extends Model<ImpactStory> {
@@ -16,14 +18,16 @@ export class ImpactStory extends Model<ImpactStory> {
   override id: number;
 
   @Index
-  @Column({ type: UUID, defaultValue: UUIDV4 })
+  @Column({
+    type: DataType.STRING(71)
+  })
   uuid: string;
 
   @Column(STRING)
   title: string;
 
   @Column(STRING)
-  status: string | null;
+  status: string;
 
   @Column(BIGINT.UNSIGNED)
   organizationId: number;
@@ -32,14 +36,14 @@ export class ImpactStory extends Model<ImpactStory> {
   organisation: Organisation;
 
   @Column(DATE)
-  date: string | null;
+  date: string;
 
-  @Column(TEXT)
-  category: string | null;
+  @JsonColumn()
+  category: string;
 
   @Column(STRING)
-  thumbnail: string | null;
+  thumbnail: string;
 
-  @Column(TEXT)
-  content: string | null;
+  @JsonColumn()
+  content: string;
 }

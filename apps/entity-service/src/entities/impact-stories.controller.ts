@@ -23,7 +23,6 @@ export class ImpactStoriesController {
   })
   @JsonApiResponse([{ data: ImpactStoryLightDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
-  @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async impactStoryIndex(@Query() params: ImpactStoryQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.impactStoryService.getImpactStories(params);
     const document = buildJsonApi(ImpactStoryLightDto, { pagination: "number" });
@@ -36,13 +35,12 @@ export class ImpactStoriesController {
       const countriesMap = await this.impactStoryService.getCountriesForOrganizations(organizationCountries);
 
       for (const impact of data) {
-        if (typeof impact.category === "string") {
-          impact.category = JSON.parse(impact.category);
-        }
         indexIds.push(impact.uuid);
 
         const mediaCollection = mediaByStory[impact.id] ?? [];
-        const orgCountries = (impact.organisation?.countries ?? []).map(iso => countriesMap.get(iso)).filter(Boolean);
+        const orgCountries = (impact.organisation?.countries ?? [])
+          .map(iso => countriesMap.get(iso))
+          .filter(country => country != null);
         const organization = {
           name: impact.organisation?.name,
           uuid: impact.organisation?.uuid,
@@ -78,7 +76,7 @@ export class ImpactStoriesController {
     operationId: "impactStoryGet",
     summary: "Get an impact story by uuid."
   })
-  @JsonApiResponse(ImpactStoryFullDto, { status: HttpStatus.OK })
+  @JsonApiResponse(ImpactStoryFullDto)
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Impact story not found" })
   async impactStoryGet(@Param() { uuid }: ImpactStoryParamDto) {
@@ -89,10 +87,6 @@ export class ImpactStoriesController {
     const organizationCountries = impactStory.organisation?.countries ?? [];
     const countriesMap = await this.impactStoryService.getCountriesForOrganizations([organizationCountries]);
     const orgCountries = organizationCountries.map(iso => countriesMap.get(iso)).filter(Boolean);
-
-    if (typeof impactStory.category === "string") {
-      impactStory.category = JSON.parse(impactStory.category);
-    }
 
     const organization = {
       uuid: impactStory.organisation?.uuid,

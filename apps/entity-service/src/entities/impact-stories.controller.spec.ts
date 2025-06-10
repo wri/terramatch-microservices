@@ -1,7 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ImpactStoriesController } from "./impact-stories.controller";
 import { ImpactStoryService } from "./impact-story.service";
-import { PolicyService } from "@terramatch-microservices/common";
 import { EntitiesService } from "./entities.service";
 import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
@@ -59,12 +58,6 @@ describe("ImpactStoriesController", () => {
             getImpactStories: jest.fn(),
             getMediaForStories: jest.fn(),
             getCountriesForOrganizations: jest.fn()
-          }
-        },
-        {
-          provide: PolicyService,
-          useValue: {
-            authorize: jest.fn()
           }
         },
         {

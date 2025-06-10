@@ -102,7 +102,9 @@ describe("ImpactStoryService", () => {
       expect(Media.findAll).toHaveBeenCalledWith({
         where: {
           modelType: ImpactStory.LARAVEL_TYPE,
-          modelId: [mockImpactStory.id]
+          modelId: {
+            [Op.in]: [mockImpactStory.id]
+          }
         }
       });
     });

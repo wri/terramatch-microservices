@@ -15,9 +15,6 @@ export class ImpactStoryLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty({ nullable: true, type: Number })
-  id: number | null;
-
   @ApiProperty({ nullable: true, type: String })
   uuid: string;
 
@@ -27,8 +24,8 @@ export class ImpactStoryLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   status: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  date: string | null;
+  @ApiProperty({ nullable: true, type: Date })
+  date: Date | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   category: string[] | null;

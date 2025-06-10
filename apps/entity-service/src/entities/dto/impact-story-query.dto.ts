@@ -16,14 +16,6 @@ class QuerySort {
 }
 
 export class ImpactStoryQueryDto extends IndexQueryDto {
-  @ValidateNested()
-  @IsOptional()
-  page?: NumberPage;
-
-  @ValidateNested()
-  @IsOptional()
-  sort?: QuerySort;
-
   @ApiProperty({ required: false })
   @IsOptional()
   search?: string;
@@ -36,7 +28,7 @@ export class ImpactStoryQueryDto extends IndexQueryDto {
     enum: ORGANISATION_TYPES,
     isArray: true,
     required: false,
-    name: "organisationType",
+    name: "organisationType[]",
     description: "Filter results by organisationType"
   })
   @IsOptional()

@@ -4,7 +4,7 @@ import { FrameworkKey } from "../constants/framework";
 import { User } from "./user.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 
-@Table({ tableName: "v2_forms", underscored: true, paranoid: true })
+@Table({ tableName: "forms", underscored: true, paranoid: true })
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 

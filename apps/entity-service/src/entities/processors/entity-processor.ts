@@ -13,7 +13,7 @@ import {
   NEEDS_MORE_INFORMATION,
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
-import { ProjectReport } from "@terramatch-microservices/database/entities";
+import { Project, ProjectReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -75,7 +75,6 @@ export abstract class EntityProcessor<
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;
-  abstract loadAssociationData(ids: number[]): Promise<unknown>;
 
   async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
     const results: DtoResult<FullDto>[] = [];
@@ -87,10 +86,29 @@ export abstract class EntityProcessor<
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
+
+    let associateData: Record<number, LightDto> = {};
+
+    const allowedTypes = [Project];
+    if (allowedTypes.some(type => models[0] instanceof type)) {
+      associateData = (await this.loadAssociationData(models.map(m => String(m.id)))) as Record<number, LightDto>;
+    }
+
     for (const model of models) {
-      results.push(await this.getLightDto(model));
+      let dto = await this.getLightDto(model);
+      dto = this.mergeDto(dto, associateData, model);
+      results.push(dto);
     }
     return results;
+  }
+
+  private mergeDto(dto: DtoResult<LightDto>, associateData: Record<number, LightDto>, model: ModelType) {
+    const associateDto = associateData[model.id] ?? {};
+    (dto as unknown as DtoResult<LightDto>).dto = new this.LIGHT_DTO(
+      model as ModelType,
+      { ...dto.dto, ...associateDto } as LightDto
+    );
+    return dto;
   }
 
   /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -158,6 +176,10 @@ export abstract class EntityProcessor<
     }
 
     await model.save();
+  }
+
+  loadAssociationData(ids: string[]): Promise<Record<number, object>> {
+    throw new BadRequestException(`This entity does not support loading association data ${ids}`);
   }
 }
 

@@ -15,7 +15,7 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -289,58 +289,70 @@ export class ProjectProcessor extends EntityProcessor<
     return pTotal + sTotal + nTotal;
   }
 
-  async loadAssociationData(projectIds: string[]): Promise<Record<number, object>> {
+  async loadAssociationData(projectIds: string[]): Promise<Record<number, ProjectLightDto>> {
     const associationDtos: Record<number, ProjectLightDto> = {};
     const numericProjectIds = projectIds.map(id => Number(id)).filter(id => !isNaN(id));
-
-    // Build a map of siteId -> projectId (from known relationship)
-    const approvedSites = await Site.findAll({
-      where: { id: { [Op.in]: Site.approvedIdsProjectsSubquery(numericProjectIds) } },
-      attributes: ["id", "projectId"],
-      raw: true
-    });
-
-    console.log(approvedSites.length);
+    const sites = await this.getSites(numericProjectIds);
 
     const siteIdToProjectId = new Map<number, number>();
-    for (const site of approvedSites) {
+    for (const site of sites) {
       siteIdToProjectId.set(site.id, site.projectId);
-      if (!associationDtos[site.projectId]) {
-        associationDtos[site.projectId] = { treeSpecies: [] } as any; // Initialize with default structure
+      if (associationDtos[site.projectId] !== undefined) {
+        associationDtos[site.projectId] = {} as ProjectLightDto; // Initialize with default structure
       }
     }
 
-    const approvedSiteReports = await SiteReport.findAll({
-      where: { id: { [Op.in]: SiteReport.approvedIdsSubquery(approvedSites.map(s => s.id)) } },
-      attributes: ["id", "siteId"],
-      raw: true
-    });
-
-    console.log(approvedSiteReports.length);
+    const approvedSiteReports = await this.getSiteReports(sites);
 
     const siteReportIdToProjectId = new Map<number, number>();
     for (const report of approvedSiteReports) {
-      const projectId = siteIdToProjectId.get(report.siteId);
-      if (projectId !== undefined) {
+      const projectId = siteIdToProjectId.get(report.siteId) ?? null;
+      if (projectId !== null) {
         siteReportIdToProjectId.set(report.id, projectId);
       }
     }
-
-    const treeSpecies = await TreeSpecies.visible()
-      .collection("tree-planted")
-      .siteReports(approvedSiteReports.map(r => r.id))
-      .findAll({ attributes: ["amount", "speciesableId"], raw: true });
+    const treeSpecies = await this.getTreeSpecies(approvedSiteReports);
 
     for (const species of treeSpecies) {
       const projectId = siteReportIdToProjectId.get(species.speciesableId);
       if (projectId !== undefined) {
-        if (!associationDtos[projectId]) {
-          associationDtos[projectId] = { treeSpecies: [] } as any;
+        const dto = associationDtos[projectId] as ProjectLightDto;
+
+        if (dto == null) {
+          associationDtos[projectId] = { treesPlantedCount: species.amount } as ProjectLightDto;
+        } else {
+          dto.treesPlantedCount = (dto.treesPlantedCount ?? 0) + (species.amount ?? 0);
         }
-        (associationDtos[projectId] as any).treeSpecies.push(species);
       }
     }
 
     return associationDtos;
+  }
+
+  private async getTreeSpecies(approvedSiteReports: SiteReport[]) {
+    return await TreeSpecies.visible()
+      .collection("tree-planted")
+      .siteReports(approvedSiteReports.map(r => r.id))
+      .findAll({
+        attributes: ["speciesableId", [Sequelize.fn("SUM", Sequelize.col("amount")), "amount"]],
+        group: ["speciesableId"],
+        raw: true
+      });
+  }
+
+  private async getSiteReports(sites: Site[]) {
+    return await SiteReport.findAll({
+      where: { id: { [Op.in]: SiteReport.approvedIdsSubquery(sites.map(s => s.id)) } },
+      attributes: ["id", "siteId"],
+      raw: true
+    });
+  }
+
+  private async getSites(numericProjectIds: number[]) {
+    return await Site.findAll({
+      where: { id: { [Op.in]: Site.approvedIdsProjectsSubquery(numericProjectIds) } },
+      attributes: ["id", "projectId"],
+      raw: true
+    });
   }
 }

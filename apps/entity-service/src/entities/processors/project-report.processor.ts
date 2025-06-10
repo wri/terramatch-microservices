@@ -235,9 +235,4 @@ export class ProjectReportProcessor extends ReportProcessor<
       })) ?? 0
     );
   }
-
-  /* istanbul ignore next */
-  loadAssociationData(ids: number[]): Promise<unknown> {
-    throw new Error(`Method not implemented, passing ids: ${ids}`);
-  }
 }

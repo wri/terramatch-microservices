@@ -8,6 +8,7 @@ import { ImpactStoryParamDto } from "./dto/impact-story-param.dto";
 import { ImpactStoryFullDto, ImpactStoryLightDto, ImpactStoryMedia } from "./dto/impact-story.dto";
 import { EntitiesService } from "./entities.service";
 import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 
 @Controller("entities/v3/impactStories")
 export class ImpactStoriesController {
@@ -17,6 +18,7 @@ export class ImpactStoriesController {
   ) {}
 
   @Get()
+  @NoBearerAuth
   @ApiOperation({
     operationId: "impactStoryIndex",
     summary: "Get impact stories."
@@ -72,6 +74,7 @@ export class ImpactStoriesController {
   }
 
   @Get(":uuid")
+  @NoBearerAuth
   @ApiOperation({
     operationId: "impactStoryGet",
     summary: "Get an impact story by uuid."

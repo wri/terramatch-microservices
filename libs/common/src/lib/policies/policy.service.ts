@@ -2,7 +2,6 @@ import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
-  ImpactStory,
   Nursery,
   NurseryReport,
   Permission,
@@ -29,7 +28,6 @@ import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
 import { ProjectPitchPolicy } from "./project-pitch.policy";
 import { TaskPolicy } from "./task.policy";
-import { ImpactStoryPolicy } from "./impact-story.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,8 +49,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [SiteReport, SiteReportPolicy],
   [User, UserPolicy],
   [ProjectPitch, ProjectPitchPolicy],
-  [Task, TaskPolicy],
-  [ImpactStory, ImpactStoryPolicy]
+  [Task, TaskPolicy]
 ];
 
 /**

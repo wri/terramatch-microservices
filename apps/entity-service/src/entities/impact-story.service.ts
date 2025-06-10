@@ -6,7 +6,7 @@ import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { groupBy, uniq } from "lodash";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
-const ORGANISATION_FIELDS_BASE = ["uuid", "name", "type", "countries"] as const;
+const ORGANISATION_FIELDS_BASE = ["uuid", "name", "type", "countries"];
 
 const ORGANISATION_ASSOCIATION_FULL: Includeable = {
   association: "organisation",
@@ -15,7 +15,7 @@ const ORGANISATION_ASSOCIATION_FULL: Includeable = {
 
 const ORGANISATION_ASSOCIATION_LIGHT: Includeable = {
   association: "organisation",
-  attributes: [...ORGANISATION_FIELDS_BASE]
+  attributes: ORGANISATION_FIELDS_BASE
 } as const;
 
 @Injectable()

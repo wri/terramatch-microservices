@@ -1,5 +1,5 @@
 import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table, DataType } from "sequelize-typescript";
-import { BIGINT, DATE, STRING } from "sequelize";
+import { BIGINT, DATE, STRING, TEXT } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 
@@ -43,6 +43,6 @@ export class ImpactStory extends Model<ImpactStory> {
   @Column(STRING)
   thumbnail: string;
 
-  @JsonColumn()
+  @Column(TEXT)
   content: string;
 }

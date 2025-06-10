@@ -257,9 +257,10 @@ describe("ProjectProcessor", () => {
 
     describe("processSideload", () => {
       it("throws if the sideloads includes something unsupported", async () => {
-        await ProjectFactory.create();
+        const project = await ProjectFactory.create();
         policyService.getPermissions.mockResolvedValue(["projects-read"]);
         const document = buildJsonApi(ProjectLightDto);
+        await processor.loadAssociationData([project.id.toString()]);
         await expect(
           processor.addIndex(document, { sideloads: [{ entity: "siteReports", pageSize: 5 }] })
         ).rejects.toThrow(BadRequestException);

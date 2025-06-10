@@ -294,6 +294,10 @@ export class ProjectProcessor extends EntityProcessor<
     const numericProjectIds = projectIds.map(id => Number(id)).filter(id => !isNaN(id));
     const sites = await this.getSites(numericProjectIds);
 
+    if (sites.length === 0) {
+      return associationDtos;
+    }
+
     const siteIdToProjectId = new Map<number, number>();
     for (const site of sites) {
       siteIdToProjectId.set(site.id, site.projectId);
@@ -303,6 +307,10 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     const approvedSiteReports = await this.getSiteReports(sites);
+
+    if (approvedSiteReports.length === 0) {
+      return associationDtos;
+    }
 
     const siteReportIdToProjectId = new Map<number, number>();
     for (const report of approvedSiteReports) {

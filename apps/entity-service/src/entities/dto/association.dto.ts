@@ -1,9 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
 import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 
 export type AssociationDtoAdditionalProps = {
-  entityType: EntityType | MediaOwnerType;
+  entityType: MediaOwnerType;
   entityUuid: string;
 };
 

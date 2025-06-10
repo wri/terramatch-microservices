@@ -42,7 +42,7 @@ export class FileUploadController {
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
   @UseInterceptors(FileInterceptor("uploadFile"))
-  @JsonApiResponse({ data: MediaDto })
+  @JsonApiResponse(MediaDto)
   async uploadFile(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,
     @UploadedFile() file: Express.Multer.File,

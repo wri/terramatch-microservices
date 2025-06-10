@@ -28,7 +28,7 @@
     "@nestjs/sequelize": "^11.0.0",
     "@nestjs/swagger": "^11.0.6",
     "@nestjs/terminus": "^11.0.0",
-    "@sentry/nestjs": "9.6.0",
+    "@sentry/nestjs": "^9.6.0",
     "@sentry/profiling-node": "^9.6.0",
     "@slack/web-api": "^7.8.0",
     "@transifex/native": "^7.1.3",

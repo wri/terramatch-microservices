@@ -7,6 +7,12 @@ import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
 export class FundingProgramme extends Model<FundingProgramme> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingProgramme";
+
+  static readonly MEDIA = {
+    cover: { dbCollection: "cover", multiple: false, validation: "cover-image" }
+  } as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsEnum, IsOptional } from "class-validator";
+import { IsArray, IsOptional } from "class-validator";
 import { IndexQueryDto } from "./index-query.dto";
 import { ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
 

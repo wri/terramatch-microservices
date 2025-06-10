@@ -178,6 +178,7 @@ export abstract class EntityProcessor<
     await model.save();
   }
 
+  /* istanbul ignore next */
   loadAssociationData(ids: string[]): Promise<Record<number, object>> {
     throw new BadRequestException(`This entity does not support loading association data ${ids}`);
   }

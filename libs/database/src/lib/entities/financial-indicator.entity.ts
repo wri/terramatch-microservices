@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 
 @Table({ tableName: "financial_indicators", underscored: true, paranoid: true })
 export class FinancialIndicator extends Model<FinancialIndicator> {
@@ -18,9 +18,11 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @AllowNull
   @Column(BIGINT.UNSIGNED)
   organisationId: number;
+
+  @Column(STRING)
+  collection: string;
 
   // TODO: complete remaining fields
 }

@@ -1,4 +1,4 @@
-import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { MediaConfiguration } from "../constants/media-owners";
 
@@ -23,12 +23,25 @@ export class FormQuestionOption extends Model<FormQuestionOption> {
   @Column(BIGINT.UNSIGNED)
   formQuestionId: number;
 
-  @Column(INTEGER)
-  order: number;
+  @AllowNull
+  @Column(STRING)
+  slug: string | null;
 
   @Column(STRING)
   label: string;
 
+  @AllowNull
+  @Column(INTEGER)
+  labelId: number | null;
+
+  @Column(INTEGER)
+  order: number;
+
+  @AllowNull
   @Column(STRING)
-  imageUrl: string;
+  imageUrl: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  formOptionListOptionId: number | null;
 }

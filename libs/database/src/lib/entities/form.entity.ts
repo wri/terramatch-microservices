@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants/framework";
 import { User } from "./user.entity";
 import { MediaConfiguration } from "../constants/media-owners";
@@ -32,7 +32,7 @@ export class Form extends Model<Form> {
   model: string | null;
 
   @AllowNull
-  @Column(TINYINT)
+  @Column(BIGINT.UNSIGNED)
   override version: number;
 
   @AllowNull
@@ -40,38 +40,64 @@ export class Form extends Model<Form> {
   type: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(TEXT)
   title: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(INTEGER)
+  titleId: number | null;
+
+  @AllowNull
+  @Column(TEXT)
   subtitle: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(INTEGER)
+  subtitleId: number | null;
+
+  @AllowNull
+  @Column(TEXT)
   description: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(INTEGER)
+  descriptionId: number | null;
+
+  @AllowNull
+  @Column(TEXT)
   documentation: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(INTEGER)
+  documentationId: number | null;
+
+  @AllowNull
+  @Column(TEXT)
   submissionMessage: string | null;
 
   @AllowNull
-  @Column(TINYINT)
-  duration: number;
+  @Column(INTEGER)
+  submissionMessageId: number | null;
 
   @AllowNull
+  @Column(TEXT)
+  duration: string | null;
+
   @Column(BOOLEAN)
-  published: boolean | null;
+  published: boolean;
+
+  @AllowNull
+  @Column(STRING)
+  stageId: string | null;
+
+  @Column(STRING)
+  updatedBy: string | null;
 
   @AllowNull
   @Column(DATE)
-  deadlineAt?: Date | null;
+  deadlineAt: Date | null;
 
-  @ForeignKey(() => User)
-  @Column(BIGINT.UNSIGNED)
-  updatedBy: number | null;
+  @AllowNull
+  @Column(STRING)
+  documentationLabel: string | null;
 }

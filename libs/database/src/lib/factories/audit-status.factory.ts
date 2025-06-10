@@ -5,8 +5,6 @@ import { ProjectFactory } from "./project.factory";
 import { faker } from "@faker-js/faker";
 
 export const AuditStatusFactory = FactoryGirl.define(AuditStatus, async () => ({
-  id: faker.number.int({ min: 1, max: 1000000 }),
-  uuid: faker.string.uuid(),
   auditableType: Project.LARAVEL_TYPE,
   auditableId: ProjectFactory.associate("id"),
   status: faker.lorem.words(1),

@@ -141,12 +141,10 @@ export class ProjectProcessor extends EntityProcessor<
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
-    const treesPlantedCount = (await this.loadAssociationData([projectId])) ?? 0;
     return {
       id: project.uuid,
       dto: new ProjectLightDto(project, {
-        totalHectaresRestoredSum,
-        treesPlantedCount
+        totalHectaresRestoredSum
       })
     };
   }
@@ -291,9 +289,58 @@ export class ProjectProcessor extends EntityProcessor<
     return pTotal + sTotal + nTotal;
   }
 
-  async loadAssociationData(projectIds: number[]): Promise<number> {
-    const approvedSitesQuery = Site.approvedIdsSubquery(projectIds[0]);
-    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
-    return await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount");
+  async loadAssociationData(projectIds: string[]): Promise<Record<number, object>> {
+    const associationDtos: Record<number, ProjectLightDto> = {};
+    const numericProjectIds = projectIds.map(id => Number(id)).filter(id => !isNaN(id));
+
+    // Build a map of siteId -> projectId (from known relationship)
+    const approvedSites = await Site.findAll({
+      where: { id: { [Op.in]: Site.approvedIdsProjectsSubquery(numericProjectIds) } },
+      attributes: ["id", "projectId"],
+      raw: true
+    });
+
+    console.log(approvedSites.length);
+
+    const siteIdToProjectId = new Map<number, number>();
+    for (const site of approvedSites) {
+      siteIdToProjectId.set(site.id, site.projectId);
+      if (!associationDtos[site.projectId]) {
+        associationDtos[site.projectId] = { treeSpecies: [] } as any; // Initialize with default structure
+      }
+    }
+
+    const approvedSiteReports = await SiteReport.findAll({
+      where: { id: { [Op.in]: SiteReport.approvedIdsSubquery(approvedSites.map(s => s.id)) } },
+      attributes: ["id", "siteId"],
+      raw: true
+    });
+
+    console.log(approvedSiteReports.length);
+
+    const siteReportIdToProjectId = new Map<number, number>();
+    for (const report of approvedSiteReports) {
+      const projectId = siteIdToProjectId.get(report.siteId);
+      if (projectId !== undefined) {
+        siteReportIdToProjectId.set(report.id, projectId);
+      }
+    }
+
+    const treeSpecies = await TreeSpecies.visible()
+      .collection("tree-planted")
+      .siteReports(approvedSiteReports.map(r => r.id))
+      .findAll({ attributes: ["amount", "speciesableId"], raw: true });
+
+    for (const species of treeSpecies) {
+      const projectId = siteReportIdToProjectId.get(species.speciesableId);
+      if (projectId !== undefined) {
+        if (!associationDtos[projectId]) {
+          associationDtos[projectId] = { treeSpecies: [] } as any;
+        }
+        (associationDtos[projectId] as any).treeSpecies.push(species);
+      }
+    }
+
+    return associationDtos;
   }
 }

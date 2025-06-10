@@ -13,7 +13,7 @@ import {
   NEEDS_MORE_INFORMATION,
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
-import { Project, ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -165,6 +165,7 @@ export abstract class EntityProcessor<
   }
 
   /* istanbul ignore next */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loadAssociationData(ids: number[]): Promise<Record<number, object>> {
     return Promise.resolve({});
   }

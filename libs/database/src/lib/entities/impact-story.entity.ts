@@ -1,8 +1,7 @@
 import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table, DataType } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, DATE, STRING } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { v4 as uuidv4 } from "uuid";
 
 @Table({ tableName: "impact_stories", underscored: true, paranoid: true })
 export class ImpactStory extends Model<ImpactStory> {

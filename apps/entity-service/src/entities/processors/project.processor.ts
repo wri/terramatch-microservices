@@ -24,6 +24,7 @@ import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { EntityDto } from "../dto/entity.dto";
 
 export class ProjectProcessor extends EntityProcessor<
   Project,
@@ -137,15 +138,17 @@ export class ProjectProcessor extends EntityProcessor<
     await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
   }
 
-  async getLightDto(project: Project) {
+  async getLightDto(project: Project, associateDto: EntityDto) {
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
+
     return {
       id: project.uuid,
       dto: new ProjectLightDto(project, {
         totalHectaresRestoredSum,
-        treesPlantedCount: 0
+        treesPlantedCount: 0,
+        ...associateDto
       })
     };
   }

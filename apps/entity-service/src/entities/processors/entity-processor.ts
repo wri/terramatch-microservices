@@ -74,7 +74,8 @@ export abstract class EntityProcessor<
   abstract findMany(query: EntityQueryDto): Promise<PaginatedResult<ModelType>>;
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
-  abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;
+
+  abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
 
   async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
     const results: DtoResult<FullDto>[] = [];
@@ -90,20 +91,10 @@ export abstract class EntityProcessor<
     const associateData = (await this.loadAssociationData(models.map(m => m.id))) as Record<number, LightDto>;
 
     for (const model of models) {
-      let dto = await this.getLightDto(model);
-      dto = this.mergeDto(dto, associateData, model);
+      const dto = await this.getLightDto(model, associateData[model.id]);
       results.push(dto);
     }
     return results;
-  }
-
-  private mergeDto(dto: DtoResult<LightDto>, associateData: Record<number, LightDto>, model: ModelType) {
-    const associateDto = associateData[model.id] ?? {};
-    (dto as unknown as DtoResult<LightDto>).dto = new this.LIGHT_DTO(
-      model as ModelType,
-      { ...dto.dto, ...associateDto } as LightDto
-    );
-    return dto;
   }
 
   /* eslint-disable @typescript-eslint/no-unused-vars */

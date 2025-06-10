@@ -10,30 +10,30 @@ type DemographicFilter<T extends Model = Model> = {
   laravelType: string;
 };
 
+const DEMOGRAPHIC_FILTERS: DemographicFilter[] = [
+  {
+    uuidKey: "projectUuid",
+    model: Project,
+    laravelType: Project.LARAVEL_TYPE
+  },
+  {
+    uuidKey: "projectReportUuid",
+    model: ProjectReport,
+    laravelType: ProjectReport.LARAVEL_TYPE
+  },
+  {
+    uuidKey: "siteReportUuid",
+    model: SiteReport,
+    laravelType: SiteReport.LARAVEL_TYPE
+  }
+] as const;
+
+const VALID_FILTER_KEYS = DEMOGRAPHIC_FILTERS.map(({ uuidKey }) => uuidKey);
+
 @Injectable()
 export class DemographicService {
   async getDemographics(query: DemographicQueryDto) {
-    const DEMOGRAPHIC_FILTERS: DemographicFilter[] = [
-      {
-        uuidKey: "projectUuid",
-        model: Project,
-        laravelType: Project.LARAVEL_TYPE
-      },
-      {
-        uuidKey: "projectReportUuid",
-        model: ProjectReport,
-        laravelType: ProjectReport.LARAVEL_TYPE
-      },
-      {
-        uuidKey: "siteReportUuid",
-        model: SiteReport,
-        laravelType: SiteReport.LARAVEL_TYPE
-      }
-    ] as const;
-
     const builder = PaginatedQueryBuilder.forNumberPage(Demographic, query);
-
-    const VALID_FILTER_KEYS = DEMOGRAPHIC_FILTERS.map(({ uuidKey }) => uuidKey);
 
     Object.keys(query).forEach(key => {
       if (key === "page" || key === "sort") return;

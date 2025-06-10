@@ -1,9 +1,8 @@
-import { ApiProperty, IntersectionType } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsOptional } from "class-validator";
-import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { IndexQueryDto } from "./index-query.dto";
 
-export class DemographicQueryDto extends IntersectionType(IndexQueryDto, NumberPage) {
+export class DemographicQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false, isArray: true, description: "project uuid array" })
   @IsOptional()
   @IsArray()

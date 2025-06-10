@@ -20,18 +20,13 @@ export class TreeRestorationGoalController {
   async getTreeRestorationGoal(@Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:tree-restoration-goal|${this.cacheService.getCacheKeyFromQuery(query)}`;
     const timestampKey = `${cacheKey}:timestamp`;
-    const lastUpdatedAt = await this.cacheService.get(timestampKey);
-    const cachedData = await this.cacheService.get(cacheKey);
 
-    let result;
-    if (cachedData == null) {
-      result = await this.treeRestorationGoalService.getTreeRestorationGoal(query);
-      const timestamp = new Date().toISOString();
-      await this.cacheService.set(cacheKey, JSON.stringify(result));
-      await this.cacheService.set(timestampKey, timestamp);
-    } else {
-      result = typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
-    }
+    const lastUpdatedAt = await this.cacheService.get(timestampKey, () => Promise.resolve(new Date().toISOString()));
+    const result = await this.cacheService.get(cacheKey, async () => {
+      const data = await this.treeRestorationGoalService.getTreeRestorationGoal(query);
+      await this.cacheService.set(timestampKey, new Date().toISOString());
+      return data;
+    });
 
     const document = buildJsonApi(TreeRestorationGoalDto);
     const stableQuery = getStableRequestQuery(query);

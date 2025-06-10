@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Project, Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { DashboardQueryDto } from "./dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
-import { Op, fn, col, literal } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import { Literal } from "sequelize/types/utils";
 import { sumBy } from "lodash";
 

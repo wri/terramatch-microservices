@@ -1,7 +1,6 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants/framework";
-import { User } from "./user.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 
 @Table({ tableName: "forms", underscored: true, paranoid: true })

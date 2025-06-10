@@ -5,7 +5,7 @@ export class FormPolicy extends UserPermissionsPolicy {
   async addRules() {
     const user = await this.getUser();
     if (user != null) {
-      this.builder.can(["uploadFiles"], Form, { updatedBy: user.id });
+      this.builder.can(["uploadFiles"], Form, { updatedBy: user.uuid });
     }
   }
 
@@ -15,7 +15,7 @@ export class FormPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["id"]
+      attributes: ["uuid"]
     }));
   }
 }

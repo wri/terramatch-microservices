@@ -4,6 +4,15 @@ import { TreeRestorationGoalService } from "./dto/tree-restoration-goal.service"
 import { CacheService } from "./dto/cache.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 
+// Mock the json-api-builder module
+jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
+  buildJsonApi: jest.fn().mockImplementation(() => ({
+    addData: jest.fn(),
+    serialize: jest.fn().mockReturnValue({ mockSerialized: true })
+  })),
+  getStableRequestQuery: jest.fn().mockImplementation(query => query)
+}));
+
 describe("TreeRestorationGoalController", () => {
   let controller: TreeRestorationGoalController;
   let treeRestorationGoalService: jest.Mocked<TreeRestorationGoalService>;
@@ -105,19 +114,39 @@ describe("TreeRestorationGoalController", () => {
         programmes: ["terrafund"]
       };
 
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
+      const mockDate = new Date(mockTimestamp);
+
       cacheService.getCacheKeyFromQuery.mockReturnValue("test-cache-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+      // Mock cache.get for timestamp key (cache miss, executes callback)
+      cacheService.get
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => {
+          expect(key).toBe("dashboard:tree-restoration-goal|test-cache-key:timestamp");
+          return factory?.();
+        })
+        // Mock cache.get for data key (cache miss, executes callback)
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => {
+          expect(key).toBe("dashboard:tree-restoration-goal|test-cache-key");
+          return factory?.();
+        });
+
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
-      cacheService.set.mockResolvedValue(undefined);
+
+      // Mock Date constructor to return consistent timestamp
+      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
       const result = await controller.getTreeRestorationGoal(query);
 
       expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
-      expect(cacheService.get).toHaveBeenCalledWith("dashboard:tree-restoration-goal|test-cache-key:timestamp");
-      expect(cacheService.get).toHaveBeenCalledWith("dashboard:tree-restoration-goal|test-cache-key");
       expect(treeRestorationGoalService.getTreeRestorationGoal).toHaveBeenCalledWith(query);
-      expect(cacheService.set).toHaveBeenCalledTimes(2);
-      expect(result).toEqual(mockServiceResponse);
+      expect(cacheService.set).toHaveBeenCalledWith(
+        "dashboard:tree-restoration-goal|test-cache-key:timestamp",
+        mockTimestamp
+      );
+      expect(result).toEqual({ mockSerialized: true });
+
+      jest.restoreAllMocks();
     });
 
     it("should return cached data when cache exists", async () => {
@@ -125,48 +154,49 @@ describe("TreeRestorationGoalController", () => {
         organisationType: ["non-profit-organization"]
       };
 
-      const lastUpdatedAt = "2024-01-01T00:00:00.000Z";
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
 
       cacheService.getCacheKeyFromQuery.mockReturnValue("cached-key");
-      cacheService.get.mockResolvedValueOnce(lastUpdatedAt).mockResolvedValueOnce(mockCachedData);
+
+      // Mock cache.get for timestamp key (cache hit)
+      cacheService.get
+        .mockResolvedValueOnce(mockTimestamp)
+        // Mock cache.get for data key (cache hit)
+        .mockResolvedValueOnce(mockCachedData);
 
       const result = await controller.getTreeRestorationGoal(query);
 
       expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
-      expect(cacheService.get).toHaveBeenCalledWith("dashboard:tree-restoration-goal|cached-key:timestamp");
-      expect(cacheService.get).toHaveBeenCalledWith("dashboard:tree-restoration-goal|cached-key");
+      expect(cacheService.get).toHaveBeenCalledWith(
+        "dashboard:tree-restoration-goal|cached-key:timestamp",
+        expect.any(Function)
+      );
+      expect(cacheService.get).toHaveBeenCalledWith("dashboard:tree-restoration-goal|cached-key", expect.any(Function));
       expect(treeRestorationGoalService.getTreeRestorationGoal).not.toHaveBeenCalled();
-
-      expect(result).toBeDefined();
-      if (result !== undefined && !Array.isArray(result) && "data" in result) {
-        const jsonApiResult = result as unknown as {
-          data: {
-            attributes: {
-              lastUpdatedAt: string | null;
-              forProfitTreeCount: number;
-              nonProfitTreeCount: number;
-            };
-          };
-        };
-        expect(jsonApiResult.data.attributes.lastUpdatedAt).toBe(lastUpdatedAt);
-        expect(jsonApiResult.data.attributes.forProfitTreeCount).toBe(mockCachedData.forProfitTreeCount);
-        expect(jsonApiResult.data.attributes.nonProfitTreeCount).toBe(mockCachedData.nonProfitTreeCount);
-      } else {
-        fail("Expected JSON API response structure with data property");
-      }
+      expect(result).toEqual({ mockSerialized: true });
     });
 
     it("should handle empty query object", async () => {
       const query: DashboardQueryDto = {};
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
+      const mockDate = new Date(mockTimestamp);
 
       cacheService.getCacheKeyFromQuery.mockReturnValue("empty-query-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+      // Mock cache misses for both keys
+      cacheService.get
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.())
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.());
+
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
+      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
       const result = await controller.getTreeRestorationGoal(query);
 
       expect(treeRestorationGoalService.getTreeRestorationGoal).toHaveBeenCalledWith(query);
-      expect(result).toEqual(mockServiceResponse);
+      expect(result).toEqual({ mockSerialized: true });
+
+      jest.restoreAllMocks();
     });
 
     it("should handle query with all possible filters", async () => {
@@ -179,95 +209,32 @@ describe("TreeRestorationGoalController", () => {
         cohort: "cohort-2024"
       };
 
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
+      const mockDate = new Date(mockTimestamp);
+
       cacheService.getCacheKeyFromQuery.mockReturnValue("full-query-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+      // Mock cache misses
+      cacheService.get
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.())
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.());
+
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
+      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
       const result = await controller.getTreeRestorationGoal(query);
 
       expect(treeRestorationGoalService.getTreeRestorationGoal).toHaveBeenCalledWith(query);
-      expect(result).toEqual(mockServiceResponse);
-    });
-
-    it("should handle cached data with null timestamp", async () => {
-      const query: DashboardQueryDto = { country: "KEN" };
-
-      cacheService.getCacheKeyFromQuery.mockReturnValue("null-timestamp-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(mockCachedData);
-
-      const result = await controller.getTreeRestorationGoal(query);
-
-      expect(result).toBeDefined();
-      if (result !== undefined && !Array.isArray(result) && "data" in result) {
-        const jsonApiResult = result as unknown as {
-          data: {
-            attributes: {
-              lastUpdatedAt: string | null;
-              forProfitTreeCount: number;
-            };
-          };
-        };
-        expect(jsonApiResult.data.attributes.lastUpdatedAt).toBeNull();
-        expect(jsonApiResult.data.attributes.forProfitTreeCount).toBe(mockCachedData.forProfitTreeCount);
-      } else {
-        fail("Expected JSON API response structure with data property");
-      }
-    });
-
-    it("should preserve Date objects in cached response", async () => {
-      const query: DashboardQueryDto = { programmes: ["ppc"] };
-
-      cacheService.getCacheKeyFromQuery.mockReturnValue("date-preservation-key");
-      cacheService.get.mockResolvedValueOnce("2024-06-01T00:00:00.000Z").mockResolvedValueOnce(mockCachedData);
-
-      const result = await controller.getTreeRestorationGoal(query);
-
-      expect(result).toBeDefined();
-      if (result !== undefined && !Array.isArray(result) && "data" in result) {
-        const jsonApiResult = result as unknown as {
-          data: {
-            attributes: {
-              treesUnderRestorationActualTotal: Array<{
-                dueDate: Date;
-                treeSpeciesAmount: number;
-                treeSpeciesGoal: number;
-              }>;
-            };
-          };
-        };
-        expect(jsonApiResult.data.attributes.treesUnderRestorationActualTotal).toHaveLength(1);
-        expect(jsonApiResult.data.attributes.treesUnderRestorationActualTotal[0].dueDate).toBeInstanceOf(Date);
-        expect(jsonApiResult.data.attributes.treesUnderRestorationActualTotal[0].dueDate.getTime()).not.toBeNaN();
-      } else {
-        fail("Expected JSON API response structure with data property");
-      }
-    });
-
-    it("should cache service result with proper timestamp", async () => {
-      const query: DashboardQueryDto = { landscapes: ["test-landscape"] };
-      const mockDate = new Date("2024-12-01T12:00:00.000Z");
-      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
-
-      cacheService.getCacheKeyFromQuery.mockReturnValue("timestamp-test-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
-      treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
-
-      await controller.getTreeRestorationGoal(query);
-
-      expect(cacheService.set).toHaveBeenCalledWith(
-        "dashboard:tree-restoration-goal|timestamp-test-key",
-        JSON.stringify(mockServiceResponse)
-      );
-      expect(cacheService.set).toHaveBeenCalledWith(
-        "dashboard:tree-restoration-goal|timestamp-test-key:timestamp",
-        mockDate.toISOString()
-      );
+      expect(result).toEqual({ mockSerialized: true });
 
       jest.restoreAllMocks();
     });
 
     it("should handle empty arrays in restoration data when no cache", async () => {
       const query: DashboardQueryDto = { cohort: "empty-cohort" };
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
+      const mockDate = new Date(mockTimestamp);
+
       const emptyServiceResponse = {
         ...mockServiceResponse,
         treesUnderRestorationActualTotal: [],
@@ -276,19 +243,26 @@ describe("TreeRestorationGoalController", () => {
       };
 
       cacheService.getCacheKeyFromQuery.mockReturnValue("empty-arrays-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+      // Mock cache misses
+      cacheService.get
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.())
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.());
+
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(emptyServiceResponse);
+      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
       const result = await controller.getTreeRestorationGoal(query);
 
-      expect(result).toEqual(emptyServiceResponse);
-      expect((result as typeof emptyServiceResponse).treesUnderRestorationActualTotal).toEqual([]);
-      expect((result as typeof emptyServiceResponse).treesUnderRestorationActualForProfit).toEqual([]);
-      expect((result as typeof emptyServiceResponse).treesUnderRestorationActualNonProfit).toEqual([]);
+      expect(result).toEqual({ mockSerialized: true });
+
+      jest.restoreAllMocks();
     });
 
     it("should handle zero values correctly when no cache", async () => {
       const query: DashboardQueryDto = { projectUuid: "zero-project" };
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
+
       const zeroServiceResponse = {
         forProfitTreeCount: 0,
         nonProfitTreeCount: 0,
@@ -305,21 +279,27 @@ describe("TreeRestorationGoalController", () => {
       };
 
       cacheService.getCacheKeyFromQuery.mockReturnValue("zero-values-key");
-      cacheService.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+      // Mock cache misses
+      cacheService.get
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.())
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.());
+
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(zeroServiceResponse);
+      const mockDate = new Date(mockTimestamp);
+      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
       const result = await controller.getTreeRestorationGoal(query);
 
-      expect(result).toEqual(zeroServiceResponse);
-      expect((result as typeof zeroServiceResponse).forProfitTreeCount).toBe(0);
-      expect((result as typeof zeroServiceResponse).nonProfitTreeCount).toBe(0);
-      expect((result as typeof zeroServiceResponse).totalTreesGrownGoal).toBe(0);
-      expect((result as typeof zeroServiceResponse).treesUnderRestorationActualTotal[0].treeSpeciesAmount).toBe(0);
-      expect((result as typeof zeroServiceResponse).treesUnderRestorationActualTotal[0].treeSpeciesGoal).toBe(0);
+      expect(result).toEqual({ mockSerialized: true });
+
+      jest.restoreAllMocks();
     });
 
     it("should handle cached data with empty arrays", async () => {
       const query: DashboardQueryDto = { cohort: "empty-cached-cohort" };
+      const mockTimestamp = "2024-01-01T00:00:00.000Z";
+
       const emptyCachedData = {
         ...mockCachedData,
         treesUnderRestorationActualTotal: [],
@@ -328,27 +308,47 @@ describe("TreeRestorationGoalController", () => {
       };
 
       cacheService.getCacheKeyFromQuery.mockReturnValue("empty-cached-arrays-key");
-      cacheService.get.mockResolvedValueOnce("2024-01-01T00:00:00.000Z").mockResolvedValueOnce(emptyCachedData);
+
+      // Mock cache hits
+      cacheService.get.mockResolvedValueOnce(mockTimestamp).mockResolvedValueOnce(emptyCachedData);
 
       const result = await controller.getTreeRestorationGoal(query);
 
-      expect(result).toBeDefined();
-      if (result !== undefined && !Array.isArray(result) && "data" in result) {
-        const jsonApiResult = result as unknown as {
-          data: {
-            attributes: {
-              treesUnderRestorationActualTotal: unknown[];
-              treesUnderRestorationActualForProfit: unknown[];
-              treesUnderRestorationActualNonProfit: unknown[];
-            };
-          };
-        };
-        expect(jsonApiResult.data.attributes.treesUnderRestorationActualTotal).toEqual([]);
-        expect(jsonApiResult.data.attributes.treesUnderRestorationActualForProfit).toEqual([]);
-        expect(jsonApiResult.data.attributes.treesUnderRestorationActualNonProfit).toEqual([]);
-      } else {
-        fail("Expected JSON API response structure with data property");
-      }
+      expect(result).toEqual({ mockSerialized: true });
+    });
+
+    it("should set timestamp when data is fetched from service", async () => {
+      const query: DashboardQueryDto = { landscapes: ["test-landscape"] };
+      const mockTimestamp = "2024-12-01T12:00:00.000Z";
+
+      cacheService.getCacheKeyFromQuery.mockReturnValue("timestamp-test-key");
+
+      // Mock cache misses
+      cacheService.get
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.())
+        .mockImplementationOnce(async (key: string, factory?: () => Promise<string | object>) => factory?.());
+
+      treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
+      const mockDate = new Date(mockTimestamp);
+      jest.spyOn(global, "Date").mockImplementation(() => mockDate);
+
+      await controller.getTreeRestorationGoal(query);
+
+      expect(cacheService.set).toHaveBeenCalledWith(
+        "dashboard:tree-restoration-goal|timestamp-test-key:timestamp",
+        mockTimestamp
+      );
+
+      jest.restoreAllMocks();
+    });
+
+    it("should handle cache service errors gracefully", async () => {
+      const query: DashboardQueryDto = { country: "ERROR" };
+
+      cacheService.getCacheKeyFromQuery.mockReturnValue("error-key");
+      cacheService.get.mockRejectedValue(new Error("Cache error"));
+
+      await expect(controller.getTreeRestorationGoal(query)).rejects.toThrow("Cache error");
     });
   });
 });

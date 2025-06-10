@@ -55,6 +55,6 @@ export class ImpactStoryFullDto extends ImpactStoryLightDto {
     }
   }
 
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  content: string[] | null;
+  @ApiProperty({ nullable: true, type: String })
+  content: string | null;
 }

@@ -8,7 +8,6 @@ import {
   UserFactory,
   FormSectionFactory
 } from "@terramatch-microservices/database/factories";
-import { faker } from "@faker-js/faker";
 
 describe("FormQuestionOptionPolicy", () => {
   let service: PolicyService;

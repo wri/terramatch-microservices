@@ -89,7 +89,7 @@ export class ImpactStoriesController {
 
     const organizationCountries = impactStory.organisation?.countries ?? [];
     const countriesMap = await this.impactStoryService.getCountriesForOrganizations([organizationCountries]);
-    const orgCountries = organizationCountries.map(iso => countriesMap.get(iso)).filter(Boolean);
+    const orgCountries = organizationCountries.map(iso => countriesMap.get(iso)).filter(country => country != null);
 
     const organization = {
       uuid: impactStory.organisation?.uuid,

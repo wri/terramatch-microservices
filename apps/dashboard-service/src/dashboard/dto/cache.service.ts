@@ -39,7 +39,7 @@ export class CacheService {
       return data;
     }
 
-    if (factory !== undefined && factory !== null) {
+    if (factory != null) {
       const result = await factory();
       const valueToStore = typeof result === "string" ? result : JSON.stringify(result);
       await this.redis.set(key, valueToStore);

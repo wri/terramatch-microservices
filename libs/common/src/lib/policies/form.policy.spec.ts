@@ -2,6 +2,7 @@ import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { FormFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { faker } from "@faker-js/faker";
 
 describe("FormPolicy", () => {
   let service: PolicyService;
@@ -22,7 +23,7 @@ describe("FormPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    const form = await FormFactory.create({ updatedBy: user.id });
+    const form = await FormFactory.create({ updatedBy: user.uuid });
     await expectCan(service, ["uploadFiles"], form);
   });
 
@@ -30,7 +31,7 @@ describe("FormPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    const form = await FormFactory.create({ updatedBy: user.id + 1 }); // Different user
+    const form = await FormFactory.create({ updatedBy: faker.string.uuid() }); // Different user
     await expectCannot(service, ["uploadFiles"], form);
   });
 

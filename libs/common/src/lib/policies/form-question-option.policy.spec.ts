@@ -7,6 +7,7 @@ import {
   FormQuestionOptionFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
+import { faker } from "@faker-js/faker";
 
 describe("FormQuestionOptionPolicy", () => {
   let service: PolicyService;
@@ -27,7 +28,7 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    await FormFactory.create({ updatedBy: user.id });
+    await FormFactory.create({ updatedBy: user.uuid });
     const question = await FormQuestionFactory.create();
     const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
     await expectCan(service, ["uploadFiles"], option);
@@ -37,7 +38,7 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    await FormFactory.create({ updatedBy: user.id + 1 }); // Different user
+    await FormFactory.create({ updatedBy: faker.string.uuid() }); // Different user
     const question = await FormQuestionFactory.create();
     const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
     await expectCannot(service, ["uploadFiles"], option);

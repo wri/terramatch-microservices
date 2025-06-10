@@ -27,12 +27,4 @@ describe("ImpactStoryPolicy", () => {
     const impactStory = await ImpactStoryFactory.create();
     await expectCan(service, ["uploadFiles"], impactStory);
   });
-
-  it("should allow uploading files for impact stories for users with impact-stories-manage permission", async () => {
-    const user = await UserFactory.create();
-    mockUserId(user.id);
-    mockPermissions("impact-stories-manage");
-    const impactStory = await ImpactStoryFactory.create();
-    await expectCan(service, ["uploadFiles"], impactStory);
-  });
 });

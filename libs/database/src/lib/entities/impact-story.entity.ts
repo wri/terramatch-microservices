@@ -1,5 +1,7 @@
-import { AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, UUID, UUIDV4 } from "sequelize";
+import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, DATE, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { Organisation } from "./organisation.entity";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "impact_stories", underscored: true, paranoid: true })
 export class ImpactStory extends Model<ImpactStory> {
@@ -18,5 +20,27 @@ export class ImpactStory extends Model<ImpactStory> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  // TODO: complete remaining fields
+  @Column(STRING)
+  title: string;
+
+  @Column(STRING)
+  status: string;
+
+  @Column(BIGINT.UNSIGNED)
+  organizationId: number;
+
+  @BelongsTo(() => Organisation, { foreignKey: "organizationId", constraints: false })
+  organisation: Organisation;
+
+  @Column(DATE)
+  date: string;
+
+  @JsonColumn()
+  category: string;
+
+  @Column(STRING)
+  thumbnail: string;
+
+  @Column(TEXT)
+  content: string;
 }

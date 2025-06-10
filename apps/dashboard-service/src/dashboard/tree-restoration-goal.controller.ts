@@ -15,7 +15,7 @@ export class TreeRestorationGoalController {
   ) {}
 
   @Get()
-  @JsonApiResponse([TreeRestorationGoalDto])
+  @JsonApiResponse(TreeRestorationGoalDto)
   @ApiOperation({ operationId: "getTreeRestorationGoal", summary: "Get tree restoration goal statistics" })
   async getTreeRestorationGoal(@Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:tree-restoration-goal|${this.cacheService.getCacheKeyFromQuery(query)}`;
@@ -30,7 +30,7 @@ export class TreeRestorationGoalController {
       await this.cacheService.set(cacheKey, JSON.stringify(result));
       await this.cacheService.set(timestampKey, timestamp);
     } else {
-      result = JSON.parse(cachedData);
+      result = typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
     }
 
     const document = buildJsonApi(TreeRestorationGoalDto);

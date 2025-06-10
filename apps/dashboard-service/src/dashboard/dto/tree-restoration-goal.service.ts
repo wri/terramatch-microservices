@@ -4,6 +4,7 @@ import { DashboardQueryDto } from "./dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
 import { Op, fn, col, literal } from "sequelize";
 import { Literal } from "sequelize/types/utils";
+import { sumBy } from "lodash";
 
 interface DateResult {
   year: number;
@@ -31,30 +32,35 @@ export class TreeRestorationGoalService {
       .filter(project => project.organisation?.type === "non-profit-organization")
       .map(project => project.id);
 
-    const totalTreesGrownGoal = projects.reduce((sum, project) => sum + (project.treesGrownGoal ?? 0), 0);
+    const totalTreesGrownGoal = sumBy(projects, "treesGrownGoal") ?? 0;
 
-    const approvedSitesQuery =
-      projectIds.length > 0 ? await Site.approvedIdsProjectsSubquery(projectIds) : literal("(0)");
+    const approvedSitesQuery = projectIds.length > 0 ? Site.approvedIdsProjectsSubquery(projectIds) : undefined;
     const forProfitApprovedSitesQuery =
-      forProfitProjectIds.length > 0 ? await Site.approvedIdsProjectsSubquery(forProfitProjectIds) : literal("(0)");
+      forProfitProjectIds.length > 0 ? Site.approvedIdsProjectsSubquery(forProfitProjectIds) : undefined;
     const nonProfitApprovedSitesQuery =
-      nonProfitProjectIds.length > 0 ? await Site.approvedIdsProjectsSubquery(nonProfitProjectIds) : literal("(0)");
+      nonProfitProjectIds.length > 0 ? Site.approvedIdsProjectsSubquery(nonProfitProjectIds) : undefined;
 
     const [forProfitTreeCount, nonProfitTreeCount] = await Promise.all([
-      this.getTreeCount(forProfitApprovedSitesQuery),
-      this.getTreeCount(nonProfitApprovedSitesQuery)
+      forProfitApprovedSitesQuery !== undefined ? this.getTreeCount(forProfitApprovedSitesQuery) : 0,
+      nonProfitApprovedSitesQuery !== undefined ? this.getTreeCount(nonProfitApprovedSitesQuery) : 0
     ]);
 
-    const distinctDates = await this.getDistinctDates(approvedSitesQuery);
+    const distinctDates = approvedSitesQuery !== undefined ? await this.getDistinctDates(approvedSitesQuery) : [];
 
     const [
       treesUnderRestorationActualTotal,
       treesUnderRestorationActualForProfit,
       treesUnderRestorationActualNonProfit
     ] = await Promise.all([
-      this.calculateTreesUnderRestoration(approvedSitesQuery, distinctDates, totalTreesGrownGoal),
-      this.calculateTreesUnderRestoration(forProfitApprovedSitesQuery, distinctDates, totalTreesGrownGoal),
-      this.calculateTreesUnderRestoration(nonProfitApprovedSitesQuery, distinctDates, totalTreesGrownGoal)
+      approvedSitesQuery !== undefined
+        ? this.calculateTreesUnderRestoration(approvedSitesQuery, distinctDates, totalTreesGrownGoal)
+        : [],
+      forProfitApprovedSitesQuery !== undefined
+        ? this.calculateTreesUnderRestoration(forProfitApprovedSitesQuery, distinctDates, totalTreesGrownGoal)
+        : [],
+      nonProfitApprovedSitesQuery !== undefined
+        ? this.calculateTreesUnderRestoration(nonProfitApprovedSitesQuery, distinctDates, totalTreesGrownGoal)
+        : []
     ]);
 
     return {
@@ -145,9 +151,9 @@ export class TreeRestorationGoalService {
       const key = `${year}-${month}`;
       const siteReportsForDate = siteReportsByDate.get(key) ?? [];
 
-      const treeSpeciesAmount = siteReportsForDate.reduce((sum, report) => {
-        return sum + (report.treesPlanted?.reduce((reportSum, tree) => reportSum + (tree.amount ?? 0), 0) ?? 0);
-      }, 0);
+      const treeSpeciesAmount = sumBy(siteReportsForDate, report =>
+        sumBy(report.treesPlanted ?? [], tree => tree.amount ?? 0)
+      );
 
       const formattedDate = new Date(year, month - 1, 1);
 

@@ -45,7 +45,7 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   private siteJoin: IncludeOptions = {
     model: Site,
-    include: [{ association: "project", attributes: ["uuid"] }],
+    include: [{ association: "project", attributes: ["uuid", "shortName"] }],
     attributes: ["id", "projectId", "name"],
     required: true
   };
@@ -84,6 +84,14 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
 
     return this.where({ projectId: { [Op.in]: subquery.literal } }, this.siteJoin);
+  }
+
+  async filterProjectShortNames(projectShortNames: string[]) {
+    const filterProjects = await Project.findAll({
+      where: { shortName: { [Op.in]: projectShortNames } },
+      attributes: ["id"]
+    });
+    return this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
   }
 
   async filterProjectUuids(projectUuids: string[]) {

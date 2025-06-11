@@ -2,7 +2,6 @@
 import {
   Demographic,
   Project,
-  ProjectPitch,
   ProjectReport,
   Site,
   SiteReport,
@@ -388,7 +387,7 @@ describe("ProjectProcessor", () => {
       jest.spyOn(TreeSpecies, "findAll").mockImplementation(() => Promise.resolve([species1, species2]));
 
       const result = await processor.loadAssociationData([project.id]);
-      // @ts-ignore
+      // @ts-expect-error
       expect(result[project.id].treesPlantedCount).toBe(species1.amount + species2.amount);
     });
 

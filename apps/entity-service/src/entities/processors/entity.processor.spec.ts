@@ -12,13 +12,11 @@ import { ActionFactory } from "@terramatch-microservices/database/factories/acti
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
-import { SiteReport, NurseryReport, Project } from "@terramatch-microservices/database/entities";
+import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { Op } from "sequelize";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { ProjectLightDto, ProjectFullDto } from "../dto/project.dto";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
-import { EntityProcessor } from "./entity-processor";
 
 describe("EntityProcessor", () => {
   let service: EntitiesService;

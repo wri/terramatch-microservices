@@ -13,7 +13,7 @@ import {
   NEEDS_MORE_INFORMATION,
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
-import { ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport, SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -142,6 +142,11 @@ export abstract class EntityProcessor<
    * and set the appropriate fields and then call super.update()
    */
   async update(model: ModelType, update: UpdateDto) {
+    // Handle virtual properties if they exist
+    if (update.siteReportNothingToReportStatus || update.nurseryReportNothingToReportStatus) {
+      await this.handleVirtualProperties(model, update);
+    }
+
     if (update.status != null) {
       if (this.APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);
@@ -157,6 +162,36 @@ export abstract class EntityProcessor<
     }
 
     await model.save();
+  }
+
+  protected async handleVirtualProperties(model: ModelType, attributes: UpdateDto): Promise<void> {
+    const siteReportUuids = attributes.siteReportNothingToReportStatus;
+    if (siteReportUuids && siteReportUuids.length > 0) {
+      await SiteReport.update(
+        { status: APPROVED },
+        {
+          where: {
+            uuid: {
+              [Op.in]: siteReportUuids
+            }
+          }
+        }
+      );
+    }
+
+    const nurseryReportUuids = attributes.nurseryReportNothingToReportStatus;
+    if (nurseryReportUuids && nurseryReportUuids.length > 0) {
+      await NurseryReport.update(
+        { status: APPROVED },
+        {
+          where: {
+            uuid: {
+              [Op.in]: nurseryReportUuids
+            }
+          }
+        }
+      );
+    }
   }
 }
 

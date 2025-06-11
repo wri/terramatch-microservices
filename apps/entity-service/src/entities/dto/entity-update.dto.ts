@@ -29,6 +29,28 @@ export class EntityUpdateAttributes {
     nullable: true
   })
   feedbackFields?: string[] | null;
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
+    description: "Virtual property to update the status of specific site reports by their UUIDs",
+    isArray: true,
+    type: String,
+    nullable: true
+  })
+  siteReportNothingToReportStatus?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
+    description: "Virtual property to update the status of specific nursery reports by their UUIDs",
+    isArray: true,
+    type: String,
+    nullable: true
+  })
+  nurseryReportNothingToReportStatus?: string[];
 }
 
 export class ProjectUpdateAttributes extends EntityUpdateAttributes {

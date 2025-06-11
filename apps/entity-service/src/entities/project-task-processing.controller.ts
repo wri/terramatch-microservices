@@ -1,11 +1,7 @@
 import { Body, Controller, Get, Param, Patch } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ProjectTaskProcessingService } from "./project-task-processing.service";
-import {
-  ApproveReportsDto,
-  ProjectTaskProcessingResponseDto,
-  ApproveReportsResponseDto
-} from "./dto/project-task-processing.dto";
+import { ProjectTaskProcessingResponseDto } from "./dto/project-task-processing.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 
@@ -23,19 +19,6 @@ export class ProjectTaskProcessingController {
     const response = await this.projectTaskProcessingService.processProjectTasks(projectUuid);
     const document = buildJsonApi(ProjectTaskProcessingResponseDto);
     document.addData(projectUuid, new ProjectTaskProcessingResponseDto(response));
-    return document.serialize();
-  }
-
-  @Patch("/approveReports")
-  @ApiOperation({
-    operationId: "approveReports",
-    summary: "Approve reports that are marked with nothingToReport=true"
-  })
-  @JsonApiResponse(ApproveReportsResponseDto)
-  async approveReports(@Body() params: ApproveReportsDto) {
-    const response = await this.projectTaskProcessingService.approveReports(params);
-    const document = buildJsonApi(ApproveReportsResponseDto);
-    document.addData("approveReports", new ApproveReportsResponseDto(response));
     return document.serialize();
   }
 }

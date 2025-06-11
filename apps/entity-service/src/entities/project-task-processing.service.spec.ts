@@ -1,13 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProjectTaskProcessingService } from "./project-task-processing.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { Project, Task, SiteReport, NurseryReport, User } from "@terramatch-microservices/database/entities";
+import { Project, Task } from "@terramatch-microservices/database/entities";
 import { createMock } from "@golevelup/ts-jest";
 import { NotFoundException } from "@nestjs/common";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
-import { RequestContext } from "nestjs-request-context";
-import { Op } from "sequelize";
-import { Request, Response } from "express";
 
 describe("ProjectTaskProcessingService", () => {
   let service: ProjectTaskProcessingService;
@@ -81,70 +77,6 @@ describe("ProjectTaskProcessingService", () => {
             nothingToReport: true
           })
         ])
-      });
-    });
-  });
-
-  describe("approveReports", () => {
-    const mockUser = {
-      id: 1,
-      emailAddress: "test@example.com",
-      firstName: "Test",
-      lastName: "User"
-    } as User;
-
-    const mockSiteReport = {
-      id: 1,
-      uuid: "site-report-uuid"
-    } as SiteReport;
-
-    const mockNurseryReport = {
-      id: 2,
-      uuid: "nursery-report-uuid"
-    } as NurseryReport;
-
-    beforeEach(() => {
-      jest.spyOn(User, "findByPk").mockResolvedValue(mockUser);
-      jest.spyOn(SiteReport, "findAll").mockResolvedValue([mockSiteReport]);
-      jest.spyOn(NurseryReport, "findAll").mockResolvedValue([mockNurseryReport]);
-      jest.spyOn(SiteReport, "update").mockResolvedValue([1]);
-      jest.spyOn(NurseryReport, "update").mockResolvedValue([1]);
-      jest.spyOn(RequestContext, "currentContext", "get").mockReturnValue({
-        req: { authenticatedUserId: 1 } as Partial<Request>,
-        res: {} as Partial<Response>
-      });
-    });
-
-    it("should approve reports and create audit statuses", async () => {
-      const result = await service.approveReports({
-        uuid: "project-uuid",
-        reportUuids: ["site-report-uuid", "nursery-report-uuid"],
-        feedback: "Test feedback"
-      });
-
-      expect(result).toEqual({
-        approvedCount: 2,
-        message: "Successfully approved 2 reports"
-      });
-
-      expect(SiteReport.update).toHaveBeenCalledWith({ status: APPROVED }, { where: { id: { [Op.in]: [1] } } });
-      expect(NurseryReport.update).toHaveBeenCalledWith({ status: APPROVED }, { where: { id: { [Op.in]: [2] } } });
-    });
-
-    it("should handle missing authenticated user", async () => {
-      jest.spyOn(RequestContext, "currentContext", "get").mockReturnValue({
-        req: {} as Partial<Request>,
-        res: {} as Partial<Response>
-      });
-
-      const result = await service.approveReports({
-        uuid: "project-uuid",
-        reportUuids: ["site-report-uuid", "nursery-report-uuid"]
-      });
-
-      expect(result).toEqual({
-        approvedCount: 2,
-        message: "Successfully approved 2 reports"
       });
     });
   });

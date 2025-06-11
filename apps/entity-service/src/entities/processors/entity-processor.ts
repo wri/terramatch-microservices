@@ -150,7 +150,7 @@ export abstract class EntityProcessor<
    */
   async update(model: ModelType, update: UpdateDto) {
     // Handle virtual properties if they exist
-    if (update.siteReportNothingToReportStatus || update.nurseryReportNothingToReportStatus) {
+    if (update.siteReportNothingToReportStatus != null || update.nurseryReportNothingToReportStatus != null) {
       await this.handleVirtualProperties(model, update);
     }
 
@@ -181,13 +181,13 @@ export abstract class EntityProcessor<
     const nurseryReportUuids = attributes.nurseryReportNothingToReportStatus;
 
     const [siteReports, nurseryReports] = await Promise.all([
-      siteReportUuids?.length
+      siteReportUuids !== undefined && siteReportUuids?.length > 0
         ? SiteReport.findAll({
             where: { uuid: { [Op.in]: siteReportUuids } },
             attributes: ["id", "uuid"]
           })
         : [],
-      nurseryReportUuids?.length
+      nurseryReportUuids !== undefined && nurseryReportUuids.length > 0
         ? NurseryReport.findAll({
             where: { uuid: { [Op.in]: nurseryReportUuids } },
             attributes: ["id", "uuid"]
@@ -196,10 +196,10 @@ export abstract class EntityProcessor<
     ]);
 
     await Promise.all([
-      siteReportUuids?.length
+      siteReportUuids !== undefined && siteReportUuids.length > 0
         ? SiteReport.update({ status: APPROVED }, { where: { uuid: { [Op.in]: siteReportUuids } } })
         : Promise.resolve(),
-      nurseryReportUuids?.length
+      nurseryReportUuids !== undefined && nurseryReportUuids.length > 0
         ? NurseryReport.update({ status: APPROVED }, { where: { uuid: { [Op.in]: nurseryReportUuids } } })
         : Promise.resolve()
     ]);
@@ -225,7 +225,7 @@ export abstract class EntityProcessor<
       }))
     ] as Array<Attributes<AuditStatus>>;
 
-    if (auditStatusRecords.length) {
+    if (auditStatusRecords.length > 0) {
       await AuditStatus.bulkCreate(auditStatusRecords);
     }
   }

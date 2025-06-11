@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsDate, IsEnum, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsString, IsUUID } from "class-validator";
 import { Type } from "class-transformer";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";

@@ -1,7 +1,18 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  ForeignKey,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { I18nItem } from "./i18n-item.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { FormSection } from "./form-section.entity";
 
 @Table({ tableName: "form_questions", underscored: true, paranoid: true })
 export class FormQuestion extends Model<FormQuestion> {
@@ -14,7 +25,10 @@ export class FormQuestion extends Model<FormQuestion> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  // TODO: foreign key for FormSection, when that's been added. Uses cascading delete constraint
+  @BelongsTo(() => FormSection)
+  formSection: FormSection | null;
+
+  @ForeignKey(() => FormSection)
   @Column(BIGINT.UNSIGNED)
   formSectionId: number;
 

@@ -25,6 +25,7 @@ export class Demographic extends Model<Demographic> {
   static readonly ALL_BENEFICIARIES_TYPE = "all-beneficiaries";
   static readonly TRAINING_BENEFICIARIES_TYPE = "training-beneficiaries";
   static readonly INDIRECT_BENEFICIARIES_TYPE = "indirect-beneficiaries";
+  static readonly ASSOCIATES_TYPES = "associates";
   static readonly VALID_TYPES = [
     Demographic.WORKDAYS_TYPE,
     Demographic.RESTORATION_PARTNERS_TYPE,
@@ -33,7 +34,8 @@ export class Demographic extends Model<Demographic> {
     Demographic.VOLUNTEERS_TYPE,
     Demographic.ALL_BENEFICIARIES_TYPE,
     Demographic.TRAINING_BENEFICIARIES_TYPE,
-    Demographic.INDIRECT_BENEFICIARIES_TYPE
+    Demographic.INDIRECT_BENEFICIARIES_TYPE,
+    Demographic.ASSOCIATES_TYPES
   ] as const;
 
   static idsSubquery(demographicalIds: Literal | number[], demographicalType: string, type?: DemographicType) {

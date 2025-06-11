@@ -10,6 +10,8 @@ import { CacheService } from "./dashboard/dto/cache.service";
 import { RedisModule } from "@nestjs-modules/ioredis";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
+import { TreeRestorationGoalController } from "./dashboard/tree-restoration-goal.controller";
+import { TreeRestorationGoalService } from "./dashboard/dto/tree-restoration-goal.service";
 
 @Module({
   imports: [
@@ -30,7 +32,7 @@ import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
     }),
     BullModule.registerQueue({ name: "dashboard" })
   ],
-  controllers: [TotalSectionHeaderController],
+  controllers: [TotalSectionHeaderController, TreeRestorationGoalController],
   providers: [
     {
       provide: APP_FILTER,
@@ -38,7 +40,8 @@ import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
     },
     TotalSectionHeaderService,
     CacheService,
-    DashboardProcessor
+    DashboardProcessor,
+    TreeRestorationGoalService
   ]
 })
 export class AppModule {}

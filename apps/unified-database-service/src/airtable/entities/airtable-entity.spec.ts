@@ -4,6 +4,7 @@ import {
   Application,
   Demographic,
   DemographicEntry,
+  FinancialIndicator,
   Framework,
   FundingProgramme,
   Nursery,
@@ -20,6 +21,7 @@ import {
   ApplicationFactory,
   DemographicEntryFactory,
   DemographicFactory,
+  FinancialIndicatorFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
   NurseryFactory,
@@ -40,6 +42,7 @@ import {
   ApplicationEntity,
   DemographicEntity,
   DemographicEntryEntity,
+  FinancialIndicatorEntity,
   FundingProgrammeEntity,
   NurseryEntity,
   NurseryReportEntity,
@@ -51,7 +54,7 @@ import {
   SiteReportEntity,
   TreeSpeciesEntity
 } from "./";
-import { orderBy, sortBy } from "lodash";
+import { orderBy, sortBy, uniq } from "lodash";
 import { Model } from "sequelize-typescript";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { FindOptions, Op } from "sequelize";
@@ -498,6 +501,49 @@ describe("AirtableEntity", () => {
           dueAt
         }
       }));
+    });
+  });
+
+  describe("FinancialIndicatorEntity", () => {
+    let indicators: FinancialIndicator[];
+    let organisationUuids: Record<number, string>;
+
+    beforeAll(async () => {
+      await FinancialIndicator.truncate();
+
+      const allIndicators = await FinancialIndicatorFactory.createMany(10);
+      await allIndicators[2].destroy();
+      await allIndicators[7].destroy();
+      allIndicators.push(
+        await FinancialIndicatorFactory.create({ organisationId: allIndicators[0].organisationId }),
+        await FinancialIndicatorFactory.create({ organisationId: allIndicators[2].organisationId })
+      );
+
+      indicators = allIndicators.filter(indicator => !indicator.isSoftDeleted());
+
+      organisationUuids = {};
+      for (const { id, uuid } of await Organisation.findAll({
+        where: { id: uniq(indicators.map(({ organisationId }) => organisationId)) },
+        attributes: ["id", "uuid"]
+      })) {
+        organisationUuids[id] = uuid;
+      }
+    });
+
+    it("sends all records to airtable", async () => {
+      await testAirtableUpdates(
+        new FinancialIndicatorEntity(dataApi),
+        indicators,
+        ({ uuid, collection, organisationId, amount, description }) => ({
+          fields: {
+            uuid,
+            collection,
+            amount,
+            description,
+            organisationUuid: organisationUuids[organisationId]
+          }
+        })
+      );
     });
   });
 

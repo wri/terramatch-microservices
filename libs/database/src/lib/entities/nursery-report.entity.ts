@@ -45,10 +45,18 @@ export class NurseryReport extends Model<NurseryReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\NurseryReport";
 
   static readonly MEDIA = {
-    file: { dbCollection: "file", multiple: true },
-    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    treeSeedlingContributions: { dbCollection: "tree_seedling_contributions", multiple: true },
-    photos: { dbCollection: "photos", multiple: true }
+    file: { dbCollection: "file", multiple: true, validation: "general-documents" },
+    otherAdditionalDocuments: {
+      dbCollection: "other_additional_documents",
+      multiple: true,
+      validation: "general-documents"
+    },
+    treeSeedlingContributions: {
+      dbCollection: "tree_seedling_contributions",
+      multiple: true,
+      validation: "general-documents"
+    },
+    photos: { dbCollection: "photos", multiple: true, validation: "photos" }
   } as const;
 
   static incomplete() {

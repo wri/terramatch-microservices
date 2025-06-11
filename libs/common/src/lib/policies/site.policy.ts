@@ -9,8 +9,14 @@ export class SitePolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve"], Site, { frameworkKey: { $in: this.frameworks } });
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], Site, {
+        frameworkKey: { $in: this.frameworks }
+      });
     }
+    if (this.permissions.includes("media-manage")) {
+      this.builder.can("uploadFiles", Site);
+    }
+
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
@@ -23,7 +29,7 @@ export class SitePolicy extends UserPermissionsPolicy {
         ];
 
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update"], Site, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "delete", "update", "uploadFiles"], Site, { projectId: { $in: projectIds } });
         }
       }
     }
@@ -33,7 +39,9 @@ export class SitePolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve"], Site, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], Site, {
+            projectId: { $in: projectIds }
+          });
         }
       }
     }

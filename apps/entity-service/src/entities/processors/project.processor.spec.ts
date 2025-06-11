@@ -387,8 +387,7 @@ describe("ProjectProcessor", () => {
       jest.spyOn(TreeSpecies, "findAll").mockImplementation(() => Promise.resolve([species1, species2]));
 
       const result = await processor.loadAssociationData([project.id]);
-      // @ts-expect-error
-      expect(result[project.id].treesPlantedCount).toBe(species1.amount + species2.amount);
+      expect(result[project.id].treesPlantedCount).toBe((species1.amount ?? 0) + (species2.amount ?? 0));
     });
 
     it("handles projects with no tree species", async () => {

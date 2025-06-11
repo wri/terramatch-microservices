@@ -64,7 +64,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [User, UserPolicy],
   [ProjectPitch, ProjectPitchPolicy],
   [Task, TaskPolicy],
-  [Demographic, DemographicPolicy][(Task, TaskPolicy)],
+  [Demographic, DemographicPolicy],
   [AuditStatus, AuditStatusPolicy],
   [FinancialIndicator, FinancialIndicatorPolicy],
   [Form, FormPolicy],

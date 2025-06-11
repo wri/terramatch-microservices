@@ -83,14 +83,16 @@ export const RESTORATION_PARTNERS_PROJECT_COLLECTIONS = [
   INDIRECT_OTHER
 ] as const;
 
+export const ALL = "all";
 export const FULL_TIME = "full-time";
+export const FULL_TIME_CLT = "full-time-clt";
 export const PART_TIME = "part-time";
-export const JOBS_PROJECT_COLLECTIONS = [FULL_TIME, PART_TIME] as const;
+export const PART_TIME_CLT = "part-time-clt";
+export const JOBS_PROJECT_COLLECTIONS = [ALL, FULL_TIME, FULL_TIME_CLT, PART_TIME, PART_TIME_CLT] as const;
 
 export const VOLUNTEER = "volunteer";
 export const VOLUNTEERS_PROJECT_COLLECTIONS = [VOLUNTEER] as const;
 
-export const ALL = "all";
 export const ALL_BENEFICIARIES_PROJECT_COLLECTIONS = [ALL] as const;
 export const ALL_BENEFICIARIES_ORGANISATION_COLLECTIONS = [ALL] as const;
 

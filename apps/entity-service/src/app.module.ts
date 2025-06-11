@@ -8,6 +8,8 @@ import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
+import { FileUploadController } from "./entities/file-upload.controller";
+import { FileUploadService } from "./file/file-upload.service";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
@@ -17,6 +19,8 @@ import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
 import { ProjectTaskProcessingController } from "./entities/project-task-processing.controller";
 import { ProjectTaskProcessingService } from "./entities/project-task-processing.service";
+import { ImpactStoriesController } from "./entities/impact-stories.controller";
+import { ImpactStoryService } from "./entities/impact-story.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
@@ -25,8 +29,10 @@ import { ProjectTaskProcessingService } from "./entities/project-task-processing
   // wildcard route on EntitiesController.
   controllers: [
     ProjectPitchesController,
+    ImpactStoriesController,
     ProjectTaskProcessingController,
     TasksController,
+    FileUploadController,
     TreesController,
     BoundingBoxController,
     EntitiesController,
@@ -39,8 +45,10 @@ import { ProjectTaskProcessingService } from "./entities/project-task-processing
     },
     EntitiesService,
     TreeService,
+    FileUploadService,
     ProjectPitchService,
     ProjectTaskProcessingService,
+    ImpactStoryService,
     BoundingBoxService,
     TasksService
   ]

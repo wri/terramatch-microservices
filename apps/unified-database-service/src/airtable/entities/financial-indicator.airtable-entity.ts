@@ -10,6 +10,7 @@ const COLUMNS: ColumnMapping<FinancialIndicator, FinancialIndicatorAssociations>
   "uuid",
   "createdAt",
   "updatedAt",
+  "year",
   "collection",
   "amount",
   "description",

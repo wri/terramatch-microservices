@@ -6,6 +6,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
+import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants";
 
 @Controller("entities/v3/demographics")
 export class DemographicsController {
@@ -27,7 +28,12 @@ export class DemographicsController {
       await this.policyService.authorize("read", data);
       for (const demographic of data) {
         indexIds.push(demographic.uuid);
-        const demographicDto = new DemographicDto(demographic);
+        const model = LARAVEL_MODELS[demographic.demographicalType];
+        const demographicData = await model.findOne({
+          where: { id: demographic.demographicalId },
+          attributes: ["id", "uuid"]
+        });
+        const demographicDto = new DemographicDto(demographic, demographicData);
         document.addData(demographicDto.uuid, demographicDto);
       }
     }

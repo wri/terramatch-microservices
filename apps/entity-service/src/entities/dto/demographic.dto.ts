@@ -75,19 +75,12 @@ export class DemographicEntryDto {
 
 @JsonApiDto({ type: "demographics" })
 export class DemographicDto extends AssociationDto {
-  constructor(demographic: Demographic, additional: AdditionalProps<DemographicDto, Demographic>);
-  constructor(demographic: Demographic);
-  constructor(demographic: Demographic, additional?: AdditionalProps<DemographicDto, Demographic>) {
+  constructor(demographic: Demographic, additional: AdditionalProps<DemographicDto, Demographic>) {
     super();
-
-    if (additional != null) {
-      populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
-        ...additional,
-        entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
-      });
-    } else {
-      populateDto<DemographicDto>(this, demographic as unknown as DemographicDto);
-    }
+    populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
+      ...additional,
+      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+    });
   }
 
   @ApiProperty()

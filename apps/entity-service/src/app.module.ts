@@ -15,6 +15,8 @@ import { TasksService } from "./entities/tasks.service";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
+import { ProjectTaskProcessingController } from "./entities/project-task-processing.controller";
+import { ProjectTaskProcessingService } from "./entities/project-task-processing.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 
@@ -26,6 +28,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
   controllers: [
     ProjectPitchesController,
     ImpactStoriesController,
+    ProjectTaskProcessingController,
     TasksController,
     TreesController,
     BoundingBoxController,
@@ -41,6 +44,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     TreeService,
     ProjectPitchService,
     ImpactStoryService,
+    ProjectTaskProcessingService,
     BoundingBoxService,
     TasksService
   ]

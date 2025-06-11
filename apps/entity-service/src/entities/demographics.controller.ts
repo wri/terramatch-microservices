@@ -6,7 +6,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
-import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants";
+import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 
 @Controller("entities/v3/demographics")
 export class DemographicsController {

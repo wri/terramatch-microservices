@@ -1,11 +1,13 @@
 import { Controller, Get, Param } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ProjectTaskProcessingService } from "./project-task-processing.service";
 import { ProjectTaskProcessingResponseDto } from "./dto/project-task-processing.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { EntitySideload } from "./dto/entity-query.dto";
 
 @Controller("entities/v3/projectTaskProcessing")
+@ApiExtraModels(EntitySideload)
 export class ProjectTaskProcessingController {
   constructor(private readonly projectTaskProcessingService: ProjectTaskProcessingService) {}
 

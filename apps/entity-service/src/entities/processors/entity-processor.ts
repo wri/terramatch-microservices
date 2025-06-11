@@ -151,7 +151,7 @@ export abstract class EntityProcessor<
   async update(model: ModelType, update: UpdateDto) {
     // Handle virtual properties if they exist
     if (update.siteReportNothingToReportStatus != null || update.nurseryReportNothingToReportStatus != null) {
-      await this.handleVirtualProperties(model, update);
+      await this.updateBulkApprovalReports(model, update);
     }
 
     if (update.status != null) {
@@ -171,7 +171,7 @@ export abstract class EntityProcessor<
     await model.save();
   }
 
-  protected async handleVirtualProperties(model: ModelType, attributes: UpdateDto): Promise<void> {
+  protected async updateBulkApprovalReports(model: ModelType, attributes: UpdateDto): Promise<void> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]

@@ -12,6 +12,13 @@ import { ActionFactory } from "@terramatch-microservices/database/factories/acti
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { SiteReport, NurseryReport, Project } from "@terramatch-microservices/database/entities";
+import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
+import { Op } from "sequelize";
+import { laravelType } from "@terramatch-microservices/database/types/util";
+import { ProjectLightDto, ProjectFullDto } from "../dto/project.dto";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
+import { EntityProcessor } from "./entity-processor";
 
 describe("EntityProcessor", () => {
   let service: EntitiesService;
@@ -125,6 +132,87 @@ describe("EntityProcessor", () => {
         expect(report.status).toBe("awaiting-approval");
         expect(report.completion).toBe(100);
         expect(report.submittedAt).not.toBeNull();
+      });
+    });
+  });
+
+  describe("updateBulkApprovalReports", () => {
+    it("should handle site report nothing to report status", async () => {
+      const siteReport = await SiteReportFactory.create();
+      const update = { siteReportNothingToReportStatus: [siteReport.uuid], feedback: "Test feedback" };
+      const project = await ProjectFactory.create();
+      await createProcessor().update(project, update);
+      const updatedSiteReport = await SiteReport.findOne({ where: { uuid: siteReport.uuid } });
+      expect(updatedSiteReport?.status).toBe(APPROVED);
+      const auditStatus = await AuditStatus.findOne({
+        where: { auditableType: laravelType(siteReport), auditableId: siteReport.id }
+      });
+      expect(auditStatus).toMatchObject({ status: APPROVED, comment: "Test feedback" });
+    });
+
+    it("should handle nursery report nothing to report status", async () => {
+      const nurseryReport = await NurseryReportFactory.create();
+      const update = { nurseryReportNothingToReportStatus: [nurseryReport.uuid], feedback: "Test feedback" };
+      const project = await ProjectFactory.create();
+      await createProcessor().update(project, update);
+      const updatedNurseryReport = await NurseryReport.findOne({ where: { uuid: nurseryReport.uuid } });
+      expect(updatedNurseryReport?.status).toBe(APPROVED);
+      const auditStatus = await AuditStatus.findOne({
+        where: { auditableType: laravelType(nurseryReport), auditableId: nurseryReport.id }
+      });
+      expect(auditStatus).toMatchObject({ status: APPROVED, comment: "Test feedback" });
+    });
+
+    it("should handle both site and nursery report nothing to report status", async () => {
+      const siteReport = await SiteReportFactory.create();
+      const nurseryReport = await NurseryReportFactory.create();
+      const update = {
+        siteReportNothingToReportStatus: [siteReport.uuid],
+        nurseryReportNothingToReportStatus: [nurseryReport.uuid],
+        feedback: "Test feedback"
+      };
+      const project = await ProjectFactory.create();
+      await createProcessor().update(project, update);
+      const [updatedSiteReport, updatedNurseryReport] = await Promise.all([
+        SiteReport.findOne({ where: { uuid: siteReport.uuid } }),
+        NurseryReport.findOne({ where: { uuid: nurseryReport.uuid } })
+      ]);
+      expect(updatedSiteReport?.status).toBe(APPROVED);
+      expect(updatedNurseryReport?.status).toBe(APPROVED);
+      const auditStatuses = await AuditStatus.findAll({
+        where: {
+          [Op.or]: [
+            { auditableType: laravelType(siteReport), auditableId: siteReport.id },
+            { auditableType: laravelType(nurseryReport), auditableId: nurseryReport.id }
+          ]
+        }
+      });
+      expect(auditStatuses).toHaveLength(2);
+      auditStatuses.forEach(status => {
+        expect(status).toMatchObject({ status: APPROVED, comment: "Test feedback" });
+      });
+    });
+
+    it("should handle missing feedback", async () => {
+      const siteReport = await SiteReportFactory.create();
+      const nurseryReport = await NurseryReportFactory.create();
+      const update = {
+        siteReportNothingToReportStatus: [siteReport.uuid],
+        nurseryReportNothingToReportStatus: [nurseryReport.uuid]
+      };
+      const project = await ProjectFactory.create();
+      await createProcessor().update(project, update);
+      const auditStatuses = await AuditStatus.findAll({
+        where: {
+          [Op.or]: [
+            { auditableType: laravelType(siteReport), auditableId: siteReport.id },
+            { auditableType: laravelType(nurseryReport), auditableId: nurseryReport.id }
+          ]
+        }
+      });
+      expect(auditStatuses).toHaveLength(2);
+      auditStatuses.forEach(status => {
+        expect(status).toMatchObject({ status: APPROVED, comment: null });
       });
     });
   });

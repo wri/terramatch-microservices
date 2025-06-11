@@ -13,7 +13,14 @@ import {
   NEEDS_MORE_INFORMATION,
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
-import { ProjectReport, SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
+import {
+  ProjectReport,
+  SiteReport,
+  NurseryReport,
+  AuditStatus,
+  User
+} from "@terramatch-microservices/database/entities";
+import { laravelType } from "@terramatch-microservices/database/types/util";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -165,32 +172,61 @@ export abstract class EntityProcessor<
   }
 
   protected async handleVirtualProperties(model: ModelType, attributes: UpdateDto): Promise<void> {
-    const siteReportUuids = attributes.siteReportNothingToReportStatus;
-    if (siteReportUuids && siteReportUuids.length > 0) {
-      await SiteReport.update(
-        { status: APPROVED },
-        {
-          where: {
-            uuid: {
-              [Op.in]: siteReportUuids
-            }
-          }
-        }
-      );
-    }
+    const user = await User.findOne({
+      where: { id: this.entitiesService.userId },
+      attributes: ["id", "firstName", "lastName", "emailAddress"]
+    });
 
+    const siteReportUuids = attributes.siteReportNothingToReportStatus;
     const nurseryReportUuids = attributes.nurseryReportNothingToReportStatus;
-    if (nurseryReportUuids && nurseryReportUuids.length > 0) {
-      await NurseryReport.update(
-        { status: APPROVED },
-        {
-          where: {
-            uuid: {
-              [Op.in]: nurseryReportUuids
-            }
-          }
-        }
-      );
+
+    const [siteReports, nurseryReports] = await Promise.all([
+      siteReportUuids?.length
+        ? SiteReport.findAll({
+            where: { uuid: { [Op.in]: siteReportUuids } },
+            attributes: ["id", "uuid"]
+          })
+        : [],
+      nurseryReportUuids?.length
+        ? NurseryReport.findAll({
+            where: { uuid: { [Op.in]: nurseryReportUuids } },
+            attributes: ["id", "uuid"]
+          })
+        : []
+    ]);
+
+    await Promise.all([
+      siteReportUuids?.length
+        ? SiteReport.update({ status: APPROVED }, { where: { uuid: { [Op.in]: siteReportUuids } } })
+        : Promise.resolve(),
+      nurseryReportUuids?.length
+        ? NurseryReport.update({ status: APPROVED }, { where: { uuid: { [Op.in]: nurseryReportUuids } } })
+        : Promise.resolve()
+    ]);
+
+    const auditStatusRecords = [
+      ...siteReports.map(report => ({
+        auditableType: laravelType(report),
+        auditableId: report.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        status: APPROVED,
+        comment: attributes.feedback
+      })),
+      ...nurseryReports.map(report => ({
+        auditableType: laravelType(report),
+        auditableId: report.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        status: APPROVED,
+        comment: attributes.feedback
+      }))
+    ] as Array<Attributes<AuditStatus>>;
+
+    if (auditStatusRecords.length) {
+      await AuditStatus.bulkCreate(auditStatusRecords);
     }
   }
 }

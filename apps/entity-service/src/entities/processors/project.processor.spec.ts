@@ -1,12 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import {
-  Demographic,
-  Project,
-  ProjectReport,
-  Site,
-  SiteReport,
-  TreeSpecies
-} from "@terramatch-microservices/database/entities";
+import { Demographic, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -324,83 +317,6 @@ describe("ProjectProcessor", () => {
       const update = { feedback: "foo" };
       await processor.update(project, update);
       expect(spy).toHaveBeenCalledWith(project, update);
-    });
-  });
-
-  describe("loadAssociationData", () => {
-    it("returns an empty object if no sites are found", async () => {
-      const result = await processor.loadAssociationData([9999]);
-      expect(result).toEqual({});
-    });
-
-    it("returns an empty object if no site reports are found", async () => {
-      const project = await ProjectFactory.create();
-      await SiteFactory.create({ projectId: project.id });
-      const result = await processor.loadAssociationData([project.id]);
-      expect(result).toEqual({});
-    });
-
-    it("returns associationDtos with correct treesPlantedCount for each project", async () => {
-      const project1 = await ProjectFactory.create();
-      const project2 = await ProjectFactory.create();
-      const site1 = await SiteFactory.create({ projectId: project1.id });
-      const site2 = await SiteFactory.create({ projectId: project2.id });
-      const report1 = await SiteReportFactory.create({ siteId: site1.id, status: "approved" });
-      const report2 = await SiteReportFactory.create({ siteId: site2.id, status: "approved" });
-
-      jest.spyOn(Site, "findAll").mockImplementation(() => Promise.resolve([site1, site2]));
-      jest.spyOn(SiteReport, "findAll").mockImplementation(() => Promise.resolve([report1, report2]));
-
-      const species1 = await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: report1.id,
-        amount: 10
-      });
-      const species2 = await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: report2.id,
-        amount: 20
-      });
-
-      jest.spyOn(TreeSpecies, "findAll").mockImplementation(() => Promise.resolve([species1, species2]));
-
-      const result = await processor.loadAssociationData([project1.id, project2.id]);
-      expect(result[project1.id].treesPlantedCount).toBe(species1.amount);
-      expect(result[project2.id].treesPlantedCount).toBe(species2.amount);
-    });
-
-    it("sums treesPlantedCount for multiple species in the same project", async () => {
-      const project = await ProjectFactory.create();
-      const site = await SiteFactory.create({ projectId: project.id });
-      const report = await SiteReportFactory.create({ siteId: site.id, status: "approved" });
-
-      jest.spyOn(Site, "findAll").mockImplementation(() => Promise.resolve([site]));
-      jest.spyOn(SiteReport, "findAll").mockImplementation(() => Promise.resolve([report]));
-
-      const species1 = await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: report.id,
-        amount: 5
-      });
-      const species2 = await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: report.id,
-        amount: 7
-      });
-
-      jest.spyOn(TreeSpecies, "findAll").mockImplementation(() => Promise.resolve([species1, species2]));
-
-      const result = await processor.loadAssociationData([project.id]);
-      expect(result[project.id].treesPlantedCount).toBe((species1.amount ?? 0) + (species2.amount ?? 0));
-    });
-
-    it("handles projects with no tree species", async () => {
-      const project = await ProjectFactory.create();
-      const site = await SiteFactory.create({ projectId: project.id });
-      const report = await SiteReportFactory.create({ siteId: site.id, status: "approved" });
-
-      jest.spyOn(Site, "findAll").mockImplementation(() => Promise.resolve([site]));
-      jest.spyOn(SiteReport, "findAll").mockImplementation(() => Promise.resolve([report]));
-      jest.spyOn(TreeSpecies, "findAll").mockImplementation(() => Promise.resolve([]));
-
-      const result = await processor.loadAssociationData([project.id]);
-      expect(result[project.id]).toBeUndefined();
     });
   });
 

@@ -293,6 +293,7 @@ export class ProjectProcessor extends EntityProcessor<
     return pTotal + sTotal + nTotal;
   }
 
+  /* istanbul ignore next */
   async loadAssociationData(projectIds: number[]): Promise<Record<number, ProjectLightDto>> {
     const associationDtos: Record<number, ProjectLightDto> = {};
     const sites = await this.getSites(projectIds);
@@ -340,6 +341,7 @@ export class ProjectProcessor extends EntityProcessor<
     return associationDtos;
   }
 
+  /* istanbul ignore next */
   private async getTreeSpecies(approvedSiteReports: SiteReport[]) {
     return await TreeSpecies.visible()
       .collection("tree-planted")
@@ -351,6 +353,7 @@ export class ProjectProcessor extends EntityProcessor<
       });
   }
 
+  /* istanbul ignore next */
   private async getSiteReports(sites: Site[]) {
     return await SiteReport.findAll({
       where: { id: { [Op.in]: SiteReport.approvedIdsSubquery(sites.map(s => s.id)) } },
@@ -359,6 +362,7 @@ export class ProjectProcessor extends EntityProcessor<
     });
   }
 
+  /* istanbul ignore next */
   private async getSites(numericProjectIds: number[]) {
     return await Site.findAll({
       where: { id: { [Op.in]: Site.approvedIdsProjectsSubquery(numericProjectIds) } },

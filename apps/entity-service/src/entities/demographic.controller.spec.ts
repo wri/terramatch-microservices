@@ -49,8 +49,18 @@ describe("DemographicsController", () => {
     it("should return an array of 3 demographics successfully", async () => {
       const mockResponse = {
         data: [
-          new Demographic({ uuid: "1", type: "type 1", demographicalType: LARAVEL_TYPE } as Demographic),
-          new Demographic({ uuid: "2", type: "type 2", demographicalType: LARAVEL_TYPE } as Demographic)
+          new Demographic({
+            uuid: "1",
+            type: "type 1",
+            demographicalType: LARAVEL_TYPE,
+            demographicalId: 1
+          } as Demographic),
+          new Demographic({
+            uuid: "2",
+            type: "type 2",
+            demographicalType: LARAVEL_TYPE,
+            demographicalId: 2
+          } as Demographic)
         ],
         paginationTotal: 3,
         pageNumber: 1

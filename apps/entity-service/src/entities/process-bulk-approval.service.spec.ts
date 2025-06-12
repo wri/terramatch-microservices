@@ -4,6 +4,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Project, Task } from "@terramatch-microservices/database/entities";
 import { createMock } from "@golevelup/ts-jest";
 import { NotFoundException } from "@nestjs/common";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 describe("ProcessBulkApprovalService", () => {
   let service: ProcessBulkApprovalService;
@@ -64,19 +65,24 @@ describe("ProcessBulkApprovalService", () => {
 
       expect(result).toEqual({
         projectUuid: "test-uuid",
-        projectName: "Test Project",
-        reports: expect.arrayContaining([
-          expect.objectContaining({
+        reportsBulkApproval: [
+          {
             uuid: "site-report-uuid",
+            name: "Site Report",
             type: "siteReport",
-            nothingToReport: true
-          }),
-          expect.objectContaining({
+            nothingToReport: true,
+            submittedAt: expect.any(Date),
+            status: undefined
+          },
+          {
             uuid: "nursery-report-uuid",
+            name: "Nursery Report",
             type: "nurseryReport",
-            nothingToReport: true
-          })
-        ])
+            nothingToReport: true,
+            submittedAt: expect.any(Date),
+            status: undefined
+          }
+        ]
       });
     });
   });

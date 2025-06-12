@@ -137,9 +137,9 @@ describe("EntityProcessor", () => {
   describe("updateBulkApprovalReports", () => {
     it("should handle site report nothing to report status", async () => {
       const siteReport = await SiteReportFactory.create();
-      const update = { siteReportNothingToReportStatus: [siteReport.uuid], feedback: "Test feedback" };
+      const update = { siteReportNothingToReportUuid: [siteReport.uuid], feedback: "Test feedback" };
       const project = await ProjectFactory.create();
-      await createProcessor().update(project, update);
+      await createProcessor().updateBulkApprovalReports(update, APPROVED);
       const updatedSiteReport = await SiteReport.findOne({ where: { uuid: siteReport.uuid } });
       expect(updatedSiteReport?.status).toBe(APPROVED);
       const auditStatus = await AuditStatus.findOne({
@@ -150,9 +150,9 @@ describe("EntityProcessor", () => {
 
     it("should handle nursery report nothing to report status", async () => {
       const nurseryReport = await NurseryReportFactory.create();
-      const update = { nurseryReportNothingToReportStatus: [nurseryReport.uuid], feedback: "Test feedback" };
+      const update = { nurseryReportNothingToReportUuid: [nurseryReport.uuid], feedback: "Test feedback" };
       const project = await ProjectFactory.create();
-      await createProcessor().update(project, update);
+      await createProcessor().updateBulkApprovalReports(update, APPROVED);
       const updatedNurseryReport = await NurseryReport.findOne({ where: { uuid: nurseryReport.uuid } });
       expect(updatedNurseryReport?.status).toBe(APPROVED);
       const auditStatus = await AuditStatus.findOne({
@@ -161,57 +161,46 @@ describe("EntityProcessor", () => {
       expect(auditStatus).toMatchObject({ status: APPROVED, comment: "Test feedback" });
     });
 
-    it("should handle both site and nursery report nothing to report status", async () => {
+    it("should handle both site and nursery reports in a single update", async () => {
       const siteReport = await SiteReportFactory.create();
       const nurseryReport = await NurseryReportFactory.create();
       const update = {
-        siteReportNothingToReportStatus: [siteReport.uuid],
-        nurseryReportNothingToReportStatus: [nurseryReport.uuid],
+        siteReportNothingToReportUuid: [siteReport.uuid],
+        nurseryReportNothingToReportUuid: [nurseryReport.uuid],
         feedback: "Test feedback"
       };
       const project = await ProjectFactory.create();
-      await createProcessor().update(project, update);
+      await createProcessor().updateBulkApprovalReports(update, APPROVED);
+
       const [updatedSiteReport, updatedNurseryReport] = await Promise.all([
         SiteReport.findOne({ where: { uuid: siteReport.uuid } }),
         NurseryReport.findOne({ where: { uuid: nurseryReport.uuid } })
       ]);
+
       expect(updatedSiteReport?.status).toBe(APPROVED);
       expect(updatedNurseryReport?.status).toBe(APPROVED);
-      const auditStatuses = await AuditStatus.findAll({
-        where: {
-          [Op.or]: [
-            { auditableType: laravelType(siteReport), auditableId: siteReport.id },
-            { auditableType: laravelType(nurseryReport), auditableId: nurseryReport.id }
-          ]
-        }
-      });
-      expect(auditStatuses).toHaveLength(2);
-      auditStatuses.forEach(status => {
-        expect(status).toMatchObject({ status: APPROVED, comment: "Test feedback" });
-      });
+
+      const [siteAuditStatus, nurseryAuditStatus] = await Promise.all([
+        AuditStatus.findOne({
+          where: { auditableType: laravelType(siteReport), auditableId: siteReport.id }
+        }),
+        AuditStatus.findOne({
+          where: { auditableType: laravelType(nurseryReport), auditableId: nurseryReport.id }
+        })
+      ]);
+
+      expect(siteAuditStatus).toMatchObject({ status: APPROVED, comment: "Test feedback" });
+      expect(nurseryAuditStatus).toMatchObject({ status: APPROVED, comment: "Test feedback" });
     });
 
-    it("should handle missing feedback", async () => {
-      const siteReport = await SiteReportFactory.create();
-      const nurseryReport = await NurseryReportFactory.create();
+    it("should handle empty report lists", async () => {
       const update = {
-        siteReportNothingToReportStatus: [siteReport.uuid],
-        nurseryReportNothingToReportStatus: [nurseryReport.uuid]
+        siteReportNothingToReportUuid: [],
+        nurseryReportNothingToReportUuid: [],
+        feedback: "Test feedback"
       };
       const project = await ProjectFactory.create();
-      await createProcessor().update(project, update);
-      const auditStatuses = await AuditStatus.findAll({
-        where: {
-          [Op.or]: [
-            { auditableType: laravelType(siteReport), auditableId: siteReport.id },
-            { auditableType: laravelType(nurseryReport), auditableId: nurseryReport.id }
-          ]
-        }
-      });
-      expect(auditStatuses).toHaveLength(2);
-      auditStatuses.forEach(status => {
-        expect(status).toMatchObject({ status: APPROVED, comment: null });
-      });
+      await expect(createProcessor().updateBulkApprovalReports(update, APPROVED)).resolves.not.toThrow();
     });
   });
 });

@@ -4,13 +4,14 @@ import { ProcessBulkApprovalService } from "./process-bulk-approval.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { processBulkApprovalDto, ReportType } from "./dto/process-bulk-approval.dto";
 import { NotFoundException } from "@nestjs/common";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 describe("ProcessBulkApprovalController", () => {
   let controller: ProcessBulkApprovalController;
   let service: ProcessBulkApprovalService;
 
   const mockService = {
-    processBulkApproval: jest.fn(),
+    processbulkApproval: jest.fn(),
     approveReports: jest.fn()
   };
 
@@ -46,14 +47,14 @@ describe("ProcessBulkApprovalController", () => {
             name: "Test Report",
             type: ReportType.SITE_REPORT,
             submittedAt: new Date(),
-            status: "approved",
+            status: APPROVED,
             uuid: "report-uuid",
             nothingToReport: false
           }
         ]
       };
 
-      mockService.processBulkApproval.mockResolvedValue(mockResponse);
+      mockService.processbulkApproval.mockResolvedValue(mockResponse);
 
       const result = await controller.processbulkApproval("test-uuid");
 
@@ -71,7 +72,7 @@ describe("ProcessBulkApprovalController", () => {
     });
 
     it("should throw NotFoundException for non-existent project", async () => {
-      mockService.processBulkApproval.mockRejectedValue(new NotFoundException());
+      mockService.processbulkApproval.mockRejectedValue(new NotFoundException());
 
       await expect(controller.processbulkApproval("non-existent")).rejects.toThrow(NotFoundException);
     });

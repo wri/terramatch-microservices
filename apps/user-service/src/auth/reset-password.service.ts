@@ -25,7 +25,7 @@ export class ResetPasswordService {
     }
 
     const { uuid, locale } = user;
-    const resetToken = await this.jwtService.signAsync({ sub: uuid }, { expiresIn: "2h" });
+    const resetToken = await this.jwtService.signAsync({ sub: uuid }, { expiresIn: "7d" });
 
     const resetLink = `${callbackUrl}/${resetToken}`;
     await this.emailService.sendI18nTemplateEmail(emailAddress, locale, EMAIL_KEYS, {

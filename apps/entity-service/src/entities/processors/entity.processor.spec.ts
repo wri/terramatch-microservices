@@ -14,7 +14,6 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
-import { Op } from "sequelize";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
@@ -138,7 +137,7 @@ describe("EntityProcessor", () => {
     it("should handle site report nothing to report status", async () => {
       const siteReport = await SiteReportFactory.create();
       const update = { siteReportNothingToReportUuid: [siteReport.uuid], feedback: "Test feedback" };
-      const project = await ProjectFactory.create();
+      await ProjectFactory.create();
       await createProcessor().updateBulkApprovalReports(update, APPROVED);
       const updatedSiteReport = await SiteReport.findOne({ where: { uuid: siteReport.uuid } });
       expect(updatedSiteReport?.status).toBe(APPROVED);
@@ -151,7 +150,7 @@ describe("EntityProcessor", () => {
     it("should handle nursery report nothing to report status", async () => {
       const nurseryReport = await NurseryReportFactory.create();
       const update = { nurseryReportNothingToReportUuid: [nurseryReport.uuid], feedback: "Test feedback" };
-      const project = await ProjectFactory.create();
+      await ProjectFactory.create();
       await createProcessor().updateBulkApprovalReports(update, APPROVED);
       const updatedNurseryReport = await NurseryReport.findOne({ where: { uuid: nurseryReport.uuid } });
       expect(updatedNurseryReport?.status).toBe(APPROVED);
@@ -169,7 +168,7 @@ describe("EntityProcessor", () => {
         nurseryReportNothingToReportUuid: [nurseryReport.uuid],
         feedback: "Test feedback"
       };
-      const project = await ProjectFactory.create();
+      await ProjectFactory.create();
       await createProcessor().updateBulkApprovalReports(update, APPROVED);
 
       const [updatedSiteReport, updatedNurseryReport] = await Promise.all([
@@ -199,7 +198,7 @@ describe("EntityProcessor", () => {
         nurseryReportNothingToReportUuid: [],
         feedback: "Test feedback"
       };
-      const project = await ProjectFactory.create();
+      await ProjectFactory.create();
       await expect(createProcessor().updateBulkApprovalReports(update, APPROVED)).resolves.not.toThrow();
     });
   });

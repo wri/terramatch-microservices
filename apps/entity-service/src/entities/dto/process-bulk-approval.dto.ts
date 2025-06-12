@@ -3,8 +3,6 @@ import { IsArray, IsDate, IsEnum, IsString, IsUUID } from "class-validator";
 import { Type } from "class-transformer";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { SiteReportLightDto } from "./site-report.dto";
-import { NurseryReportLightDto } from "./nursery-report.dto";
 
 export enum ReportType {
   SITE_REPORT = "siteReport",

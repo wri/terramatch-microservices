@@ -4,7 +4,6 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Project, Task } from "@terramatch-microservices/database/entities";
 import { createMock } from "@golevelup/ts-jest";
 import { NotFoundException } from "@nestjs/common";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 describe("ProcessBulkApprovalService", () => {
   let service: ProcessBulkApprovalService;

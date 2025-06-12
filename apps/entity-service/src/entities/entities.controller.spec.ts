@@ -28,6 +28,7 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
   getLightDto = jest.fn(() => Promise.resolve({ id: faker.string.uuid(), dto: new ProjectLightDto() }));
   delete = jest.fn(() => Promise.resolve());
   update = jest.fn(() => Promise.resolve());
+  loadAssociationData = jest.fn(() => Promise.resolve({} as Record<number, ProjectLightDto>));
 }
 
 describe("EntitiesController", () => {
@@ -63,8 +64,13 @@ describe("EntitiesController", () => {
     });
 
     it("should add DTOs to the document", async () => {
+      const projects = await ProjectFactory.createMany(2);
       // @ts-expect-error stub processor type issues
-      processor.findMany.mockResolvedValue({ models: await ProjectFactory.createMany(2), paginationTotal: 2 });
+      processor.findMany.mockResolvedValue({ models: projects, paginationTotal: 2 });
+      processor.loadAssociationData.mockResolvedValue({ [projects[0].id]: new ProjectLightDto() } as Record<
+        number,
+        ProjectLightDto
+      >);
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       policyService.authorize.mockResolvedValue();
 

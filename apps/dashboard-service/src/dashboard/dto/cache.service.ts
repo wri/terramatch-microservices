@@ -26,16 +26,27 @@ export class CacheService {
     await this.redis.set(key, value);
   }
 
-  async get(key: string) {
+  async get(key: string, factory?: () => Promise<string | object>) {
     const data = await this.redis.get(key);
-    if (typeof data === "string") {
-      try {
-        return JSON.parse(data);
-      } catch {
-        return data;
+    if (data !== null) {
+      if (typeof data === "string") {
+        try {
+          return JSON.parse(data);
+        } catch {
+          return data;
+        }
       }
+      return data;
     }
-    return data;
+
+    if (factory != null) {
+      const result = await factory();
+      const valueToStore = typeof result === "string" ? result : JSON.stringify(result);
+      await this.redis.set(key, valueToStore);
+      return result;
+    }
+
+    return null;
   }
 
   async del(key: string) {

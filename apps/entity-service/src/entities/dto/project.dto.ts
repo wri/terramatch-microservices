@@ -54,6 +54,9 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  shortName: string | null;
+
   @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
 
@@ -74,6 +77,9 @@ export class ProjectLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true, type: Number })
+  treesPlantedCount: number | null;
 }
 
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;

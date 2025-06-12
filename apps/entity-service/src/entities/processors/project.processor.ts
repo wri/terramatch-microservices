@@ -15,7 +15,7 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -24,6 +24,7 @@ import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { EntityDto } from "../dto/entity.dto";
 
 export class ProjectProcessor extends EntityProcessor<
   Project,
@@ -53,7 +54,7 @@ export class ProjectProcessor extends EntityProcessor<
     ]);
 
     if (query.sort?.field != null) {
-      if (["name", "plantingStartDate", "country"].includes(query.sort.field)) {
+      if (["name", "plantingStartDate", "country", "shortName"].includes(query.sort.field)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
         builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
@@ -104,6 +105,10 @@ export class ProjectProcessor extends EntityProcessor<
       builder.where({ cohort: { [Op.in]: query.cohort } });
     }
 
+    if (query.shortName != null) {
+      builder.where({ shortName: query.shortName });
+    }
+
     if (query.search != null || query.searchFilter != null) {
       builder.where({ name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } });
     }
@@ -137,14 +142,17 @@ export class ProjectProcessor extends EntityProcessor<
     await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
   }
 
-  async getLightDto(project: Project) {
+  async getLightDto(project: Project, associateDto: EntityDto) {
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
+
     return {
       id: project.uuid,
       dto: new ProjectLightDto(project, {
-        totalHectaresRestoredSum
+        totalHectaresRestoredSum,
+        treesPlantedCount: 0,
+        ...associateDto
       })
     };
   }
@@ -287,5 +295,83 @@ export class ProjectProcessor extends EntityProcessor<
     const nTotal = await NurseryReport.incomplete().nurseries(Nursery.approvedIdsSubquery(projectId)).count(countOpts);
 
     return pTotal + sTotal + nTotal;
+  }
+
+  /* istanbul ignore next */
+  async loadAssociationData(projectIds: number[]): Promise<Record<number, ProjectLightDto>> {
+    const associationDtos: Record<number, ProjectLightDto> = {};
+    const sites = await this.getSites(projectIds);
+
+    if (sites.length === 0) {
+      return associationDtos;
+    }
+
+    const siteIdToProjectId = new Map<number, number>();
+    for (const site of sites) {
+      siteIdToProjectId.set(site.id, site.projectId);
+      if (associationDtos[site.projectId] !== undefined) {
+        associationDtos[site.projectId] = {} as ProjectLightDto; // Initialize with default structure
+      }
+    }
+
+    const approvedSiteReports = await this.getSiteReports(sites);
+
+    if (approvedSiteReports.length === 0) {
+      return associationDtos;
+    }
+
+    const siteReportIdToProjectId = new Map<number, number>();
+    for (const report of approvedSiteReports) {
+      const projectId = siteIdToProjectId.get(report.siteId) ?? null;
+      if (projectId !== null) {
+        siteReportIdToProjectId.set(report.id, projectId);
+      }
+    }
+    const treeSpecies = await this.getTreeSpecies(approvedSiteReports);
+
+    for (const species of treeSpecies) {
+      const projectId = siteReportIdToProjectId.get(species.speciesableId);
+      if (projectId !== undefined) {
+        const dto = associationDtos[projectId] as ProjectLightDto;
+
+        if (dto == null) {
+          associationDtos[projectId] = { treesPlantedCount: species.amount } as ProjectLightDto;
+        } else {
+          dto.treesPlantedCount = (dto.treesPlantedCount ?? 0) + (species.amount ?? 0);
+        }
+      }
+    }
+
+    return associationDtos;
+  }
+
+  /* istanbul ignore next */
+  private async getTreeSpecies(approvedSiteReports: SiteReport[]) {
+    return await TreeSpecies.visible()
+      .collection("tree-planted")
+      .siteReports(approvedSiteReports.map(r => r.id))
+      .findAll({
+        attributes: ["speciesableId", [Sequelize.fn("SUM", Sequelize.col("amount")), "amount"]],
+        group: ["speciesableId"],
+        raw: true
+      });
+  }
+
+  /* istanbul ignore next */
+  private async getSiteReports(sites: Site[]) {
+    return await SiteReport.findAll({
+      where: { id: { [Op.in]: SiteReport.approvedIdsSubquery(sites.map(s => s.id)) } },
+      attributes: ["id", "siteId"],
+      raw: true
+    });
+  }
+
+  /* istanbul ignore next */
+  private async getSites(numericProjectIds: number[]) {
+    return await Site.findAll({
+      where: { id: { [Op.in]: Site.approvedIdsProjectsSubquery(numericProjectIds) } },
+      attributes: ["id", "projectId"],
+      raw: true
+    });
   }
 }

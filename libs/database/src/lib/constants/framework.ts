@@ -4,6 +4,7 @@ export const FRAMEWORK_KEYS = [
   "ppc",
   "enterprises",
   "hbf",
-  "epa-ghana-pilot"
+  "epa-ghana-pilot",
+  "fundo-flora"
 ] as const;
 export type FrameworkKey = (typeof FRAMEWORK_KEYS)[number];

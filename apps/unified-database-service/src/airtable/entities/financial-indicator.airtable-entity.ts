@@ -10,6 +10,11 @@ const COLUMNS: ColumnMapping<FinancialIndicator, FinancialIndicatorAssociations>
   "uuid",
   "createdAt",
   "updatedAt",
+  {
+    airtableColumn: "year",
+    dbColumn: "year",
+    valueMap: async ({ year }) => `${year}`
+  },
   "year",
   "collection",
   "amount",

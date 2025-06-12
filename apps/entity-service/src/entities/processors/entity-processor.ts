@@ -149,11 +149,6 @@ export abstract class EntityProcessor<
    * and set the appropriate fields and then call super.update()
    */
   async update(model: ModelType, update: UpdateDto) {
-    // Handle virtual properties if they exist
-    if (update.siteReportNothingToReportStatus != null || update.nurseryReportNothingToReportStatus != null) {
-      await this.updateBulkApprovalReports(model, update);
-    }
-
     if (update.status != null) {
       if (this.APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);
@@ -171,58 +166,64 @@ export abstract class EntityProcessor<
     await model.save();
   }
 
-  protected async updateBulkApprovalReports(model: ModelType, attributes: UpdateDto): Promise<void> {
+  private async findReportsByUuids<T extends ReportModel>(
+    modelClass: ModelCtor<T>,
+    uuids: string[] | undefined
+  ): Promise<T[]> {
+    if (uuids == undefined) return [];
+
+    const reports = await modelClass.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid"]
+    });
+    return reports as T[];
+  }
+
+  private async updateReportsStatus<T extends ReportModel>(
+    modelClass: ModelCtor<T>,
+    uuids: string[] | undefined,
+    status: string
+  ): Promise<void> {
+    if (uuids == undefined) return;
+
+    await modelClass.update({ status: status }, { where: { uuid: { [Op.in]: uuids } } });
+  }
+
+  private createAuditStatusRecords(
+    reports: ReportModel[],
+    user: User | null,
+    feedback: string | null | undefined
+  ): Array<Partial<AuditStatus>> {
+    return reports.map(report => ({
+      auditableType: laravelType(report),
+      auditableId: report.id,
+      createdBy: user?.emailAddress ?? null,
+      firstName: user?.firstName ?? null,
+      lastName: user?.lastName ?? null,
+      status: APPROVED,
+      comment: feedback ?? null
+    }));
+  }
+
+  async updateBulkApprovalReports(attributes: UpdateDto, status: string): Promise<void> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
 
-    const siteReportUuids = attributes.siteReportNothingToReportStatus;
-    const nurseryReportUuids = attributes.nurseryReportNothingToReportStatus;
-
     const [siteReports, nurseryReports] = await Promise.all([
-      siteReportUuids !== undefined && siteReportUuids?.length > 0
-        ? SiteReport.findAll({
-            where: { uuid: { [Op.in]: siteReportUuids } },
-            attributes: ["id", "uuid"]
-          })
-        : [],
-      nurseryReportUuids !== undefined && nurseryReportUuids.length > 0
-        ? NurseryReport.findAll({
-            where: { uuid: { [Op.in]: nurseryReportUuids } },
-            attributes: ["id", "uuid"]
-          })
-        : []
+      this.findReportsByUuids(SiteReport, attributes.siteReportNothingToReportUuid),
+      this.findReportsByUuids(NurseryReport, attributes.nurseryReportNothingToReportUuid)
     ]);
 
     await Promise.all([
-      siteReportUuids !== undefined && siteReportUuids.length > 0
-        ? SiteReport.update({ status: APPROVED }, { where: { uuid: { [Op.in]: siteReportUuids } } })
-        : Promise.resolve(),
-      nurseryReportUuids !== undefined && nurseryReportUuids.length > 0
-        ? NurseryReport.update({ status: APPROVED }, { where: { uuid: { [Op.in]: nurseryReportUuids } } })
-        : Promise.resolve()
+      this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuid, status),
+      this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuid, status)
     ]);
 
     const auditStatusRecords = [
-      ...siteReports.map(report => ({
-        auditableType: laravelType(report),
-        auditableId: report.id,
-        createdBy: user?.emailAddress ?? null,
-        firstName: user?.firstName ?? null,
-        lastName: user?.lastName ?? null,
-        status: APPROVED,
-        comment: attributes.feedback
-      })),
-      ...nurseryReports.map(report => ({
-        auditableType: laravelType(report),
-        auditableId: report.id,
-        createdBy: user?.emailAddress ?? null,
-        firstName: user?.firstName ?? null,
-        lastName: user?.lastName ?? null,
-        status: APPROVED,
-        comment: attributes.feedback
-      }))
+      ...this.createAuditStatusRecords(siteReports, user, attributes.feedback),
+      ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback)
     ] as Array<Attributes<AuditStatus>>;
 
     if (auditStatusRecords.length > 0) {

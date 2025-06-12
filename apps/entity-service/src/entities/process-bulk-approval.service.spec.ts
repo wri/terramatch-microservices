@@ -1,17 +1,17 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { ProjectTaskProcessingService } from "./project-task-processing.service";
+import { ProcessBulkApprovalService } from "./process-bulk-approval.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Project, Task } from "@terramatch-microservices/database/entities";
 import { createMock } from "@golevelup/ts-jest";
 import { NotFoundException } from "@nestjs/common";
 
-describe("ProjectTaskProcessingService", () => {
-  let service: ProjectTaskProcessingService;
+describe("ProcessBulkApprovalService", () => {
+  let service: ProcessBulkApprovalService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ProjectTaskProcessingService,
+        ProcessBulkApprovalService,
         {
           provide: PolicyService,
           useValue: createMock<PolicyService>()
@@ -19,13 +19,13 @@ describe("ProjectTaskProcessingService", () => {
       ]
     }).compile();
 
-    service = module.get<ProjectTaskProcessingService>(ProjectTaskProcessingService);
+    service = module.get<ProcessBulkApprovalService>(ProcessBulkApprovalService);
   });
 
-  describe("processProjectTasks", () => {
+  describe("processbulkApproval", () => {
     it("should throw NotFoundException when project is not found", async () => {
       jest.spyOn(Project, "findOne").mockResolvedValue(null);
-      await expect(service.processProjectTasks("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(service.processbulkApproval("non-existent-uuid")).rejects.toThrow(NotFoundException);
     });
 
     it("should process tasks and return reports for a valid project", async () => {
@@ -60,7 +60,7 @@ describe("ProjectTaskProcessingService", () => {
       jest.spyOn(Project, "findOne").mockResolvedValue(mockProject);
       jest.spyOn(Task, "findAll").mockResolvedValue([mockTask]);
 
-      const result = await service.processProjectTasks("test-uuid");
+      const result = await service.processbulkApproval("test-uuid");
 
       expect(result).toEqual({
         projectUuid: "test-uuid",

@@ -15,10 +15,10 @@ import { TasksService } from "./entities/tasks.service";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
-import { ProjectTaskProcessingController } from "./entities/project-task-processing.controller";
-import { ProjectTaskProcessingService } from "./entities/project-task-processing.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
+import { ProcessBulkApprovalController } from "./entities/process-bulk-approval.controller";
+import { ProcessBulkApprovalService } from "./entities/process-bulk-approval.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
@@ -28,7 +28,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
   controllers: [
     ProjectPitchesController,
     ImpactStoriesController,
-    ProjectTaskProcessingController,
+    ProcessBulkApprovalController,
     TasksController,
     TreesController,
     BoundingBoxController,
@@ -44,7 +44,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     TreeService,
     ProjectPitchService,
     ImpactStoryService,
-    ProjectTaskProcessingService,
+    ProcessBulkApprovalService,
     BoundingBoxService,
     TasksService
   ]

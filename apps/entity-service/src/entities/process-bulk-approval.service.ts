@@ -2,16 +2,16 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { Project, Task } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolicyService } from "@terramatch-microservices/common";
-import { ProjectTaskProcessingResponseDto, ReportType } from "./dto/project-task-processing.dto";
+import { processBulkApprovalDto, ReportType } from "./dto/process-bulk-approval.dto";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 @Injectable()
-export class ProjectTaskProcessingService {
-  private readonly logger = new TMLogger(ProjectTaskProcessingService.name);
+export class ProcessBulkApprovalService {
+  private readonly logger = new TMLogger(ProcessBulkApprovalService.name);
 
   constructor(private readonly policyService: PolicyService) {}
 
-  async processProjectTasks(projectUuid: string): Promise<ProjectTaskProcessingResponseDto> {
+  async processbulkApproval(projectUuid: string): Promise<processBulkApprovalDto> {
     const project = await Project.findOne({
       where: { uuid: projectUuid }
     });
@@ -48,7 +48,7 @@ export class ProjectTaskProcessingService {
           name: report.title ?? report.site?.name ?? "Unnamed Site Report",
           type: ReportType.SITE_REPORT,
           submittedAt: report.submittedAt,
-          taskUuid: task.uuid,
+          status: report.status,
           nothingToReport: report.nothingToReport
         }));
 
@@ -59,7 +59,7 @@ export class ProjectTaskProcessingService {
           name: report.title ?? report.nursery?.name ?? "Unnamed Nursery Report",
           type: ReportType.NURSERY_REPORT,
           submittedAt: report.submittedAt,
-          taskUuid: task.uuid,
+          status: report.status,
           nothingToReport: report.nothingToReport
         }));
 
@@ -68,8 +68,7 @@ export class ProjectTaskProcessingService {
 
     return {
       projectUuid,
-      projectName: project.name,
-      reports: allReports
-    } as ProjectTaskProcessingResponseDto;
+      reportsBulkApproval: allReports
+    } as processBulkApprovalDto;
   }
 }

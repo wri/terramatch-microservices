@@ -29,6 +29,7 @@ import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-repor
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
 import { EntityUpdateBody } from "./dto/entity-update.dto";
 import { SupportedEntities } from "./dto/entity.dto";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -143,6 +144,12 @@ export class EntitiesController {
 
     await this.policyService.authorize("update", model);
 
+    if (
+      updatePayload.data.attributes.nurseryReportNothingToReportUuid !== null ||
+      updatePayload.data.attributes.siteReportNothingToReportUuid !== null
+    ) {
+      await processor.updateBulkApprovalReports(updatePayload.data.attributes, APPROVED);
+    }
     await processor.update(model, updatePayload.data.attributes);
 
     const document = buildJsonApi(processor.FULL_DTO);

@@ -3,14 +3,20 @@ import { IsArray, IsDate, IsEnum, IsString, IsUUID } from "class-validator";
 import { Type } from "class-transformer";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { SiteReportLightDto } from "./site-report.dto";
+import { NurseryReportLightDto } from "./nursery-report.dto";
 
 export enum ReportType {
   SITE_REPORT = "siteReport",
   NURSERY_REPORT = "nurseryReport"
 }
 
-@JsonApiDto({ type: "reports" })
-export class ReportDto {
+@JsonApiDto({ type: "entityreports" })
+export class ReportsBulkApproval {
+  constructor(data: ReportsBulkApproval) {
+    populateDto<ReportsBulkApproval>(this, data);
+  }
+
   @IsUUID()
   @ApiProperty({ description: "Unique identifier of the report" })
   uuid: string;
@@ -30,28 +36,24 @@ export class ReportDto {
 
   @IsUUID()
   @ApiProperty({ description: "UUID of the task this report belongs to" })
-  taskUuid: string;
+  status: string;
 
   @ApiProperty({ description: "Whether the report has nothing to report" })
   nothingToReport: boolean;
 }
 
-@JsonApiDto({ type: "processProjectTasks" })
-export class ProjectTaskProcessingResponseDto {
-  constructor(data: ProjectTaskProcessingResponseDto) {
-    populateDto<ProjectTaskProcessingResponseDto>(this, data);
+@JsonApiDto({ type: "processBulkApproval" })
+export class processBulkApprovalDto {
+  constructor(data: processBulkApprovalDto) {
+    populateDto<processBulkApprovalDto>(this, data);
   }
 
   @IsUUID()
   @ApiProperty({ description: "UUID of the project" })
   projectUuid: string;
 
-  @IsString()
-  @ApiProperty({ description: "Name of the project" })
-  projectName: string;
-
   @IsArray()
-  @Type(() => ReportDto)
-  @ApiProperty({ type: [ReportDto], description: "Array of reports associated with the project's tasks" })
-  reports: ReportDto[];
+  @Type(() => ReportsBulkApproval)
+  @ApiProperty({ type: [ReportsBulkApproval], description: "Array of reports associated with the project's tasks" })
+  reportsBulkApproval: ReportsBulkApproval[];
 }

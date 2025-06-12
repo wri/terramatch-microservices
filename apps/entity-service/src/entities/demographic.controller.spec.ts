@@ -12,6 +12,7 @@ describe("DemographicsController", () => {
   let controller: DemographicsController;
   let demographicService: DeepMocked<DemographicService>;
   let policyService: DeepMocked<PolicyService>;
+  const LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -48,8 +49,8 @@ describe("DemographicsController", () => {
     it("should return an array of 3 demographics successfully", async () => {
       const mockResponse = {
         data: [
-          new Demographic({ uuid: "1", type: "type 1" } as Demographic),
-          new Demographic({ uuid: "2", type: "type 2" } as Demographic)
+          new Demographic({ uuid: "1", type: "type 1", demographicalType: LARAVEL_TYPE } as Demographic),
+          new Demographic({ uuid: "2", type: "type 2", demographicalType: LARAVEL_TYPE } as Demographic)
         ],
         paginationTotal: 3,
         pageNumber: 1

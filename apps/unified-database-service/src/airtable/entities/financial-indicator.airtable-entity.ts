@@ -15,7 +15,6 @@ const COLUMNS: ColumnMapping<FinancialIndicator, FinancialIndicatorAssociations>
     dbColumn: "year",
     valueMap: async ({ year }) => `${year}`
   },
-  "year",
   "collection",
   "amount",
   "description",

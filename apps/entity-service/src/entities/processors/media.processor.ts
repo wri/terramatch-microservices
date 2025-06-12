@@ -28,7 +28,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
   constructor(
     protected readonly entityType: EntityType,
-    protected readonly entityUuid: string,
+    protected readonly entityUuid: string[],
     protected readonly entityModelClass: EntityClass<EntityModel>,
     protected readonly entitiesService: EntitiesService,
     protected readonly query: MediaQueryDto = {}
@@ -222,7 +222,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
       document.addData(
         association.uuid,
-        this.entitiesService.mediaDto(media, { entityType: this.entityType, entityUuid: this.entityUuid })
+        this.entitiesService.mediaDto(media, { entityType: this.entityType, entityUuid: this.entityUuid[0] })
       );
     }
 

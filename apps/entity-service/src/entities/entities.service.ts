@@ -151,7 +151,7 @@ export class EntitiesService {
 
   createAssociationProcessor<T extends UuidModel, D extends AssociationDto>(
     entityType: EntityType,
-    uuid: string,
+    uuid: string[],
     association: ProcessableAssociation,
     query?: MediaQueryDto
   ) {
@@ -160,10 +160,14 @@ export class EntitiesService {
       throw new BadRequestException(`Association type invalid: ${entityType}`);
     }
 
+    console.log(processorClass);
+
     const entityModelClass = ENTITY_MODELS[entityType];
     if (entityModelClass == null) {
       throw new BadRequestException(`Entity type invalid: ${entityType}`);
     }
+
+    console.log(entityModelClass);
 
     return new processorClass(entityType, uuid, entityModelClass, this, query) as unknown as AssociationProcessor<T, D>;
   }

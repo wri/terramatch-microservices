@@ -8,10 +8,6 @@ export class EntityAssociationIndexParamsDto {
   @ApiProperty({ enum: ENTITY_TYPES, description: "Entity type for associations" })
   entity: EntityType;
 
-  @IsUUID()
-  @ApiProperty({ description: "Entity UUID for association" })
-  uuid: string;
-
   @IsIn(PROCESSABLE_ASSOCIATIONS)
   @ApiProperty({ enum: PROCESSABLE_ASSOCIATIONS, description: "Association type to retrieve" })
   association: ProcessableAssociation;

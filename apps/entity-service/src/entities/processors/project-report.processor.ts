@@ -132,7 +132,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (SUPPORTED_ASSOCIATIONS.includes(entity as ProcessableAssociation)) {
       const processor = this.entitiesService.createAssociationProcessor(
         "projectReports",
-        model.uuid,
+        [model.uuid],
         entity as ProcessableAssociation
       );
       await processor.addDtos(document);

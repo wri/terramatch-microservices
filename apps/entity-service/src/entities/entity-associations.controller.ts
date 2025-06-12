@@ -13,8 +13,9 @@ import { MediaQueryDto } from "./dto/media-query.dto";
 import { DisturbanceDto } from "./dto/disturbance.dto";
 import { InvasiveDto } from "./dto/invasive.dto";
 import { StrataDto } from "./dto/strata.dto";
+import * as console from "node:console";
 
-@Controller("entities/v3/:entity/:uuid")
+@Controller("entities/v3/:entity/associations")
 @ApiExtraModels(DemographicEntryDto, DemographicCollections)
 export class EntityAssociationsController {
   constructor(private readonly entitiesService: EntitiesService, private readonly policyService: PolicyService) {}
@@ -36,10 +37,16 @@ export class EntityAssociationsController {
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Base entity not found" })
   async associationIndex(
-    @Param() { entity, uuid, association }: EntityAssociationIndexParamsDto,
+    @Param() { entity, association }: EntityAssociationIndexParamsDto,
     @Query() query: MediaQueryDto
   ) {
-    const processor = this.entitiesService.createAssociationProcessor(entity, uuid, association, query);
+    console.log("associationIndex called with entity:", entity, "and association:", association);
+    const processor = this.entitiesService.createAssociationProcessor(
+      entity,
+      query.siteReportUuid!,
+      association,
+      query
+    );
     const baseEntity = await processor.getBaseEntity();
     await this.policyService.authorize("read", baseEntity);
     const document = buildJsonApi(processor.DTO, { forceDataArray: true });

@@ -1,4 +1,4 @@
-import { IsOptional } from "class-validator";
+import { IsArray, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { EntityQueryDto } from "./entity-query.dto";
@@ -30,4 +30,9 @@ export class MediaQueryDto extends EntityQueryDto {
   @ApiProperty({ required: false, default: false })
   @TransformBooleanString()
   isCover?: boolean;
+
+  @ApiProperty({ required: false, isArray: true, description: "siteReport uuid array" })
+  @IsOptional()
+  @IsArray()
+  siteReportUuid?: string[];
 }

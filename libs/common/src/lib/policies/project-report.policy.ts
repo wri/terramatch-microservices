@@ -9,7 +9,7 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve"], ProjectReport, {
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], ProjectReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -35,7 +35,9 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve"], ProjectReport, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], ProjectReport, {
+            projectId: { $in: projectIds }
+          });
         }
       }
     }

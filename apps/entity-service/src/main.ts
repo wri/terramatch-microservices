@@ -12,6 +12,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new TMLogger()
   });
+
   app.set("query parser", "extended");
 
   if (process.env.NODE_ENV === "development") {

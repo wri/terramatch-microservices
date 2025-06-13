@@ -91,8 +91,8 @@ export class Media extends Model<Media> {
   isCover: boolean;
 
   @AllowNull
-  @Column(ENUM("media", "document"))
-  fileType: "media" | "document" | null;
+  @Column(ENUM("media", "documents"))
+  fileType: "media" | "documents" | null;
 
   @JsonColumn()
   customProperties: object;

@@ -1,4 +1,4 @@
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto, AdditionalProps } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
@@ -76,6 +76,13 @@ export class SitePolygonLightDto extends HybridSupportDto {
     type: String
   })
   siteId: string | null;
+
+  @ApiProperty({
+    description: "UUID of the associated polygon geometry",
+    nullable: true,
+    type: String
+  })
+  polygonUuid: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   projectId?: string;

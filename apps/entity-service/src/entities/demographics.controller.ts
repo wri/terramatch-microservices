@@ -15,7 +15,6 @@ import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
 import { LARAVEL_MODEL_TYPES, LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 
 @Controller("entities/v3/demographics")
 export class DemographicsController {

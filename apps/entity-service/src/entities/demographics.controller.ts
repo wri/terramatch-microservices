@@ -13,7 +13,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
-import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
+import { LARAVEL_MODEL_TYPES, LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 
@@ -40,7 +40,7 @@ export class DemographicsController {
       for (const demographic of data) {
         indexIds.push(demographic.uuid);
         const { demographicalType, demographicalId } = demographic;
-        const entityType = demographicalType as MediaOwnerType;
+        const entityType = LARAVEL_MODEL_TYPES[demographicalType];
         const model = LARAVEL_MODELS[entityType];
         if (model == null) {
           this.logger.error("Unknown model type", entityType);

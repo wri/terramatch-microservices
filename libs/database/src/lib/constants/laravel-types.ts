@@ -7,3 +7,11 @@ export const LARAVEL_MODELS = {
   [ProjectReport.LARAVEL_TYPE]: ProjectReport,
   [SiteReport.LARAVEL_TYPE]: SiteReport
 };
+
+export const LARAVEL_MODEL_TYPES = {
+  [Organisation.LARAVEL_TYPE]: "organisation",
+  [Project.LARAVEL_TYPE]: "project",
+  [ProjectPitch.LARAVEL_TYPE]: "project-pitch",
+  [ProjectReport.LARAVEL_TYPE]: "project-report",
+  [SiteReport.LARAVEL_TYPE]: "site-report"
+};

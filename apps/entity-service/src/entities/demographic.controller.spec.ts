@@ -1,4 +1,4 @@
-import { Demographic } from "@terramatch-microservices/database/entities";
+import { Demographic, Project } from "@terramatch-microservices/database/entities";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
@@ -12,7 +12,6 @@ describe("DemographicsController", () => {
   let controller: DemographicsController;
   let demographicService: DeepMocked<DemographicService>;
   let policyService: DeepMocked<PolicyService>;
-  const LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -52,13 +51,13 @@ describe("DemographicsController", () => {
           new Demographic({
             uuid: "1",
             type: "type 1",
-            demographicalType: LARAVEL_TYPE,
+            demographicalType: Project.LARAVEL_TYPE,
             demographicalId: 1
           } as Demographic),
           new Demographic({
             uuid: "2",
             type: "type 2",
-            demographicalType: LARAVEL_TYPE,
+            demographicalType: Project.LARAVEL_TYPE,
             demographicalId: 2
           } as Demographic)
         ],

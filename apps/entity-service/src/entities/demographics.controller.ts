@@ -1,4 +1,11 @@
-import { BadRequestException, Controller, Get, NotFoundException, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  InternalServerErrorException,
+  NotFoundException,
+  Query
+} from "@nestjs/common";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -7,9 +14,13 @@ import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
 import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 
 @Controller("entities/v3/demographics")
 export class DemographicsController {
+  private logger = new TMLogger(DemographicsController.name);
+
   constructor(private readonly demographicService: DemographicService, private readonly policyService: PolicyService) {}
 
   @Get()
@@ -28,12 +39,20 @@ export class DemographicsController {
       await this.policyService.authorize("read", data);
       for (const demographic of data) {
         indexIds.push(demographic.uuid);
-        const model = LARAVEL_MODELS[demographic.demographicalType];
-        const demographicData = await model.findOne({
-          where: { id: demographic.demographicalId },
-          attributes: ["id", "uuid"]
-        });
-        const demographicDto = new DemographicDto(demographic, demographicData);
+        const { demographicalType, demographicalId } = demographic;
+        const entityType = demographicalType as MediaOwnerType;
+        const model = LARAVEL_MODELS[entityType];
+        if (model == null) {
+          this.logger.error("Unknown model type", entityType);
+          throw new InternalServerErrorException("Unexpected demographic association type");
+        }
+        const entity = await model.findOne({ where: { id: demographicalId }, attributes: ["uuid"] });
+        if (entity == null) {
+          this.logger.error("Demographic parent entity not found", { entityType, id: demographicalId });
+          throw new NotFoundException();
+        }
+        const additionalProps = { entityType, entityUuid: entity.uuid };
+        const demographicDto = new DemographicDto(demographic, additionalProps);
         document.addData(demographicDto.uuid, demographicDto);
       }
     }

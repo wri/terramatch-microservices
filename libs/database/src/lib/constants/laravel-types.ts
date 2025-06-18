@@ -1,4 +1,5 @@
-import { Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
+import { Media, Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
+import { DemographicAssociationType } from "../types/demographic";
 
 export const LARAVEL_MODELS = {
   [Organisation.LARAVEL_TYPE]: Organisation,
@@ -8,10 +9,10 @@ export const LARAVEL_MODELS = {
   [SiteReport.LARAVEL_TYPE]: SiteReport
 };
 
-export const LARAVEL_MODEL_TYPES = {
-  [Organisation.LARAVEL_TYPE]: "organisation",
-  [Project.LARAVEL_TYPE]: "project",
-  [ProjectPitch.LARAVEL_TYPE]: "project-pitch",
-  [ProjectReport.LARAVEL_TYPE]: "project-report",
-  [SiteReport.LARAVEL_TYPE]: "site-report"
-};
+export const LARAVEL_MODEL_TYPES: Record<string, DemographicAssociationType> = {
+  [Organisation.LARAVEL_TYPE]: "organisations",
+  [Project.LARAVEL_TYPE]: "projects",
+  [ProjectPitch.LARAVEL_TYPE]: "projectPitches",
+  [ProjectReport.LARAVEL_TYPE]: "projectReports",
+  [SiteReport.LARAVEL_TYPE]: "siteReports"
+} as const;

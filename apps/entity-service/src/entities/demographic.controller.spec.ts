@@ -7,6 +7,7 @@ import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 import { DemographicsController } from "./demographics.controller";
 import { DemographicService } from "./demographic.service";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
+import { ProjectFactory } from "@terramatch-microservices/database/factories";
 
 describe("DemographicsController", () => {
   let controller: DemographicsController;
@@ -46,19 +47,20 @@ describe("DemographicsController", () => {
     });
 
     it("should return an array of 3 demographics successfully", async () => {
+      const project = await ProjectFactory.create();
       const mockResponse = {
         data: [
           new Demographic({
             uuid: "1",
             type: "type 1",
             demographicalType: Project.LARAVEL_TYPE,
-            demographicalId: 1
+            demographicalId: project.id
           } as Demographic),
           new Demographic({
             uuid: "2",
             type: "type 2",
             demographicalType: Project.LARAVEL_TYPE,
-            demographicalId: 2
+            demographicalId: project.id
           } as Demographic)
         ],
         paginationTotal: 3,

@@ -1,4 +1,4 @@
-import { Media, Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
+import { Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
 import { DemographicAssociationType } from "../types/demographic";
 
 export const LARAVEL_MODELS = {

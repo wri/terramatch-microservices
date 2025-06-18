@@ -1,4 +1,4 @@
-import { populateDto, AdditionalProps } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";

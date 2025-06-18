@@ -142,22 +142,22 @@ describe("ProjectProcessor", () => {
       const orgOther = await OrganisationFactory.create({ type: "other-organisation" });
 
       const project1 = await ProjectFactory.create({
-        landscape: "Greater Rift Valley of Kenya",
+        landscape: "grv",
         cohort: "terrafund",
         organisationId: orgForProfit.id
       });
       const project2 = await ProjectFactory.create({
-        landscape: "Ghana Cocoa Belt",
+        landscape: "gcb",
         cohort: "terrafund",
         organisationId: orgNonProfit.id
       });
       const project3 = await ProjectFactory.create({
-        landscape: "Greater Rift Valley of Kenya",
+        landscape: "grv",
         cohort: "terrafund-landscapes",
         organisationId: orgOther.id
       });
       const project4 = await ProjectFactory.create({
-        landscape: "Lake Kivu & Rusizi River Basin",
+        landscape: "ikr",
         cohort: "enterprise",
         organisationId: orgForProfit.id
       });
@@ -166,17 +166,17 @@ describe("ProjectProcessor", () => {
         p.organisation = await p.$get("organisation");
       }
 
-      await expectProjects([project1, project3], { landscape: ["Greater Rift Valley of Kenya"] });
+      await expectProjects([project1, project3], { landscape: ["grv"] });
       await expectProjects([project1, project2], { cohort: ["terrafund"] });
       await expectProjects([project1, project4], { organisationType: ["for-profit-organisation"] });
       await expectProjects([project2], { organisationType: ["non-profit-organisation"] });
       await expectProjects([project1], {
-        landscape: ["Greater Rift Valley of Kenya"],
+        landscape: ["grv"],
         cohort: ["terrafund"],
         organisationType: ["for-profit-organisation"]
       });
       await expectProjects([project1, project3, project4], {
-        landscape: ["Greater Rift Valley of Kenya", "Lake Kivu & Rusizi River Basin"]
+        landscape: ["grv", "ikr"]
       });
     });
 

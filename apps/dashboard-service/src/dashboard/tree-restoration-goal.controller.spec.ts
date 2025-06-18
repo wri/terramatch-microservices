@@ -205,7 +205,7 @@ describe("TreeRestorationGoalController", () => {
         country: "CMR",
         programmes: ["terrafund", "ppc"],
         projectUuid: "uuid-123",
-        landscapes: ["landscape1", "landscape2"],
+        landscapes: ["gcb", "grv"],
         cohort: "cohort-2024"
       };
 
@@ -318,7 +318,7 @@ describe("TreeRestorationGoalController", () => {
     });
 
     it("should set timestamp when data is fetched from service", async () => {
-      const query: DashboardQueryDto = { landscapes: ["test-landscape"] };
+      const query: DashboardQueryDto = { landscapes: ["ikr"] };
       const mockTimestamp = "2024-12-01T12:00:00.000Z";
 
       cacheService.getCacheKeyFromQuery.mockReturnValue("timestamp-test-key");

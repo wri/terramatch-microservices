@@ -65,7 +65,7 @@ describe("TotalSectionHeaderService - filters", () => {
       country: "BJ",
       programmes: ["terrafund"],
       projectUuid: "uuid",
-      landscapes: ["terrafund"]
+      landscapes: ["gcb"]
     };
 
     const mockBuilder = {
@@ -191,7 +191,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
   it("should apply landscapes filter (array)", async () => {
     const filters: DashboardQueryDto = {
-      landscapes: ["land1", "land2"]
+      landscapes: ["gcb", "grv"]
     };
 
     const mockBuilder = baseMocks();

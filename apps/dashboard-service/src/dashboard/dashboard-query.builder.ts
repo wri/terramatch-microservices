@@ -3,6 +3,7 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { isObject, flatten, isEmpty } from "lodash";
 import { Project } from "@terramatch-microservices/database/entities";
+import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 
 export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
   protected findOptions: FindOptions<Attributes<T>> = {
@@ -46,7 +47,10 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     if (!isEmpty(filters?.country)) where["country"] = filters.country;
     if (!isEmpty(filters?.programmes)) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
     if (!isEmpty(filters?.cohort)) where["cohort"] = filters.cohort;
-    if (!isEmpty(filters?.landscapes)) where["landscape"] = { [Op.in]: [filters.landscapes] };
+    if (filters?.landscapes != null && filters.landscapes.length > 0) {
+      const landscapeNames = mapLandscapeCodesToNames(filters.landscapes);
+      where["landscape"] = { [Op.in]: landscapeNames };
+    }
     if (!isEmpty(filters?.organisationType)) organisationWhere["type"] = { [Op.in]: [filters.organisationType] };
     if (!isEmpty(filters?.projectUuid))
       where["uuid"] = Array.isArray(filters.projectUuid) ? { [Op.in]: filters.projectUuid } : filters.projectUuid;

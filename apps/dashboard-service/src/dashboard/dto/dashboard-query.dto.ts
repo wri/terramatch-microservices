@@ -34,7 +34,8 @@ export class DashboardQueryDto {
     isArray: true,
     required: false,
     name: "landscapes",
-    description: "Filter results by landscapes"
+    description:
+      "Filter results by landscapes using 3-letter codes: gcb (Ghana Cocoa Belt), grv (Greater Rift Valley of Kenya), ikr (Lake Kivu & Rusizi River Basin)"
   })
   @IsOptional()
   @IsArray()

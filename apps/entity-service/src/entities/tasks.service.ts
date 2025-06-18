@@ -91,7 +91,7 @@ export class TasksService {
     return task;
   }
 
-  async addFullTaskDto(document: DocumentBuilder, task: Task) {
+  async addFullTaskDto(document: DocumentBuilder, task: Task, nothingToReportStatus?: boolean) {
     const treesPlantedCount =
       (await TreeSpecies.visible()
         .collection("tree-planted")
@@ -99,7 +99,7 @@ export class TasksService {
         .sum("amount")) ?? 0;
 
     const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
-    await this.loadReports(task);
+    await this.loadReports(task, nothingToReportStatus);
     for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       if (entityType === "projectReports" && task.projectReport != null) {
@@ -154,12 +154,15 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  private async loadReports(task: Task) {
+  private async loadReports(task: Task, nothingToReportStatus?: boolean) {
     if (task.projectReport != null) return;
 
     for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
-      const { models } = await processor.findMany({ taskId: task.id });
+      const { models } = await processor.findMany({
+        taskId: task.id,
+        ...(nothingToReportStatus ? { nothingToReport: true } : {})
+      });
       if (entityType === "projectReports") {
         if (models.length > 1) {
           this.logger.error(`More than one project report found for task ${task.id}`);

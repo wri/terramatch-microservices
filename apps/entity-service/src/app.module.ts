@@ -19,6 +19,8 @@ import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
+import { DisturbancesController } from "./entities/disturbances.controller";
+import { DisturbanceService } from "./entities/disturbance.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
@@ -32,6 +34,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     FileUploadController,
     TreesController,
     BoundingBoxController,
+    DisturbancesController,
     EntitiesController,
     EntityAssociationsController
   ],
@@ -46,7 +49,8 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     ProjectPitchService,
     ImpactStoryService,
     BoundingBoxService,
-    TasksService
+    TasksService,
+    DisturbanceService
   ]
 })
 export class AppModule {}

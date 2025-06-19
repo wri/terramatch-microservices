@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing";
-import { Disturbance } from "@terramatch-microservices/database/entities";
+import { Disturbance, SiteReport } from "@terramatch-microservices/database/entities";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { DisturbanceService } from "./disturbance.service";
 import { DisturbanceQueryDto } from "./dto/disturbance-query.dto";
@@ -55,8 +55,21 @@ describe("DisturbanceService", () => {
       await expect(service.getDisturbances(params)).rejects.toThrow("Invalid filter key: unexpectedFilter");
     });
 
+    it("applies siteReportUuid filter with no coincidences", async () => {
+      const disturbances = [new Disturbance({ uuid: "uuid44", type: "Filtered" } as Disturbance)];
+      jest.spyOn(Disturbance, "findAll").mockImplementation(() => Promise.resolve(disturbances));
+
+      const params = getDefaultPagination();
+      params.siteReportUuid = ["uuid44", "uid45"];
+
+      const result = await service.getDisturbances(params);
+      expect(result.data).toHaveLength(0);
+    });
+
     it("applies siteReportUuid filter", async () => {
       const disturbances = [new Disturbance({ uuid: "uuid44", type: "Filtered" } as Disturbance)];
+      const siteReport = new SiteReport({ uuid: "uuid44" } as SiteReport);
+      jest.spyOn(SiteReport, "findAll").mockImplementation(() => Promise.resolve([siteReport]));
       jest.spyOn(Disturbance, "findAll").mockImplementation(() => Promise.resolve(disturbances));
 
       const params = getDefaultPagination();

@@ -34,6 +34,7 @@ export class DisturbancesController {
     const { data, paginationTotal, pageNumber } = await this.disturbanceService.getDisturbances(params);
     const document = buildJsonApi(DisturbanceDto, { pagination: "number" });
     const indexIds: string[] = [];
+    console.log(data.length, paginationTotal, pageNumber);
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const disturbance of data) {

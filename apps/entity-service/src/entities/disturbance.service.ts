@@ -48,6 +48,12 @@ export class DisturbanceService {
           builder.where({
             id: { [Op.in]: disturbanceIds }
           });
+        } else {
+          return {
+            data: [],
+            paginationTotal: 0,
+            pageNumber: query.page?.number ?? 1
+          };
         }
       }
     }

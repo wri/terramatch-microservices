@@ -1,6 +1,6 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
-import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { Subquery } from "../util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })

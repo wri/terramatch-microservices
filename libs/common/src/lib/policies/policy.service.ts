@@ -43,7 +43,7 @@ import { FormPolicy } from "./form.policy";
 import { FormQuestionOptionPolicy } from "./form-question-option.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
 import { ImpactStoryPolicy } from "./impact-story.policy";
-import { DisturbancePolicy } from "@terramatch-microservices/common/policies/disturbance.policy";
+import { DisturbancePolicy } from "./disturbance.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

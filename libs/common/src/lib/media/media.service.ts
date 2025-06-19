@@ -1,10 +1,40 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media } from "@terramatch-microservices/database/entities";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { TMLogger } from "../util/tm-logger";
+import "multer";
 
 @Injectable()
 export class MediaService {
-  constructor(private readonly configService: ConfigService) {}
+  private logger = new TMLogger(MediaService.name);
+
+  private readonly s3: S3Client;
+
+  constructor(private readonly configService: ConfigService) {
+    this.s3 = new S3Client({
+      region: this.configService.get<string>("AWS_REGION"),
+      credentials: {
+        accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID") ?? "",
+        secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY") ?? ""
+      }
+    });
+  }
+
+  async uploadFile(file: Express.Multer.File, bucket: string = this.configService.get<string>("AWS_BUCKET") ?? "") {
+    const { buffer, originalname, mimetype } = file;
+
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: originalname,
+      Body: buffer,
+      ContentType: mimetype,
+      ACL: "public-read"
+    });
+
+    await this.s3.send(command);
+    this.logger.log(`Uploaded ${originalname} to S3`);
+  }
 
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
   // complexity by making some assumptions that hold true for our use of Spatie (like how

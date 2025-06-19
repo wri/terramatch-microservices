@@ -8,6 +8,8 @@ import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
+import { FileUploadController } from "./entities/file-upload.controller";
+import { FileUploadService } from "./file/file-upload.service";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
@@ -15,6 +17,8 @@ import { TasksService } from "./entities/tasks.service";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
+import { DemographicsController } from "./entities/demographics.controller";
+import { DemographicService } from "./entities/demographic.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 
@@ -27,8 +31,10 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     ProjectPitchesController,
     ImpactStoriesController,
     TasksController,
+    FileUploadController,
     TreesController,
     BoundingBoxController,
+    DemographicsController,
     EntitiesController,
     EntityAssociationsController
   ],
@@ -39,10 +45,12 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     },
     EntitiesService,
     TreeService,
+    FileUploadService,
     ProjectPitchService,
     ImpactStoryService,
     BoundingBoxService,
-    TasksService
+    TasksService,
+    DemographicService
   ]
 })
 export class AppModule {}

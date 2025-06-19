@@ -1,6 +1,7 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, ENUM, NOW, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { LaravelModel, laravelType } from "../types/util";
+import { MediaConfiguration } from "../constants/media-owners";
 import { chainScope } from "../util/chain-scope";
 
 const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
@@ -22,6 +23,11 @@ type AuditStatusType = (typeof TYPES)[number];
   indexes: [{ name: "audit_statuses_auditable_type_auditable_id_index", fields: ["auditable_type", "auditable_id"] }]
 })
 export class AuditStatus extends Model<AuditStatus> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus";
+  static readonly MEDIA: Record<string, MediaConfiguration> = {
+    attachments: { dbCollection: "attachments", multiple: true, validation: "general-documents" }
+  };
+
   static for(auditable: LaravelModel) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;
   }

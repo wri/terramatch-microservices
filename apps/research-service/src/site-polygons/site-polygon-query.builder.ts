@@ -53,7 +53,17 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
 
-    this.findOptions.include = [{ model: PolygonGeometry, attributes: ["polygon"], required: true }, this.siteJoin];
+    this.findOptions.include = [
+      {
+        model: PolygonGeometry,
+        attributes: [
+          "polygon",
+          [literal("ST_Y(ST_Centroid(geom))"), "centroidLatitude"],
+          [literal("ST_X(ST_Centroid(geom))"), "centroidLongitude"]
+        ]
+      },
+      this.siteJoin
+    ];
 
     this.where({ isActive: true });
   }

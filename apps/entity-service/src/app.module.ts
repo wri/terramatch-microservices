@@ -17,6 +17,8 @@ import { TasksService } from "./entities/tasks.service";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
+import { DemographicsController } from "./entities/demographics.controller";
+import { DemographicService } from "./entities/demographic.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 import { DisturbancesController } from "./entities/disturbances.controller";
@@ -34,6 +36,7 @@ import { DisturbanceService } from "./entities/disturbance.service";
     FileUploadController,
     TreesController,
     BoundingBoxController,
+    DemographicsController,
     DisturbancesController,
     EntitiesController,
     EntityAssociationsController
@@ -50,6 +53,7 @@ import { DisturbanceService } from "./entities/disturbance.service";
     ImpactStoryService,
     BoundingBoxService,
     TasksService,
+    DemographicService,
     DisturbanceService
   ]
 })

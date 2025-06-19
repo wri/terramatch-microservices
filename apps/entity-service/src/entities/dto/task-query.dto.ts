@@ -14,14 +14,6 @@ export class TaskQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
-
-  @ApiProperty({
-    required: false,
-    description:
-      "Optional filter to retrieve reports with 'nothing to report' set to true; applied only when this filter is present"
-  })
-  @IsOptional()
-  nothingToReportStatus?: boolean;
 }
 
 export class SingleTaskDto {

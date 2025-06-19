@@ -51,11 +51,8 @@ export class TasksController {
 
       for (const task of tasks) {
         indexIds.push(task.uuid);
-        if (query.nothingToReportStatus !== undefined) {
-          await this.tasksService.addFullTaskDto(document, task, query.nothingToReportStatus);
-        } else {
-          document.addData(task.uuid, new TaskLightDto(task));
-        }
+
+        await this.tasksService.addFullTaskDto(document, task);
       }
     }
 

@@ -14,16 +14,13 @@ import { ProjectPitchesController } from "./entities/project-pitches.controller"
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
 import { TasksService } from "./entities/tasks.service";
-import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
-import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
-import { DataApiModule } from "@terramatch-microservices/data-api";
 import { DemographicsController } from "./entities/demographics.controller";
 import { DemographicService } from "./entities/demographic.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 
 @Module({
-  imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
+  imports: [SentryModule.forRoot(), CommonModule, HealthModule],
   // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
   // needs to be provided in this list before EntitiesController, or it will be superseded by the
   // wildcard route on EntitiesController.
@@ -33,7 +30,6 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     TasksController,
     FileUploadController,
     TreesController,
-    BoundingBoxController,
     DemographicsController,
     EntitiesController,
     EntityAssociationsController
@@ -48,7 +44,6 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     FileUploadService,
     ProjectPitchService,
     ImpactStoryService,
-    BoundingBoxService,
     TasksService,
     DemographicService
   ]

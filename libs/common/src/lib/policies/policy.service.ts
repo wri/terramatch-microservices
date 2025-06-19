@@ -19,7 +19,8 @@ import {
   FinancialIndicator,
   Form,
   FormQuestionOption,
-  FundingProgramme
+  FundingProgramme,
+  Disturbance
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -42,6 +43,7 @@ import { FormPolicy } from "./form.policy";
 import { FormQuestionOptionPolicy } from "./form-question-option.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
 import { ImpactStoryPolicy } from "./impact-story.policy";
+import { DisturbancePolicy } from "@terramatch-microservices/common/policies/disturbance.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +72,8 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Form, FormPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],
-  [ImpactStory, ImpactStoryPolicy]
+  [ImpactStory, ImpactStoryPolicy],
+  [Disturbance, DisturbancePolicy]
 ];
 
 /**

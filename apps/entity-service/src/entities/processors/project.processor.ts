@@ -25,6 +25,7 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
+import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 
 export class ProjectProcessor extends EntityProcessor<
   Project,
@@ -94,7 +95,8 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (query.landscape != null && query.landscape.length > 0) {
-      builder.where({ landscape: { [Op.in]: query.landscape } });
+      const landscapeNames = mapLandscapeCodesToNames(query.landscape);
+      builder.where({ landscape: { [Op.in]: landscapeNames } });
     }
 
     if (query.organisationType != null && query.organisationType.length > 0) {

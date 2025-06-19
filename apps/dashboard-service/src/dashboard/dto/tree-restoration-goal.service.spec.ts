@@ -84,7 +84,8 @@ describe("TreeRestorationGoalService", () => {
     it("should return complete tree restoration goal data", async () => {
       const query: DashboardQueryDto = {
         country: "BEN",
-        programmes: ["terrafund"]
+        programmes: ["terrafund"],
+        landscapes: ["gcb"]
       };
 
       mockBuilder.execute.mockResolvedValue(mockProjects);
@@ -111,7 +112,9 @@ describe("TreeRestorationGoalService", () => {
     });
 
     it("should handle empty projects list", async () => {
-      const query: DashboardQueryDto = {};
+      const query: DashboardQueryDto = {
+        landscapes: ["gcb"]
+      };
 
       mockBuilder.execute.mockResolvedValue([]);
       (Site.approvedIdsProjectsSubquery as jest.Mock).mockResolvedValue(literal("(0)"));
@@ -138,7 +141,8 @@ describe("TreeRestorationGoalService", () => {
 
     it("should filter projects by organisation type correctly", async () => {
       const query: DashboardQueryDto = {
-        organisationType: ["non-profit-organization"]
+        organisationType: ["non-profit-organization"],
+        landscapes: ["gcb"]
       };
 
       mockBuilder.execute.mockResolvedValue(mockProjects);
@@ -152,7 +156,9 @@ describe("TreeRestorationGoalService", () => {
     });
 
     it("should handle projects with null treesGrownGoal", async () => {
-      const query: DashboardQueryDto = {};
+      const query: DashboardQueryDto = {
+        landscapes: ["gcb"]
+      };
       const projectsWithNulls = [
         { id: 1, treesGrownGoal: null, organisation: { type: "non-profit-organization" } },
         { id: 2, treesGrownGoal: undefined, organisation: { type: "for-profit-organization" } },
@@ -172,7 +178,7 @@ describe("TreeRestorationGoalService", () => {
         country: "CMR",
         programmes: ["terrafund", "ppc"],
         projectUuid: "uuid-123",
-        landscapes: ["landscape1"],
+        landscapes: ["gcb"],
         cohort: "cohort-2024"
       };
 

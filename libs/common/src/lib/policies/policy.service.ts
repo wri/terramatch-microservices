@@ -2,6 +2,7 @@ import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
+  Demographic,
   Nursery,
   NurseryReport,
   Permission,
@@ -34,6 +35,7 @@ import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
 import { ProjectPitchPolicy } from "./project-pitch.policy";
 import { TaskPolicy } from "./task.policy";
+import { DemographicPolicy } from "./demographic.policy";
 import { AuditStatusPolicy } from "./audit-status.policy";
 import { FinancialIndicatorPolicy } from "./financial-indicator.policy";
 import { FormPolicy } from "./form.policy";
@@ -62,6 +64,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [User, UserPolicy],
   [ProjectPitch, ProjectPitchPolicy],
   [Task, TaskPolicy],
+  [Demographic, DemographicPolicy],
   [AuditStatus, AuditStatusPolicy],
   [FinancialIndicator, FinancialIndicatorPolicy],
   [Form, FormPolicy],

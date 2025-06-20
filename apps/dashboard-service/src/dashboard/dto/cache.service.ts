@@ -18,8 +18,17 @@ export class CacheService {
     return this.redis.get(timestampKey);
   }
 
+  async getTimestampForTotalJobCreated(cacheParameter: string) {
+    const timestampKey = `dashboard:total-job-created|${cacheParameter}:timestamp`;
+    return this.redis.get(timestampKey);
+  }
+
   async getTotalSectionHeader(cacheKey: string, query: DashboardQueryDto, delayedJobId: number) {
     return await this.dashboardQueue.add("totalSectionHeader", { ...query, cacheKey, delayedJobId });
+  }
+
+  async getTotalJobsCreated(cacheKey: string, query: DashboardQueryDto, delayedJobId: number) {
+    return await this.dashboardQueue.add("totalJobsCreated", { ...query, cacheKey, delayedJobId });
   }
 
   async set(key: string, value: string) {

@@ -12,6 +12,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
 import { TreeRestorationGoalController } from "./dashboard/tree-restoration-goal.controller";
 import { TreeRestorationGoalService } from "./dashboard/dto/tree-restoration-goal.service";
+import { TotalJobsCreatedController } from "./dashboard/total-jobs-created.controller";
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { TreeRestorationGoalService } from "./dashboard/dto/tree-restoration-goa
     }),
     BullModule.registerQueue({ name: "dashboard" })
   ],
-  controllers: [TotalSectionHeaderController, TreeRestorationGoalController],
+  controllers: [TotalSectionHeaderController, TreeRestorationGoalController, TotalJobsCreatedController],
   providers: [
     {
       provide: APP_FILTER,

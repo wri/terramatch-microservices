@@ -8,26 +8,47 @@ export class TotalJobsCreatedDto {
     populateDto<TotalJobsCreatedDto>(this, data);
   }
   @ApiProperty()
-  totalNonProfitCount: number;
+  totalJobsCreated: number;
 
   @ApiProperty()
-  totalEnterpriseCount: number;
+  totalFt: number;
 
   @ApiProperty()
-  totalEntries: number;
+  totalFtMen: number;
 
   @ApiProperty()
-  totalHectaresRestored: number;
+  totalFtNonYouth: number;
 
   @ApiProperty()
-  totalHectaresRestoredGoal: number;
+  totalFtWomen: number;
 
   @ApiProperty()
-  totalTreesRestored: number;
+  totalFtYouth: number;
 
   @ApiProperty()
-  totalTreesRestoredGoal: number;
+  totalMen: number;
 
-  @ApiProperty({ nullable: true, type: String })
-  lastUpdatedAt: string | null;
+  @ApiProperty()
+  totalNonYouth: number;
+
+  @ApiProperty()
+  totalPt: number;
+
+  @ApiProperty()
+  totalPtMen: number;
+
+  @ApiProperty()
+  totalPtNonYouth: number;
+
+  @ApiProperty()
+  totalPtWomen: number;
+
+  @ApiProperty()
+  totalPtYouth: number;
+
+  @ApiProperty()
+  totalWomen: number;
+
+  @ApiProperty()
+  totalYouth: number;
 }

@@ -27,6 +27,7 @@ export class CacheService {
     return await this.dashboardQueue.add("totalSectionHeader", { ...query, cacheKey, delayedJobId });
   }
 
+  // TODO remove if we dont need this
   async getTotalJobsCreated(cacheKey: string, query: DashboardQueryDto, delayedJobId: number) {
     return await this.dashboardQueue.add("totalJobsCreated", { ...query, cacheKey, delayedJobId });
   }
@@ -106,5 +107,9 @@ export class CacheService {
 
   getCacheParameterForProjectUudid(projectUuid: string) {
     return projectUuid ?? "";
+  }
+
+  getCacheParameterForProjectUuid(projectIds: string[]) {
+    return projectIds.length === 0 ? "" : projectIds.sort().join(",");
   }
 }

@@ -133,11 +133,12 @@ export class SitePolygonsService {
         let dto = pick(indicator, fields) as IndicatorDto;
         if (
           (dto.indicatorSlug === "treeCoverLoss" || dto.indicatorSlug === "treeCoverLossFires") &&
-          dto.value &&
+          dto.value !== undefined &&
+          dto.value !== null &&
           typeof dto.value === "object"
         ) {
           const sitePolygon = sitePolygons.find(sp => sp.id === indicator.sitePolygonId);
-          if (sitePolygon && sitePolygon.plantStart) {
+          if (sitePolygon !== undefined && sitePolygon.plantStart !== undefined && sitePolygon.plantStart !== null) {
             const plantStartYear = new Date(sitePolygon.plantStart).getFullYear();
             const startYear = plantStartYear - 10;
             const endYear = plantStartYear;

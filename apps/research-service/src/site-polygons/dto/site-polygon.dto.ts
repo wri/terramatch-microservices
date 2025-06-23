@@ -57,7 +57,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
         projectShortName: sitePolygon.site?.project?.shortName,
         indicators: indicators ?? [],
         siteName: sitePolygon.site?.name,
-        lightResource: true
+        lightResource: true,
+        centroidLatitude: sitePolygon.polygon?.centroidLatitude ?? null,
+        centroidLongitude: sitePolygon.polygon?.centroidLongitude ?? null
       });
     }
   }
@@ -75,6 +77,13 @@ export class SitePolygonLightDto extends HybridSupportDto {
   })
   siteId: string | null;
 
+  @ApiProperty({
+    description: "UUID of the associated polygon geometry",
+    nullable: true,
+    type: String
+  })
+  polygonUuid: string | null;
+
   @ApiProperty({ nullable: true, type: String })
   projectId?: string;
 
@@ -86,6 +95,20 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ nullable: true, type: Number })
   calcArea: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Latitude of the polygon's centroid, computed using PostGIS ST_Centroid"
+  })
+  centroidLatitude: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Longitude of the polygon's centroid, computed using PostGIS ST_Centroid"
+  })
+  centroidLongitude: number | null;
 
   @ApiProperty({
     type: "array",
@@ -127,7 +150,9 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       geometry: sitePolygon.polygon?.polygon,
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],
-      lightResource: false
+      lightResource: false,
+      centroidLatitude: sitePolygon.polygon?.centroidLatitude ?? null,
+      centroidLongitude: sitePolygon.polygon?.centroidLongitude ?? null
     });
   }
 

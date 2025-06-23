@@ -32,13 +32,9 @@ export class TasksController {
   })
   @JsonApiResponse({
     data: {
-      type: TaskLightDto,
-      relationships: [
-        { name: "siteReports", type: SiteReportLightDto, multiple: true },
-        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true }
-      ]
+      type: TaskLightDto
     },
-    included: [SiteReportLightDto, NurseryReportLightDto],
+    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto],
     pagination: "number"
   })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
@@ -52,7 +48,7 @@ export class TasksController {
       for (const task of tasks) {
         indexIds.push(task.uuid);
 
-        await this.tasksService.addFullTaskDto(document, task);
+        await this.tasksService.addFullTaskDto(document, task, true);
       }
     }
 
@@ -100,12 +96,7 @@ export class TasksController {
   })
   @JsonApiResponse({
     data: {
-      type: TaskFullDto,
-      relationships: [
-        { name: "projectReport", type: ProjectReportLightDto },
-        { name: "siteReports", type: SiteReportLightDto, multiple: true },
-        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true }
-      ]
+      type: TaskFullDto
     },
     included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto]
   })

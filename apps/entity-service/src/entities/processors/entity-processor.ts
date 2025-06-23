@@ -109,7 +109,8 @@ export abstract class EntityProcessor<
     document: DocumentBuilder,
     model: ModelType,
     entity: SideloadType,
-    pageSize: number
+    pageSize: number,
+    filterUuids?: string[]
   ): Promise<void> {
     throw new BadRequestException("This entity does not support sideloading");
   }
@@ -153,7 +154,7 @@ export abstract class EntityProcessor<
    * If this concrete processor needs to support more fields on the update dto, override this method
    * and set the appropriate fields and then call super.update()
    */
-  async update(model: ModelType, update: UpdateDto) {
+  async update(model: ModelType, update: UpdateDto, sideloaded = false) {
     if (update.status != null) {
       if (this.APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);

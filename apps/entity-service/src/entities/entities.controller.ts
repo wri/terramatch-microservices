@@ -16,7 +16,7 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, DocumentBuilder, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
@@ -27,9 +27,25 @@ import { EntityModel } from "@terramatch-microservices/database/constants/entiti
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
-import { EntityUpdateBody } from "./dto/entity-update.dto";
-import { SupportedEntities } from "./dto/entity.dto";
+import { EntityUpdateBody, EntityUpdateData } from "./dto/entity-update.dto";
+import { EntityDto, SupportedEntities } from "./dto/entity.dto";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
+import { EntityProcessor } from "./processors/entity-processor";
+
+async function processSideloads(
+  processor: EntityProcessor<EntityModel, EntityDto, EntityDto, EntityUpdateData>,
+  document: DocumentBuilder,
+  model: EntityModel,
+  sideloads?: EntitySideload[],
+  filterUuidsMap?: Record<string, string[]>
+) {
+  if (sideloads && sideloads.length > 0) {
+    for (const { entity: sideloadEntity, pageSize } of sideloads) {
+      const filterUuids = filterUuidsMap?.[sideloadEntity];
+      await processor.processSideload(document, model, sideloadEntity, pageSize, filterUuids);
+    }
+  }
+}
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -119,6 +135,10 @@ export class EntitiesController {
     operationId: "entityUpdate",
     summary: "Update various supported entity fields directly. Typically used for status transitions"
   })
+  @JsonApiResponse({
+    data: { type: EntitySideload },
+    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto, SiteLightDto, NurseryLightDto]
+  })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
@@ -126,7 +146,8 @@ export class EntitiesController {
   @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
   async entityUpdate<T extends EntityModel>(
     @Param() { entity, uuid }: SpecificEntityDto,
-    @Body() updatePayload: EntityUpdateBody
+    @Body() updatePayload: EntityUpdateBody,
+    @Query() query: EntityQueryDto
   ) {
     // The structure of the EntityUpdateBody ensures that the `type` field in the body controls
     // which update body is used for validation, but it doesn't make sure that the body of the
@@ -144,17 +165,24 @@ export class EntitiesController {
 
     await this.policyService.authorize("update", model);
 
-    if (
-      updatePayload.data.attributes.nurseryReportNothingToReportUuid !== null ||
-      updatePayload.data.attributes.siteReportNothingToReportUuid !== null
-    ) {
+    const siteReportUuids = updatePayload.data.attributes.siteReportNothingToReportUuid;
+    const nurseryReportUuids = updatePayload.data.attributes.nurseryReportNothingToReportUuid;
+    if (nurseryReportUuids !== null || siteReportUuids !== null)
       await processor.updateBulkApprovalReports(updatePayload.data.attributes, APPROVED);
-    }
     await processor.update(model, updatePayload.data.attributes);
 
     const document = buildJsonApi(processor.FULL_DTO);
     const { id, dto } = await processor.getFullDto(model);
     document.addData(id, dto);
+
+    const filterUuidsMap: Record<string, string[]> = {};
+    if (nurseryReportUuids !== null || siteReportUuids !== null) {
+      if (siteReportUuids) filterUuidsMap["siteReports"] = siteReportUuids;
+      if (nurseryReportUuids) filterUuidsMap["nurseryReports"] = nurseryReportUuids;
+
+      await processSideloads(processor, document, model, query.sideloads, filterUuidsMap);
+    }
+
     return document.serialize();
   }
 }

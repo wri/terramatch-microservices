@@ -135,13 +135,28 @@ export class ProjectProcessor extends EntityProcessor<
     document: DocumentBuilder,
     model: Project,
     entity: ProcessableEntity,
-    pageSize: number
+    pageSize: number,
+    filterUuids?: string[]
   ): Promise<void> {
-    if (!["sites", "nurseries"].includes(entity)) {
-      throw new BadRequestException("Projects only support sideloading associated sites and nurseries");
+    if (!["sites", "nurseries", "siteReports", "nurseryReports"].includes(entity)) {
+      throw new BadRequestException(
+        "Projects only support sideloading associated sites, nurseries, siteReports, and nurseryReports"
+      );
     }
     const processor = this.entitiesService.createEntityProcessor(entity);
-    await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
+    if (
+      (entity === "siteReports" || entity === "nurseryReports") &&
+      filterUuids !== undefined &&
+      filterUuids.length > 0
+    ) {
+      await processor.addIndex(
+        document,
+        { page: { size: pageSize }, projectUuid: model.uuid, uuids: filterUuids },
+        true
+      );
+    } else {
+      await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
+    }
   }
 
   async getLightDto(project: Project, associateDto: EntityDto) {

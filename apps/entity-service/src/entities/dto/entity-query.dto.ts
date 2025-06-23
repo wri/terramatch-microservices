@@ -106,6 +106,12 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   shortName?: string;
 
+  @ApiProperty({ required: false, isArray: true, type: String, description: "Filter by UUIDs" })
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  uuids?: string[];
+
   // This one is internal use only, not exposed to the API surface
   taskId?: number;
 }

@@ -139,6 +139,10 @@ export class SiteReportProcessor extends ReportProcessor<
       builder.where({ siteId: site.id });
     }
 
+    if (query.uuids && query.uuids.length > 0) {
+      builder.where({ uuid: { [Op.in]: query.uuids } });
+    }
+
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 

@@ -91,7 +91,7 @@ export class TasksService {
     return task;
   }
 
-  async addFullTaskDto(document: DocumentBuilder, task: Task) {
+  async addFullTaskDto(document: DocumentBuilder, task: Task, skipRelationships?: boolean) {
     const treesPlantedCount =
       (await TreeSpecies.visible()
         .collection("tree-planted")
@@ -104,11 +104,15 @@ export class TasksService {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       if (entityType === "projectReports" && task.projectReport != null) {
         const { id, dto } = await processor.getLightDto(task.projectReport);
-        taskResource.relateTo("projectReport", document.addData(id, dto));
+        skipRelationships
+          ? document.addData(id, dto)
+          : taskResource.relateTo("projectReport", document.addData(id, dto));
       } else {
         for (const report of task[entityType] ?? []) {
           const { id, dto } = await processor.getLightDto(report);
-          taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
+          skipRelationships
+            ? document.addData(id, dto)
+            : taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
         }
       }
     }

@@ -128,6 +128,10 @@ export class NurseryReportProcessor extends ReportProcessor<
       builder.where({ nurseryId: nursery.id });
     }
 
+    if (query.uuids && query.uuids.length > 0) {
+      builder.where({ uuid: { [Op.in]: query.uuids } });
+    }
+
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 

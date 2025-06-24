@@ -130,7 +130,28 @@ export class SitePolygonsService {
         }
 
         results[indicator.sitePolygonId] ??= [];
-        results[indicator.sitePolygonId].push(pick(indicator, fields) as IndicatorDto);
+        let dto = pick(indicator, fields) as IndicatorDto;
+        if (
+          (dto.indicatorSlug === "treeCoverLoss" || dto.indicatorSlug === "treeCoverLossFires") &&
+          dto.value != null
+        ) {
+          const sitePolygon = sitePolygons.find(sp => sp.id === indicator.sitePolygonId);
+          if (sitePolygon?.plantStart != null) {
+            const plantStartYear = new Date(sitePolygon.plantStart).getFullYear();
+            const startYear = plantStartYear - 10;
+            const endYear = plantStartYear;
+            dto = {
+              ...dto,
+              value: Object.fromEntries(
+                Object.entries(dto.value).filter(([year]) => {
+                  const y = parseInt(year, 10);
+                  return y >= startYear && y <= endYear;
+                })
+              )
+            };
+          }
+        }
+        results[indicator.sitePolygonId].push(dto);
       }
     }
 

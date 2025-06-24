@@ -3,12 +3,11 @@ import { ApiOperation } from "@nestjs/swagger";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
-import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { TotalJobsCreatedDto } from "./dto/total-jobs-created.dto";
 import { TotalJobsCreatedService } from "./total-jobs-created.service";
-import { TotalJobsCreatedQueryDto } from "./dto/total-jobs-created-query.dto";
+import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 
 @Controller("dashboard/v3/totalJobsCreated")
 export class TotalJobsCreatedController {
@@ -21,13 +20,10 @@ export class TotalJobsCreatedController {
   @NoBearerAuth
   @JsonApiResponse([TotalJobsCreatedDto, DelayedJobDto])
   @ApiOperation({ operationId: "getTotalJobsCreated", summary: "Get total jobs created" })
-  async getTotalJobsCreated(@Query() query: TotalJobsCreatedQueryDto) {
-    const cacheKey = `dashboard:jobs-created|${this.cacheService.getCacheParameterForProjectUuid(query.projectUuid)}`;
+  async getTotalJobsCreated(@Query() query: DashboardQueryDto) {
+    const cacheKey = `dashboard:jobs-created|${this.cacheService.getCacheKeyFromQuery(query)}`;
     let cachedData = await this.cacheService.get(cacheKey);
     if (cachedData == null) {
-      const delayedJob = await DelayedJob.create();
-      // await this.cacheService.getTotalJobsCreated(cacheKey, query, delayedJob.id);
-      // const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
       cachedData = await this.jobsCreatedService.getTotals(query);
     }
 

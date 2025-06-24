@@ -1,14 +1,24 @@
 import { Injectable } from "@nestjs/common";
 import { Op } from "sequelize";
-import { Demographic, DemographicEntry, ProjectReport } from "@terramatch-microservices/database/entities";
-import { TotalJobsCreatedQueryDto } from "./dto/total-jobs-created-query.dto";
+import { Demographic, DemographicEntry, Project, ProjectReport } from "@terramatch-microservices/database/entities";
+import { DashboardQueryDto } from "./dto/dashboard-query.dto";
+import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 
 @Injectable()
 export class TotalJobsCreatedService {
-  async getTotals(query: TotalJobsCreatedQueryDto): Promise<any> {
+  async getTotals(query: DashboardQueryDto): Promise<any> {
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
+      {
+        association: "organisation",
+        attributes: ["uuid", "name", "type"]
+      }
+    ]).queryFilters(query);
+
+    const projectIds: number[] = await projectsBuilder.pluckIds();
+
     const records = await ProjectReport.findAll({
       attributes: ["id"],
-      where: { uuid: { [Op.in]: query.projectUuid } }
+      where: { projectId: { [Op.in]: projectIds }, status: "approved" }
     });
 
     const demographics = await Demographic.findAll({
@@ -25,8 +35,6 @@ export class TotalJobsCreatedService {
     const all = this.getEntries(demographics);
     const ft = this.getEntries(this.getCollection(demographics, "full-time"));
     const pt = this.getEntries(this.getCollection(demographics, "part-time"));
-
-    console.log(all, ft, pt);
 
     return {
       totalJobsCreated: this.getSum(this.getType(all, "gender")),
@@ -56,7 +64,7 @@ export class TotalJobsCreatedService {
   }
 
   private getCollection(demographics: Demographic[], collection: string) {
-    return demographics.filter(d => d.type === collection);
+    return demographics.filter(d => d.collection === collection);
   }
 
   private getType(entries: (DemographicEntry | null)[], type: string, subType?: string) {

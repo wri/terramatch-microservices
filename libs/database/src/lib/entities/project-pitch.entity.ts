@@ -60,7 +60,7 @@ export class ProjectPitch extends Model<ProjectPitch> {
   @Column(UUID)
   organisationId: string | null;
 
-  @BelongsTo(() => Organisation, { foreignKey: "organisationId", constraints: false })
+  @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid", constraints: false })
   organisation: Organisation | null;
 
   @AllowNull

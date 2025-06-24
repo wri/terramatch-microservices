@@ -148,7 +148,7 @@ describe("CacheService", () => {
     it("should build correct cache key with full query", () => {
       const query: DashboardQueryDto = {
         programmes: ["prog2", "prog1"],
-        landscapes: ["land2", "land1"],
+        landscapes: ["grv", "gcb"],
         country: "USA",
         organisationType: ["non-profit-organization", "for-profit-organization"],
         cohort: "cohort2025",
@@ -156,7 +156,7 @@ describe("CacheService", () => {
       };
 
       const key = service.getCacheKeyFromQuery(query);
-      expect(key).toBe("prog1,prog2|land1,land2|USA|all-orgs|cohort2025|uuid-123");
+      expect(key).toBe("prog1,prog2|gcb,grv|USA|all-orgs|cohort2025|uuid-123");
     });
 
     it("should build cache key with missing fields", () => {

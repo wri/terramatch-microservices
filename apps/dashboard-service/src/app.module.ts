@@ -13,7 +13,7 @@ import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
 import { TreeRestorationGoalController } from "./dashboard/tree-restoration-goal.controller";
 import { TreeRestorationGoalService } from "./dashboard/dto/tree-restoration-goal.service";
 import { TotalJobsCreatedController } from "./dashboard/total-jobs-created.controller";
-import { JobsCreatedService } from "./dashboard/jobs-created.service";
+import { TotalJobsCreatedService } from "./dashboard/total-jobs-created.service";
 
 @Module({
   imports: [
@@ -44,7 +44,7 @@ import { JobsCreatedService } from "./dashboard/jobs-created.service";
     CacheService,
     DashboardProcessor,
     TreeRestorationGoalService,
-    JobsCreatedService
+    TotalJobsCreatedService
   ]
 })
 export class AppModule {}

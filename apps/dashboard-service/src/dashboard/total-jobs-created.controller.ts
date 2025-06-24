@@ -7,18 +7,21 @@ import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { TotalJobsCreatedDto } from "./dto/total-jobs-created.dto";
-import { JobsCreatedService } from "./jobs-created.service";
-import { JobsCreatedQueryDto } from "./dto/jobs-created-query.dto";
+import { TotalJobsCreatedService } from "./total-jobs-created.service";
+import { TotalJobsCreatedQueryDto } from "./dto/total-jobs-created-query.dto";
 
 @Controller("dashboard/v3/totalJobsCreated")
 export class TotalJobsCreatedController {
-  constructor(private readonly cacheService: CacheService, private readonly jobsCreatedService: JobsCreatedService) {}
+  constructor(
+    private readonly cacheService: CacheService,
+    private readonly jobsCreatedService: TotalJobsCreatedService
+  ) {}
 
   @Get()
   @NoBearerAuth
   @JsonApiResponse([TotalJobsCreatedDto, DelayedJobDto])
   @ApiOperation({ operationId: "getTotalJobsCreated", summary: "Get total jobs created" })
-  async getTotalJobsCreated(@Query() query: JobsCreatedQueryDto) {
+  async getTotalJobsCreated(@Query() query: TotalJobsCreatedQueryDto) {
     const cacheKey = `dashboard:jobs-created|${this.cacheService.getCacheParameterForProjectUuid(query.projectUuid)}`;
     let cachedData = await this.cacheService.get(cacheKey);
     if (cachedData == null) {

@@ -6,7 +6,7 @@ import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 
 @Injectable()
 export class TotalJobsCreatedService {
-  async getTotals(query: DashboardQueryDto): Promise<any> {
+  async getTotals(query: DashboardQueryDto) {
     const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
       {
         association: "organisation",

@@ -12,10 +12,6 @@ import { ActionFactory } from "@terramatch-microservices/database/factories/acti
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
-import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
-import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
-import { laravelType } from "@terramatch-microservices/database/types/util";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 describe("EntityProcessor", () => {
   let service: EntitiesService;

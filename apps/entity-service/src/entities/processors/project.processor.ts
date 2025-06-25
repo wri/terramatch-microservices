@@ -135,8 +135,7 @@ export class ProjectProcessor extends EntityProcessor<
     document: DocumentBuilder,
     model: Project,
     entity: ProcessableEntity,
-    pageSize: number,
-    filterUuids?: string[]
+    pageSize: number
   ): Promise<void> {
     if (!["sites", "nurseries", "siteReports", "nurseryReports"].includes(entity)) {
       throw new BadRequestException(
@@ -144,19 +143,6 @@ export class ProjectProcessor extends EntityProcessor<
       );
     }
     const processor = this.entitiesService.createEntityProcessor(entity);
-    if (
-      (entity === "siteReports" || entity === "nurseryReports") &&
-      filterUuids !== undefined &&
-      filterUuids.length > 0
-    ) {
-      await processor.addIndex(
-        document,
-        { page: { size: pageSize }, projectUuid: model.uuid, uuids: filterUuids },
-        true
-      );
-    } else {
-      await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
-    }
   }
 
   async getLightDto(project: Project, associateDto: EntityDto) {

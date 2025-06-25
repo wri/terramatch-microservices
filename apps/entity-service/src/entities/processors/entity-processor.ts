@@ -102,8 +102,7 @@ export abstract class EntityProcessor<
     document: DocumentBuilder,
     model: ModelType,
     entity: SideloadType,
-    pageSize: number,
-    filterUuids?: string[]
+    pageSize: number
   ): Promise<void> {
     throw new BadRequestException("This entity does not support sideloading");
   }

@@ -22,7 +22,7 @@ import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Attributes } from "sequelize";
 import { ModelCtor } from "sequelize-typescript";
-import { TaskUpdateBody, BulkTaskUpdateBody } from "./dto/task-update.dto";
+import { TaskUpdateBody } from "./dto/task-update.dto";
 
 const FILTER_PROPS = {
   status: "status",

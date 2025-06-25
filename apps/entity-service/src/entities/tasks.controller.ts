@@ -18,7 +18,7 @@ import { ProjectReportLightDto } from "./dto/project-report.dto";
 import { SiteReportLightDto } from "./dto/site-report.dto";
 import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
-import { BulkTaskUpdateBody, TaskUpdateBody } from "./dto/task-update.dto";
+import { TaskUpdateBody } from "./dto/task-update.dto";
 import { TasksService } from "./tasks.service";
 import { Task } from "@terramatch-microservices/database/entities";
 

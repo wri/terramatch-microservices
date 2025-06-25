@@ -1,4 +1,4 @@
-import { Demographic, DemographicEntry, ProjectReport, User } from "@terramatch-microservices/database/entities";
+import { Demographic, ProjectReport } from "@terramatch-microservices/database/entities";
 import { TotalJobsCreatedService } from "./total-jobs-created.service";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";

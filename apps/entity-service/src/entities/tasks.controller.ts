@@ -138,44 +138,4 @@ export class TasksController {
 
     return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
   }
-
-  // @Patch()
-  // @ApiOperation({
-  //   operationId: "bulkApproveTasks",
-  //   summary: "Bulk approve or update tasks and their reports."
-  // })
-  // @JsonApiResponse({
-  //   data: { type: TaskLightDto },
-  //   included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto],
-  //   pagination: "number"
-  // })
-  // async bulkApproveTasks(@Query() query: TaskQueryDto, @Body() updatePayload: BulkTaskUpdateBody) {
-  //   await this.tasksService.approveBulkReports(updatePayload);
-  //   const { tasks, total } = await this.tasksService.getTasks(query);
-  //   return this.buildTaskListDocument(tasks, total, query);
-  // }
-
-  // private async buildTaskListDocument(tasks: Task[], total: number, query: TaskQueryDto) {
-  //   const document = buildJsonApi(TaskLightDto, { pagination: "number" });
-  //   const indexIds: string[] = [];
-  //   if (tasks.length !== 0) {
-  //     await this.policyService.authorize("read", tasks);
-
-  //     for (const task of tasks) {
-  //       indexIds.push(task.uuid);
-
-  //       await this.tasksService.addFullTaskDto(document, task, true);
-  //     }
-  //   }
-
-  //   document.addIndexData({
-  //     resource: "tasks",
-  //     requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
-  //     ids: indexIds,
-  //     total,
-  //     pageNumber: query.page?.number ?? 1
-  //   });
-
-  //   return document.serialize();
-  // }
 }

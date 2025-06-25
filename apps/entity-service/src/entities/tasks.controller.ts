@@ -20,7 +20,6 @@ import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { TasksService } from "./tasks.service";
-import { Task } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3/tasks")
 export class TasksController {
@@ -110,13 +109,6 @@ export class TasksController {
       throw new BadRequestException("Task id in path and payload do not match");
     }
 
-    if (
-      updatePayload.data.attributes.nurseryReportNothingToReportUuid ||
-      updatePayload.data.attributes.siteReportNothingToReportUuid
-    ) {
-      await this.tasksService.approveBulkReports(updatePayload);
-    }
-
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("update", task);
 
@@ -128,6 +120,13 @@ export class TasksController {
       } else {
         throw new BadRequestException(`Status not supported by this controller: ${status}`);
       }
+    }
+
+    if (
+      updatePayload.data.attributes.nurseryReportNothingToReportUuid != null ||
+      updatePayload.data.attributes.siteReportNothingToReportUuid != null
+    ) {
+      await this.tasksService.approveBulkReports(updatePayload);
     }
 
     await task.save();

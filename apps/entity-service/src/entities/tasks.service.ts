@@ -117,15 +117,19 @@ export class TasksService {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       if (entityType === "projectReports" && task.projectReport != null) {
         const { id, dto } = await processor.getLightDto(task.projectReport);
-        skipRelationships
-          ? document.addData(id, dto)
-          : taskResource.relateTo("projectReport", document.addData(id, dto));
+        if (skipRelationships) {
+          document.addData(id, dto);
+        } else {
+          taskResource.relateTo("projectReport", document.addData(id, dto));
+        }
       } else {
         for (const report of task[entityType] ?? []) {
           const { id, dto } = await processor.getLightDto(report);
-          skipRelationships
-            ? document.addData(id, dto)
-            : taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
+          if (skipRelationships) {
+            document.addData(id, dto);
+          } else {
+            taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
+          }
         }
       }
     }
@@ -171,23 +175,29 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  async approveBulkReports(attributes: TaskUpdateBody): Promise<void> {
+  async approveBulkReports(attributes: TaskUpdateBody, taskId: number): Promise<void> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
 
     const [siteReports, nurseryReports] = await Promise.all([
-      this.findReportsByUuids(SiteReport, attributes.data.attributes.siteReportNothingToReportUuid ?? []),
-      this.findReportsByUuids(NurseryReport, attributes.data.attributes.nurseryReportNothingToReportUuid ?? [])
+      this.findReportsByUuids(SiteReport, attributes.data.attributes.siteReportNothingToReportUuid ?? [], taskId),
+      this.findReportsByUuids(NurseryReport, attributes.data.attributes.nurseryReportNothingToReportUuid ?? [], taskId)
     ]);
 
     await Promise.all([
-      this.updateReportsStatus(SiteReport, attributes.data.attributes.siteReportNothingToReportUuid ?? [], APPROVED),
+      this.updateReportsStatus(
+        SiteReport,
+        attributes.data.attributes.siteReportNothingToReportUuid ?? [],
+        APPROVED,
+        taskId
+      ),
       this.updateReportsStatus(
         NurseryReport,
         attributes.data.attributes.nurseryReportNothingToReportUuid ?? [],
-        APPROVED
+        APPROVED,
+        taskId
       )
     ]);
 
@@ -201,11 +211,15 @@ export class TasksService {
     }
   }
 
-  private async findReportsByUuids<T extends ReportModel>(modelClass: ModelCtor<T>, uuids: string[]): Promise<T[]> {
+  private async findReportsByUuids<T extends ReportModel>(
+    modelClass: ModelCtor<T>,
+    uuids: string[],
+    taskId: number
+  ): Promise<T[]> {
     if (uuids == null) return [];
 
     const reports = await modelClass.findAll({
-      where: { uuid: { [Op.in]: uuids } },
+      where: { uuid: { [Op.in]: uuids }, taskId },
       attributes: ["id", "uuid"]
     });
     return reports as T[];
@@ -214,11 +228,12 @@ export class TasksService {
   private async updateReportsStatus<T extends ReportModel>(
     modelClass: ModelCtor<T>,
     uuids: string[],
-    status: string
+    status: string,
+    taskId: number
   ): Promise<void> {
     if (uuids == null) return;
 
-    await modelClass.update({ status: status }, { where: { uuid: { [Op.in]: uuids } } });
+    await modelClass.update({ status: status }, { where: { uuid: { [Op.in]: uuids }, taskId } });
   }
 
   private createAuditStatusRecords(

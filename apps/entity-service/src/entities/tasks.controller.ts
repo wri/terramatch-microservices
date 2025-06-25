@@ -126,7 +126,7 @@ export class TasksController {
       updatePayload.data.attributes.nurseryReportNothingToReportUuid != null ||
       updatePayload.data.attributes.siteReportNothingToReportUuid != null
     ) {
-      await this.tasksService.approveBulkReports(updatePayload);
+      await this.tasksService.approveBulkReports(updatePayload, task.id);
     }
 
     await task.save();

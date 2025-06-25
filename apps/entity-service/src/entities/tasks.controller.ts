@@ -105,11 +105,7 @@ export class TasksController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async taskUpdate(
-    @Param() { uuid }: SingleTaskDto,
-    @Body() updatePayload: TaskUpdateBody,
-    @Query() query: TaskQueryDto
-  ) {
+  async taskUpdate(@Param() { uuid }: SingleTaskDto, @Body() updatePayload: TaskUpdateBody) {
     if (uuid !== updatePayload.data.id) {
       throw new BadRequestException("Task id in path and payload do not match");
     }

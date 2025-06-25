@@ -171,25 +171,29 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  async approveBulkReports(attributes: any) {
+  async approveBulkReports(attributes: TaskUpdateBody) {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
 
     const [siteReports, nurseryReports] = await Promise.all([
-      this.findReportsByUuids(SiteReport, attributes.siteReportNothingToReportUuid ?? []),
-      this.findReportsByUuids(NurseryReport, attributes.nurseryReportNothingToReportUuid ?? [])
+      this.findReportsByUuids(SiteReport, attributes.data.attributes.siteReportNothingToReportUuid ?? []),
+      this.findReportsByUuids(NurseryReport, attributes.data.attributes.nurseryReportNothingToReportUuid ?? [])
     ]);
 
     await Promise.all([
-      this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuid ?? [], APPROVED),
-      this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuid ?? [], APPROVED)
+      this.updateReportsStatus(SiteReport, attributes.data.attributes.siteReportNothingToReportUuid ?? [], APPROVED),
+      this.updateReportsStatus(
+        NurseryReport,
+        attributes.data.attributes.nurseryReportNothingToReportUuid ?? [],
+        APPROVED
+      )
     ]);
 
     const auditStatusRecords = [
-      ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),
-      ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback ?? "")
+      ...this.createAuditStatusRecords(siteReports, user, attributes.data.attributes.feedback ?? ""),
+      ...this.createAuditStatusRecords(nurseryReports, user, attributes.data.attributes.feedback ?? "")
     ] as Array<Attributes<AuditStatus>>;
 
     if (auditStatusRecords.length > 0) {

@@ -146,7 +146,7 @@ export abstract class EntityProcessor<
    * If this concrete processor needs to support more fields on the update dto, override this method
    * and set the appropriate fields and then call super.update()
    */
-  async update(model: ModelType, update: UpdateDto, sideloaded = false) {
+  async update(model: ModelType, update: UpdateDto) {
     if (update.status != null) {
       if (this.APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);

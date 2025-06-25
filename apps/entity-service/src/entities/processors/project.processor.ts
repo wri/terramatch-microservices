@@ -137,12 +137,11 @@ export class ProjectProcessor extends EntityProcessor<
     entity: ProcessableEntity,
     pageSize: number
   ): Promise<void> {
-    if (!["sites", "nurseries", "siteReports", "nurseryReports"].includes(entity)) {
-      throw new BadRequestException(
-        "Projects only support sideloading associated sites, nurseries, siteReports, and nurseryReports"
-      );
+    if (!["sites", "nurseries"].includes(entity)) {
+      throw new BadRequestException("Projects only support sideloading associated sites and nurseries");
     }
     const processor = this.entitiesService.createEntityProcessor(entity);
+    await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
   }
 
   async getLightDto(project: Project, associateDto: EntityDto) {

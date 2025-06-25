@@ -16,7 +16,7 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildDeletedResponse, buildJsonApi, DocumentBuilder, getDtoType } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
@@ -27,7 +27,7 @@ import { EntityModel } from "@terramatch-microservices/database/constants/entiti
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
-import { EntityUpdateBody, EntityUpdateData } from "./dto/entity-update.dto";
+import { EntityUpdateBody } from "./dto/entity-update.dto";
 import { SupportedEntities } from "./dto/entity.dto";
 
 @Controller("entities/v3")
@@ -148,7 +148,6 @@ export class EntitiesController {
     const document = buildJsonApi(processor.FULL_DTO);
     const { id, dto } = await processor.getFullDto(model);
     document.addData(id, dto);
-
     return document.serialize();
   }
 }

@@ -29,28 +29,6 @@ export class EntityUpdateAttributes {
     nullable: true
   })
   feedbackFields?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @Type(() => String)
-  @ApiProperty({
-    description: "UUIDs of site reports to mark as 'Nothing to report'",
-    isArray: true,
-    type: String,
-    nullable: true
-  })
-  siteReportNothingToReportUuid?: string[];
-
-  @IsOptional()
-  @IsArray()
-  @Type(() => String)
-  @ApiProperty({
-    description: "UUIDs of nusery reports to mark as 'Nothing to report'",
-    isArray: true,
-    type: String,
-    nullable: true
-  })
-  nurseryReportNothingToReportUuid?: string[];
 }
 
 export class ProjectUpdateAttributes extends EntityUpdateAttributes {

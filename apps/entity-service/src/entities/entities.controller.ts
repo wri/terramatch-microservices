@@ -28,24 +28,7 @@ import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorat
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
 import { EntityUpdateBody, EntityUpdateData } from "./dto/entity-update.dto";
-import { EntityDto, SupportedEntities } from "./dto/entity.dto";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
-import { EntityProcessor } from "./processors/entity-processor";
-
-async function processSideloads(
-  processor: EntityProcessor<EntityModel, EntityDto, EntityDto, EntityUpdateData>,
-  document: DocumentBuilder,
-  model: EntityModel,
-  sideloads?: EntitySideload[],
-  filterUuidsMap?: Record<string, string[]>
-) {
-  if (sideloads && sideloads.length > 0) {
-    for (const { entity: sideloadEntity, pageSize } of sideloads) {
-      const filterUuids = filterUuidsMap?.[sideloadEntity];
-      await processor.processSideload(document, model, sideloadEntity, pageSize, filterUuids);
-    }
-  }
-}
+import { SupportedEntities } from "./dto/entity.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -135,10 +118,6 @@ export class EntitiesController {
     operationId: "entityUpdate",
     summary: "Update various supported entity fields directly. Typically used for status transitions"
   })
-  @JsonApiResponse({
-    data: { type: EntitySideload },
-    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto, SiteLightDto, NurseryLightDto]
-  })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
@@ -146,8 +125,7 @@ export class EntitiesController {
   @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
   async entityUpdate<T extends EntityModel>(
     @Param() { entity, uuid }: SpecificEntityDto,
-    @Body() updatePayload: EntityUpdateBody,
-    @Query() query: EntityQueryDto
+    @Body() updatePayload: EntityUpdateBody
   ) {
     // The structure of the EntityUpdateBody ensures that the `type` field in the body controls
     // which update body is used for validation, but it doesn't make sure that the body of the
@@ -165,23 +143,11 @@ export class EntitiesController {
 
     await this.policyService.authorize("update", model);
 
-    const siteReportUuids = updatePayload.data.attributes.siteReportNothingToReportUuid;
-    const nurseryReportUuids = updatePayload.data.attributes.nurseryReportNothingToReportUuid;
-    if (nurseryReportUuids !== null || siteReportUuids !== null)
-      await processor.updateBulkApprovalReports(updatePayload.data.attributes, APPROVED);
     await processor.update(model, updatePayload.data.attributes);
 
     const document = buildJsonApi(processor.FULL_DTO);
     const { id, dto } = await processor.getFullDto(model);
     document.addData(id, dto);
-
-    const filterUuidsMap: Record<string, string[]> = {};
-    if (nurseryReportUuids !== null || siteReportUuids !== null) {
-      if (siteReportUuids) filterUuidsMap["siteReports"] = siteReportUuids;
-      if (nurseryReportUuids) filterUuidsMap["nurseryReports"] = nurseryReportUuids;
-
-      await processSideloads(processor, document, model, query.sideloads, filterUuidsMap);
-    }
 
     return document.serialize();
   }

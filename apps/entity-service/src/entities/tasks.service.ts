@@ -1,5 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ProjectReport, ProjectUser, SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  ProjectReport,
+  ProjectUser,
+  SiteReport,
+  Task,
+  TreeSpecies,
+  User,
+  AuditStatus,
+  NurseryReport
+} from "@terramatch-microservices/database/entities";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { TaskFullDto } from "./dto/task.dto";
 import { EntitiesService, ProcessableEntity } from "./entities.service";
@@ -9,7 +18,11 @@ import { TaskQueryDto } from "./dto/task-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
-import { AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
+import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/constants/status";
+import { laravelType } from "@terramatch-microservices/database/types/util";
+import { Attributes } from "sequelize";
+import { ModelCtor } from "sequelize-typescript";
+import { TaskUpdateBody, BulkTaskUpdateBody } from "./dto/task-update.dto";
 
 const FILTER_PROPS = {
   status: "status",
@@ -158,6 +171,67 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
+  async approveBulkReports(attributes: any) {
+    const user = await User.findOne({
+      where: { id: this.entitiesService.userId },
+      attributes: ["id", "firstName", "lastName", "emailAddress"]
+    });
+
+    const [siteReports, nurseryReports] = await Promise.all([
+      this.findReportsByUuids(SiteReport, attributes.siteReportNothingToReportUuid ?? []),
+      this.findReportsByUuids(NurseryReport, attributes.nurseryReportNothingToReportUuid ?? [])
+    ]);
+
+    await Promise.all([
+      this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuid ?? [], APPROVED),
+      this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuid ?? [], APPROVED)
+    ]);
+
+    const auditStatusRecords = [
+      ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),
+      ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback ?? "")
+    ] as Array<Attributes<AuditStatus>>;
+
+    if (auditStatusRecords.length > 0) {
+      await AuditStatus.bulkCreate(auditStatusRecords);
+    }
+  }
+
+  private async findReportsByUuids<T extends ReportModel>(modelClass: ModelCtor<T>, uuids: string[]): Promise<T[]> {
+    if (uuids == null) return [];
+
+    const reports = await modelClass.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid"]
+    });
+    return reports as T[];
+  }
+
+  private async updateReportsStatus<T extends ReportModel>(
+    modelClass: ModelCtor<T>,
+    uuids: string[],
+    status: string
+  ): Promise<void> {
+    if (uuids == null) return;
+
+    await modelClass.update({ status: status }, { where: { uuid: { [Op.in]: uuids } } });
+  }
+
+  private createAuditStatusRecords(
+    reports: ReportModel[],
+    user: User | null,
+    feedback: string | null
+  ): Array<Partial<AuditStatus>> {
+    return reports.map(report => ({
+      auditableType: laravelType(report),
+      auditableId: report.id,
+      createdBy: user?.emailAddress ?? null,
+      firstName: user?.firstName ?? null,
+      lastName: user?.lastName ?? null,
+      status: APPROVED,
+      comment: feedback ?? null
+    }));
+  }
   private async loadReports(task: Task) {
     if (task.projectReport != null) return;
 

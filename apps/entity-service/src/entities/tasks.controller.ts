@@ -18,8 +18,9 @@ import { ProjectReportLightDto } from "./dto/project-report.dto";
 import { SiteReportLightDto } from "./dto/site-report.dto";
 import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
-import { TaskUpdateBody } from "./dto/task-update.dto";
+import { BulkTaskUpdateBody, TaskUpdateBody } from "./dto/task-update.dto";
 import { TasksService } from "./tasks.service";
+import { Task } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3/tasks")
 export class TasksController {
@@ -104,15 +105,25 @@ export class TasksController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async taskUpdate(@Param() { uuid }: SingleTaskDto, @Body() updatePayload: TaskUpdateBody) {
+  async taskUpdate(
+    @Param() { uuid }: SingleTaskDto,
+    @Body() updatePayload: TaskUpdateBody,
+    @Query() query: TaskQueryDto
+  ) {
     if (uuid !== updatePayload.data.id) {
       throw new BadRequestException("Task id in path and payload do not match");
+    }
+
+    if (
+      updatePayload.data.attributes.nurseryReportNothingToReportUuid ||
+      updatePayload.data.attributes.siteReportNothingToReportUuid
+    ) {
+      await this.tasksService.approveBulkReports(updatePayload);
     }
 
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("update", task);
 
-    // the only field updateable on Task is status
     const { status } = updatePayload.data.attributes;
 
     if (status != null) {
@@ -127,4 +138,44 @@ export class TasksController {
 
     return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
   }
+
+  // @Patch()
+  // @ApiOperation({
+  //   operationId: "bulkApproveTasks",
+  //   summary: "Bulk approve or update tasks and their reports."
+  // })
+  // @JsonApiResponse({
+  //   data: { type: TaskLightDto },
+  //   included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto],
+  //   pagination: "number"
+  // })
+  // async bulkApproveTasks(@Query() query: TaskQueryDto, @Body() updatePayload: BulkTaskUpdateBody) {
+  //   await this.tasksService.approveBulkReports(updatePayload);
+  //   const { tasks, total } = await this.tasksService.getTasks(query);
+  //   return this.buildTaskListDocument(tasks, total, query);
+  // }
+
+  // private async buildTaskListDocument(tasks: Task[], total: number, query: TaskQueryDto) {
+  //   const document = buildJsonApi(TaskLightDto, { pagination: "number" });
+  //   const indexIds: string[] = [];
+  //   if (tasks.length !== 0) {
+  //     await this.policyService.authorize("read", tasks);
+
+  //     for (const task of tasks) {
+  //       indexIds.push(task.uuid);
+
+  //       await this.tasksService.addFullTaskDto(document, task, true);
+  //     }
+  //   }
+
+  //   document.addIndexData({
+  //     resource: "tasks",
+  //     requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
+  //     ids: indexIds,
+  //     total,
+  //     pageNumber: query.page?.number ?? 1
+  //   });
+
+  //   return document.serialize();
+  // }
 }

@@ -13,14 +13,7 @@ import {
   NEEDS_MORE_INFORMATION,
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
-import {
-  AuditStatus,
-  NurseryReport,
-  ProjectReport,
-  SiteReport,
-  User
-} from "@terramatch-microservices/database/entities";
-import { laravelType } from "@terramatch-microservices/database/types/util";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -176,71 +169,6 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loadAssociationData(ids: number[]): Promise<Record<number, object>> {
     return Promise.resolve({});
-  }
-
-  private async findReportsByUuids<T extends ReportModel>(
-    modelClass: ModelCtor<T>,
-    uuids: string[] | undefined
-  ): Promise<T[]> {
-    if (uuids == undefined) return [];
-
-    const reports = await modelClass.findAll({
-      where: { uuid: { [Op.in]: uuids } },
-      attributes: ["id", "uuid"]
-    });
-    return reports as T[];
-  }
-
-  private async updateReportsStatus<T extends ReportModel>(
-    modelClass: ModelCtor<T>,
-    uuids: string[] | undefined,
-    status: string
-  ): Promise<void> {
-    if (uuids == undefined) return;
-
-    await modelClass.update({ status: status }, { where: { uuid: { [Op.in]: uuids } } });
-  }
-
-  private createAuditStatusRecords(
-    reports: ReportModel[],
-    user: User | null,
-    feedback: string | null | undefined
-  ): Array<Partial<AuditStatus>> {
-    return reports.map(report => ({
-      auditableType: laravelType(report),
-      auditableId: report.id,
-      createdBy: user?.emailAddress ?? null,
-      firstName: user?.firstName ?? null,
-      lastName: user?.lastName ?? null,
-      status: APPROVED,
-      comment: feedback ?? null
-    }));
-  }
-
-  async updateBulkApprovalReports(attributes: UpdateDto, status: string): Promise<void> {
-    const user = await User.findOne({
-      where: { id: this.entitiesService.userId },
-      attributes: ["id", "firstName", "lastName", "emailAddress"]
-    });
-
-    const [siteReports, nurseryReports] = await Promise.all([
-      this.findReportsByUuids(SiteReport, attributes.siteReportNothingToReportUuid),
-      this.findReportsByUuids(NurseryReport, attributes.nurseryReportNothingToReportUuid)
-    ]);
-
-    await Promise.all([
-      this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuid, status),
-      this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuid, status)
-    ]);
-
-    const auditStatusRecords = [
-      ...this.createAuditStatusRecords(siteReports, user, attributes.feedback),
-      ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback)
-    ] as Array<Attributes<AuditStatus>>;
-
-    if (auditStatusRecords.length > 0) {
-      await AuditStatus.bulkCreate(auditStatusRecords);
-    }
   }
 }
 

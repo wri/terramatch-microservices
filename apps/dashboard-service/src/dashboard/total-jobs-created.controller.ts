@@ -25,6 +25,7 @@ export class TotalJobsCreatedController {
     let cachedData = await this.cacheService.get(cacheKey);
     if (cachedData == null) {
       cachedData = await this.jobsCreatedService.getTotals(query);
+      await this.cacheService.set(cacheKey, JSON.stringify(cachedData));
     }
 
     const {

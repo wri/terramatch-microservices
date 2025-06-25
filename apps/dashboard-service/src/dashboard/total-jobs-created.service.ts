@@ -16,7 +16,7 @@ export class TotalJobsCreatedService {
 
     const projectIds: number[] = await projectsBuilder.pluckIds();
 
-    const records = await ProjectReport.findAll({
+    const projectReports = await ProjectReport.findAll({
       attributes: ["id"],
       where: { projectId: { [Op.in]: projectIds }, status: "approved" }
     });
@@ -24,7 +24,7 @@ export class TotalJobsCreatedService {
     const demographics = await Demographic.findAll({
       attributes: ["id", "collection"],
       where: {
-        demographicalId: { [Op.in]: records.map(record => record.id) },
+        demographicalId: { [Op.in]: projectReports.map(r => r.id) },
         hidden: false,
         type: "jobs",
         demographicalType: ProjectReport.LARAVEL_TYPE

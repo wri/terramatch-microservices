@@ -88,7 +88,7 @@ export const FULL_TIME = "full-time";
 export const FULL_TIME_CLT = "full-time-clt";
 export const PART_TIME = "part-time";
 export const PART_TIME_CLT = "part-time-clt";
-export const JOBS_PROJECT_COLLECTIONS = [ALL, FULL_TIME, PART_TIME] as const;
+export const JOBS_PROJECT_COLLECTIONS = [ALL, FULL_TIME, FULL_TIME_CLT, PART_TIME, PART_TIME_CLT] as const;
 
 export const VOLUNTEER = "volunteer";
 export const VOLUNTEERS_PROJECT_COLLECTIONS = [VOLUNTEER] as const;

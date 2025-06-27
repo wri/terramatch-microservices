@@ -118,7 +118,18 @@ export class ProjectReport extends Model<ProjectReport> {
       multiple: true,
       validation: "photos"
     },
-    financialReportUpload: { dbCollection: "financial_report_upload", multiple: true, validation: "general-documents" }
+    financialReportUpload: { dbCollection: "financial_report_upload", multiple: true, validation: "general-documents" },
+    treePlantingUpload: { dbCollection: "tree_planting_upload", multiple: true, validation: "general-documents" },
+    soilWaterConservationUpload: {
+      dbCollection: "soil_water_conservation_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    soilWaterConservationPhotos: {
+      dbCollection: "soil_water_conservation_photos",
+      multiple: true,
+      validation: "photos"
+    }
   } as const;
 
   static incomplete() {

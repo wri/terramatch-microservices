@@ -10,7 +10,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve"], NurseryReport, {
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], NurseryReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -43,7 +43,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
             await Nursery.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })
           ).map(({ id }) => id);
           if (nurseryIds.length > 0) {
-            this.builder.can(["read", "delete", "update", "approve"], NurseryReport, {
+            this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], NurseryReport, {
               nurseryId: { $in: nurseryIds }
             });
           }

@@ -173,7 +173,7 @@ describe("MediaProcessor", () => {
 
     it("should filter by fileType", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject.create({ modelId: project.id, fileType: "document" });
+      const media = await MediaFactory.forProject.create({ modelId: project.id, fileType: "documents" });
       await MediaFactory.forProject.create({ modelId: project.id });
 
       const query: MediaQueryDto = { fileType: media.fileType ?? undefined };

@@ -67,7 +67,7 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   siteUuid?: string;
 
-  @ApiProperty({ required: false, isArray: true, description: "Filter by landscape names" })
+  @ApiProperty({ required: false, isArray: true, description: "Filter by landscape 3-letter codes: gcb, grv, ikr" })
   @IsOptional()
   @IsArray()
   landscape?: string[];

@@ -131,6 +131,14 @@ export class SitePolygon extends Model<SitePolygon> {
   status: PolygonStatus | null;
 
   @AllowNull
+  @Column({ type: DOUBLE })
+  lat: number | null;
+
+  @AllowNull
+  @Column({ type: DOUBLE })
+  lng: number | null;
+
+  @AllowNull
   @Column(STRING)
   source: string | null;
 

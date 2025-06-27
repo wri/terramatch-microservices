@@ -56,11 +56,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     this.findOptions.include = [
       {
         model: PolygonGeometry,
-        attributes: [
-          "polygon",
-          [literal("ST_Y(ST_Centroid(geom))"), "centroidLatitude"],
-          [literal("ST_X(ST_Centroid(geom))"), "centroidLongitude"]
-        ]
+        attributes: ["polygon"]
       },
       this.siteJoin
     ];

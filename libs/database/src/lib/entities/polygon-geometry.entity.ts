@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, GEOMETRY, UUID, UUIDV4, DOUBLE } from "sequelize";
+import { BIGINT, GEOMETRY, UUID, UUIDV4 } from "sequelize";
 import { Polygon } from "geojson";
 import { User } from "./user.entity";
 
@@ -17,14 +17,6 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
   @AllowNull
   @Column({ type: GEOMETRY, field: "geom" })
   polygon: Polygon;
-
-  @AllowNull
-  @Column({ type: DOUBLE })
-  centroidLatitude: number | null;
-
-  @AllowNull
-  @Column({ type: DOUBLE })
-  centroidLongitude: number | null;
 
   @ForeignKey(() => User)
   @AllowNull

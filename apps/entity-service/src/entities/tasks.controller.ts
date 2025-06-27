@@ -112,6 +112,7 @@ export class TasksController {
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("update", task);
 
+    // the only field updateable on Task is status
     const { status } = updatePayload.data.attributes;
 
     if (status != null) {

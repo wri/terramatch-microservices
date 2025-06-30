@@ -120,8 +120,8 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  cohort: string | null;
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  cohort: string[] | null;
 
   @ApiProperty({ nullable: true, type: String })
   continent: string | null;

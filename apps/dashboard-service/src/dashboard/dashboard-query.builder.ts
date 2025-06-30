@@ -46,7 +46,10 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
 
     if (!isEmpty(filters?.country)) where["country"] = filters.country;
     if (!isEmpty(filters?.programmes)) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
-    if (!isEmpty(filters?.cohort)) where["cohort"] = filters.cohort;
+    if (filters?.cohort != null && filters.cohort.length > 0) {
+      const cohortCondition = Project.cohortFilter(filters.cohort);
+      if (cohortCondition != null) where["cohort"] = cohortCondition;
+    }
     if (filters?.landscapes != null && filters.landscapes.length > 0) {
       const landscapeNames = mapLandscapeCodesToNames(filters.landscapes);
       where["landscape"] = { [Op.in]: landscapeNames };

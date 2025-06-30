@@ -24,6 +24,7 @@ import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { Op, WhereOptions } from "sequelize";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -61,6 +62,13 @@ export class Project extends Model<Project> {
   static forLandscape(landscapeName: string) {
     return Subquery.select(Project, "id").eq("landscape", landscapeName).literal;
   }
+  static cohortFilter(cohorts: string[]): WhereOptions | undefined {
+    if (cohorts.length === 0) return undefined;
+    if (cohorts.length === 1) {
+      return { [Op.contains]: cohorts[0] } as WhereOptions;
+    }
+    return { [Op.or]: cohorts.map(cohort => ({ [Op.contains]: cohort })) } as WhereOptions;
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -83,8 +91,8 @@ export class Project extends Model<Project> {
   }
 
   @AllowNull
-  @Column(STRING)
-  cohort: string;
+  @JsonColumn()
+  cohort: string[] | null;
 
   @Default(false)
   @Column(BOOLEAN)

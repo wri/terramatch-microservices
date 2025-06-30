@@ -104,7 +104,8 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (query.cohort != null && query.cohort.length > 0) {
-      builder.where({ cohort: { [Op.in]: query.cohort } });
+      const cohortCondition = Project.cohortFilter(query.cohort);
+      if (cohortCondition != null) builder.where({ cohort: cohortCondition });
     }
 
     if (query.shortName != null) {

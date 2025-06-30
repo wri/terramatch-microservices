@@ -25,9 +25,14 @@ export class DashboardQueryDto {
   @IsArray()
   programmes?: FrameworkType[];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    isArray: true,
+    description: "Filter by cohorts. Array format for future expansion support."
+  })
   @IsOptional()
-  cohort?: string;
+  @IsArray()
+  cohort?: string[];
 
   @ApiProperty({
     enum: LANDSCAPE_TYPES,

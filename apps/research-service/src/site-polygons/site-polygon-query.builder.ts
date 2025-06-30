@@ -78,22 +78,31 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
-  async filterProjectAttributes(cohort?: string, slug?: LandscapeSlug) {
-    const subquery = Subquery.select(Project, "id");
+  async filterProjectAttributes(cohorts?: string[], slug?: LandscapeSlug) {
+    const projectWhere: any = {};
+
     if (slug != null) {
       const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
       if (landscape == null) {
         throw new BadRequestException(`Unrecognized landscape slug: ${slug}`);
       }
-
-      subquery.eq("landscape", landscape.landscape);
+      projectWhere.landscape = landscape.landscape;
     }
 
-    if (cohort != null) {
-      subquery.eq("cohort", cohort);
+    if (cohorts != null && cohorts.length > 0) {
+      const cohortCondition = Project.cohortFilter(cohorts);
+      if (cohortCondition != null) projectWhere.cohort = cohortCondition;
     }
 
-    return this.where({ projectId: { [Op.in]: subquery.literal } }, this.siteJoin);
+    if (Object.keys(projectWhere).length > 0) {
+      const projectIds = await Project.findAll({
+        where: projectWhere,
+        attributes: ["id"]
+      });
+      return this.where({ projectId: { [Op.in]: projectIds.map(p => p.id) } }, this.siteJoin);
+    }
+
+    return this;
   }
 
   async filterProjectShortNames(projectShortNames: string[]) {

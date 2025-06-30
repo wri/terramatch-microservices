@@ -143,22 +143,22 @@ describe("ProjectProcessor", () => {
 
       const project1 = await ProjectFactory.create({
         landscape: "Greater Rift Valley of Kenya",
-        cohort: "terrafund",
+        cohort: ["terrafund"],
         organisationId: orgForProfit.id
       });
       const project2 = await ProjectFactory.create({
         landscape: "Ghana Cocoa Belt",
-        cohort: "terrafund",
+        cohort: ["terrafund"],
         organisationId: orgNonProfit.id
       });
       const project3 = await ProjectFactory.create({
         landscape: "Greater Rift Valley of Kenya",
-        cohort: "terrafund-landscapes",
+        cohort: ["terrafund-landscapes"],
         organisationId: orgOther.id
       });
       const project4 = await ProjectFactory.create({
         landscape: "Lake Kivu & Rusizi River Basin",
-        cohort: "enterprise",
+        cohort: ["enterprise"],
         organisationId: orgForProfit.id
       });
 

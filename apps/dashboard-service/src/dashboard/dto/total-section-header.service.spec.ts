@@ -213,9 +213,9 @@ describe("TotalSectionHeaderService - filters", () => {
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
   });
 
-  it("should apply cohort filter (string)", async () => {
+  it("should apply cohort filter (array)", async () => {
     const filters: DashboardQueryDto = {
-      cohort: "cohort-2025"
+      cohort: ["cohort-2025"]
     };
 
     const mockBuilder = baseMocks();
@@ -230,7 +230,7 @@ describe("TotalSectionHeaderService - filters", () => {
       country: "BJ",
       programmes: ["terrafund"],
       organisationType: ["for-profit-organization"],
-      cohort: "terrafund"
+      cohort: ["terrafund"]
     };
 
     const mockBuilder = baseMocks();

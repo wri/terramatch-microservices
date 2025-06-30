@@ -179,7 +179,7 @@ describe("TreeRestorationGoalService", () => {
         programmes: ["terrafund", "ppc"],
         projectUuid: "uuid-123",
         landscapes: ["gcb"],
-        cohort: "cohort-2024"
+        cohort: ["cohort-2024"]
       };
 
       mockBuilder.execute.mockResolvedValue(mockProjects);

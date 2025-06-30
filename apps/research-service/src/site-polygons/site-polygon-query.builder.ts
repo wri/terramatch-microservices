@@ -1,4 +1,4 @@
-import { IncludeOptions, literal, Op } from "sequelize";
+import { IncludeOptions, literal, Op, Sequelize } from "sequelize";
 import {
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,
@@ -78,7 +78,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
-  async filterProjectAttributes(cohort?: string, slug?: LandscapeSlug) {
+  async filterProjectAttributes(cohort?: string[], slug?: LandscapeSlug) {
     const subquery = Subquery.select(Project, "id");
     if (slug != null) {
       const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
@@ -89,8 +89,18 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
       subquery.eq("landscape", landscape.landscape);
     }
 
-    if (cohort != null) {
-      subquery.eq("cohort", cohort);
+    if (cohort != null && cohort.length > 0) {
+      const cohortConditions = cohort.map(c => `JSON_CONTAINS(cohort, '"${c}"')`).join(" OR ");
+
+      const projects = await Project.findAll({
+        where: {
+          ...(slug != null ? { landscape: (await LandscapeGeometry.findOne({ where: { slug } }))?.landscape } : {}),
+          [Op.and]: [Sequelize.literal(`(${cohortConditions})`)]
+        },
+        attributes: ["id"]
+      });
+
+      return this.where({ projectId: { [Op.in]: projects.map(p => p.id) } }, this.siteJoin);
     }
 
     return this.where({ projectId: { [Op.in]: subquery.literal } }, this.siteJoin);

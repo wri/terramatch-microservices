@@ -58,7 +58,7 @@ export class CacheService {
     const landscapeValue = this.getCacheParameterForLandscapes(query.landscapes ?? []);
     const countryValue = this.getCacheParameterForCountry(query.country ?? "");
     const organisationValue = this.getCacheParameterForOrganisationType(query.organisationType ?? []);
-    const cohortValue = this.getCacheParameterForCohort(query.cohort ?? "");
+    const cohortValue = this.getCacheParameterForCohort(query.cohort ?? []);
     const projectUuidValue = this.getCacheParameterForProjectUudid(query.projectUuid ?? "");
 
     return `${frameworkValue}|${landscapeValue}|${countryValue}|${organisationValue}|${cohortValue}|${projectUuidValue}`;
@@ -91,8 +91,8 @@ export class CacheService {
     return sortedOrganisations.join(",");
   }
 
-  getCacheParameterForCohort(cohort: string) {
-    return cohort ?? "";
+  getCacheParameterForCohort(cohort: string[]) {
+    return cohort.length === 0 ? "" : cohort.sort().join(",");
   }
 
   getCacheParameterForProjectUudid(projectUuid: string) {

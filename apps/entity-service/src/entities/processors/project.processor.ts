@@ -104,7 +104,10 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (query.cohort != null && query.cohort.length > 0) {
-      builder.where({ cohort: { [Op.in]: query.cohort } });
+      const cohortConditions = query.cohort
+        .map(cohort => `JSON_CONTAINS(cohort, ${Project.sequelize?.escape(`"${cohort}"`)})`)
+        .join(" OR ");
+      builder.where(Sequelize.literal(`(${cohortConditions})`));
     }
 
     if (query.shortName != null) {

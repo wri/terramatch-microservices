@@ -56,7 +56,7 @@ describe("DashboardProjectsQueryBuilder", () => {
     builder.queryFilters({
       country: "Kenya",
       programmes: ["terrafund"],
-      cohort: "2023",
+      cohort: ["2023"],
       organisationType: ["non-profit-organization"],
       projectUuid: "uuid1"
     });

@@ -43,7 +43,10 @@ describe("DashboardProjectsQueryBuilder", () => {
 
   it("should handle queryFilters with partial filters", () => {
     builder.queryFilters({ country: "MX" });
-    expect(builder["findOptions"].where).toMatchObject({ country: "MX" });
+    // With the new cohort filtering, the where clause uses Op.and structure
+    const where = builder["findOptions"].where as any;
+    expect(where[Op.and]).toBeDefined();
+    expect(where[Op.and][0]).toMatchObject({ country: "MX" });
     expect(builder["findOptions"].include).toBeDefined();
   });
 
@@ -60,7 +63,11 @@ describe("DashboardProjectsQueryBuilder", () => {
       organisationType: ["non-profit-organization"],
       projectUuid: "uuid1"
     });
-    expect(builder["findOptions"].where).toHaveProperty("country", "Kenya");
+    // With the new cohort filtering, the where clause uses Op.and structure
+    const where = builder["findOptions"].where as any;
+    expect(where[Op.and]).toBeDefined();
+    expect(where[Op.and][0]).toMatchObject({ country: "Kenya" });
+    expect(where[Op.and][1]).toMatchObject({ val: expect.stringContaining("JSON_CONTAINS(cohort") });
     expect(builder["findOptions"].include?.[0]).toHaveProperty("association", "organisation");
   });
 

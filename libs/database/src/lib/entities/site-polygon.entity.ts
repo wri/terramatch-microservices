@@ -136,7 +136,7 @@ export class SitePolygon extends Model<SitePolygon> {
 
   @AllowNull
   @Column({ type: DOUBLE })
-  lng: number | null;
+  long: number | null;
 
   @AllowNull
   @Column(STRING)

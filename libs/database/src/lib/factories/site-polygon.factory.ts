@@ -34,7 +34,7 @@ export const SitePolygonFactory = FactoryGirl.define(SitePolygon, async () => {
     numTrees: faker.number.int({ min: 0, max: 1000000 }),
     status: "submitted",
     lat: faker.location.latitude({ min: -90, max: 90, precision: 16 }),
-    lng: faker.location.longitude({ min: -180, max: 180, precision: 16 }),
+    long: faker.location.longitude({ min: -180, max: 180, precision: 16 }),
     source: "terramatch",
     createdBy: createdBy.get("id"),
     isActive: true,

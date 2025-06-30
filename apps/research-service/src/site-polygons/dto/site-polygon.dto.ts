@@ -106,7 +106,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
     type: Number,
     description: "Longitude of the site polygon"
   })
-  lng: number | null;
+  long: number | null;
 
   @ApiProperty({
     type: "array",

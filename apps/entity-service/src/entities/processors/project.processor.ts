@@ -33,7 +33,6 @@ export class ProjectProcessor extends EntityProcessor<
   ProjectFullDto,
   ProjectUpdateAttributes
 > {
-  readonly MODEL = Project;
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;
 

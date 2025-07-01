@@ -8,14 +8,18 @@ describe("DashboardProjectsQueryBuilder", () => {
   let mockModel = {
     findAll: jest.fn(),
     count: jest.fn(),
-    sum: jest.fn()
+    sum: jest.fn(),
+    sequelize: null as any
   };
 
   beforeEach(() => {
     mockModel = {
       findAll: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(42),
-      sum: jest.fn().mockResolvedValue(100)
+      sum: jest.fn().mockResolvedValue(100),
+      sequelize: {
+        escape: jest.fn((val: string) => `'${val.replace(/'/g, "''")}'`)
+      }
     };
     builder = new DashboardProjectsQueryBuilder(mockModel as unknown as ModelCtor<Project>);
   });

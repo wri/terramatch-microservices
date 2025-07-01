@@ -206,7 +206,7 @@ describe("TreeRestorationGoalController", () => {
         programmes: ["terrafund", "ppc"],
         projectUuid: "uuid-123",
         landscapes: ["gcb", "grv"],
-        cohort: "cohort-2024"
+        cohort: ["cohort-2024"]
       };
 
       const mockTimestamp = "2024-01-01T00:00:00.000Z";
@@ -231,7 +231,7 @@ describe("TreeRestorationGoalController", () => {
     });
 
     it("should handle empty arrays in restoration data when no cache", async () => {
-      const query: DashboardQueryDto = { cohort: "empty-cohort" };
+      const query: DashboardQueryDto = { cohort: ["empty-cohort"] };
       const mockTimestamp = "2024-01-01T00:00:00.000Z";
       const mockDate = new Date(mockTimestamp);
 
@@ -297,7 +297,7 @@ describe("TreeRestorationGoalController", () => {
     });
 
     it("should handle cached data with empty arrays", async () => {
-      const query: DashboardQueryDto = { cohort: "empty-cached-cohort" };
+      const query: DashboardQueryDto = { cohort: ["empty-cached-cohort"] };
       const mockTimestamp = "2024-01-01T00:00:00.000Z";
 
       const emptyCachedData = {

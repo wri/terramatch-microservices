@@ -48,7 +48,7 @@ export class TasksController {
       for (const task of tasks) {
         indexIds.push(task.uuid);
 
-        await this.tasksService.addFullTaskDto(document, task, true);
+        await this.tasksService.addFullTaskDto(document, task);
       }
     }
 
@@ -96,7 +96,12 @@ export class TasksController {
   })
   @JsonApiResponse({
     data: {
-      type: TaskFullDto
+      type: TaskFullDto,
+      relationships: [
+        { name: "projectReport", type: ProjectReportLightDto },
+        { name: "siteReports", type: SiteReportLightDto, multiple: true },
+        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true }
+      ]
     },
     included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto]
   })

@@ -29,14 +29,7 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 import { Op } from "sequelize";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import {
-  ProjectReport,
-  SiteReport,
-  NurseryReport,
-  User,
-  AuditStatus
-} from "@terramatch-microservices/database/entities";
+import { SiteReport, NurseryReport, User, AuditStatus } from "@terramatch-microservices/database/entities";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { ModelCtor } from "sequelize-typescript";
 

@@ -14,7 +14,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -49,6 +49,11 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     attributes: ["id", "projectId", "name"],
     required: true
   };
+
+  get sql() {
+    if (Project.sequelize == null) throw new InternalServerErrorException("Model is missing sequelize connection");
+    return Project.sequelize;
+  }
 
   constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
@@ -90,7 +95,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
 
     if (cohort != null && cohort.length > 0) {
-      const cohortConditions = cohort.map(c => `JSON_CONTAINS(cohort, '"${c}"')`).join(" OR ");
+      const cohortConditions = cohort.map(c => `JSON_CONTAINS(cohort, ${this.sql.escape(`"${c}"`)})`).join(" OR ");
 
       const projects = await Project.findAll({
         where: {

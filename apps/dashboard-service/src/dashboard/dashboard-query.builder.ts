@@ -4,6 +4,7 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { isObject, flatten, isEmpty } from "lodash";
 import { Project } from "@terramatch-microservices/database/entities";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
+import { InternalServerErrorException } from "@nestjs/common";
 
 export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
   protected findOptions: FindOptions<Attributes<T>> = {
@@ -14,6 +15,11 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }
+  }
+
+  get sql() {
+    if (this.MODEL.sequelize == null) throw new InternalServerErrorException("Model is missing sequelize connection");
+    return this.MODEL.sequelize;
   }
 
   order(order: OrderItem) {
@@ -58,7 +64,7 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     if (filters?.cohort != null && filters.cohort.length > 0) {
       const cohortConditions = filters.cohort
         .map(cohort => {
-          const escapedCohort = this.MODEL.sequelize?.escape(`"${cohort}"`) ?? `'"${cohort}"'`;
+          const escapedCohort = this.sql.escape(`"${cohort}"`);
           return `JSON_CONTAINS(cohort, ${escapedCohort})`;
         })
         .join(" OR ");
@@ -67,7 +73,7 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
       const defaultCohorts = ["terrafund", "terrafund-landscapes"];
       const defaultCohortConditions = defaultCohorts
         .map(cohort => {
-          const escapedCohort = this.MODEL.sequelize?.escape(`"${cohort}"`) ?? `'"${cohort}"'`;
+          const escapedCohort = this.sql.escape(`"${cohort}"`);
           return `JSON_CONTAINS(cohort, ${escapedCohort})`;
         })
         .join(" OR ");

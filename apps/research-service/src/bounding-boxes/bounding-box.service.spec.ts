@@ -7,6 +7,8 @@ import {
   LandscapeGeometry,
   PolygonGeometry,
   Project,
+  ProjectPitch,
+  ProjectPolygon,
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
@@ -23,6 +25,13 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   },
   Project: {
     findOne: jest.fn()
+  },
+  ProjectPitch: {
+    findOne: jest.fn()
+  },
+  ProjectPolygon: {
+    findAll: jest.fn(),
+    LARAVEL_TYPE_PROJECT_PITCH: "App\\Models\\V2\\ProjectPitch"
   },
   Site: {
     findOne: jest.fn(),

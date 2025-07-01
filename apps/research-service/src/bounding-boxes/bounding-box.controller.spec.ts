@@ -6,7 +6,7 @@ import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { JsonApiDocument } from "@terramatch-microservices/common/util";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
-import { PolygonGeometry, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, Project, Site, SitePolygon, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Op } from "sequelize";
 
@@ -39,6 +39,9 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   Project: {
     findOne: jest.fn()
   },
+  ProjectPitch: {
+    findOne: jest.fn()
+  },
   SitePolygon: {
     findOne: jest.fn()
   }
@@ -54,6 +57,7 @@ describe("BoundingBoxController", () => {
     getPolygonBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getSiteBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getProjectBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
+    getProjectPitchBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getCountryLandscapeBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox)
   };
 
@@ -233,7 +237,7 @@ describe("BoundingBoxController", () => {
 
       await expect(controller.getBoundingBox(query)).rejects.toThrow(
         new BadRequestException(
-          "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, country, or landscapes."
+          "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, projectPitchUuid, country, or landscapes."
         )
       );
     });

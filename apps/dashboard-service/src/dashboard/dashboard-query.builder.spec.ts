@@ -3,13 +3,24 @@ import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
 import { ModelCtor } from "sequelize-typescript";
 
+type MockSequelize = {
+  escape: jest.Mock<string, [string]>;
+};
+
+type MockModel = {
+  findAll: jest.Mock;
+  count: jest.Mock;
+  sum: jest.Mock;
+  sequelize: MockSequelize | null;
+};
+
 describe("DashboardProjectsQueryBuilder", () => {
   let builder: DashboardProjectsQueryBuilder;
-  let mockModel = {
+  let mockModel: MockModel = {
     findAll: jest.fn(),
     count: jest.fn(),
     sum: jest.fn(),
-    sequelize: null as any
+    sequelize: null
   };
 
   beforeEach(() => {

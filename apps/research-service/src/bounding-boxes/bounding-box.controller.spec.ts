@@ -6,7 +6,7 @@ import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { JsonApiDocument } from "@terramatch-microservices/common/util";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
-import { PolygonGeometry, Project, Site, SitePolygon, ProjectPitch } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Op } from "sequelize";
 

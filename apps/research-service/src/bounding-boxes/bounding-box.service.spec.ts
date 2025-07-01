@@ -7,8 +7,6 @@ import {
   LandscapeGeometry,
   PolygonGeometry,
   Project,
-  ProjectPitch,
-  ProjectPolygon,
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";

@@ -16,7 +16,7 @@ class TaskUpdateAttributes {
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: "Specific feedback for the PD", nullable: true, type: String })
+  @ApiProperty({ description: "Specific feedback for the PD", required: false, type: String })
   feedback?: string | null;
 
   @IsOptional()

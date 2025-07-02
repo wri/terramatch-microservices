@@ -83,8 +83,8 @@ export class Project extends Model<Project> {
   }
 
   @AllowNull
-  @Column(STRING)
-  cohort: string;
+  @JsonColumn()
+  cohort: string[] | null;
 
   @Default(false)
   @Column(BOOLEAN)

@@ -74,7 +74,7 @@ describe("SitePolygonsController", () => {
     it("should throw when more than one exclusive query param is provided", async () => {
       const landscape = "gcb" as LandscapeSlug;
       const projectId = ["asdf"];
-      const projectCohort = "pants";
+      const projectCohort = ["pants"];
       const siteId = ["asdf"];
       const cases = [
         { landscape, projectId },
@@ -164,8 +164,8 @@ describe("SitePolygonsController", () => {
       expect(builder.excludeTestProjects).not.toHaveBeenCalled();
       builder.filterProjectUuids.mockClear();
 
-      await controller.findMany({ projectCohort: "pants" });
-      expect(builder.filterProjectAttributes).toHaveBeenCalledWith("pants", undefined);
+      await controller.findMany({ projectCohort: ["pants"] });
+      expect(builder.filterProjectAttributes).toHaveBeenCalledWith(["pants"], undefined);
       // when filtering by cohort, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();
@@ -178,8 +178,8 @@ describe("SitePolygonsController", () => {
       builder.excludeTestProjects.mockClear();
       builder.filterProjectAttributes.mockClear();
 
-      await controller.findMany({ projectCohort: "shirts", landscape: "ikr" });
-      expect(builder.filterProjectAttributes).toHaveBeenCalledWith("shirts", "ikr");
+      await controller.findMany({ projectCohort: ["shirts"], landscape: "ikr" });
+      expect(builder.filterProjectAttributes).toHaveBeenCalledWith(["shirts"], "ikr");
       // when filtering by landscape and cohort, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();

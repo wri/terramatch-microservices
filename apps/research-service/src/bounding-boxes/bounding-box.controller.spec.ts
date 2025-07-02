@@ -138,7 +138,7 @@ describe("BoundingBoxController", () => {
         { polygonUuid: "polygon-123" },
         "getPolygonBoundingBox",
         ["polygon-123"],
-        "polygon-123"
+        "?polygonUuid=polygon-123"
       );
 
       // Verify Site.findOne is called with the subquery approach
@@ -172,7 +172,7 @@ describe("BoundingBoxController", () => {
     });
 
     it("should call getSiteBoundingBox when siteUuid is provided", async () => {
-      await testQueryParameters({ siteUuid: "site-123" }, "getSiteBoundingBox", ["site-123"], "site-123");
+      await testQueryParameters({ siteUuid: "site-123" }, "getSiteBoundingBox", ["site-123"], "?siteUuid=site-123");
 
       expect(Site.findOne).toHaveBeenCalledWith({
         where: { uuid: "site-123" },
@@ -187,7 +187,7 @@ describe("BoundingBoxController", () => {
         { projectUuid: "project-123" },
         "getProjectBoundingBox",
         ["project-123"],
-        "project-123"
+        "?projectUuid=project-123"
       );
 
       expect(Project.findOne).toHaveBeenCalledWith({
@@ -199,7 +199,7 @@ describe("BoundingBoxController", () => {
     });
 
     it("should call getCountryLandscapeBoundingBox when country is provided without authorization", async () => {
-      await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "US", false);
+      await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "?country=US", false);
     });
 
     it("should call getCountryLandscapeBoundingBox when landscapes are provided without authorization", async () => {
@@ -207,7 +207,7 @@ describe("BoundingBoxController", () => {
         { landscapes: ["ikr", "gcb"] },
         "getCountryLandscapeBoundingBox",
         ["", ["ikr", "gcb"]],
-        "ikr,gcb",
+        "?landscapes%5B0%5D=gcb&landscapes%5B1%5D=ikr",
         false
       );
     });

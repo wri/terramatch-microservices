@@ -4,7 +4,7 @@ import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Project, Site, SitePolygon, LandscapeGeometry } from "@terramatch-microservices/database/entities";
@@ -67,6 +67,7 @@ export class BoundingBoxController {
       );
     }
 
+    const id = getStableRequestQuery(query);
     switch (providedParams[0]) {
       case "polygonUuid": {
         const polygonUuid = query.polygonUuid ?? "";
@@ -86,7 +87,7 @@ export class BoundingBoxController {
         await this.policyService.authorize("read", site);
 
         const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
-        return buildJsonApi(BoundingBoxDto).addData(polygonUuid, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
 
       case "siteUuid": {
@@ -104,7 +105,7 @@ export class BoundingBoxController {
         await this.policyService.authorize("read", site);
 
         const result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
-        return buildJsonApi(BoundingBoxDto).addData(siteUuid, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
 
       case "projectUuid": {
@@ -122,7 +123,7 @@ export class BoundingBoxController {
         await this.policyService.authorize("read", project);
 
         const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
-        return buildJsonApi(BoundingBoxDto).addData(projectUuid, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
 
       case "country/landscapes": {
@@ -144,17 +145,6 @@ export class BoundingBoxController {
         }
 
         const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country ?? "", landscapes);
-
-        let id: string;
-        if (!isEmpty(country) && landscapes.length > 0) {
-          id = `${country},${landscapes.join(",")}`;
-        } else if (!isEmpty(country)) {
-          id = country as string;
-        } else if (landscapes.length > 0) {
-          id = landscapes.join(",");
-        } else {
-          id = "global";
-        }
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
     }

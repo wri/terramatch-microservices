@@ -28,10 +28,8 @@ import { TaskFullDto } from "./dto/task.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
-import { Op } from "sequelize";
-import { SiteReport, NurseryReport, User, AuditStatus } from "@terramatch-microservices/database/entities";
-import { ReportModel } from "@terramatch-microservices/database/constants/entities";
-import { ModelCtor } from "sequelize-typescript";
+import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
+import { TaskUpdateBody } from "./dto/task-update.dto";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -356,180 +354,39 @@ describe("TasksService", () => {
   });
 
   describe("approveBulkReports", () => {
-    it("should call findReportsByUuids, updateReportsStatus, and bulkCreate as expected", async () => {
-      const attributes = {
+    it("should approve the specified site and nursery reports and create audit status records", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
+
+      const task = await TaskFactory.create();
+      const siteReport = await SiteReportFactory.create({ taskId: task.id, status: "due" });
+      const nurseryReport = await NurseryReportFactory.create({ taskId: task.id, status: "due" });
+
+      const updateBody = {
         data: {
-          type: "tasks",
-          id: "some-task-id",
           attributes: {
-            siteReportNothingToReportUuid: ["site-uuid"],
-            nurseryReportNothingToReportUuid: ["nursery-uuid"],
-            feedback: "feedback text"
+            siteReportNothingToReportUuid: [siteReport.uuid],
+            nurseryReportNothingToReportUuid: [nurseryReport.uuid],
+            feedback: "Looks good"
           }
         }
-      };
-      const taskId = 123;
-      const user = { id: 1, firstName: "John", lastName: "Doe", emailAddress: "john@example.com" };
-      const siteReports: ReportModel[] = [
-        {
-          id: 1,
-          uuid: "site-uuid",
-          frameworkKey: "ppc",
-          siteId: 1,
-          createdBy: 1,
-          taskId: 1,
-          status: "approved",
-          completion: 100,
-          submittedAt: new Date(),
-          nothingToReport: false
-        } as Partial<SiteReport> as SiteReport
-      ];
-      const nurseryReports: ReportModel[] = [
-        {
-          id: 2,
-          uuid: "nursery-uuid",
-          frameworkKey: "ppc",
-          nurseryId: 1,
-          createdBy: 1,
-          taskId: 1,
-          status: "approved",
-          completion: 100,
-          submittedAt: new Date(),
-          nothingToReport: false
-        } as Partial<NurseryReport> as NurseryReport
-      ];
-      const auditStatusRecords = [{ auditableId: 1 }, { auditableId: 2 }];
+      } as unknown as TaskUpdateBody;
 
-      // Mock User.findOne
-      const User = require("@terramatch-microservices/database/entities").User;
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      // Mock findReportsByUuids
-      const serviceWithPrivate = service as unknown as {
-        findReportsByUuids: <T extends ReportModel>(
-          modelClass: ModelCtor<T>,
-          uuids: string[],
-          taskId: number
-        ) => Promise<T[]>;
-        updateReportsStatus: <T extends ReportModel>(
-          modelClass: ModelCtor<T>,
-          uuids: string[],
-          status: string,
-          taskId: number
-        ) => Promise<void>;
-        createAuditStatusRecords: (
-          reports: ReportModel[],
-          user: User | null,
-          feedback: string | null
-        ) => Array<Partial<AuditStatus>>;
-      };
-      const findReportsByUuidsSpy = jest.spyOn(serviceWithPrivate, "findReportsByUuids");
-      findReportsByUuidsSpy.mockResolvedValueOnce(siteReports).mockResolvedValueOnce(nurseryReports);
-      const updateReportsStatusSpy = jest.spyOn(serviceWithPrivate, "updateReportsStatus").mockResolvedValue(undefined);
-      jest.spyOn(serviceWithPrivate, "createAuditStatusRecords").mockImplementation(() => auditStatusRecords);
-      const AuditStatus = require("@terramatch-microservices/database/entities").AuditStatus;
-      const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue(undefined);
+      await service.approveBulkReports(updateBody, task.id);
 
-      await service.approveBulkReports(attributes, taskId);
+      await siteReport.reload();
+      await nurseryReport.reload();
+      expect(siteReport.status).toBe(APPROVED);
+      expect(nurseryReport.status).toBe(APPROVED);
 
-      expect(User.findOne).toHaveBeenCalledWith({
-        where: { id: service["entitiesService"].userId },
-        attributes: ["id", "firstName", "lastName", "emailAddress"]
+      const auditStatuses = await AuditStatus.findAll({
+        where: { auditableId: [siteReport.id, nurseryReport.id] }
       });
-      expect(findReportsByUuidsSpy).toHaveBeenCalledTimes(2);
-      expect(updateReportsStatusSpy).toHaveBeenCalledTimes(2);
-      expect(bulkCreateSpy).toHaveBeenCalledWith([
-        { auditableId: 1 },
-        { auditableId: 2 },
-        { auditableId: 1 },
-        { auditableId: 2 }
-      ]);
-    });
-  });
-
-  describe("findReportsByUuids", () => {
-    it("should return reports from modelClass.findAll", async () => {
-      const dummyReports = [
-        { id: 1, uuid: "a" },
-        { id: 2, uuid: "b" }
-      ];
-      const uuids = ["a", "b"];
-      const taskId = 42;
-      const modelClass = {
-        findAll: jest.fn().mockImplementation(({ where }) => {
-          expect(where.uuid[Op.in]).toEqual(uuids);
-          expect(where.taskId).toBe(taskId);
-          return Promise.resolve(dummyReports);
-        })
-      } as Partial<ModelCtor<ReportModel>> as ModelCtor<ReportModel>;
-      const serviceWithPrivate = service as unknown as {
-        findReportsByUuids: (
-          modelClass: ModelCtor<ReportModel>,
-          uuids: string[] | null,
-          taskId: number
-        ) => Promise<ReportModel[]>;
-      };
-      const result = await serviceWithPrivate.findReportsByUuids(modelClass, uuids, taskId);
-      expect(result).toBe(dummyReports);
-    });
-  });
-
-  describe("updateReportsStatus", () => {
-    it("should call modelClass.update with correct args", async () => {
-      const uuids = ["a", "b"];
-      const status = "approved";
-      const taskId = 42;
-      const modelClass = {
-        update: jest.fn().mockImplementation((updateObj, { where }) => {
-          expect(updateObj).toEqual({ status });
-          expect(where.uuid[Op.in]).toEqual(uuids);
-          expect(where.taskId).toBe(taskId);
-          return Promise.resolve();
-        })
-      } as Partial<ModelCtor<ReportModel>> as ModelCtor<ReportModel>;
-      const serviceWithPrivate = service as unknown as {
-        updateReportsStatus: (
-          modelClass: ModelCtor<ReportModel>,
-          uuids: string[] | null,
-          status: string,
-          taskId: number
-        ) => Promise<void>;
-      };
-      await serviceWithPrivate.updateReportsStatus(modelClass, uuids, status, taskId);
-    });
-  });
-
-  describe("createAuditStatusRecords", () => {
-    it("should return correct audit status records for reports and user", () => {
-      const reports = [{ id: 1 }, { id: 2 }];
-      const user = {
-        emailAddress: "test@example.com",
-        firstName: "Test",
-        lastName: "User"
-      };
-      const feedback = "Looks good!";
-      // @ts-ignore private method access
-      const result = service.createAuditStatusRecords(reports, user, feedback);
-      expect(result).toHaveLength(2);
-      for (const record of result) {
-        expect(record.auditableId).toBeDefined();
-        expect(record.createdBy).toBe(user.emailAddress);
-        expect(record.firstName).toBe(user.firstName);
-        expect(record.lastName).toBe(user.lastName);
-        expect(record.status).toBe("approved");
-        expect(record.comment).toBe(feedback);
-      }
-    });
-
-    it("should handle null user and feedback", () => {
-      const reports = [{ id: 3 }];
-      // @ts-ignore private method access
-      const result = service.createAuditStatusRecords(reports, null, null);
-      expect(result).toHaveLength(1);
-      expect(result[0].createdBy).toBeNull();
-      expect(result[0].firstName).toBeNull();
-      expect(result[0].lastName).toBeNull();
-      expect(result[0].comment).toBeNull();
-      expect(result[0].status).toBe("approved");
+      expect(auditStatuses).toHaveLength(2);
+      expect(auditStatuses[0].comment).toBe("Looks good");
+      expect(auditStatuses[1].comment).toBe("Looks good");
+      expect([siteReport.id, nurseryReport.id]).toContain(auditStatuses[0].auditableId);
+      expect([siteReport.id, nurseryReport.id]).toContain(auditStatuses[1].auditableId);
     });
   });
 });

@@ -15,7 +15,7 @@ export class ProjectPolygon extends Model<ProjectPolygon> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @Column(STRING)
+  @Column({ type: UUID })
   polyUuid: string;
 
   @BelongsTo(() => PolygonGeometry, { foreignKey: "polyUuid", targetKey: "uuid" })

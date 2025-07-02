@@ -12,10 +12,16 @@ export class DisturbanceDto extends AssociationDto {
   }
 
   @ApiProperty({ nullable: true, type: String })
+  disturbanceDate: Date | null;
+
+  @ApiProperty({ nullable: true, type: String })
   collection: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   type: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  subtype: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   intensity: string | null;
@@ -24,5 +30,17 @@ export class DisturbanceDto extends AssociationDto {
   extent: string | null;
 
   @ApiProperty({ nullable: true, type: String })
+  peopleAffected: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  monetaryDamage: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  actionDescription: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  propertyAffected: string | null;
 }

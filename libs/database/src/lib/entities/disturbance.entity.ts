@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4, DATE, DECIMAL } from "sequelize";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {
@@ -21,12 +21,20 @@ export class Disturbance extends Model<Disturbance> {
   disturbanceableId: number;
 
   @AllowNull
+  @Column(DATE)
+  disturbanceDate: Date | null;
+
+  @AllowNull
   @Column(STRING)
   collection: string | null;
 
   @AllowNull
   @Column(STRING)
   type: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  subtype: string | null;
 
   @AllowNull
   @Column(STRING)
@@ -37,8 +45,24 @@ export class Disturbance extends Model<Disturbance> {
   extent: string | null;
 
   @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  peopleAffected: number | null;
+
+  @AllowNull
+  @Column(DECIMAL(15, 2))
+  monetaryDamage: number | null;
+
+  @AllowNull
   @Column(TEXT)
   description: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  actionDescription: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  propertyAffected: string | null;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.

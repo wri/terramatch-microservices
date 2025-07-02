@@ -424,20 +424,13 @@ describe("TasksService", () => {
       };
       const findReportsByUuidsSpy = jest.spyOn(serviceWithPrivate, "findReportsByUuids");
       findReportsByUuidsSpy.mockResolvedValueOnce(siteReports).mockResolvedValueOnce(nurseryReports);
-      // Mock updateReportsStatus
       const updateReportsStatusSpy = jest.spyOn(serviceWithPrivate, "updateReportsStatus").mockResolvedValue(undefined);
-      // Mock createAuditStatusRecords
-      jest
-        .spyOn(serviceWithPrivate, "createAuditStatusRecords")
-        .mockImplementation((reports, user, feedback) => auditStatusRecords);
-      // Mock AuditStatus.bulkCreate
+      jest.spyOn(serviceWithPrivate, "createAuditStatusRecords").mockImplementation(() => auditStatusRecords);
       const AuditStatus = require("@terramatch-microservices/database/entities").AuditStatus;
       const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue(undefined);
 
-      // Act
       await service.approveBulkReports(attributes, taskId);
 
-      // Assert
       expect(User.findOne).toHaveBeenCalledWith({
         where: { id: service["entitiesService"].userId },
         attributes: ["id", "firstName", "lastName", "emailAddress"]

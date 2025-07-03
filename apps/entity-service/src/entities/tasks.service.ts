@@ -183,20 +183,18 @@ export class TasksService {
       .map(uuid => task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid))
       .filter((report): report is NurseryReport => !!report);
 
-    await Promise.all([
-      this.updateReportsStatus(
-        SiteReport,
-        siteReports.map(r => r.uuid),
-        APPROVED,
-        taskId
-      ),
-      this.updateReportsStatus(
-        NurseryReport,
-        nurseryReports.map(r => r.uuid),
-        APPROVED,
-        taskId
-      )
-    ]);
+    await this.updateReportsStatus(
+      SiteReport,
+      siteReports.map(r => r.uuid),
+      APPROVED,
+      taskId
+    );
+    await this.updateReportsStatus(
+      NurseryReport,
+      nurseryReports.map(r => r.uuid),
+      APPROVED,
+      taskId
+    );
 
     const auditStatusRecords = [
       ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),

@@ -8,6 +8,20 @@ import { InjectRedis } from "@nestjs-modules/ioredis";
 import Redis from "ioredis";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
+const generateCombinations = <T>(items: readonly T[]): T[][] => {
+  const combos: T[][] = [];
+  const count = items.length;
+  combos.push([]);
+  for (let i = 1; i < 1 << count; i++) {
+    const combo: T[] = [];
+    for (let j = 0; j < count; j++) {
+      if ((i & (1 << j)) !== 0) combo.push(items[j]);
+    }
+    combos.push(combo);
+  }
+  return combos;
+};
+
 @Injectable()
 export class DashboardCacheWarmupService {
   private readonly logger = new TMLogger(DashboardCacheWarmupService.name);
@@ -31,20 +45,6 @@ export class DashboardCacheWarmupService {
       const landscapesList = ["gcb", "grv", "ikr"] as const;
       const organisationTypesList = ["non-profit-organization", "for-profit-organization"] as const;
       const cohortsList = ["terrafund", "terrafund-landscapes"] as const;
-
-      const generateCombinations = <T>(items: readonly T[]): T[][] => {
-        const combos: T[][] = [];
-        const count = items.length;
-        combos.push([]);
-        for (let i = 1; i < 1 << count; i++) {
-          const combo: T[] = [];
-          for (let j = 0; j < count; j++) {
-            if ((i & (1 << j)) !== 0) combo.push(items[j]);
-          }
-          combos.push(combo);
-        }
-        return combos;
-      };
 
       const landscapeCombos = generateCombinations(landscapesList);
       const orgCombos = generateCombinations(organisationTypesList);
@@ -84,9 +84,9 @@ export class DashboardCacheWarmupService {
         }
       }
 
-      this.logger.log(`Finished warming up ${totalCombos} combinations`);
+      this.logger.log(`Finished warming up ${totalCombos} combinations`, "Cache Warmup Complete");
     } catch (error) {
-      this.logger.error(`Error during cache warmup: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error("Error during cache warmup", error);
       throw error;
     }
   }

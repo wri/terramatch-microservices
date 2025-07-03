@@ -372,7 +372,7 @@ describe("TasksService", () => {
         }
       } as unknown as TaskUpdateBody;
 
-      await service.approveBulkReports(updateBody, task.id);
+      await service.approveBulkReports(updateBody.data.attributes, task);
 
       await siteReport.reload();
       await nurseryReport.reload();

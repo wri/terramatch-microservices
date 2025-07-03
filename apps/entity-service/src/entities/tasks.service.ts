@@ -178,10 +178,10 @@ export class TasksService {
 
     const siteReports = (attributes.siteReportNothingToReportUuid ?? [])
       .map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
-      .filter((report): report is SiteReport => !!report);
+      .filter((report): report is SiteReport => report !== undefined && report !== null);
     const nurseryReports = (attributes.nurseryReportNothingToReportUuid ?? [])
       .map(uuid => task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid))
-      .filter((report): report is NurseryReport => !!report);
+      .filter((report): report is NurseryReport => report !== undefined && report !== null);
 
     await this.updateReportsStatus(
       SiteReport,

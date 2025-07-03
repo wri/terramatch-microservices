@@ -110,26 +110,18 @@ export class TasksController {
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("update", task);
 
-    if (
-      updatePayload.data.attributes.nurseryReportNothingToReportUuids != null ||
-      updatePayload.data.attributes.siteReportNothingToReportUuids != null
-    ) {
+    const { nurseryReportNothingToReportUuids, siteReportNothingToReportUuids, status } = updatePayload.data.attributes;
+
+    if (nurseryReportNothingToReportUuids != null || siteReportNothingToReportUuids != null) {
       await this.tasksService.approveBulkReports(updatePayload.data.attributes, task);
-      const updatedTask = await this.tasksService.getTask(uuid);
-      return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), updatedTask)).serialize();
-    }
-
-    // the only field updateable on Task is status
-    const { status } = updatePayload.data.attributes;
-
-    if (status != null) {
+    } else if (status != null) {
       if (status === "awaiting-approval") {
         await this.tasksService.submitForApproval(task);
+        await task.save();
       } else {
         throw new BadRequestException(`Status not supported by this controller: ${status}`);
       }
     }
-    await task.save();
 
     return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
   }

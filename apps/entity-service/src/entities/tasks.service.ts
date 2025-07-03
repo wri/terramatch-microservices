@@ -23,6 +23,7 @@ import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Attributes } from "sequelize";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
+import { filter } from "lodash";
 
 const FILTER_PROPS = {
   status: "status",
@@ -167,26 +168,30 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  async approveBulkReports(attributes: TaskUpdateAttributes, task: Task): Promise<Task> {
+  async approveBulkReports(attributes: TaskUpdateAttributes, task: Task): Promise<void> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
     const taskId = task.id;
 
-    await this.loadReports(task);
-
     await this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuids ?? [], APPROVED, taskId);
     await this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuids ?? [], APPROVED, taskId);
 
     await this.loadReports(task);
 
-    const siteReports = await SiteReport.findAll({
-      where: { uuid: { [Op.in]: attributes.siteReportNothingToReportUuids ?? [] }, taskId }
-    });
-    const nurseryReports = await NurseryReport.findAll({
-      where: { uuid: { [Op.in]: attributes.nurseryReportNothingToReportUuids ?? [] }, taskId }
-    });
+    const siteReports = filter(
+      (attributes.siteReportNothingToReportUuids ?? []).map(uuid =>
+        task.siteReports?.find(siteReport => siteReport.uuid === uuid)
+      ),
+      (report): report is SiteReport => report !== undefined && report !== null
+    );
+    const nurseryReports = filter(
+      (attributes.nurseryReportNothingToReportUuids ?? []).map(uuid =>
+        task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid)
+      ),
+      (report): report is NurseryReport => report !== undefined && report !== null
+    );
 
     const auditStatusRecords = [
       ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),
@@ -196,8 +201,6 @@ export class TasksService {
     if (auditStatusRecords.length > 0) {
       await AuditStatus.bulkCreate(auditStatusRecords);
     }
-
-    return task;
   }
 
   private async updateReportsStatus<T extends ReportModel>(

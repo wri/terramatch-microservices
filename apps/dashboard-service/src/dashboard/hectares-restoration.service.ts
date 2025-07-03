@@ -18,8 +18,11 @@ export class HectaresRestorationService {
     ]).queryFilters(query);
 
     const projectIds: number[] = await projectsBuilder.pluckIds();
+    console.log(projectIds);
     const projectPolygons = await this.getProjectPolygons(projectIds);
     const polygonsIds = projectPolygons.map(polygon => polygon.id);
+
+    console.log(polygonsIds);
 
     const restorationStrategiesRepresented = await this.getPolygonOutputHectares(HECTARES_BY_RESTORATION, polygonsIds);
     const targetLandUseTypesRepresented = await this.getPolygonOutputHectares(
@@ -33,9 +36,15 @@ export class HectaresRestorationService {
         hectaresByTargetLandUse: []
       };
     }
+
+    console.log(this.calculateGroupedHectares(restorationStrategiesRepresented));
+    return {
+      hectaresByRestoration: this.calculateGroupedHectares(restorationStrategiesRepresented),
+      hectaresByTargetLandUse: this.calculateGroupedHectares(targetLandUseTypesRepresented)
+    };
   }
 
-  async getProjectPolygons(projectIds: number[]) {
+  private async getProjectPolygons(projectIds: number[]) {
     if (!projectIds || projectIds.length === 0) {
       return [];
     }
@@ -73,13 +82,44 @@ export class HectaresRestorationService {
     });
   }
 
-  async getPolygonOutputHectares(indicator: string, polygonIds: number[]) {
+  private async getPolygonOutputHectares(indicator: string, polygonIds: number[]) {
     return await IndicatorOutputHectares.findAll({
-      attributes: ["polygonId", "hectares"],
+      // attributes: ["sitePolygonId", "hectares"],
       where: {
         sitePolygonId: { [Op.in]: polygonIds },
         indicatorSlug: indicator
       }
     });
+  }
+
+  private calculateGroupedHectares(polygonsToOutputHectares: any[]): Record<string, number> {
+    const hectaresRestored: Record<string, number> = {};
+
+    polygonsToOutputHectares.forEach(hectare => {
+      let decodedValue: null;
+
+      try {
+        decodedValue = JSON.parse(hectare.value);
+      } catch {
+        decodedValue = null;
+      }
+
+      if (decodedValue) {
+        for (const [key, value] of Object.entries(decodedValue)) {
+          if (!hectaresRestored[key]) {
+            hectaresRestored[key] = 0;
+          }
+          // @ts-ignore
+          hectaresRestored[key] += value;
+        }
+      }
+    });
+
+    // Round each value to 3 decimal places
+    for (const key in hectaresRestored) {
+      hectaresRestored[key] = parseFloat(hectaresRestored[key].toFixed(3));
+    }
+
+    return hectaresRestored;
   }
 }

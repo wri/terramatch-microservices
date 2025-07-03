@@ -27,6 +27,14 @@ export class BoundingBoxQueryDto {
   projectUuid?: string;
 
   @ApiPropertyOptional({
+    description: "UUID of a project pitch to get the bounding box of all its polygons",
+    type: String
+  })
+  @IsOptional()
+  @IsUUID()
+  projectPitchUuid?: string;
+
+  @ApiPropertyOptional({
     description: "Array of landscape slugs for combined bounding box (used with country)",
     type: [String]
   })

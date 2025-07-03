@@ -22,53 +22,12 @@ export class TotalJobsCreatedController {
   @ApiOperation({ operationId: "getTotalJobsCreated", summary: "Get total jobs created" })
   async getTotalJobsCreated(@Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:jobs-created|${this.cacheService.getCacheKeyFromQuery(query)}`;
-    let cachedData = await this.cacheService.get(cacheKey);
-    if (cachedData == null) {
-      cachedData = await this.jobsCreatedService.getTotals(query);
-      await this.cacheService.set(cacheKey, JSON.stringify(cachedData));
-    }
-
-    const {
-      totalJobsCreated,
-      totalFt,
-      totalFtMen,
-      totalFtNonYouth,
-      totalFtWomen,
-      totalFtYouth,
-      totalMen,
-      totalNonYouth,
-      totalPt,
-      totalPtMen,
-      totalPtNonYouth,
-      totalPtWomen,
-      totalPtYouth,
-      totalWomen,
-      totalYouth
-    } = cachedData;
+    const data = await this.cacheService.get(cacheKey, () => this.jobsCreatedService.getTotals(query));
 
     const document = buildJsonApi(TotalJobsCreatedDto);
     const stableQuery = getStableRequestQuery(query);
 
-    document.addData(
-      stableQuery,
-      new TotalJobsCreatedDto({
-        totalJobsCreated,
-        totalFt,
-        totalFtMen,
-        totalFtNonYouth,
-        totalFtWomen,
-        totalFtYouth,
-        totalMen,
-        totalNonYouth,
-        totalPt,
-        totalPtMen,
-        totalPtNonYouth,
-        totalPtWomen,
-        totalPtYouth,
-        totalWomen,
-        totalYouth
-      })
-    );
+    document.addData(stableQuery, new TotalJobsCreatedDto(data));
 
     return document.serialize();
   }

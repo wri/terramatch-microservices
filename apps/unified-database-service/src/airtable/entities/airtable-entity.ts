@@ -358,16 +358,20 @@ const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =
     return mapping.include.reduce(mergeInclude, includes);
   }, [] as Include[]);
 
-export const commonEntityColumns = <T extends UuidModel, A = Record<string, never>>(adminSiteType: string) =>
+export const commonEntityColumns = <T extends UuidModel, A = Record<string, never>>(adminSiteType?: string) =>
   [
     "uuid",
     "createdAt",
     "updatedAt",
-    {
-      airtableColumn: "linkToTerramatch",
-      dbColumn: "uuid",
-      valueMap: ({ uuid }) => `https://www.terramatch.org/admin#/${adminSiteType}/${uuid}/show`
-    }
+    ...(adminSiteType == null
+      ? []
+      : [
+          {
+            airtableColumn: "linkToTerramatch",
+            dbColumn: "uuid",
+            valueMap: ({ uuid }) => `https://www.terramatch.org/admin#/${adminSiteType}/${uuid}/show`
+          }
+        ])
   ] as ColumnMapping<T, A>[];
 
 export const associatedValueColumn = <T extends Model<T>, A>(

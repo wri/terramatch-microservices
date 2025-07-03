@@ -26,9 +26,9 @@ export class TaskUpdateAttributes {
     description: "UUIDs of site reports to mark as 'Nothing to report'",
     isArray: true,
     type: String,
-    nullable: true
+    required: false
   })
-  siteReportNothingToReportUuid?: string[];
+  siteReportNothingToReportUuids?: string[];
 
   @IsOptional()
   @IsArray()
@@ -37,9 +37,9 @@ export class TaskUpdateAttributes {
     description: "UUIDs of nursery reports to mark as 'Nothing to report'",
     isArray: true,
     type: String,
-    nullable: true
+    required: false
   })
-  nurseryReportNothingToReportUuid?: string[];
+  nurseryReportNothingToReportUuids?: string[];
 }
 
 export class TaskUpdateBody extends JsonApiBodyDto(

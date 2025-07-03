@@ -176,10 +176,10 @@ export class TasksService {
 
     await this.loadReports(task);
 
-    const siteReports = (attributes.siteReportNothingToReportUuid ?? [])
+    const siteReports = (attributes.siteReportNothingToReportUuids ?? [])
       .map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
       .filter((report): report is SiteReport => report !== undefined && report !== null);
-    const nurseryReports = (attributes.nurseryReportNothingToReportUuid ?? [])
+    const nurseryReports = (attributes.nurseryReportNothingToReportUuids ?? [])
       .map(uuid => task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid))
       .filter((report): report is NurseryReport => report !== undefined && report !== null);
 

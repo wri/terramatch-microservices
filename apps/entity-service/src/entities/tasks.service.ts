@@ -167,7 +167,7 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  async approveBulkReports(attributes: TaskUpdateAttributes, task: Task): Promise<void> {
+  async approveBulkReports(attributes: TaskUpdateAttributes, task: Task): Promise<Task> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
@@ -206,6 +206,8 @@ export class TasksService {
     if (auditStatusRecords.length > 0) {
       await AuditStatus.bulkCreate(auditStatusRecords);
     }
+
+    return task;
   }
 
   private async updateReportsStatus<T extends ReportModel>(

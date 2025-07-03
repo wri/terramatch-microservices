@@ -176,27 +176,17 @@ export class TasksService {
 
     await this.loadReports(task);
 
-    const siteReports = (attributes.siteReportNothingToReportUuids ?? [])
-      .map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
-      .filter((report): report is SiteReport => report !== undefined && report !== null);
-    const nurseryReports = (attributes.nurseryReportNothingToReportUuids ?? [])
-      .map(uuid => task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid))
-      .filter((report): report is NurseryReport => report !== undefined && report !== null);
-
-    await this.updateReportsStatus(
-      SiteReport,
-      siteReports.map(r => r.uuid),
-      APPROVED,
-      taskId
-    );
-    await this.updateReportsStatus(
-      NurseryReport,
-      nurseryReports.map(r => r.uuid),
-      APPROVED,
-      taskId
-    );
+    await this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuids ?? [], APPROVED, taskId);
+    await this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuids ?? [], APPROVED, taskId);
 
     await this.loadReports(task);
+
+    const siteReports = await SiteReport.findAll({
+      where: { uuid: { [Op.in]: attributes.siteReportNothingToReportUuids ?? [] }, taskId }
+    });
+    const nurseryReports = await NurseryReport.findAll({
+      where: { uuid: { [Op.in]: attributes.nurseryReportNothingToReportUuids ?? [] }, taskId }
+    });
 
     const auditStatusRecords = [
       ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),

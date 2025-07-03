@@ -30,6 +30,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { TaskUpdateBody } from "./dto/task-update.dto";
+import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -365,8 +366,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuid: [siteReport.uuid],
-            nurseryReportNothingToReportUuid: [nurseryReport.uuid],
+            siteReportNothingToReportUuids: [siteReport.uuid],
+            nurseryReportNothingToReportUuids: [nurseryReport.uuid],
             feedback: "Looks good"
           }
         }
@@ -374,10 +375,12 @@ describe("TasksService", () => {
 
       await service.approveBulkReports(updateBody.data.attributes, task);
 
-      await siteReport.reload();
-      await nurseryReport.reload();
-      expect(siteReport.status).toBe(APPROVED);
-      expect(nurseryReport.status).toBe(APPROVED);
+      // Verifica los reportes actualizados directamente desde la base de datos
+      const updatedSiteReport = await SiteReport.findOne({ where: { id: siteReport.id } });
+      const updatedNurseryReport = await NurseryReport.findOne({ where: { id: nurseryReport.id } });
+
+      expect(updatedSiteReport?.status).toBe(APPROVED);
+      expect(updatedNurseryReport?.status).toBe(APPROVED);
 
       const auditStatuses = await AuditStatus.findAll({
         where: { auditableId: [siteReport.id, nurseryReport.id] }

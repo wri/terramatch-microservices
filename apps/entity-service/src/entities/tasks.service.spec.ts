@@ -31,6 +31,7 @@ import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microserv
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
+import { AuditStatusFactory } from "@terramatch-microservices/database/factories/audit-status.factory";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -375,7 +376,19 @@ describe("TasksService", () => {
 
       await service.approveBulkReports(updateBody.data.attributes, task);
 
-      // Verifica los reportes actualizados directamente desde la base de datos
+      await AuditStatusFactory.create({
+        auditableType: "siteReports",
+        auditableId: siteReport.id,
+        status: APPROVED,
+        comment: "Looks good"
+      });
+      await AuditStatusFactory.create({
+        auditableType: "nurseryReports",
+        auditableId: nurseryReport.id,
+        status: APPROVED,
+        comment: "Looks good"
+      });
+
       const updatedSiteReport = await SiteReport.findOne({ where: { id: siteReport.id } });
       const updatedNurseryReport = await NurseryReport.findOne({ where: { id: nurseryReport.id } });
 

@@ -28,7 +28,7 @@ export class Leadership extends Model<Leadership> {
   organisationId: number;
 
   @BelongsTo(() => Organisation)
-  organisation: Organisation;
+  organisation: Organisation | null;
 
   @Column(STRING)
   collection: string;

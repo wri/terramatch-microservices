@@ -18,6 +18,8 @@ import { DemographicsController } from "./entities/demographics.controller";
 import { DemographicService } from "./entities/demographic.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
+import { DisturbancesController } from "./entities/disturbances.controller";
+import { DisturbanceService } from "./entities/disturbance.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -31,6 +33,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     FileUploadController,
     TreesController,
     DemographicsController,
+    DisturbancesController,
     EntitiesController,
     EntityAssociationsController
   ],
@@ -45,7 +48,8 @@ import { ImpactStoryService } from "./entities/impact-story.service";
     ProjectPitchService,
     ImpactStoryService,
     TasksService,
-    DemographicService
+    DemographicService,
+    DisturbanceService
   ]
 })
 export class AppModule {}

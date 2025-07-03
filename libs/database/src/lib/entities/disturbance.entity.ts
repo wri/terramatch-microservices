@@ -1,9 +1,18 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4, DATE, DECIMAL } from "sequelize";
+import { Subquery } from "../util/subquery.builder";
+import { Literal } from "sequelize/types/utils";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {
   static readonly LARAVEL_TYPE = "App\\Models\\SiteSubmissionDisturbance";
+
+  static idsSubquery(disturbanceIds: Literal | number[], disturbancelType: string) {
+    return Subquery.select(Disturbance, "id")
+      .eq("disturbanceableType", disturbancelType)
+      .in("disturbanceableId", disturbanceIds)
+      .eq("hidden", false).literal;
+  }
 
   @PrimaryKey
   @AutoIncrement

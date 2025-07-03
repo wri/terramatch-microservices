@@ -196,6 +196,8 @@ export class TasksService {
       taskId
     );
 
+    await this.loadReports(task);
+
     const auditStatusRecords = [
       ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),
       ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback ?? "")

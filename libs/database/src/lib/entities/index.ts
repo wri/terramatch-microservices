@@ -25,6 +25,8 @@ export * from "./indicator-output-msu-carbon.entity";
 export * from "./indicator-output-tree-cover.entity";
 export * from "./indicator-output-tree-cover-loss.entity";
 export * from "./invasive.entity";
+export * from "./investment.entity";
+export * from "./investment-split.entity";
 export * from "./landscape-geometry.entity";
 export * from "./leadership.entity";
 export * from "./localization-key";

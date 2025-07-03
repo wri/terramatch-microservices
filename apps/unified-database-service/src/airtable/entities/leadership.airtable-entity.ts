@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Leadership, Organisation } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 

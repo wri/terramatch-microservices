@@ -22,7 +22,7 @@ import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Attributes } from "sequelize";
 import { ModelCtor } from "sequelize-typescript";
-import { TaskUpdateBody } from "./dto/task-update.dto";
+import { TaskUpdateAttributes } from "./dto/task-update.dto";
 
 const FILTER_PROPS = {
   status: "status",
@@ -167,54 +167,45 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  async approveBulkReports(attributes: TaskUpdateBody, taskId: number): Promise<void> {
+  async approveBulkReports(attributes: TaskUpdateAttributes, task: Task): Promise<void> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
+    const taskId = task.id;
 
-    const [siteReports, nurseryReports] = await Promise.all([
-      this.findReportsByUuids(SiteReport, attributes.data.attributes.siteReportNothingToReportUuid ?? [], taskId),
-      this.findReportsByUuids(NurseryReport, attributes.data.attributes.nurseryReportNothingToReportUuid ?? [], taskId)
-    ]);
+    await this.loadReports(task);
+
+    const siteReports = (attributes.siteReportNothingToReportUuid ?? [])
+      .map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
+      .filter((report): report is SiteReport => !!report);
+    const nurseryReports = (attributes.nurseryReportNothingToReportUuid ?? [])
+      .map(uuid => task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid))
+      .filter((report): report is NurseryReport => !!report);
 
     await Promise.all([
       this.updateReportsStatus(
         SiteReport,
-        attributes.data.attributes.siteReportNothingToReportUuid ?? [],
+        siteReports.map(r => r.uuid),
         APPROVED,
         taskId
       ),
       this.updateReportsStatus(
         NurseryReport,
-        attributes.data.attributes.nurseryReportNothingToReportUuid ?? [],
+        nurseryReports.map(r => r.uuid),
         APPROVED,
         taskId
       )
     ]);
 
     const auditStatusRecords = [
-      ...this.createAuditStatusRecords(siteReports, user, attributes.data.attributes.feedback ?? ""),
-      ...this.createAuditStatusRecords(nurseryReports, user, attributes.data.attributes.feedback ?? "")
+      ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),
+      ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback ?? "")
     ] as Array<Attributes<AuditStatus>>;
 
     if (auditStatusRecords.length > 0) {
       await AuditStatus.bulkCreate(auditStatusRecords);
     }
-  }
-
-  private async findReportsByUuids<T extends ReportModel>(
-    modelClass: ModelCtor<T>,
-    uuids: string[],
-    taskId: number
-  ): Promise<T[]> {
-    if (uuids == null) return [];
-
-    const reports = await modelClass.findAll({
-      where: { uuid: { [Op.in]: uuids }, taskId },
-      attributes: ["id", "uuid"]
-    });
-    return reports as T[];
   }
 
   private async updateReportsStatus<T extends ReportModel>(

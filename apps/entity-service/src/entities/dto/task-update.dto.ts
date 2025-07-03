@@ -4,7 +4,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Type } from "class-transformer";
 
-class TaskUpdateAttributes {
+export class TaskUpdateAttributes {
   @IsOptional()
   @IsIn(TASK_STATUSES)
   @ApiProperty({

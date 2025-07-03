@@ -30,13 +30,7 @@ export class TasksController {
     operationId: "taskIndex",
     summary: "Get a paginated and filtered list of tasks"
   })
-  @JsonApiResponse({
-    data: {
-      type: TaskLightDto
-    },
-    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto],
-    pagination: "number"
-  })
+  @JsonApiResponse({ data: TaskLightDto, pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async taskIndex(@Query() query: TaskQueryDto) {
     const { tasks, total } = await this.tasksService.getTasks(query);
@@ -47,8 +41,7 @@ export class TasksController {
 
       for (const task of tasks) {
         indexIds.push(task.uuid);
-
-        await this.tasksService.addFullTaskDto(document, task);
+        document.addData(task.uuid, new TaskLightDto(task));
       }
     }
 
@@ -132,7 +125,7 @@ export class TasksController {
       updatePayload.data.attributes.nurseryReportNothingToReportUuid != null ||
       updatePayload.data.attributes.siteReportNothingToReportUuid != null
     ) {
-      await this.tasksService.approveBulkReports(updatePayload, task.id);
+      await this.tasksService.approveBulkReports(updatePayload.data.attributes, task);
     }
 
     await task.save();

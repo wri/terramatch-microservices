@@ -176,10 +176,8 @@ export class BoundingBoxController {
           id = `${country},${landscapes.join(",")}`;
         } else if (!isEmpty(country)) {
           id = country as string;
-        } else if (landscapes.length > 0) {
-          id = landscapes.join(",");
         } else {
-          id = "global";
+          id = landscapes.join(",");
         }
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }

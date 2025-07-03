@@ -6,7 +6,7 @@ import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { JsonApiDocument } from "@terramatch-microservices/common/util";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
-import { PolygonGeometry, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, Project, Site, SitePolygon, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Op } from "sequelize";
 
@@ -68,6 +68,7 @@ describe("BoundingBoxController", () => {
   const mockPolygon = { uuid: "polygon-123" };
   const mockSite = { id: "site-db-id-123", uuid: "site-123", project: { uuid: "project-123", frameworkKey: "ppc" } };
   const mockProject = { uuid: "project-123", frameworkKey: "ppc", organisationId: 1 };
+  const mockProjectPitch = { id: "pitch-db-id-123", uuid: "pitch-123", organisationId: 1 };
   const mockSitePolygon = {
     id: "sp-db-id-123",
     uuid: "site-polygon-123",
@@ -82,6 +83,7 @@ describe("BoundingBoxController", () => {
     (PolygonGeometry.findOne as jest.Mock).mockResolvedValue(mockPolygon);
     (Site.findOne as jest.Mock).mockResolvedValue(mockSite);
     (Project.findOne as jest.Mock).mockResolvedValue(mockProject);
+    (ProjectPitch.findOne as jest.Mock).mockResolvedValue(mockProjectPitch);
     (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
 
     const module: TestingModule = await Test.createTestingModule({
@@ -202,6 +204,21 @@ describe("BoundingBoxController", () => {
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockProject);
     });
 
+    it("should call getProjectPitchBoundingBox when projectPitchUuid is provided", async () => {
+      await testQueryParameters(
+        { projectPitchUuid: "pitch-123" },
+        "getProjectPitchBoundingBox",
+        ["pitch-123"],
+        "pitch-123",
+        false
+      );
+
+      expect(ProjectPitch.findOne).toHaveBeenCalledWith({
+        where: { uuid: "pitch-123" },
+        attributes: ["id", "uuid", "organisationId"]
+      });
+    });
+
     it("should call getCountryLandscapeBoundingBox when country is provided without authorization", async () => {
       await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "US", false);
     });
@@ -213,6 +230,26 @@ describe("BoundingBoxController", () => {
         ["", ["ikr", "gcb"]],
         "ikr,gcb",
         false
+      );
+    });
+
+    it("should call getCountryLandscapeBoundingBox when both country and landscapes are provided", async () => {
+      await testQueryParameters(
+        { country: "KE", landscapes: ["ikr", "grv"] },
+        "getCountryLandscapeBoundingBox",
+        ["KE", ["ikr", "grv"]],
+        "KE,ikr,grv",
+        false
+      );
+    });
+
+    it("should throw BadRequestException when invalid landscape slugs are provided", async () => {
+      const invalidQuery = { landscapes: ["invalid-slug", "another-invalid"] };
+
+      await expect(controller.getBoundingBox(invalidQuery)).rejects.toThrow(
+        new BadRequestException(
+          "Invalid landscape slugs provided: invalid-slug, another-invalid. Valid landscape slugs are: gcb, grv, ikr"
+        )
       );
     });
 
@@ -229,6 +266,14 @@ describe("BoundingBoxController", () => {
 
       await expect(controller.getBoundingBox({ projectUuid: "non-existent" })).rejects.toThrow(
         new NotFoundException("Project with UUID non-existent not found")
+      );
+    });
+
+    it("should throw NotFoundException when project pitch is not found", async () => {
+      (ProjectPitch.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(controller.getBoundingBox({ projectPitchUuid: "non-existent" })).rejects.toThrow(
+        new NotFoundException("Project pitch with UUID non-existent not found")
       );
     });
 
@@ -249,7 +294,11 @@ describe("BoundingBoxController", () => {
         { siteUuid: "site-123", projectUuid: "project-123" },
         { polygonUuid: "polygon-123", country: "US" },
         { siteUuid: "site-123", landscapes: ["ikr"] },
-        { projectUuid: "project-123", country: "US", landscapes: ["ikr"] }
+        { projectUuid: "project-123", country: "US", landscapes: ["ikr"] },
+        { projectPitchUuid: "pitch-123", polygonUuid: "polygon-123" },
+        { projectPitchUuid: "pitch-123", siteUuid: "site-123" },
+        { projectPitchUuid: "pitch-123", projectUuid: "project-123" },
+        { projectPitchUuid: "pitch-123", country: "US" }
       ];
 
       for (const query of invalidCombinations) {

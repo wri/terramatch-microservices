@@ -9,7 +9,7 @@ export class TaskUpdateAttributes {
   @IsIn(TASK_STATUSES)
   @ApiProperty({
     description: "Request to change to the status of the given entity",
-    nullable: true,
+    required: false,
     enum: TASK_STATUSES
   })
   status?: TaskStatus | null;

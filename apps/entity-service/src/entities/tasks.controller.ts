@@ -111,8 +111,8 @@ export class TasksController {
     await this.policyService.authorize("update", task);
 
     if (
-      updatePayload.data.attributes.nurseryReportNothingToReportUuid != null ||
-      updatePayload.data.attributes.siteReportNothingToReportUuid != null
+      updatePayload.data.attributes.nurseryReportNothingToReportUuids != null ||
+      updatePayload.data.attributes.siteReportNothingToReportUuids != null
     ) {
       await this.tasksService.approveBulkReports(updatePayload.data.attributes, task);
       const updatedTask = await this.tasksService.getTask(uuid);

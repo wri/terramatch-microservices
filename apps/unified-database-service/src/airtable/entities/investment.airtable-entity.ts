@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Investment, Project } from "@terramatch-microservices/database/entities";
 

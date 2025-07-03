@@ -23,7 +23,8 @@ export class CacheService {
   }
 
   async set(key: string, value: string) {
-    await this.redis.set(key, value);
+    const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7;
+    await this.redis.set(key, value, "EX", SEVEN_DAYS_IN_SECONDS);
   }
 
   async get(key: string, factory?: () => Promise<string | object>) {
@@ -42,7 +43,8 @@ export class CacheService {
     if (factory != null) {
       const result = await factory();
       const valueToStore = typeof result === "string" ? result : JSON.stringify(result);
-      await this.redis.set(key, valueToStore);
+      const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7;
+      await this.redis.set(key, valueToStore, "EX", SEVEN_DAYS_IN_SECONDS);
       return result;
     }
 

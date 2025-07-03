@@ -183,15 +183,13 @@ export class TasksService {
     const siteReports = filter(
       (attributes.siteReportNothingToReportUuids ?? []).map(uuid =>
         task.siteReports?.find(siteReport => siteReport.uuid === uuid)
-      ),
-      (report): report is SiteReport => report !== undefined && report !== null
-    );
+      )
+    ) as SiteReport[];
     const nurseryReports = filter(
       (attributes.nurseryReportNothingToReportUuids ?? []).map(uuid =>
         task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid)
-      ),
-      (report): report is NurseryReport => report !== undefined && report !== null
-    );
+      )
+    ) as NurseryReport[];
 
     const auditStatusRecords = [
       ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),

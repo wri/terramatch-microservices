@@ -43,6 +43,10 @@ describe("TasksService", () => {
   });
 
   beforeEach(async () => {
+    // Limpiar todas las tablas relacionadas antes de cada test
+    await AuditStatus.destroy({ where: {}, force: true });
+    await SiteReport.destroy({ where: {}, force: true });
+    await NurseryReport.destroy({ where: {}, force: true });
     await Task.truncate();
 
     const module = await Test.createTestingModule({
@@ -356,7 +360,7 @@ describe("TasksService", () => {
   });
 
   describe("approveBulkReports", () => {
-    it("should approve the specified site and nursery reports and create audit status records", async () => {
+    it("should approve reports and update their status", async () => {
       const user = await UserFactory.create();
       Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
 
@@ -376,33 +380,158 @@ describe("TasksService", () => {
 
       await service.approveBulkReports(updateBody.data.attributes, task);
 
-      await AuditStatusFactory.create({
-        auditableType: "siteReports",
-        auditableId: siteReport.id,
-        status: APPROVED,
-        comment: "Looks good"
-      });
-      await AuditStatusFactory.create({
-        auditableType: "nurseryReports",
-        auditableId: nurseryReport.id,
-        status: APPROVED,
-        comment: "Looks good"
-      });
-
       const updatedSiteReport = await SiteReport.findOne({ where: { id: siteReport.id } });
       const updatedNurseryReport = await NurseryReport.findOne({ where: { id: nurseryReport.id } });
 
       expect(updatedSiteReport?.status).toBe(APPROVED);
       expect(updatedNurseryReport?.status).toBe(APPROVED);
+    });
+
+    it("should handle empty arrays of UUIDs", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
+
+      const task = await TaskFactory.create();
+
+      const updateBody = {
+        data: {
+          attributes: {
+            siteReportNothingToReportUuids: [],
+            nurseryReportNothingToReportUuids: [],
+            feedback: "Empty arrays"
+          }
+        }
+      } as unknown as TaskUpdateBody;
+
+      await service.approveBulkReports(updateBody.data.attributes, task);
+
+      expect(true).toBe(true);
+    });
+
+    it("should handle null UUIDs arrays", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
+
+      const task = await TaskFactory.create();
+
+      const updateBody = {
+        data: {
+          attributes: {
+            siteReportNothingToReportUuids: null,
+            nurseryReportNothingToReportUuids: null,
+            feedback: "Null arrays"
+          }
+        }
+      } as unknown as TaskUpdateBody;
+
+      await service.approveBulkReports(updateBody.data.attributes, task);
+
+      expect(true).toBe(true);
+    });
+
+    it("should execute AuditStatus.bulkCreate when reports are found", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
+
+      const task = await TaskFactory.create();
+      const siteReport = await SiteReportFactory.create({ taskId: task.id, status: "due" });
+      const nurseryReport = await NurseryReportFactory.create({ taskId: task.id, status: "due" });
+
+      task.siteReports = [siteReport];
+      task.nurseryReports = [nurseryReport];
+
+      jest.spyOn(service as any, "loadReports").mockResolvedValue(undefined);
+
+      const updateBody = {
+        data: {
+          attributes: {
+            siteReportNothingToReportUuids: [siteReport.uuid],
+            nurseryReportNothingToReportUuids: [nurseryReport.uuid],
+            feedback: "Test feedback"
+          }
+        }
+      } as unknown as TaskUpdateBody;
+
+      await service.approveBulkReports(updateBody.data.attributes, task);
 
       const auditStatuses = await AuditStatus.findAll({
         where: { auditableId: [siteReport.id, nurseryReport.id] }
       });
       expect(auditStatuses).toHaveLength(2);
-      expect(auditStatuses[0].comment).toBe("Looks good");
-      expect(auditStatuses[1].comment).toBe("Looks good");
-      expect([siteReport.id, nurseryReport.id]).toContain(auditStatuses[0].auditableId);
-      expect([siteReport.id, nurseryReport.id]).toContain(auditStatuses[1].auditableId);
+
+      const siteAudit = auditStatuses.find(a => a.auditableId === siteReport.id);
+      const nurseryAudit = auditStatuses.find(a => a.auditableId === nurseryReport.id);
+
+      expect(siteAudit).toBeDefined();
+      expect(nurseryAudit).toBeDefined();
+      expect(siteAudit!.comment).toBe("Test feedback");
+      expect(nurseryAudit!.comment).toBe("Test feedback");
+      expect(siteAudit!.status).toBe(APPROVED);
+      expect(nurseryAudit!.status).toBe(APPROVED);
+    });
+
+    it("should filter site reports by UUID correctly", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
+
+      const task = await TaskFactory.create();
+      const siteReport1 = await SiteReportFactory.create({ taskId: task.id, status: "due" });
+      const siteReport2 = await SiteReportFactory.create({ taskId: task.id, status: "due" });
+
+      task.siteReports = [siteReport1, siteReport2];
+      task.nurseryReports = [];
+
+      jest.spyOn(service as any, "loadReports").mockResolvedValue(undefined);
+
+      const updateBody = {
+        data: {
+          attributes: {
+            siteReportNothingToReportUuids: [siteReport1.uuid],
+            nurseryReportNothingToReportUuids: [],
+            feedback: "Filtered approval"
+          }
+        }
+      } as unknown as TaskUpdateBody;
+
+      await service.approveBulkReports(updateBody.data.attributes, task);
+
+      const auditStatuses = await AuditStatus.findAll({
+        where: { auditableId: siteReport1.id }
+      });
+      expect(auditStatuses).toHaveLength(1);
+      expect(auditStatuses[0].auditableId).toBe(siteReport1.id);
+    });
+
+    it("should filter nursery reports by UUID correctly", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(service["entitiesService"], "userId", { value: user.id });
+
+      const task = await TaskFactory.create();
+      const nurseryReport1 = await NurseryReportFactory.create({ taskId: task.id, status: "due" });
+      const nurseryReport2 = await NurseryReportFactory.create({ taskId: task.id, status: "due" });
+
+      task.siteReports = [];
+      task.nurseryReports = [nurseryReport1, nurseryReport2];
+
+      jest.spyOn(service as any, "loadReports").mockResolvedValue(undefined);
+
+      const updateBody = {
+        data: {
+          attributes: {
+            siteReportNothingToReportUuids: [],
+            nurseryReportNothingToReportUuids: [nurseryReport2.uuid],
+            feedback: "Nursery filtered approval"
+          }
+        }
+      } as unknown as TaskUpdateBody;
+
+      await service.approveBulkReports(updateBody.data.attributes, task);
+
+      const auditStatuses = await AuditStatus.findAll({
+        where: { auditableId: nurseryReport2.id }
+      });
+      expect(auditStatuses).toHaveLength(1);
+      expect(auditStatuses[0].auditableId).toBe(nurseryReport2.id);
     });
   });
 });

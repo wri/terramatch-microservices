@@ -43,7 +43,6 @@ describe("TasksService", () => {
   });
 
   beforeEach(async () => {
-    // Limpiar todas las tablas relacionadas antes de cada test
     await AuditStatus.destroy({ where: {}, force: true });
     await SiteReport.destroy({ where: {}, force: true });
     await NurseryReport.destroy({ where: {}, force: true });

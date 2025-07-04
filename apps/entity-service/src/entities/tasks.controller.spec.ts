@@ -8,6 +8,7 @@ import { TaskFactory } from "@terramatch-microservices/database/factories";
 import { Task } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
+import { TaskLightDto } from "./dto/task.dto";
 
 describe("TasksController", () => {
   let controller: TasksController;
@@ -26,6 +27,13 @@ describe("TasksController", () => {
     }).compile();
 
     controller = module.get(TasksController);
+    service = module.get(TasksService);
+
+    // Mock addFullTaskDto to add data to the document for each task
+    service.addFullTaskDto.mockImplementation(async (document, task) => {
+      document.addData(task.uuid, new TaskLightDto(task));
+      return document;
+    });
   });
 
   afterEach(() => {

@@ -31,7 +31,6 @@ import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microserv
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
-import { AuditStatusFactory } from "@terramatch-microservices/database/factories/audit-status.factory";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -439,7 +438,7 @@ describe("TasksService", () => {
       task.siteReports = [siteReport];
       task.nurseryReports = [nurseryReport];
 
-      jest.spyOn(service as any, "loadReports").mockResolvedValue(undefined);
+      const loadReportsSpy = jest.spyOn(service, "loadReports" as keyof TasksService).mockResolvedValue(undefined);
 
       const updateBody = {
         data: {
@@ -467,6 +466,8 @@ describe("TasksService", () => {
       expect(nurseryAudit!.comment).toBe("Test feedback");
       expect(siteAudit!.status).toBe(APPROVED);
       expect(nurseryAudit!.status).toBe(APPROVED);
+
+      loadReportsSpy.mockRestore();
     });
 
     it("should filter site reports by UUID correctly", async () => {
@@ -480,7 +481,7 @@ describe("TasksService", () => {
       task.siteReports = [siteReport1, siteReport2];
       task.nurseryReports = [];
 
-      jest.spyOn(service as any, "loadReports").mockResolvedValue(undefined);
+      const loadReportsSpy = jest.spyOn(service, "loadReports" as keyof TasksService).mockResolvedValue(undefined);
 
       const updateBody = {
         data: {
@@ -499,6 +500,8 @@ describe("TasksService", () => {
       });
       expect(auditStatuses).toHaveLength(1);
       expect(auditStatuses[0].auditableId).toBe(siteReport1.id);
+
+      loadReportsSpy.mockRestore();
     });
 
     it("should filter nursery reports by UUID correctly", async () => {
@@ -512,7 +515,7 @@ describe("TasksService", () => {
       task.siteReports = [];
       task.nurseryReports = [nurseryReport1, nurseryReport2];
 
-      jest.spyOn(service as any, "loadReports").mockResolvedValue(undefined);
+      const loadReportsSpy = jest.spyOn(service, "loadReports" as keyof TasksService).mockResolvedValue(undefined);
 
       const updateBody = {
         data: {
@@ -531,6 +534,8 @@ describe("TasksService", () => {
       });
       expect(auditStatuses).toHaveLength(1);
       expect(auditStatuses[0].auditableId).toBe(nurseryReport2.id);
+
+      loadReportsSpy.mockRestore();
     });
   });
 });

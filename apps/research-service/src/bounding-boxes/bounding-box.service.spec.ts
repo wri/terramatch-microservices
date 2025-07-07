@@ -8,7 +8,9 @@ import {
   PolygonGeometry,
   Project,
   Site,
-  SitePolygon
+  SitePolygon,
+  ProjectPitch,
+  ProjectPolygon
 } from "@terramatch-microservices/database/entities";
 import { Model, Sequelize, Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -23,6 +25,13 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   },
   Project: {
     findOne: jest.fn()
+  },
+  ProjectPitch: {
+    findOne: jest.fn()
+  },
+  ProjectPolygon: {
+    findAll: jest.fn(),
+    LARAVEL_TYPE_PROJECT_PITCH: "App\\Models\\V2\\ProjectPitch"
   },
   Site: {
     findOne: jest.fn(),
@@ -176,6 +185,12 @@ const fixtures = {
     organisationId: 1,
     status: "active"
   },
+  projectPitch: {
+    uuid: "pitch-123",
+    id: 2,
+    organisationId: 1
+  },
+  projectPolygons: [{ polyUuid: "polygon-123" }, { polyUuid: "polygon-456" }],
   projectSites: [{ uuid: "site-123" }, { uuid: "site-456" }],
   projectSitePolygons: [{ polygonUuid: "polygon-123" }, { polygonUuid: "polygon-456" }],
   countryEnvelope: [
@@ -427,6 +442,66 @@ describe("BoundingBoxService", () => {
       expect(Project.findOne).toHaveBeenCalled();
       expect(Site.findAll).toHaveBeenCalled();
       expect(SitePolygon.findAll).toHaveBeenCalled();
+      expect(PolygonGeometry.findAll).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getProjectPitchBoundingBox", () => {
+    it("should return a bounding box for a project pitch with multiple polygons", async () => {
+      const projectPitchUuid = fixtures.projectPitch.uuid;
+      (ProjectPitch.findOne as jest.Mock).mockResolvedValue(fixtures.projectPitch);
+      (ProjectPolygon.findAll as jest.Mock).mockResolvedValue(fixtures.projectPolygons);
+      (PolygonGeometry.findAll as jest.Mock).mockResolvedValue([fixtures.polygon.envelope, fixtures.polygon2.envelope]);
+
+      const result = await service.getProjectPitchBoundingBox(projectPitchUuid);
+
+      expect(ProjectPitch.findOne).toHaveBeenCalledWith({
+        where: { uuid: projectPitchUuid },
+        attributes: ["id", "uuid", "organisationId"]
+      });
+
+      expect(ProjectPolygon.findAll).toHaveBeenCalledWith({
+        where: {
+          entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+          entityId: fixtures.projectPitch.id
+        },
+        attributes: ["polyUuid"]
+      });
+
+      expect(PolygonGeometry.findAll).toHaveBeenCalledWith({
+        where: {
+          uuid: { [Op.in]: fixtures.projectPolygons.map(pp => pp.polyUuid) }
+        },
+        attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
+      });
+
+      expect(result).toBeDefined();
+      expect(result.bbox).toEqual([-122.4194, 37.7749, -73.9538, 40.8075]);
+    });
+
+    it("should throw NotFoundException when project pitch is not found", async () => {
+      const nonExistentUuid = "non-existent-pitch";
+      (ProjectPitch.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.getProjectPitchBoundingBox(nonExistentUuid)).rejects.toThrow(
+        new NotFoundException(`ProjectPitch with UUID ${nonExistentUuid} not found`)
+      );
+
+      expect(ProjectPitch.findOne).toHaveBeenCalled();
+      expect(ProjectPolygon.findAll).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when project pitch has no polygons", async () => {
+      const projectPitchUuid = fixtures.projectPitch.uuid;
+      (ProjectPitch.findOne as jest.Mock).mockResolvedValue(fixtures.projectPitch);
+      (ProjectPolygon.findAll as jest.Mock).mockResolvedValue([]);
+
+      await expect(service.getProjectPitchBoundingBox(projectPitchUuid)).rejects.toThrow(
+        new NotFoundException(`No polygons found for project pitch with UUID ${projectPitchUuid}`)
+      );
+
+      expect(ProjectPitch.findOne).toHaveBeenCalled();
+      expect(ProjectPolygon.findAll).toHaveBeenCalled();
       expect(PolygonGeometry.findAll).not.toHaveBeenCalled();
     });
   });

@@ -12,6 +12,10 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { DashboardProcessor } from "./dashboard/worker/dashboard.processor";
 import { TreeRestorationGoalController } from "./dashboard/tree-restoration-goal.controller";
 import { TreeRestorationGoalService } from "./dashboard/dto/tree-restoration-goal.service";
+import { TotalJobsCreatedController } from "./dashboard/total-jobs-created.controller";
+import { TotalJobsCreatedService } from "./dashboard/total-jobs-created.service";
+import { ScheduleModule } from "@nestjs/schedule";
+import { DashboardCacheWarmupService } from "./dashboard/warmup/dashboard-cache-warmup.service";
 import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
 import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
 
@@ -32,9 +36,15 @@ import { HectaresRestorationController } from "./dashboard/hectares-restoration.
         };
       }
     }),
-    BullModule.registerQueue({ name: "dashboard" })
+    BullModule.registerQueue({ name: "dashboard" }),
+    ScheduleModule.forRoot()
   ],
-  controllers: [TotalSectionHeaderController, TreeRestorationGoalController, HectaresRestorationController],
+  controllers: [
+    TotalSectionHeaderController,
+    TreeRestorationGoalController,
+    TotalJobsCreatedController,
+    HectaresRestorationController
+  ],
   providers: [
     {
       provide: APP_FILTER,
@@ -44,6 +54,8 @@ import { HectaresRestorationController } from "./dashboard/hectares-restoration.
     CacheService,
     DashboardProcessor,
     TreeRestorationGoalService,
+    TotalJobsCreatedService,
+    DashboardCacheWarmupService,
     HectaresRestorationService
   ]
 })

@@ -128,7 +128,7 @@ describe("CacheService", () => {
       const result = await service.get("key1", factory);
 
       expect(factory).toHaveBeenCalled();
-      expect(redisMock.set).toHaveBeenCalledWith("key1", JSON.stringify({ newData: "value" }));
+      expect(redisMock.set).toHaveBeenCalledWith("key1", JSON.stringify({ newData: "value" }), "EX", 60 * 60 * 24 * 7);
       expect(result).toEqual({ newData: "value" });
     });
 
@@ -139,7 +139,7 @@ describe("CacheService", () => {
       const result = await service.get("key1", factory);
 
       expect(factory).toHaveBeenCalled();
-      expect(redisMock.set).toHaveBeenCalledWith("key1", "string value");
+      expect(redisMock.set).toHaveBeenCalledWith("key1", "string value", "EX", 60 * 60 * 24 * 7);
       expect(result).toBe("string value");
     });
   });

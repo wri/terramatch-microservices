@@ -3,6 +3,7 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { IndicatorOutputHectares, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
+import { HectareRestorationDto } from "./dto/hectare-restoration.dto";
 
 @Injectable()
 export class HectaresRestorationService {
@@ -31,17 +32,18 @@ export class HectaresRestorationService {
     );
 
     if (restorationStrategiesRepresented.length === 0 && targetLandUseTypesRepresented.length === 0) {
-      return {
-        hectaresByRestoration: [],
-        hectaresByTargetLandUse: []
-      };
+      return new HectareRestorationDto({
+        restorationStrategiesRepresented: {},
+        targetLandUseTypesRepresented: {}
+      });
     }
 
     console.log(this.calculateGroupedHectares(restorationStrategiesRepresented));
-    return {
-      hectaresByRestoration: this.calculateGroupedHectares(restorationStrategiesRepresented),
-      hectaresByTargetLandUse: this.calculateGroupedHectares(targetLandUseTypesRepresented)
-    };
+
+    return new HectareRestorationDto({
+      restorationStrategiesRepresented: this.calculateGroupedHectares(restorationStrategiesRepresented),
+      targetLandUseTypesRepresented: this.calculateGroupedHectares(targetLandUseTypesRepresented)
+    });
   }
 
   private async getProjectPolygons(projectIds: number[]) {

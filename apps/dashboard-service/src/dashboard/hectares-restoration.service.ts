@@ -7,7 +7,7 @@ import { HectareRestorationDto } from "./dto/hectare-restoration.dto";
 
 @Injectable()
 export class HectaresRestorationService {
-  async getResult(query: DashboardQueryDto) {
+  async getResults(query: DashboardQueryDto) {
     const HECTARES_BY_RESTORATION = "restorationByStrategy";
     const HECTARES_BY_TARGET_LAND_USE_TYPES = "restorationByLandUse";
 
@@ -29,16 +29,16 @@ export class HectaresRestorationService {
     );
 
     if (restorationStrategiesRepresented.length === 0 && targetLandUseTypesRepresented.length === 0) {
-      return new HectareRestorationDto({
+      return {
         restorationStrategiesRepresented: {},
         targetLandUseTypesRepresented: {}
-      });
+      };
     }
 
-    return new HectareRestorationDto({
+    return {
       restorationStrategiesRepresented: this.calculateGroupedHectares(restorationStrategiesRepresented),
       targetLandUseTypesRepresented: this.calculateGroupedHectares(targetLandUseTypesRepresented)
-    });
+    };
   }
 
   private async getProjectPolygons(projectIds: number[]) {
@@ -92,14 +92,7 @@ export class HectaresRestorationService {
     const hectaresRestored: Record<string, number> = {};
 
     polygonsToOutputHectares.forEach(hectare => {
-      let decodedValue: null;
-
-      try {
-        decodedValue = JSON.parse(hectare.value);
-      } catch {
-        decodedValue = null;
-      }
-
+      let decodedValue = hectare.value;
       if (decodedValue) {
         for (const [key, value] of Object.entries(decodedValue)) {
           if (!hectaresRestored[key]) {

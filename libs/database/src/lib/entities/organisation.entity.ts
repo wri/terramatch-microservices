@@ -500,10 +500,6 @@ export class Organisation extends Model<Organisation> {
   treesNaturallyRegenerated3Year: number | null;
 
   @AllowNull
-  @Column(TINYINT)
-  carbonCredits: number | null;
-
-  @AllowNull
   @Column(TEXT)
   externalTechnicalAssistance: string | null;
 

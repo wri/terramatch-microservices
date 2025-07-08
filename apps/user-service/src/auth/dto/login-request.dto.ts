@@ -1,7 +1,8 @@
 import { IsEmail, IsNotEmpty } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
-export class LoginRequest {
+export class LoginAttributes {
   @IsEmail()
   @ApiProperty()
   emailAddress: string;
@@ -10,3 +11,5 @@ export class LoginRequest {
   @ApiProperty()
   password: string;
 }
+
+export class LoginBody extends JsonApiBodyDto(class LoginData extends CreateDataDto("logins", LoginAttributes) {}) {}

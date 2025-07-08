@@ -21,7 +21,7 @@ export class HectaresRestorationController {
   @ApiOperation({ operationId: "getHectaresRestoration", summary: "Get hectares restoration" })
   async getHectaresRestoration(@Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:hectares-restoration|${this.cacheService.getCacheKeyFromQuery(query)}`;
-    let cachedData = await this.cacheService.get(cacheKey, () => this.hectaresRestorationService.getResults(query));
+    const cachedData = await this.cacheService.get(cacheKey, () => this.hectaresRestorationService.getResults(query));
     const document = buildJsonApi(HectareRestorationDto);
     const stableQuery = getStableRequestQuery(query);
     document.addData(stableQuery, new HectareRestorationDto(cachedData));

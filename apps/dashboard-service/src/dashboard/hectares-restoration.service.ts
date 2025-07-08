@@ -3,13 +3,12 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { IndicatorOutputHectares, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
-import { HectareRestorationDto } from "./dto/hectare-restoration.dto";
 
 @Injectable()
 export class HectaresRestorationService {
   async getResults(query: DashboardQueryDto) {
-    const HECTARES_BY_RESTORATION = "restorationByStrategy";
-    const HECTARES_BY_TARGET_LAND_USE_TYPES = "restorationByLandUse";
+    const hectaresByRestoration = "restorationByStrategy";
+    const hectaresByTargetLandUseTypes = "restorationByLandUse";
 
     const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
       {
@@ -22,9 +21,9 @@ export class HectaresRestorationService {
     const projectPolygons = await this.getProjectPolygons(projectIds);
     const polygonsIds = projectPolygons.map(polygon => polygon.id);
 
-    const restorationStrategiesRepresented = await this.getPolygonOutputHectares(HECTARES_BY_RESTORATION, polygonsIds);
+    const restorationStrategiesRepresented = await this.getPolygonOutputHectares(hectaresByRestoration, polygonsIds);
     const targetLandUseTypesRepresented = await this.getPolygonOutputHectares(
-      HECTARES_BY_TARGET_LAND_USE_TYPES,
+      hectaresByTargetLandUseTypes,
       polygonsIds
     );
 
@@ -42,7 +41,7 @@ export class HectaresRestorationService {
   }
 
   private async getProjectPolygons(projectIds: number[]) {
-    if (!projectIds || projectIds.length === 0) {
+    if (projectIds.length === 0) {
       return [];
     }
 
@@ -88,17 +87,16 @@ export class HectaresRestorationService {
     });
   }
 
-  private calculateGroupedHectares(polygonsToOutputHectares: any[]): Record<string, number> {
+  private calculateGroupedHectares(polygonsToOutputHectares: IndicatorOutputHectares[]): Record<string, number> {
     const hectaresRestored: Record<string, number> = {};
 
     polygonsToOutputHectares.forEach(hectare => {
-      let decodedValue = hectare.value;
-      if (decodedValue) {
+      const decodedValue = hectare.value;
+      if (decodedValue != null) {
         for (const [key, value] of Object.entries(decodedValue)) {
-          if (!hectaresRestored[key]) {
+          if (hectaresRestored[key] !== null) {
             hectaresRestored[key] = 0;
           }
-          // @ts-ignore
           hectaresRestored[key] += value;
         }
       }

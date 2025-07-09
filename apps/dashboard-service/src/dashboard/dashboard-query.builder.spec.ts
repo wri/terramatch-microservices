@@ -3,19 +3,34 @@ import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
 import { ModelCtor } from "sequelize-typescript";
 
+type MockSequelize = {
+  escape: jest.Mock<string, [string]>;
+};
+
+type MockModel = {
+  findAll: jest.Mock;
+  count: jest.Mock;
+  sum: jest.Mock;
+  sequelize: MockSequelize | null;
+};
+
 describe("DashboardProjectsQueryBuilder", () => {
   let builder: DashboardProjectsQueryBuilder;
-  let mockModel = {
+  let mockModel: MockModel = {
     findAll: jest.fn(),
     count: jest.fn(),
-    sum: jest.fn()
+    sum: jest.fn(),
+    sequelize: null
   };
 
   beforeEach(() => {
     mockModel = {
       findAll: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(42),
-      sum: jest.fn().mockResolvedValue(100)
+      sum: jest.fn().mockResolvedValue(100),
+      sequelize: {
+        escape: jest.fn((val: string) => `'${val.replace(/'/g, "''")}'`)
+      }
     };
     builder = new DashboardProjectsQueryBuilder(mockModel as unknown as ModelCtor<Project>);
   });
@@ -43,7 +58,9 @@ describe("DashboardProjectsQueryBuilder", () => {
 
   it("should handle queryFilters with partial filters", () => {
     builder.queryFilters({ country: "MX" });
-    expect(builder["findOptions"].where).toMatchObject({ country: "MX" });
+    const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
+    expect(where[Op.and]).toBeDefined();
+    expect(where[Op.and]?.[0]).toMatchObject({ country: "MX" });
     expect(builder["findOptions"].include).toBeDefined();
   });
 
@@ -56,11 +73,14 @@ describe("DashboardProjectsQueryBuilder", () => {
     builder.queryFilters({
       country: "Kenya",
       programmes: ["terrafund"],
-      cohort: "2023",
+      cohort: ["2023"],
       organisationType: ["non-profit-organization"],
       projectUuid: "uuid1"
     });
-    expect(builder["findOptions"].where).toHaveProperty("country", "Kenya");
+    const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
+    expect(where[Op.and]).toBeDefined();
+    expect(where[Op.and]?.[0]).toMatchObject({ country: "Kenya" });
+    expect(where[Op.and]?.[1]).toMatchObject({ val: expect.stringContaining("JSON_CONTAINS(cohort") });
     expect(builder["findOptions"].include?.[0]).toHaveProperty("association", "organisation");
   });
 

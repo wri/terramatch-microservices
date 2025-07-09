@@ -55,12 +55,14 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   siteId?: string[];
 
   @ApiProperty({
-    name: "projectCohort",
+    name: "projectCohort[]",
+    isArray: true,
     required: false,
-    description: "Filter results by project cohort. May not be used with projectId[] or siteId[]"
+    description: "Filter results by project cohorts. May not be used with projectId[] or siteId[]"
   })
   @IsOptional()
-  projectCohort?: string;
+  @IsArray()
+  projectCohort?: string[];
 
   @ApiProperty({
     required: false,

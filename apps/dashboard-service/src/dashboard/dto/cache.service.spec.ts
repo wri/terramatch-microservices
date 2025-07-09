@@ -92,13 +92,13 @@ describe("CacheService", () => {
   });
 
   describe("getCacheParameterForCohort", () => {
-    it("should return empty string for empty input", () => {
-      expect(service.getCacheParameterForCohort("")).toBe("");
+    it("should return empty string for empty array", () => {
+      expect(service.getCacheParameterForCohort([])).toBe("");
     });
 
-    it("should return same string for non-empty input", () => {
-      expect(service.getCacheParameterForCohort("foo")).toBe("foo");
-      expect(service.getCacheParameterForCohort("bar")).toBe("bar");
+    it("should return sorted joined string for non-empty array", () => {
+      expect(service.getCacheParameterForCohort(["foo"])).toBe("foo");
+      expect(service.getCacheParameterForCohort(["bar", "foo"])).toBe("bar,foo");
     });
   });
 
@@ -128,7 +128,7 @@ describe("CacheService", () => {
       const result = await service.get("key1", factory);
 
       expect(factory).toHaveBeenCalled();
-      expect(redisMock.set).toHaveBeenCalledWith("key1", JSON.stringify({ newData: "value" }));
+      expect(redisMock.set).toHaveBeenCalledWith("key1", JSON.stringify({ newData: "value" }), "EX", 60 * 60 * 24 * 7);
       expect(result).toEqual({ newData: "value" });
     });
 
@@ -139,7 +139,7 @@ describe("CacheService", () => {
       const result = await service.get("key1", factory);
 
       expect(factory).toHaveBeenCalled();
-      expect(redisMock.set).toHaveBeenCalledWith("key1", "string value");
+      expect(redisMock.set).toHaveBeenCalledWith("key1", "string value", "EX", 60 * 60 * 24 * 7);
       expect(result).toBe("string value");
     });
   });
@@ -151,7 +151,7 @@ describe("CacheService", () => {
         landscapes: ["grv", "gcb"],
         country: "USA",
         organisationType: ["non-profit-organization", "for-profit-organization"],
-        cohort: "cohort2025",
+        cohort: ["cohort2025"],
         projectUuid: "uuid-123"
       };
 

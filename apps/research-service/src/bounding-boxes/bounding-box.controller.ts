@@ -7,11 +7,17 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, getStableRequestQuery, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 import { PolicyService } from "@terramatch-microservices/common";
-import { Project, Site, SitePolygon, LandscapeGeometry } from "@terramatch-microservices/database/entities";
+import {
+  Project,
+  Site,
+  SitePolygon,
+  LandscapeGeometry,
+  ProjectPitch
+} from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
-type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "country/landscapes";
+type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "projectPitchUuid" | "country/landscapes";
 
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
@@ -21,7 +27,7 @@ export class BoundingBoxController {
   @Get("get")
   @ApiOperation({
     operationId: "boundingBoxGet",
-    summary: "Get a bounding box for a polygon, site, project, or country/landscape"
+    summary: "Get a bounding box for a polygon, site, project, project pitch, or country/landscape"
   })
   @JsonApiResponse(BoundingBoxDto)
   @ExceptionResponse(BadRequestException, {
@@ -48,6 +54,10 @@ export class BoundingBoxController {
       providedParams.push("projectUuid");
     }
 
+    if (!isEmpty(query.projectPitchUuid)) {
+      providedParams.push("projectPitchUuid");
+    }
+
     const hasCountry = !isEmpty(query.country);
     const hasLandscapes = !isEmpty(query.landscapes);
 
@@ -63,7 +73,7 @@ export class BoundingBoxController {
 
     if (providedParams.length === 0) {
       throw new BadRequestException(
-        "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, country, or landscapes."
+        "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, projectPitchUuid, country, or landscapes."
       );
     }
 
@@ -124,6 +134,22 @@ export class BoundingBoxController {
 
         const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+      }
+
+      case "projectPitchUuid": {
+        const projectPitchUuid = query.projectPitchUuid ?? "";
+
+        const projectPitch = await ProjectPitch.findOne({
+          where: { uuid: projectPitchUuid },
+          attributes: ["id", "uuid", "organisationId"]
+        });
+
+        if (projectPitch === null) {
+          throw new NotFoundException(`Project pitch with UUID ${projectPitchUuid} not found`);
+        }
+
+        const result = await this.boundingBoxService.getProjectPitchBoundingBox(projectPitchUuid);
+        return buildJsonApi(BoundingBoxDto).addData(projectPitchUuid, result).document.serialize();
       }
 
       case "country/landscapes": {

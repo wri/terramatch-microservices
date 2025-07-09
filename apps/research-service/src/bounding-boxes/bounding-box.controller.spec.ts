@@ -238,7 +238,7 @@ describe("BoundingBoxController", () => {
         { country: "KE", landscapes: ["ikr", "grv"] },
         "getCountryLandscapeBoundingBox",
         ["KE", ["ikr", "grv"]],
-        "KE,ikr,grv",
+        "?country=KE&landscapes%5B0%5D=grv&landscapes%5B1%5D=ikr",
         false
       );
     });

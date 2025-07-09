@@ -25,9 +25,11 @@ describe("LoginController", () => {
   it("should throw if creds are invalid", async () => {
     authService.login.mockResolvedValue(null);
 
-    await expect(controller.create({ emailAddress: "foo@bar.com", password: "asdfasdfasdf" })).rejects.toThrow(
-      UnauthorizedException
-    );
+    await expect(
+      controller.create({
+        data: { type: "logins", attributes: { emailAddress: "foo@bar.com", password: "asdfasdfasdf" } }
+      })
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it("returns a token if creds are valid", async () => {
@@ -35,7 +37,9 @@ describe("LoginController", () => {
     const userUuid = faker.string.uuid();
     authService.login.mockResolvedValue({ token, userUuid });
 
-    const result = await controller.create({ emailAddress: "foo@bar.com", password: "asdfasdfasdf" });
+    const result = await controller.create({
+      data: { type: "logins", attributes: { emailAddress: "foo@bar.com", password: "asdfasdfasdf" } }
+    });
     expect(result).toMatchObject({ data: { id: userUuid, type: "logins", attributes: { token } } });
   });
 });

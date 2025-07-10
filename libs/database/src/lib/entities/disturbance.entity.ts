@@ -2,6 +2,7 @@ import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } fro
 import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4, DATE, DECIMAL } from "sequelize";
 import { Subquery } from "../util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {
@@ -42,8 +43,8 @@ export class Disturbance extends Model<Disturbance> {
   type: string | null;
 
   @AllowNull
-  @Column(STRING)
-  subtype: string | null;
+  @JsonColumn()
+  subtype: string[] | null;
 
   @AllowNull
   @Column(STRING)
@@ -70,8 +71,8 @@ export class Disturbance extends Model<Disturbance> {
   actionDescription: string | null;
 
   @AllowNull
-  @Column(STRING)
-  propertyAffected: string | null;
+  @JsonColumn()
+  propertyAffected: string[] | null;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.

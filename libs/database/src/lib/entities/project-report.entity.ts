@@ -42,6 +42,7 @@ type ApprovedIdsSubqueryOptions = {
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
   project: (id: number) => ({ where: { projectId: id } }),
+  projectsIds: (ids: number[]) => ({ where: { projectId: { [Op.in]: ids } } }),
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } })
 }))
@@ -53,30 +54,82 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
 
   static readonly MEDIA = {
-    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
-    media: { dbCollection: "media", multiple: true },
-    file: { dbCollection: "file", multiple: true },
-    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true },
-    baselineReportUpload: { dbCollection: "baseline_report_upload", multiple: true },
-    localGovernanceOrderLetterUpload: { dbCollection: "local_governance_order_letter_upload", multiple: true },
-    eventsMeetingsPhotos: { dbCollection: "events_meetings_photos", multiple: true },
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
+    media: { dbCollection: "media", multiple: true, validation: "general-documents" },
+    file: { dbCollection: "file", multiple: true, validation: "general-documents" },
+    otherAdditionalDocuments: {
+      dbCollection: "other_additional_documents",
+      multiple: true,
+      validation: "general-documents"
+    },
+    photos: { dbCollection: "photos", multiple: true, validation: "photos" },
+    baselineReportUpload: { dbCollection: "baseline_report_upload", multiple: true, validation: "general-documents" },
+    localGovernanceOrderLetterUpload: {
+      dbCollection: "local_governance_order_letter_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    eventsMeetingsPhotos: { dbCollection: "events_meetings_photos", multiple: true, validation: "photos" },
     localGovernanceProofOfPartnershipUpload: {
       dbCollection: "local_governance_proof_of_partnership_upload",
-      multiple: true
+      multiple: true,
+      validation: "general-documents"
     },
-    topThreeSuccessesUpload: { dbCollection: "top_three_successes_upload", multiple: true },
-    directJobsUpload: { dbCollection: "direct_jobs_upload", multiple: true },
-    convergenceJobsUpload: { dbCollection: "convergence_jobs_upload", multiple: true },
-    convergenceSchemesUpload: { dbCollection: "convergence_schemes_upload", multiple: true },
-    livelihoodActivitiesUpload: { dbCollection: "livelihood_activities_upload", multiple: true },
-    directLivelihoodImpactsUpload: { dbCollection: "direct_livelihood_impacts_upload", multiple: true },
-    certifiedDatabaseUpload: { dbCollection: "certified_database_upload", multiple: true },
-    physicalAssetsPhotos: { dbCollection: "physical_assets_photos", multiple: true },
-    indirectCommunityPartnersUpload: { dbCollection: "indirect_community_partners_upload", multiple: true },
-    trainingCapacityBuildingUpload: { dbCollection: "training_capacity_building_upload", multiple: true },
-    trainingCapacityBuildingPhotos: { dbCollection: "training_capacity_building_photos", multiple: true },
-    financialReportUpload: { dbCollection: "financial_report_upload", multiple: true }
+    topThreeSuccessesUpload: {
+      dbCollection: "top_three_successes_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    directJobsUpload: { dbCollection: "direct_jobs_upload", multiple: true, validation: "general-documents" },
+    convergenceJobsUpload: { dbCollection: "convergence_jobs_upload", multiple: true, validation: "general-documents" },
+    convergenceSchemesUpload: {
+      dbCollection: "convergence_schemes_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    livelihoodActivitiesUpload: {
+      dbCollection: "livelihood_activities_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    directLivelihoodImpactsUpload: {
+      dbCollection: "direct_livelihood_impacts_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    certifiedDatabaseUpload: {
+      dbCollection: "certified_database_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    physicalAssetsPhotos: { dbCollection: "physical_assets_photos", multiple: true, validation: "photos" },
+    indirectCommunityPartnersUpload: {
+      dbCollection: "indirect_community_partners_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    trainingCapacityBuildingUpload: {
+      dbCollection: "training_capacity_building_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    trainingCapacityBuildingPhotos: {
+      dbCollection: "training_capacity_building_photos",
+      multiple: true,
+      validation: "photos"
+    },
+    financialReportUpload: { dbCollection: "financial_report_upload", multiple: true, validation: "general-documents" },
+    treePlantingUpload: { dbCollection: "tree_planting_upload", multiple: true, validation: "general-documents" },
+    soilWaterConservationUpload: {
+      dbCollection: "soil_water_conservation_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    soilWaterConservationPhotos: {
+      dbCollection: "soil_water_conservation_photos",
+      multiple: true,
+      validation: "photos"
+    }
   } as const;
 
   static incomplete() {
@@ -91,6 +144,10 @@ export class ProjectReport extends Model<ProjectReport> {
     return chainScope(this, "project", id) as typeof ProjectReport;
   }
 
+  static projectsIds(ids: number[]) {
+    return chainScope(this, "projectsIds", ids) as typeof ProjectReport;
+  }
+
   static dueBefore(date: Date | string) {
     return chainScope(this, "dueBefore", date) as typeof ProjectReport;
   }
@@ -101,6 +158,13 @@ export class ProjectReport extends Model<ProjectReport> {
       .in("status", ProjectReport.APPROVED_STATUSES);
     if (opts.dueAfter != null) builder.gte("dueAt", opts.dueAfter);
     if (opts.dueBefore != null) builder.lt("dueAt", opts.dueBefore);
+    return builder.literal;
+  }
+
+  static approvedProjectsIdsSubquery(projectIds: number[]) {
+    const builder = Subquery.select(ProjectReport, "id")
+      .in("projectId", projectIds)
+      .in("status", ProjectReport.APPROVED_STATUSES);
     return builder.literal;
   }
 

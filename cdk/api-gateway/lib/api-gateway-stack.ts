@@ -19,7 +19,8 @@ const V3_SERVICES = {
   "user-service": ["auth", "users"],
   "job-service": ["jobs"],
   "entity-service": ["entities", "trees"],
-  "research-service": ["research"],
+  "research-service": ["research", "boundingBoxes"],
+  "dashboard-service": ["dashboard"],
   "unified-database-service": ["unified-database"]
 };
 

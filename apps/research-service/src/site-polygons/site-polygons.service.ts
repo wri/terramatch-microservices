@@ -116,8 +116,10 @@ export class SitePolygonsService {
    * Get a mapping from site polygon ID to the sorted list of indicators for the polygon.
    */
   private async getIndicators(sitePolygons: SitePolygon[]) {
-    const accessor = new ModelPropertiesAccessor();
     const results: Record<number, IndicatorDto[]> = {};
+    if (sitePolygons.length === 0) return results;
+
+    const accessor = new ModelPropertiesAccessor();
     const sitePolygonIds = sitePolygons.map(({ id }) => id);
     for (const modelClass of uniq(Object.values(INDICATOR_MODEL_CLASSES))) {
       let fields: string[] | undefined = undefined;
@@ -128,7 +130,28 @@ export class SitePolygonsService {
         }
 
         results[indicator.sitePolygonId] ??= [];
-        results[indicator.sitePolygonId].push(pick(indicator, fields) as IndicatorDto);
+        let dto = pick(indicator, fields) as IndicatorDto;
+        if (
+          (dto.indicatorSlug === "treeCoverLoss" || dto.indicatorSlug === "treeCoverLossFires") &&
+          dto.value != null
+        ) {
+          const sitePolygon = sitePolygons.find(sp => sp.id === indicator.sitePolygonId);
+          if (sitePolygon?.plantStart != null) {
+            const plantStartYear = new Date(sitePolygon.plantStart).getFullYear();
+            const startYear = plantStartYear - 10;
+            const endYear = plantStartYear;
+            dto = {
+              ...dto,
+              value: Object.fromEntries(
+                Object.entries(dto.value).filter(([year]) => {
+                  const y = parseInt(year, 10);
+                  return y >= startYear && y <= endYear;
+                })
+              )
+            };
+          }
+        }
+        results[indicator.sitePolygonId].push(dto);
       }
     }
 
@@ -148,6 +171,8 @@ export class SitePolygonsService {
    * between the two to correctly deal with the aggregate data from getTreeSpecies() and getReportingPeriods()
    */
   private async getSites(sitePolygons: SitePolygon[]) {
+    if (sitePolygons.length === 0) return {};
+
     const sites = await Site.findAll({
       where: { uuid: { [Op.in]: sitePolygons.map(({ siteUuid }) => siteUuid) } },
       attributes: ["id", "uuid"]
@@ -165,6 +190,8 @@ export class SitePolygonsService {
    * Get two mappings of tree species sets: one of reports by report id, and the other of sites by site id.
    */
   private async getTreeSpecies(sitePolygons: SitePolygon[]) {
+    if (sitePolygons.length === 0) return { siteTrees: {}, reportTrees: {} };
+
     const siteIds = Subquery.select(Site, "id").in(
       "uuid",
       sitePolygons.map(({ siteUuid }) => siteUuid)
@@ -203,6 +230,8 @@ export class SitePolygonsService {
    * on the resulting reports.
    */
   private async getSiteReports(sitePolygons: SitePolygon[]) {
+    if (sitePolygons.length === 0) return {};
+
     const siteIds = Subquery.select(Site, "id").in(
       "uuid",
       sitePolygons.map(({ siteUuid }) => siteUuid)

@@ -1,5 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, col, fn, WhereOptions } from "sequelize";
+import { Attributes, col, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
@@ -74,7 +74,8 @@ export abstract class EntityProcessor<
   abstract findMany(query: EntityQueryDto): Promise<PaginatedResult<ModelType>>;
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
-  abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;
+
+  abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
 
   async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
     const results: DtoResult<FullDto>[] = [];
@@ -86,8 +87,12 @@ export abstract class EntityProcessor<
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
+
+    const associateData = (await this.loadAssociationData(models.map(m => m.id))) as Record<number, LightDto>;
+
     for (const model of models) {
-      results.push(await this.getLightDto(model));
+      const dto = await this.getLightDto(model, associateData[model.id]);
+      results.push(dto);
     }
     return results;
   }
@@ -158,6 +163,12 @@ export abstract class EntityProcessor<
 
     await model.save();
   }
+
+  /* istanbul ignore next */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  loadAssociationData(ids: number[]): Promise<Record<number, object>> {
+    return Promise.resolve({});
+  }
 }
 
 export abstract class ReportProcessor<
@@ -195,4 +206,12 @@ export abstract class ReportProcessor<
 
     await super.update(model, update);
   }
+
+  protected nothingToReportConditions = (queryValue: boolean) => {
+    if (queryValue) {
+      return true;
+    } else {
+      return { [Op.or]: [null, false] };
+    }
+  };
 }

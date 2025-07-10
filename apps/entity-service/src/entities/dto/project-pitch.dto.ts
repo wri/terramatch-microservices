@@ -252,6 +252,15 @@ export class ProjectPitchDto {
   @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  forestFragmentsDistance: number | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  anrPracticesProposed: string[] | null;
+
+  @ApiProperty()
+  informationAuthorization: boolean;
+
   @ApiProperty()
   createdAt: Date;
 }

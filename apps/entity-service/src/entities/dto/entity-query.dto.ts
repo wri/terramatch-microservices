@@ -9,6 +9,7 @@ import {
 import { Type } from "class-transformer";
 import { IndexQueryDto } from "./index-query.dto";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
 export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
 
@@ -66,6 +67,21 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   siteUuid?: string;
 
+  @ApiProperty({ required: false, isArray: true, description: "Filter by landscape 3-letter codes: gcb, grv, ikr" })
+  @IsOptional()
+  @IsArray()
+  landscape?: string[];
+
+  @ApiProperty({ required: false, isArray: true, description: "Filter by organisation types" })
+  @IsOptional()
+  @IsArray()
+  organisationType?: string[];
+
+  @ApiProperty({ required: false, isArray: true, description: "Filter by cohorts" })
+  @IsOptional()
+  @IsArray()
+  cohort?: string[];
+
   @ApiProperty({
     required: false,
     description: "If the base entity supports it, this will load the first page of associated entities",
@@ -81,6 +97,14 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   @IsIn(POLYGON_STATUSES_FILTERS)
   polygonStatus?: PolygonStatusFilter;
+
+  @ApiProperty({ required: false })
+  @TransformBooleanString({ optional: true })
+  nothingToReport?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  shortName?: string;
 
   // This one is internal use only, not exposed to the API surface
   taskId?: number;

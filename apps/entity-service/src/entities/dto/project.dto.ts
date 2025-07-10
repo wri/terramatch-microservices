@@ -32,6 +32,13 @@ export class ProjectLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation type"
+  })
+  organisationType: string | null;
+
+  @ApiProperty({
     description: "Entity status for this project",
     enum: ENTITY_STATUSES
   })
@@ -47,11 +54,20 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  shortName: string | null;
+
   @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
   country: string | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Latitude coordinate" })
+  lat: number | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Longitude coordinate" })
+  long: number | null;
 
   @ApiProperty()
   totalHectaresRestoredSum: number;
@@ -61,6 +77,9 @@ export class ProjectLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true, type: Number })
+  treesPlantedCount: number | null;
 }
 
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;
@@ -101,8 +120,8 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  cohort: string | null;
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  cohort: string[] | null;
 
   @ApiProperty({ nullable: true, type: String })
   continent: string | null;

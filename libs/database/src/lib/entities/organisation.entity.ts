@@ -7,6 +7,44 @@ import { OrganisationStatus } from "../constants/status";
 export class Organisation extends Model<Organisation> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
 
+  static readonly MEDIA = {
+    logo: { dbCollection: "logo", multiple: false, validation: "logo-image" },
+    cover: { dbCollection: "cover", multiple: false, validation: "cover-image" },
+    reference: { dbCollection: "reference", multiple: true, validation: "pdf" },
+    additional: { dbCollection: "additional", multiple: true, validation: "general-documents" },
+    bankStatements: { dbCollection: "bank_statements", multiple: true, validation: "general-documents" },
+    previousAnnualReports: { dbCollection: "previous_annual_reports", multiple: true, validation: "general-documents" },
+    historicRestoration: { dbCollection: "historic_restoration", multiple: true, validation: "photos" },
+    opBudget1Year: { dbCollection: "op_budget_1year", multiple: true, validation: "spreadsheet" },
+    opBudget2Year: { dbCollection: "op_budget_2year", multiple: true, validation: "spreadsheet" },
+    opBudget3Year: { dbCollection: "op_budget_3year", multiple: true, validation: "spreadsheet" },
+    opBudgetLastYear: { dbCollection: "op_budget_last_year", multiple: true, validation: "spreadsheet" },
+    opBudgetThisYear: { dbCollection: "op_budget_this_year", multiple: true, validation: "spreadsheet" },
+    opBudgetNextYear: { dbCollection: "op_budget_next_year", multiple: true, validation: "spreadsheet" },
+    legalRegistration: { dbCollection: "legal_registration", multiple: true, validation: "general-documents" },
+    avgTreeSurvivalRateProof: {
+      dbCollection: "avg_tree_survival_rate_proof",
+      multiple: true,
+      validation: "general-documents"
+    },
+    equityOwnership: { dbCollection: "equity_ownership", multiple: false, validation: "spreadsheet" },
+    loanStatus: { dbCollection: "loan_status", multiple: true, validation: "general-documents" },
+    restorationPhotos: { dbCollection: "restoration_photos", multiple: true, validation: "photos" },
+    organisationFile: { dbCollection: "organisation_file", multiple: true, validation: "general-documents" },
+    organisationPhoto: { dbCollection: "organisation_photo", multiple: true, validation: "photos" },
+    startupRecognitionCert: { dbCollection: "startup_recognition_cert", multiple: false, validation: "documents" },
+    fundingTypeDocuments: { dbCollection: "funding_type_documents", multiple: true, validation: "general-documents" },
+    consortiumProof: { dbCollection: "consortium_proof", multiple: true, validation: "general-documents" },
+    consortiumPartnershipAgreements: {
+      dbCollection: "consortium_partnership_agreements",
+      multiple: true,
+      validation: "general-documents"
+    },
+    organogram: { dbCollection: "organogram", multiple: true, validation: "general-documents" },
+    ownershipDocuments: { dbCollection: "ownership_documents", multiple: true, validation: "general-documents" },
+    carbonCreditsProof: { dbCollection: "carbon_credits_proof", multiple: true, validation: "general-documents" }
+  } as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -460,10 +498,6 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED, field: "trees_naturally_regenerated_3year" })
   treesNaturallyRegenerated3Year: number | null;
-
-  @AllowNull
-  @Column(TINYINT)
-  carbonCredits: number | null;
 
   @AllowNull
   @Column(TEXT)

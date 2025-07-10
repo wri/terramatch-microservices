@@ -40,6 +40,8 @@ import { DisturbanceDto } from "./dto/disturbance.dto";
 import { InvasiveDto } from "./dto/invasive.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
 import { StrataDto } from "./dto/strata.dto";
+import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -164,6 +166,14 @@ export class EntitiesService {
     }
 
     return new processorClass(entityType, uuid, entityModelClass, this, query) as unknown as AssociationProcessor<T, D>;
+  }
+
+  createMediaOwnerProcessor(mediaOwnerType: MediaOwnerType, mediaOwnerUuid: string) {
+    const mediaOwnerModelClass = MEDIA_OWNER_MODELS[mediaOwnerType];
+    if (mediaOwnerModelClass == null) {
+      throw new BadRequestException(`Media owner type invalid: ${mediaOwnerType}`);
+    }
+    return new MediaOwnerProcessor(mediaOwnerType, mediaOwnerUuid, mediaOwnerModelClass);
   }
 
   async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {

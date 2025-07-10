@@ -1,4 +1,4 @@
-import { IncludeOptions, literal, Op } from "sequelize";
+import { IncludeOptions, literal, Op, Sequelize } from "sequelize";
 import {
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,
@@ -14,7 +14,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -45,15 +45,26 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   private siteJoin: IncludeOptions = {
     model: Site,
-    include: [{ association: "project", attributes: ["uuid"] }],
+    include: [{ association: "project", attributes: ["uuid", "shortName"] }],
     attributes: ["id", "projectId", "name"],
     required: true
   };
 
+  get sql() {
+    if (Project.sequelize == null) throw new InternalServerErrorException("Model is missing sequelize connection");
+    return Project.sequelize;
+  }
+
   constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
 
-    this.findOptions.include = [{ model: PolygonGeometry, attributes: ["polygon"], required: true }, this.siteJoin];
+    this.findOptions.include = [
+      {
+        model: PolygonGeometry,
+        attributes: ["polygon"]
+      },
+      this.siteJoin
+    ];
 
     this.where({ isActive: true });
   }
@@ -68,7 +79,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
-  async filterProjectAttributes(cohort?: string, slug?: LandscapeSlug) {
+  async filterProjectAttributes(cohort?: string[], slug?: LandscapeSlug) {
     const subquery = Subquery.select(Project, "id");
     if (slug != null) {
       const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
@@ -79,11 +90,29 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
       subquery.eq("landscape", landscape.landscape);
     }
 
-    if (cohort != null) {
-      subquery.eq("cohort", cohort);
+    if (cohort != null && cohort.length > 0) {
+      const cohortConditions = cohort.map(c => `JSON_CONTAINS(cohort, ${this.sql.escape(`"${c}"`)})`).join(" OR ");
+
+      const projects = await Project.findAll({
+        where: {
+          ...(slug != null ? { landscape: (await LandscapeGeometry.findOne({ where: { slug } }))?.landscape } : {}),
+          [Op.and]: [Sequelize.literal(`(${cohortConditions})`)]
+        },
+        attributes: ["id"]
+      });
+
+      return this.where({ projectId: { [Op.in]: projects.map(p => p.id) } }, this.siteJoin);
     }
 
     return this.where({ projectId: { [Op.in]: subquery.literal } }, this.siteJoin);
+  }
+
+  async filterProjectShortNames(projectShortNames: string[]) {
+    const filterProjects = await Project.findAll({
+      where: { shortName: { [Op.in]: projectShortNames } },
+      attributes: ["id"]
+    });
+    return this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
   }
 
   async filterProjectUuids(projectUuids: string[]) {

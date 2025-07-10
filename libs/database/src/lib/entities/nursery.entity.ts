@@ -34,9 +34,13 @@ export class Nursery extends Model<Nursery> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
 
   static readonly MEDIA = {
-    file: { dbCollection: "file", multiple: true },
-    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true }
+    file: { dbCollection: "file", multiple: true, validation: "general-documents" },
+    otherAdditionalDocuments: {
+      dbCollection: "other_additional_documents",
+      multiple: true,
+      validation: "general-documents"
+    },
+    photos: { dbCollection: "photos", multiple: true, validation: "photos" }
   } as const;
 
   static approved() {

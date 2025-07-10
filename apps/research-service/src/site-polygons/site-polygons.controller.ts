@@ -64,6 +64,7 @@ export class SitePolygonsController {
     const {
       siteId,
       projectId,
+      projectShortNames,
       includeTestProjects,
       missingIndicator,
       presentIndicator,
@@ -116,6 +117,10 @@ export class SitePolygonsController {
 
     if (projectId != null) {
       await queryBuilder.filterProjectUuids(projectId);
+    }
+
+    if (projectShortNames != null) {
+      await queryBuilder.filterProjectShortNames(projectShortNames);
     }
 
     if (projectCohort != null || landscape != null) {

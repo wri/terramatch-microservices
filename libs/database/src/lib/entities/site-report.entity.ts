@@ -53,18 +53,30 @@ export class SiteReport extends Model<SiteReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
   static readonly MEDIA = {
-    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true },
-    media: { dbCollection: "media", multiple: true },
-    file: { dbCollection: "file", multiple: true },
-    otherAdditionalDocuments: { dbCollection: "other_additional_documents", multiple: true },
-    photos: { dbCollection: "photos", multiple: true },
-    treeSpecies: { dbCollection: "tree_species", multiple: true },
-    siteSubmission: { dbCollection: "site_submission", multiple: true },
-    documentFiles: { dbCollection: "document_files", multiple: true },
-    treePlantingUpload: { dbCollection: "tree_planting_upload", multiple: true },
-    anrPhotos: { dbCollection: "anr_photos", multiple: true },
-    soilWaterConservationUpload: { dbCollection: "soil_water_conservation_upload", multiple: true },
-    soilWaterConservationPhotos: { dbCollection: "soil_water_conservation_photos", multiple: true }
+    socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
+    media: { dbCollection: "media", multiple: true, validation: "general-documents" },
+    file: { dbCollection: "file", multiple: true, validation: "general-documents" },
+    otherAdditionalDocuments: {
+      dbCollection: "other_additional_documents",
+      multiple: true,
+      validation: "general-documents"
+    },
+    photos: { dbCollection: "photos", multiple: true, validation: "photos" },
+    treeSpecies: { dbCollection: "tree_species", multiple: true, validation: "general-documents" },
+    siteSubmission: { dbCollection: "site_submission", multiple: true, validation: "general-documents" },
+    documentFiles: { dbCollection: "document_files", multiple: true, validation: "general-documents" },
+    treePlantingUpload: { dbCollection: "tree_planting_upload", multiple: true, validation: "general-documents" },
+    anrPhotos: { dbCollection: "anr_photos", multiple: true, validation: "photos" },
+    soilWaterConservationUpload: {
+      dbCollection: "soil_water_conservation_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
+    soilWaterConservationPhotos: {
+      dbCollection: "soil_water_conservation_photos",
+      multiple: true,
+      validation: "photos"
+    }
   } as const;
 
   static incomplete() {

@@ -136,6 +136,50 @@ describe("ProjectProcessor", () => {
       await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
     });
 
+    it("filters by landscape, cohort and organisationType", async () => {
+      const orgForProfit = await OrganisationFactory.create({ type: "for-profit-organisation" });
+      const orgNonProfit = await OrganisationFactory.create({ type: "non-profit-organisation" });
+      const orgOther = await OrganisationFactory.create({ type: "other-organisation" });
+
+      const project1 = await ProjectFactory.create({
+        landscape: "Greater Rift Valley of Kenya",
+        cohort: ["terrafund"],
+        organisationId: orgForProfit.id
+      });
+      const project2 = await ProjectFactory.create({
+        landscape: "Ghana Cocoa Belt",
+        cohort: ["terrafund"],
+        organisationId: orgNonProfit.id
+      });
+      const project3 = await ProjectFactory.create({
+        landscape: "Greater Rift Valley of Kenya",
+        cohort: ["terrafund-landscapes"],
+        organisationId: orgOther.id
+      });
+      const project4 = await ProjectFactory.create({
+        landscape: "Lake Kivu & Rusizi River Basin",
+        cohort: ["enterprise"],
+        organisationId: orgForProfit.id
+      });
+
+      for (const p of [project1, project2, project3, project4]) {
+        p.organisation = await p.$get("organisation");
+      }
+
+      await expectProjects([project1, project3], { landscape: ["grv"] });
+      await expectProjects([project1, project2], { cohort: ["terrafund"] });
+      await expectProjects([project1, project4], { organisationType: ["for-profit-organisation"] });
+      await expectProjects([project2], { organisationType: ["non-profit-organisation"] });
+      await expectProjects([project1], {
+        landscape: ["grv"],
+        cohort: ["terrafund"],
+        organisationType: ["for-profit-organisation"]
+      });
+      await expectProjects([project1, project3, project4], {
+        landscape: ["grv", "ikr"]
+      });
+    });
+
     it("searches", async () => {
       const p1 = await ProjectFactory.create({ name: "Foo Bar" });
       const p2 = await ProjectFactory.create({ name: "Baz Foo" });
@@ -213,9 +257,10 @@ describe("ProjectProcessor", () => {
 
     describe("processSideload", () => {
       it("throws if the sideloads includes something unsupported", async () => {
-        await ProjectFactory.create();
+        const project = await ProjectFactory.create();
         policyService.getPermissions.mockResolvedValue(["projects-read"]);
         const document = buildJsonApi(ProjectLightDto);
+        await processor.loadAssociationData([project.id]);
         await expect(
           processor.addIndex(document, { sideloads: [{ entity: "siteReports", pageSize: 5 }] })
         ).rejects.toThrow(BadRequestException);
@@ -285,7 +330,7 @@ describe("ProjectProcessor", () => {
 
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const { models } = await processor.findMany({});
-      const { id, dto } = await processor.getLightDto(models[0]);
+      const { id, dto } = await processor.getLightDto(models[0], new ProjectLightDto());
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,

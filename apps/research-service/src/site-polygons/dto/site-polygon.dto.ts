@@ -54,6 +54,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
         projectId: sitePolygon.site?.project?.uuid,
+        projectShortName: sitePolygon.site?.project?.shortName,
         indicators: indicators ?? [],
         siteName: sitePolygon.site?.name,
         lightResource: true
@@ -74,14 +75,38 @@ export class SitePolygonLightDto extends HybridSupportDto {
   })
   siteId: string | null;
 
+  @ApiProperty({
+    description: "UUID of the associated polygon geometry",
+    nullable: true,
+    type: String
+  })
+  polygonUuid: string | null;
+
   @ApiProperty({ nullable: true, type: String })
   projectId?: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  projectShortName?: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
   plantStart: Date | null;
 
   @ApiProperty({ nullable: true, type: Number })
   calcArea: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Latitude of the site polygon"
+  })
+  lat: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Longitude of the site polygon"
+  })
+  long: number | null;
 
   @ApiProperty({
     type: "array",
@@ -117,6 +142,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
       projectId: sitePolygon.site?.project?.uuid,
+      projectShortName: sitePolygon.site?.project?.shortName,
       indicators: indicators ?? [],
       siteName: sitePolygon.site?.name,
       geometry: sitePolygon.polygon?.polygon,

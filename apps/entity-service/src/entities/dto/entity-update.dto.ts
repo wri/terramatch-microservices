@@ -9,15 +9,15 @@ export class EntityUpdateAttributes {
   @IsIn(ENTITY_STATUSES)
   @ApiProperty({
     description: "Request to change to the status of the given entity",
-    nullable: true,
+    required: false,
     enum: ENTITY_STATUSES
   })
-  status?: string | null;
+  status?: string;
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: "Specific feedback for the PD", nullable: true, type: String })
-  feedback?: string | null;
+  @ApiProperty({ description: "Specific feedback for the PD", required: false, type: String })
+  feedback?: string;
 
   @IsOptional()
   @IsArray()
@@ -26,15 +26,15 @@ export class EntityUpdateAttributes {
     isArray: true,
     type: String,
     description: "The fields in the entity form that need attention from the PD",
-    nullable: true
+    required: false
   })
-  feedbackFields?: string[] | null;
+  feedbackFields?: string[];
 }
 
 export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @IsOptional()
   @IsBoolean()
-  @ApiProperty({ description: "Update the isTest flag.", nullable: true })
+  @ApiProperty({ description: "Update the isTest flag.", required: false })
   isTest?: boolean;
 }
 
@@ -43,10 +43,10 @@ export class SiteUpdateAttributes extends EntityUpdateAttributes {
   @IsIn(SITE_STATUSES)
   @ApiProperty({
     description: "Request to change to the status of the given site",
-    nullable: true,
+    required: false,
     enum: SITE_STATUSES
   })
-  status?: string | null;
+  status?: string;
 }
 
 export class ReportUpdateAttributes extends EntityUpdateAttributes {
@@ -54,14 +54,14 @@ export class ReportUpdateAttributes extends EntityUpdateAttributes {
   @IsIn(REPORT_STATUSES)
   @ApiProperty({
     description: "Request to change to the status of the given report",
-    nullable: true,
+    required: false,
     enum: REPORT_STATUSES
   })
-  status?: string | null;
+  status?: string;
 
   @IsOptional()
   @IsBoolean()
-  @ApiProperty({ description: "Update the nothingToReport flag.", nullable: true })
+  @ApiProperty({ description: "Update the nothingToReport flag.", required: false })
   nothingToReport?: boolean;
 }
 

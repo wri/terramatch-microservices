@@ -7,6 +7,17 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
+  "status",
+  "updateRequestStatus",
+  "frameworkKey",
+  "nurseryUuid",
+  "organisationUuid",
+  "country",
+  "projectUuid",
+  "nothingToReport"
+];
+
 export class NurseryReportProcessor extends ReportProcessor<
   NurseryReport,
   NurseryReportLightDto,
@@ -87,18 +98,7 @@ export class NurseryReportProcessor extends ReportProcessor<
       projectUuid: "$nursery.project.uuid$"
     };
 
-    const termsToFilter = [
-      "status",
-      "updateRequestStatus",
-      "frameworkKey",
-      "nurseryUuid",
-      "organisationUuid",
-      "country",
-      "projectUuid",
-      "nothingToReport"
-    ];
-
-    termsToFilter.forEach(term => {
+    SIMPLE_FILTERS.forEach(term => {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) {
         builder.where({

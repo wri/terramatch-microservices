@@ -19,6 +19,17 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
+  "status",
+  "updateRequestStatus",
+  "frameworkKey",
+  "siteUuid",
+  "organisationUuid",
+  "country",
+  "projectUuid",
+  "nothingToReport"
+];
+
 export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
   SiteReportLightDto,
@@ -99,16 +110,7 @@ export class SiteReportProcessor extends ReportProcessor<
       projectUuid: "$site.project.uuid$"
     };
 
-    for (const term of [
-      "status",
-      "updateRequestStatus",
-      "frameworkKey",
-      "siteUuid",
-      "organisationUuid",
-      "country",
-      "projectUuid",
-      "nothingToReport"
-    ]) {
+    for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
         const field = associationFieldMap[term] ?? term;
         builder.where({

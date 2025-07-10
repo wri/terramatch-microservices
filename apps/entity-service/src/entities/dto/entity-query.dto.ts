@@ -45,6 +45,14 @@ export class EntityQueryDto extends IndexQueryDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  frameworkKey?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  organisationUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   country?: string;
 
   @ApiProperty({ required: false })

@@ -35,7 +35,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   projectId?: string[];
 
   @ApiProperty({
-    name: "prprojectShortNames[]",
+    name: "projectShortNames[]",
     isArray: true,
     required: false,
     description: "Filter results by project short name(s)"

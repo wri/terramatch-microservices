@@ -24,6 +24,15 @@ import {
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
 
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
+  "status",
+  "updateRequestStatus",
+  "frameworkKey",
+  "projectUuid",
+  "organisationUuid",
+  "country"
+];
+
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, SiteUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
@@ -87,14 +96,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       projectUuid: "$project.uuid$"
     };
 
-    for (const term of [
-      "status",
-      "updateRequestStatus",
-      "frameworkKey",
-      "projectUuid",
-      "organisationUuid",
-      "country"
-    ]) {
+    for (const term of SIMPLE_FILTERS) {
       const field = associationFieldMap[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }

@@ -1,17 +1,45 @@
-import { IsIn, IsOptional } from "class-validator";
+import { IsIn, IsOptional, IsArray, IsString } from "class-validator";
 import { TASK_STATUSES, TaskStatus } from "@terramatch-microservices/database/constants/status";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { Type } from "class-transformer";
 
-class TaskUpdateAttributes {
+export class TaskUpdateAttributes {
   @IsOptional()
   @IsIn(TASK_STATUSES)
   @ApiProperty({
     description: "Request to change to the status of the given entity",
-    nullable: true,
+    required: false,
     enum: TASK_STATUSES
   })
   status?: TaskStatus | null;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ description: "Specific feedback for the PD", required: false, type: String })
+  feedback?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
+    description: "UUIDs of site reports to mark as 'Nothing to report'",
+    isArray: true,
+    type: String,
+    required: false
+  })
+  siteReportNothingToReportUuids?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
+    description: "UUIDs of nursery reports to mark as 'Nothing to report'",
+    isArray: true,
+    type: String,
+    required: false
+  })
+  nurseryReportNothingToReportUuids?: string[];
 }
 
 export class TaskUpdateBody extends JsonApiBodyDto(

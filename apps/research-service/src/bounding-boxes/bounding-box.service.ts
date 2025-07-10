@@ -4,6 +4,8 @@ import {
   LandscapeGeometry,
   PolygonGeometry,
   Project,
+  ProjectPitch,
+  ProjectPolygon,
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
@@ -19,6 +21,7 @@ enum EntityType {
   POLYGON = "Polygon",
   SITE = "Site",
   PROJECT = "Project",
+  PROJECT_PITCH = "ProjectPitch",
   LANDSCAPE = "Landscape",
   COUNTRY = "Country"
 }
@@ -179,6 +182,38 @@ export class BoundingBoxService {
     }
 
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid);
+
+    return this.getBoundingBoxFromGeometries(
+      PolygonGeometry,
+      { uuid: { [Op.in]: polygonUuids } },
+      "geom",
+      EntityType.POLYGON
+    );
+  }
+
+  async getProjectPitchBoundingBox(projectPitchUuid: string): Promise<BoundingBoxDto> {
+    const projectPitch = await ProjectPitch.findOne({
+      where: { uuid: projectPitchUuid },
+      attributes: ["id", "uuid", "organisationId"]
+    });
+
+    if (projectPitch === null) {
+      throw new NotFoundException(`${EntityType.PROJECT_PITCH} with UUID ${projectPitchUuid} not found`);
+    }
+
+    const projectPolygons = await ProjectPolygon.findAll({
+      where: {
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      },
+      attributes: ["polyUuid"]
+    });
+
+    if (projectPolygons.length === 0) {
+      throw new NotFoundException(`No polygons found for project pitch with UUID ${projectPitchUuid}`);
+    }
+
+    const polygonUuids = projectPolygons.map(pp => pp.polyUuid);
 
     return this.getBoundingBoxFromGeometries(
       PolygonGeometry,

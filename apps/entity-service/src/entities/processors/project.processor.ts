@@ -19,7 +19,7 @@ import { Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException, InternalServerErrorException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
@@ -35,6 +35,11 @@ export class ProjectProcessor extends EntityProcessor<
 > {
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;
+
+  get sql() {
+    if (Project.sequelize == null) throw new InternalServerErrorException("Model is missing sequelize connection");
+    return Project.sequelize;
+  }
 
   async findOne(uuid: string) {
     return await Project.findOne({
@@ -104,7 +109,10 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (query.cohort != null && query.cohort.length > 0) {
-      builder.where({ cohort: { [Op.in]: query.cohort } });
+      const cohortConditions = query.cohort
+        .map(cohort => `JSON_CONTAINS(cohort, ${this.sql.escape(`"${cohort}"`)})`)
+        .join(" OR ");
+      builder.where(Sequelize.literal(`(${cohortConditions})`));
     }
 
     if (query.shortName != null) {

@@ -30,6 +30,13 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "nothingToReport"
 ];
 
+const ASSOCIATION_FIELD_MAP = {
+  siteUuid: "$site.uuid$",
+  organisationUuid: "$site.project.organisation.uuid$",
+  country: "$site.project.country$",
+  projectUuid: "$site.project.uuid$"
+};
+
 export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
   SiteReportLightDto,
@@ -103,16 +110,9 @@ export class SiteReportProcessor extends ReportProcessor<
       });
     }
 
-    const associationFieldMap = {
-      siteUuid: "$site.uuid$",
-      organisationUuid: "$site.project.organisation.uuid$",
-      country: "$site.project.country$",
-      projectUuid: "$site.project.uuid$"
-    };
-
     for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
-        const field = associationFieldMap[term] ?? term;
+        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
         builder.where({
           [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
         });

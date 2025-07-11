@@ -84,6 +84,10 @@ export class TreeService {
           ]
         },
         attributes: ["taxonId", "scientificName"],
+        order: [
+          [fn("length", col("scientificName")), "ASC"],
+          ["scientificName", "ASC"]
+        ],
         limit: 10
       })
     ).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));

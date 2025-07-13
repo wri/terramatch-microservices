@@ -27,6 +27,21 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
+  "country",
+  "status",
+  "updateRequestStatus",
+  "frameworkKey",
+  "projectUuid",
+  "organisationUuid"
+];
+
+const ASSOCIATION_FIELD_MAP = {
+  projectUuid: "uuid",
+  organisationUuid: "$organisation.uuid$",
+  organisationType: "$organisation.type$"
+};
+
 export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
@@ -81,21 +96,8 @@ export class ProjectProcessor extends EntityProcessor<
       builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
-    const associationFieldMap = {
-      projectUuid: "uuid",
-      organisationUuid: "$organisation.uuid$",
-      organisationType: "$organisation.type$"
-    };
-
-    for (const term of [
-      "country",
-      "status",
-      "updateRequestStatus",
-      "frameworkKey",
-      "projectUuid",
-      "organisationUuid"
-    ]) {
-      const field = associationFieldMap[term] ?? term;
+    for (const term of SIMPLE_FILTERS) {
+      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 

@@ -2,25 +2,33 @@ import { Injectable, BadRequestException } from "@nestjs/common";
 import { DashboardEntityProcessor } from "./processors/dashboard-entity-processor";
 import { DashboardProjectsProcessor } from "./processors/dashboard-projects.processor";
 import { CacheService } from "./dto/cache.service";
+import { Project } from "@terramatch-microservices/database/entities";
+import { DashboardEntityDto } from "./dto/dashboard-entity.dto";
+import { DashboardEntity } from "@terramatch-microservices/database/constants";
 
 export const DASHBOARD_PROCESSORS = {
   dashboardProjects: DashboardProjectsProcessor
 } as const;
 
-export type DashboardEntity = keyof typeof DASHBOARD_PROCESSORS;
-export const DASHBOARD_ENTITIES = Object.keys(DASHBOARD_PROCESSORS) as DashboardEntity[];
-
 @Injectable()
 export class DashboardEntitiesService {
   constructor(private readonly cacheService: CacheService) {}
-  createDashboardProcessor(entity: DashboardEntity): DashboardEntityProcessor<any, any, any> {
+
+  createDashboardProcessor<T extends Project>(
+    entity: DashboardEntity
+  ): DashboardEntityProcessor<T, DashboardEntityDto, DashboardEntityDto> {
     const processorClass = DASHBOARD_PROCESSORS[entity];
     if (processorClass == null) {
       throw new BadRequestException(`Dashboard entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this.cacheService) as unknown as DashboardEntityProcessor<any, any, any>;
+    return new processorClass(this.cacheService) as unknown as DashboardEntityProcessor<
+      T,
+      DashboardEntityDto,
+      DashboardEntityDto
+    >;
   }
+
   getCacheService(): CacheService {
     return this.cacheService;
   }

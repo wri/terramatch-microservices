@@ -1,10 +1,12 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { DashboardEntityDto } from "./dashboard-entity.dto";
 
 @JsonApiDto({ type: "dashboardProjects" })
-export class DashboardProjectsLightDto {
+export class DashboardProjectsLightDto extends DashboardEntityDto {
   constructor(data: DashboardProjectsLightDto) {
+    super();
     populateDto<DashboardProjectsLightDto>(this, data);
   }
 

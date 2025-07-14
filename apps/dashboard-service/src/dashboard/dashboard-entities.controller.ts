@@ -4,9 +4,10 @@ import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { DashboardEntitiesService, DASHBOARD_ENTITIES } from "./dashboard-entities.service";
+import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
-import { DashboardEntityDto, DashboardEntityParamsDto } from "./dto/dashboard-entity.dto";
+import { DashboardEntityWithUuidDto, DashboardEntityParamsDto } from "./dto/dashboard-entity.dto";
+import { DASHBOARD_ENTITIES } from "@terramatch-microservices/database/constants";
 
 @Controller("dashboard/v3")
 export class DashboardEntitiesController {
@@ -56,7 +57,7 @@ export class DashboardEntitiesController {
     operationId: "dashboardEntityGet",
     summary: "Get a single dashboard entity with full data"
   })
-  async dashboardEntityGet(@Param() { entity, uuid }: DashboardEntityDto) {
+  async dashboardEntityGet(@Param() { entity, uuid }: DashboardEntityWithUuidDto) {
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
 
     const model = await processor.findOne(uuid);

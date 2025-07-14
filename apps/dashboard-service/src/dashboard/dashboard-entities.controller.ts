@@ -65,7 +65,6 @@ export class DashboardEntitiesController {
     }
 
     // TODO: Add policy checks here later
-    // await this.policyService.authorize("read", model);
 
     const { id, dto } = await processor.getFullDto(model);
     const document = buildJsonApi(processor.FULL_DTO);

@@ -18,6 +18,18 @@ const ORGANISATION_ASSOCIATION_LIGHT: Includeable = {
   attributes: ORGANISATION_FIELDS_BASE
 } as const;
 
+const VALID_FILTER_KEYS: (keyof ImpactStoryQueryDto)[] = [
+  "title",
+  "status",
+  "createdAt",
+  "organisationUuid",
+  "organisationType",
+  "country",
+  "uuid",
+  "projectUuid",
+  "category"
+];
+
 @Injectable()
 export class ImpactStoryService {
   async getImpactStory(uuid: string) {
@@ -77,20 +89,8 @@ export class ImpactStoryService {
       country: "$organisation.countries$"
     };
 
-    const validFilterKeys = [
-      "title",
-      "status",
-      "createdAt",
-      "organisationUuid",
-      "organisationType",
-      "country",
-      "uuid",
-      "projectUuid",
-      "category"
-    ];
-
     for (const key of Object.keys(query)) {
-      if (!["page", "sort", "search", ...validFilterKeys].includes(key)) {
+      if (!["page", "sort", "search", ...VALID_FILTER_KEYS].includes(key)) {
         throw new BadRequestException(`Invalid filter key: ${key}`);
       }
     }

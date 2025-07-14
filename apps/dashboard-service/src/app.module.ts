@@ -18,6 +18,8 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { DashboardCacheWarmupService } from "./dashboard/warmup/dashboard-cache-warmup.service";
 import { DashboardEntitiesController } from "./dashboard/dashboard-entities.controller";
 import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service";
+import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
+import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
 
 @Module({
   imports: [
@@ -43,7 +45,8 @@ import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service
     TotalSectionHeaderController,
     TreeRestorationGoalController,
     TotalJobsCreatedController,
-    DashboardEntitiesController
+    DashboardEntitiesController,
+    HectaresRestorationController
   ],
   providers: [
     {
@@ -56,7 +59,8 @@ import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service
     TreeRestorationGoalService,
     TotalJobsCreatedService,
     DashboardCacheWarmupService,
-    DashboardEntitiesService
+    DashboardEntitiesService,
+    HectaresRestorationService
   ]
 })
 export class AppModule {}

@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
-import { UserNewRequest } from "./dto/user-new-request.dto";
+import { UserCreateAttributes } from "./dto/user-create.dto";
 import crypto from "node:crypto";
 import { omit } from "lodash";
 import bcrypt from "bcryptjs";
@@ -26,7 +26,7 @@ export class UserCreationService {
 
   constructor(private readonly emailService: EmailService) {}
 
-  async createNewUser(request: UserNewRequest): Promise<User> {
+  async createNewUser(request: UserCreateAttributes): Promise<User> {
     const role = request.role;
     if (!this.roles.includes(role)) {
       throw new UnprocessableEntityException("Role not valid");

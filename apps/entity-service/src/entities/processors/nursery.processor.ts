@@ -7,6 +7,21 @@ import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
+  "status",
+  "updateRequestStatus",
+  "frameworkKey",
+  "organisationUuid",
+  "country",
+  "projectUuid"
+];
+
+const ASSOCIATION_FIELD_MAP = {
+  organisationUuid: "$project.organisation.uuid$",
+  country: "$project.country$",
+  projectUuid: "$project.uuid$"
+};
+
 export class NurseryProcessor extends EntityProcessor<
   Nursery,
   NurseryLightDto,
@@ -61,22 +76,9 @@ export class NurseryProcessor extends EntityProcessor<
       builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
-    const associationFieldMap = {
-      organisationUuid: "$project.organisation.uuid$",
-      country: "$project.country$",
-      projectUuid: "$project.uuid$"
-    };
-
-    for (const term of [
-      "status",
-      "updateRequestStatus",
-      "frameworkKey",
-      "organisationUuid",
-      "country",
-      "projectUuid"
-    ]) {
+    for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
-        const field = associationFieldMap[term] ?? term;
+        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
         builder.where({ [field]: query[term] });
       }
     }

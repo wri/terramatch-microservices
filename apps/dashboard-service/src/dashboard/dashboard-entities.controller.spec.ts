@@ -1,5 +1,4 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { NotFoundException } from "@nestjs/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardEntitiesController } from "./dashboard-entities.controller";
 import { DashboardEntitiesService } from "./dashboard-entities.service";

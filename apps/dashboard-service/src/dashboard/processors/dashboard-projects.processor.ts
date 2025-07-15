@@ -57,17 +57,40 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       long: project.long,
       organisationType: project.organisation?.type ?? null,
       treesGrownGoal: project.treesGrownGoal,
-      totalSites: totalSites
+      totalSites: totalSites,
+      is_light: true
     });
 
     return { id: project.uuid, dto };
   }
 
   async getFullDto(project: Project): Promise<DtoResult<DashboardProjectsFullDto>> {
-    const { dto: lightDto } = await this.getLightDto(project);
+    const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
+
+    const [totalSites, totalHectaresRestoredSum, treesPlantedCount] = await Promise.all([
+      Site.approved().project(project.id).count(),
+      SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
+      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0
+    ]);
 
     const fullDto = new DashboardProjectsFullDto({
-      ...lightDto
+      uuid: project.uuid,
+      country: project.country,
+      frameworkKey: project.frameworkKey,
+      name: project.name,
+      organisationName: project.organisation?.name ?? null,
+      treesPlantedCount: treesPlantedCount,
+      totalHectaresRestoredSum: totalHectaresRestoredSum,
+      lat: project.lat,
+      long: project.long,
+      organisationType: project.organisation?.type ?? null,
+      treesGrownGoal: project.treesGrownGoal,
+      totalSites: totalSites,
+      is_light: false, // Full DTO means this is not the light version
+      cohort: project.cohort,
+      objectives: project.objectives ?? null,
+      landTenureProjectArea: project.landTenureProjectArea
     });
 
     return { id: project.uuid, dto: fullDto };

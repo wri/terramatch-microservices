@@ -42,7 +42,8 @@ export class DashboardProjectsService {
           long: project.long,
           organisationType: project.organisation?.type ?? null,
           treesGrownGoal: project.treesGrownGoal,
-          totalSites: totalSites
+          totalSites: totalSites,
+          is_light: true
         });
       })
     );

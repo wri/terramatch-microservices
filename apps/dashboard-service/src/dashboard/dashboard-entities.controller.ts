@@ -8,27 +8,60 @@ import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
 import { DashboardEntityWithUuidDto, DashboardEntityParamsDto } from "./dto/dashboard-entity.dto";
 import { DASHBOARD_ENTITIES } from "@terramatch-microservices/database/constants";
+import { ProjectAuthService } from "./services/project-auth.service";
+import { CurrentUser } from "./decorators/current-user.decorator";
+import { User } from "@terramatch-microservices/database/entities";
 
 @Controller("dashboard/v3")
 export class DashboardEntitiesController {
-  constructor(private readonly dashboardEntitiesService: DashboardEntitiesService) {}
+  constructor(
+    private readonly dashboardEntitiesService: DashboardEntitiesService,
+    private readonly projectAuthService: ProjectAuthService
+  ) {}
 
   @Get(":entity")
   @NoBearerAuth
   @ApiParam({ name: "entity", enum: DASHBOARD_ENTITIES, description: "Dashboard entity type" })
-  @JsonApiResponse([DashboardProjectsLightDto])
+  @JsonApiResponse([DashboardProjectsLightDto, DashboardProjectsFullDto])
   @ApiOperation({
     operationId: "dashboardEntityIndex",
-    summary: "Get a list of dashboard entities with light data"
+    summary:
+      "Get a list of dashboard entities. Returns full data for specific project if projectUuid is provided and user is authenticated."
   })
-  async dashboardEntityIndex(@Param() { entity }: DashboardEntityParamsDto, @Query() query: DashboardQueryDto) {
+  async dashboardEntityIndex(
+    @Param() { entity }: DashboardEntityParamsDto,
+    @Query() query: DashboardQueryDto,
+    @CurrentUser() user: User | null
+  ) {
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
     const cacheService = this.dashboardEntitiesService.getCacheService();
 
+    if (query.projectUuid !== undefined && query.projectUuid !== null && query.projectUuid.trim() !== "") {
+      const authResult = await this.projectAuthService.checkUserProjectAccess(query.projectUuid, user);
+
+      const models = await processor.findMany(query);
+
+      if (models.length === 0) {
+        throw new NotFoundException(`${entity} with UUID ${query.projectUuid} not found`);
+      }
+
+      const project = models[0];
+
+      if (authResult.allowed === true) {
+        const { id, dto } = await processor.getFullDto(project);
+        const document = buildJsonApi(processor.FULL_DTO);
+        document.addData(id, dto);
+        return document.serialize();
+      } else {
+        const { id, dto } = await processor.getLightDto(project);
+        const document = buildJsonApi(processor.LIGHT_DTO);
+        document.addData(id, dto);
+        return document.serialize();
+      }
+    }
+
     const cacheKey = `dashboard:${entity}|${cacheService.getCacheKeyFromQuery(query)}`;
-
     const models = await cacheService.get(cacheKey, () => processor.findMany(query));
-
     const dtoResults = await processor.getLightDtos(models);
 
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });

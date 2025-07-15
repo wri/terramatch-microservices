@@ -45,6 +45,9 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
 
   @ApiProperty()
   totalSites: number;
+
+  @ApiProperty({ description: "Whether this is a light version of the project data" })
+  is_light: boolean;
 }
 
 @JsonApiDto({ type: "dashboardProjects" })
@@ -53,5 +56,13 @@ export class DashboardProjectsFullDto extends DashboardProjectsLightDto {
     super(data);
     populateDto<DashboardProjectsFullDto>(this, data);
   }
-  // TODO add fields for project view
+
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  cohort: string[] | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  objectives: string | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  landTenureProjectArea: string[] | null;
 }

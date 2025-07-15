@@ -237,7 +237,7 @@ export abstract class AirtableEntity<ModelType extends Model<ModelType>, Associa
     // UUIDs set.
     for (const type of Object.keys(byType)) {
       if (typeMappings[type] == null) {
-        this.logger.error(`Speciesable type not recognized, ignoring [${type}]`);
+        this.logger.error(`${String(typeColumn)} not recognized, ignoring [${type}]`);
         continue;
       }
 

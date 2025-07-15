@@ -36,6 +36,12 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "organisationUuid"
 ];
 
+const ASSOCIATION_FIELD_MAP = {
+  projectUuid: "uuid",
+  organisationUuid: "$organisation.uuid$",
+  organisationType: "$organisation.type$"
+};
+
 export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
@@ -90,14 +96,8 @@ export class ProjectProcessor extends EntityProcessor<
       builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
-    const associationFieldMap = {
-      projectUuid: "uuid",
-      organisationUuid: "$organisation.uuid$",
-      organisationType: "$organisation.type$"
-    };
-
     for (const term of SIMPLE_FILTERS) {
-      const field = associationFieldMap[term] ?? term;
+      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 

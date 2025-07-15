@@ -33,6 +33,12 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country"
 ];
 
+const ASSOCIATION_FIELD_MAP = {
+  organisationUuid: "$project.organisation.uuid$",
+  country: "$project.country$",
+  projectUuid: "$project.uuid$"
+};
+
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, SiteUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
@@ -90,14 +96,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       });
     }
 
-    const associationFieldMap = {
-      organisationUuid: "$project.organisation.uuid$",
-      country: "$project.country$",
-      projectUuid: "$project.uuid$"
-    };
-
     for (const term of SIMPLE_FILTERS) {
-      const field = associationFieldMap[term] ?? term;
+      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 

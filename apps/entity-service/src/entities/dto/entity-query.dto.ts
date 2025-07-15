@@ -43,9 +43,10 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   searchFilter?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, isArray: true })
   @IsOptional()
-  frameworkKey?: string;
+  @IsArray()
+  frameworkKey?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()

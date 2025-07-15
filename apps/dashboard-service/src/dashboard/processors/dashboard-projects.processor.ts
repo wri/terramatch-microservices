@@ -1,8 +1,18 @@
-import { Project, Site, SitePolygon, TreeSpecies, SiteReport } from "@terramatch-microservices/database/entities";
+import {
+  Project,
+  Site,
+  SitePolygon,
+  TreeSpecies,
+  SiteReport,
+  DemographicEntry,
+  Demographic,
+  ProjectReport
+} from "@terramatch-microservices/database/entities";
 import { DashboardEntityProcessor, DtoResult } from "./dashboard-entity-processor";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dashboard-projects.dto";
 import { DashboardQueryDto } from "../dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
+import { Op } from "sequelize";
 
 export class DashboardProjectsProcessor extends DashboardEntityProcessor<
   Project,
@@ -35,14 +45,31 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
     return await projectsBuilder.execute();
   }
 
+  protected async getTotalJobs(projectId: number) {
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.in]: Demographic.idsSubquery(
+              ProjectReport.approvedIdsSubquery(projectId),
+              ProjectReport.LARAVEL_TYPE,
+              Demographic.JOBS_TYPE
+            )
+          }
+        }
+      })) ?? 0
+    );
+  }
+
   async getLightDto(project: Project): Promise<DtoResult<DashboardProjectsLightDto>> {
     const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
-    const [totalSites, totalHectaresRestoredSum, treesPlantedCount] = await Promise.all([
+    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
       Site.approved().project(project.id).count(),
       SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
-      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0
+      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
+      this.getTotalJobs(project.id)
     ]);
 
     const dto = new DashboardProjectsLightDto({
@@ -58,7 +85,8 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       organisationType: project.organisation?.type ?? null,
       treesGrownGoal: project.treesGrownGoal,
       totalSites: totalSites,
-      is_light: true
+      is_light: true,
+      totalJobsCreated: totalJobsCreated
     });
 
     return { id: project.uuid, dto };
@@ -68,10 +96,11 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
     const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
-    const [totalSites, totalHectaresRestoredSum, treesPlantedCount] = await Promise.all([
+    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
       Site.approved().project(project.id).count(),
       SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
-      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0
+      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
+      this.getTotalJobs(project.id)
     ]);
 
     const fullDto = new DashboardProjectsFullDto({
@@ -87,7 +116,8 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       organisationType: project.organisation?.type ?? null,
       treesGrownGoal: project.treesGrownGoal,
       totalSites: totalSites,
-      is_light: false, // Full DTO means this is not the light version
+      is_light: false,
+      totalJobsCreated: totalJobsCreated,
       cohort: project.cohort,
       objectives: project.objectives ?? null,
       landTenureProjectArea: project.landTenureProjectArea

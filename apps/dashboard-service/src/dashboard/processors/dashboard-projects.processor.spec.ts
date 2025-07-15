@@ -2,7 +2,16 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardProjectsProcessor } from "./dashboard-projects.processor";
 import { CacheService } from "../dto/cache.service";
-import { Project, Site, SitePolygon, TreeSpecies, SiteReport } from "@terramatch-microservices/database/entities";
+import {
+  Project,
+  Site,
+  SitePolygon,
+  TreeSpecies,
+  SiteReport,
+  DemographicEntry,
+  Demographic,
+  ProjectReport
+} from "@terramatch-microservices/database/entities";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dashboard-projects.dto";
 
 describe("DashboardProjectsProcessor", () => {
@@ -99,6 +108,11 @@ describe("DashboardProjectsProcessor", () => {
         siteReports: jest.fn().mockReturnValue({ sum: jest.fn().mockResolvedValue(1000) })
       })
     } as never);
+    jest.spyOn(ProjectReport, "approvedIdsSubquery").mockReturnValue("query3" as never);
+    jest.spyOn(Demographic, "idsSubquery").mockReturnValue("query4" as never);
+    jest.spyOn(DemographicEntry, "gender").mockReturnValue({
+      sum: jest.fn().mockResolvedValue(25)
+    } as never);
 
     const result = await processor.getLightDto(mockProject);
 
@@ -120,7 +134,8 @@ describe("DashboardProjectsProcessor", () => {
       organisationName: "Test Org",
       organisationType: "NGO",
       treesGrownGoal: 5000,
-      totalSites: 5
+      totalSites: 5,
+      totalJobsCreated: 25
     });
 
     jest.spyOn(processor, "getLightDto").mockResolvedValue({ id: "test-uuid", dto: mockLightDto });

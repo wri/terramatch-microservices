@@ -67,7 +67,8 @@ describe("DashboardEntitiesController", () => {
           organisationName: "Test Org",
           organisationType: "NGO",
           treesGrownGoal: 5000,
-          totalSites: 5
+          totalSites: 5,
+          totalJobsCreated: 25
         })
       },
       {
@@ -84,7 +85,8 @@ describe("DashboardEntitiesController", () => {
           organisationName: "Test Org 2",
           organisationType: "Corporation",
           treesGrownGoal: 10000,
-          totalSites: 10
+          totalSites: 10,
+          totalJobsCreated: 50
         })
       }
     ];
@@ -133,7 +135,8 @@ describe("DashboardEntitiesController", () => {
         organisationName: "Test Org",
         organisationType: "NGO",
         treesGrownGoal: 5000,
-        totalSites: 5
+        totalSites: 5,
+        totalJobsCreated: 25
       })
     };
 

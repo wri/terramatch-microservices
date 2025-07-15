@@ -48,6 +48,8 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
 
   @ApiProperty({ description: "Whether this is a light version of the project data" })
   is_light: boolean;
+  @ApiProperty({ nullable: true, type: Number })
+  totalJobsCreated: number | null;
 }
 
 @JsonApiDto({ type: "dashboardProjects" })

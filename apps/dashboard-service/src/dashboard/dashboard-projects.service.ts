@@ -1,11 +1,37 @@
 import { Injectable } from "@nestjs/common";
-import { Project, Site, SitePolygon, TreeSpecies, SiteReport } from "@terramatch-microservices/database/entities";
+import {
+  Project,
+  Site,
+  SitePolygon,
+  TreeSpecies,
+  SiteReport,
+  DemographicEntry,
+  Demographic,
+  ProjectReport
+} from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 
 @Injectable()
 export class DashboardProjectsService {
+  protected async getTotalJobs(projectId: number) {
+    return (
+      (await DemographicEntry.gender().sum("amount", {
+        where: {
+          demographicId: {
+            [Op.in]: Demographic.idsSubquery(
+              ProjectReport.approvedIdsSubquery(projectId),
+              ProjectReport.LARAVEL_TYPE,
+              Demographic.JOBS_TYPE
+            )
+          }
+        }
+      })) ?? 0
+    );
+  }
+
   async getDashboardProjects(query: DashboardQueryDto): Promise<DashboardProjectsLightDto[]> {
     const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
       {
@@ -20,15 +46,13 @@ export class DashboardProjectsService {
       projects.map(async project => {
         const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
         const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
-        const totalSites = await Site.approved().project(project.id).count();
-        const totalHectaresRestoredSum =
-          (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea")) ?? 0;
 
-        const treesPlantedCount =
-          (await TreeSpecies.visible()
-            .collection("tree-planted")
-            .siteReports(approvedSiteReportsQuery)
-            .sum("amount")) ?? 0;
+        const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
+          Site.approved().project(project.id).count(),
+          SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
+          TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
+          this.getTotalJobs(project.id)
+        ]);
 
         return new DashboardProjectsLightDto({
           uuid: project.uuid,
@@ -43,7 +67,8 @@ export class DashboardProjectsService {
           organisationType: project.organisation?.type ?? null,
           treesGrownGoal: project.treesGrownGoal,
           totalSites: totalSites,
-          is_light: true
+          is_light: true,
+          totalJobsCreated: totalJobsCreated
         });
       })
     );

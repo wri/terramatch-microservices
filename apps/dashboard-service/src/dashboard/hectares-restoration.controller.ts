@@ -1,4 +1,4 @@
-import { Get, Query, Controller } from "@nestjs/common";
+import { Get, Query, Controller, BadRequestException } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -20,6 +20,9 @@ export class HectaresRestorationController {
   @JsonApiResponse([HectareRestorationDto])
   @ApiOperation({ operationId: "getHectaresRestoration", summary: "Get hectares restoration" })
   async getHectaresRestoration(@Query() query: DashboardQueryDto) {
+    if (query.projectUuid == null) {
+      throw new BadRequestException("Invalid projectUuid");
+    }
     const cacheKey = `dashboard:hectares-restoration|${this.cacheService.getCacheKeyFromQuery(query)}`;
     const cachedData = await this.cacheService.get(cacheKey, () => this.hectaresRestorationService.getResults(query));
     const document = buildJsonApi(HectareRestorationDto);

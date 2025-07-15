@@ -49,7 +49,7 @@ describe("HectaresRestorationController", () => {
   it("should return HectareRestorationDto if there is no cached data", async () => {
     cacheService.get.mockResolvedValue(null);
 
-    const query = {} as DashboardQueryDto;
+    const query = { projectUuid: "uuid1" } as DashboardQueryDto;
 
     hectaresRestorationService.getResults.mockResolvedValue(getTotalsResult());
 
@@ -68,7 +68,7 @@ describe("HectaresRestorationController", () => {
   it("should return HectareRestorationDto if cached data exists", async () => {
     cacheService.get.mockResolvedValue(getTotalsResult());
 
-    const query = {} as DashboardQueryDto;
+    const query = { projectUuid: "uuid1" } as DashboardQueryDto;
     const response = await controller.getHectaresRestoration(query);
 
     expect(response).toBeDefined();

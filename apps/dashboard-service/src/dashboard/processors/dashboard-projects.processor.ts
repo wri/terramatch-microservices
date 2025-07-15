@@ -13,6 +13,8 @@ import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dash
 import { DashboardQueryDto } from "../dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
 import { Op } from "sequelize";
+import { PolicyService } from "@terramatch-microservices/common";
+import { CacheService } from "../dto/cache.service";
 
 export class DashboardProjectsProcessor extends DashboardEntityProcessor<
   Project,
@@ -21,6 +23,10 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
 > {
   readonly LIGHT_DTO = DashboardProjectsLightDto;
   readonly FULL_DTO = DashboardProjectsFullDto;
+
+  constructor(protected readonly cacheService: CacheService, protected readonly policyService: PolicyService) {
+    super(cacheService, policyService);
+  }
 
   async findOne(uuid: string): Promise<Project | null> {
     return await Project.findOne({

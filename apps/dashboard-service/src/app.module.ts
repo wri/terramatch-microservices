@@ -20,7 +20,7 @@ import { DashboardEntitiesController } from "./dashboard/dashboard-entities.cont
 import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service";
 import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
 import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
-import { ProjectAuthService } from "./dashboard/services/project-auth.service";
+import { DashboardAuthService } from "./dashboard/services/dashboard-auth.service";
 
 @Module({
   imports: [
@@ -62,7 +62,7 @@ import { ProjectAuthService } from "./dashboard/services/project-auth.service";
     DashboardCacheWarmupService,
     DashboardEntitiesService,
     HectaresRestorationService,
-    ProjectAuthService
+    DashboardAuthService
   ]
 })
 export class AppModule {}

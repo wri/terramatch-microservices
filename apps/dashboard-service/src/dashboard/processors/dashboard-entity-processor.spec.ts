@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardEntityProcessor } from "./dashboard-entity-processor";
 import { CacheService } from "../dto/cache.service";
+import { PolicyService } from "@terramatch-microservices/common";
 
 interface TestModel {
   uuid: string;
@@ -34,15 +35,17 @@ class TestProcessor extends DashboardEntityProcessor<TestModel, MockLightDto, Mo
 describe("DashboardEntityProcessor", () => {
   let processor: TestProcessor;
   let cacheService: DeepMocked<CacheService>;
+  let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
     cacheService = createMock<CacheService>();
+    policyService = createMock<PolicyService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         {
           provide: TestProcessor,
-          useFactory: () => new TestProcessor(cacheService)
+          useFactory: () => new TestProcessor(cacheService, policyService)
         }
       ]
     }).compile();

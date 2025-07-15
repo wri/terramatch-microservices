@@ -26,7 +26,22 @@ export const CurrentUser = createParamDecorator(async (data: unknown, ctx: Execu
 
     return await User.findOne({
       where: { id: payload.sub },
-      attributes: ["id", "emailAddress", "firstName", "lastName", "organisationId"]
+      attributes: ["id", "emailAddress", "firstName", "lastName", "organisationId", "program", "country"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["id", "name"]
+        },
+        {
+          association: "organisation",
+          attributes: ["id", "uuid", "name"]
+        },
+        {
+          association: "projects",
+          attributes: ["id"],
+          through: { attributes: ["isManaging", "isMonitoring"] }
+        }
+      ]
     });
   } catch (error) {
     return error;

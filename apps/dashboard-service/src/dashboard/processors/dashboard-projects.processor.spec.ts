@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardProjectsProcessor } from "./dashboard-projects.processor";
 import { CacheService } from "../dto/cache.service";
+import { PolicyService } from "@terramatch-microservices/common";
 import {
   Project,
   Site,
@@ -17,16 +18,25 @@ import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dash
 describe("DashboardProjectsProcessor", () => {
   let processor: DashboardProjectsProcessor;
   let cacheService: DeepMocked<CacheService>;
+  let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
     cacheService = createMock<CacheService>();
+    policyService = createMock<PolicyService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        DashboardProjectsProcessor,
+        {
+          provide: DashboardProjectsProcessor,
+          useFactory: () => new DashboardProjectsProcessor(cacheService, policyService)
+        },
         {
           provide: CacheService,
           useValue: cacheService
+        },
+        {
+          provide: PolicyService,
+          useValue: policyService
         }
       ]
     }).compile();
@@ -135,7 +145,8 @@ describe("DashboardProjectsProcessor", () => {
       organisationType: "NGO",
       treesGrownGoal: 5000,
       totalSites: 5,
-      totalJobsCreated: 25
+      totalJobsCreated: 25,
+      is_light: true
     });
 
     jest.spyOn(processor, "getLightDto").mockResolvedValue({ id: "test-uuid", dto: mockLightDto });

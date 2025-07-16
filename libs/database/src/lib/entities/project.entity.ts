@@ -24,6 +24,7 @@ import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
 
 @Table({ tableName: "v2_projects", underscored: true, paranoid: true })
 export class Project extends Model<Project> {
@@ -379,6 +380,10 @@ export class Project extends Model<Project> {
   @AllowNull
   @Column(STRING)
   shortName: string | null;
+
+  @AllowNull
+  @Column({ type: STRING, values: PLANTING_STATUSES })
+  plantingStatus: PlantingStatus | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

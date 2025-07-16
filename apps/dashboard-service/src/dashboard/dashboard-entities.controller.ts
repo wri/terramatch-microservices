@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, NotFoundException } from "@nestjs/common";
+import { Controller, Get, Param, Query, NotFoundException, UseInterceptors } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { JsonApiResponse, ExceptionResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
@@ -11,8 +11,10 @@ import { User } from "@terramatch-microservices/database/entities";
 import { DashboardAuthService } from "./services/dashboard-auth.service";
 import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
+import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 
 @Controller("dashboard/v3")
+@UseInterceptors(UserContextInterceptor)
 export class DashboardEntitiesController {
   constructor(
     private readonly dashboardEntitiesService: DashboardEntitiesService,
@@ -61,7 +63,7 @@ export class DashboardEntitiesController {
   async findOne(
     @Param("entity") entity: DashboardEntity,
     @Param("uuid") uuid: string,
-    @CurrentUser() user: User | null
+    @CurrentUser() userId: number | null
   ) {
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
     const model = await processor.findOne(uuid);
@@ -70,7 +72,7 @@ export class DashboardEntitiesController {
       throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
     }
 
-    const authResult = await this.dashboardAuthService.checkUserProjectAccess(uuid, user);
+    const authResult = await this.dashboardAuthService.checkUserProjectAccess(uuid, userId);
 
     if (authResult.allowed) {
       const { id, dto } = await processor.getFullDto(model);

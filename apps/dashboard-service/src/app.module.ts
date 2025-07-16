@@ -21,6 +21,7 @@ import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service
 import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
 import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
 import { DashboardAuthService } from "./dashboard/services/dashboard-auth.service";
+import { UserContextInterceptor } from "./dashboard/interceptors/user-context.interceptor";
 
 @Module({
   imports: [
@@ -62,7 +63,8 @@ import { DashboardAuthService } from "./dashboard/services/dashboard-auth.servic
     DashboardCacheWarmupService,
     DashboardEntitiesService,
     HectaresRestorationService,
-    DashboardAuthService
+    DashboardAuthService,
+    UserContextInterceptor
   ]
 })
 export class AppModule {}

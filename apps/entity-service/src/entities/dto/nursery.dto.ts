@@ -11,6 +11,7 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { MediaDto } from "./media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { PLANTING_STATUSES, PlantingStatus } from "@terramatch-microservices/database/constants/planting-status";
 
 @JsonApiDto({ type: "nurseries" })
 export class NurseryLightDto extends EntityDto {
@@ -96,6 +97,13 @@ export class NurseryFullDto extends NurseryLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   oldModel: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Planting status for this nursery",
+    enum: PLANTING_STATUSES
+  })
+  plantingStatus: PlantingStatus | null;
 
   @ApiProperty({ nullable: true, type: Number })
   nurseryReportsTotal: number | null;

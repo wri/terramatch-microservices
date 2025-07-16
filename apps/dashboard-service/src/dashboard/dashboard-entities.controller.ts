@@ -72,9 +72,9 @@ export class DashboardEntitiesController {
       throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
     }
 
-    const authResult = await this.dashboardAuthService.checkUserProjectAccess(uuid, userId);
+    const authResult = await this.dashboardAuthService.userHasFullProjectAccess(uuid, userId);
 
-    if (authResult.allowed) {
+    if (authResult) {
       const { id, dto } = await processor.getFullDto(model);
       const document = buildJsonApi(processor.FULL_DTO);
       document.addData(id, dto);

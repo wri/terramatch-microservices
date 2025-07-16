@@ -15,6 +15,7 @@ import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
 import { Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "../dto/cache.service";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 export class DashboardProjectsProcessor extends DashboardEntityProcessor<
   Project,
@@ -78,22 +79,12 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       this.getTotalJobs(project.id)
     ]);
 
-    const dto = new DashboardProjectsLightDto({
-      uuid: project.uuid,
-      country: project.country,
-      frameworkKey: project.frameworkKey,
-      name: project.name,
-      organisationName: project.organisation?.name ?? null,
-      treesPlantedCount: treesPlantedCount,
-      totalHectaresRestoredSum: totalHectaresRestoredSum,
-      lat: project.lat,
-      long: project.long,
-      organisationType: project.organisation?.type ?? null,
-      treesGrownGoal: project.treesGrownGoal,
-      totalSites: totalSites,
-      is_light: true,
-      totalJobsCreated: totalJobsCreated
-    });
+    const dto = new DashboardProjectsLightDto(project, {
+      totalSites,
+      totalHectaresRestoredSum,
+      treesPlantedCount,
+      totalJobsCreated
+    } as HybridSupportProps<DashboardProjectsLightDto, Project>);
 
     return { id: project.uuid, dto };
   }
@@ -109,25 +100,12 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       this.getTotalJobs(project.id)
     ]);
 
-    const fullDto = new DashboardProjectsFullDto({
-      uuid: project.uuid,
-      country: project.country,
-      frameworkKey: project.frameworkKey,
-      name: project.name,
-      organisationName: project.organisation?.name ?? null,
-      treesPlantedCount: treesPlantedCount,
-      totalHectaresRestoredSum: totalHectaresRestoredSum,
-      lat: project.lat,
-      long: project.long,
-      organisationType: project.organisation?.type ?? null,
-      treesGrownGoal: project.treesGrownGoal,
-      totalSites: totalSites,
-      is_light: false,
-      totalJobsCreated: totalJobsCreated,
-      cohort: project.cohort,
-      objectives: project.objectives ?? null,
-      landTenureProjectArea: project.landTenureProjectArea
-    });
+    const fullDto = new DashboardProjectsFullDto(project, {
+      totalSites,
+      totalHectaresRestoredSum,
+      treesPlantedCount,
+      totalJobsCreated
+    } as HybridSupportProps<DashboardProjectsFullDto, Project>);
 
     return { id: project.uuid, dto: fullDto };
   }

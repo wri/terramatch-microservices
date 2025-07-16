@@ -4,8 +4,8 @@ import { DashboardEntitiesController } from "./dashboard-entities.controller";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardProjectsProcessor } from "./processors/dashboard-projects.processor";
 import { CacheService } from "./dto/cache.service";
-import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardEntityParamsDto, DashboardEntityWithUuidDto } from "./dto/dashboard-entity.dto";
+import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
 import { Project } from "@terramatch-microservices/database/entities";
 import { DashboardAuthService } from "./services/dashboard-auth.service";
@@ -13,8 +13,8 @@ import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { JwtService } from "@nestjs/jwt";
 import { User } from "@terramatch-microservices/database/entities";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
-// Mock JwtService constructor
 jest.mock("@nestjs/jwt");
 const MockJwtService = JwtService as jest.MockedClass<typeof JwtService>;
 
@@ -95,45 +95,46 @@ describe("DashboardEntitiesController", () => {
   it("should return a list of dashboard entities with light data", async () => {
     const params: DashboardEntityParamsDto = { entity: "dashboardProjects" };
     const query: DashboardQueryDto = {};
-    const mockModels = [{ uuid: "uuid-1" }, { uuid: "uuid-2" }] as Project[];
+    const mockModels = [
+      {
+        uuid: "uuid-1",
+        name: "Project 1",
+        country: "Test Country",
+        frameworkKey: "ppc",
+        lat: 10.0,
+        long: 20.0,
+        treesGrownGoal: 5000,
+        organisation: { name: "Test Org", type: "NGO" }
+      },
+      {
+        uuid: "uuid-2",
+        name: "Project 2",
+        country: "Test Country 2",
+        frameworkKey: "ppc",
+        lat: 15.0,
+        long: 25.0,
+        treesGrownGoal: 10000,
+        organisation: { name: "Test Org 2", type: "Corporation" }
+      }
+    ] as Project[];
     const mockDtoResults = [
       {
         id: "uuid-1",
-        dto: new DashboardProjectsLightDto({
-          uuid: "uuid-1",
-          name: "Project 1",
-          country: "Test Country",
-          frameworkKey: "ppc",
+        dto: new DashboardProjectsLightDto(mockModels[0], {
           treesPlantedCount: 1000,
           totalHectaresRestoredSum: 50,
-          lat: 10.0,
-          long: 20.0,
-          organisationName: "Test Org",
-          organisationType: "NGO",
-          treesGrownGoal: 5000,
           totalSites: 5,
-          totalJobsCreated: 25,
-          is_light: true
-        })
+          totalJobsCreated: 25
+        } as HybridSupportProps<DashboardProjectsLightDto, Project>)
       },
       {
         id: "uuid-2",
-        dto: new DashboardProjectsLightDto({
-          uuid: "uuid-2",
-          name: "Project 2",
-          country: "Test Country 2",
-          frameworkKey: "ppc",
+        dto: new DashboardProjectsLightDto(mockModels[1], {
           treesPlantedCount: 2000,
           totalHectaresRestoredSum: 100,
-          lat: 15.0,
-          long: 25.0,
-          organisationName: "Test Org 2",
-          organisationType: "Corporation",
-          treesGrownGoal: 10000,
           totalSites: 10,
-          totalJobsCreated: 50,
-          is_light: true
-        })
+          totalJobsCreated: 50
+        } as HybridSupportProps<DashboardProjectsLightDto, Project>)
       }
     ];
 
@@ -166,28 +167,27 @@ describe("DashboardEntitiesController", () => {
       entity: "dashboardProjects",
       uuid: "uuid-1"
     };
-    const mockModel = { uuid: "uuid-1" } as Project;
+    const mockModel = {
+      uuid: "uuid-1",
+      name: "Project 1",
+      country: "Test Country",
+      frameworkKey: "ppc",
+      lat: 10.0,
+      long: 20.0,
+      treesGrownGoal: 5000,
+      organisation: { name: "Test Org", type: "NGO" },
+      cohort: ["terrafund"],
+      objectives: "Test objectives",
+      landTenureProjectArea: ["test-area"]
+    } as Project;
     const mockDtoResult = {
       id: "uuid-1",
-      dto: new DashboardProjectsFullDto({
-        uuid: "uuid-1",
-        name: "Project 1",
-        country: "Test Country",
-        frameworkKey: "ppc",
+      dto: new DashboardProjectsFullDto(mockModel, {
         treesPlantedCount: 1000,
         totalHectaresRestoredSum: 50,
-        lat: 10.0,
-        long: 20.0,
-        organisationName: "Test Org",
-        organisationType: "NGO",
-        treesGrownGoal: 5000,
         totalSites: 5,
-        totalJobsCreated: 25,
-        cohort: ["terrafund"],
-        objectives: "Test objectives",
-        landTenureProjectArea: ["test-area"],
-        is_light: false
-      })
+        totalJobsCreated: 25
+      } as HybridSupportProps<DashboardProjectsFullDto, Project>)
     };
 
     mockProcessor.findOne.mockResolvedValue(mockModel);
@@ -205,25 +205,24 @@ describe("DashboardEntitiesController", () => {
       entity: "dashboardProjects",
       uuid: "uuid-1"
     };
-    const mockModel = { uuid: "uuid-1" } as Project;
+    const mockModel = {
+      uuid: "uuid-1",
+      name: "Project 1",
+      country: "Test Country",
+      frameworkKey: "ppc",
+      lat: 10.0,
+      long: 20.0,
+      treesGrownGoal: 5000,
+      organisation: { name: "Test Org", type: "NGO" }
+    } as Project;
     const mockLightDtoResult = {
       id: "uuid-1",
-      dto: new DashboardProjectsLightDto({
-        uuid: "uuid-1",
-        name: "Project 1",
-        country: "Test Country",
-        frameworkKey: "ppc",
+      dto: new DashboardProjectsLightDto(mockModel, {
         treesPlantedCount: 1000,
         totalHectaresRestoredSum: 50,
-        lat: 10.0,
-        long: 20.0,
-        organisationName: "Test Org",
-        organisationType: "NGO",
-        treesGrownGoal: 5000,
         totalSites: 5,
-        totalJobsCreated: 25,
-        is_light: true
-      })
+        totalJobsCreated: 25
+      } as HybridSupportProps<DashboardProjectsLightDto, Project>)
     };
 
     mockProcessor.findOne.mockResolvedValue(mockModel);
@@ -267,28 +266,27 @@ describe("DashboardEntitiesController", () => {
     it("should return full data when user has valid JWT and access", async () => {
       const mockToken = "valid.jwt.token";
       const mockPayload = { sub: 123 };
-      const mockModel = { uuid: "uuid-1" } as Project;
+      const mockModel = {
+        uuid: "uuid-1",
+        name: "Project 1",
+        country: "Test Country",
+        frameworkKey: "ppc",
+        lat: 10.0,
+        long: 20.0,
+        treesGrownGoal: 5000,
+        organisation: { name: "Test Org", type: "NGO" },
+        cohort: ["terrafund"],
+        objectives: "Test objectives",
+        landTenureProjectArea: ["test-area"]
+      } as Project;
       const mockDtoResult = {
         id: "uuid-1",
-        dto: new DashboardProjectsFullDto({
-          uuid: "uuid-1",
-          name: "Project 1",
-          country: "Test Country",
-          frameworkKey: "ppc",
+        dto: new DashboardProjectsFullDto(mockModel, {
           treesPlantedCount: 1000,
           totalHectaresRestoredSum: 50,
-          lat: 10.0,
-          long: 20.0,
-          organisationName: "Test Org",
-          organisationType: "NGO",
-          treesGrownGoal: 5000,
           totalSites: 5,
-          totalJobsCreated: 25,
-          cohort: ["terrafund"],
-          objectives: "Test objectives",
-          landTenureProjectArea: ["test-area"],
-          is_light: false
-        })
+          totalJobsCreated: 25
+        } as HybridSupportProps<DashboardProjectsFullDto, Project>)
       };
 
       jwtService.verifyAsync.mockResolvedValue(mockPayload);
@@ -313,25 +311,24 @@ describe("DashboardEntitiesController", () => {
     it("should return light data when user has valid JWT but no access", async () => {
       const mockToken = "valid.jwt.token";
       const mockPayload = { sub: 123 };
-      const mockModel = { uuid: "uuid-1" } as Project;
+      const mockModel = {
+        uuid: "uuid-1",
+        name: "Project 1",
+        country: "Test Country",
+        frameworkKey: "ppc",
+        lat: 10.0,
+        long: 20.0,
+        treesGrownGoal: 5000,
+        organisation: { name: "Test Org", type: "NGO" }
+      } as Project;
       const mockLightDtoResult = {
         id: "uuid-1",
-        dto: new DashboardProjectsLightDto({
-          uuid: "uuid-1",
-          name: "Project 1",
-          country: "Test Country",
-          frameworkKey: "ppc",
+        dto: new DashboardProjectsLightDto(mockModel, {
           treesPlantedCount: 1000,
           totalHectaresRestoredSum: 50,
-          lat: 10.0,
-          long: 20.0,
-          organisationName: "Test Org",
-          organisationType: "NGO",
-          treesGrownGoal: 5000,
           totalSites: 5,
-          totalJobsCreated: 25,
-          is_light: true
-        })
+          totalJobsCreated: 25
+        } as HybridSupportProps<DashboardProjectsLightDto, Project>)
       };
 
       jwtService.verifyAsync.mockResolvedValue(mockPayload);
@@ -354,25 +351,24 @@ describe("DashboardEntitiesController", () => {
     });
 
     it("should return light data when no authorization header is present", async () => {
-      const mockModel = { uuid: "uuid-1" } as Project;
+      const mockModel = {
+        uuid: "uuid-1",
+        name: "Project 1",
+        country: "Test Country",
+        frameworkKey: "ppc",
+        lat: 10.0,
+        long: 20.0,
+        treesGrownGoal: 5000,
+        organisation: { name: "Test Org", type: "NGO" }
+      } as Project;
       const mockLightDtoResult = {
         id: "uuid-1",
-        dto: new DashboardProjectsLightDto({
-          uuid: "uuid-1",
-          name: "Project 1",
-          country: "Test Country",
-          frameworkKey: "ppc",
+        dto: new DashboardProjectsLightDto(mockModel, {
           treesPlantedCount: 1000,
           totalHectaresRestoredSum: 50,
-          lat: 10.0,
-          long: 20.0,
-          organisationName: "Test Org",
-          organisationType: "NGO",
-          treesGrownGoal: 5000,
           totalSites: 5,
-          totalJobsCreated: 25,
-          is_light: true
-        })
+          totalJobsCreated: 25
+        } as HybridSupportProps<DashboardProjectsLightDto, Project>)
       };
 
       mockProcessor.findOne.mockResolvedValue(mockModel);
@@ -387,25 +383,24 @@ describe("DashboardEntitiesController", () => {
 
     it("should return light data when JWT verification fails", async () => {
       const mockToken = "invalid.jwt.token";
-      const mockModel = { uuid: "uuid-1" } as Project;
+      const mockModel = {
+        uuid: "uuid-1",
+        name: "Project 1",
+        country: "Test Country",
+        frameworkKey: "ppc",
+        lat: 10.0,
+        long: 20.0,
+        treesGrownGoal: 5000,
+        organisation: { name: "Test Org", type: "NGO" }
+      } as Project;
       const mockLightDtoResult = {
         id: "uuid-1",
-        dto: new DashboardProjectsLightDto({
-          uuid: "uuid-1",
-          name: "Project 1",
-          country: "Test Country",
-          frameworkKey: "ppc",
+        dto: new DashboardProjectsLightDto(mockModel, {
           treesPlantedCount: 1000,
           totalHectaresRestoredSum: 50,
-          lat: 10.0,
-          long: 20.0,
-          organisationName: "Test Org",
-          organisationType: "NGO",
-          treesGrownGoal: 5000,
           totalSites: 5,
-          totalJobsCreated: 25,
-          is_light: true
-        })
+          totalJobsCreated: 25
+        } as HybridSupportProps<DashboardProjectsLightDto, Project>)
       };
 
       jwtService.verifyAsync.mockRejectedValue(new Error("Invalid token"));

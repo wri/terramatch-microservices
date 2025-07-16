@@ -4,13 +4,13 @@ import { JsonApiResponse, ExceptionResponse } from "@terramatch-microservices/co
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { DashboardEntityDto } from "./dto/dashboard-entity.dto";
 import { DashboardEntity } from "@terramatch-microservices/database/constants";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { User } from "@terramatch-microservices/database/entities";
 import { DashboardAuthService } from "./services/dashboard-auth.service";
 import { CacheService } from "./dto/cache.service";
+import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
 
 @Controller("dashboard/v3")
 export class DashboardEntitiesController {
@@ -23,7 +23,7 @@ export class DashboardEntitiesController {
   @Get(":entity")
   @NoBearerAuth
   @ApiParam({ name: "entity", enum: ["dashboardProjects"], description: "Dashboard entity type" })
-  @JsonApiResponse({ data: DashboardEntityDto, pagination: "number" })
+  @JsonApiResponse({ data: DashboardProjectsLightDto, pagination: "number" })
   @ApiOperation({
     operationId: "dashboardEntityIndex",
     summary: "Get a list of dashboard entities. Returns light data for all users."
@@ -52,7 +52,7 @@ export class DashboardEntitiesController {
   @NoBearerAuth
   @ApiParam({ name: "entity", enum: ["dashboardProjects"], description: "Dashboard entity type" })
   @ApiParam({ name: "uuid", description: "Entity UUID" })
-  @JsonApiResponse([DashboardEntityDto])
+  @JsonApiResponse([DashboardProjectsLightDto, DashboardProjectsFullDto])
   @ExceptionResponse(NotFoundException, { description: "Entity not found." })
   @ApiOperation({
     operationId: "dashboardEntityGet",

@@ -2,12 +2,16 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { DashboardEntityDto } from "./dashboard-entity.dto";
+import { Project } from "@terramatch-microservices/database/entities";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "dashboardProjects" })
 export class DashboardProjectsLightDto extends DashboardEntityDto {
-  constructor(data: DashboardProjectsLightDto) {
+  constructor(project?: Project, props?: HybridSupportProps<DashboardProjectsLightDto, Project>) {
     super();
-    populateDto<DashboardProjectsLightDto>(this, data);
+    if (project != null && props != null) {
+      populateDto<DashboardProjectsLightDto, Project>(this, project, { lightResource: true, ...props });
+    }
   }
 
   @ApiProperty()
@@ -46,17 +50,14 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
   @ApiProperty()
   totalSites: number;
 
-  @ApiProperty({ description: "Whether this is a light version of the project data" })
-  is_light: boolean;
   @ApiProperty({ nullable: true, type: Number })
   totalJobsCreated: number | null;
 }
 
-@JsonApiDto({ type: "dashboardProjects" })
 export class DashboardProjectsFullDto extends DashboardProjectsLightDto {
-  constructor(data: DashboardProjectsFullDto) {
-    super(data);
-    populateDto<DashboardProjectsFullDto>(this, data);
+  constructor(project: Project, props: HybridSupportProps<DashboardProjectsFullDto, Project>) {
+    super();
+    populateDto<DashboardProjectsFullDto, Project>(this, project, { lightResource: false, ...props });
   }
 
   @ApiProperty({ nullable: true, type: String, isArray: true })

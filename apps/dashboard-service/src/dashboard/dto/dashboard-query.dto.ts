@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsOptional } from "class-validator";
+import { IsArray, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 import {
   FrameworkType,
   FRAMEWORK_TF_TYPES,
@@ -8,6 +9,25 @@ import {
   ORGANISATION_TYPES,
   OrganisationType
 } from "@terramatch-microservices/database/constants";
+
+export const VALID_SIDELOAD_TYPES = ["sitePolygons", "demographics"] as const;
+export type SideloadType = (typeof VALID_SIDELOAD_TYPES)[number];
+
+export class DashboardSideload {
+  @IsIn(VALID_SIDELOAD_TYPES)
+  @ApiProperty({
+    name: "entity",
+    enum: VALID_SIDELOAD_TYPES,
+    description: "Entity type to sideload"
+  })
+  entity: SideloadType;
+
+  @ApiProperty({ name: "pageSize", description: "The page size to include." })
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize: number;
+}
 
 export class DashboardQueryDto {
   @ApiProperty({ required: false })
@@ -56,4 +76,15 @@ export class DashboardQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({
+    required: false,
+    description: "If the base entity supports it, this will load the first page of associated entities",
+    type: [DashboardSideload]
+  })
+  @IsArray()
+  @IsOptional()
+  @Type(() => DashboardSideload)
+  @ValidateNested({ each: true })
+  sideloads?: DashboardSideload[];
 }

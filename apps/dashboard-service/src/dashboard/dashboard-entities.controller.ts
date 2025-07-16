@@ -61,6 +61,7 @@ export class DashboardEntitiesController {
   async findOne(
     @Param("entity") entity: DashboardEntity,
     @Param("uuid") uuid: string,
+    @Query() query: DashboardQueryDto,
     @CurrentUser() user: User | null
   ) {
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
@@ -76,6 +77,14 @@ export class DashboardEntitiesController {
       const { id, dto } = await processor.getFullDto(model);
       const document = buildJsonApi(processor.FULL_DTO);
       document.addData(id, dto);
+
+      // Process sideloads if requested
+      if (query.sideloads != null && query.sideloads.length > 0) {
+        for (const { entity: sideloadEntity, pageSize } of query.sideloads) {
+          await processor.processSideload(document, model, sideloadEntity, pageSize);
+        }
+      }
+
       return document.serialize();
     } else {
       const { id, dto } = await processor.getLightDto(model);

@@ -1,7 +1,8 @@
 import { Type } from "@nestjs/common";
-import { DashboardQueryDto } from "../dto/dashboard-query.dto";
+import { DashboardQueryDto, SideloadType } from "../dto/dashboard-query.dto";
 import { CacheService } from "../dto/cache.service";
 import { PolicyService } from "@terramatch-microservices/common";
+import { DocumentBuilder } from "@terramatch-microservices/common/util/json-api-builder";
 
 export type DtoResult<DtoType> = {
   id: string;
@@ -37,6 +38,17 @@ export abstract class DashboardEntityProcessor<ModelType, LightDto, FullDto> {
     }
     return results;
   }
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  async processSideload(
+    document: DocumentBuilder,
+    model: ModelType,
+    entity: SideloadType,
+    pageSize: number
+  ): Promise<void> {
+    throw new Error("This entity does not support sideloading");
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   protected getCacheService(): CacheService {
     return this.cacheService;

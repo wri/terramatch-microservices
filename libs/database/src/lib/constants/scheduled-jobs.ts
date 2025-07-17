@@ -17,4 +17,4 @@ export type SiteAndNurseryReminder = {
   frameworkKey: string;
 };
 
-export type ScheduledJobPayload = TaskDue | ReportReminder | SiteAndNurseryReminder;
+export type ScheduledJobDefinition = TaskDue | ReportReminder | SiteAndNurseryReminder;

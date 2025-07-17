@@ -8,7 +8,7 @@ import { ReportGenerationService } from "@terramatch-microservices/common/tasks/
 import { DateTime } from "luxon";
 import {
   ReportReminder,
-  ScheduledJobPayload,
+  ScheduledJobDefinition,
   SiteAndNurseryReminder,
   TaskDue
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
@@ -17,7 +17,7 @@ export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
 export const SITE_AND_NURSERY_REMINDER_EVENT = "siteAndNurseryReminder" as const;
 
-type ScheduledJobData = { id: number; taskDefinition: ScheduledJobPayload };
+type ScheduledJobData = { id: number; taskDefinition: ScheduledJobDefinition };
 
 @Processor("scheduled-jobs")
 export class ScheduledJobsProcessor extends WorkerHost {

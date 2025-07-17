@@ -8,6 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { Dictionary } from "lodash";
 import { buildJsonApi } from "./json-api-builder";
 import { Op } from "sequelize";
+import { DateTime } from "luxon";
 
 const logger = new TMLogger("REPL");
 
@@ -22,9 +23,10 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
 
   const replServer = await repl(module);
 
-  // By default, we make lodash, the JSON API Builder, and the Sequelize models available
+  // By default, we make lodash, luxon, the JSON API Builder, and the Sequelize models available
   context = {
     lodash,
+    DateTime,
     buildJsonApi,
     Op,
     Reflect,

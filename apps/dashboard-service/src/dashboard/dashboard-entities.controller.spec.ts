@@ -150,9 +150,7 @@ describe("DashboardEntitiesController", () => {
       }
     ];
 
-    cacheService.get.mockImplementation(async (key, factory) => {
-      // If factory is provided, return the cached data directly
-      // This simulates a cache hit
+    cacheService.get.mockImplementation(async () => {
       return cachedData;
     });
 

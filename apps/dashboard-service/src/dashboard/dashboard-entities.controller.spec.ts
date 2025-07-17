@@ -243,6 +243,8 @@ describe("DashboardEntitiesController", () => {
         totalJobsCreated: 25
       } as HybridSupportProps<DashboardProjectsLightDto, Project>)
     };
+
+    const findOneSpy = jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
     const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue(mockLightDtoResult);
     const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto");
     policyService.hasAccess.mockResolvedValue(false);
@@ -255,6 +257,7 @@ describe("DashboardEntitiesController", () => {
     expect(Array.isArray(result.included)).toBe(true);
     expect(result.included).toHaveLength(0);
 
+    expect(findOneSpy).toHaveBeenCalledWith(mockModel.uuid);
     expect(getLightDtoSpy).toHaveBeenCalledWith(mockModel);
     expect(getFullDtoSpy).not.toHaveBeenCalled();
   });

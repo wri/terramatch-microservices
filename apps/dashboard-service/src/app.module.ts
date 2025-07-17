@@ -46,8 +46,8 @@ import { UserContextInterceptor } from "./dashboard/interceptors/user-context.in
     TotalSectionHeaderController,
     TreeRestorationGoalController,
     TotalJobsCreatedController,
-    DashboardEntitiesController,
-    HectaresRestorationController
+    HectaresRestorationController,
+    DashboardEntitiesController
   ],
   providers: [
     {

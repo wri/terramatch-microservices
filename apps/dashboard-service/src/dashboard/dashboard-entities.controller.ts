@@ -53,7 +53,7 @@ export class DashboardEntitiesController {
     });
 
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-    const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
+    const document = buildJsonApi(DashboardProjectsLightDto, { pagination: "number" });
 
     for (const { id, model, computedData } of data) {
       const dto = new processor.LIGHT_DTO(model, computedData);
@@ -85,12 +85,12 @@ export class DashboardEntitiesController {
 
     if (hasAccess) {
       const { id, dto } = await processor.getFullDto(model);
-      const document = buildJsonApi(processor.FULL_DTO);
+      const document = buildJsonApi(DashboardProjectsFullDto);
       document.addData(id, dto);
       return document.serialize();
     } else {
       const { id, dto } = await processor.getLightDto(model);
-      const document = buildJsonApi(processor.LIGHT_DTO);
+      const document = buildJsonApi(DashboardProjectsLightDto);
       document.addData(id, dto);
       return document.serialize();
     }

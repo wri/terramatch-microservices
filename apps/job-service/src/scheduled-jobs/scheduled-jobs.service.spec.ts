@@ -62,19 +62,19 @@ describe("ScheduledJobsService", () => {
       await service.processScheduledJobs();
       expect(queue.add).toHaveBeenCalledWith(
         TASK_DUE_EVENT,
-        expect.objectContaining({ jobId: taskDue.id, taskDefinition: expect.objectContaining(taskDue.taskDefinition) })
+        expect.objectContaining({ id: taskDue.id, taskDefinition: expect.objectContaining(taskDue.taskDefinition) })
       );
       expect(queue.add).toHaveBeenCalledWith(
         REPORT_REMINDER_EVENT,
         expect.objectContaining({
-          jobId: reportReminder.id,
+          id: reportReminder.id,
           taskDefinition: expect.objectContaining(reportReminder.taskDefinition)
         })
       );
       expect(queue.add).toHaveBeenCalledWith(
         SITE_AND_NURSERY_REMINDER_EVENT,
         expect.objectContaining({
-          jobId: siteAndNurseryReminder.id,
+          id: siteAndNurseryReminder.id,
           taskDefinition: expect.objectContaining(siteAndNurseryReminder.taskDefinition)
         })
       );

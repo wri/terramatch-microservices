@@ -34,7 +34,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
     super();
   }
 
-  async process({ name, data: { jobId, taskDefinition } }: Job) {
+  async process({ name, data: { id, taskDefinition } }: Job) {
     try {
       switch (name) {
         case TASK_DUE_EVENT:
@@ -56,7 +56,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
       this.logger.error("Error processing job", error);
       // Allow the job to try again. If we see this causing non-stop errors, we'll want to add a
       // feature for limited retries.
-      await ScheduledJob.restore({ where: { id: jobId } });
+      await ScheduledJob.restore({ where: { id } });
     }
   }
 

@@ -37,15 +37,15 @@ export class ScheduledJobsService {
     this.logger.log(`Adding job to the queue: [${type}, ${JSON.stringify(taskDefinition)}]`);
     switch (job.type) {
       case TASK_DUE:
-        await this.scheduledJobsQueue.add(TASK_DUE_EVENT, { jobId: id, taskDefinition });
+        await this.scheduledJobsQueue.add(TASK_DUE_EVENT, { id, taskDefinition });
         break;
 
       case REPORT_REMINDER:
-        await this.scheduledJobsQueue.add(REPORT_REMINDER_EVENT, { jobId: id, taskDefinition });
+        await this.scheduledJobsQueue.add(REPORT_REMINDER_EVENT, { id, taskDefinition });
         break;
 
       case SITE_AND_NURSERY_REMINDER:
-        await this.scheduledJobsQueue.add(SITE_AND_NURSERY_REMINDER_EVENT, { jobId: id, taskDefinition });
+        await this.scheduledJobsQueue.add(SITE_AND_NURSERY_REMINDER_EVENT, { id, taskDefinition });
         break;
 
       default:

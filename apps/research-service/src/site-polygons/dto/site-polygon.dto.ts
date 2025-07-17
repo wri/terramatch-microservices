@@ -13,6 +13,7 @@ import {
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
+import { PLANTING_STATUSES, PlantingStatus } from "@terramatch-microservices/database/constants/planting-status";
 
 export type IndicatorDto =
   | IndicatorTreeCoverLossDto
@@ -126,6 +127,16 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ description: "The name of the associated Site.", nullable: true })
   siteName?: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  versionName: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Planting status for this site polygon",
+    enum: PLANTING_STATUSES
+  })
+  plantingStatus: PlantingStatus | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })

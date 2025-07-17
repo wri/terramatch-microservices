@@ -15,6 +15,7 @@ import { EventService } from "./events/event.service";
 import { BullModule } from "@nestjs/bullmq";
 import { EmailProcessor } from "./email/email.processor";
 import { TemplateService } from "./templates/template.service";
+import { ReportGenerationService } from "./tasks/report-generation-service";
 
 export const QUEUES = ["email"];
 
@@ -61,8 +62,18 @@ export const QUEUES = ["email"];
     TemplateService,
     SlackService,
     EventService,
-    EmailProcessor
+    EmailProcessor,
+    ReportGenerationService
   ],
-  exports: [PolicyService, JwtModule, EmailService, LocalizationService, MediaService, TemplateService, SlackService]
+  exports: [
+    PolicyService,
+    JwtModule,
+    EmailService,
+    LocalizationService,
+    MediaService,
+    TemplateService,
+    SlackService,
+    ReportGenerationService
+  ]
 })
 export class CommonModule {}

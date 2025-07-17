@@ -178,7 +178,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
   it("should apply programmes filter (array)", async () => {
     const filters: DashboardQueryDto = {
-      programmes: ["prog1", "prog2"]
+      programmes: ["terrafund", "epa-ghana-pilot"]
     };
 
     const mockBuilder = baseMocks();

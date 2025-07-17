@@ -6,14 +6,21 @@ import { NotImplementedException } from "@nestjs/common";
 import * as Sentry from "@sentry/node";
 import { TMLogger } from "../util/tm-logger";
 import { EntityStatusUpdateEmail } from "./entity-status-update.email";
+import { TerrafundReportReminderEmail } from "./terrafund-report-reminder.email";
 
 export type StatusUpdateData = {
   type: EntityType;
   id: number;
 };
 
+export type ProjectEmailData = {
+  projectIds: number[];
+};
+
 const EMAIL_PROCESSORS = {
-  statusUpdate: EntityStatusUpdateEmail
+  statusUpdate: EntityStatusUpdateEmail,
+  terrafundReportReminder: TerrafundReportReminderEmail,
+  terrafundSiteAndNurseryReminder: TerrafundReportReminderEmail
 };
 
 /**

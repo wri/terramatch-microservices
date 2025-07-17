@@ -6,22 +6,18 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { Op } from "sequelize";
 import { ReportGenerationService } from "@terramatch-microservices/common/tasks/report-generation-service";
 import { DateTime } from "luxon";
+import {
+  ReportReminder,
+  ScheduledJobPayload,
+  SiteAndNurseryReminder,
+  TaskDue
+} from "@terramatch-microservices/database/constants/scheduled-jobs";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
-type TaskDue = {
-  framework_key: string;
-  due_at: string;
-};
-
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
-type ReportReminder = {
-  framework_key: string;
-};
-
 export const SITE_AND_NURSERY_REMINDER_EVENT = "siteAndNurseryReminder" as const;
-type SiteAndNurseryReminder = {
-  framework_key: string;
-};
+
+type ScheduledJobData = { id: number; taskDefinition: ScheduledJobPayload };
 
 @Processor("scheduled-jobs")
 export class ScheduledJobsProcessor extends WorkerHost {
@@ -34,19 +30,19 @@ export class ScheduledJobsProcessor extends WorkerHost {
     super();
   }
 
-  async process({ name, data: { id, taskDefinition } }: Job) {
+  async process({ name, data: { id, taskDefinition } }: Job<ScheduledJobData>) {
     try {
       switch (name) {
         case TASK_DUE_EVENT:
-          await this.processTaskDue(taskDefinition);
+          await this.processTaskDue(taskDefinition as TaskDue);
           break;
 
         case REPORT_REMINDER_EVENT:
-          await this.processReportReminder(taskDefinition);
+          await this.processReportReminder(taskDefinition as ReportReminder);
           break;
 
         case SITE_AND_NURSERY_REMINDER_EVENT:
-          await this.processSiteAndNurseryReminder(taskDefinition);
+          await this.processSiteAndNurseryReminder(taskDefinition as SiteAndNurseryReminder);
           break;
 
         default:
@@ -62,7 +58,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
 
   private async processTaskDue(taskDue: TaskDue) {
     this.logger.log(`processTaskDue ${JSON.stringify(taskDue)}`);
-    const { framework_key: frameworkKey, due_at: dueAtString } = taskDue;
+    const { frameworkKey, dueAt: dueAtString } = taskDue;
     const where = { frameworkKey, status: { [Op.ne]: "started" } };
     const count = await Project.count({ where });
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
@@ -83,7 +79,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
 
   private async processReportReminder(reportReminder: ReportReminder) {
     this.logger.log(`processReportReminder ${JSON.stringify(reportReminder)}`);
-    const { framework_key: frameworkKey } = reportReminder;
+    const { frameworkKey } = reportReminder;
     if (frameworkKey !== "terrafund") {
       this.logger.warn(`Report reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
       return;
@@ -107,7 +103,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
 
   private async processSiteAndNurseryReminder(siteAndNurseryReminder: SiteAndNurseryReminder) {
     this.logger.log(`processSiteAndNurseryReminder ${JSON.stringify(siteAndNurseryReminder)}`);
-    const { framework_key: frameworkKey } = siteAndNurseryReminder;
+    const { frameworkKey } = siteAndNurseryReminder;
     if (frameworkKey !== "terrafund") {
       this.logger.warn(`Site and Nursery reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
       return;

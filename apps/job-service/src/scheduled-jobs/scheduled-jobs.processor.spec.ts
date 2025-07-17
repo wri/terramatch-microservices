@@ -65,7 +65,7 @@ describe("ScheduledJobsProcessor", () => {
       const dueAt = DateTime.now().plus({ months: 1 }).set({ millisecond: 0 }).toISO();
       await processor.process({
         name: TASK_DUE_EVENT,
-        data: { taskDefinition: { framework_key: "ppc", due_at: dueAt } }
+        data: { taskDefinition: { frameworkKey: "ppc", dueAt } }
       } as Job);
       expect(reportGenerationService.createTask).toHaveBeenCalledTimes(projects.length);
     });
@@ -78,7 +78,7 @@ describe("ScheduledJobsProcessor", () => {
       const logSpy = jest.spyOn((processor as any).logger, "error");
       await processor.process({
         name: TASK_DUE_EVENT,
-        data: { taskDefinition: { framework_key: "terrafund", due_at: dueAt } }
+        data: { taskDefinition: { frameworkKey: "terrafund", dueAt } }
       } as Job);
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to create task for some projects:"));
     });
@@ -90,7 +90,7 @@ describe("ScheduledJobsProcessor", () => {
       const projectSpy = jest.spyOn(Project, "findAll");
       await processor.process({
         name: REPORT_REMINDER_EVENT,
-        data: { taskDefinition: { framework_key: "ppc" } }
+        data: { taskDefinition: { frameworkKey: "ppc" } }
       } as Job);
       expect(logSpy).toHaveBeenCalledWith("Report reminder for framework other than terrafund: ppc, ignoring");
       expect(projectSpy).not.toHaveBeenCalled();
@@ -105,7 +105,7 @@ describe("ScheduledJobsProcessor", () => {
       await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
       await processor.process({
         name: REPORT_REMINDER_EVENT,
-        data: { taskDefinition: { framework_key: "terrafund" } }
+        data: { taskDefinition: { frameworkKey: "terrafund" } }
       } as Job);
 
       expect(queue.add).toHaveBeenCalledWith(
@@ -123,7 +123,7 @@ describe("ScheduledJobsProcessor", () => {
       const projectSpy = jest.spyOn(Project, "findAll");
       await processor.process({
         name: SITE_AND_NURSERY_REMINDER_EVENT,
-        data: { taskDefinition: { framework_key: "ppc" } }
+        data: { taskDefinition: { frameworkKey: "ppc" } }
       } as Job);
       expect(logSpy).toHaveBeenCalledWith(
         "Site and Nursery reminder for framework other than terrafund: ppc, ignoring"
@@ -139,7 +139,7 @@ describe("ScheduledJobsProcessor", () => {
       await NurseryFactory.create({ projectId: nurseryProject.id });
       await processor.process({
         name: SITE_AND_NURSERY_REMINDER_EVENT,
-        data: { taskDefinition: { framework_key: "terrafund" } }
+        data: { taskDefinition: { frameworkKey: "terrafund" } }
       } as Job);
 
       expect(queue.add).toHaveBeenCalledWith(

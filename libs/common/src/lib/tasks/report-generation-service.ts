@@ -27,7 +27,10 @@ export class ReportGenerationService {
       return;
     }
 
-    const project = await Project.findOne({ where: { id: projectId }, attributes: ["id", "organisationId"] });
+    const project = await Project.findOne({
+      where: { id: projectId },
+      attributes: ["id", "frameworkKey", "organisationId"]
+    });
     if (project == null) {
       throw new NotFoundException(`Project not found [${projectId}]`);
     }

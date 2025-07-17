@@ -35,7 +35,7 @@ describe("ReportGenerationService", () => {
     });
 
     it("should succeed if the project has no sites or nurseries", async () => {
-      const { id: projectId } = await ProjectFactory.create();
+      const { id: projectId, frameworkKey } = await ProjectFactory.create();
       const dueAt = DateTime.now().set({ millisecond: 0 }).toJSDate();
       await service.createTask(projectId, dueAt);
       const task = await Task.findOne({ where: { projectId } });
@@ -44,6 +44,7 @@ describe("ReportGenerationService", () => {
       expect(projectReport?.projectId).toBe(projectId);
       expect(projectReport?.dueAt).toEqual(dueAt);
       expect(projectReport?.status).toBe("due");
+      expect(projectReport?.frameworkKey).toBe(frameworkKey);
     });
 
     it("should create reports for each site and nursery", async () => {

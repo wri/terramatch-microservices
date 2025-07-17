@@ -13,6 +13,9 @@ import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dash
 import { DashboardQueryDto } from "../dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
 import { Op } from "sequelize";
+import { PolicyService } from "@terramatch-microservices/common";
+import { CacheService } from "../dto/cache.service";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 export class DashboardProjectsProcessor extends DashboardEntityProcessor<
   Project,
@@ -21,6 +24,10 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
 > {
   readonly LIGHT_DTO = DashboardProjectsLightDto;
   readonly FULL_DTO = DashboardProjectsFullDto;
+
+  constructor(protected readonly cacheService: CacheService, protected readonly policyService: PolicyService) {
+    super(cacheService, policyService);
+  }
 
   async findOne(uuid: string): Promise<Project | null> {
     return await Project.findOne({
@@ -72,31 +79,33 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       this.getTotalJobs(project.id)
     ]);
 
-    const dto = new DashboardProjectsLightDto({
-      uuid: project.uuid,
-      country: project.country,
-      frameworkKey: project.frameworkKey,
-      name: project.name,
-      organisationName: project.organisation?.name ?? null,
-      treesPlantedCount: treesPlantedCount,
-      totalHectaresRestoredSum: totalHectaresRestoredSum,
-      lat: project.lat,
-      long: project.long,
-      organisationType: project.organisation?.type ?? null,
-      treesGrownGoal: project.treesGrownGoal,
-      totalSites: totalSites,
-      totalJobsCreated: totalJobsCreated
-    });
+    const dto = new DashboardProjectsLightDto(project, {
+      totalSites,
+      totalHectaresRestoredSum,
+      treesPlantedCount,
+      totalJobsCreated
+    } as HybridSupportProps<DashboardProjectsLightDto, Project>);
 
     return { id: project.uuid, dto };
   }
 
   async getFullDto(project: Project): Promise<DtoResult<DashboardProjectsFullDto>> {
-    const { dto: lightDto } = await this.getLightDto(project);
+    const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
+    const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
-    const fullDto = new DashboardProjectsFullDto({
-      ...lightDto
-    });
+    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
+      Site.approved().project(project.id).count(),
+      SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
+      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
+      this.getTotalJobs(project.id)
+    ]);
+
+    const fullDto = new DashboardProjectsFullDto(project, {
+      totalSites,
+      totalHectaresRestoredSum,
+      treesPlantedCount,
+      totalJobsCreated
+    } as HybridSupportProps<DashboardProjectsFullDto, Project>);
 
     return { id: project.uuid, dto: fullDto };
   }

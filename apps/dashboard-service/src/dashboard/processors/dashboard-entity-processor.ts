@@ -1,6 +1,7 @@
 import { Type } from "@nestjs/common";
 import { DashboardQueryDto } from "../dto/dashboard-query.dto";
 import { CacheService } from "../dto/cache.service";
+import { PolicyService } from "@terramatch-microservices/common";
 
 export type DtoResult<DtoType> = {
   id: string;
@@ -11,16 +12,10 @@ export abstract class DashboardEntityProcessor<ModelType, LightDto, FullDto> {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  constructor(protected readonly cacheService: CacheService) {}
+  constructor(protected readonly cacheService: CacheService, protected readonly policyService: PolicyService) {}
 
-  /**
-   * Used for GET /dashboard/v3/{entity}/{uuid} endpoints
-   */
   abstract findOne(uuid: string): Promise<ModelType | null>;
 
-  /**
-   * Used for GET /dashboard/v3/{entity} endpoints
-   */
   abstract findMany(query: DashboardQueryDto): Promise<ModelType[]>;
 
   abstract getLightDto(model: ModelType): Promise<DtoResult<LightDto>>;

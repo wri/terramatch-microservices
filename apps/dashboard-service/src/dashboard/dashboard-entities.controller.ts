@@ -1,76 +1,83 @@
-import { Get, Query, Controller, Param, NotFoundException } from "@nestjs/common";
+import { Controller, Get, Param, Query, NotFoundException, UseInterceptors } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { DashboardQueryDto } from "./dto/dashboard-query.dto";
+import { JsonApiResponse, ExceptionResponse } from "@terramatch-microservices/common/decorators";
+import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
+import { DashboardQueryDto } from "./dto/dashboard-query.dto";
+import { DashboardEntity } from "@terramatch-microservices/database/constants";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { PolicyService } from "@terramatch-microservices/common";
+import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
-import { DashboardEntityWithUuidDto, DashboardEntityParamsDto } from "./dto/dashboard-entity.dto";
-import { DASHBOARD_ENTITIES } from "@terramatch-microservices/database/constants";
+import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 
 @Controller("dashboard/v3")
+@UseInterceptors(UserContextInterceptor)
 export class DashboardEntitiesController {
-  constructor(private readonly dashboardEntitiesService: DashboardEntitiesService) {}
+  constructor(
+    private readonly dashboardEntitiesService: DashboardEntitiesService,
+    private readonly policyService: PolicyService,
+    private readonly cacheService: CacheService
+  ) {}
 
   @Get(":entity")
   @NoBearerAuth
-  @ApiParam({ name: "entity", enum: DASHBOARD_ENTITIES, description: "Dashboard entity type" })
-  @JsonApiResponse([DashboardProjectsLightDto])
+  @ApiParam({ name: "entity", enum: ["dashboardProjects"], description: "Dashboard entity type" })
+  @JsonApiResponse({ data: DashboardProjectsLightDto, pagination: "number" })
   @ApiOperation({
     operationId: "dashboardEntityIndex",
-    summary: "Get a list of dashboard entities with light data"
+    summary: "Get a list of dashboard entities. Returns light data for all users."
   })
-  async dashboardEntityIndex(@Param() { entity }: DashboardEntityParamsDto, @Query() query: DashboardQueryDto) {
-    const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-    const cacheService = this.dashboardEntitiesService.getCacheService();
+  async findAll(@Param("entity") entity: DashboardEntity, @Query() query: DashboardQueryDto) {
+    const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
 
-    const cacheKey = `dashboard:${entity}|${cacheService.getCacheKeyFromQuery(query)}`;
-
-    const models = await cacheService.get(cacheKey, () => processor.findMany(query));
-
-    const dtoResults = await processor.getLightDtos(models);
-
-    const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
-    const indexIds: string[] = [];
-    dtoResults.forEach(({ id, dto }) => {
-      indexIds.push(id);
-      document.addData(id, dto);
+    const data = await this.cacheService.get(cacheKey, async () => {
+      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
+      const models = await processor.findMany(query);
+      const dtoResults = await processor.getLightDtos(models);
+      return dtoResults;
     });
 
-    document.addIndexData({
-      resource: entity,
-      requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-      ids: indexIds,
-      total: models.length,
-      pageNumber: 1
+    const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
+    const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
+
+    data.forEach(({ id, dto }) => {
+      document.addData(id, dto);
     });
 
     return document.serialize();
   }
 
   @Get(":entity/:uuid")
-  @ApiParam({ name: "entity", enum: DASHBOARD_ENTITIES, description: "Dashboard entity type" })
+  @NoBearerAuth
+  @ApiParam({ name: "entity", enum: ["dashboardProjects"], description: "Dashboard entity type" })
   @ApiParam({ name: "uuid", description: "Entity UUID" })
-  @JsonApiResponse([DashboardProjectsFullDto])
+  @JsonApiResponse([DashboardProjectsLightDto, DashboardProjectsFullDto])
+  @ExceptionResponse(NotFoundException, { description: "Entity not found." })
   @ApiOperation({
     operationId: "dashboardEntityGet",
-    summary: "Get a single dashboard entity with full data"
+    summary: "Get a single dashboard entity. Returns full data if authorized, light data otherwise."
   })
-  async dashboardEntityGet(@Param() { entity, uuid }: DashboardEntityWithUuidDto) {
+  async findOne(@Param("entity") entity: DashboardEntity, @Param("uuid") uuid: string) {
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-
     const model = await processor.findOne(uuid);
-    if (model == null) {
+
+    if (model === null) {
       throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
     }
 
-    // TODO: Add policy checks here later
+    const hasAccess = await this.policyService.hasAccess("read", model);
 
-    const { id, dto } = await processor.getFullDto(model);
-    const document = buildJsonApi(processor.FULL_DTO);
-    document.addData(id, dto);
-
-    return document.serialize();
+    if (hasAccess) {
+      const { id, dto } = await processor.getFullDto(model);
+      const document = buildJsonApi(processor.FULL_DTO);
+      document.addData(id, dto);
+      return document.serialize();
+    } else {
+      const { id, dto } = await processor.getLightDto(model);
+      const document = buildJsonApi(processor.LIGHT_DTO);
+      document.addData(id, dto);
+      return document.serialize();
+    }
   }
 }

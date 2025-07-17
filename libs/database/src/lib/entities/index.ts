@@ -40,6 +40,7 @@ export * from "./permission.entity";
 export * from "./point-geometry.entity";
 export * from "./polygon-geometry.entity";
 export * from "./project.entity";
+export * from "./project-invite.entity";
 export * from "./project-pitch.entity";
 export * from "./project-polygon.entity";
 export * from "./project-report.entity";

@@ -20,6 +20,7 @@ import { DashboardEntitiesController } from "./dashboard/dashboard-entities.cont
 import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service";
 import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
 import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
+import { UserContextInterceptor } from "./dashboard/interceptors/user-context.interceptor";
 
 @Module({
   imports: [
@@ -60,7 +61,8 @@ import { HectaresRestorationController } from "./dashboard/hectares-restoration.
     TotalJobsCreatedService,
     DashboardCacheWarmupService,
     DashboardEntitiesService,
-    HectaresRestorationService
+    HectaresRestorationService,
+    UserContextInterceptor
   ]
 })
 export class AppModule {}

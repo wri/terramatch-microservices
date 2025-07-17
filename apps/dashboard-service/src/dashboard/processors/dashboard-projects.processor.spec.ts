@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardProjectsProcessor } from "./dashboard-projects.processor";
 import { CacheService } from "../dto/cache.service";
+import { PolicyService } from "@terramatch-microservices/common";
 import {
   Project,
   Site,
@@ -13,20 +14,30 @@ import {
   ProjectReport
 } from "@terramatch-microservices/database/entities";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dashboard-projects.dto";
+import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 describe("DashboardProjectsProcessor", () => {
   let processor: DashboardProjectsProcessor;
   let cacheService: DeepMocked<CacheService>;
+  let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
     cacheService = createMock<CacheService>();
+    policyService = createMock<PolicyService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        DashboardProjectsProcessor,
+        {
+          provide: DashboardProjectsProcessor,
+          useFactory: () => new DashboardProjectsProcessor(cacheService, policyService)
+        },
         {
           provide: CacheService,
           useValue: cacheService
+        },
+        {
+          provide: PolicyService,
+          useValue: policyService
         }
       ]
     }).compile();
@@ -121,22 +132,22 @@ describe("DashboardProjectsProcessor", () => {
   });
 
   it("should create full DTO from light DTO", async () => {
-    const mockProject = { uuid: "test-uuid" } as Project;
-    const mockLightDto = new DashboardProjectsLightDto({
+    const mockProject = {
       uuid: "test-uuid",
       name: "Test Project",
       country: "Kenya",
       frameworkKey: "ppc",
-      treesPlantedCount: 1000,
-      totalHectaresRestoredSum: 100.5,
       lat: 10.0,
       long: 20.0,
-      organisationName: "Test Org",
-      organisationType: "NGO",
       treesGrownGoal: 5000,
+      organisation: { name: "Test Org", type: "NGO" }
+    } as Project;
+    const mockLightDto = new DashboardProjectsLightDto(mockProject, {
+      treesPlantedCount: 1000,
+      totalHectaresRestoredSum: 100.5,
       totalSites: 5,
       totalJobsCreated: 25
-    });
+    } as HybridSupportProps<DashboardProjectsLightDto, Project>);
 
     jest.spyOn(processor, "getLightDto").mockResolvedValue({ id: "test-uuid", dto: mockLightDto });
 

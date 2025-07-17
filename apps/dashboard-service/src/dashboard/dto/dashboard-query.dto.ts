@@ -8,8 +8,9 @@ import {
   ORGANISATION_TYPES,
   OrganisationType
 } from "@terramatch-microservices/database/constants";
+import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
-export class DashboardQueryDto {
+export class DashboardQueryDto extends NumberPage {
   @ApiProperty({ required: false })
   @IsOptional()
   country?: string;

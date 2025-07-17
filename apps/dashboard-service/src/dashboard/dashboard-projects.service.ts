@@ -33,15 +33,20 @@ export class DashboardProjectsService {
     );
   }
 
-  async getDashboardProjects(query: DashboardQueryDto): Promise<DashboardProjectsLightDto[]> {
-    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
+  async getDashboardProjects(
+    query: DashboardQueryDto
+  ): Promise<{ data: DashboardProjectsLightDto[]; paginationTotal: number; pageNumber: number }> {
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, query, [
       {
         association: "organisation",
         attributes: ["uuid", "name", "type"]
       }
     ]).queryFilters(query);
 
-    const projects = await projectsBuilder.execute();
+    const [projects, paginationTotal] = await Promise.all([
+      projectsBuilder.execute(),
+      projectsBuilder.paginationTotal()
+    ]);
 
     const projectsData = await Promise.all(
       projects.map(async project => {
@@ -64,6 +69,10 @@ export class DashboardProjectsService {
       })
     );
 
-    return projectsData;
+    return {
+      data: projectsData,
+      paginationTotal,
+      pageNumber: query.number ?? 1
+    };
   }
 }

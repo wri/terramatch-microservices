@@ -14,7 +14,7 @@ interface DateResult {
 @Injectable()
 export class TreeRestorationGoalService {
   async getTreeRestorationGoal(query: DashboardQueryDto) {
-    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, query, [
       {
         association: "organisation",
         attributes: ["uuid", "name", "type"]

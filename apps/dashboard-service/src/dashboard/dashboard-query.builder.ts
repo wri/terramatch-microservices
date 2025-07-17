@@ -1,36 +1,26 @@
-import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions, Sequelize } from "sequelize";
+import { Attributes, Includeable, Op, WhereOptions, Sequelize } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { isObject, flatten, isEmpty } from "lodash";
+import { isEmpty } from "lodash";
 import { Project } from "@terramatch-microservices/database/entities";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 import { InternalServerErrorException } from "@nestjs/common";
+import { PaginatedQueryBuilder, MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 
-export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
-  protected findOptions: FindOptions<Attributes<T>> = {
-    order: ["id"]
-  };
+export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> extends PaginatedQueryBuilder<T> {
+  constructor(MODEL: ModelCtor<T>, page?: NumberPage, include?: Includeable[]) {
+    const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = page ?? {};
+    super(MODEL, pageSize, include);
 
-  constructor(private readonly MODEL: ModelCtor<T>, include?: Includeable[]) {
-    if (include != null && include.length > 0) {
-      this.findOptions.include = include;
+    if (pageNumber > 1) {
+      this.pageNumber(pageNumber);
     }
   }
 
   get sql() {
     if (this.MODEL.sequelize == null) throw new InternalServerErrorException("Model is missing sequelize connection");
     return this.MODEL.sequelize;
-  }
-
-  order(order: OrderItem) {
-    this.findOptions.order = [order];
-    return this;
-  }
-
-  where(options: WhereOptions, filterable?: Filterable) {
-    if (filterable == null) filterable = this.findOptions;
-    filterable.where = this.combineWheresWithAnd(filterable.where ?? {}, options);
-    return this;
   }
 
   async select(attributes: (keyof Attributes<T>)[]) {
@@ -91,18 +81,6 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     return this;
   }
 
-  async execute() {
-    return await this.MODEL.findAll(this.findOptions);
-  }
-
-  async count() {
-    return await this.MODEL.count({
-      ...this.findOptions,
-      distinct: true,
-      col: "id"
-    });
-  }
-
   async sum(field: keyof Attributes<T>) {
     return await this.MODEL.sum(field, this.findOptions);
   }
@@ -115,29 +93,5 @@ export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
     });
 
     return results.map(r => r.id);
-  }
-
-  private operatorSet = new Set(Object.values(Op));
-
-  private getComplexKeys(obj: object) {
-    const symbols = Object.getOwnPropertySymbols(obj).filter(s => this.operatorSet.has(s)) as (symbol | string)[];
-    return symbols.concat(Object.keys(obj));
-  }
-
-  private unpackAnd(where: WhereOptions) {
-    if (!isObject(where)) return where;
-
-    const keys = this.getComplexKeys(where);
-    if (keys.length === 0) return;
-    if (keys.length !== 1 || keys[0] !== Op.and) return where;
-    return where[Op.and];
-  }
-
-  private combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions): WhereOptions {
-    const unpackedA = this.unpackAnd(whereA);
-    if (unpackedA === undefined) return whereB;
-    const unpackedB = this.unpackAnd(whereB);
-    if (unpackedB === undefined) return whereA;
-    return { [Op.and]: flatten([unpackedA, unpackedB]) };
   }
 }

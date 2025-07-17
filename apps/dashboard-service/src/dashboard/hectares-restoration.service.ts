@@ -10,7 +10,7 @@ export class HectaresRestorationService {
     const hectaresByRestoration = "restorationByStrategy";
     const hectaresByTargetLandUseTypes = "restorationByLandUse";
 
-    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, query, [
       {
         association: "organisation",
         attributes: ["uuid", "name", "type"]

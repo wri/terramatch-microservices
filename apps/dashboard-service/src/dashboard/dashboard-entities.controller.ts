@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, NotFoundException, UseInterceptors } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { JsonApiResponse, ExceptionResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardEntity } from "@terramatch-microservices/database/constants";
@@ -31,18 +31,26 @@ export class DashboardEntitiesController {
   async findAll(@Param("entity") entity: DashboardEntity, @Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
 
-    const data = await this.cacheService.get(cacheKey, async () => {
+    const result = await this.cacheService.get(cacheKey, async () => {
       const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-      const models = await processor.findMany(query);
-      const dtoResults = await processor.getLightDtos(models);
-      return dtoResults;
+      const paginationResult = await processor.findManyWithPagination(query);
+      const dtoResults = await processor.getLightDtos(paginationResult.data);
+      return { ...paginationResult, dtoResults };
     });
 
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
 
-    data.forEach(({ id, dto }) => {
+    result.dtoResults.forEach(({ id, dto }) => {
       document.addData(id, dto);
+    });
+
+    document.addIndexData({
+      resource: "dashboardProjects",
+      requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+      ids: result.dtoResults.map(({ id }) => id),
+      total: result.paginationTotal,
+      pageNumber: result.pageNumber
     });
 
     return document.serialize();

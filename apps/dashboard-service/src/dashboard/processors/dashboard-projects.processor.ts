@@ -42,7 +42,7 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
   }
 
   async findMany(query: DashboardQueryDto): Promise<Project[]> {
-    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, query, [
       {
         association: "organisation",
         attributes: ["uuid", "name", "type"]
@@ -50,6 +50,25 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
     ]).queryFilters(query);
 
     return await projectsBuilder.execute();
+  }
+
+  async findManyWithPagination(
+    query: DashboardQueryDto
+  ): Promise<{ data: Project[]; paginationTotal: number; pageNumber: number }> {
+    const projectsBuilder = new DashboardProjectsQueryBuilder(Project, query, [
+      {
+        association: "organisation",
+        attributes: ["uuid", "name", "type"]
+      }
+    ]).queryFilters(query);
+
+    const [data, paginationTotal] = await Promise.all([projectsBuilder.execute(), projectsBuilder.paginationTotal()]);
+
+    return {
+      data,
+      paginationTotal,
+      pageNumber: query.number ?? 1
+    };
   }
 
   protected async getTotalJobs(projectId: number) {

@@ -22,6 +22,17 @@ export abstract class DashboardEntityProcessor<ModelType, LightDto, FullDto> {
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
 
+  async findManyWithPagination(
+    query: DashboardQueryDto
+  ): Promise<{ data: ModelType[]; paginationTotal: number; pageNumber: number }> {
+    const data = await this.findMany(query);
+    return {
+      data,
+      paginationTotal: data.length,
+      pageNumber: query.number ?? 1
+    };
+  }
+
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
     for (const model of models) {

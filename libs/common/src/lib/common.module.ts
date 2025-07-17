@@ -65,6 +65,15 @@ export const QUEUES = ["email"];
     EmailProcessor,
     ReportGenerationService
   ],
-  exports: [PolicyService, JwtModule, EmailService, LocalizationService, MediaService, TemplateService, SlackService]
+  exports: [
+    PolicyService,
+    JwtModule,
+    EmailService,
+    LocalizationService,
+    MediaService,
+    TemplateService,
+    SlackService,
+    ReportGenerationService
+  ]
 })
 export class CommonModule {}

@@ -7,16 +7,18 @@ import { HealthModule } from "@terramatch-microservices/common/health/health.mod
 import { ScheduleModule } from "@nestjs/schedule";
 import { ScheduledJobsService } from "./scheduled-jobs/scheduled-jobs.service";
 import { BullModule } from "@nestjs/bullmq";
+import { ScheduledJobsProcessor } from "./scheduled-jobs/scheduled-jobs.processor";
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     ScheduleModule.forRoot(),
     BullModule.registerQueue({ name: "scheduled-jobs" }),
+    BullModule.registerQueue({ name: "email" }),
     CommonModule,
     HealthModule
   ],
   controllers: [DelayedJobsController],
-  providers: [ScheduledJobsService, { provide: APP_FILTER, useClass: SentryGlobalFilter }]
+  providers: [{ provide: APP_FILTER, useClass: SentryGlobalFilter }, ScheduledJobsService, ScheduledJobsProcessor]
 })
 export class AppModule {}

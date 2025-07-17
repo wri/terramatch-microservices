@@ -34,7 +34,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
     super();
   }
 
-  async process({ name, data: { id, taskDefinition } }: Job) {
+  async process({ name, data: { jobId, taskDefinition } }: Job) {
     try {
       switch (name) {
         case TASK_DUE_EVENT:
@@ -56,11 +56,13 @@ export class ScheduledJobsProcessor extends WorkerHost {
       this.logger.error("Error processing job", error);
       // Allow the job to try again. If we see this causing non-stop errors, we'll want to add a
       // feature for limited retries.
-      await ScheduledJob.restore({ where: { id } });
+      await ScheduledJob.restore({ where: { id: jobId } });
     }
   }
 
-  private async processTaskDue({ framework_key: frameworkKey, due_at: dueAtString }: TaskDue) {
+  private async processTaskDue(taskDue: TaskDue) {
+    this.logger.log(`processTaskDue ${JSON.stringify(taskDue)}`);
+    const { framework_key: frameworkKey, due_at: dueAtString } = taskDue;
     const where = { frameworkKey, status: { [Op.ne]: "started" } };
     const count = await Project.count({ where });
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
@@ -79,7 +81,9 @@ export class ScheduledJobsProcessor extends WorkerHost {
     }
   }
 
-  private async processReportReminder({ framework_key: frameworkKey }: ReportReminder) {
+  private async processReportReminder(reportReminder: ReportReminder) {
+    this.logger.log(`processReportReminder ${JSON.stringify(reportReminder)}`);
+    const { framework_key: frameworkKey } = reportReminder;
     if (frameworkKey !== "terrafund") {
       this.logger.warn(`Report reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
       return;
@@ -101,7 +105,9 @@ export class ScheduledJobsProcessor extends WorkerHost {
     await this.emailQueue.add("terrafundReportReminder", { projectIds });
   }
 
-  private async processSiteAndNurseryReminder({ framework_key: frameworkKey }: SiteAndNurseryReminder) {
+  private async processSiteAndNurseryReminder(siteAndNurseryReminder: SiteAndNurseryReminder) {
+    this.logger.log(`processSiteAndNurseryReminder ${JSON.stringify(siteAndNurseryReminder)}`);
+    const { framework_key: frameworkKey } = siteAndNurseryReminder;
     if (frameworkKey !== "terrafund") {
       this.logger.warn(`Site and Nursery reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
       return;

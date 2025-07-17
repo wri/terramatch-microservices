@@ -25,7 +25,7 @@ const baseMocks = () => {
     sum: jest.fn().mockResolvedValue(100)
   };
 
-  (DashboardProjectsQueryBuilder as jest.Mock).mockImplementation(() => mockBuilder);
+  (DashboardProjectsQueryBuilder as unknown as jest.Mock).mockImplementation((model, page, include) => mockBuilder);
 
   return mockBuilder;
 };

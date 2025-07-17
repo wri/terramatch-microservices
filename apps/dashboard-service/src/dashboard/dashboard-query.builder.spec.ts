@@ -64,11 +64,6 @@ describe("DashboardProjectsQueryBuilder", () => {
     expect(builder["findOptions"].include).toBeDefined();
   });
 
-  it("should combine where clauses using Op.and", () => {
-    const combined = builder["combineWheresWithAnd"]({ [Op.and]: [{ a: 1 }] }, { [Op.and]: [{ b: 2 }] });
-    expect(combined).toEqual({ [Op.and]: [{ a: 1 }, { b: 2 }] });
-  });
-
   it("should apply query filters correctly with valid input", () => {
     builder.queryFilters({
       country: "Kenya",
@@ -89,9 +84,9 @@ describe("DashboardProjectsQueryBuilder", () => {
     expect(mockModel.findAll).toHaveBeenCalledWith(builder["findOptions"]);
   });
 
-  it("should count distinct records", async () => {
-    const count = await builder.count();
-    expect(count).toBe(42);
+  it("should get pagination total", async () => {
+    const total = await builder.paginationTotal();
+    expect(total).toBe(42);
     expect(mockModel.count).toHaveBeenCalledWith(expect.objectContaining({ distinct: true }));
   });
 
@@ -106,17 +101,11 @@ describe("DashboardProjectsQueryBuilder", () => {
     expect(ids).toEqual([1, 2]);
   });
 
-  it("should combine two where clauses using Op.and", () => {
-    const whereA = { [Op.and]: [{ status: "approved" }] };
-    const whereB = { [Op.and]: [{ country: "XX" }] };
-    const result = builder["combineWheresWithAnd"](whereA, whereB);
-    expect(result).toEqual({ [Op.and]: [{ status: "approved" }, { country: "XX" }] });
-  });
-
   it("should set include options in constructor when provided", () => {
     const includeOptions = [{ association: "organisation", attributes: ["uuid", "name"] }];
     const builderWithInclude = new DashboardProjectsQueryBuilder(
       mockModel as unknown as ModelCtor<Project>,
+      undefined,
       includeOptions
     );
 

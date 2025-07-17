@@ -61,7 +61,7 @@ describe("TreeRestorationGoalService", () => {
       execute: jest.fn()
     } as unknown as jest.Mocked<DashboardProjectsQueryBuilder>;
 
-    (DashboardProjectsQueryBuilder as jest.Mock).mockImplementation(() => mockBuilder);
+    (DashboardProjectsQueryBuilder as unknown as jest.Mock).mockImplementation((model, page, include) => mockBuilder);
 
     // Mock Site methods
     (Site.approvedIdsProjectsSubquery as jest.Mock).mockResolvedValue("approved-sites-subquery");
@@ -92,7 +92,7 @@ describe("TreeRestorationGoalService", () => {
 
       const result = await service.getTreeRestorationGoal(query);
 
-      expect(DashboardProjectsQueryBuilder).toHaveBeenCalledWith(Project, [
+      expect(DashboardProjectsQueryBuilder).toHaveBeenCalledWith(Project, query, [
         {
           association: "organisation",
           attributes: ["uuid", "name", "type"]

@@ -6,9 +6,7 @@ import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardEntity } from "@terramatch-microservices/database/constants";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { CurrentUser } from "./decorators/current-user.decorator";
-import { User } from "@terramatch-microservices/database/entities";
-import { DashboardAuthService } from "./services/dashboard-auth.service";
+import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
@@ -18,7 +16,7 @@ import { UserContextInterceptor } from "./interceptors/user-context.interceptor"
 export class DashboardEntitiesController {
   constructor(
     private readonly dashboardEntitiesService: DashboardEntitiesService,
-    private readonly dashboardAuthService: DashboardAuthService,
+    private readonly policyService: PolicyService,
     private readonly cacheService: CacheService
   ) {}
 
@@ -60,11 +58,7 @@ export class DashboardEntitiesController {
     operationId: "dashboardEntityGet",
     summary: "Get a single dashboard entity. Returns full data if authorized, light data otherwise."
   })
-  async findOne(
-    @Param("entity") entity: DashboardEntity,
-    @Param("uuid") uuid: string,
-    @CurrentUser() userId: number | null
-  ) {
+  async findOne(@Param("entity") entity: DashboardEntity, @Param("uuid") uuid: string) {
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
     const model = await processor.findOne(uuid);
 
@@ -72,9 +66,9 @@ export class DashboardEntitiesController {
       throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
     }
 
-    const authResult = await this.dashboardAuthService.userHasFullProjectAccess(uuid, userId);
+    const hasAccess = await this.policyService.hasAccess("read", model);
 
-    if (authResult) {
+    if (hasAccess) {
       const { id, dto } = await processor.getFullDto(model);
       const document = buildJsonApi(processor.FULL_DTO);
       document.addData(id, dto);

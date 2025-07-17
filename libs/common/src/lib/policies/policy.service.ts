@@ -121,4 +121,13 @@ export class PolicyService {
     const hasUnauthorized = subjects.find(subject => ability.cannot(action, subject)) != null;
     if (hasUnauthorized) throw new UnauthorizedException();
   }
+
+  async hasAccess(action: string, subject: Model | EntityClass | Model[]): Promise<boolean> {
+    try {
+      await this.authorize(action, subject);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

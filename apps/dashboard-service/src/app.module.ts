@@ -20,7 +20,6 @@ import { DashboardEntitiesController } from "./dashboard/dashboard-entities.cont
 import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service";
 import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
 import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
-import { DashboardAuthService } from "./dashboard/services/dashboard-auth.service";
 import { UserContextInterceptor } from "./dashboard/interceptors/user-context.interceptor";
 
 @Module({
@@ -63,7 +62,6 @@ import { UserContextInterceptor } from "./dashboard/interceptors/user-context.in
     DashboardCacheWarmupService,
     DashboardEntitiesService,
     HectaresRestorationService,
-    DashboardAuthService,
     UserContextInterceptor
   ]
 })

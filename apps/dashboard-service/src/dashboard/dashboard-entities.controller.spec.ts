@@ -8,7 +8,7 @@ import { DashboardEntityParamsDto, DashboardEntityWithUuidDto } from "./dto/dash
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
 import { Project } from "@terramatch-microservices/database/entities";
-import { DashboardAuthService } from "./services/dashboard-auth.service";
+import { PolicyService } from "@terramatch-microservices/common";
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { JwtService } from "@nestjs/jwt";
@@ -29,7 +29,7 @@ describe("DashboardEntitiesController", () => {
   let controller: DashboardEntitiesController;
   let dashboardEntitiesService: DeepMocked<DashboardEntitiesService>;
   let cacheService: DeepMocked<CacheService>;
-  let dashboardAuthService: DeepMocked<DashboardAuthService>;
+  let policyService: DeepMocked<PolicyService>;
   let mockProcessor: DeepMocked<DashboardProjectsProcessor>;
   let app: INestApplication;
   let jwtService: DeepMocked<JwtService>;
@@ -54,7 +54,7 @@ describe("DashboardEntitiesController", () => {
     dashboardEntitiesService.createDashboardProcessor.mockReturnValue(mockProcessor);
     dashboardEntitiesService.getCacheService.mockReturnValue(cacheService);
 
-    dashboardAuthService = createMock<DashboardAuthService>();
+    policyService = createMock<PolicyService>();
     jwtService = createMock<JwtService>();
 
     // Mock JwtService constructor
@@ -72,8 +72,8 @@ describe("DashboardEntitiesController", () => {
           useValue: cacheService
         },
         {
-          provide: DashboardAuthService,
-          useValue: dashboardAuthService
+          provide: PolicyService,
+          useValue: policyService
         },
         {
           provide: JwtService,
@@ -192,9 +192,9 @@ describe("DashboardEntitiesController", () => {
 
     mockProcessor.findOne.mockResolvedValue(mockModel);
     mockProcessor.getFullDto.mockResolvedValue(mockDtoResult);
-    dashboardAuthService.checkUserProjectAccess.mockResolvedValue({ allowed: true });
+    policyService.hasAccess.mockResolvedValue(true);
 
-    const result = await controller.findOne(params.entity, params.uuid, null);
+    const result = await controller.findOne(params.entity, params.uuid);
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
@@ -227,9 +227,9 @@ describe("DashboardEntitiesController", () => {
 
     mockProcessor.findOne.mockResolvedValue(mockModel);
     mockProcessor.getLightDto.mockResolvedValue(mockLightDtoResult);
-    dashboardAuthService.checkUserProjectAccess.mockResolvedValue({ allowed: false });
+    policyService.hasAccess.mockResolvedValue(false);
 
-    const result = await controller.findOne(params.entity, params.uuid, null);
+    const result = await controller.findOne(params.entity, params.uuid);
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
@@ -295,7 +295,7 @@ describe("DashboardEntitiesController", () => {
 
       mockProcessor.findOne.mockResolvedValue(mockModel);
       mockProcessor.getFullDto.mockResolvedValue(mockDtoResult);
-      dashboardAuthService.checkUserProjectAccess.mockResolvedValue({ allowed: true });
+      policyService.hasAccess.mockResolvedValue(true);
 
       const response = await request(app.getHttpServer())
         .get("/dashboard/v3/dashboardProjects/uuid-1")
@@ -337,7 +337,7 @@ describe("DashboardEntitiesController", () => {
 
       mockProcessor.findOne.mockResolvedValue(mockModel);
       mockProcessor.getLightDto.mockResolvedValue(mockLightDtoResult);
-      dashboardAuthService.checkUserProjectAccess.mockResolvedValue({ allowed: false });
+      policyService.hasAccess.mockResolvedValue(false);
 
       const response = await request(app.getHttpServer())
         .get("/dashboard/v3/dashboardProjects/uuid-1")
@@ -373,7 +373,7 @@ describe("DashboardEntitiesController", () => {
 
       mockProcessor.findOne.mockResolvedValue(mockModel);
       mockProcessor.getLightDto.mockResolvedValue(mockLightDtoResult);
-      dashboardAuthService.checkUserProjectAccess.mockResolvedValue({ allowed: false });
+      policyService.hasAccess.mockResolvedValue(false);
 
       const response = await request(app.getHttpServer()).get("/dashboard/v3/dashboardProjects/uuid-1").expect(200);
 
@@ -407,7 +407,7 @@ describe("DashboardEntitiesController", () => {
 
       mockProcessor.findOne.mockResolvedValue(mockModel);
       mockProcessor.getLightDto.mockResolvedValue(mockLightDtoResult);
-      dashboardAuthService.checkUserProjectAccess.mockResolvedValue({ allowed: false });
+      policyService.hasAccess.mockResolvedValue(false);
 
       const response = await request(app.getHttpServer())
         .get("/dashboard/v3/dashboardProjects/uuid-1")

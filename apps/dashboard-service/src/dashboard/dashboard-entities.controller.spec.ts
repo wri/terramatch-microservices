@@ -10,12 +10,9 @@ import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashb
 import { Project } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { INestApplication } from "@nestjs/common";
-import request from "supertest";
 import { JwtService } from "@nestjs/jwt";
-import { User, Permission } from "@terramatch-microservices/database/entities";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
-import { RequestContext } from "nestjs-request-context";
 
 jest.mock("@nestjs/jwt");
 const MockJwtService = JwtService as jest.MockedClass<typeof JwtService>;

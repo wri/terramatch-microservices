@@ -261,4 +261,52 @@ describe("DashboardEntitiesController", () => {
     expect(getLightDtoSpy).toHaveBeenCalledWith(mockModel);
     expect(getFullDtoSpy).not.toHaveBeenCalled();
   });
+
+  it("should handle cache service interaction with processor creation", async () => {
+    const params: DashboardEntityParamsDto = { entity: "dashboardProjects" };
+    const query: DashboardQueryDto = {};
+    const mockModels = [
+      {
+        uuid: "uuid-1",
+        name: "Project 1",
+        country: "Test Country",
+        frameworkKey: "ppc",
+        lat: 10.0,
+        long: 20.0,
+        treesGrownGoal: 5000,
+        organisation: { name: "Test Org", type: "NGO" }
+      }
+    ] as Project[];
+
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      expect(cacheKey).toBe(`dashboard:${params.entity}|test-cache-key`);
+      expect(typeof factory).toBe("function");
+
+      // Execute the factory function to test the processor creation and data processing
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return [];
+    });
+
+    jest.spyOn(mockProcessor, "findMany").mockResolvedValue(mockModels);
+    jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue({
+      id: "uuid-1",
+      dto: new DashboardProjectsLightDto(mockModels[0], {
+        totalSites: 5,
+        totalHectaresRestoredSum: 50,
+        treesPlantedCount: 1000,
+        totalJobsCreated: 25
+      })
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
+    expect(dashboardEntitiesService.createDashboardProcessor).toHaveBeenCalledWith(params.entity);
+    expect(mockProcessor.findMany).toHaveBeenCalledWith(query);
+    expect(mockProcessor.getLightDto).toHaveBeenCalledWith(mockModels[0]);
+    expect(result).toBeDefined();
+  });
 });

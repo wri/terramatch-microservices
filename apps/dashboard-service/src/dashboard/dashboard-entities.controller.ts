@@ -34,16 +34,31 @@ export class DashboardEntitiesController {
     const data = await this.cacheService.get(cacheKey, async () => {
       const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
       const models = await processor.findMany(query);
-      const dtoResults = await processor.getLightDtos(models);
-      return dtoResults;
+      const rawData = await Promise.all(
+        models.map(async model => {
+          const dtoResult = await processor.getLightDto(model);
+          return {
+            id: dtoResult.id,
+            model: model, // Store the raw model
+            computedData: {
+              totalSites: (dtoResult.dto as DashboardProjectsLightDto).totalSites,
+              totalHectaresRestoredSum: (dtoResult.dto as DashboardProjectsLightDto).totalHectaresRestoredSum,
+              treesPlantedCount: (dtoResult.dto as DashboardProjectsLightDto).treesPlantedCount,
+              totalJobsCreated: (dtoResult.dto as DashboardProjectsLightDto).totalJobsCreated
+            }
+          };
+        })
+      );
+      return rawData;
     });
 
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
 
-    data.forEach(({ id, dto }) => {
+    for (const { id, model, computedData } of data) {
+      const dto = new processor.LIGHT_DTO(model, computedData);
       document.addData(id, dto);
-    });
+    }
 
     return document.serialize();
   }

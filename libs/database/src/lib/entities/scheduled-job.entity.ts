@@ -11,7 +11,7 @@ import {
   TASK_DUE,
   TaskDue
 } from "../constants/scheduled-jobs";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 
 @Table({ tableName: "scheduled_jobs", underscored: true, paranoid: true })
 export class ScheduledJob extends Model<ScheduledJob> {

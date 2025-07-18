@@ -13,21 +13,27 @@ import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
+import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 
 jest.mock("@nestjs/jwt");
 const MockJwtService = JwtService as jest.MockedClass<typeof JwtService>;
+
+// Mock the dashboard-query.builder module
+jest.mock("./dashboard-query.builder");
 
 // Mock the json-api-builder module
 jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
   buildJsonApi: jest.fn().mockImplementation(() => ({
     addData: jest.fn().mockReturnThis(),
+    addIndexData: jest.fn().mockReturnThis(),
     serialize: jest.fn().mockReturnValue({
       data: [],
       included: [],
       meta: { resourceType: "dashboardProjects" }
     })
   })),
-  getStableRequestQuery: jest.fn().mockImplementation(query => query)
+  getStableRequestQuery: jest.fn().mockImplementation(query => query),
+  getDtoType: jest.fn().mockReturnValue("dashboardProjects")
 }));
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
@@ -48,8 +54,17 @@ describe("DashboardEntitiesController", () => {
   let mockProcessor: DashboardProjectsProcessor;
   let app: INestApplication;
   let jwtService: DeepMocked<JwtService>;
+  let mockQueryBuilder: jest.Mocked<DashboardProjectsQueryBuilder>;
 
   beforeEach(async () => {
+    // Setup mock query builder
+    mockQueryBuilder = {
+      queryFilters: jest.fn().mockReturnThis(),
+      count: jest.fn().mockResolvedValue(2)
+    } as unknown as jest.Mocked<DashboardProjectsQueryBuilder>;
+
+    (DashboardProjectsQueryBuilder as jest.Mock).mockImplementation(() => mockQueryBuilder);
+
     cacheService = createMock<CacheService>();
     cacheService.getCacheKeyFromQuery.mockReturnValue("test-cache-key");
 
@@ -126,7 +141,7 @@ describe("DashboardEntitiesController", () => {
       }
     ] as Project[];
 
-    // Mock the cache to return the new structure with models and computed data
+    // Mock data that will be returned by cache
     const cachedData = [
       {
         id: "uuid-1",
@@ -150,8 +165,12 @@ describe("DashboardEntitiesController", () => {
       }
     ];
 
+    // Fix the cache mock to return the correct structure
     cacheService.get.mockImplementation(async () => {
-      return cachedData;
+      return {
+        data: cachedData,
+        total: 2
+      };
     });
 
     // Mock the processor methods since we're using a real processor instance
@@ -179,9 +198,12 @@ describe("DashboardEntitiesController", () => {
 
     expect(Array.isArray(result.included)).toBe(true);
     expect(result.included).toHaveLength(0);
+
+    expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
+    expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
   });
 
-  it("should return a single dashboard entity with full data", async () => {
+  it("should return a single dashboard entity with full data when user has access", async () => {
     const params: DashboardEntityWithUuidDto = {
       entity: "dashboardProjects",
       uuid: "uuid-1"
@@ -199,6 +221,7 @@ describe("DashboardEntitiesController", () => {
       objectives: "Test objectives",
       landTenureProjectArea: ["test-area"]
     } as Project;
+
     const mockDtoResult = {
       id: "uuid-1",
       dto: new DashboardProjectsFullDto(mockModel, {
@@ -209,14 +232,22 @@ describe("DashboardEntitiesController", () => {
       } as HybridSupportProps<DashboardProjectsFullDto, Project>)
     };
 
-    jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
-    jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockDtoResult);
+    const findOneSpy = jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
+    const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockDtoResult);
+    const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto");
     policyService.hasAccess.mockResolvedValue(true);
 
     const result = await controller.findOne(params.entity, params.uuid);
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
+    expect(result.included).toBeDefined();
+    expect(result.meta).toBeDefined();
+
+    expect(findOneSpy).toHaveBeenCalledWith(params.uuid);
+    expect(getFullDtoSpy).toHaveBeenCalledWith(mockModel);
+    expect(getLightDtoSpy).not.toHaveBeenCalled();
+    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
   });
 
   it("should return a single dashboard entity with light data when user has no access", async () => {
@@ -234,6 +265,7 @@ describe("DashboardEntitiesController", () => {
       treesGrownGoal: 5000,
       organisation: { name: "Test Org", type: "NGO" }
     } as Project;
+
     const mockLightDtoResult = {
       id: "uuid-1",
       dto: new DashboardProjectsLightDto(mockModel, {
@@ -257,9 +289,25 @@ describe("DashboardEntitiesController", () => {
     expect(Array.isArray(result.included)).toBe(true);
     expect(result.included).toHaveLength(0);
 
-    expect(findOneSpy).toHaveBeenCalledWith(mockModel.uuid);
+    expect(findOneSpy).toHaveBeenCalledWith(params.uuid);
     expect(getLightDtoSpy).toHaveBeenCalledWith(mockModel);
     expect(getFullDtoSpy).not.toHaveBeenCalled();
+    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
+  });
+
+  it("should throw NotFoundException when entity is not found", async () => {
+    const params: DashboardEntityWithUuidDto = {
+      entity: "dashboardProjects",
+      uuid: "non-existent-uuid"
+    };
+
+    jest.spyOn(mockProcessor, "findOne").mockResolvedValue(null);
+
+    await expect(controller.findOne(params.entity, params.uuid)).rejects.toThrow(
+      `dashboardProjects with UUID ${params.uuid} not found`
+    );
+
+    expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
   });
 
   it("should handle cache service interaction with processor creation", async () => {
@@ -287,7 +335,7 @@ describe("DashboardEntitiesController", () => {
         const result = await factory();
         return result;
       }
-      return [];
+      return { data: [], total: 0 };
     });
 
     jest.spyOn(mockProcessor, "findMany").mockResolvedValue(mockModels);
@@ -307,6 +355,29 @@ describe("DashboardEntitiesController", () => {
     expect(dashboardEntitiesService.createDashboardProcessor).toHaveBeenCalledWith(params.entity);
     expect(mockProcessor.findMany).toHaveBeenCalledWith(query);
     expect(mockProcessor.getLightDto).toHaveBeenCalledWith(mockModels[0]);
+    expect(DashboardProjectsQueryBuilder).toHaveBeenCalled();
+    expect(mockQueryBuilder.queryFilters).toHaveBeenCalledWith(query);
+    expect(mockQueryBuilder.count).toHaveBeenCalled();
     expect(result).toBeDefined();
+  });
+
+  it("should handle cache service with query parameters", async () => {
+    const params: DashboardEntityParamsDto = { entity: "dashboardProjects" };
+    const query: DashboardQueryDto = {
+      country: "Test Country",
+      programmes: ["terrafund"],
+      cohort: ["terrafund"],
+      landscapes: ["gcb"]
+    };
+
+    cacheService.get.mockResolvedValue({
+      data: [],
+      total: 0
+    });
+
+    await controller.findAll(params.entity, query);
+
+    expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
+    expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
   });
 });

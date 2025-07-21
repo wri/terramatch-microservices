@@ -192,7 +192,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
   }
 
-  protected async getReportTitleBase(dueAt: Date | null, title: string, framework: FrameworkKey) {
+  protected async getReportTitleBase(dueAt: Date | null, title: string, frameworkKey?: FrameworkKey) {
     if (dueAt == null) return title ?? "";
 
     const locale = await this.entitiesService.getUserLocale();
@@ -212,7 +212,7 @@ export class SiteReportProcessor extends ReportProcessor<
       });
     };
 
-    if (framework === "ppc") {
+    if (frameworkKey === "ppc") {
       const cutoffOneMonth = new Date("2023-04-07T23:59:59.999Z");
       const cutoffThreeMonths = new Date("2023-07-01T00:00:00.000Z");
 
@@ -252,7 +252,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return await this.getReportTitleBase(
       siteReport.dueAt,
       siteReport.title ?? (await this.entitiesService.localizeText("Site Report")),
-      siteReport.frameworkKey!
+      siteReport.frameworkKey ?? undefined
     );
   }
 
@@ -267,7 +267,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return await this.getReportTitleBase(
       projectReport.dueAt,
       projectReport.title ?? projectReportTitle,
-      siteReport.frameworkKey!
+      siteReport.frameworkKey ?? undefined
     );
   }
 }

@@ -490,7 +490,7 @@ describe("SiteReportProcessor", () => {
   describe("getReportTitleBase", () => {
     beforeEach(() => {
       processor["entitiesService"].getUserLocale = jest.fn(async () => "en-US");
-      processor["entitiesService"].localizeText = jest.fn(async (str, vars) => str);
+      processor["entitiesService"].localizeText = jest.fn(async (str, _vars) => str);
     });
 
     it("should use the first branch for dueAt <= cutoffOneMonth and framework ppc", async () => {

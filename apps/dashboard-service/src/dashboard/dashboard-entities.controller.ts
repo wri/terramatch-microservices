@@ -1,7 +1,11 @@
 import { Controller, Get, Param, Query, NotFoundException, UseInterceptors } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { JsonApiResponse, ExceptionResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
+import {
+  buildJsonApi,
+  getStableRequestQuery,
+  getDtoType
+} from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardEntity } from "@terramatch-microservices/database/constants";
@@ -10,6 +14,8 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
+import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
+import { Project } from "@terramatch-microservices/database/entities";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -31,18 +37,52 @@ export class DashboardEntitiesController {
   async findAll(@Param("entity") entity: DashboardEntity, @Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
 
-    const data = await this.cacheService.get(cacheKey, async () => {
+    const { data, total } = await this.cacheService.get(cacheKey, async () => {
       const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
       const models = await processor.findMany(query);
-      const dtoResults = await processor.getLightDtos(models);
-      return dtoResults;
+
+      const queryBuilder = new DashboardProjectsQueryBuilder(Project, [
+        {
+          association: "organisation",
+          attributes: ["uuid", "name", "type"]
+        }
+      ]).queryFilters(query);
+      const total = await queryBuilder.count();
+
+      const rawData = await Promise.all(
+        models.map(async model => {
+          const dtoResult = await processor.getLightDto(model);
+          return {
+            id: dtoResult.id,
+            model: model,
+            computedData: {
+              totalSites: (dtoResult.dto as DashboardProjectsLightDto).totalSites,
+              totalHectaresRestoredSum: (dtoResult.dto as DashboardProjectsLightDto).totalHectaresRestoredSum,
+              treesPlantedCount: (dtoResult.dto as DashboardProjectsLightDto).treesPlantedCount,
+              totalJobsCreated: (dtoResult.dto as DashboardProjectsLightDto).totalJobsCreated
+            }
+          };
+        })
+      );
+      return { data: rawData, total };
     });
 
     const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-    const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
+    const document = buildJsonApi(DashboardProjectsLightDto, { pagination: "number" });
+    const indexIds: string[] = [];
 
-    data.forEach(({ id, dto }) => {
+    for (const { id, model, computedData } of data) {
+      const dto = new processor.LIGHT_DTO(model, computedData);
       document.addData(id, dto);
+      indexIds.push(id);
+    }
+
+    document.addIndexData({
+      resource: getDtoType(DashboardProjectsLightDto),
+      requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+      ids: indexIds,
+      total,
+      pageNumber: 1
     });
 
     return document.serialize();
@@ -70,12 +110,12 @@ export class DashboardEntitiesController {
 
     if (hasAccess) {
       const { id, dto } = await processor.getFullDto(model);
-      const document = buildJsonApi(processor.FULL_DTO);
+      const document = buildJsonApi(DashboardProjectsFullDto);
       document.addData(id, dto);
       return document.serialize();
     } else {
       const { id, dto } = await processor.getLightDto(model);
-      const document = buildJsonApi(processor.LIGHT_DTO);
+      const document = buildJsonApi(DashboardProjectsLightDto);
       document.addData(id, dto);
       return document.serialize();
     }

@@ -36,7 +36,7 @@ describe("DashboardEntitiesService", () => {
   });
 
   it("should create a dashboard processor for valid entity", () => {
-    const processor = service.createDashboardProcessor(DASHBOARD_PROJECTS[DASHBOARD_PROJECTS]);
+    const processor = service.createDashboardProcessor(DASHBOARD_PROJECTS);
 
     expect(processor).toBeDefined();
     expect(processor).toBeInstanceOf(DashboardProjectsProcessor);

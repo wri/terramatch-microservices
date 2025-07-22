@@ -510,4 +510,56 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(TEXT)
   capacityBuildingSupportNeeded: string | null;
+
+  @AllowNull
+  @Column(BOOLEAN)
+  associationsCooperatives: boolean | null;
+
+  @AllowNull
+  @JsonColumn()
+  territoriesOfOperation: string[] | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "decisionmaking_structure_description" })
+  decisionMakingStructureDescription: string | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "decisionmaking_structure_individuals_involved" })
+  decisionMakingStructureIndividualsInvolved: string | null;
+
+  @AllowNull
+  @Column(DECIMAL(15, 2))
+  averageWorkerIncome: number | null;
+
+  @AllowNull
+  @JsonColumn()
+  anrPracticesPast: string[] | null;
+
+  @AllowNull
+  @JsonColumn()
+  anrMonitoringApproaches: string[] | null;
+
+  @AllowNull
+  @Column(TEXT)
+  anrMonitoringApproachesDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  anrCommunicationFunders: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyProducts: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyTraditionalKnowledge: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyProductProcessing: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyBuyers: string | null;
 }

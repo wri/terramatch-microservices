@@ -1,4 +1,4 @@
-import { Get, Query, Controller, BadRequestException } from "@nestjs/common";
+import { Get, Query, Controller } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -7,7 +7,6 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { HectareRestorationDto } from "./dto/hectare-restoration.dto";
 import { HectaresRestorationService } from "./hectares-restoration.service";
-import { isEmpty } from "lodash";
 
 @Controller("dashboard/v3/hectaresRestoration")
 export class HectaresRestorationController {

@@ -157,11 +157,4 @@ export class Media extends Model<Media> {
    */
   @JsonColumn()
   responsiveImages: string[];
-
-  /**
-   * @deprecated this field is empty for all rows in the DB and may be safely ignored
-   */
-  @AllowNull
-  @Column(STRING)
-  tag: string | null;
 }

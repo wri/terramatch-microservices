@@ -32,7 +32,10 @@ const startLocalRepl = async (service: Service) => {
   });
 
   debug(`Launching REPL process for ${service}`);
-  spawn("node", [`dist/apps/${service}-repl`], { stdio: "inherit", env: { ...process.env, NODE_ENV: "development" } });
+  spawn("node", [`dist/apps/${service}-repl`], {
+    stdio: "inherit",
+    env: { ...process.env, NODE_ENV: "development", REPL: "true" }
+  });
 };
 
 const getTaskId = async (service: Service, env: Environment) => {
@@ -52,7 +55,7 @@ const getTaskId = async (service: Service, env: Environment) => {
 const getRemoteCommandString = (service: Service, remoteCommand: RemoteCommand) => {
   switch (remoteCommand) {
     case "repl":
-      return `node dist/apps/${service}-repl`;
+      return `REPL=true node dist/apps/${service}-repl`;
     case "sh":
       return "sh";
 

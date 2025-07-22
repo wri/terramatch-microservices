@@ -40,7 +40,7 @@ import { UserContextInterceptor } from "./dashboard/interceptors/user-context.in
       }
     }),
     BullModule.registerQueue({ name: "dashboard" }),
-    ScheduleModule.forRoot()
+    ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()])
   ],
   controllers: [
     TotalSectionHeaderController,

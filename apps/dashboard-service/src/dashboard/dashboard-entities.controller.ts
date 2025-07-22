@@ -63,6 +63,8 @@ export class DashboardEntitiesController {
               id: dtoResult.id,
               model: model,
               computedData: {
+                organisationName: (dtoResult.dto as DashboardProjectsLightDto).organisationName,
+                organisationType: (dtoResult.dto as DashboardProjectsLightDto).organisationType,
                 totalSites: (dtoResult.dto as DashboardProjectsLightDto).totalSites,
                 totalHectaresRestoredSum: (dtoResult.dto as DashboardProjectsLightDto).totalHectaresRestoredSum,
                 treesPlantedCount: (dtoResult.dto as DashboardProjectsLightDto).treesPlantedCount,

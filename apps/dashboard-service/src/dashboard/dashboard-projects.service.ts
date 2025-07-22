@@ -59,7 +59,9 @@ export class DashboardProjectsService {
           totalSites,
           totalHectaresRestoredSum,
           treesPlantedCount,
-          totalJobsCreated
+          totalJobsCreated,
+          organisationName: project.organisation?.name ?? null,
+          organisationType: project.organisation?.type ?? null
         } as HybridSupportProps<DashboardProjectsLightDto, Project>);
       })
     );

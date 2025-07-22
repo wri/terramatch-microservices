@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { ScheduledJob } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import {
   REPORT_REMINDER,
   SITE_AND_NURSERY_REMINDER,
@@ -20,19 +20,34 @@ export class ScheduledJobsService {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processScheduledJobs() {
-    const jobs = await ScheduledJob.findAll({
-      where: { executionTime: { [Op.lte]: new Date() } }
-    });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const transaction = await ScheduledJob.sequelize!.transaction();
+    try {
+      const jobs = await ScheduledJob.findAll({
+        where: { executionTime: { [Op.lte]: new Date() } },
+        // Use an update row lock on this query so that if multiple nodes happen to trigger this
+        // cron job at the exact same instant, only one of them gets access to the jobs that are
+        // ready to process.
+        lock: transaction.LOCK.UPDATE,
+        skipLocked: true,
+        transaction
+      });
 
-    for (const job of jobs) {
-      await this.processJob(job);
+      for (const job of jobs) {
+        await this.processJob(job, transaction);
+      }
+
+      await transaction.commit();
+    } catch (e) {
+      await transaction.rollback();
+      throw e;
     }
   }
 
-  private async processJob(job: ScheduledJob) {
+  private async processJob(job: ScheduledJob, transaction: Transaction) {
     // Remove the job first so that it doesn't get picked up again. We will undelete in the processor
     // if there's an error
-    await job.destroy();
+    await job.destroy({ transaction });
     const { id, type, taskDefinition } = job;
     this.logger.log(`Adding job to the queue: [${type}, ${JSON.stringify(taskDefinition)}]`);
     switch (job.type) {

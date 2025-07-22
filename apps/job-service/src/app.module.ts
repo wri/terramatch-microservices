@@ -12,7 +12,7 @@ import { ScheduledJobsProcessor } from "./scheduled-jobs/scheduled-jobs.processo
 @Module({
   imports: [
     SentryModule.forRoot(),
-    ScheduleModule.forRoot(),
+    ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()]),
     BullModule.registerQueue({ name: "scheduled-jobs" }),
     BullModule.registerQueue({ name: "email" }),
     CommonModule,

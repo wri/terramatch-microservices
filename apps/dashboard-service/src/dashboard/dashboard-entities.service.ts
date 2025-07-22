@@ -6,11 +6,11 @@ import { CacheService } from "./dto/cache.service";
 import { Project } from "@terramatch-microservices/database/entities";
 import { DashboardEntityDto } from "./dto/dashboard-entity.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DASHBOARD_ENTITIES } from "./constants/dashboard-entities.constants";
+import { DASHBOARD_PROJECTS, DASHBOARD_SITEPOLYGONS } from "./constants/dashboard-entities.constants";
 
 export const DASHBOARD_PROCESSORS = {
-  [DASHBOARD_ENTITIES[0]]: DashboardProjectsProcessor,
-  [DASHBOARD_ENTITIES[1]]: DashboardSitePolygonsProcessor
+  [DASHBOARD_PROJECTS]: DashboardProjectsProcessor,
+  [DASHBOARD_SITEPOLYGONS]: DashboardSitePolygonsProcessor
 } as const;
 
 type DashboardEntityKey = keyof typeof DASHBOARD_PROCESSORS;

@@ -16,7 +16,7 @@ import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashb
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
-import { DASHBOARD_ENTITIES } from "./constants/dashboard-entities.constants";
+import { DASHBOARD_ENTITIES, DASHBOARD_PROJECTS } from "./constants/dashboard-entities.constants";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -48,7 +48,7 @@ export class DashboardEntitiesController {
     const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
       const models = await processor.findMany(query);
       let rawData;
-      if (entity === DASHBOARD_ENTITIES[0]) {
+      if (entity === DASHBOARD_PROJECTS) {
         const queryBuilder = new DashboardProjectsQueryBuilder(Project, [
           {
             association: "organisation",

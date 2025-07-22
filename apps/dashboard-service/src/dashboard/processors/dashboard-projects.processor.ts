@@ -25,12 +25,7 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
   readonly LIGHT_DTO = DashboardProjectsLightDto;
   readonly FULL_DTO = DashboardProjectsFullDto;
 
-  constructor(
-    protected readonly cacheService: CacheService,
-    protected readonly policyService: PolicyService,
-    // Accept an optional third argument for compatibility
-    _dashboardSitePolygonsService?: unknown
-  ) {
+  constructor(protected readonly cacheService: CacheService, protected readonly policyService: PolicyService) {
     super(cacheService, policyService);
   }
 

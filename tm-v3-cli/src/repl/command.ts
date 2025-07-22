@@ -55,7 +55,7 @@ const getTaskId = async (service: Service, env: Environment) => {
 const getRemoteCommandString = (service: Service, remoteCommand: RemoteCommand) => {
   switch (remoteCommand) {
     case "repl":
-      return `REPL=true node dist/apps/${service}-repl`;
+      return `sh -c 'REPL=true node dist/apps/${service}-repl'`;
     case "sh":
       return "sh";
 

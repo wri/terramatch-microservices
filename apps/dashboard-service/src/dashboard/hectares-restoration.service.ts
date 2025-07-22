@@ -52,21 +52,25 @@ export class HectaresRestorationService {
           model: Site,
           as: "site",
           required: true,
+          attributes: ["id"],
           where: {
             status: {
-              [Op.in]: ["approved"]
+              [Op.in]: ["approved", "restoration-in-progress"]
             }
           },
+          paranoid: false,
           include: [
             {
               model: Project,
               as: "project",
               required: true,
+              attributes: ["id"],
               where: {
                 id: {
                   [Op.in]: projectIds
                 }
-              }
+              },
+              paranoid: false
             }
           ]
         }
@@ -74,7 +78,8 @@ export class HectaresRestorationService {
       where: {
         status: "approved",
         isActive: true
-      }
+      },
+      paranoid: false
     });
   }
 
@@ -94,10 +99,10 @@ export class HectaresRestorationService {
       const decodedValue = hectare.value;
       if (decodedValue != null) {
         for (const [key, value] of Object.entries(decodedValue)) {
-          if (hectaresRestored[key] !== null) {
+          if (!(key in hectaresRestored)) {
             hectaresRestored[key] = 0;
           }
-          hectaresRestored[key] += value;
+          hectaresRestored[key] += typeof value === "number" ? value : parseFloat(value as string);
         }
       }
     });

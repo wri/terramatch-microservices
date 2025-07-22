@@ -21,9 +21,6 @@ export class HectaresRestorationController {
   @JsonApiResponse([HectareRestorationDto])
   @ApiOperation({ operationId: "getHectaresRestoration", summary: "Get hectares restoration" })
   async getHectaresRestoration(@Query() query: DashboardQueryDto) {
-    if (isEmpty(query.projectUuid)) {
-      throw new BadRequestException("Invalid projectUuid");
-    }
     const cacheKey = `dashboard:hectares-restoration|${this.cacheService.getCacheKeyFromQuery(query)}`;
     const cachedData = await this.cacheService.get(cacheKey, () => this.hectaresRestorationService.getResults(query));
     const document = buildJsonApi(HectareRestorationDto);

@@ -16,6 +16,7 @@ import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashb
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
+import { DASHBOARD_ENTITIES } from "./constants/dashboard-entities.constants";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -30,7 +31,7 @@ export class DashboardEntitiesController {
   @NoBearerAuth
   @ApiParam({
     name: "entity",
-    enum: ["dashboardProjects", "dashboardSitePolygons"],
+    enum: DASHBOARD_ENTITIES,
     description: "Dashboard entity type"
   })
   @JsonApiResponse({ data: DashboardProjectsLightDto, pagination: "number" })
@@ -47,7 +48,7 @@ export class DashboardEntitiesController {
     const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
       const models = await processor.findMany(query);
       let rawData;
-      if (entity === "dashboardProjects") {
+      if (entity === DASHBOARD_ENTITIES[0]) {
         const queryBuilder = new DashboardProjectsQueryBuilder(Project, [
           {
             association: "organisation",
@@ -113,7 +114,7 @@ export class DashboardEntitiesController {
   @NoBearerAuth
   @ApiParam({
     name: "entity",
-    enum: ["dashboardProjects", "dashboardSitePolygons"],
+    enum: DASHBOARD_ENTITIES,
     description: "Dashboard entity type"
   })
   @ApiParam({ name: "uuid", description: "Entity UUID" })

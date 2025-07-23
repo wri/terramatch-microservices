@@ -5,6 +5,11 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 
 @JsonApiDto({ type: "dashboardSitepolygons" })
 export class DashboardSitePolygonsLightDto {
+  constructor(sitePolygon: SitePolygon) {
+    populateDto<DashboardSitePolygonsLightDto, SitePolygon>(this, sitePolygon, {
+      name: sitePolygon.polyName
+    });
+  }
   @ApiProperty()
   id: number;
 
@@ -22,10 +27,4 @@ export class DashboardSitePolygonsLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
-
-  constructor(sitePolygon: SitePolygon) {
-    populateDto<DashboardSitePolygonsLightDto, SitePolygon>(this, sitePolygon, {
-      name: sitePolygon.polyName
-    });
-  }
 }

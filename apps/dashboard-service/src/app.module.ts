@@ -25,6 +25,7 @@ import { DashboardProjectsController } from "./dashboard/dashboard-projects.cont
 import { DashboardProjectsService } from "./dashboard/dashboard-projects.service";
 import { DashboardSitePolygonsController } from "./dashboard/dashboard-sitepolygons.controller";
 import { DashboardSitePolygonsService } from "./dashboard/dashboard-sitepolygons.service";
+import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.service";
 
 @Module({
   imports: [
@@ -70,7 +71,8 @@ import { DashboardSitePolygonsService } from "./dashboard/dashboard-sitepolygons
     HectaresRestorationService,
     UserContextInterceptor,
     DashboardProjectsService,
-    DashboardSitePolygonsService
+    DashboardSitePolygonsService,
+    DashboardImpactStoryService
   ]
 })
 export class AppModule {}

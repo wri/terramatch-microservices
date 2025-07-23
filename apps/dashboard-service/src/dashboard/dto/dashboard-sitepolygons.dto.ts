@@ -1,6 +1,7 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @JsonApiDto({ type: "dashboardSitepolygons" })
 export class DashboardSitePolygonsLightDto {
@@ -23,11 +24,8 @@ export class DashboardSitePolygonsLightDto {
   name: string | null;
 
   constructor(sitePolygon: SitePolygon) {
-    this.id = sitePolygon.id;
-    this.uuid = sitePolygon.uuid;
-    this.status = sitePolygon.status ?? "";
-    this.lat = sitePolygon.lat;
-    this.long = sitePolygon.long;
-    this.name = sitePolygon.polyName;
+    populateDto<DashboardSitePolygonsLightDto, SitePolygon>(this, sitePolygon, {
+      name: sitePolygon.polyName
+    });
   }
 }

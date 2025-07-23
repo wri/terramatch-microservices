@@ -33,14 +33,7 @@ export class DashboardSitePolygonsService {
     });
 
     return polygons.map(polygon => {
-      return {
-        id: polygon.id,
-        uuid: polygon.uuid,
-        status: polygon.status ?? "",
-        lat: typeof polygon.lat === "number" ? polygon.lat : null,
-        long: typeof polygon.long === "number" ? polygon.long : null,
-        name: typeof polygon.polyName === "string" ? polygon.polyName : null
-      };
+      return new DashboardSitePolygonsLightDto(polygon);
     });
   }
 }

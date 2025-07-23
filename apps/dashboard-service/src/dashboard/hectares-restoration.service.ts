@@ -58,7 +58,6 @@ export class HectaresRestorationService {
               [Op.in]: ["approved", "restoration-in-progress"]
             }
           },
-          paranoid: false,
           include: [
             {
               model: Project,
@@ -69,8 +68,7 @@ export class HectaresRestorationService {
                 id: {
                   [Op.in]: projectIds
                 }
-              },
-              paranoid: false
+              }
             }
           ]
         }
@@ -78,8 +76,7 @@ export class HectaresRestorationService {
       where: {
         status: "approved",
         isActive: true
-      },
-      paranoid: false
+      }
     });
   }
 

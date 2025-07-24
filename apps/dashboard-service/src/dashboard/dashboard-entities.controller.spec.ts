@@ -166,7 +166,8 @@ describe("DashboardEntitiesController", () => {
           treesPlantedCount: 1000,
           totalHectaresRestoredSum: 50,
           totalSites: 5,
-          totalJobsCreated: 25
+          totalJobsCreated: 25,
+          hasAccess: true
         }
       },
       {
@@ -176,7 +177,8 @@ describe("DashboardEntitiesController", () => {
           treesPlantedCount: 2000,
           totalHectaresRestoredSum: 100,
           totalSites: 10,
-          totalJobsCreated: 50
+          totalJobsCreated: 50,
+          hasAccess: false
         }
       }
     ];
@@ -245,7 +247,8 @@ describe("DashboardEntitiesController", () => {
         treesPlantedCount: 1000,
         totalHectaresRestoredSum: 50,
         totalSites: 5,
-        totalJobsCreated: 25
+        totalJobsCreated: 25,
+        hasAccess: true
       } as HybridSupportProps<DashboardProjectsFullDto, Project>)
     };
 
@@ -362,7 +365,8 @@ describe("DashboardEntitiesController", () => {
         totalSites: 5,
         totalHectaresRestoredSum: 50,
         treesPlantedCount: 1000,
-        totalJobsCreated: 25
+        totalJobsCreated: 25,
+        hasAccess: true
       })
     });
 

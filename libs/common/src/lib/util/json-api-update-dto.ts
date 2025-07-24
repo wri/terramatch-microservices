@@ -62,6 +62,21 @@ function StringDataDto<T>(type: string, AttributesDto: new () => T) {
   return DataDto;
 }
 
+export function CreateDataDto<T>(type: string, AttributesDto: new () => T) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsNotEmpty()
+    @ValidateNested()
+    @Type(() => AttributesDto)
+    @ApiProperty({ type: () => AttributesDto })
+    attributes: T;
+  }
+  return DataDto;
+}
+
 export function JsonApiDataDto<T>(options: DtoOptions, AttributesDto: new () => T) {
   // It's tedious to have these three specified separately, but if we specify these differently as
   // an intermediate base class and then a subclass with the correct id annotations, it mixes up

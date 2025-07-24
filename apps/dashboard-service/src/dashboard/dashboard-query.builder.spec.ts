@@ -112,4 +112,30 @@ describe("DashboardProjectsQueryBuilder", () => {
     const result = builder["combineWheresWithAnd"](whereA, whereB);
     expect(result).toEqual({ [Op.and]: [{ status: "approved" }, { country: "XX" }] });
   });
+
+  it("should set include options in constructor when provided", () => {
+    const includeOptions = [{ association: "organisation", attributes: ["uuid", "name"] }];
+    const builderWithInclude = new DashboardProjectsQueryBuilder(
+      mockModel as unknown as ModelCtor<Project>,
+      includeOptions
+    );
+
+    expect(builderWithInclude["findOptions"].include).toEqual(includeOptions);
+  });
+
+  it("should handle landscapes filter correctly", () => {
+    builder.queryFilters({ landscapes: ["gcb", "grv"] });
+    const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
+
+    expect(where[Op.and]).toBeDefined();
+    expect(where[Op.and]?.[0]).toHaveProperty("landscape");
+  });
+
+  it("should handle project UUID filter as string", () => {
+    builder.queryFilters({ projectUuid: "test-uuid-123" });
+    const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
+
+    expect(where[Op.and]).toBeDefined();
+    expect(where[Op.and]?.[0]).toHaveProperty("uuid", "test-uuid-123");
+  });
 });

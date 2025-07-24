@@ -26,11 +26,13 @@ import * as Sentry from "@sentry/node";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
+import { DisturbanceEntity } from "./entities/disturbance.airtable-entity";
 
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
   demographics: DemographicEntity,
   demographicEntries: DemographicEntryEntity,
+  disturbances: DisturbanceEntity,
   financialIndicators: FinancialIndicatorEntity,
   fundingProgrammes: FundingProgrammeEntity,
   investments: InvestmentEntity,

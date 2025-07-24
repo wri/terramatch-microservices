@@ -30,4 +30,24 @@ export class ImpactStoryQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   category?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  title?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  status?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  createdAt?: Date;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  organisationUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  uuid?: string;
 }

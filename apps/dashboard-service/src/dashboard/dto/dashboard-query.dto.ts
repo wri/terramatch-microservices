@@ -1,12 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsOptional } from "class-validator";
 import {
-  FrameworkType,
-  FRAMEWORK_TF_TYPES,
+  FRAMEWORK_KEYS_TF,
   LANDSCAPE_TYPES,
   LandscapeType,
   ORGANISATION_TYPES,
-  OrganisationType
+  OrganisationType,
+  FrameworkKeyTF
 } from "@terramatch-microservices/database/constants";
 
 export class DashboardQueryDto {
@@ -15,7 +15,7 @@ export class DashboardQueryDto {
   country?: string;
 
   @ApiProperty({
-    enum: FRAMEWORK_TF_TYPES,
+    enum: FRAMEWORK_KEYS_TF,
     isArray: true,
     required: false,
     name: "programmesType[]",
@@ -23,7 +23,7 @@ export class DashboardQueryDto {
   })
   @IsOptional()
   @IsArray()
-  programmes?: FrameworkType[];
+  programmes?: FrameworkKeyTF[];
 
   @ApiProperty({ required: false, isArray: true, description: "Filter by cohorts" })
   @IsOptional()

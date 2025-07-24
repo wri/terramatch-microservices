@@ -21,6 +21,7 @@ import {
   RESTORATION_IN_PROGRESS,
   SiteStatus,
   SiteStatusStates,
+  STARTED,
   UpdateRequestStatus
 } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
@@ -31,10 +32,11 @@ import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
 
-// Incomplete stub
 @Scopes(() => ({
   approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
+  nonDraft: { where: { status: { [Op.ne]: STARTED } } },
   project: (id: number) => ({ where: { projectId: id } })
 }))
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true })
@@ -64,6 +66,10 @@ export class Site extends Model<Site> {
 
   static approved() {
     return chainScope(this, "approved") as typeof Site;
+  }
+
+  static nonDraft() {
+    return chainScope(this, "nonDraft") as typeof Site;
   }
 
   static project(id: number) {
@@ -242,6 +248,10 @@ export class Site extends Model<Site> {
   @AllowNull
   @JsonColumn()
   detailedInterventionTypes: string[] | null;
+
+  @AllowNull
+  @Column({ type: STRING, values: PLANTING_STATUSES })
+  plantingStatus: PlantingStatus | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

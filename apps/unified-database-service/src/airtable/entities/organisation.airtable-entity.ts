@@ -110,7 +110,12 @@ const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = [
   "treesNaturallyRegenerated3Year",
   "externalTechnicalAssistance",
   "barriersToFunding",
-  "capacityBuildingSupportNeeded"
+  "capacityBuildingSupportNeeded",
+  "anrPracticesPast",
+  "bioeconomyProducts",
+  "territoriesOfOperation",
+  "decisionMakingStructureDescription",
+  "decisionMakingStructureIndividualsInvolved"
 ];
 
 export class OrganisationEntity extends AirtableEntity<Organisation, OrganisationAssociations> {

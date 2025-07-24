@@ -18,7 +18,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, DocumentBuilder, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { UserNewRequest } from "./dto/user-new-request.dto";
+import { UserCreateBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
@@ -105,8 +105,8 @@ export class UsersController {
   })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
-  async create(@Body() payload: UserNewRequest): Promise<JsonApiDocument> {
-    const user = await this.userCreationService.createNewUser(payload);
+  async create(@Body() payload: UserCreateBody): Promise<JsonApiDocument> {
+    const user = await this.userCreationService.createNewUser(payload.data.attributes);
     return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
   }
 

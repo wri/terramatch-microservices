@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { FinancialIndicator, Organisation } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associatedValueColumn, ColumnMapping } from "./airtable-entity";
 import { uniq } from "lodash";

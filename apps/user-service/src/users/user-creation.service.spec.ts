@@ -4,7 +4,7 @@ import { LocalizationKey, ModelHasRole, Role, User, Verification } from "@terram
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
-import { UserNewRequest } from "./dto/user-new-request.dto";
+import { UserCreateAttributes } from "./dto/user-create.dto";
 import { InternalServerErrorException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { RoleFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
@@ -17,7 +17,7 @@ describe("UserCreationService", () => {
   let templateService: DeepMocked<TemplateService>;
 
   const getRequest = (email: string, role: string) => {
-    const userNewRequest = new UserNewRequest();
+    const userNewRequest = new UserCreateAttributes();
     userNewRequest.emailAddress = email;
     userNewRequest.password = "secret";
     userNewRequest.firstName = "firstName";

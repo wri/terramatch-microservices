@@ -27,6 +27,7 @@ import { IndicatorOutputTreeCoverLoss } from "./indicator-output-tree-cover-loss
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
+import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -154,6 +155,10 @@ export class SitePolygon extends Model<SitePolygon> {
   @AllowNull
   @Column(STRING)
   versionName: string | null;
+
+  @AllowNull
+  @Column({ type: STRING, values: PLANTING_STATUSES })
+  plantingStatus: PlantingStatus | null;
 
   @HasMany(() => IndicatorOutputFieldMonitoring)
   indicatorsFieldMonitoring: IndicatorOutputFieldMonitoring[] | null;

@@ -19,6 +19,24 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
+  "status",
+  "updateRequestStatus",
+  "frameworkKey",
+  "siteUuid",
+  "organisationUuid",
+  "country",
+  "projectUuid",
+  "nothingToReport"
+];
+
+const ASSOCIATION_FIELD_MAP = {
+  siteUuid: "$site.uuid$",
+  organisationUuid: "$site.project.organisation.uuid$",
+  country: "$site.project.country$",
+  projectUuid: "$site.project.uuid$"
+};
+
 export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
   SiteReportLightDto,
@@ -92,25 +110,9 @@ export class SiteReportProcessor extends ReportProcessor<
       });
     }
 
-    const associationFieldMap = {
-      siteUuid: "$site.uuid$",
-      organisationUuid: "$site.project.organisation.uuid$",
-      country: "$site.project.country$",
-      projectUuid: "$site.project.uuid$"
-    };
-
-    for (const term of [
-      "status",
-      "updateRequestStatus",
-      "frameworkKey",
-      "siteUuid",
-      "organisationUuid",
-      "country",
-      "projectUuid",
-      "nothingToReport"
-    ]) {
+    for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
-        const field = associationFieldMap[term] ?? term;
+        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
         builder.where({
           [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
         });
@@ -190,28 +192,67 @@ export class SiteReportProcessor extends ReportProcessor<
     return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
   }
 
-  protected async getReportTitleBase(dueAt: Date | null, title: string) {
+  protected async getReportTitleBase(dueAt: Date | null, title: string, frameworkKey?: FrameworkKey) {
     if (dueAt == null) return title ?? "";
 
-    const adjustedDate = new Date(dueAt);
-    adjustedDate.setMonth(adjustedDate.getMonth() - 1);
     const locale = await this.entitiesService.getUserLocale();
-    const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
 
-    adjustedDate.setMonth(adjustedDate.getMonth() - 5);
-    const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
+    const getRangeTitle = async () => {
+      const adjustedDate = new Date(dueAt);
+      adjustedDate.setMonth(adjustedDate.getMonth() - 1);
+      const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
 
-    return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
-      title,
-      startDate,
-      endDate
-    });
+      adjustedDate.setMonth(adjustedDate.getMonth() - 5);
+      const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
+
+      return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
+        title,
+        startDate,
+        endDate
+      });
+    };
+
+    if (frameworkKey === "ppc") {
+      const cutoffOneMonth = new Date("2023-04-07T23:59:59.999Z");
+      const cutoffThreeMonths = new Date("2023-07-01T00:00:00.000Z");
+
+      if (dueAt <= cutoffOneMonth) {
+        const prevMonth = new Date(dueAt);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const month = prevMonth.toLocaleString(locale, { month: "long" });
+        const year = prevMonth.getFullYear();
+        return await this.entitiesService.localizeText(`{title} for {month} {year}`, {
+          title,
+          month,
+          year
+        });
+      } else if (dueAt >= cutoffThreeMonths) {
+        const endMonth = new Date(dueAt);
+        endMonth.setMonth(endMonth.getMonth() - 1);
+        const startMonth = new Date(dueAt);
+        startMonth.setMonth(startMonth.getMonth() - 3);
+        const startMonthName = startMonth.toLocaleString(locale, { month: "long" });
+        const endMonthName = endMonth.toLocaleString(locale, { month: "long" });
+        const year = endMonth.getFullYear();
+        return await this.entitiesService.localizeText(`{title} for {startMonth}-{endMonth} {year}`, {
+          title,
+          startMonth: startMonthName,
+          endMonth: endMonthName,
+          year
+        });
+      } else {
+        return await getRangeTitle();
+      }
+    } else {
+      return await getRangeTitle();
+    }
   }
 
   protected async getReportTitle(siteReport: SiteReport) {
     return await this.getReportTitleBase(
       siteReport.dueAt,
-      siteReport.title ?? (await this.entitiesService.localizeText("Site Report"))
+      siteReport.title ?? (await this.entitiesService.localizeText("Site Report")),
+      siteReport.frameworkKey ?? undefined
     );
   }
 
@@ -223,6 +264,10 @@ export class SiteReportProcessor extends ReportProcessor<
     const projectReport = await ProjectReport.findOne({ where: { taskId }, attributes: ["dueAt", "title"] });
     if (projectReport == null) return projectReportTitle;
 
-    return await this.getReportTitleBase(projectReport.dueAt, projectReport.title ?? projectReportTitle);
+    return await this.getReportTitleBase(
+      projectReport.dueAt,
+      projectReport.title ?? projectReportTitle,
+      siteReport.frameworkKey ?? undefined
+    );
   }
 }

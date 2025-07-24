@@ -386,45 +386,38 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   equitableOpportunities: string | null;
 
-  @AllowNull
-  @Column(TEXT)
-  resilienceProgress: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  resilienceProgress: string;
 
-  @AllowNull
-  @Column(TEXT)
-  localGovernance: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  localGovernance: string;
 
-  @AllowNull
-  @Column(TEXT)
-  adaptiveManagement: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  adaptiveManagement: string;
 
-  @AllowNull
-  @Column(TEXT)
-  scalabilityReplicability: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  scalabilityReplicability: string;
 
-  @AllowNull
-  @Column(TEXT)
-  convergenceJobsDescription: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  convergenceJobsDescription: string;
 
-  @AllowNull
-  @Column(TEXT)
-  convergenceSchemes: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  convergenceSchemes: string;
 
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  convergenceAmount: number | null;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  convergenceAmount: number;
 
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesScstobc: number | null;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  volunteerScstobc: number;
 
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  beneficiariesScstobcFarmers: number | null;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  beneficiariesScstobc: number;
 
-  @AllowNull
-  @Column(TEXT)
-  communityPartnersAssetsDescription: string | null;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  beneficiariesScstobcFarmers: number;
+
+  @Column({ type: TEXT, defaultValue: "" })
+  communityPartnersAssetsDescription: string;
 
   @AllowNull
   @Column(INTEGER)
@@ -438,9 +431,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   publicNarrative: string | null;
 
-  @AllowNull
-  @Column(INTEGER.UNSIGNED)
-  totalUniqueRestorationPartners: number | null;
+  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
+  totalUniqueRestorationPartners: number;
 
   @AllowNull
   @Column(TEXT)
@@ -490,9 +482,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BOOLEAN)
   siteAddition: boolean;
 
-  @AllowNull
-  @Column(TEXT)
-  paidOtherActivityDescription: string | null;
+  @Column({ type: TEXT, defaultValue: "" })
+  paidOtherActivityDescription: string;
 
   @AllowNull
   @Column(TEXT("long"))

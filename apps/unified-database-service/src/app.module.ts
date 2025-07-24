@@ -10,7 +10,7 @@ import { HealthModule } from "@terramatch-microservices/common/health/health.mod
 @Module({
   imports: [
     SentryModule.forRoot(),
-    ScheduleModule.forRoot(),
+    ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()]),
     CommonModule,
     HealthModule.configure({ additionalQueues: ["airtable"] }),
     AirtableModule

@@ -77,7 +77,8 @@ export class DashboardEntitiesController {
                 totalSites: (dtoResult.dto as DashboardProjectsLightDto).totalSites,
                 totalHectaresRestoredSum: (dtoResult.dto as DashboardProjectsLightDto).totalHectaresRestoredSum,
                 treesPlantedCount: (dtoResult.dto as DashboardProjectsLightDto).treesPlantedCount,
-                totalJobsCreated: (dtoResult.dto as DashboardProjectsLightDto).totalJobsCreated
+                totalJobsCreated: (dtoResult.dto as DashboardProjectsLightDto).totalJobsCreated,
+                hasAccess: (dtoResult.dto as DashboardProjectsLightDto).hasAccess
               }
             };
           })

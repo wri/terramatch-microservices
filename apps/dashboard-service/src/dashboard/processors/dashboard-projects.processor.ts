@@ -83,7 +83,9 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       totalSites,
       totalHectaresRestoredSum,
       treesPlantedCount,
-      totalJobsCreated
+      totalJobsCreated,
+      organisationName: project.organisation?.name ?? null,
+      organisationType: project.organisation?.type ?? null
     } as HybridSupportProps<DashboardProjectsLightDto, Project>);
 
     return { id: project.uuid, dto };
@@ -104,7 +106,9 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       totalSites,
       totalHectaresRestoredSum,
       treesPlantedCount,
-      totalJobsCreated
+      totalJobsCreated,
+      organisationName: project.organisation?.name ?? null,
+      organisationType: project.organisation?.type ?? null
     } as HybridSupportProps<DashboardProjectsFullDto, Project>);
 
     return { id: project.uuid, dto: fullDto };

@@ -194,4 +194,126 @@ describe("DashboardImpactStoryProcessor", () => {
     expect(result.id).toBe("test-uuid");
     expect(result.dto).toBeInstanceOf(DashboardImpactStoryLightDto);
   });
+
+  it("should set organization to null if impactStory.organisation is null", async () => {
+    const mockStory = {
+      id: 1,
+      uuid: "test-uuid-org-null",
+      title: "Story with no org",
+      date: "2023-01-01",
+      category: [],
+      status: "published",
+      organisation: null
+    } as unknown as ImpactStory;
+
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+
+    const result = await processor.getLightDto(mockStory);
+
+    expect(result.dto.organization).toBeNull();
+  });
+
+  it("should set thumbnail to empty string if no media is found", async () => {
+    const mockStory = {
+      id: 1,
+      uuid: "test-uuid-no-thumb",
+      title: "Story with no thumbnail",
+      date: "2023-01-01",
+      category: [],
+      status: "published",
+      organisation: null
+    } as unknown as ImpactStory;
+
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+
+    const result = await processor.getLightDto(mockStory);
+
+    expect(result.dto.thumbnail).toBe("");
+  });
+
+  it("should set thumbnail to media URL if media is found", async () => {
+    const mockStory = {
+      id: 1,
+      uuid: "test-uuid-with-thumb",
+      title: "Story with thumbnail",
+      date: "2023-01-01",
+      category: [],
+      status: "published",
+      organisation: null
+    } as unknown as ImpactStory;
+
+    const mockMedia = [{ id: 1, modelId: 1 }] as Media[];
+    jest.spyOn(Media, "findAll").mockResolvedValue(mockMedia);
+    mediaService.getUrl.mockReturnValue("http://example.com/thumb.jpg");
+
+    const result = await processor.getLightDto(mockStory);
+
+    expect(Media.findAll).toHaveBeenCalledWith({
+      where: {
+        modelType: ImpactStory.LARAVEL_TYPE,
+        modelId: mockStory.id,
+        collectionName: "thumbnail"
+      }
+    });
+    expect(mediaService.getUrl).toHaveBeenCalledWith(mockMedia[0]);
+    expect(result.dto.thumbnail).toBe("http://example.com/thumb.jpg");
+  });
+
+  it("should filter null and empty strings from array category", async () => {
+    const mockStory = {
+      id: 1,
+      uuid: "test-uuid-cat-array-filter",
+      title: "Story with array category",
+      date: "2023-01-01",
+      category: ["cat1", null, "cat2", "", "cat3"],
+      status: "published",
+      organisation: null
+    } as unknown as ImpactStory;
+
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+
+    const result = await processor.getLightDto(mockStory);
+
+    expect(result.dto.category).toEqual(["cat1", "cat2", "cat3"]);
+  });
+
+  it("should convert string category to array", async () => {
+    const mockStory = {
+      id: 1,
+      uuid: "test-uuid-cat-string",
+      title: "Story with string category",
+      date: "2023-01-01",
+      category: "single-category",
+      status: "published",
+      organisation: null
+    } as unknown as ImpactStory;
+
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+
+    const result = await processor.getLightDto(mockStory);
+
+    expect(result.dto.category).toEqual(["single-category"]);
+  });
+
+  it("should set category to empty array if null, empty string, or undefined", async () => {
+    const testCases = [null, "", undefined];
+
+    for (const categoryValue of testCases) {
+      const mockStory = {
+        id: 1,
+        uuid: `test-uuid-cat-${String(categoryValue)}`,
+        title: `Story with ${String(categoryValue)} category`,
+        date: "2023-01-01",
+        category: categoryValue,
+        status: "published",
+        organisation: null
+      } as unknown as ImpactStory;
+
+      jest.spyOn(Media, "findAll").mockResolvedValue([]);
+
+      const result = await processor.getLightDto(mockStory);
+
+      expect(result.dto.category).toEqual([]);
+    }
+  });
 });

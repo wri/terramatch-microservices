@@ -503,6 +503,223 @@ describe("DashboardEntitiesController", () => {
     );
     expect(dashboardImpactStoryService.getDashboardImpactStoryById).toHaveBeenCalledWith(params.uuid);
   });
+
+  it("should create DTO and set organization to null when org is null", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = {};
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid",
+        title: "Test Story",
+        date: "2023-01-01",
+        category: [],
+        status: "published",
+        organisation: null
+      }
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
+      country: query.country,
+      organisationType: query.organisationType
+    });
+  });
+
+  it("should set thumbnail to empty string when no media is found", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = {};
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid",
+        title: "Test Story",
+        date: "2023-01-01",
+        category: [],
+        status: "published",
+        organisation: null
+      }
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(Media.findAll).toHaveBeenCalledWith({
+      where: {
+        modelType: ImpactStory.LARAVEL_TYPE,
+        modelId: 1,
+        collectionName: "thumbnail"
+      }
+    });
+  });
+
+  it("should set thumbnail to media URL when media is found", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = {};
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid",
+        title: "Test Story",
+        date: "2023-01-01",
+        category: [],
+        status: "published",
+        organisation: null
+      }
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    const mockMedia = [{ id: 1, modelId: 1 }] as Media[];
+    jest.spyOn(Media, "findAll").mockResolvedValue(mockMedia);
+    mediaService.getUrl.mockReturnValue("http://example.com/thumb.jpg");
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(mediaService.getUrl).toHaveBeenCalledWith(mockMedia[0]);
+  });
+
+  it("should filter null and empty strings from array category", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = {};
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid",
+        title: "Test Story",
+        date: "2023-01-01",
+        category: ["cat1", null, "cat2", "", "cat3"],
+        status: "published",
+        organisation: null
+      }
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
+      country: query.country,
+      organisationType: query.organisationType
+    });
+  });
+
+  it("should convert string category to array", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = {};
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid",
+        title: "Test Story",
+        date: "2023-01-01",
+        category: "single-category",
+        status: "published",
+        organisation: null
+      }
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
+      country: query.country,
+      organisationType: query.organisationType
+    });
+  });
+
+  it("should add DTO to document and push UUID to indexIds", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = {};
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid-1",
+        title: "Test Story 1",
+        date: "2023-01-01",
+        category: [],
+        status: "published",
+        organisation: null
+      },
+      {
+        id: 2,
+        uuid: "test-uuid-2",
+        title: "Test Story 2",
+        date: "2023-01-02",
+        category: [],
+        status: "published",
+        organisation: null
+      }
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(result.data).toBeDefined();
+    expect(result.meta).toBeDefined();
+    expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
+      country: query.country,
+      organisationType: query.organisationType
+    });
+  });
+
   it("should return full DTO when user has access for other entities", async () => {
     const params = { entity: "dashboardSitePolygons" as DashboardEntity, uuid: "uuid-1" };
     const mockModel = { uuid: "uuid-1", name: "Site Polygon 1" } as Project;

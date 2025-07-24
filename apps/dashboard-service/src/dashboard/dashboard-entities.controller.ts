@@ -8,7 +8,6 @@ import {
 } from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { DashboardEntity } from "@terramatch-microservices/database/constants";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "./dto/cache.service";
@@ -20,7 +19,8 @@ import { Project } from "@terramatch-microservices/database/entities";
 import {
   DASHBOARD_ENTITIES,
   DASHBOARD_PROJECTS,
-  DASHBOARD_IMPACT_STORIES
+  DASHBOARD_IMPACT_STORIES,
+  DashboardEntity
 } from "./constants/dashboard-entities.constants";
 import { DashboardImpactStoryService } from "./dashboard-impact-story.service";
 import { Media } from "@terramatch-microservices/database/entities";
@@ -235,10 +235,8 @@ export class DashboardEntitiesController {
         throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
       }
 
-      // Create new DTO instance to preserve class structure
       const dto = new DashboardImpactStoryLightDto(impactStory);
 
-      // Set additional properties that don't exist in the base model
       const org = impactStory.organisation;
       dto.organization =
         org != null

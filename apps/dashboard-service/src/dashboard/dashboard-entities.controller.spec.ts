@@ -14,6 +14,11 @@ import { JwtService } from "@nestjs/jwt";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
+import { DashboardImpactStoryService } from "./dashboard-impact-story.service";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { DASHBOARD_IMPACT_STORIES, DashboardEntity } from "./constants/dashboard-entities.constants";
+import { ImpactStory } from "@terramatch-microservices/database/entities/impact-story.entity";
+import { Media } from "@terramatch-microservices/database/entities/media.entity";
 
 jest.mock("@nestjs/jwt");
 const MockJwtService = JwtService as jest.MockedClass<typeof JwtService>;
@@ -51,6 +56,8 @@ describe("DashboardEntitiesController", () => {
   let dashboardEntitiesService: DeepMocked<DashboardEntitiesService>;
   let cacheService: DeepMocked<CacheService>;
   let policyService: DeepMocked<PolicyService>;
+  let dashboardImpactStoryService: DeepMocked<DashboardImpactStoryService>;
+  let mediaService: DeepMocked<MediaService>;
   let mockProcessor: DashboardProjectsProcessor;
   let app: INestApplication;
   let jwtService: DeepMocked<JwtService>;
@@ -69,6 +76,8 @@ describe("DashboardEntitiesController", () => {
     cacheService.getCacheKeyFromQuery.mockReturnValue("test-cache-key");
 
     policyService = createMock<PolicyService>();
+    dashboardImpactStoryService = createMock<DashboardImpactStoryService>();
+    mediaService = createMock<MediaService>();
 
     // Create a real processor instance instead of a mock to avoid 'new' keyword issues
     mockProcessor = new DashboardProjectsProcessor(cacheService, policyService);
@@ -95,6 +104,14 @@ describe("DashboardEntitiesController", () => {
         {
           provide: PolicyService,
           useValue: policyService
+        },
+        {
+          provide: DashboardImpactStoryService,
+          useValue: dashboardImpactStoryService
+        },
+        {
+          provide: MediaService,
+          useValue: mediaService
         },
         {
           provide: JwtService,
@@ -141,7 +158,6 @@ describe("DashboardEntitiesController", () => {
       }
     ] as Project[];
 
-    // Mock data that will be returned by cache
     const cachedData = [
       {
         id: "uuid-1",
@@ -379,5 +395,164 @@ describe("DashboardEntitiesController", () => {
 
     expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
     expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
+  });
+
+  it("should handle impact stories entity", async () => {
+    const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
+    const query: DashboardQueryDto = { country: "KEN" };
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(result.data).toBeDefined();
+    expect(result.included).toBeDefined();
+    expect(result.meta).toBeDefined();
+
+    expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
+      country: query.country,
+      organisationType: query.organisationType
+    });
+    expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
+    expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
+  });
+
+  it("should handle other dashboard entities with default processor", async () => {
+    const params: DashboardEntityParamsDto = { entity: "dashboardSitePolygons" as DashboardEntity };
+    const query: DashboardQueryDto = {};
+    const mockModels = [
+      { uuid: "uuid-1", name: "Site Polygon 1" } as Project,
+      { uuid: "uuid-2", name: "Site Polygon 2" } as Project
+    ];
+
+    // Create a real processor instance for other entities
+    const mockOtherProcessor = new DashboardProjectsProcessor(cacheService, policyService);
+    jest.spyOn(mockOtherProcessor, "findMany").mockResolvedValue(mockModels);
+    jest.spyOn(mockOtherProcessor, "getLightDto").mockResolvedValue({
+      id: "uuid-1",
+      dto: new DashboardProjectsLightDto(mockModels[0])
+    });
+
+    dashboardEntitiesService.createDashboardProcessor.mockReturnValue(mockOtherProcessor);
+
+    cacheService.get.mockImplementation(async (cacheKey, factory) => {
+      if (factory !== undefined && factory !== null) {
+        const result = await factory();
+        return result;
+      }
+      return { data: [], total: 0 };
+    });
+
+    const result = await controller.findAll(params.entity, query);
+
+    expect(result).toBeDefined();
+    expect(result.data).toBeDefined();
+    expect(result.included).toBeDefined();
+    expect(result.meta).toBeDefined();
+
+    expect(dashboardEntitiesService.createDashboardProcessor).toHaveBeenCalledWith(params.entity);
+    expect(mockOtherProcessor.findMany).toHaveBeenCalledWith(query);
+    expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
+    expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
+  });
+
+  it("should return a single dashboard impact story DTO when found", async () => {
+    const params = {
+      entity: DASHBOARD_IMPACT_STORIES as DashboardEntity,
+      uuid: "6c6ee6d2-22e4-49d5-900d-53218867bf48"
+    };
+    const mockImpactStory = {
+      id: 1,
+      uuid: params.uuid,
+      title: "Restoring Land, Empowering Farmers",
+      date: "2025-02-21",
+      category: ["livelihoods-strengthening", "business-dev-fund"],
+      status: "published",
+      organisation: {
+        name: "Farmlife Health Services",
+        countries: ["KEN"],
+        facebookUrl: "https://www.facebook.com/people/FarmLife-Health-Services-Ltd/100064171684456/?mibextid=ZbWKwL",
+        instagramUrl: null,
+        linkedinUrl: "https://www.linkedin.com/company/69225296/admin/feed/posts/",
+        twitterUrl: null
+      }
+    } as unknown as ImpactStory;
+
+    dashboardImpactStoryService.getDashboardImpactStoryById.mockResolvedValue(mockImpactStory);
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    mediaService.getUrl.mockReturnValue("");
+
+    const result = await controller.findOne(params.entity, params.uuid);
+    expect(result).toBeDefined();
+    expect(result.data).toBeDefined();
+    expect(result.meta).toBeDefined();
+    expect(dashboardImpactStoryService.getDashboardImpactStoryById).toHaveBeenCalledWith(params.uuid);
+  });
+
+  it("should throw NotFoundException when dashboard impact story is not found", async () => {
+    const params = { entity: DASHBOARD_IMPACT_STORIES as DashboardEntity, uuid: "not-found-uuid" };
+    dashboardImpactStoryService.getDashboardImpactStoryById.mockResolvedValue(null);
+    await expect(controller.findOne(params.entity, params.uuid)).rejects.toThrow(
+      `dashboardImpactStories with UUID ${params.uuid} not found`
+    );
+    expect(dashboardImpactStoryService.getDashboardImpactStoryById).toHaveBeenCalledWith(params.uuid);
+  });
+  it("should return full DTO when user has access for other entities", async () => {
+    const params = { entity: "dashboardSitePolygons" as DashboardEntity, uuid: "uuid-1" };
+    const mockModel = { uuid: "uuid-1", name: "Site Polygon 1" } as Project;
+    const mockFullDto = {
+      id: "uuid-1",
+      dto: new DashboardProjectsFullDto(
+        mockModel,
+        {} as unknown as HybridSupportProps<DashboardProjectsFullDto, Project>
+      )
+    };
+    const mockProcessor = new DashboardProjectsProcessor(cacheService, policyService);
+
+    jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
+    jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockFullDto);
+    jest.spyOn(mockProcessor, "getLightDto");
+    dashboardEntitiesService.createDashboardProcessor.mockReturnValue(mockProcessor);
+    policyService.hasAccess.mockResolvedValue(true);
+
+    const result = await controller.findOne(params.entity, params.uuid);
+
+    expect(result).toBeDefined();
+    expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
+    expect(mockProcessor.getFullDto).toHaveBeenCalledWith(mockModel);
+    expect(mockProcessor.getLightDto).not.toHaveBeenCalled();
+    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
+  });
+  it("should return light DTO when user does not have access for other entities", async () => {
+    const params = { entity: "dashboardSitePolygons" as DashboardEntity, uuid: "uuid-1" };
+    const mockModel = { uuid: "uuid-1", name: "Site Polygon 1" } as Project;
+    const mockLightDto = {
+      id: "uuid-1",
+      dto: new DashboardProjectsLightDto(
+        mockModel,
+        {} as unknown as HybridSupportProps<DashboardProjectsLightDto, Project>
+      )
+    };
+    const mockProcessor = new DashboardProjectsProcessor(cacheService, policyService);
+
+    jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
+    jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue(mockLightDto);
+    jest.spyOn(mockProcessor, "getFullDto");
+    dashboardEntitiesService.createDashboardProcessor.mockReturnValue(mockProcessor);
+    policyService.hasAccess.mockResolvedValue(false);
+
+    const result = await controller.findOne(params.entity, params.uuid);
+
+    expect(result).toBeDefined();
+    expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
+    expect(mockProcessor.getLightDto).toHaveBeenCalledWith(mockModel);
+    expect(mockProcessor.getFullDto).not.toHaveBeenCalled();
+    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
   });
 });

@@ -215,18 +215,10 @@ export class DashboardEntitiesController {
       if (model === null) {
         throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
       }
-      const hasAccess = await this.policyService.hasAccess("read", model);
-      if (hasAccess) {
-        const { id, dto } = await processor.getFullDto(model);
-        const document = buildJsonApi(processor.FULL_DTO);
-        document.addData(id, dto);
-        return document.serialize();
-      } else {
-        const { id, dto } = await processor.getLightDto(model);
-        const document = buildJsonApi(processor.LIGHT_DTO);
-        document.addData(id, dto);
-        return document.serialize();
-      }
+      const { id, dto } = await processor.getFullDto(model);
+      const document = buildJsonApi(processor.FULL_DTO);
+      document.addData(id, dto);
+      return document.serialize();
     }
 
     if (entity === DASHBOARD_IMPACT_STORIES) {

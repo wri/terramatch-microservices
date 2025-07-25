@@ -13,7 +13,7 @@ describe("DashboardImpactStoryLightDto", () => {
     } as unknown as ImpactStory;
 
     const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
-      organization: null,
+      organisation: null,
       thumbnail: "https://s3-eu-west-1.amazonaws.com/wri-terramatch-prod/96203/FarmLife_Kenya.jpg",
       category: ["livelihoods-strengthening", "business-dev-fund", "gender-equity"]
     });
@@ -24,7 +24,7 @@ describe("DashboardImpactStoryLightDto", () => {
     expect(dto.category).toEqual(["livelihoods-strengthening", "business-dev-fund", "gender-equity"]);
     expect(dto.thumbnail).toBe("https://s3-eu-west-1.amazonaws.com/wri-terramatch-prod/96203/FarmLife_Kenya.jpg");
     expect(dto.status).toBe("published");
-    expect(dto.organization).toBeNull();
+    expect(dto.organisation).toBeNull();
   });
 
   it("should handle missing optional fields", () => {
@@ -38,7 +38,7 @@ describe("DashboardImpactStoryLightDto", () => {
     } as unknown as ImpactStory;
 
     const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
-      organization: null,
+      organisation: null,
       thumbnail: "",
       category: []
     });
@@ -49,7 +49,7 @@ describe("DashboardImpactStoryLightDto", () => {
     expect(dto.category).toEqual([]);
     expect(dto.thumbnail).toBe("");
     expect(dto.status).toBe("draft");
-    expect(dto.organization).toBeNull();
+    expect(dto.organisation).toBeNull();
   });
 
   it("should handle string category", () => {
@@ -63,7 +63,7 @@ describe("DashboardImpactStoryLightDto", () => {
     } as unknown as ImpactStory;
 
     const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
-      organization: null,
+      organisation: null,
       thumbnail: "",
       category: ["livelihoods-strengthening"]
     });

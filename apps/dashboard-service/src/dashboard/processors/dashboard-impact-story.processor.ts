@@ -6,7 +6,7 @@ import { DashboardImpactStoryLightDto } from "../dto/dashboard-impact-story.dto"
 import { CacheService } from "../dto/cache.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createOrganizationUrls } from "../utils/organization.utils";
+import { createOrganisationUrls } from "../utils/organisation.utils";
 
 export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
   ImpactStory,
@@ -65,7 +65,16 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
 
   public async getLightDto(impactStory: ImpactStory): Promise<DtoResult<DashboardImpactStoryLightDto>> {
     const org = impactStory.organisation;
-    const organization = org != null ? createOrganizationUrls(org) : null;
+    const organisation =
+      org != null
+        ? createOrganisationUrls({
+            ...org,
+            facebookUrl: org.facebookUrl ?? undefined,
+            instagramUrl: org.instagramUrl ?? undefined,
+            linkedinUrl: org.linkedinUrl ?? undefined,
+            twitterUrl: org.twitterUrl ?? undefined
+          })
+        : null;
 
     const mediaCollection = await Media.findAll({
       where: {
@@ -83,7 +92,7 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
       : [];
 
     const dto = new DashboardImpactStoryLightDto(impactStory, {
-      organization,
+      organisation,
       thumbnail: thumbnail != null ? thumbnail : "",
       category
     });

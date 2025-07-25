@@ -26,7 +26,7 @@ import { DashboardImpactStoryService } from "./dashboard-impact-story.service";
 import { Media } from "@terramatch-microservices/database/entities";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createOrganizationUrls } from "./utils/organization.utils";
+import { createOrganisationUrls } from "./utils/organisation.utils";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -118,7 +118,16 @@ export class DashboardEntitiesController {
       const indexIds: string[] = [];
       for (const impactStory of data) {
         const org = impactStory.organisation;
-        const organization = org != null ? createOrganizationUrls(org) : null;
+        const organisation =
+          org != null
+            ? createOrganisationUrls({
+                ...org,
+                facebookUrl: org.facebookUrl ?? undefined,
+                instagramUrl: org.instagramUrl ?? undefined,
+                linkedinUrl: org.linkedinUrl ?? undefined,
+                twitterUrl: org.twitterUrl ?? undefined
+              })
+            : null;
 
         const mediaCollection = await Media.findAll({
           where: {
@@ -136,7 +145,7 @@ export class DashboardEntitiesController {
           : [];
 
         const dto = new DashboardImpactStoryLightDto(impactStory, {
-          organization,
+          organisation,
           thumbnail: thumbnail != null ? thumbnail : "",
           category
         });
@@ -221,7 +230,16 @@ export class DashboardEntitiesController {
       }
 
       const org = impactStory.organisation;
-      const organization = org != null ? createOrganizationUrls(org) : null;
+      const organisation =
+        org != null
+          ? createOrganisationUrls({
+              ...org,
+              facebookUrl: org.facebookUrl ?? undefined,
+              instagramUrl: org.instagramUrl ?? undefined,
+              linkedinUrl: org.linkedinUrl ?? undefined,
+              twitterUrl: org.twitterUrl ?? undefined
+            })
+          : null;
 
       const mediaCollection = await Media.findAll({
         where: {
@@ -239,7 +257,7 @@ export class DashboardEntitiesController {
         : [];
 
       const dto = new DashboardImpactStoryLightDto(impactStory, {
-        organization,
+        organisation,
         thumbnail: thumbnail != null ? thumbnail : "",
         category
       });

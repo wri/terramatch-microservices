@@ -509,7 +509,7 @@ describe("DashboardEntitiesController", () => {
     expect(dashboardImpactStoryService.getDashboardImpactStoryById).toHaveBeenCalledWith(params.uuid);
   });
 
-  it("should create DTO and set organization to null when org is null", async () => {
+  it("should create DTO and set organisation to null when org is null", async () => {
     const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
     const query: DashboardQueryDto = {};
     const mockImpactStories = [

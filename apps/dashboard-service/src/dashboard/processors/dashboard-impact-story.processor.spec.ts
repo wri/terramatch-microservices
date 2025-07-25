@@ -115,7 +115,7 @@ describe("DashboardImpactStoryProcessor", () => {
     expect(result).toBe(mockStories);
   });
 
-  it("should create light DTO with organization data", async () => {
+  it("should create light DTO with organisation data", async () => {
     const mockStory = {
       id: 1,
       uuid: "6c6ee6d2-22e4-49d5-900d-53218867bf48",
@@ -143,13 +143,13 @@ describe("DashboardImpactStoryProcessor", () => {
 
     expect(result.id).toBe("6c6ee6d2-22e4-49d5-900d-53218867bf48");
     expect(result.dto).toBeInstanceOf(DashboardImpactStoryLightDto);
-    expect(result.dto.organization).toEqual({
+    expect(result.dto.organisation).toEqual({
       name: "Farmlife Health Services",
       countries: [{ label: "KEN", icon: "/flags/ken.svg" }],
       facebook_url: "https://www.facebook.com/people/FarmLife-Health-Services-Ltd/100064171684456/?mibextid=ZbWKwL",
-      instagram_url: null,
+      instagram_url: undefined,
       linkedin_url: "https://www.linkedin.com/company/69225296/admin/feed/posts/",
-      twitter_url: null
+      twitter_url: undefined
     });
     expect(result.dto.thumbnail).toBe(
       "https://s3-eu-west-1.amazonaws.com/wri-terramatch-prod/96203/FarmLife_Kenya.jpg"
@@ -157,7 +157,7 @@ describe("DashboardImpactStoryProcessor", () => {
     expect(result.dto.category).toEqual(["livelihoods-strengthening", "business-dev-fund", "gender-equity"]);
   });
 
-  it("should create light DTO with null organization", async () => {
+  it("should create light DTO with null organisation", async () => {
     const mockStory = {
       id: 1,
       uuid: "6c6ee6d2-22e4-49d5-900d-53218867bf48",
@@ -173,7 +173,7 @@ describe("DashboardImpactStoryProcessor", () => {
     const result = await processor.getLightDto(mockStory);
 
     expect(result.id).toBe("6c6ee6d2-22e4-49d5-900d-53218867bf48");
-    expect(result.dto.organization).toBeNull();
+    expect(result.dto.organisation).toBeNull();
     expect(result.dto.thumbnail).toBe("");
     expect(result.dto.category).toEqual(["livelihoods-strengthening"]);
   });
@@ -187,7 +187,7 @@ describe("DashboardImpactStoryProcessor", () => {
     jest.spyOn(processor, "getLightDto").mockResolvedValue({
       id: "test-uuid",
       dto: new DashboardImpactStoryLightDto(mockStory, {
-        organization: null,
+        organisation: null,
         thumbnail: "",
         category: []
       })
@@ -199,7 +199,7 @@ describe("DashboardImpactStoryProcessor", () => {
     expect(result.dto).toBeInstanceOf(DashboardImpactStoryLightDto);
   });
 
-  it("should set organization to null if impactStory.organisation is null", async () => {
+  it("should set organisation to null if impactStory.organisation is null", async () => {
     const mockStory = {
       id: 1,
       uuid: "test-uuid-org-null",
@@ -214,7 +214,7 @@ describe("DashboardImpactStoryProcessor", () => {
 
     const result = await processor.getLightDto(mockStory);
 
-    expect(result.dto.organization).toBeNull();
+    expect(result.dto.organisation).toBeNull();
   });
 
   it("should set thumbnail to empty string if no media is found", async () => {

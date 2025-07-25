@@ -3,17 +3,30 @@ import { ApiProperty } from "@nestjs/swagger";
 import { populateDto, AdditionalProps } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 
+type DashboardImpactStoryAdditionalProps = AdditionalProps<
+  DashboardImpactStoryLightDto,
+  Omit<ImpactStory, "category" | "thumbnail">
+> & {
+  organisation: {
+    name: string;
+    countries: { label: string; icon: string | null }[];
+    facebook_url: string | undefined;
+    instagram_url: string | undefined;
+    linkedin_url: string | undefined;
+    twitter_url: string | undefined;
+  } | null;
+  thumbnail: string;
+  category: string[];
+};
+
 @JsonApiDto({ type: "dashboardImpactStories" })
 export class DashboardImpactStoryLightDto {
-  constructor(
-    impactStory: ImpactStory,
-    additional?: AdditionalProps<DashboardImpactStoryLightDto, Omit<ImpactStory, "category" | "thumbnail">>
-  ) {
+  constructor(impactStory: ImpactStory, additional?: DashboardImpactStoryAdditionalProps) {
     populateDto<DashboardImpactStoryLightDto, Omit<ImpactStory, "category" | "thumbnail">>(
       this,
       impactStory,
       additional ?? {
-        organization: null,
+        organisation: null,
         thumbnail: "",
         category: []
       }
@@ -36,7 +49,7 @@ export class DashboardImpactStoryLightDto {
   thumbnail: string | null;
 
   @ApiProperty({ type: Object })
-  organization: {
+  organisation: {
     name: string;
     countries: { label: string; icon: string | null }[];
     facebook_url: string | undefined;

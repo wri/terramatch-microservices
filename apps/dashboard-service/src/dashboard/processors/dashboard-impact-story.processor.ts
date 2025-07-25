@@ -89,15 +89,18 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
     });
     const thumbnail = mediaCollection.length > 0 ? this.mediaService.getUrl(mediaCollection[0]) : "";
 
-    const dto = new DashboardImpactStoryLightDto(impactStory);
-
-    dto.organization = organization;
-    dto.thumbnail = thumbnail != null ? thumbnail : "";
-    dto.category = Array.isArray(impactStory.category)
+    const category = Array.isArray(impactStory.category)
       ? impactStory.category.filter((cat: string) => cat != null && cat !== "")
       : impactStory.category != null && impactStory.category !== ""
       ? [impactStory.category]
       : [];
+
+    const dto = new DashboardImpactStoryLightDto(impactStory, {
+      organization,
+      thumbnail: thumbnail != null ? thumbnail : "",
+      category
+    });
+
     return { id: impactStory.uuid, dto };
   }
 

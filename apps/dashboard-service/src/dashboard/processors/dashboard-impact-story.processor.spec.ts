@@ -186,7 +186,11 @@ describe("DashboardImpactStoryProcessor", () => {
 
     jest.spyOn(processor, "getLightDto").mockResolvedValue({
       id: "test-uuid",
-      dto: new DashboardImpactStoryLightDto(mockStory)
+      dto: new DashboardImpactStoryLightDto(mockStory, {
+        organization: null,
+        thumbnail: "",
+        category: []
+      })
     });
 
     const result = await processor.getFullDto(mockStory);

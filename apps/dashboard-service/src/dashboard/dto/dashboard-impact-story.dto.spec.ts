@@ -12,7 +12,11 @@ describe("DashboardImpactStoryLightDto", () => {
       status: "published"
     } as unknown as ImpactStory;
 
-    const dto = new DashboardImpactStoryLightDto(mockImpactStory);
+    const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
+      organization: null,
+      thumbnail: "https://s3-eu-west-1.amazonaws.com/wri-terramatch-prod/96203/FarmLife_Kenya.jpg",
+      category: ["livelihoods-strengthening", "business-dev-fund", "gender-equity"]
+    });
 
     expect(dto.uuid).toBe("6c6ee6d2-22e4-49d5-900d-53218867bf48");
     expect(dto.title).toBe("Restoring Land, Empowering Farmers");
@@ -33,13 +37,17 @@ describe("DashboardImpactStoryLightDto", () => {
       status: "draft"
     } as unknown as ImpactStory;
 
-    const dto = new DashboardImpactStoryLightDto(mockImpactStory);
+    const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
+      organization: null,
+      thumbnail: "",
+      category: []
+    });
 
     expect(dto.uuid).toBe("6c6ee6d2-22e4-49d5-900d-53218867bf48");
     expect(dto.title).toBe("Restoring Land, Empowering Farmers");
     expect(dto.date).toBe("2025-02-21");
-    expect(dto.category).toBeNull();
-    expect(dto.thumbnail).toBeNull();
+    expect(dto.category).toEqual([]);
+    expect(dto.thumbnail).toBe("");
     expect(dto.status).toBe("draft");
     expect(dto.organization).toBeNull();
   });
@@ -54,7 +62,11 @@ describe("DashboardImpactStoryLightDto", () => {
       status: "published"
     } as unknown as ImpactStory;
 
-    const dto = new DashboardImpactStoryLightDto(mockImpactStory);
+    const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
+      organization: null,
+      thumbnail: "",
+      category: ["livelihoods-strengthening"]
+    });
 
     expect(dto.category).toEqual(["livelihoods-strengthening"]);
   });

@@ -1,14 +1,23 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto, AdditionalProps } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 
 @JsonApiDto({ type: "dashboardImpactStories" })
 export class DashboardImpactStoryLightDto {
-  constructor(impactStory: ImpactStory) {
-    populateDto<DashboardImpactStoryLightDto, ImpactStory>(this, impactStory, {
-      organization: null
-    });
+  constructor(
+    impactStory: ImpactStory,
+    additional?: AdditionalProps<DashboardImpactStoryLightDto, Omit<ImpactStory, "category" | "thumbnail">>
+  ) {
+    populateDto<DashboardImpactStoryLightDto, Omit<ImpactStory, "category" | "thumbnail">>(
+      this,
+      impactStory,
+      additional ?? {
+        organization: null,
+        thumbnail: "",
+        category: []
+      }
+    );
   }
 
   @ApiProperty()

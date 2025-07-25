@@ -116,9 +116,8 @@ export class DashboardEntitiesController {
       const document = buildJsonApi(DashboardImpactStoryLightDto, { pagination: "number" });
       const indexIds: string[] = [];
       for (const impactStory of data) {
-        const dto = new DashboardImpactStoryLightDto(impactStory);
         const org = impactStory.organisation;
-        dto.organization =
+        const organization =
           org != null
             ? {
                 name: org.name ?? "",
@@ -141,13 +140,19 @@ export class DashboardEntitiesController {
             collectionName: "thumbnail"
           }
         });
-        dto.thumbnail = mediaCollection.length > 0 ? this.mediaService.getUrl(mediaCollection[0]) : "";
+        const thumbnail = mediaCollection.length > 0 ? this.mediaService.getUrl(mediaCollection[0]) : "";
 
-        dto.category = Array.isArray(impactStory.category)
+        const category = Array.isArray(impactStory.category)
           ? impactStory.category.filter((cat: string) => cat != null && cat !== "")
           : impactStory.category != null && impactStory.category !== ""
           ? [impactStory.category]
           : [];
+
+        const dto = new DashboardImpactStoryLightDto(impactStory, {
+          organization,
+          thumbnail: thumbnail != null ? thumbnail : "",
+          category
+        });
 
         document.addData(dto.uuid, dto);
         indexIds.push(dto.uuid);
@@ -228,10 +233,8 @@ export class DashboardEntitiesController {
         throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
       }
 
-      const dto = new DashboardImpactStoryLightDto(impactStory);
-
       const org = impactStory.organisation;
-      dto.organization =
+      const organization =
         org != null
           ? {
               name: org.name ?? "",
@@ -255,14 +258,20 @@ export class DashboardEntitiesController {
           collectionName: "thumbnail"
         }
       });
-      dto.thumbnail = mediaCollection.length > 0 ? this.mediaService.getUrl(mediaCollection[0]) : "";
+      const thumbnail = mediaCollection.length > 0 ? this.mediaService.getUrl(mediaCollection[0]) : "";
 
       // Set category
-      dto.category = Array.isArray(impactStory.category)
+      const category = Array.isArray(impactStory.category)
         ? impactStory.category.filter((cat: string) => cat != null && cat !== "")
         : impactStory.category != null && impactStory.category !== ""
         ? [impactStory.category]
         : [];
+
+      const dto = new DashboardImpactStoryLightDto(impactStory, {
+        organization,
+        thumbnail: thumbnail != null ? thumbnail : "",
+        category
+      });
 
       const document = buildJsonApi(DashboardImpactStoryLightDto);
       document.addData(uuid, dto);

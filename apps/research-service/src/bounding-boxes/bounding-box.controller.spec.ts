@@ -209,7 +209,7 @@ describe("BoundingBoxController", () => {
         { projectPitchUuid: "pitch-123" },
         "getProjectPitchBoundingBox",
         ["pitch-123"],
-        "pitch-123",
+        "?projectPitchUuid=pitch-123",
         false
       );
 

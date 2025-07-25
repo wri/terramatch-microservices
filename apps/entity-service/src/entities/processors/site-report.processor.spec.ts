@@ -486,4 +486,47 @@ describe("SiteReportProcessor", () => {
       await expect(processor.processSideload(document, siteReport, "sites")).rejects.toThrow(BadRequestException);
     });
   });
+
+  describe("getReportTitleBase", () => {
+    beforeEach(() => {
+      processor["entitiesService"].getUserLocale = jest.fn(async () => "en-US");
+      processor["entitiesService"].localizeText = jest.fn(async str => str);
+    });
+
+    it("should use the first branch for dueAt <= cutoffOneMonth and framework ppc", async () => {
+      const dueAt = new Date("2023-04-01T00:00:00.000Z");
+      await processor["getReportTitleBase"](dueAt, "Test Title", "ppc");
+      expect(processor["entitiesService"].localizeText).toHaveBeenCalledWith(
+        "{title} for {month} {year}",
+        expect.objectContaining({ title: "Test Title" })
+      );
+    });
+
+    it("should use the second branch for dueAt >= cutoffThreeMonths and framework ppc", async () => {
+      const dueAt = new Date("2023-07-15T00:00:00.000Z");
+      await processor["getReportTitleBase"](dueAt, "Test Title", "ppc");
+      expect(processor["entitiesService"].localizeText).toHaveBeenCalledWith(
+        "{title} for {startMonth}-{endMonth} {year}",
+        expect.objectContaining({ title: "Test Title" })
+      );
+    });
+
+    it("should use the else branch for dueAt between cutoffs and framework ppc", async () => {
+      const dueAt = new Date("2023-05-15T00:00:00.000Z");
+      await processor["getReportTitleBase"](dueAt, "Test Title", "ppc");
+      expect(processor["entitiesService"].localizeText).toHaveBeenCalledWith(
+        "{title} for {startDate} - {endDate}",
+        expect.objectContaining({ title: "Test Title" })
+      );
+    });
+
+    it("should use the else external branch for non-ppc framework", async () => {
+      const dueAt = new Date("2023-05-15T00:00:00.000Z");
+      await processor["getReportTitleBase"](dueAt, "Test Title", "terrafund");
+      expect(processor["entitiesService"].localizeText).toHaveBeenCalledWith(
+        "{title} for {startDate} - {endDate}",
+        expect.objectContaining({ title: "Test Title" })
+      );
+    });
+  });
 });

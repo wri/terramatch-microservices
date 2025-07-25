@@ -45,7 +45,7 @@ import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.
       }
     }),
     BullModule.registerQueue({ name: "dashboard" }),
-    ScheduleModule.forRoot()
+    ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()])
   ],
   controllers: [
     TotalSectionHeaderController,

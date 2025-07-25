@@ -11,7 +11,7 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "./dto/cache.service";
-import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
+import { DashboardProjectsFullDto, DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { DashboardImpactStoryLightDto } from "./dto/dashboard-impact-story.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
@@ -46,7 +46,10 @@ export class DashboardEntitiesController {
     enum: DASHBOARD_ENTITIES,
     description: "Dashboard entity type"
   })
-  @JsonApiResponse({ data: DashboardProjectsLightDto, pagination: "number" })
+  @JsonApiResponse([
+    { data: DashboardProjectsLightDto, pagination: "number" },
+    { data: DashboardImpactStoryLightDto, pagination: "number" }
+  ])
   @ApiOperation({
     operationId: "dashboardEntityIndex",
     summary: "Get a list of dashboard entities. Returns light data for all users."
@@ -207,7 +210,11 @@ export class DashboardEntitiesController {
     description: "Dashboard entity type"
   })
   @ApiParam({ name: "uuid", description: "Entity UUID" })
-  @JsonApiResponse([DashboardProjectsLightDto, DashboardProjectsFullDto])
+  @JsonApiResponse([
+    { data: DashboardProjectsLightDto, pagination: "number" },
+    { data: DashboardProjectsFullDto, pagination: "number" },
+    { data: DashboardImpactStoryLightDto, pagination: "number" }
+  ])
   @ExceptionResponse(NotFoundException, { description: "Entity not found." })
   @ApiOperation({
     operationId: "dashboardEntityGet",

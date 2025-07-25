@@ -39,10 +39,10 @@ export class DashboardImpactStoryLightDto {
   organization: {
     name: string;
     countries: { label: string; icon: string | null }[];
-    facebook_url: string | null;
-    instagram_url: string | null;
-    linkedin_url: string | null;
-    twitter_url: string | null;
+    facebook_url: string | undefined;
+    instagram_url: string | undefined;
+    linkedin_url: string | undefined;
+    twitter_url: string | undefined;
   } | null;
 
   @ApiProperty()

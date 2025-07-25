@@ -1,11 +1,12 @@
+import { WhereOptions, Op } from "sequelize";
 import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
 import { DashboardEntityProcessor, DtoResult } from "./dashboard-entity-processor";
-import { DashboardImpactStoryLightDto } from "../dto/dashboard-impact-story.dto";
 import { DashboardQueryDto } from "../dto/dashboard-query.dto";
-import { PolicyService } from "@terramatch-microservices/common";
+import { DashboardImpactStoryLightDto } from "../dto/dashboard-impact-story.dto";
 import { CacheService } from "../dto/cache.service";
-import { Op, WhereOptions } from "sequelize";
+import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { createOrganizationUrls } from "../utils/organization.utils";
 
 export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
   ImpactStory,
@@ -64,21 +65,7 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
 
   public async getLightDto(impactStory: ImpactStory): Promise<DtoResult<DashboardImpactStoryLightDto>> {
     const org = impactStory.organisation;
-    const organization =
-      org != null
-        ? {
-            name: org.name ?? "",
-            countries: Array.isArray(org.countries)
-              ? org.countries
-                  .filter((c: string) => c != null && c !== "")
-                  .map((c: string) => ({ label: c, icon: c !== "" ? `/flags/${c.toLowerCase()}.svg` : null }))
-              : [],
-            facebook_url: org.facebookUrl != null && org.facebookUrl !== "" ? org.facebookUrl : null,
-            instagram_url: org.instagramUrl != null && org.instagramUrl !== "" ? org.instagramUrl : null,
-            linkedin_url: org.linkedinUrl != null && org.linkedinUrl !== "" ? org.linkedinUrl : null,
-            twitter_url: org.twitterUrl != null && org.twitterUrl !== "" ? org.twitterUrl : null
-          }
-        : null;
+    const organization = org != null ? createOrganizationUrls(org) : null;
 
     const mediaCollection = await Media.findAll({
       where: {

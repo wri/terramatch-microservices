@@ -26,6 +26,7 @@ import { DashboardImpactStoryService } from "./dashboard-impact-story.service";
 import { Media } from "@terramatch-microservices/database/entities";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { createOrganizationUrls } from "./utils/organization.utils";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -117,21 +118,7 @@ export class DashboardEntitiesController {
       const indexIds: string[] = [];
       for (const impactStory of data) {
         const org = impactStory.organisation;
-        const organization =
-          org != null
-            ? {
-                name: org.name ?? "",
-                countries: Array.isArray(org.countries)
-                  ? org.countries
-                      .filter((c: string) => c != null && c !== "")
-                      .map((c: string) => ({ label: c, icon: c !== "" ? `/flags/${c.toLowerCase()}.svg` : null }))
-                  : [],
-                facebook_url: org.facebookUrl != null && org.facebookUrl !== "" ? org.facebookUrl : null,
-                instagram_url: org.instagramUrl != null && org.instagramUrl !== "" ? org.instagramUrl : null,
-                linkedin_url: org.linkedinUrl != null && org.linkedinUrl !== "" ? org.linkedinUrl : null,
-                twitter_url: org.twitterUrl != null && org.twitterUrl !== "" ? org.twitterUrl : null
-              }
-            : null;
+        const organization = org != null ? createOrganizationUrls(org) : null;
 
         const mediaCollection = await Media.findAll({
           where: {
@@ -234,23 +221,8 @@ export class DashboardEntitiesController {
       }
 
       const org = impactStory.organisation;
-      const organization =
-        org != null
-          ? {
-              name: org.name ?? "",
-              countries: Array.isArray(org.countries)
-                ? org.countries
-                    .filter((c: string) => c != null && c !== "")
-                    .map((c: string) => ({ label: c, icon: c !== "" ? `/flags/${c.toLowerCase()}.svg` : null }))
-                : [],
-              facebook_url: org.facebookUrl != null && org.facebookUrl !== "" ? org.facebookUrl : null,
-              instagram_url: org.instagramUrl != null && org.instagramUrl !== "" ? org.instagramUrl : null,
-              linkedin_url: org.linkedinUrl != null && org.linkedinUrl !== "" ? org.linkedinUrl : null,
-              twitter_url: org.twitterUrl != null && org.twitterUrl !== "" ? org.twitterUrl : null
-            }
-          : null;
+      const organization = org != null ? createOrganizationUrls(org) : null;
 
-      // Set thumbnail
       const mediaCollection = await Media.findAll({
         where: {
           modelType: ImpactStory.LARAVEL_TYPE,
@@ -260,7 +232,6 @@ export class DashboardEntitiesController {
       });
       const thumbnail = mediaCollection.length > 0 ? this.mediaService.getUrl(mediaCollection[0]) : "";
 
-      // Set category
       const category = Array.isArray(impactStory.category)
         ? impactStory.category.filter((cat: string) => cat != null && cat !== "")
         : impactStory.category != null && impactStory.category !== ""

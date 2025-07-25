@@ -112,7 +112,9 @@ export class DashboardEntitiesController {
           country: query.country,
           organisationType: query.organisationType
         });
-        const plainData = impactStories.map(story => story.get({ plain: true }));
+        const plainData = impactStories.map(story =>
+          typeof story.get === "function" ? story.get({ plain: true }) : story
+        );
         return { data: plainData, total: plainData.length };
       });
       const document = buildJsonApi(DashboardImpactStoryLightDto, { pagination: "number" });

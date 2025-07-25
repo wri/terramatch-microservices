@@ -30,7 +30,7 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
       include: [
         {
           association: "organisation",
-          attributes: ["uuid", "name", "type", "countries"]
+          attributes: ["uuid", "name", "type", "countries", "facebookUrl", "instagramUrl", "linkedinUrl", "twitterUrl"]
         }
       ]
     });

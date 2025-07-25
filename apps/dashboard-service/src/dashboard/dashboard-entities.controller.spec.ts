@@ -429,7 +429,7 @@ describe("DashboardEntitiesController", () => {
   });
 
   it("should handle other dashboard entities with default processor", async () => {
-    const params: DashboardEntityParamsDto = { entity: "dashboardSitePolygons" as DashboardEntity };
+    const params: DashboardEntityParamsDto = { entity: "dashboardSitepolygons" as DashboardEntity };
     const query: DashboardQueryDto = {};
     const mockModels = [
       { uuid: "uuid-1", name: "Site Polygon 1" } as Project,
@@ -726,7 +726,7 @@ describe("DashboardEntitiesController", () => {
   });
 
   it("should return full DTO when user has access for other entities", async () => {
-    const params = { entity: "dashboardSitePolygons" as DashboardEntity, uuid: "uuid-1" };
+    const params = { entity: "dashboardSitepolygons" as DashboardEntity, uuid: "uuid-1" };
     const mockModel = { uuid: "uuid-1", name: "Site Polygon 1" } as Project;
     const mockFullDto = {
       id: "uuid-1",
@@ -752,7 +752,7 @@ describe("DashboardEntitiesController", () => {
     expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
   });
   it("should return light DTO when user does not have access for other entities", async () => {
-    const params = { entity: "dashboardSitePolygons" as DashboardEntity, uuid: "uuid-1" };
+    const params = { entity: "dashboardSitepolygons" as DashboardEntity, uuid: "uuid-1" };
     const mockModel = { uuid: "uuid-1", name: "Site Polygon 1" } as Project;
     const mockLightDto = {
       id: "uuid-1",

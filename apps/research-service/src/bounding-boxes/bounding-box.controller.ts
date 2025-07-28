@@ -149,7 +149,7 @@ export class BoundingBoxController {
         }
 
         const result = await this.boundingBoxService.getProjectPitchBoundingBox(projectPitchUuid);
-        return buildJsonApi(BoundingBoxDto).addData(projectPitchUuid, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
 
       case "country/landscapes": {

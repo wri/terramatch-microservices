@@ -80,12 +80,20 @@ describe("DashboardImpactStoryProcessor", () => {
     const result = await processor.findMany(query);
 
     expect(ImpactStory.findAll).toHaveBeenCalledWith({
-      where: {},
+      where: {
+        "$organisation.countries$": {
+          [Op.or]: [
+            {
+              [Op.like]: `%"Kenya"%`
+            }
+          ]
+        }
+      },
       include: [
         {
           association: "organisation",
           attributes: ["uuid", "name", "type", "countries", "facebookUrl", "instagramUrl", "linkedinUrl", "twitterUrl"],
-          where: { countries: { [Op.like]: '%"Kenya"%' } }
+          where: undefined
         }
       ],
       order: [["id", "ASC"]]

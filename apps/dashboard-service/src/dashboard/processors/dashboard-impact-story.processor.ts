@@ -41,7 +41,17 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
     const organisationWhere: WhereOptions = {};
 
     if (query.country != null && query.country !== "") {
-      organisationWhere.countries = { [Op.like]: `%"${query.country}"%` };
+      where["$organisation.countries$"] = {
+        [Op.or]: Array.isArray(query.country)
+          ? query.country.map(country => ({
+              [Op.like]: `%"${country}"%`
+            }))
+          : [
+              {
+                [Op.like]: `%"${query.country}"%`
+              }
+            ]
+      };
     }
 
     if (query.organisationType != null && query.organisationType.length > 0) {

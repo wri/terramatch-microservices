@@ -189,7 +189,8 @@ describe("DashboardImpactStoryProcessor", () => {
       dto: new DashboardImpactStoryLightDto(mockStory, {
         organisation: null,
         thumbnail: "",
-        category: []
+        category: [],
+        content: ""
       })
     });
 

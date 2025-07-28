@@ -15,7 +15,8 @@ describe("DashboardImpactStoryLightDto", () => {
     const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
       organisation: null,
       thumbnail: "https://s3-eu-west-1.amazonaws.com/wri-terramatch-prod/96203/FarmLife_Kenya.jpg",
-      category: ["livelihoods-strengthening", "business-dev-fund", "gender-equity"]
+      category: ["livelihoods-strengthening", "business-dev-fund", "gender-equity"],
+      content: "Sample content for the impact story"
     });
 
     expect(dto.uuid).toBe("6c6ee6d2-22e4-49d5-900d-53218867bf48");
@@ -40,7 +41,8 @@ describe("DashboardImpactStoryLightDto", () => {
     const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
       organisation: null,
       thumbnail: "",
-      category: []
+      category: [],
+      content: ""
     });
 
     expect(dto.uuid).toBe("6c6ee6d2-22e4-49d5-900d-53218867bf48");
@@ -65,7 +67,8 @@ describe("DashboardImpactStoryLightDto", () => {
     const dto = new DashboardImpactStoryLightDto(mockImpactStory, {
       organisation: null,
       thumbnail: "",
-      category: ["livelihoods-strengthening"]
+      category: ["livelihoods-strengthening"],
+      content: ""
     });
 
     expect(dto.category).toEqual(["livelihoods-strengthening"]);

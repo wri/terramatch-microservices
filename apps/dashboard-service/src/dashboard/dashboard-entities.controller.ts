@@ -153,7 +153,8 @@ export class DashboardEntitiesController {
         const dto = new DashboardImpactStoryLightDto(impactStory, {
           organisation,
           thumbnail: thumbnail != null ? thumbnail : "",
-          category
+          category,
+          content: impactStory.content ?? ""
         });
 
         document.addData(dto.uuid, dto);
@@ -269,7 +270,8 @@ export class DashboardEntitiesController {
       const dto = new DashboardImpactStoryLightDto(impactStory, {
         organisation,
         thumbnail: thumbnail != null ? thumbnail : "",
-        category
+        category,
+        content: impactStory.content ?? ""
       });
 
       const document = buildJsonApi(DashboardImpactStoryLightDto);

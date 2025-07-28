@@ -94,7 +94,8 @@ export class DashboardImpactStoryProcessor extends DashboardEntityProcessor<
     const dto = new DashboardImpactStoryLightDto(impactStory, {
       organisation,
       thumbnail: thumbnail != null ? thumbnail : "",
-      category
+      category,
+      content: impactStory.content ?? ""
     });
 
     return { id: impactStory.uuid, dto };

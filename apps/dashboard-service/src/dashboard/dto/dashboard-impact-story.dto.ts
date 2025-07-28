@@ -17,6 +17,7 @@ type DashboardImpactStoryAdditionalProps = AdditionalProps<
   } | null;
   thumbnail: string;
   category: string[];
+  content: string;
 };
 
 @JsonApiDto({ type: "dashboardImpactStories" })
@@ -28,7 +29,8 @@ export class DashboardImpactStoryLightDto {
       additional ?? {
         organisation: null,
         thumbnail: "",
-        category: []
+        category: [],
+        content: ""
       }
     );
   }
@@ -60,4 +62,7 @@ export class DashboardImpactStoryLightDto {
 
   @ApiProperty()
   status: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  content: string | null;
 }

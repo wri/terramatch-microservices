@@ -42,7 +42,7 @@ export class DashboardImpactStoryLightDto extends DashboardEntityDto {
 
 export class DashboardImpactStoryFullDto extends DashboardImpactStoryLightDto {
   constructor(impactStory: ImpactStory, props: HybridSupportProps<DashboardImpactStoryFullDto, ImpactStory>) {
-    super(impactStory, props);
+    super();
     if (impactStory != null && props != null) {
       populateDto<DashboardImpactStoryFullDto, ImpactStory>(this, impactStory, { lightResource: false, ...props });
     }

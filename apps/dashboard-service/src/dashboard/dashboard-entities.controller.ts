@@ -193,10 +193,13 @@ export class DashboardEntitiesController {
   })
   async findOne(@Param("entity") entity: DashboardEntity, @Param("uuid") uuid: string) {
     if (entity === DASHBOARD_IMPACT_STORIES) {
-      const impactStory = await this.dashboardImpactStoryService.getDashboardImpactStoryById(uuid);
-      if (impactStory === null) {
+      const impactStoryRaw = await this.dashboardImpactStoryService.getDashboardImpactStoryById(uuid);
+      if (impactStoryRaw === null) {
         throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
       }
+
+      const impactStory =
+        typeof impactStoryRaw.get === "function" ? impactStoryRaw.get({ plain: true }) : impactStoryRaw;
 
       const org = impactStory.organisation;
       const organisation =

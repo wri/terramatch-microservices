@@ -13,6 +13,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsFullDto, DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { DashboardImpactStoryLightDto } from "./dto/dashboard-impact-story.dto";
+import { DashboardSitePolygonsLightDto } from "./dto/dashboard-sitepolygons.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
@@ -20,6 +21,7 @@ import {
   DASHBOARD_ENTITIES,
   DASHBOARD_PROJECTS,
   DASHBOARD_IMPACT_STORIES,
+  DASHBOARD_SITEPOLYGONS,
   DashboardEntity
 } from "./constants/dashboard-entities.constants";
 import { DashboardImpactStoryService } from "./dashboard-impact-story.service";
@@ -49,7 +51,8 @@ export class DashboardEntitiesController {
   })
   @JsonApiResponse([
     { data: DashboardProjectsLightDto, pagination: "number" },
-    { data: DashboardImpactStoryLightDto, pagination: "number" }
+    { data: DashboardImpactStoryLightDto, pagination: "number" },
+    { data: DashboardSitePolygonsLightDto, pagination: "number" }
   ])
   @ApiOperation({
     operationId: "dashboardEntityIndex",
@@ -170,6 +173,39 @@ export class DashboardEntitiesController {
       return document.serialize();
     }
 
+    if (entity === DASHBOARD_SITEPOLYGONS) {
+      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
+      const DtoClass = processor.LIGHT_DTO;
+      const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
+        const models = await processor.findMany(query);
+        const rawData = await Promise.all(
+          models.map(async model => {
+            const dtoResult = await processor.getLightDto(model);
+            return {
+              id: dtoResult.id,
+              model: model,
+              dto: dtoResult.dto
+            };
+          })
+        );
+        return { data: rawData, total: rawData.length };
+      });
+      const document = buildJsonApi(DtoClass, { pagination: "number" });
+      const indexIds: string[] = [];
+      for (const { id, dto } of data) {
+        document.addData(id, dto);
+        indexIds.push(id);
+      }
+      document.addIndexData({
+        resource: getDtoType(DtoClass),
+        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+        ids: indexIds,
+        total,
+        pageNumber: 1
+      });
+      return document.serialize();
+    }
+
     throw new NotFoundException(`Entity type ${entity} is not supported for listing`);
   }
 
@@ -184,7 +220,8 @@ export class DashboardEntitiesController {
   @JsonApiResponse([
     { data: DashboardProjectsLightDto, pagination: "number" },
     { data: DashboardProjectsFullDto, pagination: "number" },
-    { data: DashboardImpactStoryFullDto, pagination: "number" }
+    { data: DashboardImpactStoryFullDto, pagination: "number" },
+    { data: DashboardSitePolygonsLightDto, pagination: "number" }
   ])
   @ExceptionResponse(NotFoundException, { description: "Entity not found." })
   @ApiOperation({
@@ -257,6 +294,18 @@ export class DashboardEntitiesController {
         document.addData(id, dto);
         return document.serialize();
       }
+    }
+
+    if (entity === DASHBOARD_SITEPOLYGONS) {
+      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
+      const model = await processor.findOne(uuid);
+      if (model === null) {
+        throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
+      }
+      const { id, dto } = await processor.getLightDto(model);
+      const document = buildJsonApi(processor.LIGHT_DTO);
+      document.addData(id, dto);
+      return document.serialize();
     }
 
     throw new NotFoundException(`Entity type ${entity} is not supported for single entity retrieval`);

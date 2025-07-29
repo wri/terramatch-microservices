@@ -437,11 +437,11 @@ describe("DashboardEntitiesController", () => {
   });
 
   it("should handle unsupported dashboard entities with appropriate error", async () => {
-    const params: DashboardEntityParamsDto = { entity: "dashboardSitepolygons" as DashboardEntity };
+    const params: DashboardEntityParamsDto = { entity: "dashboardUnsupported" as DashboardEntity };
     const query: DashboardQueryDto = {};
 
     await expect(controller.findAll(params.entity, query)).rejects.toThrow(
-      "Entity type dashboardSitepolygons is not supported for listing"
+      "Entity type dashboardUnsupported is not supported for listing"
     );
   });
 
@@ -476,10 +476,10 @@ describe("DashboardEntitiesController", () => {
   });
 
   it("should throw error for unsupported entity in single retrieval", async () => {
-    const params = { entity: "dashboardSitepolygons" as DashboardEntity, uuid: "uuid-1" };
+    const params = { entity: "dashboardUnsupported" as DashboardEntity, uuid: "uuid-1" };
 
     await expect(controller.findOne(params.entity, params.uuid)).rejects.toThrow(
-      "Entity type dashboardSitepolygons is not supported for single entity retrieval"
+      "Entity type dashboardUnsupported is not supported for single entity retrieval"
     );
   });
 

@@ -3,17 +3,16 @@ import { ApiProperty } from "@nestjs/swagger";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { DashboardEntityDto } from "./dashboard-entity.dto";
 
 @JsonApiDto({ type: "dashboardImpactStories" })
-export class DashboardImpactStoryLightDto {
+export class DashboardImpactStoryLightDto extends DashboardEntityDto {
   constructor(impactStory?: ImpactStory, props?: HybridSupportProps<DashboardImpactStoryLightDto, ImpactStory>) {
+    super();
     if (impactStory != null && props != null) {
       populateDto<DashboardImpactStoryLightDto, ImpactStory>(this, impactStory, { lightResource: true, ...props });
     }
   }
-
-  @ApiProperty()
-  uuid: string;
 
   @ApiProperty()
   title: string;
@@ -43,7 +42,7 @@ export class DashboardImpactStoryLightDto {
 
 export class DashboardImpactStoryFullDto extends DashboardImpactStoryLightDto {
   constructor(impactStory: ImpactStory, props: HybridSupportProps<DashboardImpactStoryFullDto, ImpactStory>) {
-    super(impactStory);
+    super(impactStory, props);
     if (impactStory != null && props != null) {
       populateDto<DashboardImpactStoryFullDto, ImpactStory>(this, impactStory, { lightResource: false, ...props });
     }

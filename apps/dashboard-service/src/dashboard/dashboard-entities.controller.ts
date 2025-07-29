@@ -27,6 +27,7 @@ import { Media } from "@terramatch-microservices/database/entities";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createOrganisationUrls } from "./utils/organisation.utils";
+import { DashboardImpactStoryFullDto } from "./dto/dashboard-impact-story.dto";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -56,58 +57,6 @@ export class DashboardEntitiesController {
   })
   async findAll(@Param("entity") entity: DashboardEntity, @Query() query: DashboardQueryDto) {
     const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
-
-    if (entity === DASHBOARD_PROJECTS) {
-      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-      const DtoClass = processor.LIGHT_DTO;
-      const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
-        const models = await processor.findMany(query);
-        const queryBuilder = new DashboardProjectsQueryBuilder(Project, [
-          {
-            association: "organisation",
-            attributes: ["uuid", "name", "type"]
-          }
-        ]).queryFilters(query);
-        const total = await queryBuilder.count();
-        const rawData = await Promise.all(
-          models.map(async model => {
-            const dtoResult = await processor.getLightDto(model);
-            return {
-              id: dtoResult.id,
-              model: model,
-              computedData: {
-                organisationName: (dtoResult.dto as DashboardProjectsLightDto).organisationName,
-                organisationType: (dtoResult.dto as DashboardProjectsLightDto).organisationType,
-                totalSites: (dtoResult.dto as DashboardProjectsLightDto).totalSites,
-                totalHectaresRestoredSum: (dtoResult.dto as DashboardProjectsLightDto).totalHectaresRestoredSum,
-                treesPlantedCount: (dtoResult.dto as DashboardProjectsLightDto).treesPlantedCount,
-                totalJobsCreated: (dtoResult.dto as DashboardProjectsLightDto).totalJobsCreated,
-                hasAccess: (dtoResult.dto as DashboardProjectsLightDto).hasAccess
-              }
-            };
-          })
-        );
-        return { data: rawData, total };
-      });
-      const document = buildJsonApi(DtoClass, { pagination: "number" });
-      const indexIds: string[] = [];
-      for (const { id, model, computedData } of data) {
-        const dto =
-          typeof computedData !== "undefined" && computedData !== null
-            ? new DtoClass(model, computedData)
-            : new DtoClass(model);
-        document.addData(id, dto);
-        indexIds.push(id);
-      }
-      document.addIndexData({
-        resource: getDtoType(DtoClass),
-        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-        ids: indexIds,
-        total,
-        pageNumber: 1
-      });
-      return document.serialize();
-    }
 
     if (entity === DASHBOARD_IMPACT_STORIES) {
       const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
@@ -169,37 +118,59 @@ export class DashboardEntitiesController {
       return document.serialize();
     }
 
-    const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-    const DtoClass = processor.LIGHT_DTO;
-    const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
-      const models = await processor.findMany(query);
-      const rawData = await Promise.all(
-        models.map(async model => {
-          const dtoResult = await processor.getLightDto(model);
-          return {
-            id: dtoResult.id,
-            model: model,
-            computedData: undefined
-          };
-        })
-      );
-      return { data: rawData, total: rawData.length };
-    });
-    const document = buildJsonApi(DtoClass, { pagination: "number" });
-    const indexIds: string[] = [];
-    for (const { id, model } of data) {
-      const dto = new DtoClass(model);
-      document.addData(id, dto);
-      indexIds.push(id);
+    if (entity === DASHBOARD_PROJECTS) {
+      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
+      const DtoClass = processor.LIGHT_DTO;
+      const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
+        const models = await processor.findMany(query);
+        const queryBuilder = new DashboardProjectsQueryBuilder(Project, [
+          {
+            association: "organisation",
+            attributes: ["uuid", "name", "type"]
+          }
+        ]).queryFilters(query);
+        const total = await queryBuilder.count();
+        const rawData = await Promise.all(
+          models.map(async model => {
+            const dtoResult = await processor.getLightDto(model);
+            return {
+              id: dtoResult.id,
+              model: model,
+              computedData: {
+                organisationName: (dtoResult.dto as DashboardProjectsLightDto).organisationName,
+                organisationType: (dtoResult.dto as DashboardProjectsLightDto).organisationType,
+                totalSites: (dtoResult.dto as DashboardProjectsLightDto).totalSites,
+                totalHectaresRestoredSum: (dtoResult.dto as DashboardProjectsLightDto).totalHectaresRestoredSum,
+                treesPlantedCount: (dtoResult.dto as DashboardProjectsLightDto).treesPlantedCount,
+                totalJobsCreated: (dtoResult.dto as DashboardProjectsLightDto).totalJobsCreated,
+                hasAccess: (dtoResult.dto as DashboardProjectsLightDto).hasAccess
+              }
+            };
+          })
+        );
+        return { data: rawData, total };
+      });
+      const document = buildJsonApi(DtoClass, { pagination: "number" });
+      const indexIds: string[] = [];
+      for (const { id, model, computedData } of data) {
+        const dto =
+          typeof computedData !== "undefined" && computedData !== null
+            ? new DtoClass(model, computedData)
+            : new DtoClass(model);
+        document.addData(id, dto);
+        indexIds.push(id);
+      }
+      document.addIndexData({
+        resource: getDtoType(DtoClass),
+        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+        ids: indexIds,
+        total,
+        pageNumber: 1
+      });
+      return document.serialize();
     }
-    document.addIndexData({
-      resource: getDtoType(DtoClass),
-      requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-      ids: indexIds,
-      total,
-      pageNumber: 1
-    });
-    return document.serialize();
+
+    throw new NotFoundException(`Entity type ${entity} is not supported for listing`);
   }
 
   @Get(":entity/:uuid")
@@ -213,7 +184,7 @@ export class DashboardEntitiesController {
   @JsonApiResponse([
     { data: DashboardProjectsLightDto, pagination: "number" },
     { data: DashboardProjectsFullDto, pagination: "number" },
-    { data: DashboardImpactStoryLightDto, pagination: "number" }
+    { data: DashboardImpactStoryFullDto, pagination: "number" }
   ])
   @ExceptionResponse(NotFoundException, { description: "Entity not found." })
   @ApiOperation({
@@ -221,18 +192,6 @@ export class DashboardEntitiesController {
     summary: "Get a single dashboard entity. Returns full data if authorized, light data otherwise."
   })
   async findOne(@Param("entity") entity: DashboardEntity, @Param("uuid") uuid: string) {
-    if (entity === DASHBOARD_PROJECTS) {
-      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-      const model = await processor.findOne(uuid);
-      if (model === null) {
-        throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
-      }
-      const { id, dto } = await processor.getFullDto(model);
-      const document = buildJsonApi(processor.FULL_DTO);
-      document.addData(id, dto);
-      return document.serialize();
-    }
-
     if (entity === DASHBOARD_IMPACT_STORIES) {
       const impactStory = await this.dashboardImpactStoryService.getDashboardImpactStoryById(uuid);
       if (impactStory === null) {
@@ -266,33 +225,37 @@ export class DashboardEntitiesController {
         ? [impactStory.category]
         : [];
 
-      const dto = new DashboardImpactStoryLightDto(impactStory, {
+      const dto = new DashboardImpactStoryFullDto(impactStory, {
         organisation,
         thumbnail: thumbnail != null ? thumbnail : "",
         category
       });
 
-      const document = buildJsonApi(DashboardImpactStoryLightDto);
+      const document = buildJsonApi(DashboardImpactStoryFullDto);
       document.addData(uuid, dto);
       return document.serialize();
     }
 
-    const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
-    const model = await processor.findOne(uuid);
-    if (model === null) {
-      throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
+    if (entity === DASHBOARD_PROJECTS) {
+      const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);
+      const model = await processor.findOne(uuid);
+      if (model === null) {
+        throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
+      }
+      const hasAccess = await this.policyService.hasAccess("read", model);
+      if (hasAccess) {
+        const { id, dto } = await processor.getFullDto(model);
+        const document = buildJsonApi(processor.FULL_DTO);
+        document.addData(id, dto);
+        return document.serialize();
+      } else {
+        const { id, dto } = await processor.getLightDto(model);
+        const document = buildJsonApi(processor.LIGHT_DTO);
+        document.addData(id, dto);
+        return document.serialize();
+      }
     }
-    const hasAccess = await this.policyService.hasAccess("read", model);
-    if (hasAccess) {
-      const { id, dto } = await processor.getFullDto(model);
-      const document = buildJsonApi(processor.FULL_DTO);
-      document.addData(id, dto);
-      return document.serialize();
-    } else {
-      const { id, dto } = await processor.getLightDto(model);
-      const document = buildJsonApi(processor.LIGHT_DTO);
-      document.addData(id, dto);
-      return document.serialize();
-    }
+
+    throw new NotFoundException(`Entity type ${entity} is not supported for single entity retrieval`);
   }
 }

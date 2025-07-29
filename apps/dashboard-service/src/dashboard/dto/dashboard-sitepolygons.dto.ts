@@ -13,8 +13,12 @@ export class DashboardSitePolygonsLightDto {
   @ApiProperty()
   id: number;
 
-  @ApiProperty()
-  uuid: string;
+  @ApiProperty({
+    description: "UUID of the associated polygon geometry",
+    nullable: true,
+    type: String
+  })
+  polygonUuid: string;
 
   @ApiProperty()
   status: string;

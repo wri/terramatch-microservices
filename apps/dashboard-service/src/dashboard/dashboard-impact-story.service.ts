@@ -17,7 +17,17 @@ export class DashboardImpactStoryService {
     const organisationWhere: WhereOptions = {};
 
     if (params.country != null && params.country !== "") {
-      organisationWhere.countries = { [Op.like]: `%"${params.country}"%` };
+      where["$organisation.countries$"] = {
+        [Op.or]: Array.isArray(params.country)
+          ? params.country.map(country => ({
+              [Op.like]: `%"${country}"%`
+            }))
+          : [
+              {
+                [Op.like]: `%"${params.country}"%`
+              }
+            ]
+      };
     }
 
     if (params.organisationType != null && params.organisationType.length > 0) {

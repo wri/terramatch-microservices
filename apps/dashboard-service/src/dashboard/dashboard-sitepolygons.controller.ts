@@ -25,7 +25,7 @@ export class DashboardSitePolygonsController {
 
     const document = buildJsonApi(DashboardSitePolygonsLightDto);
     data.forEach((sitePolygon: DashboardSitePolygonsLightDto) => {
-      document.addData(sitePolygon.uuid, sitePolygon);
+      document.addData(sitePolygon.polygonUuid, sitePolygon);
     });
     return document.serialize();
   }

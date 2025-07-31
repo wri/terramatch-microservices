@@ -5,7 +5,6 @@ import { TransformBooleanString } from "@terramatch-microservices/common/decorat
 export class GeometryQueryDto {
   @ApiProperty({
     description: "Extract properties from GeoJSON features (default: true)",
-    example: true,
     default: true,
     required: false
   })
@@ -16,7 +15,6 @@ export class GeometryQueryDto {
 
   @ApiProperty({
     description: "Validate data immediately upon submission (default: true)",
-    example: true,
     default: true,
     required: false
   })
@@ -27,7 +25,6 @@ export class GeometryQueryDto {
 
   @ApiProperty({
     description: "Preserve existing status during processing (default: true)",
-    example: true,
     default: true,
     required: false
   })

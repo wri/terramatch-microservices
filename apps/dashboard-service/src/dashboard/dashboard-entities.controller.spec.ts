@@ -231,7 +231,7 @@ describe("DashboardEntitiesController", () => {
     expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
   });
 
-  it("should return a single dashboard entity with full data when user has access", async () => {
+  it("should return a single dashboard entity with full data", async () => {
     const params: DashboardEntityWithUuidDto = {
       entity: "dashboardProjects",
       uuid: "uuid-1"
@@ -266,8 +266,6 @@ describe("DashboardEntitiesController", () => {
     const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockDtoResult);
     const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto");
 
-    policyService.hasAccess.mockResolvedValue(true);
-
     const result = await controller.findOne(params.entity, params.uuid);
 
     expect(result).toBeDefined();
@@ -278,10 +276,9 @@ describe("DashboardEntitiesController", () => {
     expect(findOneSpy).toHaveBeenCalledWith(params.uuid);
     expect(getFullDtoSpy).toHaveBeenCalledWith(mockModel);
     expect(getLightDtoSpy).not.toHaveBeenCalled();
-    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
   });
 
-  it("should return a single dashboard entity with light data when user has no access", async () => {
+  it("should return a single dashboard entity with full data regardless of access", async () => {
     const params: DashboardEntityWithUuidDto = {
       entity: "dashboardProjects",
       uuid: "uuid-1"
@@ -298,22 +295,20 @@ describe("DashboardEntitiesController", () => {
       organisation: { name: "Test Org", type: "NGO" }
     } as Project;
 
-    const mockLightDtoResult = {
+    const mockFullDtoResult = {
       id: "uuid-1",
-      dto: new DashboardProjectsLightDto(mockModel, {
+      dto: new DashboardProjectsFullDto(mockModel, {
         treesPlantedCount: 1000,
         totalHectaresRestoredSum: 50,
         totalSites: 5,
-        totalJobsCreated: 25
-      } as HybridSupportProps<DashboardProjectsLightDto, Project>)
+        totalJobsCreated: 25,
+        hasAccess: false
+      } as HybridSupportProps<DashboardProjectsFullDto, Project>)
     };
 
     const findOneSpy = jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
-    const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto");
-    const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue(mockLightDtoResult);
-
-    // Mock policy service to return false for access
-    policyService.hasAccess.mockResolvedValue(false);
+    const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockFullDtoResult);
+    const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto");
 
     const result = await controller.findOne(params.entity, params.uuid);
 
@@ -323,10 +318,8 @@ describe("DashboardEntitiesController", () => {
     expect(result.meta).toBeDefined();
 
     expect(findOneSpy).toHaveBeenCalledWith(params.uuid);
-    expect(getFullDtoSpy).not.toHaveBeenCalled();
-    expect(getLightDtoSpy).toHaveBeenCalledWith(mockModel);
-    // Dashboard projects now check access before determining which DTO to return
-    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
+    expect(getFullDtoSpy).toHaveBeenCalledWith(mockModel);
+    expect(getLightDtoSpy).not.toHaveBeenCalled();
   });
 
   it("should throw NotFoundException when entity is not found", async () => {
@@ -710,7 +703,7 @@ describe("DashboardEntitiesController", () => {
     expect(dashboardImpactStoryService.getDashboardImpactStoryById).toHaveBeenCalledWith(params.uuid);
   });
 
-  it("should return full DTO when user has access for other entities", async () => {
+  it("should return full DTO for dashboard projects", async () => {
     const params = { entity: DASHBOARD_PROJECTS as DashboardEntity, uuid: "uuid-1" };
     const mockModel = { uuid: "uuid-1", name: "Project 1" } as Project;
     const mockFullDto = {
@@ -728,7 +721,6 @@ describe("DashboardEntitiesController", () => {
     dashboardEntitiesService.createDashboardProcessor.mockReturnValue(
       mockProcessor as unknown as ReturnType<typeof dashboardEntitiesService.createDashboardProcessor>
     );
-    policyService.hasAccess.mockResolvedValue(true);
 
     const result = await controller.findOne(params.entity, params.uuid);
 
@@ -736,36 +728,33 @@ describe("DashboardEntitiesController", () => {
     expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
     expect(mockProcessor.getFullDto).toHaveBeenCalledWith(mockModel);
     expect(mockProcessor.getLightDto).not.toHaveBeenCalled();
-    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
   });
 
-  it("should return light DTO when user does not have access for other entities", async () => {
+  it("should return full DTO for dashboard projects regardless of access", async () => {
     const params = { entity: DASHBOARD_PROJECTS as DashboardEntity, uuid: "uuid-1" };
     const mockModel = { uuid: "uuid-1", name: "Project 1" } as Project;
-    const mockLightDto = {
+    const mockFullDto = {
       id: "uuid-1",
-      dto: new DashboardProjectsLightDto(
+      dto: new DashboardProjectsFullDto(
         mockModel,
-        {} as unknown as HybridSupportProps<DashboardProjectsLightDto, Project>
+        {} as unknown as HybridSupportProps<DashboardProjectsFullDto, Project>
       )
     };
     const mockProcessor = new DashboardProjectsProcessor(cacheService, policyService);
 
     jest.spyOn(mockProcessor, "findOne").mockResolvedValue(mockModel);
-    jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue(mockLightDto);
-    jest.spyOn(mockProcessor, "getFullDto");
+    jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockFullDto);
+    jest.spyOn(mockProcessor, "getLightDto");
     dashboardEntitiesService.createDashboardProcessor.mockReturnValue(
       mockProcessor as unknown as ReturnType<typeof dashboardEntitiesService.createDashboardProcessor>
     );
-    policyService.hasAccess.mockResolvedValue(false);
 
     const result = await controller.findOne(params.entity, params.uuid);
 
     expect(result).toBeDefined();
     expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
-    expect(mockProcessor.getLightDto).toHaveBeenCalledWith(mockModel);
-    expect(mockProcessor.getFullDto).not.toHaveBeenCalled();
-    expect(policyService.hasAccess).toHaveBeenCalledWith("read", mockModel);
+    expect(mockProcessor.getFullDto).toHaveBeenCalledWith(mockModel);
+    expect(mockProcessor.getLightDto).not.toHaveBeenCalled();
   });
 
   it("should handle DASHBOARD_SITEPOLYGONS entity in findAll", async () => {

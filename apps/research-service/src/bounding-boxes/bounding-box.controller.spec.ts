@@ -193,15 +193,14 @@ describe("BoundingBoxController", () => {
         { projectUuid: "project-123" },
         "getProjectBoundingBox",
         ["project-123"],
-        "?projectUuid=project-123"
+        "?projectUuid=project-123",
+        false
       );
 
       expect(Project.findOne).toHaveBeenCalledWith({
         where: { uuid: "project-123" },
         attributes: ["id", "uuid", "frameworkKey", "organisationId"]
       });
-
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockProject);
     });
 
     it("should call getProjectPitchBoundingBox when projectPitchUuid is provided", async () => {

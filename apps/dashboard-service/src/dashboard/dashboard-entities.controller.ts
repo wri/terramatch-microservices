@@ -183,8 +183,7 @@ export class DashboardEntitiesController {
             const dtoResult = await processor.getLightDto(model);
             return {
               id: dtoResult.id,
-              model: model,
-              dto: dtoResult.dto
+              model: model
             };
           })
         );
@@ -192,7 +191,8 @@ export class DashboardEntitiesController {
       });
       const document = buildJsonApi(DtoClass, { pagination: "number" });
       const indexIds: string[] = [];
-      for (const { id, dto } of data) {
+      for (const { id, model } of data) {
+        const dto = new DtoClass(model);
         document.addData(id, dto);
         indexIds.push(id);
       }

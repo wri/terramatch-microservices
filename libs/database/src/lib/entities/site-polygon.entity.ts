@@ -160,6 +160,10 @@ export class SitePolygon extends Model<SitePolygon> {
   @Column({ type: STRING, values: PLANTING_STATUSES })
   plantingStatus: PlantingStatus | null;
 
+  @AllowNull
+  @Column({ type: STRING })
+  validationStatus: string | null;
+
   @HasMany(() => IndicatorOutputFieldMonitoring)
   indicatorsFieldMonitoring: IndicatorOutputFieldMonitoring[] | null;
 

@@ -137,14 +137,6 @@ export class SitePolygonLightDto extends HybridSupportDto {
     enum: PLANTING_STATUSES
   })
   plantingStatus: PlantingStatus | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "Validation status of the site polygon",
-    maxLength: 255
-  })
-  validationStatus: string | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })
@@ -185,6 +177,13 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
 
   @ApiProperty({ nullable: true, type: Number })
   numTrees: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Source of the site polygon"
+  })
+  source: string | null;
 
   @ApiProperty({
     type: () => TreeSpeciesDto,

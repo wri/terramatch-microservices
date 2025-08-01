@@ -146,7 +146,8 @@ describe("DashboardProjectsProcessor", () => {
       treesPlantedCount: 1000,
       totalHectaresRestoredSum: 100.5,
       totalSites: 5,
-      totalJobsCreated: 25
+      totalJobsCreated: 25,
+      hasAccess: true
     } as HybridSupportProps<DashboardProjectsLightDto, Project>);
 
     jest.spyOn(processor, "getLightDto").mockResolvedValue({ id: "test-uuid", dto: mockLightDto });

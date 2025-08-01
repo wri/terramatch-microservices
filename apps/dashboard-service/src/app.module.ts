@@ -21,6 +21,11 @@ import { DashboardEntitiesService } from "./dashboard/dashboard-entities.service
 import { HectaresRestorationService } from "./dashboard/hectares-restoration.service";
 import { HectaresRestorationController } from "./dashboard/hectares-restoration.controller";
 import { UserContextInterceptor } from "./dashboard/interceptors/user-context.interceptor";
+import { DashboardProjectsController } from "./dashboard/dashboard-projects.controller";
+import { DashboardProjectsService } from "./dashboard/dashboard-projects.service";
+import { DashboardSitePolygonsController } from "./dashboard/dashboard-sitepolygons.controller";
+import { DashboardSitePolygonsService } from "./dashboard/dashboard-sitepolygons.service";
+import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.service";
 
 @Module({
   imports: [
@@ -47,7 +52,9 @@ import { UserContextInterceptor } from "./dashboard/interceptors/user-context.in
     TreeRestorationGoalController,
     TotalJobsCreatedController,
     HectaresRestorationController,
-    DashboardEntitiesController
+    DashboardEntitiesController,
+    DashboardProjectsController,
+    DashboardSitePolygonsController
   ],
   providers: [
     {
@@ -62,7 +69,10 @@ import { UserContextInterceptor } from "./dashboard/interceptors/user-context.in
     DashboardCacheWarmupService,
     DashboardEntitiesService,
     HectaresRestorationService,
-    UserContextInterceptor
+    UserContextInterceptor,
+    DashboardProjectsService,
+    DashboardSitePolygonsService,
+    DashboardImpactStoryService
   ]
 })
 export class AppModule {}

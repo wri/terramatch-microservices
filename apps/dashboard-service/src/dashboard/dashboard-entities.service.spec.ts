@@ -4,6 +4,7 @@ import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { CacheService } from "./dto/cache.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { DashboardProjectsProcessor } from "./processors/dashboard-projects.processor";
+import { DASHBOARD_PROJECTS } from "./constants/dashboard-entities.constants";
 
 describe("DashboardEntitiesService", () => {
   let service: DashboardEntitiesService;
@@ -35,7 +36,7 @@ describe("DashboardEntitiesService", () => {
   });
 
   it("should create a dashboard processor for valid entity", () => {
-    const processor = service.createDashboardProcessor("dashboardProjects");
+    const processor = service.createDashboardProcessor(DASHBOARD_PROJECTS);
 
     expect(processor).toBeDefined();
     expect(processor).toBeInstanceOf(DashboardProjectsProcessor);

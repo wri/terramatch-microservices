@@ -72,18 +72,22 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
     const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
-    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
+    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated, hasAccess] = await Promise.all([
       Site.approved().project(project.id).count(),
       SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
       TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
-      this.getTotalJobs(project.id)
+      this.getTotalJobs(project.id),
+      this.policyService.hasAccess("read", project)
     ]);
 
     const dto = new DashboardProjectsLightDto(project, {
       totalSites,
       totalHectaresRestoredSum,
       treesPlantedCount,
-      totalJobsCreated
+      totalJobsCreated,
+      organisationName: project.organisation?.name ?? null,
+      organisationType: project.organisation?.type ?? null,
+      hasAccess
     } as HybridSupportProps<DashboardProjectsLightDto, Project>);
 
     return { id: project.uuid, dto };
@@ -93,18 +97,22 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
     const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
     const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
-    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
+    const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated, hasAccess] = await Promise.all([
       Site.approved().project(project.id).count(),
       SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
       TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
-      this.getTotalJobs(project.id)
+      this.getTotalJobs(project.id),
+      this.policyService.hasAccess("read", project)
     ]);
 
     const fullDto = new DashboardProjectsFullDto(project, {
       totalSites,
       totalHectaresRestoredSum,
       treesPlantedCount,
-      totalJobsCreated
+      totalJobsCreated,
+      organisationName: project.organisation?.name ?? null,
+      organisationType: project.organisation?.type ?? null,
+      hasAccess
     } as HybridSupportProps<DashboardProjectsFullDto, Project>);
 
     return { id: project.uuid, dto: fullDto };

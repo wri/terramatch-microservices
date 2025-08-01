@@ -4,6 +4,7 @@ import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { buildJsonApi, getStableRequestQuery, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -21,6 +22,7 @@ type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "projectPitchU
 
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
+@NoBearerAuth
 export class BoundingBoxController {
   constructor(private readonly boundingBoxService: BoundingBoxService, private readonly policyService: PolicyService) {}
 
@@ -129,8 +131,6 @@ export class BoundingBoxController {
         if (project === null) {
           throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
         }
-
-        await this.policyService.authorize("read", project);
 
         const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();

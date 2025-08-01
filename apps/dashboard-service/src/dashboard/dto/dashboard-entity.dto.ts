@@ -1,6 +1,6 @@
 import { IsIn, IsUUID } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { DASHBOARD_ENTITIES, DashboardEntity } from "@terramatch-microservices/database/constants";
+import { DASHBOARD_ENTITIES, DashboardEntity } from "../constants/dashboard-entities.constants";
 import { HybridSupportDto } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 export class DashboardEntityDto extends HybridSupportDto {

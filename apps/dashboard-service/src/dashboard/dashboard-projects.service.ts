@@ -14,9 +14,12 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { PolicyService } from "@terramatch-microservices/common";
 
 @Injectable()
 export class DashboardProjectsService {
+  constructor(private readonly policyService: PolicyService) {}
+
   protected async getTotalJobs(projectId: number) {
     return (
       (await DemographicEntry.gender().sum("amount", {
@@ -48,18 +51,23 @@ export class DashboardProjectsService {
         const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
         const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
 
-        const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated] = await Promise.all([
-          Site.approved().project(project.id).count(),
-          SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
-          TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
-          this.getTotalJobs(project.id)
-        ]);
+        const [totalSites, totalHectaresRestoredSum, treesPlantedCount, totalJobsCreated, hasAccess] =
+          await Promise.all([
+            Site.approved().project(project.id).count(),
+            SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(project.id)).sum("calcArea") ?? 0,
+            TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount") ?? 0,
+            this.getTotalJobs(project.id),
+            this.policyService.hasAccess("read", project)
+          ]);
 
         return new DashboardProjectsLightDto(project, {
           totalSites,
           totalHectaresRestoredSum,
           treesPlantedCount,
-          totalJobsCreated
+          totalJobsCreated,
+          organisationName: project.organisation?.name ?? null,
+          organisationType: project.organisation?.type ?? null,
+          hasAccess
         } as HybridSupportProps<DashboardProjectsLightDto, Project>);
       })
     );

@@ -6,6 +6,7 @@ import { TreeRestorationGoalDto } from "./dto/tree-restoration-goal.dto";
 import { TreeRestorationGoalService } from "./dto/tree-restoration-goal.service";
 import { CacheService } from "./dto/cache.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 
 @Controller("dashboard/v3/treeRestorationGoal")
 export class TreeRestorationGoalController {
@@ -15,6 +16,7 @@ export class TreeRestorationGoalController {
   ) {}
 
   @Get()
+  @NoBearerAuth
   @JsonApiResponse(TreeRestorationGoalDto)
   @ApiOperation({ operationId: "getTreeRestorationGoal", summary: "Get tree restoration goal statistics" })
   async getTreeRestorationGoal(@Query() query: DashboardQueryDto) {

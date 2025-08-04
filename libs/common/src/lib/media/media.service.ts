@@ -49,7 +49,6 @@ export class MediaService {
     if (!media.generatedConversions[conversion]) return null;
 
     const lastIndex = fileName.lastIndexOf(".");
-    // return `${baseUrl}/conversions/${fileName.slice(0, lastIndex)}-${conversion}${fileName.slice(lastIndex)}`;
     const baseFileName = fileName.slice(0, lastIndex);
 
     // For thumbnails, Spatie Media Library always generates .jpg files regardless of original extension

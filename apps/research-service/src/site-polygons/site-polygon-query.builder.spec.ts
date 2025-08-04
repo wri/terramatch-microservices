@@ -2,7 +2,6 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { SitePolygonFactory, ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
 
 describe("SitePolygonQueryBuilder", () => {
   let builder: SitePolygonQueryBuilder;

@@ -124,8 +124,8 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   async filterValidationStatus(validationStatuses: string[]) {
-    const hasNotChecked = validationStatuses.includes("not_checked");
     const otherStatuses = validationStatuses.filter(status => status !== "not_checked");
+    const hasNotChecked = otherStatuses.length !== validationStatuses.length;
 
     if (hasNotChecked && otherStatuses.length > 0) {
       return this.where({

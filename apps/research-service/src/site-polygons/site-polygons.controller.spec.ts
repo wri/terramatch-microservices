@@ -212,7 +212,7 @@ describe("SitePolygonsController", () => {
       const poly1 = await SitePolygonFactory.create({ validationStatus: "passed" });
       const poly2 = await SitePolygonFactory.create({ validationStatus: null });
 
-      const builder = mockQueryBuilder([poly1, poly2], 2);
+      mockQueryBuilder([poly1, poly2], 2);
 
       const result = await controller.findMany({
         validationStatus: ["passed", "not_checked"],

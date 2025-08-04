@@ -197,6 +197,26 @@ describe("SitePolygonsController", () => {
       expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
     });
 
+    it("should call filterValidationStatus when validationStatus is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
+
+      await controller.findMany({ validationStatus: ["passed", "not_checked"] });
+      expect(builder.filterValidationStatus).toHaveBeenCalledWith(["passed", "not_checked"]);
+    });
+
+    it("should execute real filterValidationStatus logic", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await SitePolygonFactory.create({ validationStatus: "passed" });
+      await SitePolygonFactory.create({ validationStatus: null });
+
+      const result = await controller.findMany({
+        validationStatus: ["passed", "not_checked"],
+        page: { size: 10, number: 1 }
+      });
+      expect(result.data).toHaveLength(2);
+    });
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,

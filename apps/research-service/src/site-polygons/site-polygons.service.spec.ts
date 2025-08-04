@@ -403,8 +403,6 @@ describe("SitePolygonsService", () => {
       const updateDate = DateTime.fromJSDate(newDate).plus({ days: 1 }).toJSDate();
       clock.setSystemTime(updateDate);
       await poly1.update({ status: "submitted" });
-      // The SQL query uses greater than or equal, but in order to get around weirdness with
-      // truncated date precision, we test with a slightly older date time.
       query = (await service.buildQuery({ size: 20 })).modifiedSince(
         DateTime.fromJSDate(updateDate).minus({ minutes: 1 }).toJSDate()
       );
@@ -704,31 +702,23 @@ describe("SitePolygonsService", () => {
   });
 
   it("should map establishment tree species and reporting periods correctly", async () => {
-    // Create site polygon with a valid site relationship
     const sitePolygon = await SitePolygonFactory.create();
     const site = (await sitePolygon.loadSite()) as Site;
-
-    // Create a site report for the site
     const siteReport = await SiteReportFactory.create({ siteId: site.id });
-
-    // Create tree species for the site (establishment trees)
     await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, {
       speciesableId: site.id,
       name: "Oak",
       amount: 100
     });
 
-    // Create tree species for the site report (reporting period trees)
     await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(1, {
       speciesableId: siteReport.id,
       name: "Pine",
       amount: 50
     });
 
-    // Call the method that should execute lines 94-102
     const associations = await service.loadAssociationDtos([sitePolygon], false);
 
-    // Verify the mapping worked correctly
     expect(associations[sitePolygon.id]?.establishmentTreeSpecies).toHaveLength(2);
     expect(associations[sitePolygon.id]?.establishmentTreeSpecies?.[0]).toEqual({
       name: "Oak",
@@ -738,7 +728,10 @@ describe("SitePolygonsService", () => {
     expect(associations[sitePolygon.id]?.reportingPeriods).toHaveLength(1);
     expect(associations[sitePolygon.id]?.reportingPeriods?.[0]).toEqual({
       dueAt: siteReport.dueAt,
-      submittedAt: siteReport.submittedAt,
+      submittedAt:
+        siteReport.submittedAt !== null
+          ? new Date(siteReport.submittedAt.getTime() - (siteReport.submittedAt.getTime() % 1000))
+          : null,
       treeSpecies: [{ name: "Pine", amount: 50 }]
     });
   });
@@ -757,21 +750,16 @@ describe("SitePolygonsService", () => {
     expect(associations[sitePolygon.id]?.reportingPeriods).toBeDefined();
   });
   it("should execute getTreeSpecies with both site and report trees", async () => {
-    // Clear existing data to ensure clean test
     await SitePolygon.truncate();
-
-    // Create site polygons with valid sites
     const sitePolygon1 = await SitePolygonFactory.create();
     const site1 = (await sitePolygon1.loadSite()) as Site;
 
     const sitePolygon2 = await SitePolygonFactory.create();
     const site2 = (await sitePolygon2.loadSite()) as Site;
 
-    // Create site reports
     const siteReport1 = await SiteReportFactory.create({ siteId: site1.id });
     const siteReport2 = await SiteReportFactory.create({ siteId: site2.id });
 
-    // Create tree species for sites (covers Site.LARAVEL_TYPE filtering)
     await TreeSpeciesFactory.forSiteTreePlanted.create({
       speciesableId: site1.id,
       name: "Site1Tree",
@@ -783,7 +771,6 @@ describe("SitePolygonsService", () => {
       amount: 200
     });
 
-    // Create tree species for reports (covers SiteReport.LARAVEL_TYPE filtering)
     await TreeSpeciesFactory.forSiteReportTreePlanted.create({
       speciesableId: siteReport1.id,
       name: "Report1Tree",
@@ -795,10 +782,8 @@ describe("SitePolygonsService", () => {
       amount: 75
     });
 
-    // This call will execute the getTreeSpecies method with the target lines
     const associations = await service.loadAssociationDtos([sitePolygon1, sitePolygon2], false);
 
-    // Verify both site and report trees are properly mapped
     expect(associations[sitePolygon1.id]?.establishmentTreeSpecies).toHaveLength(1);
     expect(associations[sitePolygon1.id]?.establishmentTreeSpecies?.[0].name).toBe("Site1Tree");
 
@@ -819,20 +804,17 @@ describe("SitePolygonsService", () => {
     const site = await SiteFactory.create({ projectId: project.id });
     const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-    // Create indicators
     await IndicatorOutputHectaresFactory.create({
       sitePolygonId: sitePolygon.id,
       indicatorSlug: "restorationByStrategy"
     });
 
-    // Create establishment tree species
     await TreeSpeciesFactory.forSiteTreePlanted.create({
       speciesableId: site.id,
       name: "TestTree",
       amount: 150
     });
 
-    // Create site report with tree species
     const siteReport = await SiteReportFactory.create({ siteId: site.id });
     await TreeSpeciesFactory.forSiteReportTreePlanted.create({
       speciesableId: siteReport.id,
@@ -840,10 +822,8 @@ describe("SitePolygonsService", () => {
       amount: 75
     });
 
-    // Load associations (this should cover lines 92-102)
     const associations = await service.loadAssociationDtos([sitePolygon], false);
 
-    // Call buildFullDto to ensure it's covered
     const fullDto = await service.buildFullDto(sitePolygon, associations[sitePolygon.id]);
 
     expect(fullDto).toBeInstanceOf(SitePolygonFullDto);
@@ -853,25 +833,20 @@ describe("SitePolygonsService", () => {
     expect(fullDto.establishmentTreeSpecies[0].name).toBe("TestTree");
     expect(fullDto.reportingPeriods[0].treeSpecies[0].name).toBe("ReportTree");
   });
-  // Add this test to site-polygons.service.spec.ts
-  // This specifically targets the mapping logic in lines 92-102
 
   it("should properly map associations when siteId exists (lines 92-102)", async () => {
     await SitePolygon.truncate();
 
-    // Create a site polygon with a valid site
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
     const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-    // Create establishment tree species (for site)
     await TreeSpeciesFactory.forSiteTreePlanted.create({
       speciesableId: site.id,
       name: "EstablishmentOak",
       amount: 200
     });
 
-    // Create site report and reporting period tree species
     const siteReport = await SiteReportFactory.create({
       siteId: site.id,
       dueAt: new Date("2024-06-15"),
@@ -884,25 +859,23 @@ describe("SitePolygonsService", () => {
       amount: 100
     });
 
-    // Call loadAssociationDtos to trigger the mapping logic
     const associations = await service.loadAssociationDtos([sitePolygon], false);
 
-    // Verify the specific mapping that happens in lines 94-102
     const polyAssociations = associations[sitePolygon.id];
     expect(polyAssociations).toBeDefined();
-
-    // Test establishmentTreeSpecies mapping (line 96-99)
     expect(polyAssociations.establishmentTreeSpecies).toHaveLength(1);
     expect(polyAssociations.establishmentTreeSpecies![0]).toEqual({
       name: "EstablishmentOak",
       amount: 200
     });
 
-    // Test reportingPeriods mapping (line 100-102)
     expect(polyAssociations.reportingPeriods).toHaveLength(1);
     expect(polyAssociations.reportingPeriods![0]).toEqual({
       dueAt: siteReport.dueAt,
-      submittedAt: siteReport.submittedAt,
+      submittedAt:
+        siteReport.submittedAt !== null
+          ? new Date(siteReport.submittedAt.getTime() - (siteReport.submittedAt.getTime() % 1000))
+          : null,
       treeSpecies: [{ name: "ReportMaple", amount: 100 }]
     });
   });

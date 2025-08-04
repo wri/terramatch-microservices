@@ -33,6 +33,7 @@ describe("SitePolygonsController", () => {
     builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
     builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
+    builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
     builder.paginationTotal.mockResolvedValue(totalResult);
@@ -208,8 +209,10 @@ describe("SitePolygonsController", () => {
 
     it("should execute real filterValidationStatus logic", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      await SitePolygonFactory.create({ validationStatus: "passed" });
-      await SitePolygonFactory.create({ validationStatus: null });
+      const poly1 = await SitePolygonFactory.create({ validationStatus: "passed" });
+      const poly2 = await SitePolygonFactory.create({ validationStatus: null });
+
+      const builder = mockQueryBuilder([poly1, poly2], 2);
 
       const result = await controller.findMany({
         validationStatus: ["passed", "not_checked"],

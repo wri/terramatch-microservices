@@ -128,7 +128,9 @@ describe("SitePolygonsService", () => {
   });
 
   it("should skip site polygons when site is not found", async () => {
-    const sitePolygon = await SitePolygonFactory.create({ siteUuid: "non-existent-uuid" });
+    const site = await SiteFactory.create();
+    await site.destroy();
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
     const associations = await service.loadAssociationDtos([sitePolygon], false);
     expect(associations[sitePolygon.id]?.establishmentTreeSpecies).toBeUndefined();
     expect(associations[sitePolygon.id]?.reportingPeriods).toBeUndefined();

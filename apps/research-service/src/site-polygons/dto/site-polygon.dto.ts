@@ -179,6 +179,21 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
   numTrees: number | null;
 
   @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Source of the site polygon"
+  })
+  source: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Validation status of the site polygon",
+    maxLength: 255
+  })
+  validationStatus: string | null;
+
+  @ApiProperty({
     type: () => TreeSpeciesDto,
     isArray: true,
     description: "The tree species associated with the establishment of the site that this polygon relates to."

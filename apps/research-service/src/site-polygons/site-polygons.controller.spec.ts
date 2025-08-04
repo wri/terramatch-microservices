@@ -33,6 +33,7 @@ describe("SitePolygonsController", () => {
     builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
     builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
+    builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
     builder.paginationTotal.mockResolvedValue(totalResult);
@@ -197,6 +198,28 @@ describe("SitePolygonsController", () => {
       expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
     });
 
+    it("should call filterValidationStatus when validationStatus is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
+
+      await controller.findMany({ validationStatus: ["passed", "not_checked"] });
+      expect(builder.filterValidationStatus).toHaveBeenCalledWith(["passed", "not_checked"]);
+    });
+
+    it("should execute real filterValidationStatus logic", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const poly1 = await SitePolygonFactory.create({ validationStatus: "passed" });
+      const poly2 = await SitePolygonFactory.create({ validationStatus: null });
+
+      mockQueryBuilder([poly1, poly2], 2);
+
+      const result = await controller.findMany({
+        validationStatus: ["passed", "not_checked"],
+        page: { size: 10, number: 1 }
+      });
+      expect(result.data).toHaveLength(2);
+    });
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,

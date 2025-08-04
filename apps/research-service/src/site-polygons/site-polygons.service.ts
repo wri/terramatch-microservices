@@ -37,7 +37,11 @@ export class SitePolygonsService {
 
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
     const accessor = new ModelPropertiesAccessor();
-    const { id: sitePolygonId } = (await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } })) ?? {};
+    const { id: sitePolygonId } =
+      (await SitePolygon.findOne({
+        where: { uuid: sitePolygonUuid },
+        attributes: ["id"]
+      })) ?? {};
     if (sitePolygonId == null) {
       throw new NotFoundException(`SitePolygon not found for id: ${sitePolygonUuid}`);
     }

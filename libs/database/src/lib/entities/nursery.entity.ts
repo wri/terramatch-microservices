@@ -15,20 +15,31 @@ import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
-import { APPROVED, EntityStatus, EntityStatusStates, STARTED, UpdateRequestStatus } from "../constants/status";
+import {
+  APPROVED,
+  EntityStatus,
+  EntityStatusStates,
+  STARTED,
+  statusUpdateSequelizeHook,
+  UpdateRequestStatus
+} from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey, PLANTING_STATUSES, PlantingStatus } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
-import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
   approved: { where: { status: { [Op.in]: Nursery.APPROVED_STATUSES } } },
   nonDraft: { where: { status: { [Op.ne]: STARTED } } }
 }))
-@Table({ tableName: "v2_nurseries", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_nurseries",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
 export class Nursery extends Model<Nursery> {
   static readonly APPROVED_STATUSES = [APPROVED];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];

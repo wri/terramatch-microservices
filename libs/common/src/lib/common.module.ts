@@ -16,8 +16,10 @@ import { BullModule } from "@nestjs/bullmq";
 import { EmailProcessor } from "./email/email.processor";
 import { TemplateService } from "./templates/template.service";
 import { ReportGenerationService } from "./tasks/report-generation-service";
+import { AnalyticsEventService } from "./analytics/analytics-events.service";
+import { AnalyticsProcessor } from "./analytics/analytics.processor";
 
-export const QUEUES = ["email"];
+export const QUEUES = ["email", "analytics"];
 
 @Module({
   imports: [
@@ -63,7 +65,9 @@ export const QUEUES = ["email"];
     SlackService,
     EventService,
     EmailProcessor,
-    ReportGenerationService
+    ReportGenerationService,
+    AnalyticsEventService,
+    AnalyticsProcessor
   ],
   exports: [
     PolicyService,
@@ -73,7 +77,8 @@ export const QUEUES = ["email"];
     MediaService,
     TemplateService,
     SlackService,
-    ReportGenerationService
+    ReportGenerationService,
+    AnalyticsEventService
   ]
 })
 export class CommonModule {}

@@ -3,6 +3,13 @@ import { BIGINT, BOOLEAN, DATE, ENUM, NOW, STRING, TEXT, UUID, UUIDV4 } from "se
 import { LaravelModel, laravelType } from "../types/util";
 import { MediaConfiguration } from "../constants/media-owners";
 import { chainScope } from "../util/chain-scope";
+import { Project } from "./project.entity";
+import { Site } from "./site.entity";
+import { Nursery } from "./nursery.entity";
+import { ProjectReport } from "./project-report.entity";
+import { SiteReport } from "./site-report.entity";
+import { NurseryReport } from "./nursery-report.entity";
+import { SitePolygon } from "./site-polygon.entity";
 
 const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
 type AuditStatusType = (typeof TYPES)[number];
@@ -27,6 +34,16 @@ export class AuditStatus extends Model<AuditStatus> {
   static readonly MEDIA: Record<string, MediaConfiguration> = {
     attachments: { dbCollection: "attachments", multiple: true, validation: "general-documents" }
   };
+
+  static readonly AUDITABLE_LARAVEL_TYPES = [
+    Project.LARAVEL_TYPE,
+    Site.LARAVEL_TYPE,
+    Nursery.LARAVEL_TYPE,
+    ProjectReport.LARAVEL_TYPE,
+    SiteReport.LARAVEL_TYPE,
+    NurseryReport.LARAVEL_TYPE,
+    SitePolygon.LARAVEL_TYPE
+  ];
 
   static for(auditable: LaravelModel) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;

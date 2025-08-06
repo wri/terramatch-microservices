@@ -1,14 +1,15 @@
 import { DynamicModule, Type } from "@nestjs/common";
 import { TMLogger } from "./tm-logger";
 import * as lodash from "lodash";
+import { Dictionary } from "lodash";
 import { repl } from "@nestjs/core";
 import { Sequelize } from "sequelize-typescript";
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
-import { Dictionary } from "lodash";
 import { buildJsonApi } from "./json-api-builder";
 import { Op } from "sequelize";
 import { DateTime } from "luxon";
+import { v4 as uuidv4 } from "uuid";
 
 const logger = new TMLogger("REPL");
 
@@ -26,6 +27,7 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
   // By default, we make lodash, luxon, the JSON API Builder, and the Sequelize models available
   context = {
     lodash,
+    uuidv4,
     DateTime,
     buildJsonApi,
     Op,

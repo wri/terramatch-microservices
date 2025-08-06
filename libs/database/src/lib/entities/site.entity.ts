@@ -22,24 +22,24 @@ import {
   SiteStatus,
   SiteStatusStates,
   STARTED,
+  statusUpdateSequelizeHook,
   UpdateRequestStatus
 } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey, PLANTING_STATUSES, PlantingStatus } from "../constants";
 import { Framework } from "./framework.entity";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
-import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
 
 @Scopes(() => ({
   approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
   nonDraft: { where: { status: { [Op.ne]: STARTED } } },
   project: (id: number) => ({ where: { projectId: id } })
 }))
-@Table({ tableName: "v2_sites", underscored: true, paranoid: true })
+@Table({ tableName: "v2_sites", underscored: true, paranoid: true, hooks: { afterCreate: statusUpdateSequelizeHook } })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = [APPROVED, RESTORATION_IN_PROGRESS] as SiteStatus[];

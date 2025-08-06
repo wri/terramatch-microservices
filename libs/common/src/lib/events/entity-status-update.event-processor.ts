@@ -3,6 +3,7 @@ import { EventProcessor } from "./event.processor";
 import { TMLogger } from "../util/tm-logger";
 import {
   ENTITY_MODELS,
+  EntityClass,
   EntityModel,
   EntityType,
   getOrganisationId,
@@ -43,12 +44,13 @@ export class EntityStatusUpdate extends EventProcessor {
       })}]`
     );
 
-    const entityType = Object.entries(ENTITY_MODELS).find(
+    const [entityType, entityClass] = (Object.entries(ENTITY_MODELS).find(
       ([, entityClass]) => this.model instanceof entityClass
-    )?.[0] as EntityType | undefined;
+    ) ?? []) as [EntityType, EntityClass<EntityModel>] | [undefined, undefined];
 
-    if (entityType != null) {
+    if (entityType != null && entityClass != null) {
       await this.sendStatusUpdateEmail(entityType);
+      await this.eventService.sendStatusUpdateAnalytics(this.model.uuid, entityClass.LARAVEL_TYPE, this.model.status);
       await this.updateActions();
     }
     await this.createAuditStatus();

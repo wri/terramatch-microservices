@@ -19,14 +19,18 @@ import { Application } from "./application.entity";
 import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey, PLANTING_STATUSES, PlantingStatus } from "../constants";
 import { Framework } from "./framework.entity";
-import { EntityStatus, EntityStatusStates, UpdateRequestStatus } from "../constants/status";
+import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
-import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
 
-@Table({ tableName: "v2_projects", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_projects",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
 export class Project extends Model<Project> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";

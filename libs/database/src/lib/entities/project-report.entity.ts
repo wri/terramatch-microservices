@@ -14,7 +14,7 @@ import {
 import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 import {
   AWAITING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
@@ -22,6 +22,7 @@ import {
   DUE,
   ReportStatus,
   ReportStatusStates,
+  statusUpdateSequelizeHook,
   UpdateRequestStatus
 } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
@@ -46,7 +47,12 @@ type ApprovedIdsSubqueryOptions = {
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } })
 }))
-@Table({ tableName: "v2_project_reports", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_project_reports",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
 export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["nurserySeedlings"];
   static readonly PARENT_ID = "projectId";

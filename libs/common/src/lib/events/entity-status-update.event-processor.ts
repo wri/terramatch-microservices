@@ -43,6 +43,8 @@ export class EntityStatusUpdate extends EventProcessor {
       })}]`
     );
 
+    await this.eventService.sendStatusUpdateAnalytics(this.model.uuid, laravelType(this.model), this.model.status);
+
     const entityType = Object.entries(ENTITY_MODELS).find(
       ([, entityClass]) => this.model instanceof entityClass
     )?.[0] as EntityType | undefined;
@@ -91,13 +93,16 @@ export class EntityStatusUpdate extends EventProcessor {
   }
 
   private async createAuditStatus() {
+    const auditableType = laravelType(this.model);
+    if (!AuditStatus.AUDITABLE_LARAVEL_TYPES.includes(auditableType)) return;
+
     this.logger.log(
       `Creating auditStatus [${JSON.stringify({ model: this.model.constructor.name, id: this.model.id })}]`
     );
 
     const user = await this.getAuthenticatedUser();
     const auditStatus = new AuditStatus();
-    auditStatus.auditableType = laravelType(this.model);
+    auditStatus.auditableType = auditableType;
     auditStatus.auditableId = this.model.id;
     auditStatus.createdBy = user?.emailAddress ?? null;
     auditStatus.firstName = user?.firstName ?? null;
@@ -112,15 +117,19 @@ export class EntityStatusUpdate extends EventProcessor {
       auditStatus.type = "change-request";
       auditStatus.comment = await this.getNeedsMoreInfoComment();
     } else if (this.model.status === "awaiting-approval") {
-      // NOOP, but avoid the short circuit warning below.
+      // no additional properties to set, but avoid the short circuit warning below.
     } else {
-      this.logger.warn(
-        `Skipping audit status for entity status [${JSON.stringify({
-          model: this.model.constructor.name,
-          id: this.model.id,
-          status: this.model.status
-        })}]`
-      );
+      // Getting this method called for started is expected on model creation, so no need to warn
+      // in that case.
+      if (this.model.status !== "started") {
+        this.logger.warn(
+          `Skipping audit status for entity status [${JSON.stringify({
+            model: this.model.constructor.name,
+            id: this.model.id,
+            status: this.model.status
+          })}]`
+        );
+      }
       return;
     }
 

@@ -17,7 +17,7 @@ import { Site } from "./site.entity";
 import { PointGeometry } from "./point-geometry.entity";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { User } from "./user.entity";
-import { INDICATOR_SLUGS, POLYGON_STATUSES, PolygonStatus } from "../constants";
+import { INDICATOR_SLUGS, PLANTING_STATUSES, PlantingStatus, POLYGON_STATUSES, PolygonStatus } from "../constants";
 import { IndicatorOutputFieldMonitoring } from "./indicator-output-field-monitoring.entity";
 import { IndicatorOutputHectares } from "./indicator-output-hectares.entity";
 import { IndicatorOutputMsuCarbon } from "./indicator-output-msu-carbon.entity";
@@ -27,7 +27,7 @@ import { IndicatorOutputTreeCoverLoss } from "./indicator-output-tree-cover-loss
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
-import { PlantingStatus, PLANTING_STATUSES } from "../constants/planting-status";
+import { statusUpdateSequelizeHook } from "../constants/status";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -42,8 +42,17 @@ export type Indicator =
   approved: { where: { status: "approved" } },
   sites: (uuids: string[] | Literal) => ({ where: { siteUuid: { [Op.in]: uuids } } })
 }))
-@Table({ tableName: "site_polygon", underscored: true, paranoid: true })
+@Table({
+  tableName: "site_polygon",
+  underscored: true,
+  paranoid: true,
+  // TODO: once status is updated to use a state machine as in the base entity models, this
+  //  afterUpdate will probably need to be removed, as it will be handled by the state machine.
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterUpdate: statusUpdateSequelizeHook }
+})
 export class SitePolygon extends Model<SitePolygon> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SitePolygon";
+
   static active() {
     return chainScope(this, "active") as typeof SitePolygon;
   }

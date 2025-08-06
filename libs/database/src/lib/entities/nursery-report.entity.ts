@@ -20,9 +20,10 @@ import {
   CompleteReportStatus,
   ReportStatus,
   ReportStatusStates,
+  statusUpdateSequelizeHook,
   UpdateRequestStatus
 } from "../constants/status";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
@@ -37,7 +38,12 @@ import { getStateMachine, StateMachineColumn } from "../util/model-column-state-
   approved: { where: { status: { [Op.in]: NurseryReport.APPROVED_STATUSES } } },
   task: (taskId: number) => ({ where: { taskId } })
 }))
-@Table({ tableName: "v2_nursery_reports", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_nursery_reports",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
 export class NurseryReport extends Model<NurseryReport> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly APPROVED_STATUSES = ["approved"];

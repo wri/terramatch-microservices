@@ -15,7 +15,7 @@ import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 import { Literal } from "sequelize/types/utils";
 import {
   AWAITING_APPROVAL,
@@ -23,6 +23,7 @@ import {
   CompleteReportStatus,
   ReportStatus,
   ReportStatusStates,
+  statusUpdateSequelizeHook,
   UpdateRequestStatus
 } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
@@ -44,7 +45,12 @@ type ApprovedIdsSubqueryOptions = {
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } })
 }))
-@Table({ tableName: "v2_site_reports", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_site_reports",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
 export class SiteReport extends Model<SiteReport> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";

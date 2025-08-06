@@ -5,7 +5,6 @@ import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { JsonApiDocument } from "@terramatch-microservices/common/util";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { PolicyService } from "@terramatch-microservices/common";
 import { PolygonGeometry, Project, Site, SitePolygon, ProjectPitch } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Op } from "sequelize";
@@ -61,10 +60,6 @@ describe("BoundingBoxController", () => {
     getCountryLandscapeBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox)
   };
 
-  const mockPolicyService = {
-    authorize: jest.fn().mockResolvedValue(undefined)
-  };
-
   const mockPolygon = { uuid: "polygon-123" };
   const mockSite = { id: "site-db-id-123", uuid: "site-123", project: { uuid: "project-123", frameworkKey: "ppc" } };
   const mockProject = { uuid: "project-123", frameworkKey: "ppc", organisationId: 1 };
@@ -92,10 +87,6 @@ describe("BoundingBoxController", () => {
         {
           provide: BoundingBoxService,
           useValue: mockBoundingBoxService
-        },
-        {
-          provide: PolicyService,
-          useValue: mockPolicyService
         }
       ]
     }).compile();
@@ -114,18 +105,11 @@ describe("BoundingBoxController", () => {
       queryParams: BoundingBoxQueryDto,
       expectedService: keyof typeof mockBoundingBoxService,
       expectedArgs: BoundingBoxServiceArgs,
-      expectedId: string,
-      shouldAuthorize = true
+      expectedId: string
     ) => {
       const result = (await controller.getBoundingBox(queryParams)) as JsonApiDocument;
 
       expect(mockBoundingBoxService[expectedService]).toHaveBeenCalledWith(...expectedArgs);
-
-      if (shouldAuthorize) {
-        expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", expect.anything());
-      } else {
-        expect(mockPolicyService.authorize).not.toHaveBeenCalled();
-      }
 
       expect(result.data).toBeDefined();
 
@@ -139,7 +123,7 @@ describe("BoundingBoxController", () => {
       }
     };
 
-    it("should call getPolygonBoundingBox when polygonUuid is provided and authorize using Site", async () => {
+    it("should call getPolygonBoundingBox when polygonUuid is provided", async () => {
       await testQueryParameters(
         { polygonUuid: "polygon-123" },
         "getPolygonBoundingBox",
@@ -156,8 +140,6 @@ describe("BoundingBoxController", () => {
         },
         attributes: ["frameworkKey", "projectId"]
       });
-
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);
     });
 
     it("should throw NotFoundException when Site with associated polygon is not found", async () => {
@@ -184,8 +166,6 @@ describe("BoundingBoxController", () => {
         where: { uuid: "site-123" },
         attributes: ["frameworkKey", "projectId"]
       });
-
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);
     });
 
     it("should call getProjectBoundingBox when projectUuid is provided", async () => {
@@ -200,8 +180,6 @@ describe("BoundingBoxController", () => {
         where: { uuid: "project-123" },
         attributes: ["id", "uuid", "frameworkKey", "organisationId"]
       });
-
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockProject);
     });
 
     it("should call getProjectPitchBoundingBox when projectPitchUuid is provided", async () => {
@@ -209,8 +187,7 @@ describe("BoundingBoxController", () => {
         { projectPitchUuid: "pitch-123" },
         "getProjectPitchBoundingBox",
         ["pitch-123"],
-        "?projectPitchUuid=pitch-123",
-        false
+        "?projectPitchUuid=pitch-123"
       );
 
       expect(ProjectPitch.findOne).toHaveBeenCalledWith({
@@ -219,17 +196,16 @@ describe("BoundingBoxController", () => {
       });
     });
 
-    it("should call getCountryLandscapeBoundingBox when country is provided without authorization", async () => {
-      await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "?country=US", false);
+    it("should call getCountryLandscapeBoundingBox when country is provided", async () => {
+      await testQueryParameters({ country: "US" }, "getCountryLandscapeBoundingBox", ["US", []], "?country=US");
     });
 
-    it("should call getCountryLandscapeBoundingBox when landscapes are provided without authorization", async () => {
+    it("should call getCountryLandscapeBoundingBox when landscapes are provided", async () => {
       await testQueryParameters(
         { landscapes: ["ikr", "gcb"] },
         "getCountryLandscapeBoundingBox",
         ["", ["ikr", "gcb"]],
-        "?landscapes%5B0%5D=gcb&landscapes%5B1%5D=ikr",
-        false
+        "?landscapes%5B0%5D=gcb&landscapes%5B1%5D=ikr"
       );
     });
 
@@ -238,8 +214,7 @@ describe("BoundingBoxController", () => {
         { country: "KE", landscapes: ["ikr", "grv"] },
         "getCountryLandscapeBoundingBox",
         ["KE", ["ikr", "grv"]],
-        "?country=KE&landscapes%5B0%5D=grv&landscapes%5B1%5D=ikr",
-        false
+        "?country=KE&landscapes%5B0%5D=grv&landscapes%5B1%5D=ikr"
       );
     });
 

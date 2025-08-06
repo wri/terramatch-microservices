@@ -1,12 +1,12 @@
-import { Controller, Get, Query, BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { Controller, Get, Query, BadRequestException, NotFoundException } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { buildJsonApi, getStableRequestQuery, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
-import { PolicyService } from "@terramatch-microservices/common";
 import {
   Project,
   Site,
@@ -21,8 +21,9 @@ type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "projectPitchU
 
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
+@NoBearerAuth
 export class BoundingBoxController {
-  constructor(private readonly boundingBoxService: BoundingBoxService, private readonly policyService: PolicyService) {}
+  constructor(private readonly boundingBoxService: BoundingBoxService) {}
 
   @Get("get")
   @ApiOperation({
@@ -35,9 +36,6 @@ export class BoundingBoxController {
   })
   @ExceptionResponse(NotFoundException, {
     description: "Requested resource not found"
-  })
-  @ExceptionResponse(UnauthorizedException, {
-    description: "User is not authorized to view this resource"
   })
   async getBoundingBox(@Query() query: BoundingBoxQueryDto): Promise<JsonApiDocument> {
     const providedParams: ParameterType[] = [];
@@ -94,8 +92,6 @@ export class BoundingBoxController {
           throw new NotFoundException(`Site with associated polygon UUID ${polygonUuid} not found`);
         }
 
-        await this.policyService.authorize("read", site);
-
         const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
@@ -112,8 +108,6 @@ export class BoundingBoxController {
           throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
         }
 
-        await this.policyService.authorize("read", site);
-
         const result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
@@ -129,8 +123,6 @@ export class BoundingBoxController {
         if (project === null) {
           throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
         }
-
-        await this.policyService.authorize("read", project);
 
         const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();

@@ -56,4 +56,9 @@ export class DashboardQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsArray()
+  polygonStatus?: string[];
 }

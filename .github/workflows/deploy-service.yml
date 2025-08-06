@@ -77,6 +77,7 @@ jobs:
           echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> .env
           echo "JWT_SECRET=\"${{ secrets.JWT_SECRET }}\"" >> .env
           echo "AIRTABLE_API_KEY=\"${{ secrets.AIRTABLE_API_KEY }}\"" >> .env
+          echo "GA_API_SECRET=\"${{ secrets.GA_API_SECRET }}\"" >> .env
           echo "SENTRY_DSN=\"${{ secrets.SENTRY_DSN }}\"" >> .env
           echo "SLACK_API_KEY=\"${{ secrets.SLACK_API_KEY }}\"" >> .env
           echo "ENTITY_UPDATE_DO_NOT_EMAIL=\"${{ secrets.ENTITY_UPDATE_DO_NOT_EMAIL }}\"" >> .env

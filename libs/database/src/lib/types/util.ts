@@ -11,4 +11,4 @@ export type StatusModel = Model & { status: string };
 
 export type FeedbackModel = Model & { feedback?: string | null; feedbackFields?: string[] | null };
 
-export type StatusUpdateModel = LaravelModel & StatusModel & FeedbackModel;
+export type StatusUpdateModel = UuidModel & LaravelModel & StatusModel & FeedbackModel;

@@ -70,7 +70,8 @@ export class SitePolygonsController {
       presentIndicator,
       lightResource,
       projectCohort,
-      landscape
+      landscape,
+      validationStatus
     } = query;
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
     // these two can be used together, but not along with the other project / site filters.
@@ -121,6 +122,10 @@ export class SitePolygonsController {
 
     if (projectShortNames != null) {
       await queryBuilder.filterProjectShortNames(projectShortNames);
+    }
+
+    if (validationStatus != null) {
+      await queryBuilder.filterValidationStatus(validationStatus);
     }
 
     if (projectCohort != null || landscape != null) {

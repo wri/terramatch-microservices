@@ -123,6 +123,21 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ projectId: { [Op.in]: filterProjects.map(({ id }) => id) } }, this.siteJoin);
   }
 
+  async filterValidationStatus(validationStatuses: string[]) {
+    const otherStatuses = validationStatuses.filter(status => status !== "not_checked");
+    const hasNotChecked = otherStatuses.length !== validationStatuses.length;
+
+    if (hasNotChecked && otherStatuses.length > 0) {
+      return this.where({
+        [Op.or]: [{ validationStatus: null }, { validationStatus: { [Op.in]: otherStatuses } }]
+      });
+    } else if (hasNotChecked) {
+      return this.where({ validationStatus: null });
+    } else {
+      return this.where({ validationStatus: { [Op.in]: otherStatuses } });
+    }
+  }
+
   async addSearch(searchTerm: string) {
     return this.where({
       [Op.or]: [

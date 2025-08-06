@@ -52,6 +52,9 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
 
   @ApiProperty({ nullable: true, type: Number })
   totalJobsCreated: number | null;
+
+  @ApiProperty()
+  hasAccess: boolean;
 }
 
 export class DashboardProjectsFullDto extends DashboardProjectsLightDto {

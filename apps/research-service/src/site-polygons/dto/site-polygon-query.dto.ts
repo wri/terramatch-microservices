@@ -25,6 +25,16 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   polygonStatus?: PolygonStatus[];
 
   @ApiProperty({
+    name: "validationStatus[]",
+    isArray: true,
+    required: false,
+    description: "Filter results by validation status"
+  })
+  @IsOptional()
+  @IsArray()
+  validationStatus?: string[];
+
+  @ApiProperty({
     name: "projectId[]",
     isArray: true,
     required: false,

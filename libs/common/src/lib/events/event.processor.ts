@@ -9,7 +9,7 @@ export abstract class EventProcessor {
   async getAuthenticatedUser() {
     if (this._authenticatedUser != null) return this._authenticatedUser;
 
-    const userId = RequestContext.currentContext.req.authenticatedUserId as number | null;
+    const userId = RequestContext.currentContext?.req?.authenticatedUserId as number | null | undefined;
     if (userId == null) return null;
 
     return (this._authenticatedUser = await User.findOne({

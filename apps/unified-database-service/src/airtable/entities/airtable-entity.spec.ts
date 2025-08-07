@@ -650,10 +650,14 @@ describe("AirtableEntity", () => {
 
       // won't count because siteReport1 is not approved
       await SitePolygonFactory.create({ siteUuid: startedSiteUuid });
-      let hectaresRestoredToDate = (await SitePolygonFactory.create({ siteUuid: site1Uuid })).calcArea ?? 0;
+      let hectaresRestoredToDate =
+        (await SitePolygonFactory.create({ siteUuid: site1Uuid, status: "approved" })).calcArea ?? 0;
       // won't count because it's not active
       await SitePolygonFactory.create({ siteUuid: site2Uuid, isActive: false });
-      hectaresRestoredToDate += (await SitePolygonFactory.create({ siteUuid: site2Uuid })).calcArea ?? 0;
+      // won't count because it's not approved
+      await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "needs-more-information" });
+      hectaresRestoredToDate +=
+        (await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "approved" })).calcArea ?? 0;
 
       calculatedValues = {
         [projects[0].uuid]: {

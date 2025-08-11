@@ -206,4 +206,17 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     description: "Access to reported trees planted for each approved report on this site."
   })
   reportingPeriods: ReportingPeriodDto[];
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Primary UUID of the site polygon"
+  })
+  primaryUuid: string | null;
+
+  @ApiProperty({
+    type: String,
+    description: "UUID of the site polygon"
+  })
+  uuid: string;
 }

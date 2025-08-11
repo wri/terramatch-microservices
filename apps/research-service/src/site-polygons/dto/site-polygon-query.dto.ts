@@ -65,6 +65,16 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   siteId?: string[];
 
   @ApiProperty({
+    name: "polygonUuid[]",
+    isArray: true,
+    required: false,
+    description: "Filter results by polygon UUID(s)"
+  })
+  @IsOptional()
+  @IsArray()
+  polygonUuid?: string[];
+
+  @ApiProperty({
     name: "projectCohort[]",
     isArray: true,
     required: false,

@@ -41,6 +41,7 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   "scalabilityReplicability",
   "convergenceJobsDescription",
   "convergenceSchemes",
+  "convergenceAmount",
   "beneficiariesScstobc",
   "beneficiariesScstobcFarmers",
   "communityPartnersAssetsDescription",

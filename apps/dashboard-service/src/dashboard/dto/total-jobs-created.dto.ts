@@ -51,4 +51,55 @@ export class TotalJobsCreatedDto {
 
   @ApiProperty()
   totalYouth: number;
+
+  @ApiProperty()
+  totalNonBinary: number;
+
+  @ApiProperty()
+  totalFtNonBinary: number;
+
+  @ApiProperty()
+  totalPtNonBinary: number;
+
+  @ApiProperty()
+  totalOthersGender: number;
+
+  @ApiProperty()
+  totalFtOthersGender: number;
+
+  @ApiProperty()
+  totalPtOthersGender: number;
+
+  @ApiProperty()
+  totalOthersAge: number;
+
+  @ApiProperty()
+  totalPtOthersAge: number;
+
+  @ApiProperty()
+  totalFtOthersAge: number;
+
+  @ApiProperty()
+  totalVolunteers: number;
+
+  @ApiProperty()
+  volunteerMen: number;
+
+  @ApiProperty()
+  volunteerWomen: number;
+
+  @ApiProperty()
+  volunteerNonBinary: number;
+
+  @ApiProperty()
+  volunteerOthers: number;
+
+  @ApiProperty()
+  volunteerYouth: number;
+
+  @ApiProperty()
+  volunteerNonYouth: number;
+
+  @ApiProperty()
+  volunteerAgeOthers: number;
 }

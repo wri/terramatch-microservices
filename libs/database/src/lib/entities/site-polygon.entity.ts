@@ -74,9 +74,8 @@ export class SitePolygon extends Model<SitePolygon> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @AllowNull
   @Column(UUID)
-  primaryUuid: string | null;
+  primaryUuid: string;
 
   // This column got called site_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull

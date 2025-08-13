@@ -212,7 +212,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     type: String,
     description: "Primary UUID of the site polygon"
   })
-  primaryUuid: string | null;
+  primaryUuid: string;
 
   @ApiProperty({
     type: String,

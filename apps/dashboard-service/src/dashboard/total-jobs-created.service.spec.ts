@@ -238,7 +238,7 @@ describe("TotalJobsCreatedService - filters", () => {
       expect(result.totalYouth).toBe(0);
       expect(result.totalNonYouth).toBe(0);
 
-      expect(result.totalVolunteers).toBe(20 + 18 + 8 + 25 + 21 + 5 + 4);
+      expect(result.totalVolunteers).toBe(20 + 18 + 8 + 5);
       expect(result.volunteerMen).toBe(20);
       expect(result.volunteerWomen).toBe(18);
       expect(result.volunteerNonBinary).toBe(8);

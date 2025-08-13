@@ -87,7 +87,7 @@ export class TotalJobsCreatedService {
       totalPtOthersAge: this.getSum(this.getOthers(ptJobs, "age", knownAgeSubtypes)),
       totalFtOthersAge: this.getSum(this.getOthers(ftJobs, "age", knownAgeSubtypes)),
 
-      totalVolunteers: this.getSum(allVolunteers),
+      totalVolunteers: this.getSum(this.getType(allVolunteers, "gender")),
       volunteerMen: this.getSum(this.getType(allVolunteers, "gender", "male")),
       volunteerWomen: this.getSum(this.getType(allVolunteers, "gender", "female")),
       volunteerNonBinary: this.getSum(this.getType(allVolunteers, "gender", "non-binary")),

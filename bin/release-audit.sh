@@ -37,7 +37,7 @@ feBranch=$(echo "$feResult" | jq -r .[].headRefName)
 
 # Enable case-insensitive matching
 shopt -s nocasematch
-if [[ ! ($v3Title =~ $release || $phpTitle =~ $release || $feTitle =~ $release) ]]; then
+if [[ ! ($v3Title =~ $release && $phpTitle =~ $release && $feTitle =~ $release) ]]; then
   echo -e "\nOne or more PR not found. Current release branches:"
   echo "  v3: $v3Title, $v3Branch"
   echo "  PHP: $phpTitle, $phpBranch"

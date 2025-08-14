@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# See https://gfw.atlassian.net/wiki/spaces/TerraMatch/pages/967475206/Release+Process+and+Branching+Strategy#Release-Audit-Script
+# for setup and usage instructions.
+
 if [[ -z "$JIRA_USER" || -z "$JIRA_TOKEN" ]]; then
   echo "Please set the JIRA_USER and JIRA_TOKEN env variables."
   exit 100

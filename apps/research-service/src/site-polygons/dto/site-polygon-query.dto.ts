@@ -12,6 +12,17 @@ import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
+class QuerySort {
+  @ApiProperty({ name: "sort[field]", required: false })
+  @IsOptional()
+  field?: string;
+
+  @ApiProperty({ name: "sort[direction]", required: false, enum: ["ASC", "DESC"], default: "ASC" })
+  @IsEnum(["ASC", "DESC"])
+  @IsOptional()
+  direction?: "ASC" | "DESC";
+}
+
 export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
@@ -154,4 +165,8 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   })
   @TransformBooleanString()
   lightResource?: boolean;
+
+  @ValidateNested()
+  @IsOptional()
+  sort?: QuerySort;
 }

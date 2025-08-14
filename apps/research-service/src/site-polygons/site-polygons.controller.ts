@@ -145,8 +145,8 @@ export class SitePolygonsController {
       await queryBuilder.addSearch(query.search);
     }
 
-    if (query.sort?.field != null) {
-      if (!isNumberPage(query.page ?? {})) {
+    if (query.sort != null && query.sort.field != null) {
+      if (!isNumberPage(page)) {
         throw new BadRequestException("Sorting is only supported with number pagination.");
       }
       const direction = query.sort.direction ?? "ASC";

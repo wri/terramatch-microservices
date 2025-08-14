@@ -44,7 +44,7 @@ if [[ ! ($v3Title =~ $release || $phpTitle =~ $release || $feTitle =~ $release) 
   echo "  FE: $feTitle, $feBranch"
   exit 100
 fi
-# Disable case-insensitive matching if not needed further
+# Disable case-insensitive matching
 shopt -u nocasematch
 
 echo -e "\nFound PRs:"

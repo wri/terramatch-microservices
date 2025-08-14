@@ -79,10 +79,10 @@ describe("SitePolygonQueryBuilder", () => {
     it("should filter by polygon uuids", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
-      const poly1 = await SitePolygonFactory.create({ siteUuid: site.uuid, polygonUuid: "poly-1" });
-      await SitePolygonFactory.create({ siteUuid: site.uuid, polygonUuid: "poly-2" });
+      const poly1 = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      await builder.filterPolygonUuids(["poly-1"]);
+      await builder.filterPolygonUuids([poly1.polygonUuid]);
       const result = await builder.execute();
 
       expect(result).toHaveLength(1);

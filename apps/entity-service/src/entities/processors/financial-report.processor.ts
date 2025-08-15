@@ -5,21 +5,13 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { FinancialReportFullDto, FinancialReportLightDto, FinancialReportMedia } from "../dto/financial-report.dto";
+import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FinancialReportUpdateAttributes } from "../dto/entity-update.dto";
 
-const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
-  "status",
-  "updateRequestStatus",
-  "frameworkKey",
-  "organisationUuid",
-  "projectUuid",
-  "yearOfReport"
-];
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "yearOfReport"];
 
 const ASSOCIATION_FIELD_MAP = {
-  organisationUuid: "$project.organisation.uuid$",
-  projectUuid: "$project.uuid$"
+  organisationUuid: "$organisation.uuid$"
 };
 
 export class FinancialReportProcessor extends EntityProcessor<
@@ -36,9 +28,8 @@ export class FinancialReportProcessor extends EntityProcessor<
       where: { uuid },
       include: [
         {
-          association: "project",
-          attributes: ["id", "uuid", "name"],
-          include: [{ association: "organisation", attributes: ["uuid", "name"] }]
+          association: "organisation",
+          attributes: ["id", "uuid", "name"]
         },
         { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
         { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
@@ -48,9 +39,8 @@ export class FinancialReportProcessor extends EntityProcessor<
 
   async findMany(query: EntityQueryDto) {
     const projectAssociation: Includeable = {
-      association: "project",
-      attributes: ["id", "uuid", "name"],
-      include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }]
+      association: "organisation",
+      attributes: ["id", "uuid", "name"]
     };
 
     const builder = await this.entitiesService.buildQuery(FinancialReport, query, [projectAssociation]);
@@ -63,9 +53,7 @@ export class FinancialReportProcessor extends EntityProcessor<
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
-      } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
@@ -97,10 +85,8 @@ export class FinancialReportProcessor extends EntityProcessor<
     if (query.search != null) {
       builder.where({
         [Op.or]: [
-          { "$project.name$": { [Op.like]: `%${query.search}%` } },
-          { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } },
-          { title: { [Op.like]: `%${query.search}%` } },
-          { description: { [Op.like]: `%${query.search}%` } }
+          { "$organisation.name$": { [Op.like]: `%${query.search}%` } },
+          { title: { [Op.like]: `%${query.search}%` } }
         ]
       });
     }
@@ -109,21 +95,13 @@ export class FinancialReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(financialReport: FinancialReport) {
-    const mediaCollection = await Media.for(financialReport).findAll();
-    const dto = new FinancialReportFullDto(financialReport, {
-      ...(this.entitiesService.mapMediaCollection(
-        mediaCollection,
-        FinancialReport.MEDIA,
-        "financialReports",
-        financialReport.uuid
-      ) as FinancialReportMedia)
-    });
+    const dto = new FinancialReportFullDto(financialReport);
 
     return { id: financialReport.uuid, dto };
   }
 
   async getLightDto(financialReport: FinancialReport) {
-    return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
+    return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport) };
   }
 
   async update(financialReport: FinancialReport, attributes: FinancialReportUpdateAttributes): Promise<void> {

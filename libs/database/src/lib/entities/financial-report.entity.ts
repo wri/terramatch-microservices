@@ -14,11 +14,12 @@ import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Project } from "./project.entity";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
-import { EntityStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
+import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { Organisation } from "./organisation.entity";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
@@ -40,15 +41,6 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 export class FinancialReport extends Model<FinancialReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FinancialReports\\FinancialReport";
 
-  static readonly MEDIA = {
-    documentation: { dbCollection: "documentation", multiple: true, validation: "general-documents" },
-    financialDocuments: { dbCollection: "financial_documents", multiple: true, validation: "general-documents" }
-  } as const;
-
-  static project(id: number) {
-    return chainScope(this, "project", id) as typeof FinancialReport;
-  }
-
   static organisation(uuid: string) {
     return chainScope(this, "organisation", uuid) as typeof FinancialReport;
   }
@@ -63,7 +55,7 @@ export class FinancialReport extends Model<FinancialReport> {
   uuid: string;
 
   @StateMachineColumn(ReportStatusStates)
-  status: EntityStatus;
+  status: ReportStatus;
 
   @AllowNull
   @Column(STRING)
@@ -149,29 +141,21 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column(BIGINT.UNSIGNED)
   approvedBy: number;
 
-  @BelongsTo(() => Project)
-  project: Project | null;
-
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
   createdByUser: User | null;
 
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
-  get projectName() {
-    return this.project?.name;
-  }
-
-  get projectUuid() {
-    return this.project?.uuid;
-  }
+  @BelongsTo(() => Organisation)
+  organisation: Organisation;
 
   get organisationName() {
-    return this.project?.organisationName;
+    return this.organisation.name;
   }
 
   get organisationUuid() {
-    return this.project?.organisationUuid;
+    return this.organisation.uuid;
   }
 
   get isCompletable() {

@@ -20,6 +20,7 @@ import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 import { DisturbancesController } from "./entities/disturbances.controller";
 import { DisturbanceService } from "./entities/disturbance.service";
+import { FinancialReportsController } from "./entities/financial-reports.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -34,6 +35,7 @@ import { DisturbanceService } from "./entities/disturbance.service";
     TreesController,
     DemographicsController,
     DisturbancesController,
+    FinancialReportsController,
     EntitiesController,
     EntityAssociationsController
   ],

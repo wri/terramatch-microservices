@@ -115,6 +115,10 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   shortName?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  yearOfReport?: number;
+
   // This one is internal use only, not exposed to the API surface
   taskId?: number;
 }

@@ -6,6 +6,7 @@ export * from "./demographic.entity";
 export * from "./demographic-entry.entity";
 export * from "./disturbance.entity";
 export * from "./financial-indicator.entity";
+export * from "./financial-report.entity";
 export * from "./form.entity";
 export * from "./form-question.entity";
 export * from "./form-question-option.entity";

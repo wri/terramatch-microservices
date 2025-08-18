@@ -1,12 +1,12 @@
 import { Media, FinancialReport, ProjectUser } from "@terramatch-microservices/database/entities";
-import { EntityStatus } from "@terramatch-microservices/database/constants/status";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { Includeable, Op } from "sequelize";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FinancialReportUpdateAttributes } from "../dto/entity-update.dto";
+import { EntityStatus } from "@terramatch-microservices/database/constants/status";
+import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "yearOfReport"];
 
@@ -38,12 +38,12 @@ export class FinancialReportProcessor extends EntityProcessor<
   }
 
   async findMany(query: EntityQueryDto) {
-    const projectAssociation: Includeable = {
+    const organisationAssociation: Includeable = {
       association: "organisation",
       attributes: ["id", "uuid", "name"]
     };
 
-    const builder = await this.entitiesService.buildQuery(FinancialReport, query, [projectAssociation]);
+    const builder = await this.entitiesService.buildQuery(FinancialReport, query, [organisationAssociation]);
 
     if (query.sort?.field != null) {
       if (
@@ -66,12 +66,16 @@ export class FinancialReportProcessor extends EntityProcessor<
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
+      // For now, we'll need to implement organisation-based permissions
+      // This might need to be updated based on your permission system
       builder.where({
-        "$project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+        "$organisation.id$": { [Op.in]: [] } // TODO: Implement organisation permissions
       });
     } else if (permissions?.includes("projects-manage")) {
+      // For now, we'll need to implement organisation-based permissions
+      // This might need to be updated based on your permission system
       builder.where({
-        "$project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+        "$organisation.id$": { [Op.in]: [] } // TODO: Implement organisation permissions
       });
     }
 
@@ -121,6 +125,27 @@ export class FinancialReportProcessor extends EntityProcessor<
     }
     if (attributes.submittedAt !== undefined) {
       updateData.submittedAt = attributes.submittedAt;
+    }
+    if (attributes.approvedAt !== undefined) {
+      updateData.approvedAt = attributes.approvedAt;
+    }
+    if (attributes.completion !== undefined) {
+      updateData.completion = attributes.completion;
+    }
+    if (attributes.feedback !== undefined) {
+      updateData.feedback = attributes.feedback;
+    }
+    if (attributes.feedbackFields !== undefined) {
+      updateData.feedbackFields = attributes.feedbackFields;
+    }
+    if (attributes.answers !== undefined) {
+      updateData.answers = attributes.answers;
+    }
+    if (attributes.finStartMonth !== undefined) {
+      updateData.finStartMonth = attributes.finStartMonth;
+    }
+    if (attributes.currency !== undefined) {
+      updateData.currency = attributes.currency;
     }
 
     await financialReport.update(updateData);

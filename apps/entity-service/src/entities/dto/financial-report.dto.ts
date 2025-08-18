@@ -20,9 +20,12 @@ export class FinancialReportLightDto extends EntityDto {
   @ApiProperty({
     nullable: true,
     type: String,
-    description: "The associated project organisation name"
+    description: "The associated organisation name"
   })
   organisationName: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  title: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   yearOfReport: number | null;
@@ -32,6 +35,12 @@ export class FinancialReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  approvedAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  completion: number | null;
 
   @ApiProperty()
   createdAt: Date;
@@ -52,14 +61,23 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
   updateRequestStatus: string;
 
   @ApiProperty({ nullable: true, type: String })
+  frameworkKey: string | null;
+
+  @ApiProperty({ nullable: true, type: Boolean })
+  nothingToReport: boolean | null;
+
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
   @ApiProperty({ nullable: true, type: String })
-  currency: string | null;
+  answers: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   finStartMonth: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  currency: string | null;
 }

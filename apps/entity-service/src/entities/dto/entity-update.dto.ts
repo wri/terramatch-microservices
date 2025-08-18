@@ -72,11 +72,6 @@ export class FinancialReportUpdateAttributes extends EntityUpdateAttributes {
   title?: string;
 
   @IsOptional()
-  @IsString()
-  @ApiProperty({ description: "Update the description of the financial report", required: false })
-  description?: string;
-
-  @IsOptional()
   @ApiProperty({ description: "Update the year of the report", required: false, type: Number })
   yearOfReport?: number;
 
@@ -89,10 +84,36 @@ export class FinancialReportUpdateAttributes extends EntityUpdateAttributes {
   submittedAt?: Date;
 
   @IsOptional()
+  @ApiProperty({ description: "Update the approved date", required: false, type: Date })
+  approvedAt?: Date;
+
+  @IsOptional()
+  @ApiProperty({ description: "Update the completion percentage", required: false, type: Number })
+  completion?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ description: "Update the feedback", required: false })
+  feedback?: string;
+
+  @IsOptional()
   @IsArray()
   @Type(() => String)
-  @ApiProperty({ description: "Update the tags", required: false, isArray: true, type: String })
-  tags?: string[];
+  @ApiProperty({ description: "Update the feedback fields", required: false, isArray: true, type: String })
+  feedbackFields?: string[];
+
+  @IsOptional()
+  @ApiProperty({ description: "Update the answers", required: false })
+  answers?: any;
+
+  @IsOptional()
+  @ApiProperty({ description: "Update the financial start month", required: false, type: Number })
+  finStartMonth?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ description: "Update the currency", required: false })
+  currency?: string;
 }
 
 export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}

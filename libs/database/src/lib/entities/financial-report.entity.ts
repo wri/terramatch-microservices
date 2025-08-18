@@ -10,10 +10,8 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { Project } from "./project.entity";
+import { BIGINT, INTEGER, STRING, TEXT, CHAR, TINYINT, DATE } from "sequelize";
 import { User } from "./user.entity";
-import { Task } from "./task.entity";
 import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
@@ -22,15 +20,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
 
 @Scopes(() => ({
-  project: (id: number) => ({ where: { projectId: id } }),
-  organisation: (uuid: string) => ({
-    include: [
-      {
-        association: "project",
-        include: [{ association: "organisation", where: { uuid } }]
-      }
-    ]
-  })
+  organisation: (id: number) => ({ where: { organisationId: id } })
 }))
 @Table({
   tableName: "financial_reports",
@@ -41,8 +31,8 @@ import { Organisation } from "./organisation.entity";
 export class FinancialReport extends Model<FinancialReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FinancialReports\\FinancialReport";
 
-  static organisation(uuid: string) {
-    return chainScope(this, "organisation", uuid) as typeof FinancialReport;
+  static organisation(id: number) {
+    return chainScope(this, "organisation", id) as typeof FinancialReport;
   }
 
   @PrimaryKey
@@ -51,39 +41,60 @@ export class FinancialReport extends Model<FinancialReport> {
   override id: number;
 
   @Index
-  @Column({ type: UUID, defaultValue: UUIDV4 })
+  @Column({ type: CHAR(36) })
   uuid: string;
 
   @StateMachineColumn(ReportStatusStates)
+  @Column(STRING(255))
   status: ReportStatus;
-
-  @AllowNull
-  @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
-
-  @AllowNull
-  @Column(STRING)
-  frameworkKey: FrameworkKey | null;
 
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
   organisationId: number;
 
   @AllowNull
+  @Column(STRING(255))
+  title: string | null;
+
+  @AllowNull
   @Column(INTEGER)
   yearOfReport: number | null;
 
   @AllowNull
+  @Column(STRING(255))
+  updateRequestStatus: UpdateRequestStatus | null;
+
+  @AllowNull
+  @Column(TINYINT)
+  nothingToReport: boolean | null;
+
+  @AllowNull
   @Column(DATE)
-  dueAt: Date | null;
+  approvedAt: Date | null;
+
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  approvedBy: number;
+
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  createdBy: number;
 
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
 
   @AllowNull
-  @Column(TEXT)
-  title: string | null;
+  @Column(STRING(255))
+  frameworkKey: FrameworkKey | null;
+
+  @AllowNull
+  @Column(DATE)
+  dueAt: Date | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  completion: number | null;
 
   @AllowNull
   @Column(TEXT)
@@ -94,20 +105,26 @@ export class FinancialReport extends Model<FinancialReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  completion: number | null;
+  @JsonColumn()
+  answers: string | null;
 
   @AllowNull
-  @Column({ type: STRING, values: ["true", "false"] })
-  nothingToReport: boolean | null;
+  @Column(INTEGER)
+  finStartMonth: number | null;
 
-  @ForeignKey(() => User)
-  @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  @AllowNull
+  @Column(STRING(255))
+  currency: string | null;
 
-  @ForeignKey(() => User)
-  @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  @AllowNull
+  @Column(DATE)
+  override deletedAt: Date | null;
+
+  @Column(DATE)
+  override createdAt: Date;
+
+  @Column(DATE)
+  override updatedAt: Date;
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
   createdByUser: User | null;

@@ -1,6 +1,6 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityDto } from "./entity.dto";
-import { FinancialReport } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
@@ -49,6 +49,32 @@ export class FinancialReportLightDto extends EntityDto {
   updatedAt: Date;
 }
 
+export class FinancialIndicatorDto {
+  @ApiProperty()
+  uuid: string;
+
+  @ApiProperty({ nullable: true, type: Number })
+  organisationId: number;
+
+  @ApiProperty({ nullable: true, type: Number })
+  financialReportId: number;
+
+  @ApiProperty({ nullable: true, type: String })
+  collection: string;
+
+  @ApiProperty({ nullable: true, type: Number })
+  amount: number;
+
+  @ApiProperty({ nullable: true, type: Number })
+  year: number;
+
+  @ApiProperty({ nullable: true, type: String })
+  description: string;
+
+  @ApiProperty({ nullable: true, type: Number })
+  exchangeRate: number;
+}
+
 export class FinancialReportFullDto extends FinancialReportLightDto {
   constructor(financialReport: FinancialReport, props?: HybridSupportProps<FinancialReportFullDto, FinancialReport>) {
     super();
@@ -77,6 +103,9 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
 
   @ApiProperty({ nullable: true, type: Number })
   finStartMonth: number | null;
+
+  @ApiProperty({ nullable: true, type: FinancialIndicatorDto, isArray: true })
+  financialCollection: FinancialIndicatorDto[] | null;
 
   @ApiProperty({ nullable: true, type: String })
   currency: string | null;

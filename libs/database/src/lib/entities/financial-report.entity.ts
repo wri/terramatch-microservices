@@ -4,6 +4,7 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
+  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -18,6 +19,7 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
+import { FinancialIndicator } from "./financial-indicator.entity";
 
 @Scopes(() => ({
   organisation: (id: number) => ({ where: { organisationId: id } })
@@ -29,7 +31,7 @@ import { Organisation } from "./organisation.entity";
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
 export class FinancialReport extends Model<FinancialReport> {
-  static readonly LARAVEL_TYPE = "App\\Models\\V2\\FinancialReports\\FinancialReport";
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\FinancialReport";
 
   static organisation(id: number) {
     return chainScope(this, "organisation", id) as typeof FinancialReport;
@@ -113,7 +115,7 @@ export class FinancialReport extends Model<FinancialReport> {
   finStartMonth: number | null;
 
   @AllowNull
-  @Column(STRING(255))
+  @Column(STRING)
   currency: string | null;
 
   @AllowNull
@@ -134,6 +136,16 @@ export class FinancialReport extends Model<FinancialReport> {
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId" })
   organisation: Organisation;
+
+  // @HasMany(() => FinancialIndicator, { foreignKey: "financialReportId" })
+  // financialCollection: FinancialIndicator[];
+
+  @HasMany(() => FinancialIndicator, {
+    foreignKey: "financialReportId",
+    constraints: false
+    // scope: { financialReport_type: FinancialReport.LARAVEL_TYPE }
+  })
+  financialCollection: FinancialIndicator[] | null;
 
   get organisationName() {
     return this.organisation.name;

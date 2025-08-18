@@ -1,12 +1,11 @@
-import { Media, FinancialReport, ProjectUser } from "@terramatch-microservices/database/entities";
+import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
-import { Includeable, Op } from "sequelize";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FinancialReportUpdateAttributes } from "../dto/entity-update.dto";
-import { EntityStatus } from "@terramatch-microservices/database/constants/status";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { Includeable, Op } from "sequelize";
+import { ReportStatus } from "@terramatch-microservices/database/constants/status";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "yearOfReport"];
 
@@ -32,7 +31,11 @@ export class FinancialReportProcessor extends EntityProcessor<
           attributes: ["id", "uuid", "name"]
         },
         { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
-        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
+        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
+        {
+          association: "financialCollection",
+          attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate"]
+        }
       ]
     });
   }
@@ -43,7 +46,15 @@ export class FinancialReportProcessor extends EntityProcessor<
       attributes: ["id", "uuid", "name"]
     };
 
-    const builder = await this.entitiesService.buildQuery(FinancialReport, query, [organisationAssociation]);
+    const financialCollectionAssociation: Includeable = {
+      association: "financialCollection",
+      attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate"]
+    };
+
+    const builder = await this.entitiesService.buildQuery(FinancialReport, query, [
+      organisationAssociation,
+      financialCollectionAssociation
+    ]);
 
     if (query.sort?.field != null) {
       if (
@@ -57,26 +68,6 @@ export class FinancialReportProcessor extends EntityProcessor<
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
-    }
-
-    const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
-      builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
-    } else if (permissions?.includes("manage-own")) {
-      // For now, we'll need to implement organisation-based permissions
-      // This might need to be updated based on your permission system
-      builder.where({
-        "$organisation.id$": { [Op.in]: [] } // TODO: Implement organisation permissions
-      });
-    } else if (permissions?.includes("projects-manage")) {
-      // For now, we'll need to implement organisation-based permissions
-      // This might need to be updated based on your permission system
-      builder.where({
-        "$organisation.id$": { [Op.in]: [] } // TODO: Implement organisation permissions
-      });
     }
 
     SIMPLE_FILTERS.forEach(term => {
@@ -112,7 +103,7 @@ export class FinancialReportProcessor extends EntityProcessor<
     const updateData: Partial<FinancialReport> = {};
 
     if (attributes.status !== undefined) {
-      updateData.status = attributes.status as EntityStatus;
+      updateData.status = attributes.status as ReportStatus;
     }
     if (attributes.title !== undefined) {
       updateData.title = attributes.title;

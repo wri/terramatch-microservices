@@ -33,4 +33,7 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
 
   @Column(TEXT)
   description: string | null;
+
+  @Column(DECIMAL(15, 2))
+  exchangeRate: number | null;
 }

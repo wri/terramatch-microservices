@@ -39,16 +39,15 @@ export const isReport = (entity: EntityModel): entity is ReportModel =>
  */
 export async function getProjectId(entity: EntityModel) {
   if (entity instanceof Project) return entity.id;
-  if (
-    entity instanceof Site ||
-    entity instanceof Nursery ||
-    entity instanceof ProjectReport ||
-    entity instanceof FinancialReport
-  )
-    return entity.projectId;
+  if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
 
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;
-  const parentId = entity instanceof SiteReport ? entity.siteId : entity.nurseryId;
+  const parentId =
+    entity instanceof SiteReport
+      ? entity.siteId
+      : entity instanceof FinancialReport
+      ? entity.organisationId
+      : entity.nurseryId;
   return (await parentClass.findOne({ where: { id: parentId }, attributes: ["projectId"] }))?.projectId;
 }
 

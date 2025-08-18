@@ -33,7 +33,7 @@ import { Organisation } from "./organisation.entity";
   })
 }))
 @Table({
-  tableName: "v2_financial_reports",
+  tableName: "financial_reports",
   underscored: true,
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
@@ -65,25 +65,9 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
-  @ForeignKey(() => Project)
+  @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
-
-  @AllowNull
-  @Column(STRING)
-  name: string | null;
-
-  @AllowNull
-  @Column(DATE)
-  startDate: Date | null;
-
-  @AllowNull
-  @Column(DATE)
-  endDate: Date | null;
-
-  @AllowNull
-  @Column(STRING)
-  type: string | null;
+  organisationId: number;
 
   @AllowNull
   @Column(INTEGER)
@@ -103,14 +87,6 @@ export class FinancialReport extends Model<FinancialReport> {
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
-
-  @AllowNull
-  @JsonColumn()
-  tags: string[] | null;
-
-  @AllowNull
-  @Column(TEXT)
   feedback: string | null;
 
   @AllowNull
@@ -118,20 +94,12 @@ export class FinancialReport extends Model<FinancialReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(INTEGER)
+  @Column(INTEGER({ length: 11 }))
   completion: number | null;
 
   @AllowNull
   @Column({ type: STRING, values: ["true", "false"] })
   nothingToReport: boolean | null;
-
-  @ForeignKey(() => Task)
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  taskId: number | null;
-
-  @BelongsTo(() => Task, { constraints: false })
-  task: Task | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
@@ -147,7 +115,7 @@ export class FinancialReport extends Model<FinancialReport> {
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
-  @BelongsTo(() => Organisation)
+  @BelongsTo(() => Organisation, { foreignKey: "organisationId" })
   organisation: Organisation;
 
   get organisationName() {

@@ -3,13 +3,6 @@ import { EntityDto } from "./entity.dto";
 import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
-import {
-  ENTITY_STATUSES,
-  EntityStatus,
-  UPDATE_REQUEST_STATUSES,
-  UpdateRequestStatus
-} from "@terramatch-microservices/database/constants/status";
-import { MediaDto } from "./media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "financial-reports" })
@@ -21,14 +14,8 @@ export class FinancialReportLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty({ nullable: true, type: String })
-  title: string | null;
-
   @ApiProperty()
   status: string;
-
-  @ApiProperty()
-  updateRequestStatus: string;
 
   @ApiProperty({
     nullable: true,
@@ -36,13 +23,6 @@ export class FinancialReportLightDto extends EntityDto {
     description: "The associated project organisation name"
   })
   organisationName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated project organisation UUID"
-  })
-  organisationUuid: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   yearOfReport: number | null;
@@ -67,4 +47,19 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
       populateDto<FinancialReportFullDto, FinancialReport>(this, financialReport, { lightResource: false, ...props });
     }
   }
+
+  @ApiProperty()
+  updateRequestStatus: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  feedbackFields: string[] | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  currency: string | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  finStartMonth: number | null;
 }

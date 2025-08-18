@@ -113,9 +113,6 @@ export class FinancialReportProcessor extends EntityProcessor<
     if (attributes.title !== undefined) {
       updateData.title = attributes.title;
     }
-    if (attributes.description !== undefined) {
-      updateData.description = attributes.description;
-    }
     if (attributes.yearOfReport !== undefined) {
       updateData.yearOfReport = attributes.yearOfReport;
     }
@@ -124,9 +121,6 @@ export class FinancialReportProcessor extends EntityProcessor<
     }
     if (attributes.submittedAt !== undefined) {
       updateData.submittedAt = attributes.submittedAt;
-    }
-    if (attributes.tags !== undefined) {
-      updateData.tags = attributes.tags;
     }
 
     await financialReport.update(updateData);

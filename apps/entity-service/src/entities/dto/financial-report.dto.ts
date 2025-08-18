@@ -1,11 +1,11 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityDto } from "./entity.dto";
-import { FinancialIndicator, FinancialReport } from "@terramatch-microservices/database/entities";
+import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
-@JsonApiDto({ type: "financial-reports" })
+@JsonApiDto({ type: "financialReports" })
 export class FinancialReportLightDto extends EntityDto {
   constructor(financialReport?: FinancialReport, props?: HybridSupportProps<FinancialReportLightDto, FinancialReport>) {
     super();

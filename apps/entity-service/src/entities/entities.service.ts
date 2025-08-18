@@ -151,10 +151,6 @@ export class EntitiesService {
     return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
   }
 
-  createFinancialReportProcessor() {
-    return new FinancialReportProcessor(this, "financialReports");
-  }
-
   createAssociationProcessor<T extends UuidModel, D extends AssociationDto>(
     entityType: EntityType,
     uuid: string,

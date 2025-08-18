@@ -1,5 +1,5 @@
 import { FinancialReport } from "@terramatch-microservices/database/entities";
-import { EntityProcessor } from "./entity-processor";
+import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
@@ -13,7 +13,7 @@ const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$organisation.uuid$"
 };
 
-export class FinancialReportProcessor extends EntityProcessor<
+export class FinancialReportProcessor extends ReportProcessor<
   FinancialReport,
   FinancialReportLightDto,
   FinancialReportFullDto,
@@ -90,13 +90,13 @@ export class FinancialReportProcessor extends EntityProcessor<
   }
 
   async getFullDto(financialReport: FinancialReport) {
-    const dto = new FinancialReportFullDto(financialReport);
+    const dto = new FinancialReportFullDto(financialReport, {});
 
     return { id: financialReport.uuid, dto };
   }
 
   async getLightDto(financialReport: FinancialReport) {
-    return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport) };
+    return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
   }
 
   async update(financialReport: FinancialReport, attributes: FinancialReportUpdateAttributes): Promise<void> {

@@ -28,13 +28,13 @@ export class FinancialReportProcessor extends ReportProcessor<
       include: [
         {
           association: "organisation",
-          attributes: ["id", "uuid", "name"]
+          attributes: ["id", "uuid", "name", "type", "status"]
         },
         { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
         { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
         {
           association: "financialCollection",
-          attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate"]
+          attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
         }
       ]
     });
@@ -48,7 +48,7 @@ export class FinancialReportProcessor extends ReportProcessor<
 
     const financialCollectionAssociation: Includeable = {
       association: "financialCollection",
-      attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate"]
+      attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
     };
 
     const builder = await this.entitiesService.buildQuery(FinancialReport, query, [

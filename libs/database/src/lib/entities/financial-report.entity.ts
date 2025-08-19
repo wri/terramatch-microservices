@@ -137,13 +137,9 @@ export class FinancialReport extends Model<FinancialReport> {
   @BelongsTo(() => Organisation, { foreignKey: "organisationId" })
   organisation: Organisation;
 
-  // @HasMany(() => FinancialIndicator, { foreignKey: "financialReportId" })
-  // financialCollection: FinancialIndicator[];
-
   @HasMany(() => FinancialIndicator, {
     foreignKey: "financialReportId",
     constraints: false
-    // scope: { financialReport_type: FinancialReport.LARAVEL_TYPE }
   })
   financialCollection: FinancialIndicator[] | null;
 
@@ -153,6 +149,14 @@ export class FinancialReport extends Model<FinancialReport> {
 
   get organisationUuid() {
     return this.organisation.uuid;
+  }
+
+  get organisationType() {
+    return this.organisation.type;
+  }
+
+  get organisationStatus() {
+    return this.organisation.status;
   }
 
   get isCompletable() {

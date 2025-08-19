@@ -1,9 +1,12 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityDto } from "./entity.dto";
-import { FinancialReport } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { OrganisationStatus } from "@terramatch-microservices/database/constants/status";
+import { MediaDto } from "./media.dto";
+import { FinancialIndicatorDto } from "./financial-indicator.dto";
 
 @JsonApiDto({ type: "financialReports" })
 export class FinancialReportLightDto extends EntityDto {
@@ -24,55 +27,17 @@ export class FinancialReportLightDto extends EntityDto {
   })
   organisationName: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  title: string | null;
-
   @ApiProperty({ nullable: true, type: Number })
   yearOfReport: number | null;
 
   @ApiProperty({ nullable: true, type: Date })
-  dueAt: Date | null;
-
-  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  approvedAt: Date | null;
-
-  @ApiProperty({ nullable: true, type: Number })
-  completion: number | null;
 
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
-}
-
-export class FinancialIndicatorDto {
-  @ApiProperty()
-  uuid: string;
-
-  @ApiProperty({ nullable: true, type: Number })
-  organisationId: number;
-
-  @ApiProperty({ nullable: true, type: Number })
-  financialReportId: number;
-
-  @ApiProperty({ nullable: true, type: String })
-  collection: string;
-
-  @ApiProperty({ nullable: true, type: Number })
-  amount: number;
-
-  @ApiProperty({ nullable: true, type: Number })
-  year: number;
-
-  @ApiProperty({ nullable: true, type: String })
-  description: string;
-
-  @ApiProperty({ nullable: true, type: Number })
-  exchangeRate: number;
 }
 
 export class FinancialReportFullDto extends FinancialReportLightDto {
@@ -82,6 +47,18 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
       populateDto<FinancialReportFullDto, FinancialReport>(this, financialReport, { lightResource: false, ...props });
     }
   }
+
+  @ApiProperty({ nullable: true, type: String })
+  title: string | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  approvedAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  completion: number | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  dueAt: Date | null;
 
   @ApiProperty()
   updateRequestStatus: string;
@@ -109,4 +86,13 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   currency: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation uuid" })
+  organisationUuid: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation type" })
+  organisationType: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation status" })
+  organisationStatus: OrganisationStatus;
 }

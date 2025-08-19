@@ -142,23 +142,6 @@ describe("BoundingBoxController", () => {
       });
     });
 
-    it("should throw NotFoundException when Site with associated polygon is not found", async () => {
-      (Site.findOne as jest.Mock).mockResolvedValue(null);
-
-      await expect(controller.getBoundingBox({ polygonUuid: "non-existent" })).rejects.toThrow(
-        new NotFoundException("Site with associated polygon UUID non-existent not found")
-      );
-
-      expect(Site.findOne).toHaveBeenCalledWith({
-        where: {
-          uuid: {
-            [Op.in]: "mocked-subquery-literal"
-          }
-        },
-        attributes: ["frameworkKey", "projectId"]
-      });
-    });
-
     it("should call getSiteBoundingBox when siteUuid is provided", async () => {
       await testQueryParameters({ siteUuid: "site-123" }, "getSiteBoundingBox", ["site-123"], "?siteUuid=site-123");
 

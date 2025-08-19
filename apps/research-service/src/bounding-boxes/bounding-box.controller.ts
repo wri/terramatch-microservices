@@ -78,21 +78,7 @@ export class BoundingBoxController {
     const id = getStableRequestQuery(query);
     switch (providedParams[0]) {
       case "polygonUuid": {
-        const polygonUuid = query.polygonUuid ?? "";
-        const site = await Site.findOne({
-          where: {
-            uuid: {
-              [Op.in]: Subquery.select(SitePolygon, "siteUuid").eq("polygonUuid", polygonUuid).literal
-            }
-          },
-          attributes: ["frameworkKey", "projectId"]
-        });
-
-        if (site === null) {
-          throw new NotFoundException(`Site with associated polygon UUID ${polygonUuid} not found`);
-        }
-
-        const result = await this.boundingBoxService.getPolygonBoundingBox(polygonUuid);
+        const result = await this.boundingBoxService.getPolygonBoundingBox(query.polygonUuid ?? "");
         return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
       }
 

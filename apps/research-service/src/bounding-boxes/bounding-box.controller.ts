@@ -7,15 +7,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { buildJsonApi, getStableRequestQuery, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
-import {
-  Project,
-  Site,
-  SitePolygon,
-  LandscapeGeometry,
-  ProjectPitch
-} from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
-import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { Project, Site, LandscapeGeometry, ProjectPitch } from "@terramatch-microservices/database/entities";
 
 type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "projectPitchUuid" | "country/landscapes";
 

@@ -10,7 +10,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, CHAR, DATE, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, CHAR, DATE, UUIDV4, UUID } from "sequelize";
 import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
 
@@ -40,7 +40,7 @@ export class FundingType extends Model<FundingType> {
   override id: number;
 
   @Index
-  @Column(UUIDV4)
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
   @ForeignKey(() => Organisation)

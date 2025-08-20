@@ -100,49 +100,6 @@ export class FinancialReportProcessor extends ReportProcessor<
     return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
   }
 
-  async update(financialReport: FinancialReport, attributes: FinancialReportUpdateAttributes): Promise<void> {
-    const updateData: Partial<FinancialReport> = {};
-
-    if (attributes.status !== undefined) {
-      updateData.status = attributes.status as ReportStatus;
-    }
-    if (attributes.title !== undefined) {
-      updateData.title = attributes.title;
-    }
-    if (attributes.yearOfReport !== undefined) {
-      updateData.yearOfReport = attributes.yearOfReport;
-    }
-    if (attributes.dueAt !== undefined) {
-      updateData.dueAt = attributes.dueAt;
-    }
-    if (attributes.submittedAt !== undefined) {
-      updateData.submittedAt = attributes.submittedAt;
-    }
-    if (attributes.approvedAt !== undefined) {
-      updateData.approvedAt = attributes.approvedAt;
-    }
-    if (attributes.completion !== undefined) {
-      updateData.completion = attributes.completion;
-    }
-    if (attributes.feedback !== undefined) {
-      updateData.feedback = attributes.feedback;
-    }
-    if (attributes.feedbackFields !== undefined) {
-      updateData.feedbackFields = attributes.feedbackFields;
-    }
-    if (attributes.answers !== undefined) {
-      updateData.answers = attributes.answers;
-    }
-    if (attributes.finStartMonth !== undefined) {
-      updateData.finStartMonth = attributes.finStartMonth;
-    }
-    if (attributes.currency !== undefined) {
-      updateData.currency = attributes.currency;
-    }
-
-    await financialReport.update(updateData);
-  }
-
   protected async getFundingTypes(financialReport: FinancialReport) {
     const fundingTypes = await FundingType.organisationByUuid(financialReport.organisation.uuid).findAll({
       include: [

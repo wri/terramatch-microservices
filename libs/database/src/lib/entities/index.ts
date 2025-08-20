@@ -61,3 +61,4 @@ export * from "./update-request.entity";
 export * from "./user.entity";
 export * from "./verification.entity";
 export * from "./world-country-generalized.entity";
+export * from "./funding-type.entity";

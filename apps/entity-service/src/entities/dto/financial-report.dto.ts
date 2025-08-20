@@ -1,12 +1,13 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityDto } from "./entity.dto";
-import { FinancialIndicator, FinancialReport } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, FundingType } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { OrganisationStatus } from "@terramatch-microservices/database/constants/status";
 import { MediaDto } from "./media.dto";
 import { FinancialIndicatorDto } from "./financial-indicator.dto";
+import { FundingTypeDto } from "./funding-type.dto";
 
 @JsonApiDto({ type: "financialReports" })
 export class FinancialReportLightDto extends EntityDto {
@@ -94,5 +95,8 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
   organisationType: string | null;
 
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation status" })
-  organisationStatus: OrganisationStatus;
+  organisationStatus: OrganisationStatus | null;
+
+  @ApiProperty({ nullable: true, type: FundingTypeDto, isArray: true })
+  fundingTypes: FundingTypeDto[] | null;
 }

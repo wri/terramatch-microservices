@@ -1,8 +1,9 @@
-import { FinancialReport } from "@terramatch-microservices/database/entities";
+import { FinancialReport, FundingType } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
+import { FundingTypeDto } from "../dto/funding-type.dto";
 import { FinancialReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Includeable, Op } from "sequelize";
 import { ReportStatus } from "@terramatch-microservices/database/constants/status";
@@ -30,8 +31,6 @@ export class FinancialReportProcessor extends ReportProcessor<
           association: "organisation",
           attributes: ["id", "uuid", "name", "type", "status"]
         },
-        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
-        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
         {
           association: "financialCollection",
           attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
@@ -90,7 +89,9 @@ export class FinancialReportProcessor extends ReportProcessor<
   }
 
   async getFullDto(financialReport: FinancialReport) {
-    const dto = new FinancialReportFullDto(financialReport, {});
+    const fundingTypes = await this.getFundingTypes(financialReport);
+
+    const dto = new FinancialReportFullDto(financialReport, { fundingTypes });
 
     return { id: financialReport.uuid, dto };
   }
@@ -140,5 +141,24 @@ export class FinancialReportProcessor extends ReportProcessor<
     }
 
     await financialReport.update(updateData);
+  }
+
+  protected async getFundingTypes(financialReport: FinancialReport) {
+    const fundingTypes = await FundingType.organisationByUuid(financialReport.organisation.uuid).findAll({
+      include: [
+        {
+          association: "organisation",
+          attributes: ["id", "uuid", "name"]
+        }
+      ]
+    });
+
+    return fundingTypes.map(
+      ft =>
+        new FundingTypeDto(ft, {
+          entityType: "organisations" as const,
+          entityUuid: financialReport.organisation.uuid
+        })
+    );
   }
 }

@@ -128,12 +128,6 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column(DATE)
   override updatedAt: Date;
 
-  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
-  createdByUser: User | null;
-
-  @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
-  approvedByUser: User | null;
-
   @BelongsTo(() => Organisation, { foreignKey: "organisationId" })
   organisation: Organisation;
 

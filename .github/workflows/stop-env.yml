@@ -48,6 +48,7 @@ jobs:
           aws cloudformation delete-stack --stack-name JobServiceStack-${{ inputs.env }}
           aws cloudformation delete-stack --stack-name UnifiedDatabaseServiceStack-${{ inputs.env }}
           aws cloudformation delete-stack --stack-name ResearchServiceStack-${{ inputs.env }}
+          aws cloudformation delete-stack --stack-name DashboardServiceStack-${{ inputs.env }}
 
       - name: Wait for Service Stack Deletion
         run: |
@@ -56,6 +57,7 @@ jobs:
           aws cloudformation wait stack-delete-complete --stack-name JobServiceStack-${{ inputs.env }}
           aws cloudformation wait stack-delete-complete --stack-name UnifiedDatabaseServiceStack-${{ inputs.env }}
           aws cloudformation wait stack-delete-complete --stack-name ResearchServiceStack-${{ inputs.env }}
+          aws cloudformation wait stack-delete-complete --stack-name DashboardServiceStack-${{ inputs.env }}
 
       - name: Stop ApiGateway
         run: |

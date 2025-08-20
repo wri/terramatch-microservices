@@ -27,13 +27,16 @@ describe("SitePolygonsController", () => {
       modifiedSince: jest.fn().mockReturnThis(),
       isMissingIndicators: jest.fn().mockReturnThis(),
       hasPresentIndicators: jest.fn().mockReturnThis(),
-      lightResource: jest.fn().mockReturnThis()
+      lightResource: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis()
     };
     builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
     builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
     builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
     builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
     builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
+    builder.filterProjectShortNames = jest.fn().mockResolvedValue(builder);
+    builder.filterPolygonUuids = jest.fn().mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
     builder.paginationTotal.mockResolvedValue(totalResult);
@@ -238,6 +241,89 @@ describe("SitePolygonsController", () => {
       await controller.findMany({ search: searchTerm });
 
       expect(builder.addSearch).toHaveBeenCalledWith(searchTerm);
+    });
+
+    it("should apply sorting when sort is provided with number pagination", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "name", direction: "DESC" } });
+
+      expect(builder.order).toHaveBeenCalledWith(["polyName", "DESC"]);
+    });
+
+    it("should apply sorting by status with number pagination", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "status", direction: "ASC" } });
+
+      expect(builder.order).toHaveBeenCalledWith(["status", "ASC"]);
+    });
+
+    it("should apply sorting by createdAt with number pagination", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "createdAt", direction: "DESC" } });
+
+      expect(builder.order).toHaveBeenCalledWith(["createdAt", "DESC"]);
+    });
+
+    it("should call isMissingIndicators when missingIndicator is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ missingIndicator: ["treeCover"] });
+
+      expect(builder.isMissingIndicators).toHaveBeenCalledWith(["treeCover"]);
+      expect(builder.hasPresentIndicators).not.toHaveBeenCalled();
+    });
+
+    it("should call hasPresentIndicators when presentIndicator is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ presentIndicator: ["treeCoverLoss"] });
+
+      expect(builder.hasPresentIndicators).toHaveBeenCalledWith(["treeCoverLoss"]);
+      expect(builder.isMissingIndicators).not.toHaveBeenCalled();
+    });
+
+    it("should call filterProjectShortNames when projectShortNames is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ projectShortNames: ["ABC", "DEF"] });
+
+      expect(builder.filterProjectShortNames).toHaveBeenCalledWith(["ABC", "DEF"]);
+    });
+
+    it("should call filterPolygonUuids when polygonUuid is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ polygonUuid: ["uuid-1", "uuid-2"] });
+
+      expect(builder.filterPolygonUuids).toHaveBeenCalledWith(["uuid-1", "uuid-2"]);
+    });
+
+    it("should throw when sorting without number pagination", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockQueryBuilder();
+
+      await expect(
+        controller.findMany({ page: { after: "cursor" }, sort: { field: "name", direction: "ASC" } })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw when sort field is invalid", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockQueryBuilder();
+
+      await expect(
+        controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "invalid", direction: "ASC" } })
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

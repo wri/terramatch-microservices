@@ -71,7 +71,8 @@ export class SitePolygonsController {
       lightResource,
       projectCohort,
       landscape,
-      validationStatus
+      validationStatus,
+      polygonUuid
     } = query;
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
     // these two can be used together, but not along with the other project / site filters.
@@ -132,6 +133,10 @@ export class SitePolygonsController {
       await queryBuilder.filterProjectAttributes(projectCohort, landscape);
     }
 
+    if (polygonUuid != null) {
+      await queryBuilder.filterPolygonUuids(polygonUuid);
+    }
+
     // Ensure test projects are excluded only if not included explicitly
     if (!includeTestProjects && siteId == null && projectId == null) {
       await queryBuilder.excludeTestProjects();
@@ -139,6 +144,26 @@ export class SitePolygonsController {
     if (query.search != null) {
       await queryBuilder.addSearch(query.search);
     }
+
+    if (query.sort != null && query.sort.field != null) {
+      if (!isNumberPage(page)) {
+        throw new BadRequestException("Sorting is only supported with number pagination.");
+      }
+      const direction = query.sort.direction ?? "ASC";
+      const field = query.sort.field;
+      if (["name", "status", "createdAt"].includes(field)) {
+        if (field === "name") {
+          queryBuilder.order(["polyName", direction]);
+        } else if (field === "status") {
+          queryBuilder.order(["status", direction]);
+        } else {
+          queryBuilder.order(["createdAt", direction]);
+        }
+      } else {
+        throw new BadRequestException(`Invalid sort field: ${field}`);
+      }
+    }
+
     const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
 
     const indexIds: string[] = [];

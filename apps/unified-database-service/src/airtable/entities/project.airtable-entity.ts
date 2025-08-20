@@ -21,7 +21,7 @@ const loadApprovedSites = async (projectIds: number[]) =>
 const loadSitePolygons = async (siteUuids: string[]) =>
   groupBy(
     await SitePolygon.findAll({
-      where: { siteUuid: siteUuids, isActive: true },
+      where: { siteUuid: siteUuids, isActive: true, status: "approved" },
       attributes: ["siteUuid", "calcArea"]
     }),
     "siteUuid"

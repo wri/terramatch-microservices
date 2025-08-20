@@ -122,7 +122,7 @@ export class FinancialReport extends Model<FinancialReport> {
     foreignKey: "financialReportId",
     constraints: false
   })
-  financialCollection: FinancialIndicator[] | null;
+  financialIndicators: FinancialIndicator[] | null;
 
   get organisationName() {
     return this.organisation.name;

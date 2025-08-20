@@ -1,9 +1,10 @@
-import { FinancialReport, FundingType } from "@terramatch-microservices/database/entities";
+import { FinancialReport, FundingType, FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FundingTypeDto } from "../dto/funding-type.dto";
+import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial-indicator.dto";
 import { Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
@@ -31,7 +32,7 @@ export class FinancialReportProcessor extends ReportProcessor<
           attributes: ["id", "uuid", "name", "type", "status"]
         },
         {
-          association: "financialCollection",
+          association: "financialIndicators",
           attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
         }
       ]
@@ -45,7 +46,7 @@ export class FinancialReportProcessor extends ReportProcessor<
     };
 
     const financialCollectionAssociation: Includeable = {
-      association: "financialCollection",
+      association: "financialIndicators",
       attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
     };
 
@@ -89,8 +90,13 @@ export class FinancialReportProcessor extends ReportProcessor<
 
   async getFullDto(financialReport: FinancialReport) {
     const fundingTypes = await this.getFundingTypes(financialReport);
+    const financialIndicators = await this.getFinancialIndicatorsWithMedia(financialReport);
+    const financialIndicatorsWithMedia = await Promise.all(financialIndicators);
 
-    const dto = new FinancialReportFullDto(financialReport, { fundingTypes });
+    const dto = new FinancialReportFullDto(financialReport, {
+      fundingTypes,
+      financialCollection: financialIndicatorsWithMedia
+    });
 
     return { id: financialReport.uuid, dto };
   }
@@ -116,5 +122,24 @@ export class FinancialReportProcessor extends ReportProcessor<
           entityUuid: financialReport.organisation.uuid
         })
     );
+  }
+
+  protected async getFinancialIndicatorsWithMedia(financialReport: FinancialReport) {
+    const financialIndicators = await FinancialIndicator.financialReport(financialReport.id).findAll();
+
+    return financialIndicators.map(async fi => {
+      const mediaCollection = await Media.for(fi).findAll();
+
+      return new FinancialIndicatorDto(fi, {
+        entityType: "financialIndicators" as const,
+        entityUuid: fi.uuid,
+        ...(this.entitiesService.mapMediaCollection(
+          mediaCollection,
+          FinancialIndicator.MEDIA,
+          "nurseryReports",
+          fi.uuid
+        ) as FinancialIndicatorMedia)
+      });
+    });
   }
 }

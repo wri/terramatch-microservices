@@ -11,7 +11,6 @@ import {
   Table
 } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, TEXT, CHAR, DATE, UUIDV4 } from "sequelize";
-import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
 

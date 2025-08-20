@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, TINYINT, DATE, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, DATE, UUID, UUIDV4, BOOLEAN } from "sequelize";
 import { User } from "./user.entity";
 import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
@@ -47,10 +47,8 @@ export class FinancialReport extends Model<FinancialReport> {
   uuid: string;
 
   @StateMachineColumn(ReportStatusStates)
-  @Column(STRING)
   status: ReportStatus;
 
-  @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
   organisationId: number;
 
@@ -67,7 +65,7 @@ export class FinancialReport extends Model<FinancialReport> {
   updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
-  @Column(TINYINT)
+  @Column(BOOLEAN)
   nothingToReport: boolean | null;
 
   @AllowNull
@@ -116,16 +114,6 @@ export class FinancialReport extends Model<FinancialReport> {
   @AllowNull
   @Column(STRING)
   currency: string | null;
-
-  @AllowNull
-  @Column(DATE)
-  override deletedAt: Date | null;
-
-  @Column(DATE)
-  override createdAt: Date;
-
-  @Column(DATE)
-  override updatedAt: Date;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId" })
   organisation: Organisation;

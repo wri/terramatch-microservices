@@ -3,19 +3,18 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
-  ForeignKey,
   Index,
   Model,
   PrimaryKey,
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, CHAR, DATE, UUIDV4, UUID } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, UUIDV4, UUID } from "sequelize";
 import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
 
 @Scopes(() => ({
-  organisation: (id: number) => ({ where: { organisationId: id } }),
+  organisation: (uuid: string) => ({ where: { organisationId: uuid } }),
   organisationByUuid: (uuid: string) => ({ where: { organisationId: uuid } })
 }))
 @Table({
@@ -43,19 +42,8 @@ export class FundingType extends Model<FundingType> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @ForeignKey(() => Organisation)
-  @Column(CHAR(36))
+  @Column({ type: UUID, defaultValue: UUIDV4 })
   organisationId: string;
-
-  @AllowNull
-  @Column(DATE)
-  override deletedAt: Date | null;
-
-  @Column(DATE)
-  override createdAt: Date;
-
-  @Column(DATE)
-  override updatedAt: Date;
 
   @AllowNull
   @Column(STRING)

@@ -47,7 +47,7 @@ export class FinancialReport extends Model<FinancialReport> {
   uuid: string;
 
   @StateMachineColumn(ReportStatusStates)
-  @Column(STRING(255))
+  @Column(STRING)
   status: ReportStatus;
 
   @ForeignKey(() => Organisation)
@@ -85,7 +85,6 @@ export class FinancialReport extends Model<FinancialReport> {
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
-
   @AllowNull
   @Column(STRING(255))
   frameworkKey: FrameworkKey | null;

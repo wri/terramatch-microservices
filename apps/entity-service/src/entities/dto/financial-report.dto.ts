@@ -1,11 +1,10 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { EntityDto } from "./entity.dto";
-import { FinancialIndicator, FinancialReport, FundingType } from "@terramatch-microservices/database/entities";
+import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { OrganisationStatus } from "@terramatch-microservices/database/constants/status";
-import { MediaDto } from "./media.dto";
 import { FinancialIndicatorDto } from "./financial-indicator.dto";
 import { FundingTypeDto } from "./funding-type.dto";
 

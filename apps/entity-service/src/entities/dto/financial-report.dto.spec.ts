@@ -1,13 +1,56 @@
 import { FinancialReportLightDto, FinancialReportFullDto } from "./financial-report.dto";
 import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { FinancialIndicatorDto } from "./financial-indicator.dto";
-import { MediaDto } from "./media.dto";
 import { OrganisationStatus } from "@terramatch-microservices/database/constants/status";
 
 describe("FinancialReportDto", () => {
   let mockFinancialReport: FinancialReport;
-  let mockFinancialIndicators: any[];
-  let mockMedia: any[];
+
+  // Define specific types instead of any
+  type MockMedia = {
+    id: number;
+    uuid: string;
+    name: string;
+    url: string;
+    collectionName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+  type MockFinancialIndicator = {
+    id: number;
+    uuid: string;
+    collection: string;
+    description: string;
+    amount: number;
+    exchangeRate: number;
+    year: number;
+    documentation: MockMedia[];
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+  let mockFinancialIndicators: MockFinancialIndicator[];
+  let mockMedia: MockMedia[];
+
+  // Helper function to create valid props for FinancialReportLightDto
+  const createLightProps = () => ({
+    documentation: [],
+    entityType: "financialReports" as const,
+    entityUuid: mockFinancialReport.uuid
+  });
+
+  // Helper function to create valid props for FinancialReportFullDto
+  const createFullProps = () => ({
+    documentation: [],
+    entityType: "financialReports" as const,
+    entityUuid: mockFinancialReport.uuid,
+    fundingTypes: []
+  });
+
+  // Define specific types for status values
+  type ReportStatus = "started" | "approved" | "due" | "awaiting-approval" | "needs-more-information";
+  type UpdateRequestStatus = "draft" | "approved" | "awaiting-approval" | "needs-more-information" | "no-update";
 
   beforeEach(() => {
     mockMedia = [
@@ -78,10 +121,7 @@ describe("FinancialReportDto", () => {
     let lightDto: FinancialReportLightDto;
 
     beforeEach(() => {
-      lightDto = new FinancialReportLightDto(mockFinancialReport, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      lightDto = new FinancialReportLightDto(mockFinancialReport, createLightProps());
     });
 
     it("should create light DTO with basic properties", () => {
@@ -145,10 +185,7 @@ describe("FinancialReportDto", () => {
     let fullDto: FinancialReportFullDto;
 
     beforeEach(() => {
-      fullDto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      fullDto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
     });
 
     it("should create full DTO with all properties", () => {
@@ -188,10 +225,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.feedback = null;
       mockFinancialReport.financialCollection = null;
 
-      const dto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
       expect(dto.title).toBeNull();
       expect(dto.approvedAt).toBeNull();
@@ -204,10 +238,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.feedbackFields = [];
       mockFinancialReport.financialCollection = [];
 
-      const dto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
       expect(dto.feedbackFields).toEqual([]);
       expect(dto.financialCollection).toEqual([]);
@@ -217,10 +248,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.nothingToReport = true;
       mockFinancialReport.nothingToReport = false;
 
-      const dto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
       expect(dto.nothingToReport).toBe(false);
     });
@@ -230,10 +258,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.completion = 100;
       mockFinancialReport.finStartMonth = 12;
 
-      const dto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
       expect(dto.yearOfReport).toBe(2024);
       expect(dto.completion).toBe(100);
@@ -245,10 +270,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.submittedAt = testDate;
       mockFinancialReport.approvedAt = testDate;
 
-      const dto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
       expect(dto.submittedAt).toEqual(testDate);
       expect(dto.approvedAt).toEqual(testDate);
@@ -257,20 +279,14 @@ describe("FinancialReportDto", () => {
 
   describe("DTO inheritance", () => {
     it("should extend EntityDto", () => {
-      const lightDto = new FinancialReportLightDto(mockFinancialReport, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      const lightDto = new FinancialReportLightDto(mockFinancialReport, createLightProps());
 
       expect(lightDto).toHaveProperty("id");
       expect(lightDto).toHaveProperty("uuid");
     });
 
     it("should have JsonApiDto decorator", () => {
-      const lightDto = new FinancialReportLightDto(mockFinancialReport, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      const lightDto = new FinancialReportLightDto(mockFinancialReport, createLightProps());
 
       expect(lightDto.constructor.name).toBe("FinancialReportLightDto");
     });
@@ -283,10 +299,7 @@ describe("FinancialReportDto", () => {
         organisation: undefined
       } as unknown as FinancialReport;
 
-      const lightDto = new FinancialReportLightDto(reportWithoutOrg, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      const lightDto = new FinancialReportLightDto(reportWithoutOrg, createLightProps());
 
       expect(lightDto.organisationName).toBeUndefined();
     });
@@ -294,10 +307,7 @@ describe("FinancialReportDto", () => {
     it("should handle missing financial collection", () => {
       mockFinancialReport.financialCollection = null;
 
-      const fullDto = new FinancialReportFullDto(mockFinancialReport, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const fullDto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
       expect(fullDto.financialCollection).toBeNull();
     });
@@ -308,10 +318,7 @@ describe("FinancialReportDto", () => {
     });
 
     it("should handle undefined financialReport parameter", () => {
-      const lightDto = new FinancialReportLightDto(undefined, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      const lightDto = new FinancialReportLightDto(undefined, createLightProps());
       expect(lightDto).toBeDefined();
     });
   });
@@ -321,11 +328,8 @@ describe("FinancialReportDto", () => {
       const statuses = ["started", "approved", "due", "awaiting-approval", "needs-more-information"];
 
       statuses.forEach(status => {
-        mockFinancialReport.status = status as any;
-        const dto = new FinancialReportLightDto(mockFinancialReport, {
-          lightResource: true,
-          includeAssociations: false
-        });
+        mockFinancialReport.status = status as ReportStatus;
+        const dto = new FinancialReportLightDto(mockFinancialReport, createLightProps());
         expect(dto.status).toBe(status);
       });
     });
@@ -334,11 +338,8 @@ describe("FinancialReportDto", () => {
       const statuses = ["draft", "approved", "awaiting-approval", "needs-more-information", "no-update"];
 
       statuses.forEach(status => {
-        mockFinancialReport.updateRequestStatus = status as any;
-        const dto = new FinancialReportFullDto(mockFinancialReport, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        mockFinancialReport.updateRequestStatus = status as UpdateRequestStatus;
+        const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
         expect(dto.updateRequestStatus).toBe(status);
       });
     });
@@ -348,10 +349,7 @@ describe("FinancialReportDto", () => {
 
       keys.forEach(key => {
         const reportWithKey = { ...mockFinancialReport, frameworkKey: key } as unknown as FinancialReport;
-        const dto = new FinancialReportFullDto(reportWithKey, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialReportFullDto(reportWithKey, createFullProps());
         expect(dto.frameworkKey).toBe(key);
       });
     });

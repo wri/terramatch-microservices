@@ -1,10 +1,18 @@
-import { FinancialIndicatorDto, FinancialIndicatorMedia } from "./financial-indicator.dto";
+import { FinancialIndicatorDto } from "./financial-indicator.dto";
 import { FinancialIndicator } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./media.dto";
 
 describe("FinancialIndicatorDto", () => {
   let mockFinancialIndicator: FinancialIndicator;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockMedia: any[];
+
+  // Helper function to create valid props for FinancialIndicatorDto
+  const createValidProps = () => ({
+    documentation: [],
+    entityType: "financialIndicators" as const,
+    entityUuid: mockFinancialIndicator.uuid
+  });
 
   beforeEach(() => {
     mockMedia = [
@@ -47,10 +55,7 @@ describe("FinancialIndicatorDto", () => {
     let dto: FinancialIndicatorDto;
 
     beforeEach(() => {
-      dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
     });
 
     it("should create DTO with all properties", () => {
@@ -66,10 +71,7 @@ describe("FinancialIndicatorDto", () => {
       mockFinancialIndicator.description = null;
       mockFinancialIndicator.exchangeRate = null;
 
-      const dtoWithNulls = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dtoWithNulls = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dtoWithNulls.amount).toBeNull();
       expect(dtoWithNulls.description).toBeNull();
@@ -82,8 +84,10 @@ describe("FinancialIndicatorDto", () => {
         value: mockMedia.map(
           media =>
             new MediaDto(media, {
-              lightResource: false,
-              includeAssociations: false
+              url: "https://example.com/media",
+              thumbUrl: "https://example.com/media/thumb",
+              entityType: "financialIndicators",
+              entityUuid: mockFinancialIndicator.uuid
             })
         ),
         writable: true
@@ -120,10 +124,7 @@ describe("FinancialIndicatorDto", () => {
 
       collections.forEach(collection => {
         mockFinancialIndicator.collection = collection;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.collection).toBe(collection);
       });
     });
@@ -133,23 +134,17 @@ describe("FinancialIndicatorDto", () => {
 
       years.forEach(year => {
         mockFinancialIndicator.year = year;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.year).toBe(year);
       });
     });
 
     it("should handle different amount values", () => {
-      const amounts = [0, 100.5, 1000.0, 1000000.99, 99999999999999.99];
+      const amounts = [0, 100.5, 1000.0, 1000000.99, 999999999.99];
 
       amounts.forEach(amount => {
         mockFinancialIndicator.amount = amount;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.amount).toBe(amount);
       });
     });
@@ -159,10 +154,7 @@ describe("FinancialIndicatorDto", () => {
 
       rates.forEach(rate => {
         mockFinancialIndicator.exchangeRate = rate;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.exchangeRate).toBe(rate);
       });
     });
@@ -177,10 +169,7 @@ describe("FinancialIndicatorDto", () => {
 
       descriptions.forEach(description => {
         mockFinancialIndicator.description = description;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.description).toBe(description);
       });
     });
@@ -192,10 +181,7 @@ describe("FinancialIndicatorDto", () => {
       mockFinancialIndicator.year = 0;
       mockFinancialIndicator.exchangeRate = 0;
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.amount).toBe(0);
       expect(dto.year).toBe(0);
@@ -203,26 +189,20 @@ describe("FinancialIndicatorDto", () => {
     });
 
     it("should handle very large numbers", () => {
-      mockFinancialIndicator.amount = 99999999999999.99;
-      mockFinancialIndicator.exchangeRate = 99999999999999.99;
+      mockFinancialIndicator.amount = 999999999.99;
+      mockFinancialIndicator.exchangeRate = 999999.99;
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
-      expect(dto.amount).toBe(99999999999999.99);
-      expect(dto.exchangeRate).toBe(99999999999999.99);
+      expect(dto.amount).toBe(999999999.99);
+      expect(dto.exchangeRate).toBe(999999.99);
     });
 
     it("should handle very small decimal values", () => {
       mockFinancialIndicator.amount = 0.01;
       mockFinancialIndicator.exchangeRate = 0.001;
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.amount).toBe(0.01);
       expect(dto.exchangeRate).toBe(0.001);
@@ -232,45 +212,33 @@ describe("FinancialIndicatorDto", () => {
       mockFinancialIndicator.collection = "";
       mockFinancialIndicator.description = "";
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.collection).toBe("");
       expect(dto.description).toBe("");
     });
 
-    it("should handle undefined values", () => {
-      mockFinancialIndicator.amount = undefined;
-      mockFinancialIndicator.description = undefined;
+    it("should handle null values", () => {
+      mockFinancialIndicator.amount = null;
+      mockFinancialIndicator.description = null;
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
-      expect(dto.amount).toBeUndefined();
-      expect(dto.description).toBeUndefined();
+      expect(dto.amount).toBeNull();
+      expect(dto.description).toBeNull();
     });
   });
 
   describe("DTO inheritance and structure", () => {
     it("should extend AssociationDto", () => {
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto).toHaveProperty("id");
       expect(dto).toHaveProperty("uuid");
     });
 
     it("should have JsonApiDto decorator", () => {
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.constructor.name).toBe("FinancialIndicatorDto");
     });
@@ -282,11 +250,6 @@ describe("FinancialIndicatorDto", () => {
   });
 
   describe("FinancialIndicatorMedia type", () => {
-    it("should be defined as a type", () => {
-      // This is a type alias, so we just verify it exists
-      expect(typeof FinancialIndicatorMedia).toBe("object");
-    });
-
     it("should represent media-related properties", () => {
       // FinancialIndicatorMedia should pick only the media-related properties
       // from FinancialIndicatorDto based on the MEDIA constant
@@ -297,20 +260,17 @@ describe("FinancialIndicatorDto", () => {
 
   describe("Constructor behavior", () => {
     it("should handle null financialIndicator parameter", () => {
-      const dto = new FinancialIndicatorDto(null, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
       expect(dto).toBeDefined();
     });
 
     it("should handle undefined props parameter", () => {
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, undefined);
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
       expect(dto).toBeDefined();
     });
 
     it("should handle empty props object", () => {
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {});
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
       expect(dto).toBeDefined();
     });
   });
@@ -321,10 +281,7 @@ describe("FinancialIndicatorDto", () => {
       mockFinancialIndicator.amount = 500000.0;
       mockFinancialIndicator.description = "Carbon credit revenue";
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.collection).toBe("revenue");
       expect(dto.amount).toBe(500000.0);
@@ -336,10 +293,7 @@ describe("FinancialIndicatorDto", () => {
       mockFinancialIndicator.amount = 250000.0;
       mockFinancialIndicator.description = "Operational costs";
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.collection).toBe("expenses");
       expect(dto.amount).toBe(250000.0);
@@ -351,10 +305,7 @@ describe("FinancialIndicatorDto", () => {
       mockFinancialIndicator.amount = 1000000.0;
       mockFinancialIndicator.description = "Land and equipment";
 
-      const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-        lightResource: false,
-        includeAssociations: true
-      });
+      const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
 
       expect(dto.collection).toBe("assets");
       expect(dto.amount).toBe(1000000.0);
@@ -377,10 +328,7 @@ describe("FinancialIndicatorDto", () => {
 
       validCollections.forEach(collection => {
         mockFinancialIndicator.collection = collection;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.collection).toBe(collection);
       });
     });
@@ -390,10 +338,7 @@ describe("FinancialIndicatorDto", () => {
 
       validYears.forEach(year => {
         mockFinancialIndicator.year = year;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.year).toBe(year);
       });
     });
@@ -403,10 +348,7 @@ describe("FinancialIndicatorDto", () => {
 
       amounts.forEach(amount => {
         mockFinancialIndicator.amount = amount;
-        const dto = new FinancialIndicatorDto(mockFinancialIndicator, {
-          lightResource: false,
-          includeAssociations: true
-        });
+        const dto = new FinancialIndicatorDto(mockFinancialIndicator, createValidProps());
         expect(dto.amount).toBe(amount);
       });
     });

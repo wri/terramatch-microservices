@@ -4,9 +4,8 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FundingTypeDto } from "../dto/funding-type.dto";
-import { FinancialReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Includeable, Op } from "sequelize";
-import { ReportStatus } from "@terramatch-microservices/database/constants/status";
+import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "yearOfReport"];
 
@@ -18,7 +17,7 @@ export class FinancialReportProcessor extends ReportProcessor<
   FinancialReport,
   FinancialReportLightDto,
   FinancialReportFullDto,
-  FinancialReportUpdateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;

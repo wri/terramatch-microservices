@@ -11,7 +11,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, CHAR, TINYINT, DATE, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TEXT, TINYINT, DATE, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";

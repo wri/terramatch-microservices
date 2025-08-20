@@ -1,5 +1,4 @@
 import { FinancialReport } from "./financial-report.entity";
-import { User } from "./user.entity";
 import { Organisation } from "./organisation.entity";
 import { FinancialIndicator } from "./financial-indicator.entity";
 import { ReportStatus, UpdateRequestStatus } from "../constants/status";
@@ -7,22 +6,10 @@ import { FrameworkKey } from "../constants";
 
 describe("FinancialReport", () => {
   let financialReport: FinancialReport;
-  let mockUser: User;
   let mockOrganisation: Organisation;
   let mockFinancialIndicators: FinancialIndicator[];
 
   beforeEach(() => {
-    mockUser = {
-      id: 1,
-      uuid: "user-uuid-1",
-      firstName: "Test",
-      lastName: "User",
-      emailAddress: "test@example.com",
-      organisationId: 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as Partial<User> as User;
-
     mockOrganisation = {
       id: 1,
       uuid: "org-uuid-1",
@@ -72,8 +59,7 @@ describe("FinancialReport", () => {
     financialReport.createdAt = new Date();
     financialReport.updatedAt = new Date();
     financialReport.deletedAt = null;
-    financialReport.createdByUser = mockUser;
-    financialReport.approvedByUser = null;
+
     financialReport.organisation = mockOrganisation;
     financialReport.financialCollection = mockFinancialIndicators;
   });
@@ -124,16 +110,9 @@ describe("FinancialReport", () => {
   });
 
   describe("Associations", () => {
-    it("should have createdByUser association", () => {
-      expect(financialReport.createdByUser).toBeDefined();
-      expect(financialReport.createdByUser?.id).toBe(1);
-      expect(financialReport.createdByUser?.firstName).toBe("Test");
-    });
-
-    it("should have approvedByUser association", () => {
-      expect(financialReport.approvedByUser).toBeNull();
-      financialReport.approvedByUser = mockUser;
-      expect(financialReport.approvedByUser?.id).toBe(1);
+    it("should have createdBy and approvedBy IDs", () => {
+      expect(financialReport.createdBy).toBe(1);
+      expect(financialReport.approvedBy).toBe(1);
     });
 
     it("should have organisation association", () => {

@@ -1,5 +1,4 @@
 import { FinancialIndicatorFactory } from "./financial-indicator.factory";
-import { FinancialIndicator } from "../entities";
 import { OrganisationFactory } from "./index";
 
 // Mock the dependencies

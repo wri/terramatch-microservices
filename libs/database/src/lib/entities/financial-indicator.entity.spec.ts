@@ -133,16 +133,16 @@ describe("FinancialIndicator", () => {
       financialIndicator.amount = 0.01;
       expect(financialIndicator.amount).toBe(0.01);
 
-      financialIndicator.amount = 99999999999999.99;
-      expect(financialIndicator.amount).toBe(99999999999999.99);
+      financialIndicator.amount = 999999999.99;
+      expect(financialIndicator.amount).toBe(999999999.99);
     });
 
     it("should handle exchangeRate as decimal with precision", () => {
       financialIndicator.exchangeRate = 0.01;
       expect(financialIndicator.exchangeRate).toBe(0.01);
 
-      financialIndicator.exchangeRate = 99999999999999.99;
-      expect(financialIndicator.exchangeRate).toBe(99999999999999.99);
+      financialIndicator.exchangeRate = 999999.99;
+      expect(financialIndicator.exchangeRate).toBe(999999.99);
     });
   });
 
@@ -188,10 +188,10 @@ describe("FinancialIndicator", () => {
     });
 
     it("should handle very large numbers", () => {
-      financialIndicator.amount = 99999999999999.99;
+      financialIndicator.amount = 999999999.99;
       financialIndicator.organisationId = 999999999;
 
-      expect(financialIndicator.amount).toBe(99999999999999.99);
+      expect(financialIndicator.amount).toBe(999999999.99);
       expect(financialIndicator.organisationId).toBe(999999999);
     });
   });

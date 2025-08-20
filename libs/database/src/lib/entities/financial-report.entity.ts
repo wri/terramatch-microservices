@@ -43,7 +43,7 @@ export class FinancialReport extends Model<FinancialReport> {
   override id: number;
 
   @Index
-  @Column({ type: CHAR(36) })
+  @Column(CHAR(36))
   uuid: string;
 
   @StateMachineColumn(ReportStatusStates)
@@ -55,7 +55,7 @@ export class FinancialReport extends Model<FinancialReport> {
   organisationId: number;
 
   @AllowNull
-  @Column(STRING(255))
+  @Column(STRING)
   title: string | null;
 
   @AllowNull
@@ -63,7 +63,7 @@ export class FinancialReport extends Model<FinancialReport> {
   yearOfReport: number | null;
 
   @AllowNull
-  @Column(STRING(255))
+  @Column(STRING)
   updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
@@ -85,17 +85,17 @@ export class FinancialReport extends Model<FinancialReport> {
   @AllowNull
   @Column(DATE)
   submittedAt: Date | null;
+
   @AllowNull
-  @Column(STRING(255))
+  @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
   @AllowNull
   @Column(DATE)
   dueAt: Date | null;
 
-  @AllowNull
-  @Column(INTEGER)
-  completion: number | null;
+  @Column({ type: INTEGER, defaultValue: 0 })
+  completion: number;
 
   @AllowNull
   @Column(TEXT)
@@ -106,7 +106,7 @@ export class FinancialReport extends Model<FinancialReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @JsonColumn()
+  @Column(TEXT("long"))
   answers: string | null;
 
   @AllowNull

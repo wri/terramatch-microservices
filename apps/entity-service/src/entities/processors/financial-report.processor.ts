@@ -8,7 +8,7 @@ import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "yearOfReport"];
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid"];
 
 const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$organisation.uuid$"

@@ -137,6 +137,46 @@ export class SitePolygonLightDto extends HybridSupportDto {
     enum: PLANTING_STATUSES
   })
   plantingStatus: PlantingStatus | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  practice: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  targetSys: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  distr: string | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  numTrees: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Source of the site polygon"
+  })
+  source: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Validation status of the site polygon",
+    maxLength: 255
+  })
+  validationStatus: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "Primary UUID of the site polygon"
+  })
+  primaryUuid: string | null;
+
+  @ApiProperty({
+    type: String,
+    description: "UUID of the site polygon"
+  })
+  uuid: string;
 }
 
 @JsonApiDto({ type: "sitePolygons" })

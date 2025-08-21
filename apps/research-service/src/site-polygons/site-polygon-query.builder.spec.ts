@@ -34,4 +34,59 @@ describe("SitePolygonQueryBuilder", () => {
       expect(result[0].siteUuid).toBe(site1.uuid);
     });
   });
+
+  describe("filterValidationStatus", () => {
+    it("should return records with null when including not_checked and other statuses", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polyPassed = await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: "passed" });
+      const polyNull = await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: null });
+
+      await builder.filterValidationStatus(["passed", "not_checked"]);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([polyNull.id, polyPassed.id].sort());
+    });
+
+    it("should return only null when filtering by not_checked", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: "passed" });
+      const polyNull = await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: null });
+
+      await builder.filterValidationStatus(["not_checked"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polyNull.id);
+    });
+
+    it("should return only matching explicit statuses when not including not_checked", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polyPassed = await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: "passed" });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: null });
+
+      await builder.filterValidationStatus(["passed"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polyPassed.id);
+    });
+  });
+
+  describe("filterPolygonUuids", () => {
+    it("should filter by polygon uuids", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const poly1 = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      await builder.filterPolygonUuids([poly1.polygonUuid]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].polygonUuid).toBe(poly1.polygonUuid);
+    });
+  });
 });

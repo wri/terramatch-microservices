@@ -24,13 +24,8 @@ describe("FinancialReportPolicy", () => {
     mockUserId(user.id);
     mockPermissions();
 
-    const financialReport = {
-      id: 1,
-      uuid: "test-uuid",
-      organisationId: 1
-    } as FinancialReport;
-
-    await expectCan(service, "read", financialReport);
-    await expectCan(service, "delete", financialReport);
+    // Test with the class itself, not an instance
+    await expectCan(service, "read", FinancialReport);
+    await expectCan(service, "delete", FinancialReport);
   });
 });

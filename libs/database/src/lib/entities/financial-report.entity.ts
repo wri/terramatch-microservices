@@ -143,7 +143,7 @@ export class FinancialReport extends Model<FinancialReport> {
   }
 
   get isCompletable() {
-    return getStateMachine(this, "status")?.canBe(this.status, "started") || this.status !== "started";
+    return this.status !== "started";
   }
 
   get isComplete() {

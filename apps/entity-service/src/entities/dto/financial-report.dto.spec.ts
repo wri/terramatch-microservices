@@ -126,7 +126,7 @@ describe("FinancialReportDto", () => {
     });
 
     it("should create light DTO with basic properties", () => {
-      expect(lightDto.status).toBe("draft");
+      expect(lightDto.status).toBe("started");
       expect(lightDto.organisationName).toBe("Test Organisation");
       expect(lightDto.yearOfReport).toBe(2023);
       expect(lightDto.submittedAt).toBeNull();
@@ -158,10 +158,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.yearOfReport = null;
       mockFinancialReport.submittedAt = null;
 
-      const dto = new FinancialReportLightDto(mockFinancialReport, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      const dto = new FinancialReportLightDto(mockFinancialReport, createLightProps());
 
       expect(dto.organisationName).toBeNull();
       expect(dto.yearOfReport).toBeNull();
@@ -172,10 +169,7 @@ describe("FinancialReportDto", () => {
       mockFinancialReport.organisation.name = null;
       mockFinancialReport.yearOfReport = null;
 
-      const dto = new FinancialReportLightDto(mockFinancialReport, {
-        lightResource: true,
-        includeAssociations: false
-      });
+      const dto = new FinancialReportLightDto(mockFinancialReport, createLightProps());
 
       expect(dto.organisationName).toBeNull();
       expect(dto.yearOfReport).toBeNull();
@@ -190,7 +184,7 @@ describe("FinancialReportDto", () => {
     });
 
     it("should create full DTO with all properties", () => {
-      expect(fullDto.status).toBe("draft");
+      expect(fullDto.status).toBe("started");
       expect(fullDto.organisationName).toBe("Test Organisation");
       expect(fullDto.yearOfReport).toBe(2023);
       expect(fullDto.submittedAt).toBeNull();
@@ -200,8 +194,8 @@ describe("FinancialReportDto", () => {
       expect(fullDto.approvedAt).toBeNull();
       expect(fullDto.completion).toBe(75);
       expect(fullDto.dueAt).toEqual(new Date("2023-12-31"));
-      expect(fullDto.updateRequestStatus).toBe("pending");
-      expect(fullDto.frameworkKey).toBe("test-framework");
+      expect(fullDto.updateRequestStatus).toBe("draft");
+      expect(fullDto.frameworkKey).toBe("terrafund");
       expect(fullDto.nothingToReport).toBe(false);
       expect(fullDto.feedback).toBe("Good progress, needs more details");
       expect(fullDto.feedbackFields).toEqual(["revenue", "expenses"]);

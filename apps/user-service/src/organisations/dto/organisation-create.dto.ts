@@ -1,6 +1,7 @@
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
-import { IsArray, IsIn, IsNotEmpty, IsOptional, Length } from "class-validator";
+import { IsArray, IsEmail, IsIn, IsNotEmpty, IsOptional, Length } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 const ORGANISATION_TYPES = ["non-profit-organization", "for-profit-organization"] as const;
 type OrganisationType = (typeof ORGANISATION_TYPES)[number];
@@ -104,6 +105,27 @@ export class OrganisationCreateAttributes {
   @IsArray()
   @Length(3, 3, { each: true })
   level1PastRestoration?: string[];
+
+  @IsNotEmpty()
+  @ApiProperty()
+  userFirstName: string;
+
+  @IsNotEmpty()
+  @ApiProperty()
+  userLastName: string;
+
+  @IsEmail()
+  @ApiProperty()
+  userEmail: string;
+
+  @IsNotEmpty()
+  @ApiProperty()
+  userRole: string;
+
+  @IsNotEmpty()
+  @IsIn(VALID_LOCALES)
+  @ApiProperty({ enum: VALID_LOCALES })
+  userLocale: ValidLocale;
 }
 
 export class OrganisationCreateBody extends JsonApiBodyDto(

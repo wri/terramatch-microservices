@@ -1,7 +1,8 @@
-import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Stage } from "./stage.entity";
 
 @Table({ tableName: "forms", underscored: true, paranoid: true })
 export class Form extends Model<Form> {
@@ -86,8 +87,11 @@ export class Form extends Model<Form> {
   published: boolean;
 
   @AllowNull
-  @Column(STRING)
+  @Column(UUID)
   stageId: string | null;
+
+  @BelongsTo(() => Stage, { foreignKey: "stageId", targetKey: "uuid", constraints: false })
+  stage: Stage | null;
 
   @Column(STRING)
   updatedBy: string | null;

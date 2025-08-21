@@ -52,6 +52,7 @@ export * from "./seeding.entity";
 export * from "./site.entity";
 export * from "./site-polygon.entity";
 export * from "./site-report.entity";
+export * from "./stage.entity";
 export * from "./stratas.entity";
 export * from "./task.entity";
 export * from "./tree-species.entity";

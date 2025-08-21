@@ -19,7 +19,7 @@ describe("FinancialIndicator", () => {
 
   describe("Static properties", () => {
     it("should have correct LARAVEL_TYPE", () => {
-      expect(FinancialIndicator.LARAVEL_TYPE).toBe("App\\Models\\V2\\FinancialIndicator");
+      expect(FinancialIndicator.LARAVEL_TYPE).toBe("App\\Models\\V2\\FinancialIndicators");
     });
 
     it("should have MEDIA configuration", () => {

@@ -17,7 +17,7 @@ import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequ
 import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
 import { FinancialIndicator } from "./financial-indicator.entity";
 
@@ -143,7 +143,7 @@ export class FinancialReport extends Model<FinancialReport> {
   }
 
   get isCompletable() {
-    return getStateMachine(this, "status")?.canBe(this.status, "started") || this.status !== "started";
+    return this.status !== "started";
   }
 
   get isComplete() {

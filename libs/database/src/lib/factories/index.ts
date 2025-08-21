@@ -4,6 +4,7 @@ export * from "./demographic.factory";
 export * from "./demographic-entry.factory";
 export * from "./financial-indicator.factory";
 export * from "./financial-report.factory";
+export * from "./funding-type.factory";
 export * from "./form-submission.factory";
 export * from "./form.factory";
 export * from "./form-question-option.factory";

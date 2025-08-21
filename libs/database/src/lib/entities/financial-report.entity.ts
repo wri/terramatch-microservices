@@ -127,19 +127,19 @@ export class FinancialReport extends Model<FinancialReport> {
   financialIndicators: FinancialIndicator[] | null;
 
   get organisationName() {
-    return this.organisation.name;
+    return this.organisation?.name;
   }
 
   get organisationUuid() {
-    return this.organisation.uuid;
+    return this.organisation?.uuid;
   }
 
   get organisationType() {
-    return this.organisation.type;
+    return this.organisation?.type;
   }
 
   get organisationStatus() {
-    return this.organisation.status;
+    return this.organisation?.status;
   }
 
   get isCompletable() {

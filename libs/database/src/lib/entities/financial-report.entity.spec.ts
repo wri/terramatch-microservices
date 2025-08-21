@@ -61,7 +61,7 @@ describe("FinancialReport", () => {
     financialReport.deletedAt = null;
 
     financialReport.organisation = mockOrganisation;
-    financialReport.financialCollection = mockFinancialIndicators;
+    financialReport.financialIndicators = mockFinancialIndicators;
   });
 
   describe("Static properties", () => {
@@ -121,10 +121,10 @@ describe("FinancialReport", () => {
       expect(financialReport.organisation.name).toBe("Test Organisation");
     });
 
-    it("should have financialCollection association", () => {
-      expect(financialReport.financialCollection).toBeDefined();
-      expect(financialReport.financialCollection).toHaveLength(1);
-      expect(financialReport.financialCollection?.[0].id).toBe(1);
+    it("should have financialIndicators association", () => {
+      expect(financialReport.financialIndicators).toBeDefined();
+      expect(financialReport.financialIndicators).toHaveLength(1);
+      expect(financialReport.financialIndicators?.[0].id).toBe(1);
     });
   });
 

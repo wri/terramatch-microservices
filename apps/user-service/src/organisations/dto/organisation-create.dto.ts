@@ -9,7 +9,7 @@ type OrganisationType = (typeof ORGANISATION_TYPES)[number];
 export class OrganisationCreateAttributes {
   @IsNotEmpty()
   @ApiProperty()
-  organisationName: string;
+  name: string;
 
   @IsNotEmpty()
   @IsIn(ORGANISATION_TYPES)

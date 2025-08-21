@@ -26,6 +26,8 @@ export class OrganisationsController {
   @ExceptionResponse(UnauthorizedException, { description: "Organisation creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "One or more attributes are invalid or missing." })
   async create(@Body() payload: OrganisationCreateBody) {
-    // const { user, organisation } = await this.organisationCreationService.createNewOrganisation(payload.data.attributes);
+    const { user, organisation } = await this.organisationCreationService.createNewOrganisation(
+      payload.data.attributes
+    );
   }
 }

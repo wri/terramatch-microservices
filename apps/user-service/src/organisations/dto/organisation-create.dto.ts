@@ -116,7 +116,7 @@ export class OrganisationCreateAttributes {
 
   @IsEmail()
   @ApiProperty()
-  userEmail: string;
+  userEmailAddress: string;
 
   @IsNotEmpty()
   @ApiProperty()

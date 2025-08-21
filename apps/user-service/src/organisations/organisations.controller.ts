@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Post, UnauthorizedException } from "@nestjs/common";
 import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
@@ -23,7 +23,8 @@ export class OrganisationsController {
     data: OrganisationDto,
     included: [{ type: UserDto, relationships: [USER_ORG_RELATIONSHIP] }]
   })
-  @ExceptionResponse(UnauthorizedException, { description: "organisation creation failed." })
+  @ExceptionResponse(UnauthorizedException, { description: "Organisation creation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "One or more attributes are invalid or missing." })
   async create(@Body() payload: OrganisationCreateBody) {
     // const { user, organisation } = await this.organisationCreationService.createNewOrganisation(payload.data.attributes);
   }

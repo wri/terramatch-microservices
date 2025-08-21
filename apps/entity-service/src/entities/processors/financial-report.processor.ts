@@ -5,7 +5,7 @@ import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FundingTypeDto } from "../dto/funding-type.dto";
 import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial-indicator.dto";
-import { Includeable, Op } from "sequelize";
+import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "yearOfReport"];
@@ -40,19 +40,8 @@ export class FinancialReportProcessor extends ReportProcessor<
   }
 
   async findMany(query: EntityQueryDto) {
-    const organisationAssociation: Includeable = {
-      association: "organisation",
-      attributes: ["id", "uuid", "name"]
-    };
-
-    const financialCollectionAssociation: Includeable = {
-      association: "financialIndicators",
-      attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
-    };
-
     const builder = await this.entitiesService.buildQuery(FinancialReport, query, [
-      organisationAssociation,
-      financialCollectionAssociation
+      { association: "organisation", attributes: ["uuid", "name", "type"] }
     ]);
 
     if (query.sort?.field != null) {

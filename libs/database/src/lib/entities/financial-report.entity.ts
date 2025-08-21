@@ -49,6 +49,8 @@ export class FinancialReport extends Model<FinancialReport> {
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
+  @AllowNull
+  @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
   organisationId: number;
 
@@ -115,7 +117,7 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column(STRING)
   currency: string | null;
 
-  @BelongsTo(() => Organisation, { foreignKey: "organisationId" })
+  @BelongsTo(() => Organisation)
   organisation: Organisation;
 
   @HasMany(() => FinancialIndicator, {

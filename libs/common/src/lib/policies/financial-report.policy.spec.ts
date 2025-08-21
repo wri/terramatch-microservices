@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
-import { UserFactory } from "@terramatch-microservices/database/factories";
+import { FinancialReportFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { expectCan, mockPermissions, mockUserId } from "./policy.service.spec";
-import { FinancialReport } from "@terramatch-microservices/database/entities";
 
 describe("FinancialReportPolicy", () => {
   let service: PolicyService;
@@ -19,18 +18,11 @@ describe("FinancialReportPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("should allow read and delete for any user", async () => {
+  it("should allow read and delete for financial reports for admins", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
-    mockPermissions();
-
-    const financialReport = {
-      id: 1,
-      uuid: "test-uuid",
-      organisationId: 1
-    } as FinancialReport;
-
-    await expectCan(service, "read", financialReport);
-    await expectCan(service, "delete", financialReport);
+    mockPermissions("framework-admin");
+    const financialReport = await FinancialReportFactory.create();
+    await expectCan(service, ["read", "delete"], financialReport);
   });
 });

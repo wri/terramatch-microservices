@@ -3,6 +3,8 @@ import { FinancialReport } from "@terramatch-microservices/database/entities";
 
 export class FinancialReportPolicy extends UserPermissionsPolicy {
   async addRules() {
-    this.builder.can(["read", "delete"], FinancialReport);
+    if (this.userId) {
+      this.builder.can(["read", "delete"], FinancialReport);
+    }
   }
 }

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { FinancialReport, FundingType, FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
+import { FinancialReport, Media } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -149,7 +149,7 @@ describe("FinancialReportProcessor", () => {
 
     it("should handle pagination", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReports = await FinancialReportFactory.createMany(5, { organisationId: organisation.id });
+      await FinancialReportFactory.createMany(5, { organisationId: organisation.id });
 
       const result = await processor.findMany({ page: { size: 2, number: 1 } });
       expect(result.models.length).toBe(2);
@@ -164,9 +164,14 @@ describe("FinancialReportProcessor", () => {
 
       await financialReport.reload({ include: [{ association: "organisation" }] });
 
-      const getFundingTypesSpy = jest.spyOn(processor as any, "getFundingTypes").mockResolvedValue([]);
+      const getFundingTypesSpy = jest
+        .spyOn(processor as unknown as { getFundingTypes: jest.Mock }, "getFundingTypes")
+        .mockResolvedValue([]);
       const getFinancialIndicatorsWithMediaSpy = jest
-        .spyOn(processor as any, "getFinancialIndicatorsWithMedia")
+        .spyOn(
+          processor as unknown as { getFinancialIndicatorsWithMedia: jest.Mock },
+          "getFinancialIndicatorsWithMedia"
+        )
         .mockResolvedValue([]);
 
       const result = await processor.getFullDto(financialReport);
@@ -196,11 +201,13 @@ describe("FinancialReportProcessor", () => {
     it("should return funding types for organisation", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
-      const fundingTypes = await FundingTypeFactory.createMany(2, { organisationId: organisation.uuid });
+      await FundingTypeFactory.createMany(2, { organisationId: organisation.uuid });
 
       await financialReport.reload({ include: [{ association: "organisation" }] });
 
-      const result = await (processor as any).getFundingTypes(financialReport);
+      const result = await (
+        processor as unknown as { getFundingTypes: (report: FinancialReport) => Promise<unknown[]> }
+      ).getFundingTypes(financialReport);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(FundingTypeDto);
@@ -211,15 +218,16 @@ describe("FinancialReportProcessor", () => {
     it("should return financial indicators with media", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
-      const financialIndicators = await FinancialIndicatorFactory.createMany(2, {
+      await FinancialIndicatorFactory.createMany(2, {
         financialReportId: financialReport.id
       });
 
-      jest.spyOn(Media, "for").mockReturnValue({
-        findAll: jest.fn().mockResolvedValue([])
-      } as any);
+      const mockMedia = { findAll: jest.fn().mockResolvedValue([]) };
+      jest.spyOn(Media, "for").mockReturnValue(mockMedia as unknown as ReturnType<typeof Media.for>);
 
-      const result = await (processor as any).getFinancialIndicatorsWithMedia(financialReport);
+      const result = await (
+        processor as unknown as { getFinancialIndicatorsWithMedia: (report: FinancialReport) => Promise<unknown[]> }
+      ).getFinancialIndicatorsWithMedia(financialReport);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(Promise);

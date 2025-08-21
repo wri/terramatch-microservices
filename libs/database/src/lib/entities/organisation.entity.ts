@@ -1,18 +1,7 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column,
-  Default,
-  Index,
-  Model,
-  PrimaryKey,
-  Table,
-  HasMany
-} from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { OrganisationStatus } from "../constants/status";
-import { FundingType } from "./funding-type.entity";
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true })
 export class Organisation extends Model<Organisation> {
@@ -573,7 +562,4 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(TEXT)
   bioeconomyBuyers: string | null;
-
-  @HasMany(() => FundingType, "organisationId")
-  fundingTypes: FundingType[];
 }

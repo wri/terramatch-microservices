@@ -1,11 +1,22 @@
 import { FinancialIndicatorDto } from "./financial-indicator.dto";
-import { FinancialIndicator } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "./media.dto";
 
 describe("FinancialIndicatorDto", () => {
   let mockFinancialIndicator: FinancialIndicator;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockMedia: any[];
+
+  // Define minimal mock type for testing purposes
+  type MockMedia = {
+    id: number;
+    uuid: string;
+    name: string;
+    url: string;
+    collectionName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+  let mockMedia: MockMedia[];
 
   // Helper function to create valid props for FinancialIndicatorDto
   const createValidProps = () => ({
@@ -83,7 +94,7 @@ describe("FinancialIndicatorDto", () => {
       Object.defineProperty(dto, "documentation", {
         value: mockMedia.map(
           media =>
-            new MediaDto(media, {
+            new MediaDto(media as unknown as Media, {
               url: "https://example.com/media",
               thumbUrl: "https://example.com/media/thumb",
               entityType: "financialIndicators",

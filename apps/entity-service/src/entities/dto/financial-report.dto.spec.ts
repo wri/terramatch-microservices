@@ -45,7 +45,8 @@ describe("FinancialReportDto", () => {
     documentation: [],
     entityType: "financialReports" as const,
     entityUuid: mockFinancialReport.uuid,
-    fundingTypes: []
+    fundingTypes: [],
+    financialCollection: []
   });
 
   // Define specific types for status values
@@ -113,7 +114,7 @@ describe("FinancialReportDto", () => {
         createdAt: new Date(),
         updatedAt: new Date()
       },
-      financialCollection: mockFinancialIndicators
+      financialIndicators: mockFinancialIndicators
     } as unknown as FinancialReport;
   });
 
@@ -221,9 +222,9 @@ describe("FinancialReportDto", () => {
     it("should handle null values in full DTO", () => {
       mockFinancialReport.title = null;
       mockFinancialReport.approvedAt = null;
-      mockFinancialReport.completion = null;
+      mockFinancialReport.completion = 0;
       mockFinancialReport.feedback = null;
-      mockFinancialReport.financialCollection = null;
+      mockFinancialReport.financialIndicators = null;
 
       const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
@@ -236,7 +237,7 @@ describe("FinancialReportDto", () => {
 
     it("should handle empty arrays", () => {
       mockFinancialReport.feedbackFields = [];
-      mockFinancialReport.financialCollection = [];
+      mockFinancialReport.financialIndicators = [];
 
       const dto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 
@@ -305,7 +306,7 @@ describe("FinancialReportDto", () => {
     });
 
     it("should handle missing financial collection", () => {
-      mockFinancialReport.financialCollection = null;
+      mockFinancialReport.financialIndicators = null;
 
       const fullDto = new FinancialReportFullDto(mockFinancialReport, createFullProps());
 

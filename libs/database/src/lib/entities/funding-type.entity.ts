@@ -14,7 +14,6 @@ import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
 
 @Scopes(() => ({
-  organisation: (uuid: string) => ({ where: { organisationId: uuid } }),
   organisationByUuid: (uuid: string) => ({ where: { organisationId: uuid } })
 }))
 @Table({

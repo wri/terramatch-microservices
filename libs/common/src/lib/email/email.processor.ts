@@ -7,6 +7,8 @@ import * as Sentry from "@sentry/node";
 import { TMLogger } from "../util/tm-logger";
 import { EntityStatusUpdateEmail } from "./entity-status-update.email";
 import { TerrafundReportReminderEmail } from "./terrafund-report-reminder.email";
+import { TerrafundSiteAndNurseryReminderEmail } from "./terrafund-site-and-nursery-reminder.email";
+import { AdminUserCreationEmail } from "./admin-user-creation.email";
 
 export type StatusUpdateData = {
   type: EntityType;
@@ -20,7 +22,8 @@ export type ProjectEmailData = {
 const EMAIL_PROCESSORS = {
   statusUpdate: EntityStatusUpdateEmail,
   terrafundReportReminder: TerrafundReportReminderEmail,
-  terrafundSiteAndNurseryReminder: TerrafundReportReminderEmail
+  terrafundSiteAndNurseryReminder: TerrafundSiteAndNurseryReminderEmail,
+  adminUserCreation: AdminUserCreationEmail
 };
 
 /**

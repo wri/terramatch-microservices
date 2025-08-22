@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import {
   Application,
@@ -14,15 +13,18 @@ import {
   Stage,
   User
 } from "@terramatch-microservices/database/entities";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { AdminUserCreationEmail } from "@terramatch-microservices/common/email/admin-user-creation.email";
 
 @Injectable()
 export class OrganisationCreationService {
   protected readonly logger = new TMLogger(OrganisationCreationService.name);
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   async createNewOrganisation(attributes: OrganisationCreateAttributes) {
-    const { roleId, stageUuid, formUuid } = await this.validateAttributes(attributes);
+    const { roleId, stageUuid, formUuid, fundingProgrammeName } = await this.validateAttributes(attributes);
 
     // create Organisation
     const orgData: Partial<Organisation> = {
@@ -78,6 +80,7 @@ export class OrganisationCreationService {
     } as FormSubmission);
 
     // send verification email
+    await new AdminUserCreationEmail({ userId: user.id, fundingProgrammeName }).sendLater(this.emailQueue);
 
     return { user, organisation };
   }
@@ -87,7 +90,11 @@ export class OrganisationCreationService {
       throw new BadRequestException("Organisation already exists");
     }
 
-    if ((await FundingProgramme.count({ where: { uuid: attributes.fundingProgrammeUuid } })) !== 1) {
+    const fundingProgramme = await FundingProgramme.findOne({
+      where: { uuid: attributes.fundingProgrammeUuid },
+      attributes: ["name"]
+    });
+    if (fundingProgramme == null) {
       throw new BadRequestException("Funding programme not found");
     }
 
@@ -114,6 +121,6 @@ export class OrganisationCreationService {
       throw new BadRequestException("User role not found");
     }
 
-    return { roleId: role.id, stageUuid: stage.uuid, formUuid: form.uuid };
+    return { roleId: role.id, stageUuid: stage.uuid, formUuid: form.uuid, fundingProgrammeName: fundingProgramme.name };
   }
 }

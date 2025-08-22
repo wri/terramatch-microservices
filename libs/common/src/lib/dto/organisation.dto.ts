@@ -6,6 +6,9 @@ type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "organisations" })
 export class OrganisationDto {
+  @ApiProperty()
+  uuid: string;
+
   @ApiProperty({ enum: STATUSES })
   status: Status;
 

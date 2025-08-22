@@ -6,6 +6,8 @@ import { USER_ORG_RELATIONSHIP } from "../users/users.controller";
 import { PolicyService } from "@terramatch-microservices/common";
 import { OrganisationCreationService } from "./organisation-creation.service";
 import { ApiOperation } from "@nestjs/swagger";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -29,5 +31,11 @@ export class OrganisationsController {
     const { user, organisation } = await this.organisationCreationService.createNewOrganisation(
       payload.data.attributes
     );
+
+    const document = buildJsonApi(OrganisationDto);
+    const orgResource = document.addData(organisation.uuid, populateDto(new OrganisationDto(), organisation));
+    const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
+    userResource.relateTo("org", orgResource, { meta: { userStatus: "na" } });
+    return document.serialize();
   }
 }

@@ -67,7 +67,7 @@ export class OrganisationCreateAttributes {
   @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
   @IsArray()
-  @Length(3, 3, { each: true })
+  @Length(3, undefined, { each: true })
   level1Proposed?: string[];
 
   @ApiProperty({ isArray: true, required: false, type: String })
@@ -79,7 +79,7 @@ export class OrganisationCreateAttributes {
   @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
   @IsArray()
-  @Length(3, 3, { each: true })
+  @Length(3, undefined, { each: true })
   level1PastRestoration?: string[];
 
   @IsNotEmpty()

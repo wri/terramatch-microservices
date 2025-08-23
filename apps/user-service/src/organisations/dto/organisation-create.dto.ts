@@ -45,11 +45,7 @@ export class OrganisationCreateAttributes {
   @ApiProperty()
   phone: string;
 
-  @ApiProperty({
-    name: "countries[]",
-    isArray: true,
-    type: String
-  })
+  @ApiProperty({ isArray: true, type: String })
   @IsArray()
   @Length(3, 3, { each: true })
   countries: string[];
@@ -62,45 +58,25 @@ export class OrganisationCreateAttributes {
   @ApiProperty({ required: false, default: "USD" })
   currency?: string;
 
-  @ApiProperty({
-    name: "level0Proposed[]",
-    isArray: true,
-    required: false,
-    type: String
-  })
+  @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
   @IsArray()
   @Length(3, 3, { each: true })
   level0Proposed?: string[];
 
-  @ApiProperty({
-    name: "level1Proposed[]",
-    isArray: true,
-    required: false,
-    type: String
-  })
+  @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
   @IsArray()
   @Length(3, 3, { each: true })
   level1Proposed?: string[];
 
-  @ApiProperty({
-    name: "level0PastRestoration[]",
-    isArray: true,
-    required: false,
-    type: String
-  })
+  @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
   @IsArray()
   @Length(3, 3, { each: true })
   level0PastRestoration?: string[];
 
-  @ApiProperty({
-    name: "level1PastRestoration[]",
-    isArray: true,
-    required: false,
-    type: String
-  })
+  @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
   @IsArray()
   @Length(3, 3, { each: true })

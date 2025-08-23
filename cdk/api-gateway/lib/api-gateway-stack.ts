@@ -16,7 +16,7 @@ import { Stack, StackProps } from "aws-cdk-lib";
 import * as process from "node:process";
 
 const V3_SERVICES = {
-  "user-service": ["auth", "users"],
+  "user-service": ["auth", "users", "organisations"],
   "job-service": ["jobs"],
   "entity-service": ["entities", "trees"],
   "research-service": ["research", "boundingBoxes"],

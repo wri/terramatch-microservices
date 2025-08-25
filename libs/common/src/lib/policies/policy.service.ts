@@ -20,7 +20,8 @@ import {
   Form,
   FormQuestionOption,
   FundingProgramme,
-  Disturbance
+  Disturbance,
+  Organisation
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -44,6 +45,7 @@ import { FormQuestionOptionPolicy } from "./form-question-option.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
 import { ImpactStoryPolicy } from "./impact-story.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
+import { OrganisationPolicy } from "./organisation.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,24 +58,25 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
-  [Nursery, NurseryPolicy],
-  [NurseryReport, NurseryReportPolicy],
-  [Project, ProjectPolicy],
-  [ProjectReport, ProjectReportPolicy],
-  [Site, SitePolicy],
-  [SitePolygon, SitePolygonPolicy],
-  [SiteReport, SiteReportPolicy],
-  [User, UserPolicy],
-  [ProjectPitch, ProjectPitchPolicy],
-  [Task, TaskPolicy],
-  [Demographic, DemographicPolicy],
   [AuditStatus, AuditStatusPolicy],
+  [Demographic, DemographicPolicy],
+  [Disturbance, DisturbancePolicy],
+  [ImpactStory, ImpactStoryPolicy],
   [FinancialIndicator, FinancialIndicatorPolicy],
   [Form, FormPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],
-  [ImpactStory, ImpactStoryPolicy],
-  [Disturbance, DisturbancePolicy]
+  [Nursery, NurseryPolicy],
+  [NurseryReport, NurseryReportPolicy],
+  [Organisation, OrganisationPolicy],
+  [Project, ProjectPolicy],
+  [ProjectPitch, ProjectPitchPolicy],
+  [ProjectReport, ProjectReportPolicy],
+  [Site, SitePolicy],
+  [SitePolygon, SitePolygonPolicy],
+  [SiteReport, SiteReportPolicy],
+  [Task, TaskPolicy],
+  [User, UserPolicy]
 ];
 
 /**

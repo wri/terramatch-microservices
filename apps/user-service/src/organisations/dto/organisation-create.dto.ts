@@ -34,7 +34,7 @@ export class OrganisationCreateAttributes {
 
   @IsOptional()
   @ApiProperty({ required: false })
-  hqZipcode: string;
+  hqZipcode?: string;
 
   @IsNotEmpty()
   @Length(3, 3)

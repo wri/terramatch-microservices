@@ -31,9 +31,7 @@ export class OrganisationsController {
   async create(@Body() payload: OrganisationCreateBody) {
     await this.policyService.authorize("create", Organisation);
 
-    const { user, organisation } = await this.organisationCreationService.createNewOrganisation(
-      payload.data.attributes
-    );
+    const { user, organisation } = await this.organisationCreationService.createOrganisation(payload.data.attributes);
 
     const document = buildJsonApi(OrganisationDto);
     const orgResource = document.addData(organisation.uuid, populateDto(new OrganisationDto(), organisation));

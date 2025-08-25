@@ -23,7 +23,7 @@ export class OrganisationCreationService {
 
   constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
-  async createNewOrganisation(attributes: OrganisationCreateAttributes) {
+  async createOrganisation(attributes: OrganisationCreateAttributes) {
     const { roleId, stageUuid, formUuid, fundingProgrammeName } = await this.validateAttributes(attributes);
 
     // create Organisation

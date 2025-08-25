@@ -22,24 +22,24 @@ export class FormOptionListOption extends Model<FormOptionListOption> {
 
   @AllowNull
   @Column(STRING)
-  slug: string;
+  slug: string | null;
 
   @AllowNull
   @Column(STRING)
-  altValue: string;
+  altValue: string | null;
 
   @AllowNull
   @Column(STRING)
-  label: string;
+  label: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  labelId: number;
+  labelId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "labelId", constraints: false })
   labelTranslated: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
-  imageUrl: string;
+  imageUrl: string | null;
 }

@@ -4,10 +4,17 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { OptionLabelDto } from "./dto/option-label.dto";
 import { filter, groupBy, isEmpty, uniqBy } from "lodash";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { FormOptionListOption, I18nTranslation, User } from "@terramatch-microservices/database/entities";
+import {
+  FormOptionListOption,
+  FormQuestionOption,
+  I18nTranslation,
+  User
+} from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+
+type OptionLabelModel = { slug: string; label: string | null; labelId: number | null; imageUrl: string | null };
 
 @Controller("forms/v3/optionLabels")
 export class OptionLabelsController {
@@ -21,15 +28,28 @@ export class OptionLabelsController {
     const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
     if (locale == null) throw new BadRequestException("Locale is required");
 
-    const listOptions = await FormOptionListOption.findAll({
+    const listOptions = (await FormOptionListOption.findAll({
       where: { slug: slugs },
       attributes: ["slug", "label", "labelId", "imageUrl"]
-    });
-    if (listOptions.length === 0) throw new NotFoundException("No records matching the given slugs exist");
+    })) as OptionLabelModel[];
 
+    const missingSlugs = filter(slugs, slug => !listOptions.some(option => option.slug === slug));
+    const formQuestions =
+      missingSlugs.length === 0
+        ? []
+        : ((await FormQuestionOption.findAll({
+            where: { slug: missingSlugs },
+            attributes: ["slug", "label", "labelId", "imageUrl"]
+          })) as OptionLabelModel[]);
+
+    if (listOptions.length === 0 && formQuestions.length === 0) {
+      throw new NotFoundException("No records matching the given slugs exist");
+    }
+
+    const options = uniqBy([...listOptions, ...formQuestions], "slug");
     const document = buildJsonApi<OptionLabelDto>(OptionLabelDto, { forceDataArray: true });
     const indexIds: string[] = [];
-    for (const dto of await this.getOptionLabelDtos(uniqBy(listOptions, "slug"), locale)) {
+    for (const dto of await this.getOptionLabelDtos(options, locale)) {
       indexIds.push(dto.slug);
       document.addData(dto.slug, dto);
     }
@@ -43,8 +63,8 @@ export class OptionLabelsController {
     return document.serialize();
   }
 
-  private async getOptionLabelDtos(listOptions: FormOptionListOption[], locale: ValidLocale) {
-    const i18nItemIds = filter(listOptions.map(({ labelId }) => labelId));
+  private async getOptionLabelDtos(listOptions: OptionLabelModel[], locale: ValidLocale) {
+    const i18nItemIds = filter(listOptions.map(({ labelId }) => labelId)) as number[];
     // Pull all translations at once and group them by i18nItemId
     const translations =
       i18nItemIds.length === 0
@@ -57,14 +77,15 @@ export class OptionLabelsController {
             "i18nItemId"
           );
 
-    return listOptions.map(listOption =>
-      populateDto(new OptionLabelDto(), {
-        slug: listOption.slug,
-        imageUrl: listOption.imageUrl,
+    return listOptions.map(labelModel =>
+      populateDto<OptionLabelDto>(new OptionLabelDto(), {
+        slug: labelModel.slug,
+        imageUrl: labelModel.imageUrl,
         label:
-          translations[listOption.labelId]?.[0]?.shortValue ??
-          translations[listOption.labelId]?.[0]?.longValue ??
-          listOption.label
+          translations[labelModel.labelId ?? ""]?.[0]?.shortValue ??
+          translations[labelModel.labelId ?? ""]?.[0]?.longValue ??
+          labelModel.label ??
+          ""
       })
     );
   }

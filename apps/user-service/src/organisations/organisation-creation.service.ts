@@ -37,6 +37,7 @@ export class OrganisationCreationService {
       hqStreet2: attributes.hqStreet2,
       hqCity: attributes.hqCity,
       hqZipcode: attributes.hqZipcode,
+      hqState: attributes.hqState,
       hqCountry: attributes.hqCountry,
       phone: attributes.phone,
       countries: attributes.countries,

@@ -2,9 +2,9 @@ import { Controller, Get, NotFoundException, Query, Request } from "@nestjs/comm
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { OptionLabelDto } from "./dto/option-label.dto";
-import { isEmpty, uniqBy } from "lodash";
+import { filter, groupBy, isEmpty, uniqBy } from "lodash";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { FormOptionListOption, User } from "@terramatch-microservices/database/entities";
+import { FormOptionListOption, I18nTranslation, User } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
@@ -23,8 +23,7 @@ export class OptionLabelsController {
 
     const listOptions = await FormOptionListOption.findAll({
       where: { slug: slugs },
-      attributes: ["slug", "label", "imageUrl"],
-      include: [{ association: "labelTranslated", attributes: ["id"] }]
+      attributes: ["slug", "label", "labelId", "imageUrl"]
     });
     if (listOptions.length === 0) throw new NotFoundException("No records matching the given slugs exist");
 
@@ -45,19 +44,27 @@ export class OptionLabelsController {
   }
 
   private async getOptionLabelDtos(listOptions: FormOptionListOption[], locale: ValidLocale) {
-    return await Promise.all(
-      listOptions.map(async listOption => {
-        if (listOption.labelTranslated == null) return populateDto(new OptionLabelDto(), listOption);
+    const i18nItemIds = filter(listOptions.map(({ labelId }) => labelId));
+    // Pull all translations at once and group them by i18nItemId
+    const translations =
+      i18nItemIds.length === 0
+        ? {}
+        : groupBy(
+            await I18nTranslation.findAll({
+              where: { language: locale, i18nItemId: i18nItemIds },
+              attributes: ["i18nItemId", "shortValue", "longValue"]
+            }),
+            "i18nItemId"
+          );
 
-        const translation = await listOption.labelTranslated.$get("i18nTranslations", {
-          where: { language: locale },
-          attributes: ["shortValue", "longValue"]
-        });
-        return populateDto(new OptionLabelDto(), {
-          slug: listOption.slug,
-          imageUrl: listOption.imageUrl,
-          label: translation?.[0]?.shortValue ?? translation?.[0]?.longValue ?? listOption.label
-        });
+    return listOptions.map(listOption =>
+      populateDto(new OptionLabelDto(), {
+        slug: listOption.slug,
+        imageUrl: listOption.imageUrl,
+        label:
+          translations[listOption.labelId]?.[0]?.shortValue ??
+          translations[listOption.labelId]?.[0]?.longValue ??
+          listOption.label
       })
     );
   }

@@ -8,6 +8,7 @@ import { OrganisationFactory, UserFactory } from "@terramatch-microservices/data
 import { Relationship, Resource } from "@terramatch-microservices/common/util";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }
@@ -100,7 +101,7 @@ describe("UsersController", () => {
   });
 
   describe("update", () => {
-    const makeValidBody = (uuid: string, locale?: string) => ({
+    const makeValidBody = (uuid: string, locale?: ValidLocale) => ({
       data: {
         id: uuid,
         type: "users",

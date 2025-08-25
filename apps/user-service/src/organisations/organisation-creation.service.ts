@@ -53,7 +53,10 @@ export class OrganisationCreationService {
       emailAddress: attributes.userEmailAddress,
       firstName: attributes.userFirstName,
       lastName: attributes.userLastName,
-      locale: attributes.userLocale
+      locale: attributes.userLocale,
+      // We can set the verified stamp for this user, because they only way they can log in is by following the
+      // set password link in the email sent.
+      emailAddressVerifiedAt: new Date()
     };
     const user = await User.create(userData as User);
     await ModelHasRole.create({ roleId, modelId: user.id, modelType: User.LARAVEL_TYPE } as ModelHasRole);

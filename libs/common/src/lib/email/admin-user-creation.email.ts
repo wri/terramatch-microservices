@@ -29,7 +29,7 @@ export class AdminUserCreationEmail extends EmailSender {
   async send(emailService: EmailService) {
     const user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["emailAddress", "firstName", "lastName", "locale"]
+      attributes: ["uuid", "emailAddress", "firstName", "lastName", "locale"]
     });
     if (user == null) {
       this.logger.error(`User not found [${this.userId}]`);
@@ -41,13 +41,13 @@ export class AdminUserCreationEmail extends EmailSender {
     }
 
     const i18nReplacements: Dictionary<string> = {
-      userName: user.fullName ?? "",
-      mail: user.emailAddress,
-      fundingProgrammeName: this.fundingProgrammeName
+      "{userName}": user.fullName ?? "",
+      "{mail}": user.emailAddress,
+      "{fundingProgrammeName}": this.fundingProgrammeName
     };
     const resetToken = await emailService.jwtService.signAsync({ sub: user.uuid }, { expiresIn: "7d" });
     const additionalValues = {
-      link: `auth/reset-password/${resetToken}`,
+      link: `/auth/reset-password/${resetToken}`,
       transactional: "transactional"
     };
     await emailService.sendI18nTemplateEmail(

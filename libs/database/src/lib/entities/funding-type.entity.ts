@@ -14,7 +14,6 @@ import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
 
 @Scopes(() => ({
-  organisation: (uuid: string) => ({ where: { organisationId: uuid } }),
   organisationByUuid: (uuid: string) => ({ where: { organisationId: uuid } })
 }))
 @Table({
@@ -24,10 +23,6 @@ import { Organisation } from "./organisation.entity";
 })
 export class FundingType extends Model<FundingType> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingType";
-
-  static organisation(id: number) {
-    return chainScope(this, "organisation", id) as typeof FundingType;
-  }
 
   static organisationByUuid(uuid: string) {
     return chainScope(this, "organisationByUuid", uuid) as typeof FundingType;

@@ -8,6 +8,7 @@ import { OrganisationCreationService } from "./organisation-creation.service";
 import { ApiOperation } from "@nestjs/swagger";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { Organisation } from "@terramatch-microservices/database/entities";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -28,6 +29,8 @@ export class OrganisationsController {
   @ExceptionResponse(UnauthorizedException, { description: "Organisation creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "One or more attributes are invalid or missing." })
   async create(@Body() payload: OrganisationCreateBody) {
+    await this.policyService.authorize("create", Organisation);
+
     const { user, organisation } = await this.organisationCreationService.createNewOrganisation(
       payload.data.attributes
     );

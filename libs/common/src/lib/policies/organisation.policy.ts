@@ -4,6 +4,10 @@ import { Organisation, User } from "@terramatch-microservices/database/entities"
 
 export class OrganisationPolicy extends UserPermissionsPolicy {
   async addRules() {
+    if (this.permissions.includes("users-manage")) {
+      this.builder.can("create", Organisation);
+    }
+
     const user = await this.getUser();
     if (user != null) {
       this.builder.can("uploadFiles", Organisation, { id: user.organisationId, status: "approved" });

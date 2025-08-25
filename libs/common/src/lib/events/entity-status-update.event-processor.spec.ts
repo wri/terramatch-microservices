@@ -3,6 +3,7 @@ import * as FakeTimers from "@sinonjs/fake-timers";
 import { EventService } from "./event.service";
 import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import {
+  FinancialReportFactory,
   NurseryReportFactory,
   ProjectFactory,
   ProjectReportFactory,
@@ -151,6 +152,16 @@ describe("EntityStatusUpdate EventProcessor", () => {
       const logSpy = jest.spyOn((handler as any).logger, "warn");
       await handler.handle();
       expect(logSpy).toHaveBeenCalledWith(expect.stringMatching("No task found for status changed report"));
+    });
+
+    it("should skip task status check for FinancialReport (which has no taskId)", async () => {
+      const financialReport = await FinancialReportFactory.create({ status: AWAITING_APPROVAL });
+      const handler = createHandler(financialReport);
+      const logSpy = jest.spyOn((handler as any).logger, "warn");
+      await handler.handle();
+      expect(logSpy).toHaveBeenCalledWith(
+        `Skipping task status check for model without taskId [${financialReport.constructor.name}, ${financialReport.id}]`
+      );
     });
 
     it("should log a warning if the task for the ID is not found", async () => {

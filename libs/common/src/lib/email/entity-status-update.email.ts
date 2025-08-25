@@ -12,6 +12,7 @@ import {
 } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary, groupBy, isEmpty } from "lodash";
 import {
+  FinancialReport,
   ProjectReport,
   ProjectUser,
   SiteReport,
@@ -107,6 +108,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
   private getParentName(report: ReportModel) {
     if (report instanceof ProjectReport) return report.projectName;
     if (report instanceof SiteReport) return report.siteName;
+    if (report instanceof FinancialReport) return report.organisationName;
     return report.nurseryName;
   }
 

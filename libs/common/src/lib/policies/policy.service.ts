@@ -17,6 +17,7 @@ import {
   AuditStatus,
   ImpactStory,
   FinancialIndicator,
+  FinancialReport,
   Form,
   FormQuestionOption,
   FundingProgramme,
@@ -40,6 +41,7 @@ import { TaskPolicy } from "./task.policy";
 import { DemographicPolicy } from "./demographic.policy";
 import { AuditStatusPolicy } from "./audit-status.policy";
 import { FinancialIndicatorPolicy } from "./financial-indicator.policy";
+import { FinancialReportPolicy } from "./financial-report.policy";
 import { FormPolicy } from "./form.policy";
 import { FormQuestionOptionPolicy } from "./form-question-option.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
@@ -63,6 +65,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Disturbance, DisturbancePolicy],
   [ImpactStory, ImpactStoryPolicy],
   [FinancialIndicator, FinancialIndicatorPolicy],
+  [FinancialReport, FinancialReportPolicy],
   [Form, FormPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],

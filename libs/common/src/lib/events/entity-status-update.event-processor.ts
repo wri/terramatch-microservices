@@ -153,7 +153,16 @@ export class EntityStatusUpdate extends EventProcessor {
   }
 
   private async checkTaskStatus() {
-    const { taskId } = this.model as ReportModel;
+    if (!("taskId" in this.model)) {
+      this.logger.warn(
+        `Skipping task status check for model without taskId [${this.model.constructor.name}, ${this.model.id}]`
+      );
+      return;
+    }
+    // Special case for financial report: it has no taskId
+    const modelWithTaskId = this.model as ReportModel & { taskId: number | null };
+    const { taskId } = modelWithTaskId;
+
     if (taskId == null) {
       this.logger.warn(`No task found for status changed report [${this.model.constructor.name}, ${this.model.id}]`);
       return;

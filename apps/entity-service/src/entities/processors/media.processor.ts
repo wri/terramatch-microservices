@@ -5,7 +5,8 @@ import {
   Site,
   SiteReport,
   Nursery,
-  NurseryReport
+  NurseryReport,
+  FinancialReport
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "../dto/media.dto";
 import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/database/constants/entities";
@@ -119,6 +120,11 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return models;
   }
 
+  private async getFinancialReportModels(financialReport: FinancialReport) {
+    const models: QueryModelType[] = this.getBaseEntityModels(financialReport);
+    return models;
+  }
+
   _queryBuilder: PaginatedQueryBuilder<Media> | null = null;
   private async getQueryBuilder() {
     if (this._queryBuilder != null) return this._queryBuilder;
@@ -140,6 +146,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       models = await this.getNurseryModels(baseEntity);
     } else if (baseEntity instanceof ProjectReport) {
       models = await this.getProjectReportModels(baseEntity);
+    } else if (baseEntity instanceof FinancialReport) {
+      models = await this.getFinancialReportModels(baseEntity);
     } else {
       models = this.getBaseEntityModels(baseEntity);
     }

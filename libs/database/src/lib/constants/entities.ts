@@ -1,17 +1,18 @@
-import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
+import { FinancialReport, Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";
 
-export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports"] as const;
+export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports", "financialReports"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
-export type ReportModel = ProjectReport | SiteReport | NurseryReport;
+export type ReportModel = ProjectReport | SiteReport | NurseryReport | FinancialReport;
 export type ReportClass<T extends ReportModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
   projectReports: ProjectReport,
   siteReports: SiteReport,
-  nurseryReports: NurseryReport
+  nurseryReports: NurseryReport,
+  financialReports: FinancialReport
 };
 
 export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] as const;
@@ -41,7 +42,12 @@ export async function getProjectId(entity: EntityModel) {
   if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
 
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;
-  const parentId = entity instanceof SiteReport ? entity.siteId : entity.nurseryId;
+  const parentId =
+    entity instanceof SiteReport
+      ? entity.siteId
+      : entity instanceof FinancialReport
+      ? entity.organisationId
+      : entity.nurseryId;
   return (await parentClass.findOne({ where: { id: parentId }, attributes: ["projectId"] }))?.projectId;
 }
 

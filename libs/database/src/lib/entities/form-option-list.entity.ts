@@ -12,7 +12,7 @@ export class FormOptionList extends Model<FormOptionList> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @Column(STRING)
   @Unique
+  @Column(STRING)
   key: string;
 }

@@ -23,17 +23,17 @@ export class OptionLabelsController {
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
   @ExceptionResponse(BadRequestException, { description: "Set of slugs is required" })
   @ExceptionResponse(NotFoundException, { description: "No records matching the given slugs exist" })
-  async optionLabelsIndex(@Query("slugs") slugs: string[], @Request() { authenticatedUserId }) {
-    if (isEmpty(slugs)) throw new BadRequestException("Set of slugs is required");
+  async optionLabelsIndex(@Query("ids") ids: string[], @Request() { authenticatedUserId }) {
+    if (isEmpty(ids)) throw new BadRequestException("Set of ids is required");
     const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const listOptions = (await FormOptionListOption.findAll({
-      where: { slug: slugs },
+      where: { slug: ids },
       attributes: ["slug", "label", "labelId", "imageUrl"]
     })) as OptionLabelModel[];
 
-    const missingSlugs = filter(slugs, slug => !listOptions.some(option => option.slug === slug));
+    const missingSlugs = filter(ids, slug => !listOptions.some(option => option.slug === slug));
     const formQuestions =
       missingSlugs.length === 0
         ? []
@@ -43,7 +43,7 @@ export class OptionLabelsController {
           })) as OptionLabelModel[]);
 
     if (listOptions.length === 0 && formQuestions.length === 0) {
-      throw new NotFoundException("No records matching the given slugs exist");
+      throw new NotFoundException("No records matching the given ids exist");
     }
 
     const options = uniqBy([...listOptions, ...formQuestions], "slug");
@@ -56,7 +56,7 @@ export class OptionLabelsController {
 
     document.addIndexData({
       resource: getDtoType(OptionLabelDto),
-      requestPath: `/forms/v3/optionLabels${getStableRequestQuery({ slugs })}`,
+      requestPath: `/forms/v3/optionLabels${getStableRequestQuery({ ids })}`,
       ids: indexIds
     });
 

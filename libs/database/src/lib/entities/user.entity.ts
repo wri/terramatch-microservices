@@ -23,6 +23,7 @@ import { ProjectUser } from "./project-user.entity";
 import { Organisation } from "./organisation.entity";
 import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
+import { ValidLocale } from "../constants/locale";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
@@ -127,7 +128,7 @@ export class User extends Model<User> {
   program: string | null;
 
   @Column(STRING)
-  locale: string;
+  locale: ValidLocale;
 
   @BelongsToMany(() => Role, {
     foreignKey: "modelId",

@@ -14,7 +14,7 @@ import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-mic
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
-type OptionLabelModel = { slug: string; label: string | null; labelId: number | null; imageUrl: string | null };
+export type OptionLabelModel = { slug: string; label: string | null; labelId: number | null; imageUrl: string | null };
 
 @Controller("forms/v3/optionLabels")
 export class OptionLabelsController {

@@ -6,6 +6,7 @@ import { Dictionary, isString } from "lodash";
 import { LocalizationService } from "../localization/localization.service";
 import { User } from "@terramatch-microservices/database/entities";
 import { TemplateService } from "../templates/template.service";
+import { JwtService } from "@nestjs/jwt";
 
 type I18nEmailOptions = {
   i18nReplacements?: Dictionary<string>;
@@ -21,7 +22,8 @@ export class EmailService {
   constructor(
     private readonly configService: ConfigService,
     private readonly localizationService: LocalizationService,
-    private readonly templateService: TemplateService
+    private readonly templateService: TemplateService,
+    readonly jwtService: JwtService
   ) {
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>("MAIL_HOST"),

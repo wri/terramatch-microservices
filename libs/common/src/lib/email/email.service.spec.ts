@@ -6,6 +6,7 @@ import * as nodemailer from "nodemailer";
 import { LocalizationService } from "../localization/localization.service";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import { TemplateService } from "../templates/template.service";
+import { JwtService } from "@nestjs/jwt";
 
 jest.mock("nodemailer");
 
@@ -25,7 +26,8 @@ describe("EmailService", () => {
         EmailService,
         { provide: ConfigService, useValue: (configService = createMock<ConfigService>()) },
         { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
-        { provide: TemplateService, useValue: (templateService = createMock<TemplateService>()) }
+        { provide: TemplateService, useValue: (templateService = createMock<TemplateService>()) },
+        { provide: JwtService, useValue: createMock<JwtService>() }
       ]
     }).compile();
 

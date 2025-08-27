@@ -1,6 +1,7 @@
 import { LinkedFieldConfiguration } from "../types";
 import { ProjectPitch } from "@terramatch-microservices/database/entities";
 
+// Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
 export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
   label: "Project Pitch",
   laravelModelType: ProjectPitch.LARAVEL_TYPE,

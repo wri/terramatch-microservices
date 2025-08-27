@@ -1,6 +1,7 @@
 import { LinkedFieldConfiguration } from "../types";
 import { Organisation } from "@terramatch-microservices/database/entities";
 
+// Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
 export const OrganisationConfiguration: LinkedFieldConfiguration = {
   label: "Organisation",
   laravelModelType: Organisation.LARAVEL_TYPE,

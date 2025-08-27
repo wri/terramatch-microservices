@@ -385,10 +385,6 @@ export class Project extends Model<Project> {
   @Column(STRING)
   shortName: string | null;
 
-  @AllowNull
-  @Column({ type: STRING, values: PLANTING_STATUSES })
-  plantingStatus: PlantingStatus | null;
-
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

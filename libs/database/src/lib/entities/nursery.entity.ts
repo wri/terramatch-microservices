@@ -131,10 +131,6 @@ export class Nursery extends Model<Nursery> {
   @Column(STRING)
   oldModel: string | null;
 
-  @AllowNull
-  @Column({ type: STRING, values: PLANTING_STATUSES })
-  plantingStatus: PlantingStatus | null;
-
   @BelongsTo(() => Project)
   project: Project | null;
 

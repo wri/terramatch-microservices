@@ -249,10 +249,6 @@ export class Site extends Model<Site> {
   @JsonColumn()
   detailedInterventionTypes: string[] | null;
 
-  @AllowNull
-  @Column({ type: STRING, values: PLANTING_STATUSES })
-  plantingStatus: PlantingStatus | null;
-
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

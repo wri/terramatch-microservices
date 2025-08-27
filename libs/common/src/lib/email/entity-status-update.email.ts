@@ -150,6 +150,12 @@ export class EntityStatusUpdateEmail extends EmailSender {
   }
 
   private async getEntityUsers(entity: EntityModel) {
+    // FinancialReport does not have a projectId, so we skip sending emails
+    if (entity instanceof FinancialReport) {
+      this.logger.log(`Skipping email notification for FinancialReport - no project association`);
+      return [];
+    }
+
     const projectId = await getProjectId(entity);
     if (projectId == null) {
       this.logger.error(`Could not find project ID for entity [type=${entity.constructor.name}, id=${entity.id}]`);

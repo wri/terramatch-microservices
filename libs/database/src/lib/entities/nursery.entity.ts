@@ -25,7 +25,7 @@ import {
 } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
-import { FrameworkKey, PLANTING_STATUSES, PlantingStatus } from "../constants";
+import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 

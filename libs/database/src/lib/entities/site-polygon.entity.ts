@@ -17,7 +17,7 @@ import { Site } from "./site.entity";
 import { PointGeometry } from "./point-geometry.entity";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { User } from "./user.entity";
-import { INDICATOR_SLUGS, PLANTING_STATUSES, PlantingStatus, POLYGON_STATUSES, PolygonStatus } from "../constants";
+import { INDICATOR_SLUGS, POLYGON_STATUSES, PolygonStatus } from "../constants";
 import { IndicatorOutputFieldMonitoring } from "./indicator-output-field-monitoring.entity";
 import { IndicatorOutputHectares } from "./indicator-output-hectares.entity";
 import { IndicatorOutputMsuCarbon } from "./indicator-output-msu-carbon.entity";

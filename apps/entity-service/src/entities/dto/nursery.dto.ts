@@ -98,13 +98,6 @@ export class NurseryFullDto extends NurseryLightDto {
   @ApiProperty({ nullable: true, type: String })
   oldModel: string | null;
 
-  @ApiProperty({
-    nullable: true,
-    description: "Planting status for this nursery",
-    enum: PLANTING_STATUSES
-  })
-  plantingStatus: PlantingStatus | null;
-
   @ApiProperty({ nullable: true, type: Number })
   nurseryReportsTotal: number | null;
 

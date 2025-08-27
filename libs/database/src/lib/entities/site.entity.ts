@@ -27,7 +27,7 @@ import {
 } from "../constants/status";
 import { SitingStrategy } from "../constants/entity-selects";
 import { Seeding } from "./seeding.entity";
-import { FrameworkKey, PLANTING_STATUSES, PlantingStatus } from "../constants";
+import { FrameworkKey } from "../constants";
 import { Framework } from "./framework.entity";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";

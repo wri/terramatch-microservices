@@ -92,7 +92,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
     "pro-county-district": { property: "project_county_district", label: "Project District", inputType: "text" },
     "pro-desc-of-proj-timeline": {
       property: "description_of_project_timeline",
-      label: "Key stages of this project's implementation",
+      label: "Key stages of this project’s implementation",
       inputType: "long-text"
     },
     "pro-siting-strategy-description": {
@@ -308,7 +308,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
     },
     "pro-col-programme-submission": {
       property: "programme_submission",
-      label: "Programme Submission",
+      label: "programme_submission",
       inputType: "file",
       multiChoice: true
     },
@@ -320,7 +320,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
     },
     "pro-col-proof-of-land-tenure-mou": {
       property: "proof_of_land_tenure_mou",
-      label: "Documentation on project area's land tenure",
+      label: "Documentation on project area’s land tenure",
       inputType: "file",
       multiChoice: true
     }

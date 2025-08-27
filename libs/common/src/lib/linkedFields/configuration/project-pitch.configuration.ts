@@ -7,7 +7,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
   fields: {
     "pro-pit-name": { property: "project_name", label: "Name", inputType: "text" },
     "pro-pit-objectives": { property: "project_objectives", label: "Objectives", inputType: "long-text" },
-    "pro-pit-district": { property: "project_county_district", label: "County District", inputType: "text" },
+    "pro-pit-district": { property: "project_county_district", label: "County district", inputType: "text" },
     "pro-pit-country": {
       property: "project_country",
       label: "Country",

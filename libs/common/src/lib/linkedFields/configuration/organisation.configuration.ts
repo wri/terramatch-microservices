@@ -28,7 +28,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
     "org-hq-zip": { property: "hq_zipcode", label: "HQ zipcode", inputType: "text" },
     "org-hq-country": {
       property: "hq_country",
-      label: "HQ Country",
+      label: "HQ country",
       inputType: "select",
       multiChoice: false,
       optionListKey: "gadm-level-0"
@@ -504,8 +504,8 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       optionListKey: "territories-of-operation-collection"
     },
     "org-decisionmaking-structure-description": {
-      property: "descisionmaking_structure_description",
-      label: "Organization's decision-making structure",
+      property: "decisionmaking_structure_description",
+      label: "Organization’s decision-making structure",
       inputType: "long-text"
     },
     "org-decisionmaking-structure-individuals-involved": {
@@ -563,7 +563,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       inputType: "text"
     }
   },
-
   fileCollections: {
     "org-fcol-cover": { property: "cover", label: "Cover image", inputType: "file", multiChoice: false },
     "org-fcol-lgl-reg": {
@@ -684,7 +683,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       multiChoice: true
     }
   },
-
   relations: {
     "org-funding-types": {
       property: "fundingTypes",

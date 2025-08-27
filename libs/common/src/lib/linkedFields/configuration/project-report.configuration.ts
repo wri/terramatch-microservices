@@ -129,7 +129,7 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
       label: "Beneficiaries Income Increase",
       inputType: "number"
     },
-    "pro-rep-beneificaries-income-desc": {
+    "pro-rep-beneficiaries-income-desc": {
       property: "beneficiaries_income_increase_description",
       label: "Beneficiaries Income Increase Description",
       inputType: "long-text"
@@ -209,7 +209,7 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
       label: "Community Partners Marginalized Farmers",
       inputType: "number"
     },
-    "pro-rep-beneficiaries-scstobc": {
+    "pro-rep-beneficiaries_scstobc": {
       property: "beneficiaries_scstobc",
       label: "Community Partners Marginalized",
       inputType: "number"

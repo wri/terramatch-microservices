@@ -1,7 +1,7 @@
 import { LinkedFieldConfiguration } from "../types";
 import { Organisation } from "@terramatch-microservices/database/entities";
 
-export const OrganisationConfig: LinkedFieldConfiguration = {
+export const OrganisationConfiguration: LinkedFieldConfiguration = {
   label: "Organisation",
   laravelModelType: Organisation.LARAVEL_TYPE,
   fields: {

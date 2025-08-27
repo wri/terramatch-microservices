@@ -47,14 +47,14 @@ export class UserEntity extends AirtableEntity<UserWithUuid, UserAssociations> {
     const associations: Record<number, UserAssociations> = {};
     await Promise.all(
       users.map(async user => {
-        const orgs = await user.$get("organisations");
+        const orgs = await user.$get("organisations", { attributes: ["uuid"] });
         associations[user.id] = {
           primaryOrganisationUuid: (await user.primaryOrganisation())?.uuid,
           monitoringOrganisationUuids: orgs
             .filter(({ OrganisationUser }) => OrganisationUser.status === "approved")
             .map(({ uuid }) => uuid),
           frameworks: (await user.myFrameworks()).map(({ slug }) => slug),
-          projectUuids: (await user.$get("projects")).map(({ uuid }) => uuid)
+          projectUuids: (await user.$get("projects", { attributes: ["uuid"] })).map(({ uuid }) => uuid)
         };
       })
     );

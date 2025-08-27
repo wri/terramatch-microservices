@@ -3,11 +3,19 @@ import { FinancialReportConfiguration } from "./financial-report.configuration";
 import { ProjectPitchConfiguration } from "./project-pitch.configuration";
 import { ProjectConfiguration } from "./project.configuration";
 import { ProjectReportConfiguration } from "./project-report.configuration";
+import { SiteConfiguration } from "./site.configuration";
+import { SiteReportConfiguration } from "./site-report.configuration";
+import { NurseryConfiguration } from "./nursery.configuration";
+import { NurseryReportConfiguration } from "./nursery-report.configuration";
 
 export const LinkedFieldsConfiguration = {
   organisation: OrganisationConfiguration,
   financialReport: FinancialReportConfiguration,
+  nursery: NurseryConfiguration,
+  nurseryReport: NurseryReportConfiguration,
   project: ProjectConfiguration,
   projectPitch: ProjectPitchConfiguration,
-  projectReport: ProjectReportConfiguration
+  projectReport: ProjectReportConfiguration,
+  site: SiteConfiguration,
+  siteReport: SiteReportConfiguration
 } as const;

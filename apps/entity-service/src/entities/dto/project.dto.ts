@@ -11,7 +11,6 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { PLANTING_STATUSES, PlantingStatus } from "@terramatch-microservices/database/constants/planting-status";
 
 @JsonApiDto({ type: "projects" })
 export class ProjectLightDto extends EntityDto {

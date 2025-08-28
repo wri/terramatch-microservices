@@ -4,7 +4,7 @@ import { FinancialReport, User } from "@terramatch-microservices/database/entiti
 export class FinancialReportPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete"], FinancialReport, {
+      this.builder.can(["read", "delete", "update", "approve"], FinancialReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -12,14 +12,14 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
-        this.builder.can(["read", "delete"], FinancialReport, {
+        this.builder.can(["read", "delete", "update", "approve"], FinancialReport, {
           organisationId: user.organisationId
         });
       }
     }
 
     if (this.permissions.includes("reports-manage")) {
-      this.builder.can(["read", "delete"], FinancialReport);
+      this.builder.can(["read", "delete", "update", "approve"], FinancialReport);
     }
   }
 

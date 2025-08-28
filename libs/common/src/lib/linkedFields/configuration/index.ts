@@ -7,10 +7,22 @@ import { SiteConfiguration } from "./site.configuration";
 import { SiteReportConfiguration } from "./site-report.configuration";
 import { NurseryConfiguration } from "./nursery.configuration";
 import { NurseryReportConfiguration } from "./nursery-report.configuration";
-import { Dictionary } from "lodash";
 import { LinkedFieldConfiguration } from "../types";
 
-export const LinkedFieldsConfiguration: Dictionary<LinkedFieldConfiguration> = {
+export const FORM_TYPES = [
+  "organisation",
+  "financialReport",
+  "nursery",
+  "nurseryReport",
+  "project",
+  "projectPitch",
+  "projectReport",
+  "site",
+  "siteReport"
+] as const;
+export type FormType = (typeof FORM_TYPES)[number];
+
+export const LinkedFieldsConfiguration: Record<FormType, LinkedFieldConfiguration> = {
   organisation: OrganisationConfiguration,
   financialReport: FinancialReportConfiguration,
   nursery: NurseryConfiguration,

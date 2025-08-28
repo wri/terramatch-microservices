@@ -163,24 +163,36 @@ function buildSchema(options: JsonApiOptions) {
         description:
           "The full stable (sorted query param) request path for this request, suitable for use as a store key in the FE React app"
       },
-      total: { type: "number", description: "The total number of records available.", example: 42 }
+      // Ids are only required if this index is for a sideloaded resource.
+      ids: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "The ordered set of resource IDs for this index. If this is omitted, the ids in the main `data` object of the response should be used.",
+        required: false
+      }
     };
     if (pagination === "cursor") {
       properties["cursor"] = {
         type: "string",
         description: "The cursor for the first record on this page."
       };
+      properties["total"] = { type: "number", description: "The total number of records available.", example: 42 };
     } else if (pagination === "number") {
       properties["pageNumber"] = {
         type: "number",
         description: "The current page number."
       };
+      properties["total"] = { type: "number", description: "The total number of records available.", example: 42 };
+    } else {
+      // Total is not required if this is not a paginated endpoint.
+      properties["total"] = {
+        type: "number",
+        description: "The total number of records available.",
+        example: 42,
+        required: false
+      };
     }
-    properties["ids"] = {
-      type: "array",
-      items: { type: "string" },
-      description: "The ordered set of resource IDs for this page of this index search."
-    };
     addMeta(document, "indices", { type: "array", items: { type: "object", properties } });
   }
 

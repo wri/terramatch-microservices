@@ -10,7 +10,7 @@ import {
   I18nTranslation,
   User
 } from "@terramatch-microservices/database/entities";
-import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
@@ -48,19 +48,11 @@ export class OptionLabelsController {
 
     const options = uniqBy([...listOptions, ...formQuestions], "slug");
     const document = buildJsonApi<OptionLabelDto>(OptionLabelDto, { forceDataArray: true });
-    const indexIds: string[] = [];
     for (const dto of await this.getOptionLabelDtos(options, locale)) {
-      indexIds.push(dto.slug);
       document.addData(dto.slug, dto);
     }
 
-    document.addIndexData({
-      resource: getDtoType(OptionLabelDto),
-      requestPath: `/forms/v3/optionLabels${getStableRequestQuery({ ids })}`,
-      ids: indexIds
-    });
-
-    return document.serialize();
+    return document.addIndex({ requestPath: `/forms/v3/optionLabels${getStableRequestQuery({ ids })}` }).serialize();
   }
 
   private async getOptionLabelDtos(listOptions: OptionLabelModel[], locale: ValidLocale) {

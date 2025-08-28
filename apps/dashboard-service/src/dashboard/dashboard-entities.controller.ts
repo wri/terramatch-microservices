@@ -1,35 +1,28 @@
-import { Controller, Get, Param, Query, NotFoundException, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Param, Query, UseInterceptors } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
-import { JsonApiResponse, ExceptionResponse } from "@terramatch-microservices/common/decorators";
-import {
-  buildJsonApi,
-  getStableRequestQuery,
-  getDtoType
-} from "@terramatch-microservices/common/util/json-api-builder";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { PolicyService } from "@terramatch-microservices/common";
 import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsFullDto, DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
-import { DashboardImpactStoryLightDto } from "./dto/dashboard-impact-story.dto";
+import { DashboardImpactStoryFullDto, DashboardImpactStoryLightDto } from "./dto/dashboard-impact-story.dto";
 import { DashboardSitePolygonsLightDto } from "./dto/dashboard-sitepolygons.dto";
 import { UserContextInterceptor } from "./interceptors/user-context.interceptor";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
-import { Project } from "@terramatch-microservices/database/entities";
+import { ImpactStory, Media, Project } from "@terramatch-microservices/database/entities";
 import {
   DASHBOARD_ENTITIES,
-  DASHBOARD_PROJECTS,
   DASHBOARD_IMPACT_STORIES,
+  DASHBOARD_PROJECTS,
   DASHBOARD_SITEPOLYGONS,
   DashboardEntity
 } from "./constants/dashboard-entities.constants";
 import { DashboardImpactStoryService } from "./dashboard-impact-story.service";
-import { Media } from "@terramatch-microservices/database/entities";
-import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createOrganisationUrls } from "./utils/organisation.utils";
-import { DashboardImpactStoryFullDto } from "./dto/dashboard-impact-story.dto";
 
 @Controller("dashboard/v3")
 @UseInterceptors(UserContextInterceptor)
@@ -73,7 +66,6 @@ export class DashboardEntitiesController {
         return { data: plainData, total: plainData.length };
       });
       const document = buildJsonApi(DashboardImpactStoryLightDto, { pagination: "number" });
-      const indexIds: string[] = [];
       for (const impactStory of data) {
         const org = impactStory.organisation;
         const organisation =
@@ -109,16 +101,14 @@ export class DashboardEntitiesController {
         });
 
         document.addData(dto.uuid, dto);
-        indexIds.push(dto.uuid);
       }
-      document.addIndexData({
-        resource: getDtoType(DashboardImpactStoryLightDto),
-        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-        ids: indexIds,
-        total,
-        pageNumber: 1
-      });
-      return document.serialize();
+      return document
+        .addIndex({
+          requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+          total,
+          pageNumber: 1
+        })
+        .serialize();
     }
 
     if (entity === DASHBOARD_PROJECTS) {
@@ -154,23 +144,20 @@ export class DashboardEntitiesController {
         return { data: rawData, total };
       });
       const document = buildJsonApi(DtoClass, { pagination: "number" });
-      const indexIds: string[] = [];
       for (const { id, model, computedData } of data) {
         const dto =
           typeof computedData !== "undefined" && computedData !== null
             ? new DtoClass(model, computedData)
             : new DtoClass(model);
         document.addData(id, dto);
-        indexIds.push(id);
       }
-      document.addIndexData({
-        resource: getDtoType(DtoClass),
-        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-        ids: indexIds,
-        total,
-        pageNumber: 1
-      });
-      return document.serialize();
+      return document
+        .addIndex({
+          requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+          total,
+          pageNumber: 1
+        })
+        .serialize();
     }
 
     if (entity === DASHBOARD_SITEPOLYGONS) {
@@ -190,20 +177,16 @@ export class DashboardEntitiesController {
         return { data: rawData, total: rawData.length };
       });
       const document = buildJsonApi(DtoClass, { pagination: "number" });
-      const indexIds: string[] = [];
       for (const { id, model } of data) {
-        const dto = new DtoClass(model);
-        document.addData(id, dto);
-        indexIds.push(id);
+        document.addData(id, new DtoClass(model));
       }
-      document.addIndexData({
-        resource: getDtoType(DtoClass),
-        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-        ids: indexIds,
-        total,
-        pageNumber: 1
-      });
-      return document.serialize();
+      return document
+        .addIndex({
+          requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+          total,
+          pageNumber: 1
+        })
+        .serialize();
     }
 
     throw new NotFoundException(`Entity type ${entity} is not supported for listing`);

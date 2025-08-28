@@ -26,23 +26,20 @@ export class ProjectPitchesController {
   async projectPitchIndex(@Query() params: ProjectPitchQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.projectPitchService.getProjectPitches(params);
     const document = buildJsonApi(ProjectPitchDto, { pagination: "number" });
-    const indexIds: string[] = [];
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const pitch of data) {
-        indexIds.push(pitch.uuid);
         const pitchDto = new ProjectPitchDto(pitch);
         document.addData(pitchDto.uuid, pitchDto);
       }
     }
-    document.addIndexData({
-      resource: "projectPitches",
-      requestPath: `/entities/v3/projectPitches${getStableRequestQuery(params)}`,
-      ids: indexIds,
-      total: paginationTotal,
-      pageNumber: pageNumber
-    });
-    return document.serialize();
+    return document
+      .addIndex({
+        requestPath: `/entities/v3/projectPitches${getStableRequestQuery(params)}`,
+        total: paginationTotal,
+        pageNumber: pageNumber
+      })
+      .serialize();
   }
 
   @Get(":uuid")

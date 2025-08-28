@@ -33,11 +33,9 @@ export class DemographicsController {
   async demographicsIndex(@Query() params: DemographicQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.demographicService.getDemographics(params);
     const document = buildJsonApi(DemographicDto, { pagination: "number" });
-    const indexIds: string[] = [];
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const demographic of data) {
-        indexIds.push(demographic.uuid);
         const { demographicalType: laravelType, demographicalId } = demographic;
         const model = LARAVEL_MODELS[laravelType];
         if (model == null) {
@@ -51,17 +49,15 @@ export class DemographicsController {
         }
         const entityType = LARAVEL_MODEL_TYPES[laravelType];
         const additionalProps = { entityType, entityUuid: entity.uuid };
-        const demographicDto = new DemographicDto(demographic, additionalProps);
-        document.addData(demographicDto.uuid, demographicDto);
+        document.addData(demographic.uuid, new DemographicDto(demographic, additionalProps));
       }
     }
-    document.addIndexData({
-      resource: "demographics",
-      requestPath: `/entities/v3/demographics${getStableRequestQuery(params)}`,
-      ids: indexIds,
-      total: paginationTotal,
-      pageNumber: pageNumber
-    });
-    return document.serialize();
+    return document
+      .addIndex({
+        requestPath: `/entities/v3/demographics${getStableRequestQuery(params)}`,
+        total: paginationTotal,
+        pageNumber: pageNumber
+      })
+      .serialize();
   }
 }

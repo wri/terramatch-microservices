@@ -127,7 +127,7 @@ export type SerializeOptions = {
 export type IndexData = {
   resource: string;
   requestPath: string;
-  ids: string[];
+  ids?: string[];
   total?: number;
   cursor?: string;
   pageNumber?: number;
@@ -162,8 +162,13 @@ export class DocumentBuilder {
     return builder;
   }
 
-  addIndexData(indexData: IndexData): DocumentBuilder {
-    this.indexData.push(indexData);
+  addIndex(indexData: Omit<IndexData, "resource"> & { resource?: string }): DocumentBuilder {
+    const resource = indexData.resource ?? this.resourceType;
+    const ids = resource === this.resourceType ? undefined : indexData.ids;
+    if (resource !== this.resourceType && ids == null) {
+      throw new ApiBuilderException(`Sideloaded indices must have an ids array`);
+    }
+    this.indexData.push({ ...indexData, resource, ids });
     return this;
   }
 

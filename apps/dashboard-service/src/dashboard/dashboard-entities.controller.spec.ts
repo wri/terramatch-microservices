@@ -7,7 +7,7 @@ import { DashboardSitePolygonsProcessor } from "./processors/dashboard-sitepolyg
 import { CacheService } from "./dto/cache.service";
 import { DashboardEntityParamsDto, DashboardEntityWithUuidDto } from "./dto/dashboard-entity.dto";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
+import { DashboardProjectsFullDto, DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { DashboardSitePolygonsLightDto } from "./dto/dashboard-sitepolygons.dto";
 import { Project, SitePolygon } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -37,7 +37,7 @@ jest.mock("./dashboard-query.builder");
 jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
   buildJsonApi: jest.fn().mockImplementation(() => ({
     addData: jest.fn().mockReturnThis(),
-    addIndexData: jest.fn().mockReturnThis(),
+    addIndex: jest.fn().mockReturnThis(),
     serialize: jest.fn().mockReturnValue({
       data: [],
       included: [],
@@ -69,6 +69,13 @@ describe("DashboardEntitiesController", () => {
   let app: INestApplication;
   let jwtService: DeepMocked<JwtService>;
   let mockQueryBuilder: jest.Mocked<DashboardProjectsQueryBuilder>;
+
+  const mockCacheServiceGet = () => {
+    // Fix the cache mock to return the correct structure
+    cacheService.get.mockImplementation(async (cacheKey, factory) =>
+      factory == null ? { data: [], total: 0 } : await factory()
+    );
+  };
 
   beforeEach(async () => {
     // Setup mock query builder
@@ -192,14 +199,7 @@ describe("DashboardEntitiesController", () => {
       }
     ];
 
-    // Fix the cache mock to return the correct structure
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     // Mock the processor methods since we're using a real processor instance
     jest.spyOn(mockProcessor, "findMany").mockResolvedValue(mockModels);
@@ -353,13 +353,7 @@ describe("DashboardEntitiesController", () => {
       }
     ] as Project[];
 
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     jest.spyOn(mockProcessor, "findMany").mockResolvedValue(mockModels);
     jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue({
@@ -408,13 +402,7 @@ describe("DashboardEntitiesController", () => {
   it("should handle impact stories entity", async () => {
     const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
     const query: DashboardQueryDto = { country: "KEN" };
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -494,13 +482,7 @@ describe("DashboardEntitiesController", () => {
     ] as unknown as ImpactStory[];
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -528,13 +510,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -567,13 +543,7 @@ describe("DashboardEntitiesController", () => {
     const mockMedia = [{ id: 1, modelId: 1 }] as Media[];
     jest.spyOn(Media, "findAll").mockResolvedValue(mockMedia);
     mediaService.getUrl.mockReturnValue("http://example.com/thumb.jpg");
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -598,13 +568,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -632,13 +596,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -675,13 +633,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 
@@ -772,14 +724,7 @@ describe("DashboardEntitiesController", () => {
     );
     mockProcessor.findMany.mockResolvedValue([mockSitePolygon]);
     mockProcessor.getLightDto.mockResolvedValue(mockDtoResult);
-
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     const result = await controller.findAll(params.entity, query);
 

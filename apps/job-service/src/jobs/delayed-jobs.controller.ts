@@ -12,7 +12,7 @@ import {
 import { ApiOperation } from "@nestjs/swagger";
 import { Op } from "sequelize";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, getDtoType, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -44,13 +44,10 @@ export class DelayedJobsController {
     );
 
     const document = buildJsonApi(DelayedJobDto, { forceDataArray: true });
-    const indexIds: string[] = [];
     jobsWithEntityNames.forEach(job => {
-      indexIds.push(job.uuid);
       document.addData(job.uuid, populateDto(new DelayedJobDto(), job));
     });
-    document.addIndexData({ resource: getDtoType(DelayedJobDto), requestPath: "/jobs/v3/delayedJobs", ids: indexIds });
-    return document.serialize();
+    return document.addIndex({ requestPath: "/jobs/v3/delayedJobs" }).serialize();
   }
 
   @Get(":uuid")

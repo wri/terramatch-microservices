@@ -35,25 +35,21 @@ export class TasksController {
   async taskIndex(@Query() query: TaskQueryDto) {
     const { tasks, total } = await this.tasksService.getTasks(query);
     const document = buildJsonApi(TaskLightDto, { pagination: "number" });
-    const indexIds: string[] = [];
     if (tasks.length !== 0) {
       await this.policyService.authorize("read", tasks);
 
       for (const task of tasks) {
-        indexIds.push(task.uuid);
         document.addData(task.uuid, new TaskLightDto(task));
       }
     }
 
-    document.addIndexData({
-      resource: "tasks",
-      requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
-      ids: indexIds,
-      total,
-      pageNumber: query.page?.number ?? 1
-    });
-
-    return document.serialize();
+    return document
+      .addIndex({
+        requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
+        total,
+        pageNumber: query.page?.number ?? 1
+      })
+      .serialize();
   }
 
   @Get(":uuid")

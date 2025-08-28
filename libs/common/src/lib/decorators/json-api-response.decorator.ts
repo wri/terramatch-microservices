@@ -155,7 +155,7 @@ function buildSchema(options: JsonApiOptions) {
     }
   }
 
-  if (pagination != null) {
+  if (pagination != null || hasMany) {
     const properties: Dictionary<object> = {
       resource: { type: "string", description: "The resource type for this included index" },
       requestPath: {

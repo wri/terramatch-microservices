@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsOptional } from "class-validator";
+import { Type } from "class-transformer";
 import { IndexQueryDto } from "./index-query.dto";
 import { ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
 
@@ -27,9 +28,11 @@ export class ImpactStoryQueryDto extends IndexQueryDto {
   @IsOptional()
   projectUuid?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, isArray: true })
   @IsOptional()
-  category?: string;
+  @IsArray()
+  @Type(() => Array)
+  category?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()

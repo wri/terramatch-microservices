@@ -38,7 +38,7 @@ export class ImpactStory extends Model<ImpactStory> {
   date: string;
 
   @JsonColumn()
-  category: string;
+  category: string[];
 
   @Column(STRING)
   thumbnail: string;

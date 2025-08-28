@@ -207,17 +207,82 @@ describe("ImpactStoryService", () => {
     it("should handle category filter", async () => {
       const query: ImpactStoryQueryDto = {
         page: { number: 1 },
-        category: "test"
+        category: ["test"]
       };
 
       await service.getImpactStories(query);
       expect(ImpactStory.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            category: expect.any(Object)
+            [Op.or]: expect.any(Array)
           })
         })
       );
+    });
+
+    it("should handle sort by id", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        sort: { field: "id", direction: "DESC" }
+      };
+
+      await service.getImpactStories(query);
+      expect(ImpactStory.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: [["id", "DESC"]]
+        })
+      );
+    });
+
+    it("should handle sort by title", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        sort: { field: "title", direction: "ASC" }
+      };
+
+      await service.getImpactStories(query);
+      expect(ImpactStory.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: [["title", "ASC"]]
+        })
+      );
+    });
+
+    it("should handle sort by organization.name", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        sort: { field: "organization.name", direction: "DESC" }
+      };
+
+      await service.getImpactStories(query);
+      expect(ImpactStory.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: [["organisation", "name", "DESC"]]
+        })
+      );
+    });
+
+    it("should handle sort by organization.countries", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        sort: { field: "organization.countries", direction: "ASC" }
+      };
+
+      await service.getImpactStories(query);
+      expect(ImpactStory.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: [["organisation", "countries", "ASC"]]
+        })
+      );
+    });
+
+    it("should throw BadRequestException for invalid sort field", async () => {
+      const query: ImpactStoryQueryDto = {
+        page: { number: 1 },
+        sort: { field: "invalid", direction: "ASC" }
+      };
+
+      await expect(service.getImpactStories(query)).rejects.toThrow(BadRequestException);
     });
   });
 });

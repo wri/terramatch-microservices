@@ -42,9 +42,7 @@ export class TreesController {
       document.addData(treeSpecies.taxonId, populateDto(new ScientificNameDto(), treeSpecies));
     }
 
-    return document
-      .addIndex({ requestPath: `/trees/v3/scientificNames${getStableRequestQuery({ search })}` })
-      .serialize();
+    return document.addIndex({ requestPath: `/trees/v3/scientificNames${getStableRequestQuery({ search })}` });
   }
 
   @Get("establishments/:entity/:uuid")
@@ -63,12 +61,10 @@ export class TreesController {
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
-    return buildJsonApi(EstablishmentsTreesDto)
-      .addData(
-        `${entity}|${uuid}`,
-        populateDto(new EstablishmentsTreesDto(), { establishmentTrees, previousPlantingCounts })
-      )
-      .document.serialize();
+    return buildJsonApi(EstablishmentsTreesDto).addData(
+      `${entity}|${uuid}`,
+      populateDto(new EstablishmentsTreesDto(), { establishmentTrees, previousPlantingCounts })
+    );
   }
 
   @Get("reportCounts/:entity/:uuid")
@@ -91,9 +87,10 @@ export class TreesController {
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
-    return buildJsonApi(TreeReportCountsDto)
-      .addData(`${entity}|${uuid}`, populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts }))
-      .document.serialize();
+    return buildJsonApi(TreeReportCountsDto).addData(
+      `${entity}|${uuid}`,
+      populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts })
+    );
   }
 
   private async authorizeRead(entity: EntityType, uuid: string) {

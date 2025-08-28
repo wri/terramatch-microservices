@@ -52,12 +52,10 @@ export class DemographicsController {
         document.addData(demographic.uuid, new DemographicDto(demographic, additionalProps));
       }
     }
-    return document
-      .addIndex({
-        requestPath: `/entities/v3/demographics${getStableRequestQuery(params)}`,
-        total: paginationTotal,
-        pageNumber: pageNumber
-      })
-      .serialize();
+    return document.addIndex({
+      requestPath: `/entities/v3/demographics${getStableRequestQuery(params)}`,
+      total: paginationTotal,
+      pageNumber: pageNumber
+    });
   }
 }

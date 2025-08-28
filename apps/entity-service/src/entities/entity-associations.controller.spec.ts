@@ -8,6 +8,7 @@ import { AssociationProcessor } from "./processors/association-processor";
 import { DemographicDto } from "./dto/demographic.dto";
 import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 class StubProcessor extends AssociationProcessor<Demographic, DemographicDto> {
   DTO = DemographicDto;
@@ -94,13 +95,15 @@ describe("EntityAssociationsController", () => {
       const pr = await ProjectReportFactory.create();
       await DemographicFactory.forProjectReportWorkday.create({ demographicalId: pr.id });
       await DemographicFactory.forProjectReportJobs.create({ demographicalId: pr.id });
-      const result = await controller.associationIndex(
-        {
-          entity: "projectReports",
-          uuid: pr.uuid,
-          association: "demographics"
-        },
-        {}
+      const result = serialize(
+        await controller.associationIndex(
+          {
+            entity: "projectReports",
+            uuid: pr.uuid,
+            association: "demographics"
+          },
+          {}
+        )
       );
 
       const processor = entitiesService.createAssociationProcessor.mock.results[0].value;

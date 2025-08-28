@@ -33,13 +33,11 @@ export class ProjectPitchesController {
         document.addData(pitchDto.uuid, pitchDto);
       }
     }
-    return document
-      .addIndex({
-        requestPath: `/entities/v3/projectPitches${getStableRequestQuery(params)}`,
-        total: paginationTotal,
-        pageNumber: pageNumber
-      })
-      .serialize();
+    return document.addIndex({
+      requestPath: `/entities/v3/projectPitches${getStableRequestQuery(params)}`,
+      total: paginationTotal,
+      pageNumber: pageNumber
+    });
   }
 
   @Get(":uuid")
@@ -53,6 +51,6 @@ export class ProjectPitchesController {
   async projectPitchGet(@Param() { uuid }: ProjectPitchParamDto) {
     const result = await this.projectPitchService.getProjectPitch(uuid);
     await this.policyService.authorize("read", result);
-    return buildJsonApi(ProjectPitchDto).addData(uuid, new ProjectPitchDto(result)).document.serialize();
+    return buildJsonApi(ProjectPitchDto).addData(uuid, new ProjectPitchDto(result));
   }
 }

@@ -53,12 +53,10 @@ export class DisturbancesController {
         document.addData(disturbance.uuid, new DisturbanceDto(disturbance, additionalProps));
       }
     }
-    return document
-      .addIndex({
-        requestPath: `/entities/v3/disturbances${getStableRequestQuery(params)}`,
-        total: paginationTotal,
-        pageNumber: pageNumber
-      })
-      .serialize();
+    return document.addIndex({
+      requestPath: `/entities/v3/disturbances${getStableRequestQuery(params)}`,
+      total: paginationTotal,
+      pageNumber: pageNumber
+    });
   }
 }

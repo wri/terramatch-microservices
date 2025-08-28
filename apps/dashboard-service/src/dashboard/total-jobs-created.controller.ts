@@ -24,11 +24,7 @@ export class TotalJobsCreatedController {
     const cacheKey = `dashboard:jobs-created|${this.cacheService.getCacheKeyFromQuery(query)}`;
     const data = await this.cacheService.get(cacheKey, () => this.jobsCreatedService.getTotals(query));
 
-    const document = buildJsonApi(TotalJobsCreatedDto);
     const stableQuery = getStableRequestQuery(query);
-
-    document.addData(stableQuery, new TotalJobsCreatedDto(data));
-
-    return document.serialize();
+    return buildJsonApi(TotalJobsCreatedDto).addData(stableQuery, new TotalJobsCreatedDto(data));
   }
 }

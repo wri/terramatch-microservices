@@ -1,8 +1,8 @@
-import { Controller, Body, Post, HttpStatus, BadRequestException, Param, Put } from "@nestjs/common";
+import { BadRequestException, Body, Controller, HttpStatus, Param, Post, Put } from "@nestjs/common";
 import { ResetPasswordService } from "./reset-password.service";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ResetPasswordRequest } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
@@ -21,11 +21,12 @@ export class ResetPasswordController {
   })
   @JsonApiResponse(ResetPasswordResponseDto, { status: HttpStatus.CREATED })
   @ExceptionResponse(BadRequestException, { description: "Invalid request or email." })
-  async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest): Promise<JsonApiDocument> {
+  async requestReset(@Body() { emailAddress, callbackUrl }: ResetPasswordRequest) {
     const { email, uuid } = await this.resetPasswordService.sendResetPasswordEmail(emailAddress, callbackUrl);
-    return buildJsonApi(ResetPasswordResponseDto)
-      .addData(uuid ?? "no-uuid", populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
-      .document.serialize();
+    return buildJsonApi(ResetPasswordResponseDto).addData(
+      uuid ?? "no-uuid",
+      populateDto(new ResetPasswordResponseDto(), { emailAddress: email })
+    );
   }
 
   @Put(":token")
@@ -36,13 +37,11 @@ export class ResetPasswordController {
   })
   @JsonApiResponse(ResetPasswordResponseDto)
   @ExceptionResponse(BadRequestException, { description: "Invalid or expired token." })
-  async resetPassword(
-    @Param("token") token: string,
-    @Body() { newPassword }: ResetPasswordDto
-  ): Promise<JsonApiDocument> {
+  async resetPassword(@Param("token") token: string, @Body() { newPassword }: ResetPasswordDto) {
     const { email, uuid } = await this.resetPasswordService.resetPassword(token, newPassword);
-    return buildJsonApi(ResetPasswordResponseDto)
-      .addData(uuid ?? "no-uuid", populateDto(new ResetPasswordResponseDto(), { emailAddress: email }))
-      .document.serialize();
+    return buildJsonApi(ResetPasswordResponseDto).addData(
+      uuid ?? "no-uuid",
+      populateDto(new ResetPasswordResponseDto(), { emailAddress: email })
+    );
   }
 }

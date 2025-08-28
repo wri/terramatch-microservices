@@ -43,13 +43,11 @@ export class TasksController {
       }
     }
 
-    return document
-      .addIndex({
-        requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
-        total,
-        pageNumber: query.page?.number ?? 1
-      })
-      .serialize();
+    return document.addIndex({
+      requestPath: `/entities/v3/tasks${getStableRequestQuery(query)}`,
+      total,
+      pageNumber: query.page?.number ?? 1
+    });
   }
 
   @Get(":uuid")
@@ -75,7 +73,7 @@ export class TasksController {
   async taskGet(@Param() { uuid }: SingleTaskDto) {
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("read", task);
-    return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
+    return await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task);
   }
 
   @Patch(":uuid")
@@ -119,6 +117,6 @@ export class TasksController {
       }
     }
 
-    return (await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
+    return await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task);
   }
 }

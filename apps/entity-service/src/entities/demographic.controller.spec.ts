@@ -8,6 +8,7 @@ import { DemographicsController } from "./demographics.controller";
 import { DemographicService } from "./demographic.service";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("DemographicsController", () => {
   let controller: DemographicsController;
@@ -41,7 +42,7 @@ describe("DemographicsController", () => {
 
       demographicService.getDemographics.mockResolvedValue(mockResponse);
 
-      const result = await controller.demographicsIndex(new DemographicQueryDto());
+      const result = serialize(await controller.demographicsIndex(new DemographicQueryDto()));
       expect(demographicService.getDemographics).toHaveBeenCalledTimes(1);
       expect(result).toBeDefined();
     });
@@ -69,7 +70,7 @@ describe("DemographicsController", () => {
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       demographicService.getDemographics.mockResolvedValue(mockResponse);
 
-      const result = await controller.demographicsIndex(new DemographicQueryDto());
+      const result = serialize(await controller.demographicsIndex(new DemographicQueryDto()));
       expect(result).toBeDefined();
       expect(Array.isArray(result.data) ? result.data.length : 0).toBe(2);
       expect(demographicService.getDemographics).toHaveBeenCalledTimes(1);

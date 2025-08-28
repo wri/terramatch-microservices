@@ -5,21 +5,7 @@ import { TotalJobsCreatedService } from "./total-jobs-created.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { TotalJobsCreatedDto } from "./dto/total-jobs-created.dto";
-
-jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
-  buildJsonApi: jest.fn().mockImplementation(() => ({
-    addData: jest.fn().mockReturnThis(),
-    serialize: jest.fn().mockReturnValue({
-      data: {
-        type: "totalJobsCreated",
-        id: "test-id",
-        attributes: {}
-      },
-      meta: { resourceType: "totalJobsCreated" }
-    })
-  })),
-  getStableRequestQuery: jest.fn().mockImplementation(query => query)
-}));
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 const getTotalsResult = (): TotalJobsCreatedDto => {
   return {
@@ -93,7 +79,7 @@ describe("TotalJobsCreatedController", () => {
       const expectedResult = getTotalsResult();
       totalJobsCreatedService.getTotals.mockResolvedValue(expectedResult);
 
-      const response = await controller.getTotalJobsCreated(query);
+      const response = serialize(await controller.getTotalJobsCreated(query));
 
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
@@ -112,7 +98,7 @@ describe("TotalJobsCreatedController", () => {
       cacheService.get.mockResolvedValue(cachedResult);
       const query: DashboardQueryDto = { country: "Kenya" };
 
-      const response = await controller.getTotalJobsCreated(query);
+      const response = serialize(await controller.getTotalJobsCreated(query));
 
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
@@ -154,7 +140,7 @@ describe("TotalJobsCreatedController", () => {
       const expectedResult = getTotalsResult();
       totalJobsCreatedService.getTotals.mockResolvedValue(expectedResult);
 
-      const response = await controller.getTotalJobsCreated(query);
+      const response = serialize(await controller.getTotalJobsCreated(query));
 
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
@@ -175,7 +161,7 @@ describe("TotalJobsCreatedController", () => {
       const expectedResult = getTotalsResult();
       totalJobsCreatedService.getTotals.mockResolvedValue(expectedResult);
 
-      const response = await controller.getTotalJobsCreated(query);
+      const response = serialize(await controller.getTotalJobsCreated(query));
 
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();

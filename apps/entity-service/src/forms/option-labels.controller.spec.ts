@@ -5,6 +5,7 @@ import { FormOptionListOptionFactory, FormQuestionOptionFactory } from "@terrama
 import { faker } from "@faker-js/faker";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 const mockLocale = (locale: ValidLocale) => {
   jest.spyOn(User, "findOne").mockResolvedValue({ locale } as User);
@@ -47,9 +48,11 @@ describe("OptionsLabelsController", () => {
       await FormOptionListOptionFactory.create();
 
       mockLocale("en-US");
-      const document = await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[], {
-        authenticatedUserId: 123
-      });
+      const document = serialize(
+        await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[], {
+          authenticatedUserId: 123
+        })
+      );
       expect(document.data).toHaveLength(options.length);
       for (const { slug, label, imageUrl } of options) {
         expect(document.data).toContainEqual({
@@ -67,9 +70,11 @@ describe("OptionsLabelsController", () => {
       options.push((await FormQuestionOptionFactory.create()) as OptionLabelModel);
 
       mockLocale("en-US");
-      const document = await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[], {
-        authenticatedUserId: 123
-      });
+      const document = serialize(
+        await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[], {
+          authenticatedUserId: 123
+        })
+      );
       expect(document.data).toHaveLength(options.length);
       for (const { slug, label, imageUrl } of options) {
         expect(document.data).toContainEqual({
@@ -96,9 +101,11 @@ describe("OptionsLabelsController", () => {
       const translations = [translation1, translation2];
 
       mockLocale("es-MX");
-      const document = await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[], {
-        authenticatedUserId: 123
-      });
+      const document = serialize(
+        await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[], {
+          authenticatedUserId: 123
+        })
+      );
       expect(document.data).toHaveLength(options.length);
       for (const { slug, labelId, imageUrl } of options) {
         const translation = translations.find(({ i18nItemId }) => i18nItemId === labelId);

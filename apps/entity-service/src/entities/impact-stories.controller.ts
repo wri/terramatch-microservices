@@ -60,13 +60,11 @@ export class ImpactStoriesController {
       }
     }
 
-    return document
-      .addIndex({
-        requestPath: `/entities/v3/impactStories${getStableRequestQuery(params)}`,
-        total: paginationTotal,
-        pageNumber: pageNumber
-      })
-      .serialize();
+    return document.addIndex({
+      requestPath: `/entities/v3/impactStories${getStableRequestQuery(params)}`,
+      total: paginationTotal,
+      pageNumber: pageNumber
+    });
   }
 
   @Get(":uuid")
@@ -99,19 +97,17 @@ export class ImpactStoriesController {
       twitterUrl: impactStory.organisation?.twitterUrl
     };
 
-    return buildJsonApi(ImpactStoryFullDto)
-      .addData(
-        uuid,
-        new ImpactStoryFullDto(impactStory, {
-          organization,
-          ...(this.entitiesService.mapMediaCollection(
-            mediaCollection,
-            ImpactStory.MEDIA,
-            "projects",
-            impactStory.uuid
-          ) as ImpactStoryMedia)
-        })
-      )
-      .document.serialize();
+    return buildJsonApi(ImpactStoryFullDto).addData(
+      uuid,
+      new ImpactStoryFullDto(impactStory, {
+        organization,
+        ...(this.entitiesService.mapMediaCollection(
+          mediaCollection,
+          ImpactStory.MEDIA,
+          "projects",
+          impactStory.uuid
+        ) as ImpactStoryMedia)
+      })
+    );
   }
 }

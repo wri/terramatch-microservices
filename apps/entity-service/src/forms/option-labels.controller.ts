@@ -52,7 +52,7 @@ export class OptionLabelsController {
       document.addData(dto.slug, dto);
     }
 
-    return document.addIndex({ requestPath: `/forms/v3/optionLabels${getStableRequestQuery({ ids })}` }).serialize();
+    return document.addIndex({ requestPath: `/forms/v3/optionLabels${getStableRequestQuery({ ids })}` });
   }
 
   private async getOptionLabelDtos(listOptions: OptionLabelModel[], locale: ValidLocale) {

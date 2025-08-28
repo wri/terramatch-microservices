@@ -8,7 +8,7 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { buildJsonApi, getStableRequestQuery, IndexData, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -52,7 +52,7 @@ export class SitePolygonsController {
   ])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
-  async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
+  async findMany(@Query() query: SitePolygonQueryDto) {
     await this.policyService.authorize("readAll", SitePolygon);
 
     const {
@@ -185,7 +185,7 @@ export class SitePolygonsController {
     };
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
     else indexData.cursor = cursor;
-    return document.addIndex(indexData).serialize();
+    return document.addIndex(indexData);
   }
 
   @Patch()

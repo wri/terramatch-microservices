@@ -102,13 +102,11 @@ export class DashboardEntitiesController {
 
         document.addData(dto.uuid, dto);
       }
-      return document
-        .addIndex({
-          requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-          total,
-          pageNumber: 1
-        })
-        .serialize();
+      return document.addIndex({
+        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+        total,
+        pageNumber: 1
+      });
     }
 
     if (entity === DASHBOARD_PROJECTS) {
@@ -151,13 +149,11 @@ export class DashboardEntitiesController {
             : new DtoClass(model);
         document.addData(id, dto);
       }
-      return document
-        .addIndex({
-          requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-          total,
-          pageNumber: 1
-        })
-        .serialize();
+      return document.addIndex({
+        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+        total,
+        pageNumber: 1
+      });
     }
 
     if (entity === DASHBOARD_SITEPOLYGONS) {
@@ -180,13 +176,11 @@ export class DashboardEntitiesController {
       for (const { id, model } of data) {
         document.addData(id, new DtoClass(model));
       }
-      return document
-        .addIndex({
-          requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
-          total,
-          pageNumber: 1
-        })
-        .serialize();
+      return document.addIndex({
+        requestPath: `/dashboard/v3/${entity}${getStableRequestQuery(query)}`,
+        total,
+        pageNumber: 1
+      });
     }
 
     throw new NotFoundException(`Entity type ${entity} is not supported for listing`);
@@ -254,9 +248,7 @@ export class DashboardEntitiesController {
         category
       });
 
-      const document = buildJsonApi(DashboardImpactStoryFullDto);
-      document.addData(uuid, dto);
-      return document.serialize();
+      return buildJsonApi(DashboardImpactStoryFullDto).addData(uuid, dto);
     }
 
     if (entity === DASHBOARD_PROJECTS) {
@@ -266,9 +258,7 @@ export class DashboardEntitiesController {
         throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
       }
       const { id, dto } = await processor.getFullDto(model);
-      const document = buildJsonApi(processor.FULL_DTO);
-      document.addData(id, dto);
-      return document.serialize();
+      return buildJsonApi(processor.FULL_DTO).addData(id, dto);
     }
 
     if (entity === DASHBOARD_SITEPOLYGONS) {
@@ -278,9 +268,7 @@ export class DashboardEntitiesController {
         throw new NotFoundException(`${entity} with UUID ${uuid} not found`);
       }
       const { id, dto } = await processor.getLightDto(model);
-      const document = buildJsonApi(processor.LIGHT_DTO);
-      document.addData(id, dto);
-      return document.serialize();
+      return buildJsonApi(processor.LIGHT_DTO).addData(id, dto);
     }
 
     throw new NotFoundException(`Entity type ${entity} is not supported for single entity retrieval`);

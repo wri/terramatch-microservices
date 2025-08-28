@@ -5,7 +5,7 @@ export type LinkedFieldConfiguration = {
   laravelModelType: string;
   fields: Dictionary<LinkedField>;
   fileCollections: Dictionary<LinkedFile>;
-  relations: Dictionary<linkedRelation>;
+  relations: Dictionary<LinkedRelation>;
 };
 
 export const FIELD_INPUT_TYPES = [
@@ -62,7 +62,7 @@ export const RELATION_INPUT_TYPES = [
 ] as const;
 export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 
-export type linkedRelation = Omit<LinkedField, "optionListKey" | "inputType"> & {
+export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice"> & {
   inputType: RelationInputType;
   resource: string;
   collection?: string;
@@ -70,3 +70,10 @@ export type linkedRelation = Omit<LinkedField, "optionListKey" | "inputType"> & 
 
 export const INPUT_TYPES = [...FIELD_INPUT_TYPES, ...FILE_INPUT_TYPES, ...RELATION_INPUT_TYPES] as const;
 export type InputType = (typeof INPUT_TYPES)[number];
+
+export const isField = (field: LinkedField | LinkedFile | LinkedRelation): field is LinkedField =>
+  FIELD_INPUT_TYPES.includes(field.inputType as FieldInputType);
+export const isFile = (field: LinkedField | LinkedFile | LinkedRelation): field is LinkedFile =>
+  FILE_INPUT_TYPES.includes(field.inputType as FileInputType);
+export const isRelation = (field: LinkedField | LinkedFile | LinkedRelation): field is LinkedRelation =>
+  RELATION_INPUT_TYPES.includes(field.inputType as RelationInputType);

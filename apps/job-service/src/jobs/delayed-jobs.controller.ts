@@ -12,7 +12,7 @@ import {
 import { ApiOperation } from "@nestjs/swagger";
 import { Op } from "sequelize";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -27,7 +27,7 @@ export class DelayedJobsController {
   })
   @JsonApiResponse({ data: DelayedJobDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  async getRunningJobs(@Request() { authenticatedUserId }): Promise<JsonApiDocument> {
+  async getRunningJobs(@Request() { authenticatedUserId }) {
     const runningJobs = await DelayedJob.findAll({
       where: {
         isAcknowledged: false,
@@ -47,7 +47,7 @@ export class DelayedJobsController {
     jobsWithEntityNames.forEach(job => {
       document.addData(job.uuid, populateDto(new DelayedJobDto(), job));
     });
-    return document.addIndex({ requestPath: "/jobs/v3/delayedJobs" }).serialize();
+    return document.addIndex({ requestPath: "/jobs/v3/delayedJobs" });
   }
 
   @Get(":uuid")
@@ -61,11 +61,11 @@ export class DelayedJobsController {
   // Note: Since jobs are very generic and we don't track which resources are related to a given
   // job, there is no effective way to make a policy for jobs until we expand the service to
   // include an owner ID on the job table.
-  async findOne(@Param("uuid") pathUUID: string): Promise<JsonApiDocument> {
+  async findOne(@Param("uuid") pathUUID: string) {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();
 
-    return buildJsonApi(DelayedJobDto).addData(pathUUID, populateDto(new DelayedJobDto(), job)).document.serialize();
+    return buildJsonApi(DelayedJobDto).addData(pathUUID, populateDto(new DelayedJobDto(), job));
   }
 
   @Patch("bulk-update")
@@ -80,10 +80,7 @@ export class DelayedJobsController {
   @ExceptionResponse(NotFoundException, {
     description: "One or more jobs specified in the payload could not be found."
   })
-  async bulkUpdateJobs(
-    @Body() bulkUpdateJobsDto: DelayedJobBulkUpdateBodyDto,
-    @Request() { authenticatedUserId }
-  ): Promise<JsonApiDocument> {
+  async bulkUpdateJobs(@Body() bulkUpdateJobsDto: DelayedJobBulkUpdateBodyDto, @Request() { authenticatedUserId }) {
     const jobUpdates = bulkUpdateJobsDto.data;
     const jobs = await DelayedJob.findAll({
       where: {
@@ -116,6 +113,6 @@ export class DelayedJobsController {
       jsonApiBuilder.addData(job.uuid, populateDto(new DelayedJobDto(), job));
     });
 
-    return jsonApiBuilder.serialize();
+    return jsonApiBuilder;
   }
 }

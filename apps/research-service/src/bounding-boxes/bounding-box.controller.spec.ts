@@ -3,10 +3,10 @@ import { BoundingBoxController } from "./bounding-box.controller";
 import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
-import { JsonApiDocument } from "@terramatch-microservices/common/util";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { PolygonGeometry, Project, Site, SitePolygon, ProjectPitch } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, Project, ProjectPitch, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 jest.mock("@terramatch-microservices/database/util/subquery.builder", () => ({
   Subquery: {
@@ -106,7 +106,7 @@ describe("BoundingBoxController", () => {
       expectedArgs: BoundingBoxServiceArgs,
       expectedId: string
     ) => {
-      const result = (await controller.getBoundingBox(queryParams)) as JsonApiDocument;
+      const result = serialize(await controller.getBoundingBox(queryParams));
 
       expect(mockBoundingBoxService[expectedService]).toHaveBeenCalledWith(...expectedArgs);
 

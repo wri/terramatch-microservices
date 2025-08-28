@@ -55,7 +55,7 @@ export class EntitiesController {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
     await processor.addIndex(document, query);
-    return document.serialize();
+    return document;
   }
 
   @Get(":entity/:uuid")
@@ -84,10 +84,8 @@ export class EntitiesController {
 
     await this.policyService.authorize("read", model);
 
-    const document = buildJsonApi(processor.FULL_DTO);
     const { id, dto } = await processor.getFullDto(model);
-    document.addData(id, dto);
-    return document.serialize();
+    return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 
   @Delete(":entity/:uuid")
@@ -148,9 +146,7 @@ export class EntitiesController {
 
     await processor.update(model, updatePayload.data.attributes);
 
-    const document = buildJsonApi(processor.FULL_DTO);
     const { id, dto } = await processor.getFullDto(model);
-    document.addData(id, dto);
-    return document.serialize();
+    return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 }

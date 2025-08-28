@@ -4,6 +4,7 @@ import { NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
 import { VerificationUserController } from "./verification-user.controller";
 import { VerificationUserService } from "./verification-user.service";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("VerificationUserController", () => {
   let controller: VerificationUserController;
@@ -31,7 +32,7 @@ describe("VerificationUserController", () => {
     const uuid = faker.string.uuid();
     verificationUserService.verify.mockResolvedValue({ uuid, isVerified: true });
 
-    const result = await controller.verifyUser({ token: "my token" });
+    const result = serialize(await controller.verifyUser({ token: "my token" }));
     expect(result).toMatchObject({
       data: { id: uuid, type: "verifications", attributes: { verified: true } }
     });

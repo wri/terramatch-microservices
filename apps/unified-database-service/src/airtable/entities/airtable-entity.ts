@@ -302,7 +302,7 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
       dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
       // Include if this mapping should eager load an association on the DB query
       include?: Include[];
-      valueMap: (entity: T, associations: A) => Promise<null | undefined | string | number | boolean | Date>;
+      valueMap: (entity: T, associations: A) => Promise<null | undefined | string | number | boolean | Date | string[]>;
     };
 
 export type PolymorphicUuidAssociation<AssociationType> = {
@@ -376,7 +376,7 @@ export const commonEntityColumns = <T extends UuidModel, A = Record<string, neve
 
 export const associatedValueColumn = <T extends Model<T>, A>(
   valueName: keyof A,
-  dbColumn: keyof Attributes<T> | (keyof Attributes<T>)[]
+  dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[]
 ) =>
   ({
     airtableColumn: valueName,

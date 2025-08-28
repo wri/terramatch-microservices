@@ -22,21 +22,20 @@ import { UserCreateBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
+export const USER_ORG_RELATIONSHIP = {
+  name: "org",
+  type: OrganisationDto,
+  meta: {
+    userStatus: {
+      type: "string",
+      enum: ["approved", "requested", "rejected", "na"]
+    }
+  }
+};
 const USER_RESPONSE_SHAPE = {
   data: {
     type: UserDto,
-    relationships: [
-      {
-        name: "org",
-        type: OrganisationDto,
-        meta: {
-          userStatus: {
-            type: "string",
-            enum: ["approved", "requested", "rejected", "na"]
-          }
-        }
-      }
-    ]
+    relationships: [USER_ORG_RELATIONSHIP]
   },
   included: [OrganisationDto]
 };

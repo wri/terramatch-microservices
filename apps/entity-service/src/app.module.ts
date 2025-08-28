@@ -20,6 +20,7 @@ import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 import { DisturbancesController } from "./entities/disturbances.controller";
 import { DisturbanceService } from "./entities/disturbance.service";
+import { OptionLabelsController } from "./forms/option-labels.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -35,7 +36,8 @@ import { DisturbanceService } from "./entities/disturbance.service";
     DemographicsController,
     DisturbancesController,
     EntitiesController,
-    EntityAssociationsController
+    EntityAssociationsController,
+    OptionLabelsController
   ],
   providers: [
     {

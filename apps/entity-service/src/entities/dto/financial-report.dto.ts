@@ -20,6 +20,9 @@ export class FinancialReportLightDto extends EntityDto {
   @ApiProperty()
   status: string;
 
+  @ApiProperty()
+  updateRequestStatus: string;
+
   @ApiProperty({
     nullable: true,
     type: String,
@@ -59,9 +62,6 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
 
   @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
-
-  @ApiProperty()
-  updateRequestStatus: string;
 
   @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;

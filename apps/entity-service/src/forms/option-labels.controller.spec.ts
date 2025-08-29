@@ -1,11 +1,16 @@
 import { OptionLabelModel, OptionLabelsController } from "./option-labels.controller";
 import { Test } from "@nestjs/testing";
-import { FormOptionListOption, FormQuestion, User } from "@terramatch-microservices/database/entities";
-import { FormOptionListOptionFactory, FormQuestionOptionFactory } from "@terramatch-microservices/database/factories";
+import { FormOptionList, FormOptionListOption, FormQuestion, User } from "@terramatch-microservices/database/entities";
+import {
+  FormOptionListFactory,
+  FormOptionListOptionFactory,
+  FormQuestionOptionFactory
+} from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { NotFoundException } from "@nestjs/common";
 
 const mockLocale = (locale: ValidLocale) => {
   jest.spyOn(User, "findOne").mockResolvedValue({ locale } as User);
@@ -113,6 +118,44 @@ describe("OptionsLabelsController", () => {
           id: slug,
           type: "optionLabels",
           attributes: { slug, imageUrl: imageUrl ?? null, label: translation?.shortValue ?? translation?.longValue }
+        });
+      }
+    });
+  });
+
+  describe("findList", () => {
+    beforeEach(async () => {
+      await FormOptionListOption.truncate();
+      await FormOptionList.truncate();
+    });
+
+    it("should throw an error if listKey does not exist", async () => {
+      await expect(controller.findList("fake-list-key", { authenticatedUserId: 123 })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw an error if the listKey has no associated options", async () => {
+      const { key } = await FormOptionListFactory.create();
+      await expect(controller.findList(key, { authenticatedUserId: 123 })).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if no locale is found", async () => {
+      await expect(controller.findList("fake-list-key", { authenticatedUserId: -1 })).rejects.toThrow(
+        "Locale is required"
+      );
+    });
+
+    it("should return the options associated with the listKey", async () => {
+      const { key, id } = await FormOptionListFactory.create();
+      const options = await FormOptionListOptionFactory.createMany(5, { formOptionListId: id });
+      const document = serialize(await controller.findList(key, { authenticatedUserId: 123 }));
+      expect(document.data).toHaveLength(options.length);
+      for (const { slug, label, imageUrl } of options) {
+        expect(document.data).toContainEqual({
+          id: slug,
+          type: "optionLabels",
+          attributes: { slug, label, imageUrl: imageUrl ?? null }
         });
       }
     });

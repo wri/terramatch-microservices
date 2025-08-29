@@ -15,7 +15,13 @@ import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatc
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
-export type OptionLabelModel = { slug: string; label: string | null; labelId: number | null; imageUrl: string | null };
+export type OptionLabelModel = {
+  slug: string;
+  label: string | null;
+  labelId: number | null;
+  imageUrl: string | null;
+  altValue?: string | null;
+};
 
 @Controller("forms/v3/optionLabels")
 export class OptionLabelsController {
@@ -31,7 +37,7 @@ export class OptionLabelsController {
 
     const listOptions = (await FormOptionListOption.findAll({
       where: { slug: ids },
-      attributes: ["slug", "label", "labelId", "imageUrl"]
+      attributes: ["slug", "label", "labelId", "imageUrl", "altValue"]
     })) as OptionLabelModel[];
 
     const missingSlugs = filter(ids, slug => !listOptions.some(option => option.slug === slug));
@@ -70,7 +76,7 @@ export class OptionLabelsController {
       include: [
         {
           association: "listOptions",
-          attributes: ["slug", "label", "labelId", "imageUrl"]
+          attributes: ["slug", "label", "labelId", "imageUrl", "altValue"]
         }
       ]
     });
@@ -110,7 +116,8 @@ export class OptionLabelsController {
             translations[labelModel.labelId ?? ""]?.[0]?.shortValue ??
             translations[labelModel.labelId ?? ""]?.[0]?.longValue ??
             labelModel.label ??
-            ""
+            "",
+          altValue: labelModel.altValue ?? null
         })
       );
     });

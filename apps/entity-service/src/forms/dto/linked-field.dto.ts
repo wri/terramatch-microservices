@@ -20,12 +20,12 @@ export class LinkedFieldDto {
   @ApiProperty({ enum: INPUT_TYPES })
   inputType: InputType;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   optionListKey: string | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   multiChoice: boolean | null;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: String })
   collection: string | null;
 }

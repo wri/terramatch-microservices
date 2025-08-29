@@ -63,7 +63,7 @@ describe("OptionsLabelsController", () => {
         expect(document.data).toContainEqual({
           id: slug,
           type: "optionLabels",
-          attributes: { slug, label, imageUrl: imageUrl ?? null }
+          attributes: { slug, label, imageUrl: imageUrl ?? null, altValue: null }
         });
       }
     });
@@ -85,7 +85,7 @@ describe("OptionsLabelsController", () => {
         expect(document.data).toContainEqual({
           id: slug,
           type: "optionLabels",
-          attributes: { slug, label, imageUrl: imageUrl ?? null }
+          attributes: { slug, label, imageUrl: imageUrl ?? null, altValue: null }
         });
       }
     });
@@ -117,7 +117,12 @@ describe("OptionsLabelsController", () => {
         expect(document.data).toContainEqual({
           id: slug,
           type: "optionLabels",
-          attributes: { slug, imageUrl: imageUrl ?? null, label: translation?.shortValue ?? translation?.longValue }
+          attributes: {
+            slug,
+            imageUrl: imageUrl ?? null,
+            label: translation?.shortValue ?? translation?.longValue,
+            altValue: null
+          }
         });
       }
     });
@@ -155,7 +160,7 @@ describe("OptionsLabelsController", () => {
         expect(document.data).toContainEqual({
           id: slug,
           type: "optionLabels",
-          attributes: { slug, label, imageUrl: imageUrl ?? null }
+          attributes: { slug, label, imageUrl: imageUrl ?? null, altValue: null }
         });
       }
     });

@@ -4,9 +4,6 @@ import { Op } from "sequelize";
 
 export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
-    console.log("Permissions:", this.permissions);
-    console.log("Frameworks:", this.frameworks);
-    console.log("User ID:", this.userId);
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can("manage", SitePolygon);
       return;

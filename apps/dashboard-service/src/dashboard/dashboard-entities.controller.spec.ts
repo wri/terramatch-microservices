@@ -409,7 +409,6 @@ describe("DashboardEntitiesController", () => {
     const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
     const query: DashboardQueryDto = { country: "KEN" };
 
-    // Mock the impact story service to return test data
     const mockImpactStories = [
       {
         id: 1,
@@ -445,7 +444,6 @@ describe("DashboardEntitiesController", () => {
       organisationType: query.organisationType
     });
 
-    // Impact stories no longer use caching, so these should NOT be called
     expect(cacheService.getCacheKeyFromQuery).not.toHaveBeenCalled();
     expect(cacheService.get).not.toHaveBeenCalled();
   });

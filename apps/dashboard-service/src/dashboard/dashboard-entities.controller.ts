@@ -118,7 +118,6 @@ export class DashboardEntitiesController {
       return document.serialize();
     }
 
-    // Define cacheKey for other entities that use caching
     const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
 
     if (entity === DASHBOARD_PROJECTS) {

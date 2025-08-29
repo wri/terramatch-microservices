@@ -2,12 +2,7 @@ import { PolicyService } from "./policy.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import {
-  SiteFactory,
-  ProjectFactory,
-  UserFactory,
-  ProjectUserFactory
-} from "@terramatch-microservices/database/factories";
+import { SiteFactory, ProjectFactory, ProjectUserFactory } from "@terramatch-microservices/database/factories";
 
 describe("SitePolygonPolicy", () => {
   let service: PolicyService;

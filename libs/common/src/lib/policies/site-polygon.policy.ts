@@ -1,9 +1,12 @@
-import { SitePolygon, Site, ProjectUser } from "@terramatch-microservices/database/entities";
+import { SitePolygon, Site, ProjectUser, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Op } from "sequelize";
 
 export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
+    console.log("Permissions:", this.permissions);
+    console.log("Frameworks:", this.frameworks);
+    console.log("User ID:", this.userId);
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can("manage", SitePolygon);
       return;
@@ -27,5 +30,33 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
         this.builder.can("manage", SitePolygon, { siteUuid: { $in: siteUuids } });
       }
     }
+
+    if (this.permissions.includes("projects-manage")) {
+      const user = await this.getUser();
+      if (user != null) {
+        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        if (projectIds.length > 0) {
+          const sites = await Site.findAll({
+            where: { projectId: { [Op.in]: projectIds } },
+            attributes: ["uuid"]
+          });
+          const siteUuids = sites.map(site => site.uuid);
+          if (siteUuids.length > 0) {
+            this.builder.can("manage", SitePolygon, { siteUuid: { $in: siteUuids } });
+          }
+        }
+      }
+    }
+  }
+
+  protected _user?: User | null;
+  protected async getUser() {
+    if (this._user != null) return this._user;
+
+    return (this._user = await User.findOne({
+      where: { id: this.userId },
+      attributes: ["organisationId"],
+      include: [{ association: "projects", attributes: ["id"] }]
+    }));
   }
 }

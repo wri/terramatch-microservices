@@ -19,7 +19,7 @@ import { Application } from "./application.entity";
 import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { FrameworkKey, PLANTING_STATUSES, PlantingStatus } from "../constants";
+import { FrameworkKey } from "../constants";
 import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
@@ -384,10 +384,6 @@ export class Project extends Model<Project> {
   @AllowNull
   @Column(STRING)
   shortName: string | null;
-
-  @AllowNull
-  @Column({ type: STRING, values: PLANTING_STATUSES })
-  plantingStatus: PlantingStatus | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ImpactStory, Project, Media, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
+import { Sequelize } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { groupBy, uniq } from "lodash";
@@ -135,6 +136,15 @@ export class ImpactStoryService {
           builder.where({
             "$organisation.id$": Subquery.select(Project, "organisationId").eq("uuid", value).literal
           });
+        } else if (key === "category") {
+          if (Array.isArray(value) && value.length > 0) {
+            const categoryConditions = value.map(cat =>
+              Sequelize.literal(`JSON_SEARCH(category, 'one', '${cat}') IS NOT NULL`)
+            );
+            builder.where({
+              [Op.or]: categoryConditions
+            });
+          }
         } else {
           builder.where({
             [fieldKey]: { [Op.like]: `%${value}%` }

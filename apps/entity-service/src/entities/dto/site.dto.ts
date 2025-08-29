@@ -11,7 +11,6 @@ import { Site } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { PLANTING_STATUSES, PlantingStatus } from "@terramatch-microservices/database/constants/planting-status";
 
 @JsonApiDto({ type: "sites" })
 export class SiteLightDto extends EntityDto {
@@ -171,13 +170,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   detailedInterventionTypes: string[] | null;
-
-  @ApiProperty({
-    nullable: true,
-    description: "Planting status for this site",
-    enum: PLANTING_STATUSES
-  })
-  plantingStatus: PlantingStatus | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

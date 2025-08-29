@@ -42,7 +42,6 @@ describe("SitePolygonPolicy", () => {
   });
 
   it("allows managing polygons for own projects with manage-own", async () => {
-    const user = await UserFactory.create({ id: 123 });
     const project = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: 123, projectId: project.id });
     const site = await SiteFactory.create({ projectId: project.id });
@@ -56,7 +55,6 @@ describe("SitePolygonPolicy", () => {
   });
 
   it("allows managing polygons for managed projects with projects-manage", async () => {
-    const user = await UserFactory.create({ id: 123 });
     const project = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: 123, projectId: project.id, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });

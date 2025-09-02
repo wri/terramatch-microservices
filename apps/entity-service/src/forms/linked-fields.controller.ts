@@ -2,7 +2,7 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { LinkedFieldDto } from "./dto/linked-field.dto";
-import { FormType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields/configuration";
+import { FormType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import {
   isField,
@@ -10,7 +10,7 @@ import {
   LinkedField,
   LinkedFile,
   LinkedRelation
-} from "@terramatch-microservices/common/linkedFields/types";
+} from "@terramatch-microservices/database/constants/linked-fields";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { isEmpty } from "lodash";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";

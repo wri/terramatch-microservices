@@ -7,7 +7,7 @@ import { SiteConfiguration } from "./site.configuration";
 import { SiteReportConfiguration } from "./site-report.configuration";
 import { NurseryConfiguration } from "./nursery.configuration";
 import { NurseryReportConfiguration } from "./nursery-report.configuration";
-import { LinkedFieldConfiguration } from "../types";
+import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
 
 export const FORM_TYPES = [
   "organisation",

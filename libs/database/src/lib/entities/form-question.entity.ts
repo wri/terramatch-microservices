@@ -14,6 +14,7 @@ import { BIGINT, BOOLEAN, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "s
 import { I18nItem } from "./i18n-item.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormSection } from "./form-section.entity";
+import { InputType } from "../constants/linked-fields";
 
 @Table({ tableName: "form_questions", underscored: true, paranoid: true })
 export class FormQuestion extends Model<FormQuestion> {
@@ -46,7 +47,7 @@ export class FormQuestion extends Model<FormQuestion> {
   linkedFieldKey: string | null;
 
   @Column(STRING)
-  inputType: string;
+  inputType: InputType;
 
   @AllowNull
   @Column(STRING)
@@ -83,6 +84,10 @@ export class FormQuestion extends Model<FormQuestion> {
 
   @BelongsTo(() => I18nItem, { foreignKey: "placeholder_id", constraints: false })
   placeholderI18nItem: I18nItem | null;
+
+  @AllowNull
+  @Column(STRING)
+  optionsList: string | null;
 
   @Column({ type: BOOLEAN, field: "multichoice", defaultValue: false })
   multiChoice: boolean;
@@ -141,6 +146,6 @@ export class FormQuestion extends Model<FormQuestion> {
   maxNumberLimit: number | null;
 
   @AllowNull
-  @Column(STRING)
-  years: string | null;
+  @JsonColumn()
+  years: string[] | null;
 }

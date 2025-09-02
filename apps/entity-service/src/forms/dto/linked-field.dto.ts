@@ -1,7 +1,7 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
-import { INPUT_TYPES, InputType } from "@terramatch-microservices/common/linkedFields/types";
-import { FORM_TYPES, FormType } from "@terramatch-microservices/common/linkedFields/configuration";
+import { INPUT_TYPES, InputType } from "@terramatch-microservices/database/constants/linked-fields";
+import { FORM_TYPES, FormType } from "@terramatch-microservices/common/linkedFields";
 
 @JsonApiDto({ type: "linkedFields", id: "string" })
 export class LinkedFieldDto {

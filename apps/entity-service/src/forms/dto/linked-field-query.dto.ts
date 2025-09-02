@@ -1,4 +1,4 @@
-import { FORM_TYPES, FormType } from "@terramatch-microservices/common/linkedFields/configuration";
+import { FORM_TYPES, FormType } from "@terramatch-microservices/common/linkedFields";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsIn, IsOptional } from "class-validator";
 

@@ -141,6 +141,9 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Date })
   plantingEndDate: Date | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  description: string | null;
+
   @ApiProperty({ nullable: true, type: Number })
   budget: number | null;
 
@@ -218,6 +221,9 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   landholderCommEngage: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  communityIncentives: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   projPartnerInfo: string | null;

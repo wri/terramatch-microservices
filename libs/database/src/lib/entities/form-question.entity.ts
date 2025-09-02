@@ -7,7 +7,8 @@ import {
   Index,
   Model,
   PrimaryKey,
-  Table
+  Table,
+  Unique
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { I18nItem } from "./i18n-item.entity";
@@ -22,20 +23,23 @@ export class FormQuestion extends Model<FormQuestion> {
   override id: number;
 
   @Index
+  @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
-
-  @BelongsTo(() => FormSection)
-  formSection: FormSection | null;
 
   @ForeignKey(() => FormSection)
   @Column(BIGINT.UNSIGNED)
   formSectionId: number;
 
-  // TODO: foreign key on Form UUID
+  @BelongsTo(() => FormSection)
+  formSection: FormSection | null;
+
   @AllowNull
   @Column(UUID)
   parentId: string;
+
+  @BelongsTo(() => FormQuestion, { foreignKey: "parentId", targetKey: "uuid", constraints: false })
+  parent: FormQuestion | null;
 
   @AllowNull
   @Column(STRING)
@@ -79,10 +83,6 @@ export class FormQuestion extends Model<FormQuestion> {
 
   @BelongsTo(() => I18nItem, { foreignKey: "placeholder_id", constraints: false })
   placeholderI18nItem: I18nItem | null;
-
-  @AllowNull
-  @Column(STRING)
-  optionsList: string | null;
 
   @Column({ type: BOOLEAN, field: "multichoice", defaultValue: false })
   multiChoice: boolean;
@@ -131,4 +131,16 @@ export class FormQuestion extends Model<FormQuestion> {
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 90000 })
   maxCharacterLimit: number | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  minNumberLimit: number | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  maxNumberLimit: number | null;
+
+  @AllowNull
+  @Column(STRING)
+  years: string | null;
 }

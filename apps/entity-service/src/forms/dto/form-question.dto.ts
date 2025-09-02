@@ -1,8 +1,10 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { INPUT_TYPES, InputType } from "@terramatch-microservices/database/constants/linked-fields";
+import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { FormQuestion } from "@terramatch-microservices/database/entities";
 
-export class FormTableHeader {
+export class FormTableHeaderDto {
   @ApiProperty({ nullable: true, type: String })
   slug: string | null;
 
@@ -13,8 +15,17 @@ export class FormTableHeader {
   order: number | null;
 }
 
+type FormQuestionWithoutTranslations = Omit<FormQuestion, "label" | "description" | "placeholder">;
+
 @JsonApiDto({ type: "formQuestions" })
 export class FormQuestionDto {
+  constructor(
+    question: FormQuestionWithoutTranslations,
+    props: AdditionalProps<FormQuestionDto, FormQuestionWithoutTranslations>
+  ) {
+    populateDto<FormQuestionDto, FormQuestionWithoutTranslations>(this, question, props);
+  }
+
   @ApiProperty()
   uuid: string;
 
@@ -81,8 +92,8 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   years: string[] | null;
 
-  @ApiProperty({ nullable: true, type: FormTableHeader, isArray: true })
-  tableHeaders: FormTableHeader[] | null;
+  @ApiProperty({ nullable: true, type: FormTableHeaderDto, isArray: true })
+  tableHeaders: FormTableHeaderDto[] | null;
 
   @ApiProperty({ nullable: true, type: Object })
   additionalProps: object | null;

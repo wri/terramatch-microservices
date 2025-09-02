@@ -1,9 +1,17 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
+import { Form } from "@terramatch-microservices/database/entities";
+import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+
+type FormWithoutTranslations = Omit<Form, "title" | "subtitle" | "description" | "submissionMessage">;
 
 @JsonApiDto({ type: "forms" })
 export class FormDto {
+  constructor(form: FormWithoutTranslations, props: AdditionalProps<FormDto, FormWithoutTranslations>) {
+    populateDto<FormDto, FormWithoutTranslations>(this, form, props);
+  }
+
   @ApiProperty()
   uuid: string;
 

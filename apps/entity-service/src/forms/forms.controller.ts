@@ -1,12 +1,20 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Param, Request } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
-import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { FormDto } from "./dto/form.dto";
-import { FormQuestionDto } from "./dto/form-question.dto";
+import { FormQuestionDto, FormTableHeaderDto } from "./dto/form-question.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
+import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { Form, FormQuestion, FormSection, FormTableHeader, User } from "@terramatch-microservices/database/entities";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { filter, flattenDeep, groupBy, uniq } from "lodash";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("forms/v3/forms")
 export class FormsController {
+  constructor(private readonly localizationService: LocalizationService) {}
+
   @Get(":uuid")
   @ApiOperation({
     operationId: "formGet",
@@ -14,8 +22,84 @@ export class FormsController {
   })
   @ApiParam({ name: "uuid", type: String, description: "Form uuid" })
   @JsonApiResponse({ data: FormDto, included: [FormSectionDto, FormQuestionDto] })
-  async formGet() {
-    // TODO: form section response only directly relates to questions with no parent id
-    // TODO: relate to question children UUIDs
+  @ExceptionResponse(NotFoundException, { description: "Form not found" })
+  @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
+  async formGet(@Param("uuid") uuid: string, @Request() { authenticatedUserId }) {
+    const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
+    if (locale == null) throw new BadRequestException("Locale is required");
+
+    // Note: a lot of this method will likely be abstracted to a service when the form index endpoint is implemented.
+    const form = await Form.findOne({
+      where: { uuid },
+      include: [{ association: "stage", attributes: ["fundingProgrammeId"] }]
+    });
+    if (form == null) throw new NotFoundException("Form not found");
+
+    // Note: Fetching the sections / questions / table headers as their own queries is substantially
+    // more efficient than joining these large tables together into the form query above.
+    // Note: Form / section / question relations are odd - form_sections.form_id is the form uuid, but
+    // form questions and form table headers relate to their parents via numerical ID.
+    const sections = await FormSection.findAll({ where: { formId: form.uuid } });
+    const questions = await FormQuestion.findAll({ where: { formSectionId: sections.map(({ id }) => id) } });
+    const tableHeaders = await FormTableHeader.findAll({ where: { formQuestionId: questions.map(({ id }) => id) } });
+
+    // Get all the translations at once.
+    const formI18nIds = [form.titleId, form.subtitleId, form.descriptionId, form.submissionMessageId];
+    const sectionI18nIds = sections.map(({ titleId, descriptionId }) => [titleId, descriptionId]);
+    const questionI18nIds = questions.map(({ labelId, descriptionId, placeholderId }) => [
+      labelId,
+      descriptionId,
+      placeholderId
+    ]);
+    const tableHeaderI18nIds = tableHeaders.map(({ labelId }) => labelId);
+    const translations = await this.localizationService.translateIds(
+      filter(uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds])), id => id != null),
+      locale
+    );
+
+    const document = buildJsonApi<FormDto>(FormDto);
+    document.addData<FormDto>(
+      form.uuid,
+      new FormDto(form, {
+        title: translations[form.titleId ?? -1] ?? form.title,
+        subtitle: translations[form.subtitleId ?? -1] ?? form.subtitle,
+        description: translations[form.descriptionId ?? -1] ?? form.description,
+        submissionMessage: translations[form.submissionMessageId ?? -1] ?? form.submissionMessage,
+        fundingProgrammeId: form.stage?.fundingProgrammeId ?? null
+      })
+    );
+
+    for (const section of sections) {
+      document.addData<FormSectionDto>(
+        section.uuid,
+        new FormSectionDto(section, {
+          title: translations[section.titleId ?? -1] ?? section.title,
+          description: translations[section.descriptionId ?? -1] ?? section.description
+        })
+      );
+    }
+
+    const sectionsById = groupBy(sections, "id");
+    const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
+    for (const question of questions) {
+      document.addData<FormQuestionDto>(
+        question.uuid,
+        new FormQuestionDto(question, {
+          label: translations[question.labelId ?? -1] ?? question.label,
+          description: translations[question.descriptionId ?? -1] ?? question.description,
+          placeholder: translations[question.placeholderId ?? -1] ?? question.placeholder,
+          sectionId: sectionsById[question.formSectionId]?.[0]?.uuid,
+          tableHeaders: tableHeadersByQuestionId[question.id]?.map(header =>
+            populateDto<FormTableHeaderDto>(new FormTableHeaderDto(), {
+              slug: header.slug,
+              label: translations[header.labelId ?? -1] ?? header.label,
+              order: header.order
+            })
+          )
+        })
+      );
+    }
+
+    return document;
   }
 }

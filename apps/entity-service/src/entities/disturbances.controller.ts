@@ -40,7 +40,7 @@ export class DisturbancesController {
       for (const disturbance of data) {
         indexIds.push(disturbance.uuid);
         const { disturbanceableType: laravelType, disturbanceableId } = disturbance;
-        const model = LARAVEL_MODELS[laravelType];
+        const model = LARAVEL_MODELS[laravelType!];
         if (model == null) {
           this.logger.error("Unknown model type", model);
           throw new InternalServerErrorException("Unexpected disturbance association type");
@@ -50,7 +50,7 @@ export class DisturbancesController {
           this.logger.error("Disturbance parent entity not found", { model, id: disturbanceableId });
           throw new NotFoundException();
         }
-        const entityType = LARAVEL_MODEL_TYPES[laravelType];
+        const entityType = LARAVEL_MODEL_TYPES[laravelType!];
         const additionalProps = { entityType, entityUuid: entity.uuid };
         const disturbanceDto = new DisturbanceDto(disturbance, additionalProps);
         document.addData(disturbance.uuid, disturbanceDto);

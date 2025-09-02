@@ -23,6 +23,7 @@ import { Includeable, Op } from "sequelize";
 import { TMLogger } from "../util/tm-logger";
 import { InternalServerErrorException } from "@nestjs/common";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 export class EntityStatusUpdateEmail extends EmailSender {
   private readonly logger = new TMLogger(EntityStatusUpdateEmail.name);
@@ -94,7 +95,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
       Object.entries(groupBy(to, "locale")).map(([locale, users]) =>
         emailService.sendI18nTemplateEmail(
           users.map(({ emailAddress }) => emailAddress),
-          locale,
+          locale as ValidLocale,
           i18nKeys,
           {
             i18nReplacements,

@@ -2,18 +2,18 @@ import { Controller, Get, NotFoundException, Param, Query, Request } from "@nest
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { OptionLabelDto } from "./dto/option-label.dto";
-import { filter, groupBy, isEmpty, uniqBy } from "lodash";
+import { filter, isEmpty, uniqBy } from "lodash";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import {
   FormOptionList,
   FormOptionListOption,
   FormQuestionOption,
-  I18nTranslation,
   User
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 export type OptionLabelModel = {
   slug: string;
@@ -25,6 +25,8 @@ export type OptionLabelModel = {
 
 @Controller("forms/v3/optionLabels")
 export class OptionLabelsController {
+  constructor(private readonly localizationService: LocalizationService) {}
+
   @Get()
   @ApiOperation({ operationId: "optionLabelsIndex" })
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
@@ -94,29 +96,14 @@ export class OptionLabelsController {
 
   private async addOptionListDtos(document: DocumentBuilder, listOptions: OptionLabelModel[], locale: ValidLocale) {
     const i18nItemIds = filter(listOptions.map(({ labelId }) => labelId)) as number[];
-    // Pull all translations at once and group them by i18nItemId
-    const translations =
-      i18nItemIds.length === 0
-        ? {}
-        : groupBy(
-            await I18nTranslation.findAll({
-              where: { language: locale, i18nItemId: i18nItemIds },
-              attributes: ["i18nItemId", "shortValue", "longValue"]
-            }),
-            "i18nItemId"
-          );
-
+    const translations = await this.localizationService.translateIds(i18nItemIds, locale);
     listOptions.forEach(labelModel => {
       document.addData(
         labelModel.slug,
         populateDto<OptionLabelDto>(new OptionLabelDto(), {
           slug: labelModel.slug,
           imageUrl: labelModel.imageUrl,
-          label:
-            translations[labelModel.labelId ?? ""]?.[0]?.shortValue ??
-            translations[labelModel.labelId ?? ""]?.[0]?.longValue ??
-            labelModel.label ??
-            "",
+          label: translations[labelModel.labelId ?? -1] ?? labelModel.label ?? "",
           altValue: labelModel.altValue ?? null
         })
       );

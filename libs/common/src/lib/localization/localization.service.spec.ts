@@ -72,9 +72,11 @@ describe("LocalizationService", () => {
 
   describe("translateKeys", () => {
     it("should translate", async () => {
-      const enTranslations = await I18nTranslationFactory.createMany(5);
+      const enTranslations = await I18nTranslationFactory.createMany(5, { shortValue: null });
       const esTranslations = await Promise.all(
-        enTranslations.map(({ i18nItemId }) => I18nTranslationFactory.create({ i18nItemId, language: "es-MX" }))
+        enTranslations.map(({ i18nItemId }) =>
+          I18nTranslationFactory.create({ i18nItemId, language: "es-MX", shortValue: null })
+        )
       );
       const localizationKeys = await Promise.all(
         enTranslations.map(({ i18nItemId }) => LocalizationKeyFactory.create({ valueId: i18nItemId }))

@@ -11,7 +11,6 @@ import {
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";
-import { DisturbanceReport } from "../entities/disturbance-report.entity ";
 
 export const REPORT_TYPES = [
   "projectReports",

@@ -9,6 +9,7 @@ import { Relationship, Resource } from "@terramatch-microservices/common/util";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }
@@ -48,20 +49,20 @@ describe("UsersController", () => {
 
     it('should return the currently logged in user if the id is "me"', async () => {
       const { id, uuid } = await UserFactory.create();
-      const result = await controller.findOne("me", { authenticatedUserId: id });
+      const result = serialize(await controller.findOne("me", { authenticatedUserId: id }));
       expect((result.data as Resource).id).toBe(uuid);
     });
 
     it("should return the indicated user if the logged in user is allowed to access", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const { id, uuid } = await UserFactory.create();
-      const result = await controller.findOne(uuid!, { authenticatedUserId: id + 1 });
+      const result = serialize(await controller.findOne(uuid!, { authenticatedUserId: id + 1 }));
       expect((result.data as Resource).id).toBe(uuid);
     });
 
     it("should return a document without includes if there is no org", async () => {
       const { id } = await UserFactory.create();
-      const result = await controller.findOne("me", { authenticatedUserId: id });
+      const result = serialize(await controller.findOne("me", { authenticatedUserId: id }));
       expect(result.included).not.toBeDefined();
     });
 
@@ -69,7 +70,7 @@ describe("UsersController", () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$add("organisationsConfirmed", org);
-      const result = await controller.findOne("me", { authenticatedUserId: user.id });
+      const result = serialize(await controller.findOne("me", { authenticatedUserId: user.id }));
       expect(result.included).toHaveLength(1);
       expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
       const data = result.data as Resource;
@@ -86,7 +87,7 @@ describe("UsersController", () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$set("organisation", org);
-      const result = await controller.findOne("me", { authenticatedUserId: user.id });
+      const result = serialize(await controller.findOne("me", { authenticatedUserId: user.id }));
       expect(result.included).toHaveLength(1);
       expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
       const data = result.data as Resource;
@@ -123,7 +124,7 @@ describe("UsersController", () => {
 
     it("update the user with a new locale", async () => {
       const user = await UserFactory.create();
-      const result = await controller.update(user.uuid!, makeValidBody(user.uuid!, "es-MX"));
+      const result = serialize(await controller.update(user.uuid!, makeValidBody(user.uuid!, "es-MX")));
       expect((result.data as Resource).attributes.locale).toEqual("es-MX");
       await user.reload();
       expect(user.locale).toEqual("es-MX");
@@ -131,7 +132,7 @@ describe("UsersController", () => {
 
     it("does not change the locale if it's missing in the update request", async () => {
       const user = await UserFactory.create({ locale: "es-MX" });
-      const result = await controller.update(user.uuid!, makeValidBody(user.uuid!));
+      const result = serialize(await controller.update(user.uuid!, makeValidBody(user.uuid!)));
       expect((result.data as Resource).attributes.locale).toEqual("es-MX");
       await user.reload();
       expect(user.locale).toEqual("es-MX");
@@ -147,7 +148,7 @@ describe("UsersController", () => {
       attributes.lastName = user.lastName!;
       userCreationService.createNewUser.mockResolvedValue(user);
 
-      const result = await controller.create(createRequest(attributes));
+      const result = serialize(await controller.create(createRequest(attributes)));
       expect(result).toMatchObject({
         data: {
           id: user.uuid,

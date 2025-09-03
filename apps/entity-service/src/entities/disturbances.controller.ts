@@ -33,12 +33,10 @@ export class DisturbancesController {
   async disturbancesIndex(@Query() params: DisturbanceQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.disturbanceService.getDisturbances(params);
     const document = buildJsonApi(DisturbanceDto, { pagination: "number" });
-    const indexIds: string[] = [];
 
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const disturbance of data) {
-        indexIds.push(disturbance.uuid);
         const { disturbanceableType: laravelType, disturbanceableId } = disturbance;
         const model = LARAVEL_MODELS[laravelType];
         if (model == null) {
@@ -52,17 +50,13 @@ export class DisturbancesController {
         }
         const entityType = LARAVEL_MODEL_TYPES[laravelType];
         const additionalProps = { entityType, entityUuid: entity.uuid };
-        const disturbanceDto = new DisturbanceDto(disturbance, additionalProps);
-        document.addData(disturbance.uuid, disturbanceDto);
+        document.addData(disturbance.uuid, new DisturbanceDto(disturbance, additionalProps));
       }
     }
-    document.addIndexData({
-      resource: "disturbances",
+    return document.addIndex({
       requestPath: `/entities/v3/disturbances${getStableRequestQuery(params)}`,
-      ids: indexIds,
       total: paginationTotal,
       pageNumber: pageNumber
     });
-    return document.serialize();
   }
 }

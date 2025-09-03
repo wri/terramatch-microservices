@@ -76,7 +76,7 @@ describe("AssociationProcessor", () => {
       expect(result.meta.indices?.[0]).toMatchObject({
         resource: "demographics",
         requestPath: `/entities/v3/projectReports/${projectReportUuid}/demographics`,
-        ids: [uuid]
+        ids: undefined
       });
     });
 

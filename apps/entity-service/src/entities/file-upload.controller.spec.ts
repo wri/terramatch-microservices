@@ -1,18 +1,14 @@
-jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
-  buildJsonApi: jest.fn()
-}));
-
+import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Test, TestingModule } from "@nestjs/testing";
-import { UnauthorizedException, NotFoundException } from "@nestjs/common";
+import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FileUploadController } from "./file-upload.controller";
-import { FileUploadService, ExtractedRequestData } from "../file/file-upload.service";
+import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
-import { MediaDto } from "./dto/media.dto";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
-import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
+import { Resource } from "@terramatch-microservices/common/util";
 
 describe("FileUploadController", () => {
   let controller: FileUploadController;
@@ -21,7 +17,6 @@ describe("FileUploadController", () => {
   let mediaService: jest.Mocked<MediaService>;
   let entitiesService: jest.Mocked<EntitiesService>;
   let mockMediaOwnerProcessor: { getBaseEntity: jest.Mock };
-  let docMock: { addData: jest.Mock; serialize: jest.Mock };
 
   beforeEach(async () => {
     fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;
@@ -32,12 +27,6 @@ describe("FileUploadController", () => {
       createMediaOwnerProcessor: jest.fn().mockReturnValue(mockMediaOwnerProcessor),
       userId: "user-uuid"
     } as unknown as jest.Mocked<EntitiesService>;
-
-    docMock = {
-      addData: jest.fn(),
-      serialize: jest.fn().mockReturnValue({ data: "serialized-response" })
-    };
-    (buildJsonApi as jest.Mock).mockReturnValue(docMock);
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FileUploadController],
@@ -78,16 +67,14 @@ describe("FileUploadController", () => {
         conversion != null ? `thumbUrl/${m.uuid}` : `url/${m.uuid}`
       );
 
-      const result = await controller.uploadFile(params, file as Express.Multer.File, body);
+      const result = serialize(await controller.uploadFile(params, file as Express.Multer.File, body));
 
       expect(entitiesService.createMediaOwnerProcessor).toHaveBeenCalledWith(params.entity, params.uuid);
       expect(mockMediaOwnerProcessor.getBaseEntity).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("uploadFiles", model);
       expect(fileUploadService.uploadFile).toHaveBeenCalledWith(model, params.entity, params.collection, file, body);
-      expect(buildJsonApi).toHaveBeenCalledWith(MediaDto);
-      expect(docMock.addData).toHaveBeenCalledWith(media.uuid, expect.any(MediaDto));
-      expect(docMock.serialize).toHaveBeenCalled();
-      expect(result).toEqual({ data: "serialized-response" });
+      expect((result.data as Resource).id).toEqual(media.uuid);
+      expect((result.data as Resource).attributes).toMatchObject(media);
     });
 
     it("should throw UnauthorizedException when authorization fails", async () => {

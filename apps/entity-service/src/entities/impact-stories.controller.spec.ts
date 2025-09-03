@@ -4,8 +4,9 @@ import { ImpactStoryService } from "./impact-story.service";
 import { EntitiesService } from "./entities.service";
 import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
-import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util/json-api-builder";
+import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("ImpactStoriesController", () => {
   let controller: ImpactStoriesController;
@@ -105,7 +106,7 @@ describe("ImpactStoriesController", () => {
   describe("impactStoryIndex", () => {
     it("should return paginated impact stories with media and countries", async () => {
       const query: ImpactStoryQueryDto = { page: { number: 1 } };
-      const result = (await controller.impactStoryIndex(query)) as JsonApiDocument;
+      const result = serialize(await controller.impactStoryIndex(query));
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
@@ -126,7 +127,7 @@ describe("ImpactStoriesController", () => {
       });
 
       const query: ImpactStoryQueryDto = { page: { number: 1 } };
-      const result = (await controller.impactStoryIndex(query)) as JsonApiDocument;
+      const result = serialize(await controller.impactStoryIndex(query));
 
       expect(result.data).toBeDefined();
       expect(result.meta.indices?.[0].total).toBe(0);
@@ -138,7 +139,7 @@ describe("ImpactStoriesController", () => {
   describe("impactStoryGet", () => {
     it("should return a single impact story with media and countries", async () => {
       const params = { uuid: "test-uuid" };
-      const result = (await controller.impactStoryGet(params)) as JsonApiDocument;
+      const result = serialize(await controller.impactStoryGet(params));
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();

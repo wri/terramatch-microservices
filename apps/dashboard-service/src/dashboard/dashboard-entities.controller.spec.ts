@@ -7,7 +7,7 @@ import { DashboardSitePolygonsProcessor } from "./processors/dashboard-sitepolyg
 import { CacheService } from "./dto/cache.service";
 import { DashboardEntityParamsDto, DashboardEntityWithUuidDto } from "./dto/dashboard-entity.dto";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "./dto/dashboard-projects.dto";
+import { DashboardProjectsFullDto, DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { DashboardSitePolygonsLightDto } from "./dto/dashboard-sitepolygons.dto";
 import { Project, SitePolygon } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -26,27 +26,13 @@ import {
 } from "./constants/dashboard-entities.constants";
 import { ImpactStory } from "@terramatch-microservices/database/entities/impact-story.entity";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 jest.mock("@nestjs/jwt");
 const MockJwtService = JwtService as jest.MockedClass<typeof JwtService>;
 
 // Mock the dashboard-query.builder module
 jest.mock("./dashboard-query.builder");
-
-// Mock the json-api-builder module
-jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
-  buildJsonApi: jest.fn().mockImplementation(() => ({
-    addData: jest.fn().mockReturnThis(),
-    addIndexData: jest.fn().mockReturnThis(),
-    serialize: jest.fn().mockReturnValue({
-      data: [],
-      included: [],
-      meta: { resourceType: "dashboardProjects" }
-    })
-  })),
-  getStableRequestQuery: jest.fn().mockImplementation(query => query),
-  getDtoType: jest.fn().mockReturnValue("dashboardProjects")
-}));
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   ...jest.requireActual("@terramatch-microservices/database/entities"),
@@ -69,6 +55,13 @@ describe("DashboardEntitiesController", () => {
   let app: INestApplication;
   let jwtService: DeepMocked<JwtService>;
   let mockQueryBuilder: jest.Mocked<DashboardProjectsQueryBuilder>;
+
+  const mockCacheServiceGet = () => {
+    // Fix the cache mock to return the correct structure
+    cacheService.get.mockImplementation(async (cacheKey, factory) =>
+      factory == null ? { data: [], total: 0 } : await factory()
+    );
+  };
 
   beforeEach(async () => {
     // Setup mock query builder
@@ -192,14 +185,7 @@ describe("DashboardEntitiesController", () => {
       }
     ];
 
-    // Fix the cache mock to return the correct structure
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     // Mock the processor methods since we're using a real processor instance
     jest.spyOn(mockProcessor, "findMany").mockResolvedValue(mockModels);
@@ -214,18 +200,14 @@ describe("DashboardEntitiesController", () => {
       };
     });
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
-    expect(result.included).toBeDefined();
     expect(result.meta).toBeDefined();
 
     expect(Array.isArray(result.data)).toBe(true);
-    expect(result.data).toHaveLength(0);
-
-    expect(Array.isArray(result.included)).toBe(true);
-    expect(result.included).toHaveLength(0);
+    expect(result.data).toHaveLength(2);
 
     expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
     expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
@@ -266,11 +248,10 @@ describe("DashboardEntitiesController", () => {
     const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockDtoResult);
     const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto");
 
-    const result = await controller.findOne(params.entity, params.uuid);
+    const result = serialize(await controller.findOne(params.entity, params.uuid));
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
-    expect(result.included).toBeDefined();
     expect(result.meta).toBeDefined();
 
     expect(findOneSpy).toHaveBeenCalledWith(params.uuid);
@@ -310,11 +291,10 @@ describe("DashboardEntitiesController", () => {
     const getFullDtoSpy = jest.spyOn(mockProcessor, "getFullDto").mockResolvedValue(mockFullDtoResult);
     const getLightDtoSpy = jest.spyOn(mockProcessor, "getLightDto");
 
-    const result = await controller.findOne(params.entity, params.uuid);
+    const result = serialize(await controller.findOne(params.entity, params.uuid));
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
-    expect(result.included).toBeDefined();
     expect(result.meta).toBeDefined();
 
     expect(findOneSpy).toHaveBeenCalledWith(params.uuid);
@@ -353,13 +333,7 @@ describe("DashboardEntitiesController", () => {
       }
     ] as Project[];
 
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mockCacheServiceGet();
 
     jest.spyOn(mockProcessor, "findMany").mockResolvedValue(mockModels);
     jest.spyOn(mockProcessor, "getLightDto").mockResolvedValue({
@@ -373,7 +347,7 @@ describe("DashboardEntitiesController", () => {
       })
     });
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
     expect(dashboardEntitiesService.createDashboardProcessor).toHaveBeenCalledWith(params.entity);
@@ -432,11 +406,10 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
-    expect(result.included).toBeDefined();
     expect(result.meta).toBeDefined();
 
     expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
@@ -483,7 +456,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findOne(params.entity, params.uuid);
+    const result = serialize(await controller.findOne(params.entity, params.uuid));
     expect(result).toBeDefined();
   });
 
@@ -514,7 +487,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
@@ -542,7 +515,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(Media.findAll).toHaveBeenCalledWith({
@@ -574,7 +547,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue(mockMedia);
     mediaService.getUrl.mockReturnValue("http://example.com/thumb.jpg");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(mediaService.getUrl).toHaveBeenCalledWith(mockMedia[0]);
@@ -599,7 +572,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
@@ -627,7 +600,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(dashboardImpactStoryService.getDashboardImpactStories).toHaveBeenCalledWith({
@@ -664,7 +637,7 @@ describe("DashboardEntitiesController", () => {
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
     mediaService.getUrl.mockReturnValue("");
 
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(result.data).toBeDefined();
@@ -703,7 +676,7 @@ describe("DashboardEntitiesController", () => {
       mockProcessor as unknown as ReturnType<typeof dashboardEntitiesService.createDashboardProcessor>
     );
 
-    const result = await controller.findOne(params.entity, params.uuid);
+    const result = serialize(await controller.findOne(params.entity, params.uuid));
 
     expect(result).toBeDefined();
     expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
@@ -730,7 +703,7 @@ describe("DashboardEntitiesController", () => {
       mockProcessor as unknown as ReturnType<typeof dashboardEntitiesService.createDashboardProcessor>
     );
 
-    const result = await controller.findOne(params.entity, params.uuid);
+    const result = serialize(await controller.findOne(params.entity, params.uuid));
 
     expect(result).toBeDefined();
     expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);
@@ -743,6 +716,8 @@ describe("DashboardEntitiesController", () => {
     const query: DashboardQueryDto = {};
     const mockSitePolygon = { uuid: "site-uuid-1", name: "Test Site" } as unknown as SitePolygon;
     const mockProcessor = createMock<DashboardSitePolygonsProcessor>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mockProcessor as any).LIGHT_DTO = DashboardSitePolygonsLightDto;
     const mockDtoResult = {
       id: "site-uuid-1",
       dto: new DashboardSitePolygonsLightDto(mockSitePolygon)
@@ -753,16 +728,9 @@ describe("DashboardEntitiesController", () => {
     );
     mockProcessor.findMany.mockResolvedValue([mockSitePolygon]);
     mockProcessor.getLightDto.mockResolvedValue(mockDtoResult);
+    mockCacheServiceGet();
 
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
-
-    const result = await controller.findAll(params.entity, query);
+    const result = serialize(await controller.findAll(params.entity, query));
 
     expect(result).toBeDefined();
     expect(dashboardEntitiesService.createDashboardProcessor).toHaveBeenCalledWith(params.entity);
@@ -786,7 +754,7 @@ describe("DashboardEntitiesController", () => {
     mockProcessor.findOne.mockResolvedValue(mockSitePolygon);
     mockProcessor.getLightDto.mockResolvedValue(mockDto);
 
-    const result = await controller.findOne(params.entity, params.uuid);
+    const result = serialize(await controller.findOne(params.entity, params.uuid));
 
     expect(result).toBeDefined();
     expect(mockProcessor.findOne).toHaveBeenCalledWith(params.uuid);

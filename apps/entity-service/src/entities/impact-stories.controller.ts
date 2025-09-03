@@ -28,7 +28,6 @@ export class ImpactStoriesController {
   async impactStoryIndex(@Query() params: ImpactStoryQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.impactStoryService.getImpactStories(params);
     const document = buildJsonApi(ImpactStoryLightDto, { pagination: "number" });
-    const indexIds: string[] = [];
 
     if (data.length !== 0) {
       const mediaByStory = await this.impactStoryService.getMediaForStories(data);
@@ -37,8 +36,6 @@ export class ImpactStoriesController {
       const countriesMap = await this.impactStoryService.getCountriesForOrganizations(organizationCountries);
 
       for (const impact of data) {
-        indexIds.push(impact.uuid);
-
         const mediaCollection = mediaByStory[impact.id] ?? [];
         const orgCountries = (impact.organisation?.countries ?? [])
           .map(iso => countriesMap.get(iso))
@@ -63,14 +60,11 @@ export class ImpactStoriesController {
       }
     }
 
-    document.addIndexData({
-      resource: "impactStories",
+    return document.addIndex({
       requestPath: `/entities/v3/impactStories${getStableRequestQuery(params)}`,
-      ids: indexIds,
       total: paginationTotal,
       pageNumber: pageNumber
     });
-    return document.serialize();
   }
 
   @Get(":uuid")
@@ -103,19 +97,17 @@ export class ImpactStoriesController {
       twitterUrl: impactStory.organisation?.twitterUrl
     };
 
-    return buildJsonApi(ImpactStoryFullDto)
-      .addData(
-        uuid,
-        new ImpactStoryFullDto(impactStory, {
-          organization,
-          ...(this.entitiesService.mapMediaCollection(
-            mediaCollection,
-            ImpactStory.MEDIA,
-            "projects",
-            impactStory.uuid
-          ) as ImpactStoryMedia)
-        })
-      )
-      .document.serialize();
+    return buildJsonApi(ImpactStoryFullDto).addData(
+      uuid,
+      new ImpactStoryFullDto(impactStory, {
+        organization,
+        ...(this.entitiesService.mapMediaCollection(
+          mediaCollection,
+          ImpactStory.MEDIA,
+          "projects",
+          impactStory.uuid
+        ) as ImpactStoryMedia)
+      })
+    );
   }
 }

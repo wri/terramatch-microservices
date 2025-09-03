@@ -37,6 +37,6 @@ export class OrganisationsController {
     const orgResource = document.addData(organisation.uuid, populateDto(new OrganisationDto(), organisation));
     const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
     userResource.relateTo("org", orgResource, { meta: { userStatus: "na" } });
-    return document.serialize();
+    return document;
   }
 }

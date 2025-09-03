@@ -46,7 +46,7 @@ describe("MediaProcessor", () => {
     expect(result.meta.indices?.[0]).toMatchObject({
       resource: "media",
       requestPath: `/entities/v3/${entityType}/${entityUuid}/media${getStableRequestQuery(query)}`,
-      ids: response.map(({ uuid }) => uuid)
+      ids: undefined
     });
   }
 

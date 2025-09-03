@@ -12,6 +12,7 @@ import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -126,7 +127,7 @@ describe("SitePolygonsController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
       mockQueryBuilder([sitePolygon], 1);
-      const result = await controller.findMany({});
+      const result = serialize(await controller.findMany({}));
       expect(result.meta).not.toBe(null);
       expect(result.meta!.indices?.[0].total).toBe(1);
       expect(result.meta!.indices?.[0].cursor).toBe(sitePolygon.uuid);
@@ -140,7 +141,7 @@ describe("SitePolygonsController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       const sitePolygon = await SitePolygonFactory.build();
       mockQueryBuilder([sitePolygon], 1);
-      const result = await controller.findMany({ page: { size: 5, number: 1 } });
+      const result = serialize(await controller.findMany({ page: { size: 5, number: 1 } }));
       expect(result.meta).not.toBe(null);
       expect(result.meta!.indices?.[0].total).toBe(1);
       expect(result.meta!.indices?.[0].pageNumber).toBe(1);
@@ -153,7 +154,7 @@ describe("SitePolygonsController", () => {
     it("should exclude test projects by default", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();
-      const result = await controller.findMany({});
+      const result = serialize(await controller.findMany({}));
       expect(result.meta?.indices?.[0].total).toBe(0);
 
       expect(builder.excludeTestProjects).toHaveBeenCalled();
@@ -217,10 +218,12 @@ describe("SitePolygonsController", () => {
 
       mockQueryBuilder([poly1, poly2], 2);
 
-      const result = await controller.findMany({
-        validationStatus: ["passed", "not_checked"],
-        page: { size: 10, number: 1 }
-      });
+      const result = serialize(
+        await controller.findMany({
+          validationStatus: ["passed", "not_checked"],
+          page: { size: 10, number: 1 }
+        })
+      );
       expect(result.data).toHaveLength(2);
     });
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {

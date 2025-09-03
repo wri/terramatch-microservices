@@ -6,6 +6,7 @@ import { ProjectPitchService } from "./project-pitch.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("ProjectPitchesController", () => {
   let controller: ProjectPitchesController;
@@ -39,7 +40,7 @@ describe("ProjectPitchesController", () => {
 
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
-      const result = await controller.projectPitchIndex(new ProjectPitchQueryDto());
+      const result = serialize(await controller.projectPitchIndex(new ProjectPitchQueryDto()));
       expect(projectPitchService.getProjectPitches).toHaveBeenCalledTimes(1);
       expect(result).toBeDefined();
     });
@@ -56,7 +57,7 @@ describe("ProjectPitchesController", () => {
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
-      const result = await controller.projectPitchIndex(new ProjectPitchQueryDto());
+      const result = serialize(await controller.projectPitchIndex(new ProjectPitchQueryDto()));
       expect(result).toBeDefined();
       expect(Array.isArray(result.data) ? result.data.length : 0).toBe(2);
       expect(projectPitchService.getProjectPitches).toHaveBeenCalledTimes(1);
@@ -85,7 +86,7 @@ describe("ProjectPitchesController", () => {
         } as ProjectPitch);
         projectPitchService.getProjectPitch.mockResolvedValue(mockProjectPitch);
 
-        const result = await controller.projectPitchGet({ uuid: "1" });
+        const result = serialize(await controller.projectPitchGet({ uuid: "1" }));
         expect(result).toBeDefined();
         expect(result.data?.["id"]).toBe("1");
         expect(projectPitchService.getProjectPitch).toHaveBeenCalledWith("1");

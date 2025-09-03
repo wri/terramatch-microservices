@@ -3,15 +3,7 @@ import { TreeRestorationGoalController } from "./tree-restoration-goal.controlle
 import { TreeRestorationGoalService } from "./dto/tree-restoration-goal.service";
 import { CacheService } from "./dto/cache.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-
-// Mock the json-api-builder module
-jest.mock("@terramatch-microservices/common/util/json-api-builder", () => ({
-  buildJsonApi: jest.fn().mockImplementation(() => ({
-    addData: jest.fn(),
-    serialize: jest.fn().mockReturnValue({ mockSerialized: true })
-  })),
-  getStableRequestQuery: jest.fn().mockImplementation(query => query)
-}));
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("TreeRestorationGoalController", () => {
   let controller: TreeRestorationGoalController;
@@ -136,7 +128,7 @@ describe("TreeRestorationGoalController", () => {
       // Mock Date constructor to return consistent timestamp
       jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
-      const result = await controller.getTreeRestorationGoal(query);
+      await controller.getTreeRestorationGoal(query);
 
       expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
       expect(treeRestorationGoalService.getTreeRestorationGoal).toHaveBeenCalledWith(query);
@@ -144,7 +136,6 @@ describe("TreeRestorationGoalController", () => {
         "dashboard:tree-restoration-goal|test-cache-key:timestamp",
         mockTimestamp
       );
-      expect(result).toEqual({ mockSerialized: true });
 
       jest.restoreAllMocks();
     });
@@ -164,7 +155,7 @@ describe("TreeRestorationGoalController", () => {
         // Mock cache.get for data key (cache hit)
         .mockResolvedValueOnce(mockCachedData);
 
-      const result = await controller.getTreeRestorationGoal(query);
+      await controller.getTreeRestorationGoal(query);
 
       expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
       expect(cacheService.get).toHaveBeenCalledWith(
@@ -173,7 +164,6 @@ describe("TreeRestorationGoalController", () => {
       );
       expect(cacheService.get).toHaveBeenCalledWith("dashboard:tree-restoration-goal|cached-key", expect.any(Function));
       expect(treeRestorationGoalService.getTreeRestorationGoal).not.toHaveBeenCalled();
-      expect(result).toEqual({ mockSerialized: true });
     });
 
     it("should handle empty query object", async () => {
@@ -191,10 +181,8 @@ describe("TreeRestorationGoalController", () => {
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
       jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
-      const result = await controller.getTreeRestorationGoal(query);
-
+      await controller.getTreeRestorationGoal(query);
       expect(treeRestorationGoalService.getTreeRestorationGoal).toHaveBeenCalledWith(query);
-      expect(result).toEqual({ mockSerialized: true });
 
       jest.restoreAllMocks();
     });
@@ -222,10 +210,8 @@ describe("TreeRestorationGoalController", () => {
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(mockServiceResponse);
       jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
-      const result = await controller.getTreeRestorationGoal(query);
-
+      await controller.getTreeRestorationGoal(query);
       expect(treeRestorationGoalService.getTreeRestorationGoal).toHaveBeenCalledWith(query);
-      expect(result).toEqual({ mockSerialized: true });
 
       jest.restoreAllMocks();
     });
@@ -252,9 +238,8 @@ describe("TreeRestorationGoalController", () => {
       treeRestorationGoalService.getTreeRestorationGoal.mockResolvedValue(emptyServiceResponse);
       jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
-      const result = await controller.getTreeRestorationGoal(query);
-
-      expect(result).toEqual({ mockSerialized: true });
+      const result = serialize(await controller.getTreeRestorationGoal(query));
+      expect(result).toBeDefined();
 
       jest.restoreAllMocks();
     });
@@ -289,9 +274,8 @@ describe("TreeRestorationGoalController", () => {
       const mockDate = new Date(mockTimestamp);
       jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
-      const result = await controller.getTreeRestorationGoal(query);
-
-      expect(result).toEqual({ mockSerialized: true });
+      const result = serialize(await controller.getTreeRestorationGoal(query));
+      expect(result).toBeDefined();
 
       jest.restoreAllMocks();
     });
@@ -312,9 +296,8 @@ describe("TreeRestorationGoalController", () => {
       // Mock cache hits
       cacheService.get.mockResolvedValueOnce(mockTimestamp).mockResolvedValueOnce(emptyCachedData);
 
-      const result = await controller.getTreeRestorationGoal(query);
-
-      expect(result).toEqual({ mockSerialized: true });
+      const result = serialize(await controller.getTreeRestorationGoal(query));
+      expect(result).toBeDefined();
     });
 
     it("should set timestamp when data is fetched from service", async () => {

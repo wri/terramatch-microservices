@@ -12,6 +12,7 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -74,7 +75,7 @@ describe("EntitiesController", () => {
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       policyService.authorize.mockResolvedValue();
 
-      const result = await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto);
+      const result = serialize(await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto));
       expect(processor.getLightDto).toHaveBeenCalledTimes(2);
       expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
       expect(result.meta.indices?.[0]?.total).toBe(2);
@@ -98,7 +99,7 @@ describe("EntitiesController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       policyService.authorize.mockResolvedValue();
-      const result = await controller.entityGet({ entity: "projects", uuid: "asdf" });
+      const result = serialize(await controller.entityGet({ entity: "projects", uuid: "asdf" }));
       expect(processor.getFullDto).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
     });
@@ -122,7 +123,7 @@ describe("EntitiesController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       policyService.authorize.mockResolvedValue();
-      const result = await controller.entityDelete({ entity: "projects", uuid: project.uuid });
+      const result = serialize(await controller.entityDelete({ entity: "projects", uuid: project.uuid }));
       expect(processor.delete).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
       expect(result.meta.resourceId).toBe(project.uuid);

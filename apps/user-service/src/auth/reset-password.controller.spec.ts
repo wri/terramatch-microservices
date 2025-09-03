@@ -4,6 +4,7 @@ import { ResetPasswordController } from "./reset-password.controller";
 import { ResetPasswordService } from "./reset-password.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("ResetPasswordController", () => {
   let controller: ResetPasswordController;
@@ -29,7 +30,7 @@ describe("ResetPasswordController", () => {
     const uuid = faker.string.uuid();
     resetPasswordService.sendResetPasswordEmail.mockResolvedValue({ uuid, email });
 
-    const result = await controller.requestReset({ emailAddress: email, callbackUrl: "http://example.com" });
+    const result = serialize(await controller.requestReset({ emailAddress: email, callbackUrl: "http://example.com" }));
     expect(result).toMatchObject({
       data: { id: uuid, type: "passwordResets", attributes: { emailAddress: email } }
     });
@@ -59,7 +60,7 @@ describe("ResetPasswordController", () => {
     resetPasswordService.resetPassword.mockResolvedValue({ uuid, email });
     const token = "fake";
 
-    const result = await controller.resetPassword(token, { newPassword: "superpassword" });
+    const result = serialize(await controller.resetPassword(token, { newPassword: "superpassword" }));
     expect(result).toMatchObject({
       data: { id: uuid, type: "passwordResets", attributes: { emailAddress: email } }
     });

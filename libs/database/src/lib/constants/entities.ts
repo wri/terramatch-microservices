@@ -1,4 +1,13 @@
-import { FinancialReport, Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
+import {
+  DisturbanceReport,
+  FinancialReport,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "../entities";
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";

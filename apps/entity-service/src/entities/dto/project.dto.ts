@@ -11,7 +11,6 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
 import { MediaDto } from "./media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { PLANTING_STATUSES, PlantingStatus } from "@terramatch-microservices/database/constants/planting-status";
 
 @JsonApiDto({ type: "projects" })
 export class ProjectLightDto extends EntityDto {
@@ -57,13 +56,6 @@ export class ProjectLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: String })
   shortName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    description: "Planting status for this project",
-    enum: PLANTING_STATUSES
-  })
-  plantingStatus: PlantingStatus | null;
 
   @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
@@ -149,6 +141,9 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Date })
   plantingEndDate: Date | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  description: string | null;
+
   @ApiProperty({ nullable: true, type: Number })
   budget: number | null;
 
@@ -226,6 +221,9 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   landholderCommEngage: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  communityIncentives: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   projPartnerInfo: string | null;

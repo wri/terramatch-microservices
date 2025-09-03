@@ -12,6 +12,7 @@ import {
 } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary, groupBy, isEmpty } from "lodash";
 import {
+  FinancialReport,
   ProjectReport,
   ProjectUser,
   SiteReport,
@@ -107,6 +108,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
   private getParentName(report: ReportModel) {
     if (report instanceof ProjectReport) return report.projectName;
     if (report instanceof SiteReport) return report.siteName;
+    if (report instanceof FinancialReport) return report.organisationName;
     return report.nurseryName;
   }
 
@@ -148,6 +150,12 @@ export class EntityStatusUpdateEmail extends EmailSender {
   }
 
   private async getEntityUsers(entity: EntityModel) {
+    // FinancialReport does not have a projectId, so we skip sending emails
+    if (entity instanceof FinancialReport) {
+      this.logger.log(`Skipping email notification for FinancialReport - no project association`);
+      return [];
+    }
+
     const projectId = await getProjectId(entity);
     if (projectId == null) {
       this.logger.error(`Could not find project ID for entity [type=${entity.constructor.name}, id=${entity.id}]`);

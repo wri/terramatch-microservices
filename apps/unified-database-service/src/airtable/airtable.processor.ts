@@ -27,6 +27,7 @@ import { SlackService } from "@terramatch-microservices/common/slack/slack.servi
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { DisturbanceEntity } from "./entities/disturbance.airtable-entity";
+import { UserEntity } from "./entities/users.airtable-entity";
 
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
@@ -46,7 +47,8 @@ export const AIRTABLE_ENTITIES = {
   projectReports: ProjectReportEntity,
   sites: SiteEntity,
   siteReports: SiteReportEntity,
-  treeSpecies: TreeSpeciesEntity
+  treeSpecies: TreeSpeciesEntity,
+  users: UserEntity
 };
 
 export type EntityType = keyof typeof AIRTABLE_ENTITIES;

@@ -17,10 +17,12 @@ import {
   AuditStatus,
   ImpactStory,
   FinancialIndicator,
+  FinancialReport,
   Form,
   FormQuestionOption,
   FundingProgramme,
-  Disturbance
+  Disturbance,
+  Organisation
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -39,11 +41,13 @@ import { TaskPolicy } from "./task.policy";
 import { DemographicPolicy } from "./demographic.policy";
 import { AuditStatusPolicy } from "./audit-status.policy";
 import { FinancialIndicatorPolicy } from "./financial-indicator.policy";
+import { FinancialReportPolicy } from "./financial-report.policy";
 import { FormPolicy } from "./form.policy";
 import { FormQuestionOptionPolicy } from "./form-question-option.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
 import { ImpactStoryPolicy } from "./impact-story.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
+import { OrganisationPolicy } from "./organisation.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,24 +60,26 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [AuditStatus, AuditStatusPolicy],
+  [Demographic, DemographicPolicy],
+  [Disturbance, DisturbancePolicy],
+  [ImpactStory, ImpactStoryPolicy],
+  [FinancialIndicator, FinancialIndicatorPolicy],
+  [FinancialReport, FinancialReportPolicy],
+  [Form, FormPolicy],
+  [FormQuestionOption, FormQuestionOptionPolicy],
+  [FundingProgramme, FundingProgrammePolicy],
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],
+  [Organisation, OrganisationPolicy],
   [Project, ProjectPolicy],
+  [ProjectPitch, ProjectPitchPolicy],
   [ProjectReport, ProjectReportPolicy],
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
-  [User, UserPolicy],
-  [ProjectPitch, ProjectPitchPolicy],
   [Task, TaskPolicy],
-  [Demographic, DemographicPolicy],
-  [AuditStatus, AuditStatusPolicy],
-  [FinancialIndicator, FinancialIndicatorPolicy],
-  [Form, FormPolicy],
-  [FormQuestionOption, FormQuestionOptionPolicy],
-  [FundingProgramme, FundingProgrammePolicy],
-  [ImpactStory, ImpactStoryPolicy],
-  [Disturbance, DisturbancePolicy]
+  [User, UserPolicy]
 ];
 
 /**

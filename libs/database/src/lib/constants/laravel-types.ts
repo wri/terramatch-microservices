@@ -1,4 +1,4 @@
-import { Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
+import { FinancialReport, Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
 import { DemographicAssociationType } from "../types/demographic";
 
 export const LARAVEL_MODELS = {
@@ -6,7 +6,8 @@ export const LARAVEL_MODELS = {
   [Project.LARAVEL_TYPE]: Project,
   [ProjectPitch.LARAVEL_TYPE]: ProjectPitch,
   [ProjectReport.LARAVEL_TYPE]: ProjectReport,
-  [SiteReport.LARAVEL_TYPE]: SiteReport
+  [SiteReport.LARAVEL_TYPE]: SiteReport,
+  [FinancialReport.LARAVEL_TYPE]: FinancialReport
 };
 
 export const LARAVEL_MODEL_TYPES: Record<string, DemographicAssociationType> = {

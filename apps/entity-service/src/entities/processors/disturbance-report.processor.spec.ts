@@ -6,7 +6,12 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { DisturbanceReportFactory, ProjectFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import {
+  DisturbanceReportFactory,
+  ProjectFactory,
+  SiteFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -43,14 +48,19 @@ describe("DisturbanceReportProcessor", () => {
   describe("findOne", () => {
     it("should return a disturbance report with associations", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({ siteId: site.id });
 
       const result = await processor.findOne(disturbanceReport.uuid);
 
       expect(result).toBeDefined();
       expect(result?.id).toBe(disturbanceReport.id);
-      expect(result?.project).toBeDefined();
-      expect(result?.project?.id).toBe(project.id);
+      expect(result?.site).toBeDefined();
+      expect(result?.site?.id).toBe(site.id);
+      expect(result?.site?.uuid).toBe(site.uuid);
+      expect(result?.site?.name).toBe(site.name);
+      expect(result?.site?.project).toBeDefined();
+      expect(result?.site?.project?.id).toBe(project.id);
     });
 
     it("should return null for non-existent uuid", async () => {
@@ -82,12 +92,13 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should filter by status", async () => {
       const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
       const approvedReports = await DisturbanceReportFactory.createMany(2, {
-        projectId: project.id,
+        siteId: site.id,
         status: "approved"
       });
       await DisturbanceReportFactory.createMany(3, {
-        projectId: project.id,
+        siteId: site.id,
         status: "started"
       });
 
@@ -97,16 +108,19 @@ describe("DisturbanceReportProcessor", () => {
     it("should filter by projectUuid", async () => {
       const project1 = await ProjectFactory.create();
       const project2 = await ProjectFactory.create();
+      const site1 = await SiteFactory.create({ projectId: project1.id });
+      const site2 = await SiteFactory.create({ projectId: project2.id });
 
-      const reports1 = await DisturbanceReportFactory.createMany(2, { projectId: project1.id });
-      await DisturbanceReportFactory.createMany(3, { projectId: project2.id });
+      const reports1 = await DisturbanceReportFactory.createMany(2, { siteId: site1.id });
+      await DisturbanceReportFactory.createMany(3, { siteId: site2.id });
 
       await expectDisturbanceReports(reports1, { projectUuid: project1.uuid });
     });
 
     it("should search by project name", async () => {
       const project = await ProjectFactory.create({ name: "Test Project" });
-      const disturbanceReports = await DisturbanceReportFactory.createMany(2, { projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbanceReports = await DisturbanceReportFactory.createMany(2, { siteId: site.id });
       await DisturbanceReportFactory.createMany(3);
 
       await expectDisturbanceReports(disturbanceReports, { search: "Test Project" });
@@ -121,7 +135,8 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should sort by valid fields", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbanceReports = await DisturbanceReportFactory.createMany(3, { siteId: site.id });
 
       await expectDisturbanceReports(disturbanceReports, { sort: { field: "createdAt", direction: "ASC" } });
       await expectDisturbanceReports(disturbanceReports, { sort: { field: "status", direction: "DESC" } });
@@ -129,7 +144,8 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should sort by project name", async () => {
       const project = await ProjectFactory.create({ name: "A Project" });
-      const disturbanceReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbanceReports = await DisturbanceReportFactory.createMany(3, { siteId: site.id });
 
       await expectDisturbanceReports(disturbanceReports, { sort: { field: "projectName", direction: "ASC" } });
     });
@@ -142,7 +158,8 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should handle pagination", async () => {
       const project = await ProjectFactory.create();
-      await DisturbanceReportFactory.createMany(5, { projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      await DisturbanceReportFactory.createMany(5, { siteId: site.id });
 
       const result = await processor.findMany({ page: { size: 2, number: 1 } });
       expect(result.models.length).toBe(2);
@@ -153,9 +170,10 @@ describe("DisturbanceReportProcessor", () => {
   describe("getFullDto", () => {
     it("should return full DTO", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({ siteId: site.id });
 
-      await disturbanceReport.reload({ include: [{ association: "project" }] });
+      await disturbanceReport.reload({ include: [{ association: "site" }] });
 
       const result = await processor.getFullDto(disturbanceReport);
 
@@ -167,9 +185,10 @@ describe("DisturbanceReportProcessor", () => {
   describe("getLightDto", () => {
     it("should return light DTO", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({ siteId: site.id });
 
-      await disturbanceReport.reload({ include: [{ association: "project" }] });
+      await disturbanceReport.reload({ include: [{ association: "site" }] });
 
       const result = await processor.getLightDto(disturbanceReport);
 

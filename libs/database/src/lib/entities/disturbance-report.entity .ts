@@ -17,10 +17,10 @@ import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
-import { Project } from "./project.entity";
+import { Site } from "./site.entity";
 
 @Scopes(() => ({
-  project: (id: number) => ({ where: { projectId: id } })
+  site: (id: number) => ({ where: { siteId: id } })
 }))
 @Table({
   tableName: "disturbance_reports",
@@ -31,8 +31,8 @@ import { Project } from "./project.entity";
 export class DisturbanceReport extends Model<DisturbanceReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReport";
 
-  static project(id: number) {
-    return chainScope(this, "project", id) as typeof DisturbanceReport;
+  static site(id: number) {
+    return chainScope(this, "site", id) as typeof DisturbanceReport;
   }
 
   @PrimaryKey
@@ -47,9 +47,9 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
-  @ForeignKey(() => Project)
+  @ForeignKey(() => Site)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  siteId: number;
 
   @AllowNull
   @Column(STRING)
@@ -102,8 +102,8 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(TEXT("long"))
   answers: string | null;
 
-  @BelongsTo(() => Project)
-  project: Project | null;
+  @BelongsTo(() => Site)
+  site: Site | null;
 
   @AllowNull
   @Column(DATE)
@@ -113,12 +113,24 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(STRING)
   intensity: string | null;
 
+  get siteName() {
+    return this.site?.name;
+  }
+
   get projectName() {
-    return this.project?.name;
+    return this.site?.project?.name;
+  }
+
+  get siteUuid() {
+    return this.site?.uuid;
   }
 
   get projectUuid() {
-    return this.project?.uuid;
+    return this.site?.project?.uuid;
+  }
+
+  get organisationName() {
+    return this.site?.organisationName;
   }
 
   get isCompletable() {

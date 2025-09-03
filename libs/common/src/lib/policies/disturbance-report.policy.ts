@@ -1,5 +1,6 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
-import { Project, User, DisturbanceReport } from "@terramatch-microservices/database/entities";
+import { Project, Site, DisturbanceReport, User } from "@terramatch-microservices/database/entities";
+import { Op, WhereAttributeHash } from "sequelize";
 
 export class DisturbanceReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -9,7 +10,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], DisturbanceReport, {
+      this.builder.can(["read", "delete"], DisturbanceReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -17,15 +18,18 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectIds = [
-          ...(user.organisationId == null
-            ? []
-            : await Project.findAll({ where: { organisationId: user.organisationId }, attributes: ["id"] })
-          ).map(({ id }) => id),
-          ...user.projects.map(({ id }) => id)
-        ];
-        if (projectIds.length > 0) {
-          this.builder.can(["read", "update"], DisturbanceReport, { projectId: { $in: projectIds } });
+        const projectIds: WhereAttributeHash[] = [{ [Op.in]: user.projects.map(({ id }) => id) }];
+        if (user.organisationId != null) {
+          projectIds.push({ [Op.in]: Project.forOrganisation(user.organisationId) });
+        }
+        const siteIds = (
+          await Site.findAll({
+            where: { projectId: { [Op.or]: projectIds } },
+            attributes: ["id"]
+          })
+        ).map(({ id }) => id);
+        if (siteIds.length > 0) {
+          this.builder.can(["read", "update"], DisturbanceReport, { siteId: { $in: siteIds } });
         }
       }
     }
@@ -35,12 +39,19 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], DisturbanceReport, {
-            projectId: { $in: projectIds }
-          });
+          const siteIds = (
+            await Site.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })
+          ).map(({ id }) => id);
+          if (siteIds.length > 0) {
+            this.builder.can(["read", "delete"], DisturbanceReport, {
+              siteId: { $in: siteIds }
+            });
+          }
         }
       }
     }
+
+    this.builder.can("read", DisturbanceReport);
   }
 
   private _user?: User | null;

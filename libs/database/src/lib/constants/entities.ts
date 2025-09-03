@@ -55,17 +55,11 @@ export const isReport = (entity: EntityModel): entity is ReportModel =>
  */
 export async function getProjectId(entity: EntityModel) {
   if (entity instanceof Project) return entity.id;
-  if (
-    entity instanceof Site ||
-    entity instanceof Nursery ||
-    entity instanceof ProjectReport ||
-    entity instanceof DisturbanceReport
-  )
-    return entity.projectId;
+  if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
 
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;
   const parentId =
-    entity instanceof SiteReport
+    entity instanceof SiteReport || entity instanceof DisturbanceReport
       ? entity.siteId
       : entity instanceof FinancialReport
       ? entity.organisationId

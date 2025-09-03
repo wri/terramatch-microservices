@@ -1,4 +1,4 @@
-import { DisturbanceReport, Site, ProjectUser } from "@terramatch-microservices/database/entities";
+import { DisturbanceReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
@@ -11,17 +11,15 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
   "updateRequestStatus",
   "frameworkKey",
-  "siteUuid",
   "organisationUuid",
   "country",
   "projectUuid"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
-  siteUuid: "$site.uuid$",
-  organisationUuid: "$site.project.organisation.uuid$",
-  country: "$site.project.country$",
-  projectUuid: "$site.project.uuid$"
+  organisationUuid: "$project.organisation.uuid$",
+  country: "$project.country$",
+  projectUuid: "$project.uuid$"
 };
 
 export class DisturbanceReportProcessor extends ReportProcessor<
@@ -38,15 +36,9 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       where: { uuid },
       include: [
         {
-          association: "site",
-          attributes: ["id", "uuid", "name"],
-          include: [
-            {
-              association: "project",
-              attributes: ["id", "uuid", "name"],
-              include: [{ association: "organisation", attributes: ["uuid", "name"] }]
-            }
-          ]
+          association: "project",
+          attributes: ["uuid", "name", "country"],
+          include: [{ association: "organisation", attributes: ["uuid", "name"] }]
         },
         { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
         { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
@@ -55,18 +47,12 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   async findMany(query: EntityQueryDto) {
-    const siteAssociation: Includeable = {
-      association: "site",
-      attributes: ["id", "uuid", "name"],
-      include: [
-        {
-          association: "project",
-          attributes: ["id", "uuid", "name"],
-          include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }]
-        }
-      ]
+    const projectAssociation: Includeable = {
+      association: "project",
+      attributes: ["uuid", "name"],
+      include: [{ association: "organisation", attributes: ["uuid", "name"] }]
     };
-    const associations = [siteAssociation];
+    const associations = [projectAssociation];
     const builder = await this.entitiesService.buildQuery(DisturbanceReport, query, associations);
 
     if (query.sort?.field != null) {
@@ -76,10 +62,10 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         )
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
-      } else if (query.sort.field === "organisationName") {
-        builder.order(["site", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["site", "project", "name", query.sort.direction ?? "ASC"]);
+        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organisationName") {
+        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
@@ -92,13 +78,9 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     if (frameworkPermissions?.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({
-        "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
-      });
+      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({
-        "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
-      });
+      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
     }
 
     for (const term of SIMPLE_FILTERS) {
@@ -111,20 +93,19 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     if (query.search != null) {
       builder.where({
         [Op.or]: [
-          { "$site.name$": { [Op.like]: `%${query.search}%` } },
-          { "$site.project.name$": { [Op.like]: `%${query.search}%` } },
-          { "$site.project.organisation.name$": { [Op.like]: `%${query.search}%` } },
+          { "$project.name$": { [Op.like]: `%${query.search}%` } },
+          { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } },
           { title: { [Op.like]: `%${query.search}%` } }
         ]
       });
     }
 
-    if (query.siteUuid != null) {
-      const site = await Site.findOne({ where: { uuid: query.siteUuid }, attributes: ["id"] });
-      if (site == null) {
-        throw new BadRequestException(`Site with uuid ${query.siteUuid} not found`);
+    if (query.projectUuid != null) {
+      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
+      if (project == null) {
+        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
       }
-      builder.where({ siteId: site.id });
+      builder.where({ projectId: project.id });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

@@ -17,10 +17,10 @@ import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
-import { Site } from "./site.entity";
+import { Project } from "./project.entity";
 
 @Scopes(() => ({
-  site: (id: number) => ({ where: { siteId: id } })
+  project: (id: number) => ({ where: { projectId: id } })
 }))
 @Table({
   tableName: "disturbance_reports",
@@ -31,8 +31,8 @@ import { Site } from "./site.entity";
 export class DisturbanceReport extends Model<DisturbanceReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReport";
 
-  static site(id: number) {
-    return chainScope(this, "site", id) as typeof DisturbanceReport;
+  static project(id: number) {
+    return chainScope(this, "project", id) as typeof DisturbanceReport;
   }
 
   @PrimaryKey
@@ -47,9 +47,9 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
-  @ForeignKey(() => Site)
+  @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  siteId: number;
+  projectId: number;
 
   @AllowNull
   @Column(STRING)
@@ -102,8 +102,8 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(TEXT("long"))
   answers: string | null;
 
-  @BelongsTo(() => Site)
-  site: Site | null;
+  @BelongsTo(() => Project)
+  project: Project | null;
 
   @AllowNull
   @Column(DATE)
@@ -113,24 +113,16 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(STRING)
   intensity: string | null;
 
-  get siteName() {
-    return this.site?.name;
-  }
-
   get projectName() {
-    return this.site?.project?.name;
-  }
-
-  get siteUuid() {
-    return this.site?.uuid;
-  }
-
-  get projectUuid() {
-    return this.site?.project?.uuid;
+    return this.project?.name;
   }
 
   get organisationName() {
-    return this.site?.organisationName;
+    return this.project?.organisationName;
+  }
+
+  get projectUuid() {
+    return this.project?.uuid;
   }
 
   get isCompletable() {

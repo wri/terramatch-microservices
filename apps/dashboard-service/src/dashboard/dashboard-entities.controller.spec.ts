@@ -408,13 +408,29 @@ describe("DashboardEntitiesController", () => {
   it("should handle impact stories entity", async () => {
     const params: DashboardEntityParamsDto = { entity: DASHBOARD_IMPACT_STORIES };
     const query: DashboardQueryDto = { country: "KEN" };
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
+
+    const mockImpactStories = [
+      {
+        id: 1,
+        uuid: "test-uuid",
+        title: "Test Story",
+        date: "2023-01-01",
+        category: ["test-category"],
+        status: "published",
+        organisation: {
+          name: "Test Org",
+          countries: ["KEN"],
+          facebookUrl: null,
+          instagramUrl: null,
+          linkedinUrl: null,
+          twitterUrl: null
+        }
       }
-      return { data: [], total: 0 };
-    });
+    ] as unknown as ImpactStory[];
+
+    dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    mediaService.getUrl.mockReturnValue("");
 
     const result = await controller.findAll(params.entity, query);
 
@@ -427,8 +443,9 @@ describe("DashboardEntitiesController", () => {
       country: query.country,
       organisationType: query.organisationType
     });
-    expect(cacheService.getCacheKeyFromQuery).toHaveBeenCalledWith(query);
-    expect(cacheService.get).toHaveBeenCalledWith(`dashboard:${params.entity}|test-cache-key`, expect.any(Function));
+
+    expect(cacheService.getCacheKeyFromQuery).not.toHaveBeenCalled();
+    expect(cacheService.get).not.toHaveBeenCalled();
   });
 
   it("should handle unsupported dashboard entities with appropriate error", async () => {
@@ -494,13 +511,8 @@ describe("DashboardEntitiesController", () => {
     ] as unknown as ImpactStory[];
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    jest.spyOn(Media, "findAll").mockResolvedValue([]);
+    mediaService.getUrl.mockReturnValue("");
 
     const result = await controller.findAll(params.entity, query);
 
@@ -528,13 +540,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mediaService.getUrl.mockReturnValue("");
 
     const result = await controller.findAll(params.entity, query);
 
@@ -567,13 +573,6 @@ describe("DashboardEntitiesController", () => {
     const mockMedia = [{ id: 1, modelId: 1 }] as Media[];
     jest.spyOn(Media, "findAll").mockResolvedValue(mockMedia);
     mediaService.getUrl.mockReturnValue("http://example.com/thumb.jpg");
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
 
     const result = await controller.findAll(params.entity, query);
 
@@ -598,13 +597,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mediaService.getUrl.mockReturnValue("");
 
     const result = await controller.findAll(params.entity, query);
 
@@ -632,13 +625,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mediaService.getUrl.mockReturnValue("");
 
     const result = await controller.findAll(params.entity, query);
 
@@ -675,13 +662,7 @@ describe("DashboardEntitiesController", () => {
 
     dashboardImpactStoryService.getDashboardImpactStories.mockResolvedValue(mockImpactStories);
     jest.spyOn(Media, "findAll").mockResolvedValue([]);
-    cacheService.get.mockImplementation(async (cacheKey, factory) => {
-      if (factory !== undefined && factory !== null) {
-        const result = await factory();
-        return result;
-      }
-      return { data: [], total: 0 };
-    });
+    mediaService.getUrl.mockReturnValue("");
 
     const result = await controller.findAll(params.entity, query);
 

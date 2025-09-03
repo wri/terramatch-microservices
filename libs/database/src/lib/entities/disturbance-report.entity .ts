@@ -102,9 +102,6 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(TEXT("long"))
   answers: string | null;
 
-  @BelongsTo(() => Project)
-  project: Project | null;
-
   @AllowNull
   @Column(DATE)
   dateOfIncident: Date | null;
@@ -112,6 +109,15 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @AllowNull
   @Column(STRING)
   intensity: string | null;
+
+  @BelongsTo(() => Project)
+  project: Project | null;
+
+  @BelongsTo(() => User)
+  user: User | null;
+
+  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
+  createdByUser: User | null;
 
   get projectName() {
     return this.project?.name;

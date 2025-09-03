@@ -52,19 +52,16 @@ export class DashboardEntitiesController {
     summary: "Get a list of dashboard entities. Returns light data for all users."
   })
   async findAll(@Param("entity") entity: DashboardEntity, @Query() query: DashboardQueryDto) {
-    const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
-
     if (entity === DASHBOARD_IMPACT_STORIES) {
-      const { data = [], total = 0 } = await this.cacheService.get(cacheKey, async () => {
-        const impactStories = await this.dashboardImpactStoryService.getDashboardImpactStories({
-          country: query.country,
-          organisationType: query.organisationType
-        });
-        const plainData = impactStories.map(story =>
-          typeof story.get === "function" ? story.get({ plain: true }) : story
-        );
-        return { data: plainData, total: plainData.length };
+      const impactStories = await this.dashboardImpactStoryService.getDashboardImpactStories({
+        country: query.country,
+        organisationType: query.organisationType
       });
+      const plainData = impactStories.map(story =>
+        typeof story.get === "function" ? story.get({ plain: true }) : story
+      );
+      const data = plainData;
+      const total = plainData.length;
       const document = buildJsonApi(DashboardImpactStoryLightDto, { pagination: "number" });
       for (const impactStory of data) {
         const org = impactStory.organisation;
@@ -108,6 +105,8 @@ export class DashboardEntitiesController {
         pageNumber: 1
       });
     }
+
+    const cacheKey = `dashboard:${entity}|${this.cacheService.getCacheKeyFromQuery(query)}`;
 
     if (entity === DASHBOARD_PROJECTS) {
       const processor = this.dashboardEntitiesService.createDashboardProcessor(entity);

@@ -44,6 +44,6 @@ export class EntityAssociationsController {
     await this.policyService.authorize("read", baseEntity);
     const document = buildJsonApi(processor.DTO, { forceDataArray: true });
     await processor.addDtos(document);
-    return document.serialize();
+    return document;
   }
 }

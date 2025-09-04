@@ -120,9 +120,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return models;
   }
 
-  private async getFinancialReportModels(financialReport: FinancialReport) {
-    const models: QueryModelType[] = this.getBaseEntityModels(financialReport);
-    return models;
+  private async getFinancialReportModels(financialReport: FinancialReport): Promise<QueryModelType[]> {
+    return this.getBaseEntityModels(financialReport);
   }
 
   _queryBuilder: PaginatedQueryBuilder<Media> | null = null;
@@ -237,7 +236,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     const total = await this.getTotal();
 
     const resource = getDtoType(this.DTO);
-    document.addIndexData({
+    document.addIndex({
       resource,
       requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}${getStableRequestQuery(this.query)}`,
       total,

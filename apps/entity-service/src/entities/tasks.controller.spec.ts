@@ -9,6 +9,7 @@ import { Task } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { TaskLightDto } from "./dto/task.dto";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("TasksController", () => {
   let controller: TasksController;
@@ -53,7 +54,7 @@ describe("TasksController", () => {
       service.getTasks.mockResolvedValue({ tasks, total: tasks.length });
       policyService.authorize.mockResolvedValue();
 
-      const result = await controller.taskIndex({});
+      const result = serialize(await controller.taskIndex({}));
       expect(policyService.authorize).toHaveBeenCalledWith("read", tasks);
       expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
       expect(result.meta.indices?.[0]?.total).toBe(2);

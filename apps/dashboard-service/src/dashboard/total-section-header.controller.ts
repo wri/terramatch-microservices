@@ -29,7 +29,7 @@ export class TotalSectionHeaderController {
       await this.cacheService.getTotalSectionHeader(cacheKey, query, delayedJob.id);
       const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
 
-      return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto).document.serialize();
+      return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto);
     }
 
     const {
@@ -42,10 +42,9 @@ export class TotalSectionHeaderController {
       totalTreesRestoredGoal
     } = cachedData;
 
-    const document = buildJsonApi(TotalSectionHeaderDto);
     const stableQuery = getStableRequestQuery(query);
 
-    document.addData(
+    return buildJsonApi(TotalSectionHeaderDto).addData(
       stableQuery,
       new TotalSectionHeaderDto({
         totalNonProfitCount,
@@ -58,7 +57,5 @@ export class TotalSectionHeaderController {
         lastUpdatedAt
       })
     );
-
-    return document.serialize();
   }
 }

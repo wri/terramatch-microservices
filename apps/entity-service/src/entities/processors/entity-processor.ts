@@ -125,7 +125,7 @@ export abstract class EntityProcessor<
       }
     }
 
-    document.addIndexData({ ...indexData, ids: indexIds });
+    document.addIndex({ ...indexData, ids: indexIds });
 
     if (models.length > 0 && !sideloaded && query.sideloads != null && query.sideloads.length > 0) {
       for (const model of models) {

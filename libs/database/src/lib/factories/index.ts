@@ -6,6 +6,7 @@ export * from "./disturbance-report.factory";
 export * from "./financial-indicator.factory";
 export * from "./financial-report.factory";
 export * from "./funding-type.factory";
+export * from "./form-option-list.factory";
 export * from "./form-option-list-option.factory";
 export * from "./form-submission.factory";
 export * from "./form.factory";

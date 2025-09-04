@@ -4,6 +4,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { HectaresRestorationController } from "./hectares-restoration.controller";
 import { HectaresRestorationService } from "./hectares-restoration.service";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 const getTotalsResult = () => {
   return {
@@ -53,7 +54,7 @@ describe("HectaresRestorationController", () => {
 
     hectaresRestorationService.getResults.mockResolvedValue(getTotalsResult());
 
-    const response = await controller.getHectaresRestoration(query);
+    const response = serialize(await controller.getHectaresRestoration(query));
 
     expect(response).toBeDefined();
     expect(response.data).toBeDefined();
@@ -69,7 +70,7 @@ describe("HectaresRestorationController", () => {
     cacheService.get.mockResolvedValue(getTotalsResult());
 
     const query = { projectUuid: "uuid1" } as DashboardQueryDto;
-    const response = await controller.getHectaresRestoration(query);
+    const response = serialize(await controller.getHectaresRestoration(query));
 
     expect(response).toBeDefined();
     expect(response.data).toBeDefined();

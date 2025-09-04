@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { TotalSectionHeaderController } from "./total-section-header.controller";
 import { CacheService } from "./dto/cache.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   DelayedJob: {
@@ -40,7 +41,7 @@ describe("TotalSectionHeaderController", () => {
     cacheService.get.mockResolvedValue(null);
 
     const query = {} as DashboardQueryDto;
-    const response = await controller.getTotalSectionHeader(query);
+    const response = serialize(await controller.getTotalSectionHeader(query));
 
     expect(response).toBeDefined();
     expect(response.data).toBeDefined();
@@ -66,7 +67,7 @@ describe("TotalSectionHeaderController", () => {
     cacheService.getTimestampForTotalSectionHeader.mockResolvedValue("2025-01-01T00:00:00.000Z");
 
     const query = {} as DashboardQueryDto;
-    const response = await controller.getTotalSectionHeader(query);
+    const response = serialize(await controller.getTotalSectionHeader(query));
 
     expect(response).toBeDefined();
     expect(response.data).toBeDefined();

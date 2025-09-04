@@ -8,13 +8,7 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import {
-  buildJsonApi,
-  getDtoType,
-  getStableRequestQuery,
-  IndexData,
-  JsonApiDocument
-} from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -58,7 +52,7 @@ export class SitePolygonsController {
   ])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
-  async findMany(@Query() query: SitePolygonQueryDto): Promise<JsonApiDocument> {
+  async findMany(@Query() query: SitePolygonQueryDto) {
     await this.policyService.authorize("readAll", SitePolygon);
 
     const {
@@ -166,12 +160,12 @@ export class SitePolygonsController {
 
     const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
 
-    const indexIds: string[] = [];
     const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     const sitePolygons = await queryBuilder.execute();
     const associations = await this.sitePolygonService.loadAssociationDtos(sitePolygons, lightResource ?? false);
+    let cursor: string | undefined = undefined;
     for (const sitePolygon of sitePolygons) {
-      indexIds.push(sitePolygon.uuid);
+      if (cursor == null) cursor = sitePolygon.uuid;
       if (lightResource) {
         document.addData(
           sitePolygon.uuid,
@@ -185,17 +179,13 @@ export class SitePolygonsController {
       }
     }
 
-    const indexData: IndexData = {
-      resource: getDtoType(dtoType),
+    const indexData: Partial<IndexData> & { requestPath: string } = {
       requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`,
-      ids: indexIds,
       total: await queryBuilder.paginationTotal()
     };
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
-    else indexData.cursor = indexIds[0];
-    document.addIndexData(indexData);
-
-    return document.serialize();
+    else indexData.cursor = cursor;
+    return document.addIndex(indexData);
   }
 
   @Patch()

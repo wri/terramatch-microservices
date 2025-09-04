@@ -8,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { AppModule } from "./app.module";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilderInterceptor } from "@terramatch-microservices/common/util/document-builder-interceptor";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -35,6 +36,8 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true, exposeDefaultValues: true }
     })
   );
+
+  app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
   const port = process.env.NODE_ENV === "production" ? 80 : process.env.JOB_SERVICE_PORT ?? 4020;
   await app.listen(port);

@@ -8,6 +8,7 @@ import { SiteReportFactory } from "@terramatch-microservices/database/factories"
 import { DisturbancesController } from "./disturbances.controller";
 import { DisturbanceService } from "./disturbance.service";
 import { DisturbanceQueryDto } from "./dto/disturbance-query.dto";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("DisturbanceController", () => {
   let controller: DisturbancesController;
@@ -41,7 +42,7 @@ describe("DisturbanceController", () => {
 
       disturbanceService.getDisturbances.mockResolvedValue(mockResponse);
 
-      const result = await controller.disturbancesIndex(new DisturbanceQueryDto());
+      const result = serialize(await controller.disturbancesIndex(new DisturbanceQueryDto()));
       expect(disturbanceService.getDisturbances).toHaveBeenCalledTimes(1);
       expect(result).toBeDefined();
     });
@@ -69,7 +70,7 @@ describe("DisturbanceController", () => {
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       disturbanceService.getDisturbances.mockResolvedValue(mockResponse);
 
-      const result = await controller.disturbancesIndex(new DisturbanceQueryDto());
+      const result = serialize(await controller.disturbancesIndex(new DisturbanceQueryDto()));
       expect(result).toBeDefined();
       expect(Array.isArray(result.data) ? result.data.length : 0).toBe(2);
       expect(disturbanceService.getDisturbances).toHaveBeenCalledTimes(1);

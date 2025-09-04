@@ -147,5 +147,5 @@ export class FormQuestion extends Model<FormQuestion> {
 
   @AllowNull
   @JsonColumn()
-  years: string[] | null;
+  years: number[] | null;
 }

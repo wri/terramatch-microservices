@@ -89,8 +89,8 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, type: Number })
   maxNumberLimit: number | null;
 
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  years: string[] | null;
+  @ApiProperty({ nullable: true, type: Number, isArray: true })
+  years: number[] | null;
 
   @ApiProperty({ nullable: true, type: FormTableHeaderDto, isArray: true })
   tableHeaders: FormTableHeaderDto[] | null;

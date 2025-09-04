@@ -23,6 +23,9 @@ export class DisturbanceReportLightDto extends EntityDto {
   @ApiProperty()
   status: string;
 
+  @ApiProperty()
+  updateRequestStatus: string;
+
   @ApiProperty({ nullable: true, type: String, description: "The associated project name" })
   projectName: string | null;
 
@@ -58,9 +61,6 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
       });
     }
   }
-
-  @ApiProperty({ nullable: true, type: String })
-  updateRequestStatus: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   title: string | null;

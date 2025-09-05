@@ -159,7 +159,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
       const user = await User.findByPk(entity.createdBy, {
         attributes: ["emailAddress", "locale"]
       });
-      return user ? [user] : [];
+      return user != null ? [user] : [];
     }
 
     const projectId = await getProjectId(entity);

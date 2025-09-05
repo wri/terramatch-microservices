@@ -9,7 +9,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete"], DisturbanceReport, {
+      this.builder.can(["read", "delete", "update", "approve"], DisturbanceReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -35,7 +35,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete"], DisturbanceReport, {
+          this.builder.can(["read", "delete", "update", "approve"], DisturbanceReport, {
             projectId: { $in: projectIds }
           });
         }

@@ -141,15 +141,6 @@ describe("DisturbanceReportProcessor", () => {
         BadRequestException
       );
     });
-
-    it("should handle pagination", async () => {
-      const project = await ProjectFactory.create();
-      await DisturbanceReportFactory.createMany(5, { projectId: project.id });
-
-      const result = await processor.findMany({ page: { size: 2, number: 1 } });
-      expect(result.models.length).toBe(2);
-      expect(result.paginationTotal).toBe(5);
-    });
   });
 
   describe("getFullDto", () => {

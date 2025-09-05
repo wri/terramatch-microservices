@@ -37,7 +37,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       include: [
         {
           association: "project",
-          attributes: ["uuid", "name", "country"],
+          attributes: ["id", "uuid", "name", "country"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
         }
       ]
@@ -47,7 +47,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   async findMany(query: EntityQueryDto) {
     const projectAssociation: Includeable = {
       association: "project",
-      attributes: ["uuid", "name"],
+      attributes: ["id", "uuid", "name"],
       include: [{ association: "organisation", attributes: ["uuid", "name"] }]
     };
     const associations = [projectAssociation];
@@ -55,9 +55,17 @@ export class DisturbanceReportProcessor extends ReportProcessor<
 
     if (query.sort?.field != null) {
       if (
-        ["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus", "dateOfIncident", "intensity"].includes(
-          query.sort.field
-        )
+        [
+          "title",
+          "status",
+          "updateRequestStatus",
+          "createdAt",
+          "dueAt",
+          "updatedAt",
+          "submittedAt",
+          "dateOfIncident",
+          "intensity"
+        ].includes(query.sort.field)
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {

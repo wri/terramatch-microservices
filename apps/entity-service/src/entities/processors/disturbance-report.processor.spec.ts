@@ -6,7 +6,12 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { DisturbanceReportFactory, ProjectFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import {
+  DisturbanceReportFactory,
+  ProjectFactory,
+  ProjectUserFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -134,6 +139,41 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
 
       await expectDisturbanceReports(disturbanceReports, { sort: { field: "projectName", direction: "ASC" } });
+    });
+
+    it("should returns managed project reports", async () => {
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectFactory.create();
+      const projectReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
+      await DisturbanceReportFactory.createMany(5);
+      await expectDisturbanceReports(projectReports, {}, { permissions: ["projects-manage"] });
+    });
+
+    it("should returns framework disturbance reports", async () => {
+      const disturbanceReports = await DisturbanceReportFactory.createMany(3, { frameworkKey: "hbf" });
+      await DisturbanceReportFactory.createMany(3, { frameworkKey: "ppc" });
+      for (const p of await DisturbanceReportFactory.createMany(3, { frameworkKey: "terrafund" })) {
+        disturbanceReports.push(p);
+      }
+
+      await expectDisturbanceReports(disturbanceReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+    });
+
+    it("should returns own project disturbance reports", async () => {
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId, projectId: project.id });
+      const ownProjectReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
+      await DisturbanceReportFactory.createMany(5);
+
+      await expectDisturbanceReports(ownProjectReports, {}, { permissions: ["manage-own"] });
+    });
+
+    it("should filter by framework key when user has framework permissions", async () => {
+      const ppcReports = await DisturbanceReportFactory.createMany(2, { frameworkKey: "ppc" });
+      await DisturbanceReportFactory.createMany(3, { frameworkKey: "terrafund" });
+
+      await expectDisturbanceReports(ppcReports, {}, { permissions: ["framework-ppc"] });
     });
 
     it("should throw error for invalid sort field", async () => {

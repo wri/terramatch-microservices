@@ -132,10 +132,8 @@ export class EntityStatusUpdateEmail extends EmailSender {
 
     const include: Includeable[] = [];
     const attributeKeys = Object.keys(entityClass.getAttributes());
-    const baseAttributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"];
 
-    // Only include createdBy for FinancialReport
-    const attributes = baseAttributes
+    const attributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"]
       .concat(entityClass === FinancialReport ? ["createdBy"] : [])
       .filter(field => attributeKeys.includes(field));
 

@@ -132,9 +132,13 @@ export class EntityStatusUpdateEmail extends EmailSender {
 
     const include: Includeable[] = [];
     const attributeKeys = Object.keys(entityClass.getAttributes());
-    const attributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"].filter(field =>
-      attributeKeys.includes(field)
-    );
+    const baseAttributes = ["id", "uuid", "status", "updateRequestStatus", "name", "feedback"];
+
+    // Only include createdBy for FinancialReport
+    const attributes = baseAttributes
+      .concat(entityClass === FinancialReport ? ["createdBy"] : [])
+      .filter(field => attributeKeys.includes(field));
+
     for (const parentId of ["projectId", "siteId", "nurseryId"]) {
       if (attributeKeys.includes(parentId)) {
         attributes.push(parentId);
@@ -150,10 +154,12 @@ export class EntityStatusUpdateEmail extends EmailSender {
   }
 
   private async getEntityUsers(entity: EntityModel) {
-    // FinancialReport does not have a projectId, so we skip sending emails
+    // FinancialReport does not have a projectId, so we send email to the createdBy user
     if (entity instanceof FinancialReport) {
-      this.logger.log(`Skipping email notification for FinancialReport - no project association`);
-      return [];
+      const user = await User.findByPk(entity.createdBy, {
+        attributes: ["emailAddress", "locale"]
+      });
+      return user ? [user] : [];
     }
 
     const projectId = await getProjectId(entity);

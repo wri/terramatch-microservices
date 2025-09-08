@@ -113,6 +113,14 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(STRING)
   intensity: string | null;
 
+  @AllowNull
+  @Column(TEXT)
+  disturbanceSubtype: string[] | null;
+
+  @AllowNull
+  @Column(STRING)
+  disturbanceType: string | null;
+
   get projectName() {
     return this.project?.name;
   }

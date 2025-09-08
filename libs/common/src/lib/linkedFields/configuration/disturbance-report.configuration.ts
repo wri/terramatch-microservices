@@ -20,7 +20,13 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
       multiChoice: true,
       optionListKey: "disturbance-subtypes-collection"
     },
-    "dis-rep-intensity": { property: "intensity", label: "Intensity", inputType: "number" },
+    "dis-rep-intensity": {
+      property: "intensity",
+      label: "Intensity",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "intensity-collection"
+    },
     "dis-rep-extent": { property: "extent", label: "Extent", inputType: "text" },
     "dis-rep-people-affected": { property: "people_affected", label: "People Affected", inputType: "number" },
     "dis-rep-date-of-disturbance": { property: "date_of_disturbance", label: "Date of Disturbance", inputType: "date" },

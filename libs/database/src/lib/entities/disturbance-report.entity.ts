@@ -121,6 +121,10 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(STRING)
   disturbanceType: string | null;
 
+  @AllowNull
+  @Column(STRING)
+  propertyAffected: string[] | null;
+
   get projectName() {
     return this.project?.name;
   }

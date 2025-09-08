@@ -97,4 +97,7 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   disturbanceType: string | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  propertyAffected: string[] | null;
 }

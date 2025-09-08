@@ -27,7 +27,13 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
       multiChoice: false,
       optionListKey: "intensity-collection"
     },
-    "dis-rep-extent": { property: "extent", label: "Extent", inputType: "text" },
+    "dis-rep-extent": {
+      property: "extent",
+      label: "Extent",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "extent-collection"
+    },
     "dis-rep-people-affected": { property: "people_affected", label: "People Affected", inputType: "number" },
     "dis-rep-date-of-disturbance": { property: "date_of_disturbance", label: "Date of Disturbance", inputType: "date" },
     "dis-rep-monetary-damage": { property: "monetary_damage", label: "Monetary Damage", inputType: "number" },
@@ -36,6 +42,13 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
       property: "action_description",
       label: "Action Description",
       inputType: "long-text"
+    },
+    "dis-rep-property-affected": {
+      property: "property_affected",
+      label: "Property Affected",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "property-affected-collection"
     }
   },
   fileCollections: {

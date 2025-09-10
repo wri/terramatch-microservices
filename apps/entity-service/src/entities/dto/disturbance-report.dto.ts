@@ -36,7 +36,7 @@ export class DisturbanceReportLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
-  dateOfIncident: Date | null;
+  dateOfDisturbance: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
   intensity: string | null;
@@ -103,4 +103,10 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   extent: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  siteAffected: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  polygonAffected: string | null;
 }

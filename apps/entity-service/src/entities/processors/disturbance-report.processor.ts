@@ -63,7 +63,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
           "dueAt",
           "updatedAt",
           "submittedAt",
-          "dateOfIncident",
+          "dateOfDisturbance",
           "intensity"
         ].includes(query.sort.field)
       ) {

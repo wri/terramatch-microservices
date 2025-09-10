@@ -107,7 +107,7 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
 
   @AllowNull
   @Column(DATE)
-  dateOfIncident: Date | null;
+  dateOfDisturbance: Date | null;
 
   @AllowNull
   @Column(STRING)
@@ -128,6 +128,14 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @AllowNull
   @Column(STRING)
   extent: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  siteAffected: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  polygonAffected: string | null;
 
   get projectName() {
     return this.project?.name;

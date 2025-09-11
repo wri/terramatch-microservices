@@ -24,11 +24,13 @@ export class Disturbance extends Model<Disturbance> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
+  @AllowNull
   @Column(STRING)
-  disturbanceableType: string;
+  disturbanceableType: string | null;
 
+  @AllowNull
   @Column(BIGINT.UNSIGNED)
-  disturbanceableId: number;
+  disturbanceableId: number | null;
 
   @AllowNull
   @Column(DATE)

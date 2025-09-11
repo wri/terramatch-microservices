@@ -63,18 +63,17 @@ export async function getProjectId(entity: EntityModel) {
   )
     return entity.projectId;
 
+  // FinancialReport does not have a projectId, return undefined
+  if (entity instanceof FinancialReport) return undefined;
+
   const parentClass: ModelCtor<Site | Nursery> = entity instanceof SiteReport ? Site : Nursery;
-  const parentId =
-    entity instanceof SiteReport
-      ? entity.siteId
-      : entity instanceof FinancialReport
-      ? entity.organisationId
-      : entity.nurseryId;
+  const parentId = entity instanceof SiteReport ? entity.siteId : entity.nurseryId;
   return (await parentClass.findOne({ where: { id: parentId }, attributes: ["projectId"] }))?.projectId;
 }
 
 export async function getOrganisationId(entity: EntityModel) {
   if (entity instanceof Project) return entity.organisationId;
+  if (entity instanceof FinancialReport) return entity.organisationId;
 
   return (await Project.findOne({ where: { id: await getProjectId(entity) }, attributes: ["organisationId"] }))
     ?.organisationId;

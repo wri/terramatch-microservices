@@ -107,11 +107,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     }
 
     if (query.projectUuid != null) {
-      const project = await Project.findOne({ where: { uuid: query.projectUuid }, attributes: ["id"] });
-      if (project == null) {
-        throw new BadRequestException(`Project with uuid ${query.projectUuid} not found`);
-      }
-      builder.where({ projectId: project.id });
+      builder.where({ projectId: Project.forUuid(query.projectUuid) });
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };

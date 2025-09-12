@@ -48,10 +48,4 @@ export class CriteriaSite extends Model<CriteriaSite> {
   @AllowNull
   @Column(JSON)
   extraInfo: object | null;
-
-  @Column(DATE)
-  override createdAt: Date;
-
-  @Column(DATE)
-  override updatedAt: Date;
 }

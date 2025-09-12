@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion,@typescript-eslint/no-non-null-asserted-optional-chain */
-import FakeTimers from "@sinonjs/fake-timers";
 import { SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import {
@@ -25,8 +24,6 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { faker } from "@faker-js/faker";
-import { DateTime } from "luxon";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";

@@ -15,7 +15,6 @@ import { PolygonGeometry } from "./polygon-geometry.entity";
 @Table({
   tableName: "criteria_site",
   underscored: true,
-  paranoid: false,
   indexes: [
     { name: "criteria_site_polygon_id_index", fields: ["polygon_id"] },
     { name: "criteria_site_criteria_id_index", fields: ["criteria_id"] }

@@ -4,24 +4,21 @@ import { IsBoolean, IsDate, IsNumber, IsOptional, IsObject } from "class-validat
 export class ValidationCriteriaDto {
   @ApiProperty({
     description: "The criteria ID that was validated",
-    example: 3,
-    type: Number
+    example: 3
   })
   @IsNumber()
   criteriaId: number;
 
   @ApiProperty({
     description: "Whether the polygon passed this validation criteria",
-    example: true,
-    type: Boolean
+    example: true
   })
   @IsBoolean()
   valid: boolean;
 
   @ApiProperty({
     description: "When this validation was last run",
-    example: "2025-02-20T22:01:31Z",
-    type: Date
+    example: "2025-02-20T22:01:31Z"
   })
   @IsDate()
   createdAt: Date;

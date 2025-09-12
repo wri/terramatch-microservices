@@ -9,7 +9,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 
 @Table({

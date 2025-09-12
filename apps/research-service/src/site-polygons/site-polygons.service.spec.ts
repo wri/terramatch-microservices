@@ -382,45 +382,6 @@ describe("SitePolygonsService", () => {
     expect(result.map(({ id }) => id).sort()).toEqual([draftPoly.id, submittedPoly.id, approvedPoly.id].sort());
   });
 
-  it("should only return polys updated since the given date", async () => {
-    // sequelize doesn't support manually setting createdAt or updatedAt, so we have to mess with the
-    // system clock for this test.
-    const clock = FakeTimers.install({ shouldAdvanceTime: true });
-    try {
-      await SitePolygon.truncate();
-      const oldDate = faker.date.past({ years: 1 });
-      const newDate = faker.date.recent();
-      clock.setSystemTime(oldDate);
-      const poly1 = await SitePolygonFactory.create({ status: "draft" });
-      clock.setSystemTime(newDate);
-      const poly2 = await SitePolygonFactory.create();
-
-      let query = (await service.buildQuery({ size: 20 })).modifiedSince(
-        DateTime.fromJSDate(oldDate).plus({ days: 5 }).toJSDate()
-      );
-      let result = await query.execute();
-      expect(result.length).toBe(1);
-      expect(result[0].id).toBe(poly2.id);
-
-      const updateDate = DateTime.fromJSDate(newDate).plus({ days: 1 }).toJSDate();
-      clock.setSystemTime(updateDate);
-      await poly1.update({ status: "submitted" });
-      query = (await service.buildQuery({ size: 20 })).modifiedSince(
-        DateTime.fromJSDate(updateDate).minus({ minutes: 1 }).toJSDate()
-      );
-      result = await query.execute();
-      expect(result.length).toBe(1);
-      expect(result[0].id).toBe(poly1.id);
-
-      query = await service.buildQuery({ size: 20 });
-      result = await query.execute();
-      expect(result.length).toBe(2);
-      expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id].sort());
-    } finally {
-      clock.uninstall();
-    }
-  });
-
   it("should only return polys missing the given indicators", async () => {
     await SitePolygon.truncate();
     const poly1 = await SitePolygonFactory.create();

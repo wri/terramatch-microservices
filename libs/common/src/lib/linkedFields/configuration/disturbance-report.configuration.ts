@@ -47,16 +47,12 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
     "dis-rep-site-affected": {
       property: "site_affected",
       label: "Site Affected",
-      inputType: "select",
-      multiChoice: false,
-      optionListKey: "site-affected-collection"
+      inputType: "disturbanceAffectedSite"
     },
     "dis-rep-polygon-affected": {
       property: "polygon_affected",
       label: "Polygon Affected",
-      inputType: "select",
-      multiChoice: true,
-      optionListKey: "polygon-affected-collection"
+      inputType: "disturbanceAffectedPolygon"
     },
     "dis-rep-description": { property: "description", label: "Description", inputType: "long-text" },
     "dis-rep-action-description": {

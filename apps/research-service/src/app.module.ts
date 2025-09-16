@@ -9,6 +9,7 @@ import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller"
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { ValidationController } from "./validations/validation.controller";
 import { ValidationService } from "./validations/validation.service";
+import { SelfIntersectionValidator } from "./validations/validators/self-intersection.validator";
 import { DataApiModule } from "@terramatch-microservices/data-api";
 
 @Module({
@@ -21,7 +22,8 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
     },
     SitePolygonsService,
     BoundingBoxService,
-    ValidationService
+    ValidationService,
+    SelfIntersectionValidator
   ]
 })
 export class AppModule {}

@@ -6,6 +6,7 @@ import { SiteFactory } from "./site.factory";
 
 const defaultAttributesFactory = async () => ({
   name: faker.lorem.words(2),
+  taxonId: null,
   amount: faker.number.int({ min: 10, max: 1000 }),
   seedsInSample: faker.number.int({ min: 10, max: 1000 }),
   weightOfSample: faker.number.float({ min: 0.2, max: 9.5 }),

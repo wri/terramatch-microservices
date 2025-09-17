@@ -41,10 +41,8 @@ export class LinkedFieldsController {
   @JsonApiResponse({ data: LinkedFieldDto, hasMany: true })
   @ExceptionResponse(BadRequestException, { description: "None of the requested formTypes were found." })
   async linkedFieldsIndex(@Query() { formTypes }: LinkedFieldQueryDto) {
-    formTypes ??= Object.keys(LinkedFieldsConfiguration) as FormType[];
-
     const document = buildJsonApi(LinkedFieldDto, { forceDataArray: true });
-    for (const formType of formTypes) {
+    for (const formType of formTypes ?? (Object.keys(LinkedFieldsConfiguration) as FormType[])) {
       const configuration = LinkedFieldsConfiguration[formType];
       if (configuration == null) continue;
 

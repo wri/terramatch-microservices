@@ -9,7 +9,7 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { flatten, pick, sumBy, uniq } from "lodash";
+import { flatten, pick, sortBy, sumBy, uniqBy } from "lodash";
 import { faker } from "@faker-js/faker";
 import {
   NurseryFactory,
@@ -28,6 +28,12 @@ import { DateTime } from "luxon";
 
 import { PlantingCountDto } from "./dto/planting-count.dto";
 import { Op } from "sequelize";
+
+const sortedSpeciesDto = (species: TreeSpecies[] | Seeding[]) =>
+  sortBy(
+    species.map(({ name, taxonId }) => ({ name, taxonId })),
+    "name"
+  );
 
 describe("TreeService", () => {
   let service: TreeService;
@@ -89,37 +95,30 @@ describe("TreeService", () => {
       const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
       const ppcProjectReport = await ProjectReportFactory.create({ projectId: ppcProject.id, frameworkKey: "ppc" });
 
-      const tfProjectTrees = (
+      const tfProjectTrees = sortedSpeciesDto(
         await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: tfProject.id })
-      )
-        .map(({ name }) => name)
-        .sort();
+      );
+
       // hidden trees are ignored
       await TreeSpeciesFactory.forProjectTreePlanted.create({
         speciesableId: tfProject.id,
         hidden: true
       });
-      const ppcProjectTrees = (
+      const ppcProjectTrees = sortedSpeciesDto(
         await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: ppcProject.id })
-      )
-        .map(({ name }) => name)
-        .sort();
-      const siteTreesPlanted = (await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, { speciesableId: site.id }))
-        .map(({ name }) => name)
-        .sort();
+      );
+      const siteTreesPlanted = sortedSpeciesDto(
+        await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, { speciesableId: site.id })
+      );
       await TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id, hidden: true });
-      const siteNonTrees = (await TreeSpeciesFactory.forSiteNonTree.createMany(3, { speciesableId: site.id }))
-        .map(({ name }) => name)
-        .sort();
-      const siteSeedings = (await SeedingFactory.forSite.createMany(3, { seedableId: site.id }))
-        .map(({ name }) => name)
-        .sort();
+      const siteNonTrees = sortedSpeciesDto(
+        await TreeSpeciesFactory.forSiteNonTree.createMany(3, { speciesableId: site.id })
+      );
+      const siteSeedings = sortedSpeciesDto(await SeedingFactory.forSite.createMany(3, { seedableId: site.id }));
       await SeedingFactory.forSite.create({ seedableId: site.id, hidden: true });
-      const nurserySeedlings = (
+      const nurserySeedlings = sortedSpeciesDto(
         await TreeSpeciesFactory.forNurserySeedling.createMany(4, { speciesableId: nursery.id })
-      )
-        .map(({ name }) => name)
-        .sort();
+      );
       await TreeSpeciesFactory.forNurserySeedling.create({
         speciesableId: nursery.id,
         hidden: true
@@ -127,30 +126,32 @@ describe("TreeService", () => {
 
       let result = await service.getEstablishmentTrees("projectReports", tfProjectReport.uuid);
       expect(Object.keys(result).length).toBe(1);
-      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
+      expect(sortBy(result["tree-planted"], "name")).toEqual(tfProjectTrees);
       result = await service.getEstablishmentTrees("projectReports", ppcProjectReport.uuid);
       expect(Object.keys(result).length).toBe(1);
       // for PPC Project Reports, we fake out the FE by changing the establishment collection from tree-planted to
       // nursery seedling. This is to support the strange situation where project report trees are only ever
       // nursery seedlings in PPC, but the establishment data is always tree-planted.
-      expect(result["nursery-seedling"].sort()).toEqual(ppcProjectTrees);
+      expect(sortBy(result["nursery-seedling"], "name")).toEqual(ppcProjectTrees);
       result = await service.getEstablishmentTrees("sites", site.uuid);
       expect(Object.keys(result)).toEqual(["tree-planted", "seeds"]);
-      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
+      expect(sortBy(result["tree-planted"], "name")).toEqual(tfProjectTrees);
       result = await service.getEstablishmentTrees("nurseries", nursery.uuid);
       expect(Object.keys(result).length).toBe(1);
-      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
+      expect(sortBy(result["tree-planted"], "name")).toEqual(tfProjectTrees);
 
       result = await service.getEstablishmentTrees("siteReports", siteReport.uuid);
       expect(Object.keys(result).length).toBe(3);
-      expect(result["tree-planted"].sort()).toEqual(uniq([...siteTreesPlanted, ...tfProjectTrees]).sort());
-      expect(result["non-tree"].sort()).toEqual(siteNonTrees);
-      expect(result["seeds"].sort()).toEqual(siteSeedings);
+      expect(sortBy(result["tree-planted"], "name")).toEqual(
+        sortBy(uniqBy([...siteTreesPlanted, ...tfProjectTrees], "name"), "name")
+      );
+      expect(sortBy(result["non-tree"], "name")).toEqual(siteNonTrees);
+      expect(sortBy(result["seeds"], "name")).toEqual(siteSeedings);
 
       result = await service.getEstablishmentTrees("nurseryReports", nurseryReport.uuid);
       expect(Object.keys(result).length).toBe(2);
-      expect(result["tree-planted"].sort()).toEqual(tfProjectTrees);
-      expect(result["nursery-seedling"].sort()).toEqual(nurserySeedlings);
+      expect(sortBy(result["tree-planted"], "name")).toEqual(tfProjectTrees);
+      expect(sortBy(result["nursery-seedling"], "name")).toEqual(nurserySeedlings);
     });
 
     it("throws with bad inputs to establishment trees", async () => {

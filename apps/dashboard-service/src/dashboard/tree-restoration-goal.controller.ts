@@ -30,17 +30,13 @@ export class TreeRestorationGoalController {
       return data;
     });
 
-    const document = buildJsonApi(TreeRestorationGoalDto);
     const stableQuery = getStableRequestQuery(query);
-
-    document.addData(
+    return buildJsonApi(TreeRestorationGoalDto).addData(
       stableQuery,
       new TreeRestorationGoalDto({
         ...result,
         lastUpdatedAt
       })
     );
-
-    return document.serialize();
   }
 }

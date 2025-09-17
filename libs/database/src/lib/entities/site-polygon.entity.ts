@@ -28,6 +28,7 @@ import { Literal } from "sequelize/types/utils";
 import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { statusUpdateSequelizeHook } from "../constants/status";
+import { Disturbance } from "./disturbance.entity";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -168,6 +169,14 @@ export class SitePolygon extends Model<SitePolygon> {
   @AllowNull
   @Column({ type: STRING })
   validationStatus: string | null;
+
+  @ForeignKey(() => Disturbance)
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  disturbanceId: number | null;
+
+  @BelongsTo(() => Disturbance, { foreignKey: "disturbanceId", targetKey: "id" })
+  disturbance: Disturbance | null;
 
   @HasMany(() => IndicatorOutputFieldMonitoring)
   indicatorsFieldMonitoring: IndicatorOutputFieldMonitoring[] | null;

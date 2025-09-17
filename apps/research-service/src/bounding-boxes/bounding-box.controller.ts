@@ -1,13 +1,13 @@
-import { Controller, Get, Query, BadRequestException, NotFoundException } from "@nestjs/common";
-import { ApiTags, ApiOperation } from "@nestjs/swagger";
+import { BadRequestException, Controller, Get, NotFoundException, Query } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { buildJsonApi, getStableRequestQuery, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
-import { Project, Site, LandscapeGeometry, ProjectPitch } from "@terramatch-microservices/database/entities";
+import { LandscapeGeometry, Project, ProjectPitch, Site } from "@terramatch-microservices/database/entities";
 
 type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "projectPitchUuid" | "country/landscapes";
 
@@ -29,7 +29,7 @@ export class BoundingBoxController {
   @ExceptionResponse(NotFoundException, {
     description: "Requested resource not found"
   })
-  async getBoundingBox(@Query() query: BoundingBoxQueryDto): Promise<JsonApiDocument> {
+  async getBoundingBox(@Query() query: BoundingBoxQueryDto) {
     const providedParams: ParameterType[] = [];
 
     if (!isEmpty(query.polygonUuid)) {
@@ -70,8 +70,10 @@ export class BoundingBoxController {
     const id = getStableRequestQuery(query);
     switch (providedParams[0]) {
       case "polygonUuid": {
-        const result = await this.boundingBoxService.getPolygonBoundingBox(query.polygonUuid ?? "");
-        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(
+          id,
+          await this.boundingBoxService.getPolygonBoundingBox(query.polygonUuid ?? "")
+        );
       }
 
       case "siteUuid": {
@@ -86,8 +88,7 @@ export class BoundingBoxController {
           throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
         }
 
-        const result = await this.boundingBoxService.getSiteBoundingBox(siteUuid);
-        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(id, await this.boundingBoxService.getSiteBoundingBox(siteUuid));
       }
 
       case "projectUuid": {
@@ -102,8 +103,10 @@ export class BoundingBoxController {
           throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
         }
 
-        const result = await this.boundingBoxService.getProjectBoundingBox(projectUuid);
-        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(
+          id,
+          await this.boundingBoxService.getProjectBoundingBox(projectUuid)
+        );
       }
 
       case "projectPitchUuid": {
@@ -118,8 +121,10 @@ export class BoundingBoxController {
           throw new NotFoundException(`Project pitch with UUID ${projectPitchUuid} not found`);
         }
 
-        const result = await this.boundingBoxService.getProjectPitchBoundingBox(projectPitchUuid);
-        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(
+          id,
+          await this.boundingBoxService.getProjectPitchBoundingBox(projectPitchUuid)
+        );
       }
 
       case "country/landscapes": {
@@ -140,8 +145,10 @@ export class BoundingBoxController {
           }
         }
 
-        const result = await this.boundingBoxService.getCountryLandscapeBoundingBox(country ?? "", landscapes);
-        return buildJsonApi(BoundingBoxDto).addData(id, result).document.serialize();
+        return buildJsonApi(BoundingBoxDto).addData(
+          id,
+          await this.boundingBoxService.getCountryLandscapeBoundingBox(country ?? "", landscapes)
+        );
       }
     }
   }

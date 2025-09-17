@@ -52,8 +52,7 @@ export class FileUploadController {
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
     const media = await this.fileUploadService.uploadFile(model, entity, collection, file, body);
-    const document = buildJsonApi(MediaDto);
-    document.addData(
+    return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {
         url: this.mediaService.getUrl(media),
@@ -62,6 +61,5 @@ export class FileUploadController {
         entityUuid: model.uuid
       })
     );
-    return document.serialize();
   }
 }

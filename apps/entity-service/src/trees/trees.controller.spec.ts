@@ -6,6 +6,7 @@ import { BadRequestException, NotFoundException, UnauthorizedException } from "@
 import { Resource } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectFactory, SiteFactory, SiteReportFactory } from "@terramatch-microservices/database/factories";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("TreesController", () => {
   let controller: TreesController;
@@ -40,7 +41,7 @@ describe("TreesController", () => {
         { taxonId: "wfo-0000002583", scientificName: "Cirsium carolinianum" },
         { taxonId: "wfo-0000003963", scientificName: "Cirsium carniolicum" }
       ]);
-      const result = await controller.searchScientificNames("cirs");
+      const result = serialize(await controller.searchScientificNames("cirs"));
       expect(treeService.searchScientificNames).toHaveBeenCalledWith("cirs");
       const data = result.data as Resource[];
       expect(data.length).toBe(2);
@@ -66,15 +67,17 @@ describe("TreesController", () => {
           Banana: { amount: 75, taxonId: "wfo-faketaxonid" }
         }
       };
-      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": ["Coffee", "Banana"] });
+      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": [{ name: "Coffee" }, { name: "Banana" }] });
       treeService.getPreviousPlanting.mockResolvedValue(stubData);
       const { uuid } = await SiteReportFactory.create();
-      const result = await controller.getEstablishmentData({ entity: "siteReports", uuid });
+      const result = serialize(await controller.getEstablishmentData({ entity: "siteReports", uuid }));
       expect(treeService.getEstablishmentTrees).toHaveBeenCalledWith("siteReports", uuid);
       expect(treeService.getPreviousPlanting).toHaveBeenCalledWith("siteReports", uuid);
       const resource = result.data as Resource;
       expect(resource.id).toBe(`siteReports|${uuid}`);
-      expect(resource.attributes.establishmentTrees).toMatchObject({ "non-tree": ["Coffee", "Banana"] });
+      expect(resource.attributes.establishmentTrees).toMatchObject({
+        "non-tree": [{ name: "Coffee" }, { name: "Banana" }]
+      });
       expect(resource.attributes.previousPlantingCounts).toMatchObject(stubData);
     });
   });
@@ -93,30 +96,32 @@ describe("TreesController", () => {
           Banana: { amount: 75, taxonId: "wfo-faketaxonid" }
         }
       };
-      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": ["Coffee", "Banana"] });
+      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": [{ name: "Coffee" }, { name: "Banana" }] });
       treeService.getAssociatedReportCounts.mockResolvedValue(stubData);
       const { uuid } = await SiteFactory.create();
-      const result = await controller.getReportCounts({ entity: "sites", uuid });
+      const result = serialize(await controller.getReportCounts({ entity: "sites", uuid }));
       expect(treeService.getEstablishmentTrees).toHaveBeenCalledWith("sites", uuid);
       expect(treeService.getAssociatedReportCounts).toHaveBeenCalledWith("sites", uuid);
       const resource = result.data as Resource;
       expect(resource.id).toBe(`sites|${uuid}`);
-      expect(resource.attributes.establishmentTrees).toMatchObject({ "non-tree": ["Coffee", "Banana"] });
+      expect(resource.attributes.establishmentTrees).toMatchObject({
+        "non-tree": [{ name: "Coffee" }, { name: "Banana" }]
+      });
       expect(resource.attributes.reportCounts).toMatchObject(stubData);
     });
 
     it("should skip establishment for a non-establishment type", async () => {
       treeService.getAssociatedReportCounts.mockResolvedValue({ "tree-planted": { Acacia: { amount: 123 } } });
       const { uuid } = await ProjectFactory.create();
-      const result = await controller.getReportCounts({ entity: "projects", uuid });
+      const result = serialize(await controller.getReportCounts({ entity: "projects", uuid }));
       expect(treeService.getEstablishmentTrees).not.toHaveBeenCalled();
       expect((result.data as Resource).attributes.establishmentTrees).toBeUndefined();
     });
 
     it("should skip report counts for a non-report-counts type", async () => {
-      treeService.getEstablishmentTrees.mockResolvedValue({ "tree-planted": ["Acacia"] });
+      treeService.getEstablishmentTrees.mockResolvedValue({ "tree-planted": [{ name: "Acacia" }] });
       const { uuid } = await SiteReportFactory.create();
-      const result = await controller.getReportCounts({ entity: "siteReports", uuid });
+      const result = serialize(await controller.getReportCounts({ entity: "siteReports", uuid }));
       expect(treeService.getAssociatedReportCounts).not.toHaveBeenCalled();
       expect((result.data as Resource).attributes.reportCounts).toBeUndefined();
     });

@@ -77,7 +77,7 @@ export abstract class AssociationProcessor<M extends UuidModel, D extends Associ
     }
 
     const resource = getDtoType(this.DTO);
-    document.addIndexData({
+    document.addIndex({
       resource,
       requestPath: `/entities/v3/${this.entityType}/${this.entityUuid}/${resource}`,
       ids: indexIds

@@ -21,6 +21,7 @@ import { ImpactStoryService } from "./entities/impact-story.service";
 import { DisturbancesController } from "./entities/disturbances.controller";
 import { DisturbanceService } from "./entities/disturbance.service";
 import { OptionLabelsController } from "./forms/option-labels.controller";
+import { LinkedFieldsController } from "./forms/linked-fields.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -37,7 +38,8 @@ import { OptionLabelsController } from "./forms/option-labels.controller";
     DisturbancesController,
     EntitiesController,
     EntityAssociationsController,
-    OptionLabelsController
+    OptionLabelsController,
+    LinkedFieldsController
   ],
   providers: [
     {

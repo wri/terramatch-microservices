@@ -8,7 +8,7 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
-import { buildJsonApi, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -22,9 +22,10 @@ import { PlantingCountDto } from "./dto/planting-count.dto";
 import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { SpeciesDto } from "./dto/species.dto";
 
 @Controller("trees/v3")
-@ApiExtraModels(PlantingCountDto, TreeEntityTypes)
+@ApiExtraModels(PlantingCountDto, SpeciesDto, TreeEntityTypes)
 export class TreesController {
   constructor(private readonly treeService: TreeService, private readonly policyService: PolicyService) {}
 
@@ -38,19 +39,11 @@ export class TreesController {
     if (isEmpty(search)) throw new BadRequestException("search query param is required");
 
     const document = buildJsonApi(ScientificNameDto, { forceDataArray: true });
-    const indexIds: string[] = [];
     for (const treeSpecies of await this.treeService.searchScientificNames(search)) {
-      indexIds.push(treeSpecies.taxonId);
       document.addData(treeSpecies.taxonId, populateDto(new ScientificNameDto(), treeSpecies));
     }
 
-    document.addIndexData({
-      resource: getDtoType(ScientificNameDto),
-      requestPath: `/trees/v3/scientificNames${getStableRequestQuery({ search })}`,
-      ids: indexIds
-    });
-
-    return document.serialize();
+    return document.addIndex({ requestPath: `/trees/v3/scientificNames${getStableRequestQuery({ search })}` });
   }
 
   @Get("establishments/:entity/:uuid")
@@ -69,12 +62,10 @@ export class TreesController {
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
-    return buildJsonApi(EstablishmentsTreesDto)
-      .addData(
-        `${entity}|${uuid}`,
-        populateDto(new EstablishmentsTreesDto(), { establishmentTrees, previousPlantingCounts })
-      )
-      .document.serialize();
+    return buildJsonApi(EstablishmentsTreesDto).addData(
+      `${entity}|${uuid}`,
+      populateDto(new EstablishmentsTreesDto(), { establishmentTrees, previousPlantingCounts })
+    );
   }
 
   @Get("reportCounts/:entity/:uuid")
@@ -97,9 +88,10 @@ export class TreesController {
 
     // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
     // backed by a single DB table.
-    return buildJsonApi(TreeReportCountsDto)
-      .addData(`${entity}|${uuid}`, populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts }))
-      .document.serialize();
+    return buildJsonApi(TreeReportCountsDto).addData(
+      `${entity}|${uuid}`,
+      populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts })
+    );
   }
 
   private async authorizeRead(entity: EntityType, uuid: string) {

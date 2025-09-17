@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { NotFoundException } from "@nestjs/common";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;
@@ -40,7 +41,7 @@ describe("DelayedJobsController", () => {
       } as DelayedJob);
 
       const request = { authenticatedUserId };
-      const result = await controller.getRunningJobs(request);
+      const result = serialize(await controller.getRunningJobs(request));
 
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
@@ -60,7 +61,7 @@ describe("DelayedJobsController", () => {
       } as DelayedJob);
 
       const request = { authenticatedUserId };
-      const result = await controller.getRunningJobs(request);
+      const result = serialize(await controller.getRunningJobs(request));
 
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
@@ -83,7 +84,7 @@ describe("DelayedJobsController", () => {
       } as DelayedJob);
 
       const request = { authenticatedUserId };
-      const result = await controller.getRunningJobs(request);
+      const result = serialize(await controller.getRunningJobs(request));
 
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
@@ -106,7 +107,7 @@ describe("DelayedJobsController", () => {
         metadata: { entity_name: "TestEntity" } // Adding entity_name
       } as DelayedJob);
 
-      const result = await controller.findOne(job.uuid);
+      const result = serialize(await controller.findOne(job.uuid));
       const jobData = Array.isArray(result.data) ? result.data[0] : result.data;
       expect(jobData?.id).toBe(job.uuid);
     });
@@ -153,7 +154,7 @@ describe("DelayedJobsController", () => {
 
       const request = { authenticatedUserId };
 
-      const result = await controller.bulkUpdateJobs(payload, request);
+      const result = serialize(await controller.bulkUpdateJobs(payload, request));
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe(job.uuid);
       expect(result.data![0].attributes.entityName).toBeUndefined();
@@ -197,7 +198,7 @@ describe("DelayedJobsController", () => {
 
       const request = { authenticatedUserId };
 
-      const result = await controller.bulkUpdateJobs(payload, request);
+      const result = serialize(await controller.bulkUpdateJobs(payload, request));
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe(job1.uuid);
       expect(result.data![1].id).toBe(job2.uuid);
@@ -259,7 +260,7 @@ describe("DelayedJobsController", () => {
       };
       const request = { authenticatedUserId };
 
-      const result = await controller.bulkUpdateJobs(payload, request);
+      const result = serialize(await controller.bulkUpdateJobs(payload, request));
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe(pendingJob.uuid);
       expect(result.data![0].attributes.entityName).toBe("TestEntityPending");

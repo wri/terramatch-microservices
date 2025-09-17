@@ -15,7 +15,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, DocumentBuilder, JsonApiDocument } from "@terramatch-microservices/common/util";
+import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserCreateBody } from "./dto/user-create.dto";
@@ -63,7 +63,7 @@ export class UsersController {
 
     await this.policyService.authorize("read", user);
 
-    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
+    return await this.addUserResource(buildJsonApi(UserDto), user);
   }
 
   @Patch(":uuid")
@@ -93,7 +93,7 @@ export class UsersController {
       await user.save();
     }
 
-    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
+    return await this.addUserResource(buildJsonApi(UserDto), user);
   }
 
   @Post()
@@ -104,9 +104,9 @@ export class UsersController {
   })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
-  async create(@Body() payload: UserCreateBody): Promise<JsonApiDocument> {
+  async create(@Body() payload: UserCreateBody) {
     const user = await this.userCreationService.createNewUser(payload.data.attributes);
-    return (await this.addUserResource(buildJsonApi(UserDto), user)).serialize();
+    return await this.addUserResource(buildJsonApi(UserDto), user);
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {

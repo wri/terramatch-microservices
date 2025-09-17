@@ -4,6 +4,7 @@ import { AuthService } from "./auth.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
 import { faker } from "@faker-js/faker";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("LoginController", () => {
   let controller: LoginController;
@@ -37,9 +38,11 @@ describe("LoginController", () => {
     const userUuid = faker.string.uuid();
     authService.login.mockResolvedValue({ token, userUuid });
 
-    const result = await controller.create({
-      data: { type: "logins", attributes: { emailAddress: "foo@bar.com", password: "asdfasdfasdf" } }
-    });
+    const result = serialize(
+      await controller.create({
+        data: { type: "logins", attributes: { emailAddress: "foo@bar.com", password: "asdfasdfasdf" } }
+      })
+    );
     expect(result).toMatchObject({ data: { id: userUuid, type: "logins", attributes: { token } } });
   });
 });

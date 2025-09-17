@@ -27,6 +27,6 @@ export class DashboardSitePolygonsController {
     data.forEach((sitePolygon: DashboardSitePolygonsLightDto) => {
       document.addData(sitePolygon.polygonUuid, sitePolygon);
     });
-    return document.serialize();
+    return document;
   }
 }

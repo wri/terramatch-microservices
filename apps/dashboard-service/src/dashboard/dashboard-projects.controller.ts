@@ -24,11 +24,9 @@ export class DashboardProjectsController {
     const data = await this.cacheService.get(cacheKey, () => this.dashboardProjectsService.getDashboardProjects(query));
 
     const document = buildJsonApi(DashboardProjectsLightDto);
-
     data.forEach((project: DashboardProjectsLightDto) => {
       document.addData(project.uuid, project);
     });
-
-    return document.serialize();
+    return document;
   }
 }

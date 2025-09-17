@@ -440,5 +440,13 @@ export class ProjectPitch extends Model<ProjectPitch> {
 
   @AllowNull
   @Column(BOOLEAN)
-  informationAuthorization: boolean;
+  informationAuthorization: boolean | null;
+
+  @AllowNull
+  @Column(TEXT)
+  goalTreesRestoredDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  jobsCreatedBeneficiariesDescription: string | null;
 }

@@ -206,11 +206,14 @@ describe("FinancialReportProcessor", () => {
       await financialReport.reload({ include: [{ association: "organisation" }] });
 
       const result = await (
-        processor as unknown as { getFundingTypes: (report: FinancialReport) => Promise<unknown[]> }
+        processor as unknown as { getFundingTypes: (report: FinancialReport) => Promise<FundingTypeDto[]> }
       ).getFundingTypes(financialReport);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(FundingTypeDto);
+      // Ensure DTOs are populated with association props
+      expect(result[0].entityType).toBe("financialReports");
+      expect(typeof result[0].entityUuid).toBe("string");
     });
   });
 

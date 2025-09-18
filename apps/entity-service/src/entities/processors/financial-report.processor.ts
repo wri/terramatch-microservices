@@ -95,7 +95,7 @@ export class FinancialReportProcessor extends ReportProcessor<
   }
 
   protected async getFundingTypes(financialReport: FinancialReport) {
-    const fundingTypes = await FundingType.organisationByUuid(financialReport.organisation.uuid).findAll({
+    const fundingTypes = await FundingType.financialReport(financialReport.id).findAll({
       include: [
         {
           association: "organisation",
@@ -103,12 +103,11 @@ export class FinancialReportProcessor extends ReportProcessor<
         }
       ]
     });
-
     return fundingTypes.map(
       ft =>
         new FundingTypeDto(ft, {
-          entityType: "organisations" as const,
-          entityUuid: financialReport.organisation.uuid
+          entityType: "financialReports" as const,
+          entityUuid: financialReport.uuid
         })
     );
   }

@@ -20,6 +20,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
 import { FinancialIndicator } from "./financial-indicator.entity";
+import { FundingType } from "./funding-type.entity";
 
 @Scopes(() => ({
   organisation: (id: number) => ({ where: { organisationId: id } })

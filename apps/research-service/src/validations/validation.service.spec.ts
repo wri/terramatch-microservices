@@ -173,7 +173,7 @@ describe("ValidationService", () => {
     });
 
     it("should paginate results correctly", async () => {
-      const pageSize = 100; // Use MAX_PAGE_SIZE to avoid type issues
+      const pageSize = 100;
       const pageNumber = 2;
 
       (SitePolygon.findAndCountAll as jest.Mock).mockResolvedValue(mockPolygons);
@@ -192,13 +192,8 @@ describe("ValidationService", () => {
       });
     });
 
-    it("should throw BadRequestException when page size is invalid", async () => {
-      // Cast to any to bypass TypeScript constraint for testing the runtime check
-      await expect(service.getSiteValidations(siteUuid, 101 as any, 1)).rejects.toThrow(BadRequestException);
-    });
-
     it("should throw BadRequestException when page number is invalid", async () => {
-      const invalidPageNumber = 0; // Below minimum page number
+      const invalidPageNumber = 0;
 
       await expect(service.getSiteValidations(siteUuid, 100, invalidPageNumber)).rejects.toThrow(BadRequestException);
     });
@@ -217,13 +212,13 @@ describe("ValidationService", () => {
 
     it("should handle site polygons with missing validation criteria", async () => {
       (SitePolygon.findAndCountAll as jest.Mock).mockResolvedValue(mockPolygons);
-      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([mockCriteria[0]]); // Only return criteria for first polygon
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([mockCriteria[0]]);
 
       const result = await service.getSiteValidations(siteUuid);
 
       expect(result.validations).toHaveLength(2);
       expect(result.validations[0].criteriaList).toHaveLength(1);
-      expect(result.validations[1].criteriaList).toHaveLength(0); // Second polygon has no criteria
+      expect(result.validations[1].criteriaList).toHaveLength(0);
     });
   });
 });

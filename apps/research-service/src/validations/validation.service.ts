@@ -4,6 +4,8 @@ import { ValidationDto } from "./dto/validation.dto";
 import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { WhereOptions } from "sequelize";
+import { groupBy } from "lodash";
 
 @Injectable()
 export class ValidationService {
@@ -39,8 +41,9 @@ export class ValidationService {
 
   async getSiteValidations(
     siteUuid: string,
-    pageSize = MAX_PAGE_SIZE,
-    pageNumber = 1
+    pageSize: number,
+    pageNumber = 1,
+    criteriaId?: number
   ): Promise<{
     validations: ValidationDto[];
     total: number;
@@ -52,60 +55,60 @@ export class ValidationService {
       throw new BadRequestException(`Invalid page number: ${pageNumber}`);
     }
 
-    const sitePolygons = await SitePolygon.findAndCountAll({
+    const allSitePolygons = await SitePolygon.findAll({
       where: {
         siteUuid,
         isActive: true
       },
-      attributes: ["polygonUuid"],
-      limit: pageSize,
-      offset: (pageNumber - 1) * pageSize
+      attributes: ["polygonUuid"]
     });
 
-    if (sitePolygons.count === 0) {
-      throw new NotFoundException(`Site with UUID ${siteUuid} not found or has no polygons`);
-    }
-
-    const polygonUuids = sitePolygons.rows
+    const allPolygonUuids = allSitePolygons
       .map(polygon => polygon.polygonUuid)
       .filter(uuid => uuid !== null) as string[];
 
-    const criteriaData = await CriteriaSite.findAll({
-      where: { polygonId: polygonUuids },
+    if (allPolygonUuids.length === 0) {
+      return {
+        validations: [],
+        total: 0
+      };
+    }
+
+    const criteriaWhere: WhereOptions<CriteriaSite> = { polygonId: allPolygonUuids };
+    if (criteriaId !== undefined) {
+      criteriaWhere.criteriaId = criteriaId;
+      criteriaWhere.valid = false;
+    }
+
+    const allCriteriaData = await CriteriaSite.findAll({
+      where: criteriaWhere,
       attributes: ["polygonId", "criteriaId", "valid", "createdAt", "extraInfo"],
       order: [["createdAt", "DESC"]]
     });
 
-    const criteriaByPolygon: Record<string, ValidationCriteriaDto[]> = {};
+    const criteriaByPolygon = groupBy(allCriteriaData, "polygonId");
+    const polygonsWithValidations = Object.keys(criteriaByPolygon);
+    const total = polygonsWithValidations.length;
 
-    for (const criteria of criteriaData) {
-      if (criteria.polygonId === null) continue;
+    const startIndex = (pageNumber - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedPolygonIds = polygonsWithValidations.slice(startIndex, endIndex);
 
-      const polygonId = criteria.polygonId as string;
-      criteriaByPolygon[polygonId] = criteriaByPolygon[polygonId] ?? [];
-
-      criteriaByPolygon[polygonId].push({
-        criteriaId: criteria.criteriaId,
-        valid: criteria.valid,
-        createdAt: criteria.createdAt,
-        extraInfo: criteria.extraInfo
-      });
-    }
-
-    const validations: ValidationDto[] = [];
-
-    for (const polygonUuid of polygonUuids) {
-      const dto = new ValidationDto();
-      populateDto(dto, {
-        polygonId: polygonUuid,
-        criteriaList: criteriaByPolygon[polygonUuid] ?? []
-      });
-      validations.push(dto);
-    }
+    const validations = paginatedPolygonIds.map(polygonId =>
+      populateDto<ValidationDto>(new ValidationDto(), {
+        polygonId,
+        criteriaList: criteriaByPolygon[polygonId].map(criteria => ({
+          criteriaId: criteria.criteriaId,
+          valid: criteria.valid,
+          createdAt: criteria.createdAt,
+          extraInfo: criteria.extraInfo
+        }))
+      })
+    );
 
     return {
       validations,
-      total: sitePolygons.count
+      total
     };
   }
 }

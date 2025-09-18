@@ -1,17 +1,22 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, ValidateNested } from "class-validator";
-import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
-import { Type, TypeHelpOptions } from "class-transformer";
+import { IsInt, IsOptional, Min, ValidateNested } from "class-validator";
+import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { Type } from "class-transformer";
 
 export class SiteValidationQueryDto {
   @ValidateNested()
-  @Type(({ object } = {} as TypeHelpOptions) => {
-    const keys = Object.keys(object.page ?? {});
-    if (keys.includes("after")) return CursorPage;
-    if (keys.includes("number")) return NumberPage;
-    return Page;
-  })
+  @Type(() => NumberPage)
   @IsOptional()
   @ApiProperty({ type: NumberPage })
-  page?: CursorPage | NumberPage;
+  page?: NumberPage;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @ApiProperty({
+    description: "Filter validations by criteria ID",
+    required: false,
+    example: 3
+  })
+  criteriaId?: number;
 }

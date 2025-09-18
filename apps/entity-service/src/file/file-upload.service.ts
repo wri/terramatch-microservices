@@ -13,14 +13,14 @@ import {
   MediaConfiguration,
   ValidationKey
 } from "@terramatch-microservices/database/constants/media-owners";
-
-export interface ExtractedRequestData {
-  isPublic: boolean;
-  lat: number;
-  lng: number;
-}
+import { ExtraMediaRequest } from "../entities/dto/extra-media-request";
 
 const mappingMimeTypes = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/heif": "heif",
+  "image/heic": "heic",
+  "image/svg+xml": "svg",
   "text/plain": "txt",
   "application/pdf": "pdf",
   "application/vnd.ms-excel": "xls",
@@ -70,7 +70,7 @@ export class FileUploadService {
     entity: MediaOwnerType,
     collection: string,
     file: Express.Multer.File,
-    body: ExtractedRequestData
+    body: ExtraMediaRequest
   ): Promise<Media> {
     if (file == null) {
       throw new BadRequestException("No file provided");
@@ -98,6 +98,11 @@ export class FileUploadService {
     media.mimeType = file.mimetype;
     media.fileType = this.getMediaType(file, configuration);
     media.isPublic = body.isPublic;
+    media.disk = "s3";
+    media.manipulations = [];
+    media.customProperties = { custom_headers: { ACL: "public-read" } };
+    media.generatedConversions = {};
+    media.responsiveImages = [];
     media.lat = body.lat;
     media.lng = body.lng;
     media.size = file.size;

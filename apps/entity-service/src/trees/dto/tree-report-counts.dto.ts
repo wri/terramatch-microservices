@@ -2,6 +2,7 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { PlantingCountMap } from "./planting-count.dto";
 import { ApiProperty } from "@nestjs/swagger";
 import { Dictionary } from "lodash";
+import { SpeciesDto } from "./species.dto";
 
 // The ID for this DTO is formed of "entityType|entityUuid". This is a virtual resource, not directly
 // backed by a single DB table.
@@ -9,15 +10,18 @@ import { Dictionary } from "lodash";
 export class TreeReportCountsDto {
   @ApiProperty({
     type: "object",
-    additionalProperties: { type: "array", items: { type: "string" } },
+    additionalProperties: { type: "array", items: { $ref: "#/components/schemas/SpeciesDto" } },
     nullable: true,
     description:
       "The species that were specified at the establishment of the parent entity grouped by collection. " +
       "This will be null for projects because projects don't have a parent entity. " +
       'Note that for site reports, the seeds on the site establishment are included under the collection name "seeds"',
-    example: { "tree-planted": ["Aster Peraliens", "Circium carniolicum"], "non-tree": ["Coffee"] }
+    example: {
+      "tree-planted": [{ name: "Aster Peraliens" }, { name: "Circium carniolicum" }],
+      "non-tree": [{ name: "Coffee" }]
+    }
   })
-  establishmentTrees?: Dictionary<string[]>;
+  establishmentTrees?: Dictionary<SpeciesDto[]>;
 
   @ApiProperty({
     type: "object",

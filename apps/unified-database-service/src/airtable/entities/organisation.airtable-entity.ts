@@ -115,7 +115,11 @@ const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = [
   "bioeconomyProducts",
   "territoriesOfOperation",
   "decisionMakingStructureDescription",
-  "decisionMakingStructureIndividualsInvolved"
+  "decisionMakingStructureIndividualsInvolved",
+  "averageWorkerIncome",
+  "bioeconomyTraditionalKnowledge",
+  "bioeconomyProductProcessing",
+  "bioeconomyBuyers"
 ];
 
 export class OrganisationEntity extends AirtableEntity<Organisation, OrganisationAssociations> {

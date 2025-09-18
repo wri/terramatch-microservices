@@ -538,6 +538,17 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       property: "all_associates_aggregate",
       label: "Aggregate associates",
       inputType: "number"
+    },
+    "pro-pit-goal-trees-restored-description": {
+      property: "goal_trees_restored_description",
+      label: "How did you calculate the estimated number of trees planted-restored?",
+      inputType: "long-text"
+    },
+    "pro-pit-jobs-created-beneficiaries-description": {
+      property: "jobs_created_beneficiaries_description",
+      label:
+        "How did you arrive at the provided estimate of number of jobs created, direct and indirect beneficiaries?",
+      inputType: "long-text"
     }
   },
   fileCollections: {

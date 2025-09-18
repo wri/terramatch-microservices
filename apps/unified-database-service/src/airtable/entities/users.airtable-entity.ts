@@ -29,7 +29,7 @@ const COLUMNS: ColumnMapping<UserWithUuid, UserAssociations>[] = [
   "lastName",
   "emailAddress",
   "phoneNumber",
-  associatedValueColumn("primaryOrganisationUuid"),
+  associatedValueColumn("primaryOrganisationUuid", "organisationId"),
   associatedValueColumn("monitoringOrganisationUuids"),
   associatedValueColumn("frameworks"),
   associatedValueColumn("projectUuids")

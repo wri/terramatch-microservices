@@ -7,18 +7,21 @@ import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
+import { ValidationController } from "./validations/validation.controller";
+import { ValidationService } from "./validations/validation.service";
 import { DataApiModule } from "@terramatch-microservices/data-api";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
-  controllers: [SitePolygonsController, BoundingBoxController],
+  controllers: [SitePolygonsController, BoundingBoxController, ValidationController],
   providers: [
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter
     },
     SitePolygonsService,
-    BoundingBoxService
+    BoundingBoxService,
+    ValidationService
   ]
 })
 export class AppModule {}

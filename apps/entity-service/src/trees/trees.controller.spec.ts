@@ -67,7 +67,7 @@ describe("TreesController", () => {
           Banana: { amount: 75, taxonId: "wfo-faketaxonid" }
         }
       };
-      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": ["Coffee", "Banana"] });
+      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": [{ name: "Coffee" }, { name: "Banana" }] });
       treeService.getPreviousPlanting.mockResolvedValue(stubData);
       const { uuid } = await SiteReportFactory.create();
       const result = serialize(await controller.getEstablishmentData({ entity: "siteReports", uuid }));
@@ -75,7 +75,9 @@ describe("TreesController", () => {
       expect(treeService.getPreviousPlanting).toHaveBeenCalledWith("siteReports", uuid);
       const resource = result.data as Resource;
       expect(resource.id).toBe(`siteReports|${uuid}`);
-      expect(resource.attributes.establishmentTrees).toMatchObject({ "non-tree": ["Coffee", "Banana"] });
+      expect(resource.attributes.establishmentTrees).toMatchObject({
+        "non-tree": [{ name: "Coffee" }, { name: "Banana" }]
+      });
       expect(resource.attributes.previousPlantingCounts).toMatchObject(stubData);
     });
   });
@@ -94,7 +96,7 @@ describe("TreesController", () => {
           Banana: { amount: 75, taxonId: "wfo-faketaxonid" }
         }
       };
-      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": ["Coffee", "Banana"] });
+      treeService.getEstablishmentTrees.mockResolvedValue({ "non-tree": [{ name: "Coffee" }, { name: "Banana" }] });
       treeService.getAssociatedReportCounts.mockResolvedValue(stubData);
       const { uuid } = await SiteFactory.create();
       const result = serialize(await controller.getReportCounts({ entity: "sites", uuid }));
@@ -102,7 +104,9 @@ describe("TreesController", () => {
       expect(treeService.getAssociatedReportCounts).toHaveBeenCalledWith("sites", uuid);
       const resource = result.data as Resource;
       expect(resource.id).toBe(`sites|${uuid}`);
-      expect(resource.attributes.establishmentTrees).toMatchObject({ "non-tree": ["Coffee", "Banana"] });
+      expect(resource.attributes.establishmentTrees).toMatchObject({
+        "non-tree": [{ name: "Coffee" }, { name: "Banana" }]
+      });
       expect(resource.attributes.reportCounts).toMatchObject(stubData);
     });
 
@@ -115,7 +119,7 @@ describe("TreesController", () => {
     });
 
     it("should skip report counts for a non-report-counts type", async () => {
-      treeService.getEstablishmentTrees.mockResolvedValue({ "tree-planted": ["Acacia"] });
+      treeService.getEstablishmentTrees.mockResolvedValue({ "tree-planted": [{ name: "Acacia" }] });
       const { uuid } = await SiteReportFactory.create();
       const result = serialize(await controller.getReportCounts({ entity: "siteReports", uuid }));
       expect(treeService.getAssociatedReportCounts).not.toHaveBeenCalled();

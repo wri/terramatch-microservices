@@ -198,10 +198,10 @@ describe("FinancialReportProcessor", () => {
   });
 
   describe("getFundingTypes", () => {
-    it("should return funding types for organisation", async () => {
+    it("should return funding types for financial report", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
-      await FundingTypeFactory.createMany(2, { organisationId: organisation.uuid });
+      await FundingTypeFactory.createMany(2, { financialReportId: financialReport.id });
 
       await financialReport.reload({ include: [{ association: "organisation" }] });
 

@@ -292,13 +292,13 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
 
       // Create multiple entries
-      const entry1 = await DisturbanceReportEntryFactory.create({
+      DisturbanceReportEntryFactory.create({
         disturbanceReportId: disturbanceReport.id,
         name: "intensity",
         value: "low",
         inputType: "select"
       });
-      const entry2 = await DisturbanceReportEntryFactory.create({
+      await DisturbanceReportEntryFactory.create({
         disturbanceReportId: disturbanceReport.id,
         name: "date-of-disturbance",
         value: "2023-10-01",

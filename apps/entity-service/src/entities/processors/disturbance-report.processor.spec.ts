@@ -8,6 +8,7 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   DisturbanceReportFactory,
+  DisturbanceReportEntryFactory,
   ProjectFactory,
   ProjectUserFactory,
   UserFactory
@@ -184,9 +185,23 @@ describe("DisturbanceReportProcessor", () => {
   });
 
   describe("getFullDto", () => {
-    it("should return full DTO", async () => {
+    it("should return full DTO with entries and extracted fields", async () => {
       const project = await ProjectFactory.create();
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      // Create entries
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "intensity",
+        value: "high",
+        inputType: "select"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "date-of-disturbance",
+        value: "2023-12-01",
+        inputType: "date"
+      });
 
       await disturbanceReport.reload({ include: [{ association: "project" }] });
 
@@ -194,13 +209,53 @@ describe("DisturbanceReportProcessor", () => {
 
       expect(result.id).toBe(disturbanceReport.uuid);
       expect(result.dto).toBeDefined();
+      expect(result.dto.entries).toHaveLength(2);
+      expect(result.dto.intensity).toBe("high");
+      expect(result.dto.dateOfDisturbance).toEqual(new Date("2023-12-01"));
+    });
+
+    it("should handle missing entry values", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      // Create entry without intensity
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "other-field",
+        value: "some-value",
+        inputType: "text"
+      });
+
+      await disturbanceReport.reload({ include: [{ association: "project" }] });
+
+      const result = await processor.getFullDto(disturbanceReport);
+
+      expect(result.id).toBe(disturbanceReport.uuid);
+      expect(result.dto).toBeDefined();
+      expect(result.dto.entries).toHaveLength(1);
+      expect(result.dto.intensity).toBeNull();
+      expect(result.dto.dateOfDisturbance).toBeNull();
     });
   });
 
   describe("getLightDto", () => {
-    it("should return light DTO", async () => {
+    it("should return light DTO with entries and extracted fields", async () => {
       const project = await ProjectFactory.create();
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      // Create entries
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "intensity",
+        value: "medium",
+        inputType: "select"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "date-of-disturbance",
+        value: "2023-11-15",
+        inputType: "date"
+      });
 
       await disturbanceReport.reload({ include: [{ association: "project" }] });
 
@@ -208,6 +263,64 @@ describe("DisturbanceReportProcessor", () => {
 
       expect(result.id).toBe(disturbanceReport.uuid);
       expect(result.dto).toBeDefined();
+      expect(result.dto.entries).toHaveLength(2);
+      expect(result.dto.intensity).toBe("medium");
+      expect(result.dto.dateOfDisturbance).toEqual(new Date("2023-11-15"));
+    });
+
+    it("should handle missing entry values in light DTO", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      // No entries created
+
+      await disturbanceReport.reload({ include: [{ association: "project" }] });
+
+      const result = await processor.getLightDto(disturbanceReport);
+
+      expect(result.id).toBe(disturbanceReport.uuid);
+      expect(result.dto).toBeDefined();
+      expect(result.dto.entries).toHaveLength(0);
+      expect(result.dto.intensity).toBeNull();
+      expect(result.dto.dateOfDisturbance).toBeNull();
+    });
+  });
+
+  describe("getDisturbanceReportEntries", () => {
+    it("should return entries for a disturbance report", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      // Create multiple entries
+      const entry1 = await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "intensity",
+        value: "low",
+        inputType: "select"
+      });
+      const entry2 = await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "date-of-disturbance",
+        value: "2023-10-01",
+        inputType: "date"
+      });
+
+      const entries = await processor.getDisturbanceReportEntries(disturbanceReport);
+
+      expect(entries).toHaveLength(2);
+      expect(entries[0].name).toBe("intensity");
+      expect(entries[0].value).toBe("low");
+      expect(entries[1].name).toBe("date-of-disturbance");
+      expect(entries[1].value).toBe("2023-10-01");
+    });
+
+    it("should return empty array when no entries exist", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      const entries = await processor.getDisturbanceReportEntries(disturbanceReport);
+
+      expect(entries).toHaveLength(0);
     });
   });
 });

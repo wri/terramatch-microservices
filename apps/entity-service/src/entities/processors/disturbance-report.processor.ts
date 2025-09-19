@@ -125,7 +125,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     return { id: disturbanceReport.uuid, dto };
   }
 
-  protected async getDisturbanceReportEntries(disturbanceReport: DisturbanceReport) {
+  async getDisturbanceReportEntries(disturbanceReport: DisturbanceReport) {
     const entries = await DisturbanceReportEntry.findAll({
       where: { disturbanceReportId: disturbanceReport.id }
     });

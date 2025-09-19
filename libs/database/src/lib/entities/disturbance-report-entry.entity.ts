@@ -30,13 +30,13 @@ export class DisturbanceReportEntry extends Model<DisturbanceReportEntry> {
   uuid: string;
 
   @ForeignKey(() => DisturbanceReport)
-  @Column({ type: BIGINT.UNSIGNED, field: "disturbance_report_id" })
+  @Column({ type: BIGINT.UNSIGNED })
   disturbanceReportId: number;
 
   @Column(STRING)
   name: string;
 
-  @Column({ type: STRING, field: "input_type" })
+  @Column({ type: STRING })
   inputType: string;
 
   @AllowNull
@@ -51,6 +51,6 @@ export class DisturbanceReportEntry extends Model<DisturbanceReportEntry> {
   @Column(TEXT)
   value: string | null;
 
-  @BelongsTo(() => DisturbanceReport, { foreignKey: "disturbanceReportId" })
+  @BelongsTo(() => DisturbanceReport)
   disturbanceReport: DisturbanceReport;
 }

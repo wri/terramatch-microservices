@@ -4,6 +4,7 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
+  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -18,6 +19,7 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
+import { DisturbanceReportEntry } from "./disturbance-report-entry.entity";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } })
@@ -104,38 +106,6 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
 
   @BelongsTo(() => Project)
   project: Project | null;
-
-  @AllowNull
-  @Column(DATE)
-  dateOfDisturbance: Date | null;
-
-  @AllowNull
-  @Column(STRING)
-  intensity: string | null;
-
-  @AllowNull
-  @Column(TEXT)
-  disturbanceSubtype: string[] | null;
-
-  @AllowNull
-  @Column(STRING)
-  disturbanceType: string | null;
-
-  @AllowNull
-  @Column(STRING)
-  propertyAffected: string[] | null;
-
-  @AllowNull
-  @Column(STRING)
-  extent: string | null;
-
-  @AllowNull
-  @JsonColumn()
-  siteAffected: string | null;
-
-  @AllowNull
-  @JsonColumn()
-  polygonAffected: string | null;
 
   get projectName() {
     return this.project?.name;

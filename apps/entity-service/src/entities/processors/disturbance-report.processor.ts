@@ -1,10 +1,16 @@
-import { DisturbanceReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
+import {
+  DisturbanceReport,
+  DisturbanceReportEntry,
+  Project,
+  ProjectUser
+} from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { Op, Includeable } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { DisturbanceReportFullDto, DisturbanceReportLightDto } from "../dto/disturbance-report.dto";
+import { DisturbanceReportEntryDto } from "../dto/disturbance-report-entry.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -50,22 +56,15 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       attributes: ["id", "uuid", "name"],
       include: [{ association: "organisation", attributes: ["uuid", "name"] }]
     };
+
     const associations = [projectAssociation];
     const builder = await this.entitiesService.buildQuery(DisturbanceReport, query, associations);
 
     if (query.sort?.field != null) {
       if (
-        [
-          "title",
-          "status",
-          "updateRequestStatus",
-          "createdAt",
-          "dueAt",
-          "updatedAt",
-          "submittedAt",
-          "dateOfDisturbance",
-          "intensity"
-        ].includes(query.sort.field)
+        ["title", "status", "updateRequestStatus", "createdAt", "dueAt", "updatedAt", "submittedAt"].includes(
+          query.sort.field
+        )
       ) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {
@@ -114,12 +113,36 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   async getFullDto(disturbanceReport: DisturbanceReport) {
-    const dto = new DisturbanceReportFullDto(disturbanceReport, {});
+    const dto = new DisturbanceReportFullDto(disturbanceReport);
 
     return { id: disturbanceReport.uuid, dto };
   }
 
+  protected async getDisturbanceReportEntries(disturbanceReport: DisturbanceReport) {
+    const entries = await DisturbanceReportEntry.findAll({
+      where: { disturbanceReportId: disturbanceReport.id }
+    });
+    return entries.map(
+      entry =>
+        new DisturbanceReportEntryDto(entry, {
+          entityType: "disturbanceReports" as const,
+          entityUuid: disturbanceReport.uuid
+        })
+    );
+  }
+
   async getLightDto(disturbanceReport: DisturbanceReport) {
-    return { id: disturbanceReport.uuid, dto: new DisturbanceReportLightDto(disturbanceReport, {}) };
+    const entries = await this.getDisturbanceReportEntries(disturbanceReport);
+    const intensity = entries.find(entry => entry.name === "intensity")?.value ?? null;
+    const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
+
+    return {
+      id: disturbanceReport.uuid,
+      dto: new DisturbanceReportLightDto(disturbanceReport, {
+        entries,
+        intensity,
+        dateOfDisturbance: dateOfDisturbance ? new Date(dateOfDisturbance) : null
+      })
+    };
   }
 }

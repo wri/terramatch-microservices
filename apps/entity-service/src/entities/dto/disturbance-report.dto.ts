@@ -4,6 +4,7 @@ import { DisturbanceReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { DisturbanceReportEntryDto } from "./disturbance-report-entry.dto";
 
 @JsonApiDto({ type: "disturbanceReports" })
 export class DisturbanceReportLightDto extends EntityDto {
@@ -36,16 +37,19 @@ export class DisturbanceReportLightDto extends EntityDto {
   organisationName: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
-  dateOfDisturbance: Date | null;
-
-  @ApiProperty({ nullable: true, type: String })
   intensity: string | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  dateOfDisturbance: Date | null;
 
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true, type: DisturbanceReportEntryDto, isArray: true })
+  entries: DisturbanceReportEntryDto[] | null;
 }
 
 export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
@@ -91,22 +95,4 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   answers: string | null;
-
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  disturbanceSubtype: string[] | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  disturbanceType: string | null;
-
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  propertyAffected: string[] | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  extent: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  siteAffected: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  polygonAffected: string | null;
 }

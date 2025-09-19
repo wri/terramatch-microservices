@@ -26,14 +26,16 @@ export class EmailService {
     readonly jwtService: JwtService
   ) {
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>("MAIL_HOST"),
-      port: this.configService.get<number>("MAIL_PORT"),
-      secure: this.configService.get<number>("MAIL_PORT") === 465,
+      host: "localhost", // Hardcoded for mail catcher
+      port: 1025, // Hardcoded for mail catcher
+      secure: false, // Hardcoded for mail catcher
       auth: {
-        user: this.configService.get<string>("MAIL_USERNAME"),
-        pass: this.configService.get<string>("MAIL_PASSWORD")
+        user: "", // No auth needed for mail catcher
+        pass: "" // No auth needed for mail catcher
       }
     });
+    //view mail in browser
+    // http://localhost:1080/
   }
 
   filterEntityEmailRecipients(recipients: User[]) {

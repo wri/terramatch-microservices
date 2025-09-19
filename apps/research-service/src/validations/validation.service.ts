@@ -74,30 +74,35 @@ export class ValidationService {
       };
     }
 
-    const criteriaWhere: WhereOptions<CriteriaSite> = { polygonId: allPolygonUuids };
-    if (criteriaId !== undefined) {
-      criteriaWhere.criteriaId = criteriaId;
-      criteriaWhere.valid = false;
-    }
-
     const allCriteriaData = await CriteriaSite.findAll({
-      where: criteriaWhere,
+      where: { polygonId: allPolygonUuids },
       attributes: ["polygonId", "criteriaId", "valid", "createdAt", "extraInfo"],
       order: [["createdAt", "DESC"]]
     });
 
-    const criteriaByPolygon = groupBy(allCriteriaData, "polygonId");
-    const polygonsWithValidations = Object.keys(criteriaByPolygon);
+    let polygonsWithValidations: string[];
+    if (criteriaId !== undefined) {
+      const filteredCriteriaData = allCriteriaData.filter(
+        criteria => criteria.criteriaId === criteriaId && criteria.valid === false
+      );
+      polygonsWithValidations = [...new Set(filteredCriteriaData.map(criteria => criteria.polygonId))];
+    } else {
+      const criteriaByPolygon = groupBy(allCriteriaData, "polygonId");
+      polygonsWithValidations = Object.keys(criteriaByPolygon);
+    }
+
     const total = polygonsWithValidations.length;
 
     const startIndex = (pageNumber - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedPolygonIds = polygonsWithValidations.slice(startIndex, endIndex);
 
+    const criteriaByPolygon = groupBy(allCriteriaData, "polygonId");
+
     const validations = paginatedPolygonIds.map(polygonId =>
       populateDto<ValidationDto>(new ValidationDto(), {
         polygonId,
-        criteriaList: criteriaByPolygon[polygonId].map(criteria => ({
+        criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
           criteriaId: criteria.criteriaId,
           valid: criteria.valid,
           createdAt: criteria.createdAt,

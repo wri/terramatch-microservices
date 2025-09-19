@@ -141,7 +141,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       dto: new DisturbanceReportLightDto(disturbanceReport, {
         entries,
         intensity,
-        dateOfDisturbance: dateOfDisturbance ? new Date(dateOfDisturbance) : null
+        dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
       })
     };
   }

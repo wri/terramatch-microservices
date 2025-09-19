@@ -4,7 +4,6 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
-  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -19,7 +18,6 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
-import { DisturbanceReportEntry } from "./disturbance-report-entry.entity";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } })

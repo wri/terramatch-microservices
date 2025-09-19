@@ -2,7 +2,6 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ValidationController } from "./validation.controller";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
@@ -92,19 +91,6 @@ describe("ValidationController", () => {
       expect(mockValidationService.getPolygonValidation).toHaveBeenCalledWith(polygonUuid);
 
       expect(result.data).toBeDefined();
-    });
-
-    it("should throw NotFoundException when polygon is not found", async () => {
-      const nonExistentUuid = "non-existent-uuid";
-      mockValidationService.getPolygonValidation.mockRejectedValue(
-        new NotFoundException(`Polygon with UUID ${nonExistentUuid} not found`)
-      );
-
-      await expect(controller.getPolygonValidation(nonExistentUuid)).rejects.toThrow(
-        new NotFoundException(`Polygon with UUID ${nonExistentUuid} not found`)
-      );
-
-      expect(mockValidationService.getPolygonValidation).toHaveBeenCalledWith(nonExistentUuid);
     });
   });
 

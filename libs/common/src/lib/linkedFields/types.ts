@@ -21,9 +21,7 @@ export const FIELD_INPUT_TYPES = [
   "select-image",
   "strategy-area",
   "text",
-  "url",
-  "disturbanceAffectedSite",
-  "disturbanceAffectedPolygon"
+  "url"
 ] as const;
 export type FieldInputType = (typeof FIELD_INPUT_TYPES)[number];
 

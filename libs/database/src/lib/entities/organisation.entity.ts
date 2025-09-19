@@ -367,26 +367,6 @@ export class Organisation extends Model<Organisation> {
   communityMembersEngaged3YrBackwardClass: number | null;
 
   @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  totalBoardMembers: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  pctBoardWomen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  pctBoardMen: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  pctBoardYouth: number | null;
-
-  @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  pctBoardNonYouth: number | null;
-
-  @AllowNull
   @Column(TEXT)
   engagementNonYouth: string | null;
 
@@ -413,10 +393,6 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column({ type: ENUM, values: ["yes", "no"] })
   fpcCompany: string | null;
-
-  @AllowNull
-  @Column(INTEGER({ length: 11 }))
-  numOfFarmersOnBoard: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))

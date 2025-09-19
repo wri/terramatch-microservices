@@ -113,7 +113,14 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   async getFullDto(disturbanceReport: DisturbanceReport) {
-    const dto = new DisturbanceReportFullDto(disturbanceReport);
+    const entries = await this.getDisturbanceReportEntries(disturbanceReport);
+    const intensity = entries.find(entry => entry.name === "intensity")?.value ?? null;
+    const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
+    const dto = new DisturbanceReportFullDto(disturbanceReport, {
+      entries,
+      intensity,
+      dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
+    });
 
     return { id: disturbanceReport.uuid, dto };
   }

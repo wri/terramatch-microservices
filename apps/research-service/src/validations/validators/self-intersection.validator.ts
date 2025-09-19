@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common";
-import { Sequelize, QueryTypes } from "sequelize";
+import { QueryTypes } from "sequelize";
+import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 
 @Injectable()
 export class SelfIntersectionValidator {
-  constructor(private readonly sequelize: Sequelize) {}
-
   async validatePolygon(polygonUuid: string): Promise<{ valid: boolean; extraInfo: object | null }> {
-    const result = await this.sequelize.query(
+    if (PolygonGeometry.sequelize == null) {
+      throw new Error("PolygonGeometry model is missing sequelize connection");
+    }
+
+    const result = await PolygonGeometry.sequelize.query(
       `
         SELECT ST_IsSimple(geom) as is_simple
         FROM polygon_geometry 
@@ -33,7 +36,11 @@ export class SelfIntersectionValidator {
   async validatePolygons(
     polygonUuids: string[]
   ): Promise<Array<{ polygonUuid: string; valid: boolean; extraInfo: object | null }>> {
-    const results = await this.sequelize.query(
+    if (PolygonGeometry.sequelize == null) {
+      throw new Error("PolygonGeometry model is missing sequelize connection");
+    }
+
+    const results = await PolygonGeometry.sequelize.query(
       `
         SELECT uuid, ST_IsSimple(geom) as is_simple
         FROM polygon_geometry 

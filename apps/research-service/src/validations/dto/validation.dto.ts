@@ -12,7 +12,7 @@ export class ValidationDto {
 
   @ApiProperty({
     description: "List of validation criteria results for this polygon",
-    type: [ValidationCriteriaDto],
+    type: ValidationCriteriaDto,
     isArray: true
   })
   criteriaList: ValidationCriteriaDto[];

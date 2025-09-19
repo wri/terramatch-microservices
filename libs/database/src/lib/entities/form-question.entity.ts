@@ -138,14 +138,6 @@ export class FormQuestion extends Model<FormQuestion> {
   maxCharacterLimit: number | null;
 
   @AllowNull
-  @Column(INTEGER)
-  minNumberLimit: number | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  maxNumberLimit: number | null;
-
-  @AllowNull
   @JsonColumn()
   years: number[] | null;
 }

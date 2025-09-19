@@ -83,12 +83,6 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, type: Number })
   maxCharacterLimit: number | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  minNumberLimit: number | null;
-
-  @ApiProperty({ nullable: true, type: Number })
-  maxNumberLimit: number | null;
-
   @ApiProperty({ nullable: true, type: Number, isArray: true })
   years: number[] | null;
 

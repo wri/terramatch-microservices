@@ -4,7 +4,6 @@ import { ValidationDto } from "./dto/validation.dto";
 import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { WhereOptions } from "sequelize";
 import { groupBy } from "lodash";
 
 @Injectable()

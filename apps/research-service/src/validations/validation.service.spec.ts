@@ -11,7 +11,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findAll: jest.fn()
   },
   SitePolygon: {
-    findAndCountAll: jest.fn()
+    findAndCountAll: jest.fn(),
+    findAll: jest.fn()
   }
 }));
 
@@ -113,10 +114,7 @@ describe("ValidationService", () => {
     const siteUuid = "site-uuid-123";
     const polygonUuid1 = "polygon-uuid-123";
     const polygonUuid2 = "polygon-uuid-456";
-    const mockPolygons = {
-      count: 2,
-      rows: [{ polygonUuid: polygonUuid1 }, { polygonUuid: polygonUuid2 }]
-    };
+    const mockPolygons = [{ polygonUuid: polygonUuid1 }, { polygonUuid: polygonUuid2 }];
 
     const mockCriteria = [
       {
@@ -143,19 +141,17 @@ describe("ValidationService", () => {
     ];
 
     it("should return validations for all polygons in a site", async () => {
-      (SitePolygon.findAndCountAll as jest.Mock).mockResolvedValue(mockPolygons);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue(mockPolygons);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue(mockCriteria);
 
-      const result = await service.getSiteValidations(siteUuid);
+      const result = await service.getSiteValidations(siteUuid, 100);
 
-      expect(SitePolygon.findAndCountAll).toHaveBeenCalledWith({
+      expect(SitePolygon.findAll).toHaveBeenCalledWith({
         where: {
           siteUuid,
           isActive: true
         },
-        attributes: ["polygonUuid"],
-        limit: 100,
-        offset: 0
+        attributes: ["polygonUuid"]
       });
 
       expect(CriteriaSite.findAll).toHaveBeenCalledWith({
@@ -176,19 +172,17 @@ describe("ValidationService", () => {
       const pageSize = 100;
       const pageNumber = 2;
 
-      (SitePolygon.findAndCountAll as jest.Mock).mockResolvedValue(mockPolygons);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue(mockPolygons);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue(mockCriteria);
 
       await service.getSiteValidations(siteUuid, pageSize, pageNumber);
 
-      expect(SitePolygon.findAndCountAll).toHaveBeenCalledWith({
+      expect(SitePolygon.findAll).toHaveBeenCalledWith({
         where: {
           siteUuid,
           isActive: true
         },
-        attributes: ["polygonUuid"],
-        limit: pageSize,
-        offset: (pageNumber - 1) * pageSize
+        attributes: ["polygonUuid"]
       });
     });
 
@@ -198,27 +192,29 @@ describe("ValidationService", () => {
       await expect(service.getSiteValidations(siteUuid, 100, invalidPageNumber)).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw NotFoundException when site has no polygons", async () => {
-      (SitePolygon.findAndCountAll as jest.Mock).mockResolvedValue({
-        count: 0,
-        rows: []
+    it("should return empty result when site has no polygons", async () => {
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.getSiteValidations(siteUuid, 100);
+
+      expect(result).toEqual({
+        validations: [],
+        total: 0
       });
 
-      await expect(service.getSiteValidations(siteUuid)).rejects.toThrow(NotFoundException);
-
-      expect(SitePolygon.findAndCountAll).toHaveBeenCalled();
+      expect(SitePolygon.findAll).toHaveBeenCalled();
       expect(CriteriaSite.findAll).not.toHaveBeenCalled();
     });
 
     it("should handle site polygons with missing validation criteria", async () => {
-      (SitePolygon.findAndCountAll as jest.Mock).mockResolvedValue(mockPolygons);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue(mockPolygons);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([mockCriteria[0]]);
 
-      const result = await service.getSiteValidations(siteUuid);
+      const result = await service.getSiteValidations(siteUuid, 100);
 
-      expect(result.validations).toHaveLength(2);
+      expect(result.validations).toHaveLength(1);
       expect(result.validations[0].criteriaList).toHaveLength(1);
-      expect(result.validations[1].criteriaList).toHaveLength(0);
+      expect(result.total).toBe(1);
     });
   });
 });

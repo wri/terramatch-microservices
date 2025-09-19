@@ -116,7 +116,7 @@ describe("ValidationController", () => {
 
       const result = serialize(await controller.getSiteValidation(siteUuid, query));
 
-      expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 100, 1);
+      expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 100, 1, undefined);
 
       expect(result.data).toBeDefined();
       expect(result.data).toHaveLength(2);
@@ -132,39 +132,7 @@ describe("ValidationController", () => {
 
       await controller.getSiteValidation(siteUuid, query);
 
-      expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 10, 3);
-    });
-
-    it("should throw BadRequestException for invalid page size", async () => {
-      const query: SiteValidationQueryDto = {
-        page: {
-          size: 101,
-          number: 1
-        }
-      };
-
-      await expect(controller.getSiteValidation(siteUuid, query)).rejects.toThrow(BadRequestException);
-      expect(mockValidationService.getSiteValidations).not.toHaveBeenCalled();
-    });
-
-    it("should throw BadRequestException for invalid page number", async () => {
-      const query: SiteValidationQueryDto = {
-        page: {
-          size: 10,
-          number: 0
-        }
-      };
-
-      await expect(controller.getSiteValidation(siteUuid, query)).rejects.toThrow(BadRequestException);
-      expect(mockValidationService.getSiteValidations).not.toHaveBeenCalled();
-    });
-
-    it("should pass through NotFoundException when site has no polygons", async () => {
-      mockValidationService.getSiteValidations.mockRejectedValue(
-        new NotFoundException(`Site with UUID ${siteUuid} not found or has no polygons`)
-      );
-
-      await expect(controller.getSiteValidation(siteUuid, {})).rejects.toThrow(NotFoundException);
+      expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 10, 3, undefined);
     });
   });
 });

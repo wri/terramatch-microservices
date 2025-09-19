@@ -60,7 +60,8 @@ export const RELATION_INPUT_TYPES = [
   "trainingBeneficiaries",
   "treeSpecies",
   "volunteers",
-  "workdays"
+  "workdays",
+  "disturbanceReportEntries"
 ] as const;
 export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 

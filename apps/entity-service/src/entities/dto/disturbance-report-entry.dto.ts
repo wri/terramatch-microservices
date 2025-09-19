@@ -17,10 +17,10 @@ export class DisturbanceReportEntryDto extends AssociationDto {
     }
   }
 
-  @ApiProperty({ type: String })
+  @ApiProperty()
   name: string;
 
-  @ApiProperty({ type: String })
+  @ApiProperty()
   inputType: string;
 
   @ApiProperty({ nullable: true, type: String })

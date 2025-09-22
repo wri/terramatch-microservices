@@ -1,19 +1,49 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ValidationService } from "./validation.service";
 import { NotFoundException } from "@nestjs/common";
-import { CriteriaSite, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { CriteriaSite, CriteriaSiteHistoric, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
+import { SpikesValidator } from "./validators/spikes.validator";
+
+interface MockCriteriaSite {
+  update: jest.MockedFunction<(data: { valid: boolean; extraInfo: object | null }) => Promise<void>>;
+  save: jest.MockedFunction<() => Promise<void>>;
+}
+
+interface MockSelfIntersectionValidator {
+  validatePolygon: jest.MockedFunction<(polygonUuid: string) => Promise<{ valid: boolean; extraInfo: object | null }>>;
+  validatePolygons: jest.MockedFunction<
+    (polygonUuids: string[]) => Promise<Array<{ polygonUuid: string; valid: boolean; extraInfo: object | null }>>
+  >;
+}
+
+interface MockSpikesValidator {
+  validatePolygon: jest.MockedFunction<(polygonUuid: string) => Promise<{ valid: boolean; extraInfo: object | null }>>;
+  validatePolygons: jest.MockedFunction<
+    (polygonUuids: string[]) => Promise<Array<{ polygonUuid: string; valid: boolean; extraInfo: object | null }>>
+  >;
+}
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
     findOne: jest.fn()
   },
-  CriteriaSite: {
-    findAll: jest.fn()
-  }
+  CriteriaSite: jest.fn().mockImplementation(() => ({
+    save: jest.fn()
+  })),
+  CriteriaSiteHistoric: jest.fn().mockImplementation(() => ({
+    save: jest.fn()
+  }))
 }));
+
+// Mock the static methods
+(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findAll = jest.fn();
+(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findOne = jest.fn();
 
 describe("ValidationService", () => {
   let service: ValidationService;
+  let mockSelfIntersectionValidator: MockSelfIntersectionValidator;
+  let mockSpikesValidator: MockSpikesValidator;
 
   const mockCriteriaData = [
     {
@@ -39,8 +69,28 @@ describe("ValidationService", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    mockSelfIntersectionValidator = {
+      validatePolygon: jest.fn(),
+      validatePolygons: jest.fn()
+    } as MockSelfIntersectionValidator;
+
+    mockSpikesValidator = {
+      validatePolygon: jest.fn(),
+      validatePolygons: jest.fn()
+    } as MockSpikesValidator;
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ValidationService]
+      providers: [
+        ValidationService,
+        {
+          provide: SelfIntersectionValidator,
+          useValue: mockSelfIntersectionValidator
+        },
+        {
+          provide: SpikesValidator,
+          useValue: mockSpikesValidator
+        }
+      ]
     }).compile();
 
     service = module.get<ValidationService>(ValidationService);
@@ -103,6 +153,179 @@ describe("ValidationService", () => {
 
       expect(result.polygonId).toBe(polygonUuid);
       expect(result.criteriaList).toEqual([]);
+    });
+  });
+
+  describe("validatePolygons", () => {
+    const mockCriteriaSite: MockCriteriaSite = {
+      update: jest.fn(),
+      save: jest.fn()
+    };
+
+    beforeEach(() => {
+      (CriteriaSite.findOne as jest.Mock).mockResolvedValue(mockCriteriaSite);
+    });
+
+    it("should validate polygons with SELF_INTERSECTION validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1", "uuid-2"],
+        validationTypes: ["SELF_INTERSECTION"]
+      };
+
+      mockSelfIntersectionValidator.validatePolygon
+        .mockResolvedValueOnce({ valid: true, extraInfo: null })
+        .mockResolvedValueOnce({ valid: false, extraInfo: null });
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 4,
+        valid: true,
+        extraInfo: null
+      });
+      expect(result.results[1]).toEqual({
+        polygonUuid: "uuid-2",
+        criteriaId: 4,
+        valid: false,
+        extraInfo: null
+      });
+
+      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledTimes(2);
+      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledWith("uuid-1");
+      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledWith("uuid-2");
+    });
+
+    it("should validate polygons with SPIKES validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SPIKES"]
+      };
+
+      const spikesResult = {
+        valid: false,
+        extraInfo: {
+          spikes: [[33.0532174455731, -2.0235234982835237]],
+          spikeCount: 1
+        }
+      };
+
+      mockSpikesValidator.validatePolygon.mockResolvedValue(spikesResult);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 8,
+        valid: false,
+        extraInfo: spikesResult.extraInfo
+      });
+
+      expect(mockSpikesValidator.validatePolygon).toHaveBeenCalledWith("uuid-1");
+    });
+
+    it("should validate polygons with both validation types", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SELF_INTERSECTION", "SPIKES"]
+      };
+
+      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
+      mockSpikesValidator.validatePolygon.mockResolvedValue({
+        valid: false,
+        extraInfo: { spikes: [], spikeCount: 0 }
+      });
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].criteriaId).toBe(4);
+      expect(result.results[1].criteriaId).toBe(8);
+    });
+
+    it("should default to SELF_INTERSECTION when no validation types specified", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"]
+      };
+
+      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].criteriaId).toBe(4);
+      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledWith("uuid-1");
+    });
+
+    it("should save validation results to database", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SELF_INTERSECTION"]
+      };
+
+      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
+
+      await service.validatePolygons(request);
+
+      expect(CriteriaSite.findOne).toHaveBeenCalledWith({
+        where: {
+          polygonId: "uuid-1",
+          criteriaId: 4
+        }
+      });
+    });
+
+    it("should create new criteria record when none exists", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SELF_INTERSECTION"]
+      };
+
+      (CriteriaSite.findOne as jest.Mock).mockResolvedValue(null);
+      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
+
+      await service.validatePolygons(request);
+
+      expect(CriteriaSite).toHaveBeenCalled();
+    });
+
+    it("should update existing criteria record and create historic record", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SELF_INTERSECTION"]
+      };
+
+      const existingCriteria: MockCriteriaSite & { valid: boolean; extraInfo: object } = {
+        valid: false,
+        extraInfo: { old: "data" },
+        update: jest.fn(),
+        save: jest.fn()
+      };
+
+      (CriteriaSite.findOne as jest.Mock).mockResolvedValue(existingCriteria);
+      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
+
+      await service.validatePolygons(request);
+
+      expect(CriteriaSiteHistoric).toHaveBeenCalled();
+      expect(existingCriteria.update).toHaveBeenCalledWith({
+        valid: true,
+        extraInfo: null
+      });
+    });
+
+    it("should handle validator errors gracefully", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SELF_INTERSECTION"]
+      };
+
+      const validatorError = new Error("Database connection failed");
+      mockSelfIntersectionValidator.validatePolygon.mockRejectedValue(validatorError);
+
+      await expect(service.validatePolygons(request)).rejects.toThrow(validatorError);
     });
   });
 });

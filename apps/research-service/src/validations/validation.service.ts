@@ -5,10 +5,14 @@ import { ValidationRequestDto } from "./dto/validation-request.dto";
 import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-response.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
+import { SpikesValidator } from "./validators/spikes.validator";
 
 @Injectable()
 export class ValidationService {
-  constructor(private readonly selfIntersectionValidator: SelfIntersectionValidator) {}
+  constructor(
+    private readonly selfIntersectionValidator: SelfIntersectionValidator,
+    private readonly spikesValidator: SpikesValidator
+  ) {}
   async getPolygonValidation(polygonUuid: string): Promise<ValidationDto> {
     const polygon = await PolygonGeometry.findOne({
       where: { uuid: polygonUuid },
@@ -27,7 +31,7 @@ export class ValidationService {
 
     const criteriaList: ValidationCriteriaDto[] = criteriaData.map(criteria => ({
       criteriaId: criteria.criteriaId,
-      valid: criteria.valid,
+      valid: Boolean(criteria.valid),
       createdAt: criteria.createdAt,
       extraInfo: criteria.extraInfo
     }));
@@ -54,8 +58,19 @@ export class ValidationService {
           results.push({
             polygonUuid: polygonUuid,
             criteriaId: 4,
-            valid: validationResult.valid,
+            valid: Boolean(validationResult.valid),
             extraInfo: validationResult.extraInfo
+          });
+        } else if (validationType === "SPIKES") {
+          const validationResult = await this.spikesValidator.validatePolygon(polygonUuid);
+
+          await this.saveValidationResult(polygonUuid, 8, validationResult.valid, validationResult.extraInfo);
+
+          results.push({
+            polygonUuid: polygonUuid,
+            criteriaId: 8,
+            valid: Boolean(validationResult.valid),
+            extraInfo: validationResult.extraInfo ?? null
           });
         }
       }
@@ -81,19 +96,19 @@ export class ValidationService {
       const historicRecord = new CriteriaSiteHistoric();
       historicRecord.polygonId = polygonUuid;
       historicRecord.criteriaId = criteriaId;
-      historicRecord.valid = existingCriteria.valid;
+      historicRecord.valid = Boolean(existingCriteria.valid);
       historicRecord.extraInfo = existingCriteria.extraInfo;
       await historicRecord.save();
 
       await existingCriteria.update({
-        valid,
+        valid: Boolean(valid),
         extraInfo
       });
     } else {
       const newRecord = new CriteriaSite();
       newRecord.polygonId = polygonUuid;
       newRecord.criteriaId = criteriaId;
-      newRecord.valid = valid;
+      newRecord.valid = Boolean(valid);
       newRecord.extraInfo = extraInfo;
       await newRecord.save();
     }

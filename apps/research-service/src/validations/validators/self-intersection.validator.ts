@@ -56,7 +56,7 @@ export class SelfIntersectionValidator {
 
     return polygonUuids.map(polygonUuid => ({
       polygonUuid,
-      valid: resultMap.get(polygonUuid) ?? false,
+      valid: Boolean(resultMap.get(polygonUuid) ?? false),
       extraInfo: null
     }));
   }

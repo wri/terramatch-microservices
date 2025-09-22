@@ -49,16 +49,15 @@ export class ValidationController {
       query.criteriaId
     );
 
-    const document = buildJsonApi(ValidationDto, { pagination: "number" });
-
-    for (const validation of validations) {
-      document.addData(validation.polygonId, validation);
-    }
-
-    return document.addIndex({
-      requestPath: `/validations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,
-      total,
-      pageNumber
-    });
+    return validations
+      .reduce(
+        (document, validation) => document.addData(validation.polygonId, validation).document,
+        buildJsonApi(ValidationDto, { pagination: "number" })
+      )
+      .addIndex({
+        requestPath: `/validations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,
+        total,
+        pageNumber
+      });
   }
 }

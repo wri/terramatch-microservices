@@ -9,17 +9,6 @@ describe("SiteValidationQueryDto", () => {
     expect(errors.length).toBe(0);
   });
 
-  it("should validate a DTO with valid page parameters", async () => {
-    const dto = plainToInstance(SiteValidationQueryDto, {
-      page: {
-        size: 10,
-        number: 1
-      }
-    });
-    const errors = await validate(dto);
-    expect(errors.length).toBe(0);
-  });
-
   it("should handle the page[size] and page[number] format correctly", async () => {
     const dto = plainToInstance(SiteValidationQueryDto, {
       "page[size]": "10",

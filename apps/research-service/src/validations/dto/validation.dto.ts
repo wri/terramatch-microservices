@@ -2,7 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { IsArray, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
-import { ValidationCriteriaDto } from "./validation-response.dto";
+import { ValidationCriteriaDto } from "./validation-criteria.dto";
 
 @JsonApiDto({ type: "validations" })
 export class ValidationDto {

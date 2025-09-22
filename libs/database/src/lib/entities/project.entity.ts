@@ -67,6 +67,10 @@ export class Project extends Model<Project> {
     return Subquery.select(Project, "id").eq("landscape", landscapeName).literal;
   }
 
+  static forUuid(uuid: string) {
+    return Subquery.select(Project, "id").eq("uuid", uuid).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -7,7 +7,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
-import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-response.dto";
+import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";

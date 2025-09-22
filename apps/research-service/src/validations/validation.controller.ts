@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
-import { ValidationResponseDto } from "./dto/validation-response.dto";
+import { ValidationResponseDto } from "./dto/validation-criteria.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";

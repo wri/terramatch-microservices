@@ -52,7 +52,7 @@ export class ValidationController {
     return validations
       .reduce(
         (document, validation) => document.addData(validation.polygonId, validation).document,
-        buildJsonApi(ValidationDto, { pagination: "number" })
+        buildJsonApi(ValidationDto)
       )
       .addIndex({
         requestPath: `/validations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,

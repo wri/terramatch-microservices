@@ -53,7 +53,7 @@ export class FileUploadController {
   ) {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
-    // await this.policyService.authorize("uploadFiles", model);
+    await this.policyService.authorize("uploadFiles", model);
     body.data = JSON.parse(body.data as unknown as string);
     const media = await this.fileUploadService.uploadFile(model, entity, collection, file, body);
     return buildJsonApi(MediaDto).addData(

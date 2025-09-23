@@ -1,5 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { ValidationService } from "./validation.service";
+import { ValidationService, VALIDATORS } from "./validation.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import {
   CriteriaSite,
@@ -7,8 +7,6 @@ import {
   PolygonGeometry,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
-import { SpikesValidator } from "./validators/spikes.validator";
 import { ValidationType } from "@terramatch-microservices/database/constants";
 
 interface MockCriteriaSite {
@@ -32,7 +30,10 @@ interface MockSpikesValidator {
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
-    findOne: jest.fn()
+    findOne: jest.fn(),
+    sequelize: {
+      query: jest.fn()
+    }
   },
   CriteriaSite: jest.fn().mockImplementation(() => ({
     save: jest.fn()
@@ -79,6 +80,8 @@ describe("ValidationService", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    (PolygonGeometry.sequelize?.query as jest.Mock)?.mockResolvedValue([{ is_simple: true }]);
+
     mockSelfIntersectionValidator = {
       validatePolygon: jest.fn(),
       validatePolygons: jest.fn()
@@ -89,18 +92,11 @@ describe("ValidationService", () => {
       validatePolygons: jest.fn()
     } as MockSpikesValidator;
 
+    (VALIDATORS as Record<string, unknown>).SELF_INTERSECTION = mockSelfIntersectionValidator;
+    (VALIDATORS as Record<string, unknown>).SPIKES = mockSpikesValidator;
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ValidationService,
-        {
-          provide: SelfIntersectionValidator,
-          useValue: mockSelfIntersectionValidator
-        },
-        {
-          provide: SpikesValidator,
-          useValue: mockSpikesValidator
-        }
-      ]
+      providers: [ValidationService]
     }).compile();
 
     service = module.get<ValidationService>(ValidationService);
@@ -441,7 +437,7 @@ describe("ValidationService", () => {
         validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
-      const validatorError = new Error("Database connection failed");
+      const validatorError = new Error("PolygonGeometry model is missing sequelize connection");
       mockSelfIntersectionValidator.validatePolygon.mockRejectedValue(validatorError);
 
       await expect(service.validatePolygons(request)).rejects.toThrow(validatorError);

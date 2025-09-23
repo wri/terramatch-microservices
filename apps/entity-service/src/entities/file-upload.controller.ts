@@ -20,7 +20,7 @@ import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import "multer";
-import { ExtraMediaRequest } from "./dto/extra-media-request";
+import { ExtraMediaRequestBody } from "./dto/extra-media-request";
 
 @Controller("entities/v3/files")
 export class FileUploadController {
@@ -49,11 +49,12 @@ export class FileUploadController {
   async uploadFile(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: ExtraMediaRequest
+    @Body() body: ExtraMediaRequestBody
   ) {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     // await this.policyService.authorize("uploadFiles", model);
+    body.data = JSON.parse(body.data as unknown as string);
     const media = await this.fileUploadService.uploadFile(model, entity, collection, file, body);
     return buildJsonApi(MediaDto).addData(
       media.uuid,

@@ -31,4 +31,7 @@ export class FundingTypeDto extends AssociationDto {
 
   @ApiProperty({ nullable: true, type: String })
   organisationUuid: string | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  financialReportId: string | null;
 }

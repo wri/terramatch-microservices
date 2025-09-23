@@ -3,14 +3,14 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
-import { ValidationResponseDto } from "./dto/validation-criteria.dto";
+import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 
-@Controller("validations/v3")
+@Controller("polygonValidations/v3")
 @ApiTags("Validations")
 export class ValidationController {
   constructor(private readonly validationService: ValidationService) {}
@@ -66,19 +66,44 @@ export class ValidationController {
         buildJsonApi(ValidationDto)
       )
       .addIndex({
-        requestPath: `/validations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,
+        requestPath: `/polygonValidations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,
         total,
         pageNumber
       });
   }
 
-  @Post("validate")
+  @Post()
   @ApiOperation({
-    operationId: "validatePolygons",
+    operationId: "createPolygonValidations",
     summary: "Validate multiple polygons for various criteria"
   })
-  @JsonApiResponse(ValidationResponseDto)
-  async validatePolygons(@Body() request: ValidationRequestDto): Promise<ValidationResponseDto> {
-    return await this.validationService.validatePolygons(request);
+  @JsonApiResponse(ValidationDto)
+  async createPolygonValidations(@Body() request: ValidationRequestDto) {
+    const validationResponse = await this.validationService.validatePolygons(request);
+
+    const document = buildJsonApi(ValidationDto);
+
+    const resultsByPolygon = new Map<string, ValidationCriteriaDto[]>();
+
+    for (const result of validationResponse.results) {
+      if (result.polygonUuid != null) {
+        if (!resultsByPolygon.has(result.polygonUuid)) {
+          resultsByPolygon.set(result.polygonUuid, []);
+        }
+        const criteriaList = resultsByPolygon.get(result.polygonUuid);
+        if (criteriaList != null) {
+          criteriaList.push(result);
+        }
+      }
+    }
+
+    for (const [polygonUuid, criteriaList] of resultsByPolygon) {
+      const validation = new ValidationDto();
+      validation.polygonId = polygonUuid;
+      validation.criteriaList = criteriaList;
+      document.addData(polygonUuid, validation);
+    }
+
+    return document;
   }
 }

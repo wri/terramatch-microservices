@@ -9,6 +9,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
 import { SpikesValidator } from "./validators/spikes.validator";
+import { ValidationType } from "@terramatch-microservices/database/constants";
 
 interface MockCriteriaSite {
   update: jest.MockedFunction<(data: { valid: boolean; extraInfo: object | null }) => Promise<void>>;
@@ -286,7 +287,7 @@ describe("ValidationService", () => {
     it("should validate polygons with SELF_INTERSECTION validation type", async () => {
       const request = {
         polygonUuids: ["uuid-1", "uuid-2"],
-        validationTypes: ["SELF_INTERSECTION"]
+        validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
       mockSelfIntersectionValidator.validatePolygon
@@ -317,7 +318,7 @@ describe("ValidationService", () => {
     it("should validate polygons with SPIKES validation type", async () => {
       const request = {
         polygonUuids: ["uuid-1"],
-        validationTypes: ["SPIKES"]
+        validationTypes: ["SPIKES" as ValidationType]
       };
 
       const spikesResult = {
@@ -346,7 +347,7 @@ describe("ValidationService", () => {
     it("should validate polygons with both validation types", async () => {
       const request = {
         polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION", "SPIKES"]
+        validationTypes: ["SELF_INTERSECTION" as ValidationType, "SPIKES" as ValidationType]
       };
 
       mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
@@ -362,9 +363,10 @@ describe("ValidationService", () => {
       expect(result.results[1].criteriaId).toBe(8);
     });
 
-    it("should default to SELF_INTERSECTION when no validation types specified", async () => {
+    it("should validate polygon with SELF_INTERSECTION when specified", async () => {
       const request = {
-        polygonUuids: ["uuid-1"]
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
       mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
@@ -379,7 +381,7 @@ describe("ValidationService", () => {
     it("should save validation results to database", async () => {
       const request = {
         polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION"]
+        validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
       mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
@@ -397,7 +399,7 @@ describe("ValidationService", () => {
     it("should create new criteria record when none exists", async () => {
       const request = {
         polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION"]
+        validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
       (CriteriaSite.findOne as jest.Mock).mockResolvedValue(null);
@@ -411,7 +413,7 @@ describe("ValidationService", () => {
     it("should update existing criteria record and create historic record", async () => {
       const request = {
         polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION"]
+        validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
       const existingCriteria: MockCriteriaSite & { valid: boolean; extraInfo: object } = {
@@ -436,7 +438,7 @@ describe("ValidationService", () => {
     it("should handle validator errors gracefully", async () => {
       const request = {
         polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION"]
+        validationTypes: ["SELF_INTERSECTION" as ValidationType]
       };
 
       const validatorError = new Error("Database connection failed");

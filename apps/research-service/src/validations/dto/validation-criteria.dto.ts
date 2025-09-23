@@ -3,7 +3,7 @@ import { IsArray, IsString, IsBoolean, IsObject, IsOptional, ValidateNested, IsN
 import { Type } from "class-transformer";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 
-@JsonApiDto({ type: "validation-criteria" })
+@JsonApiDto({ type: "validationCriterias" })
 export class ValidationCriteriaDto {
   @ApiProperty({
     description: "The polygon UUID that was validated (optional for historic data)",
@@ -52,7 +52,7 @@ export class ValidationCriteriaDto {
   extraInfo?: object | null;
 }
 
-@JsonApiDto({ type: "validation-response" })
+@JsonApiDto({ type: "validationResponses" })
 export class ValidationResponseDto {
   @ApiProperty({
     description: "Array of validation results for each polygon",

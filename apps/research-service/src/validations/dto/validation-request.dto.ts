@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsOptional, IsString, ArrayMinSize } from "class-validator";
+import { IsArray, IsString, ArrayMinSize, IsEnum } from "class-validator";
+import { VALIDATION_TYPES, ValidationType } from "@terramatch-microservices/database/constants";
 
 export class ValidationRequestDto {
   @ApiProperty({
@@ -14,14 +15,13 @@ export class ValidationRequestDto {
   polygonUuids: string[];
 
   @ApiProperty({
-    description: "Optional array of validation types to run",
-    example: ["SELF_INTERSECTION", "SPIKES"],
-    type: [String],
+    enum: VALIDATION_TYPES,
+    name: "validationTypes[]",
     isArray: true,
-    required: false
+    required: true,
+    description: "Array of validation types to run"
   })
-  @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  validationTypes?: string[];
+  @IsEnum(VALIDATION_TYPES, { each: true })
+  validationTypes: ValidationType[];
 }

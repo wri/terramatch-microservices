@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
 import { QueryTypes } from "sequelize";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 
 interface GeoJSONPolygon {
   type: "Polygon";
@@ -14,16 +14,14 @@ interface GeoJSONMultiPolygon {
 
 type GeoJSONGeometry = GeoJSONPolygon | GeoJSONMultiPolygon;
 
-interface SpikeDetectionResult {
-  valid: boolean;
+interface SpikeDetectionResult extends ValidationResult {
   extraInfo: {
     spikes: number[][];
     spikeCount: number;
   } | null;
 }
 
-@Injectable()
-export class SpikesValidator {
+export class SpikesValidator implements Validator {
   async validatePolygon(polygonUuid: string): Promise<SpikeDetectionResult> {
     if (PolygonGeometry.sequelize == null) {
       throw new Error("PolygonGeometry model is missing sequelize connection");
@@ -58,9 +56,7 @@ export class SpikesValidator {
     };
   }
 
-  async validatePolygons(
-    polygonUuids: string[]
-  ): Promise<Array<{ polygonUuid: string; valid: boolean; extraInfo: object | null }>> {
+  async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
     if (PolygonGeometry.sequelize == null) {
       throw new Error("PolygonGeometry model is missing sequelize connection");
     }

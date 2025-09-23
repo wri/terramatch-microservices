@@ -1,10 +1,9 @@
-import { Injectable } from "@nestjs/common";
 import { QueryTypes } from "sequelize";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 
-@Injectable()
-export class SelfIntersectionValidator {
-  async validatePolygon(polygonUuid: string): Promise<{ valid: boolean; extraInfo: object | null }> {
+export class SelfIntersectionValidator implements Validator {
+  async validatePolygon(polygonUuid: string): Promise<ValidationResult> {
     if (PolygonGeometry.sequelize == null) {
       throw new Error("PolygonGeometry model is missing sequelize connection");
     }
@@ -33,9 +32,7 @@ export class SelfIntersectionValidator {
     };
   }
 
-  async validatePolygons(
-    polygonUuids: string[]
-  ): Promise<Array<{ polygonUuid: string; valid: boolean; extraInfo: object | null }>> {
+  async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
     if (PolygonGeometry.sequelize == null) {
       throw new Error("PolygonGeometry model is missing sequelize connection");
     }

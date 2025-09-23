@@ -13,13 +13,16 @@ import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-q
 import { groupBy } from "lodash";
 import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
 import { SpikesValidator } from "./validators/spikes.validator";
+import { Validator } from "./validators/validator.interface";
+import { ValidationType, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+
+export const VALIDATORS: Record<ValidationType, Validator> = {
+  SELF_INTERSECTION: new SelfIntersectionValidator(),
+  SPIKES: new SpikesValidator()
+};
 
 @Injectable()
 export class ValidationService {
-  constructor(
-    private readonly selfIntersectionValidator: SelfIntersectionValidator,
-    private readonly spikesValidator: SpikesValidator
-  ) {}
   async getPolygonValidation(polygonUuid: string): Promise<ValidationDto> {
     const polygon = await PolygonGeometry.findOne({
       where: { uuid: polygonUuid },
@@ -132,36 +135,31 @@ export class ValidationService {
     const results: ValidationCriteriaDto[] = [];
 
     for (const polygonUuid of request.polygonUuids) {
-      const validationTypes = request.validationTypes ?? ["SELF_INTERSECTION"];
-
-      for (const validationType of validationTypes) {
-        if (validationType === "SELF_INTERSECTION") {
-          const validationResult = await this.selfIntersectionValidator.validatePolygon(polygonUuid);
-
-          await this.saveValidationResult(polygonUuid, 4, validationResult.valid, validationResult.extraInfo);
-
-          results.push({
-            polygonUuid: polygonUuid,
-            criteriaId: 4,
-            valid: Boolean(validationResult.valid),
-            extraInfo: validationResult.extraInfo
-          });
-        } else if (validationType === "SPIKES") {
-          const validationResult = await this.spikesValidator.validatePolygon(polygonUuid);
-
-          await this.saveValidationResult(polygonUuid, 8, validationResult.valid, validationResult.extraInfo);
-
-          results.push({
-            polygonUuid: polygonUuid,
-            criteriaId: 8,
-            valid: Boolean(validationResult.valid),
-            extraInfo: validationResult.extraInfo ?? null
-          });
+      for (const validationType of request.validationTypes) {
+        const validator = VALIDATORS[validationType];
+        if (validator == null) {
+          throw new BadRequestException(`Unknown validation type: ${validationType}`);
         }
+
+        const validationResult = await validator.validatePolygon(polygonUuid);
+        const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+        await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
+
+        results.push({
+          polygonUuid: polygonUuid,
+          criteriaId: criteriaId,
+          valid: Boolean(validationResult.valid),
+          extraInfo: validationResult.extraInfo
+        });
       }
     }
 
     return { results };
+  }
+
+  private getCriteriaIdForValidationType(validationType: ValidationType): number {
+    return VALIDATION_CRITERIA_IDS[validationType];
   }
 
   private async saveValidationResult(

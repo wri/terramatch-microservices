@@ -1,13 +1,10 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, IntersectionType } from "@nestjs/swagger";
 import { IsInt, IsOptional, Min, ValidateNested } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { Type } from "class-transformer";
 
-export class SiteValidationQueryDto {
+export class SiteValidationQueryDto extends IntersectionType(NumberPage) {
   @ValidateNested()
-  @Type(() => NumberPage)
   @IsOptional()
-  @ApiProperty({ type: NumberPage })
   page?: NumberPage;
 
   @IsOptional()

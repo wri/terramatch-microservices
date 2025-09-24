@@ -57,7 +57,7 @@ export class ValidationController {
         buildJsonApi(ValidationDto)
       )
       .addIndex({
-        requestPath: `/polygonValidations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,
+        requestPath: `/validations/v3/sites/${siteUuid}${getStableRequestQuery(query)}`,
         total,
         pageNumber
       });

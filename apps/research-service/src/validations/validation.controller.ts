@@ -9,7 +9,7 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 
-@Controller("polygonValidations/v3")
+@Controller("validations/v3")
 @ApiTags("Validations")
 export class ValidationController {
   constructor(private readonly validationService: ValidationService) {}
@@ -63,7 +63,7 @@ export class ValidationController {
       });
   }
 
-  @Post()
+  @Post("polygonValidations")
   @ApiOperation({
     operationId: "createPolygonValidations",
     summary: "Validate multiple polygons for various criteria"

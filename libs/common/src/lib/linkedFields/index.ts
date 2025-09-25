@@ -14,7 +14,7 @@ import {
   LinkedRelation
 } from "@terramatch-microservices/database/constants/linked-fields";
 
-export const FORM_TYPES = [
+export const FORM_MODEL_TYPES = [
   "organisation",
   "financialReport",
   "nursery",
@@ -25,9 +25,9 @@ export const FORM_TYPES = [
   "site",
   "siteReport"
 ] as const;
-export type FormType = (typeof FORM_TYPES)[number];
+export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
 
-export const LinkedFieldsConfiguration: Record<FormType, LinkedFieldConfiguration> = {
+export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfiguration> = {
   organisation: OrganisationConfiguration,
   financialReport: FinancialReportConfiguration,
   nursery: NurseryConfiguration,
@@ -39,13 +39,24 @@ export const LinkedFieldsConfiguration: Record<FormType, LinkedFieldConfiguratio
   siteReport: SiteReportConfiguration
 } as const;
 
+type LinkedFieldSpecification = {
+  model: FormModelType;
+  field: LinkedField | LinkedFile | LinkedRelation;
+};
+
 // Memoize all linked field configurations by linked field key to make getLinkedFieldConfig (which
 // is used heavily in form work) faster.
-const LINKED_FIELDS = new Map<string, LinkedField | LinkedFile | LinkedRelation>(
-  Object.values(LinkedFieldsConfiguration).flatMap(config => [
-    ...Object.entries(config.fields),
-    ...Object.entries(config.relations),
-    ...Object.entries(config.fileCollections)
+const LINKED_FIELDS = new Map<string, LinkedFieldSpecification>(
+  Object.entries(LinkedFieldsConfiguration).flatMap(([model, config]) => [
+    ...Object.entries(config.fields).map(
+      ([key, field]) => [key, { field, model }] as [string, LinkedFieldSpecification]
+    ),
+    ...Object.entries(config.relations).map(
+      ([key, field]) => [key, { field, model }] as [string, LinkedFieldSpecification]
+    ),
+    ...Object.entries(config.fileCollections).map(
+      ([key, field]) => [key, { field, model }] as [string, LinkedFieldSpecification]
+    )
   ])
 );
 

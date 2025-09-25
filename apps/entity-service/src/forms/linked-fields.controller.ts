@@ -2,7 +2,7 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { LinkedFieldDto } from "./dto/linked-field.dto";
-import { FormType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
+import { FormModelType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import {
   isField,
@@ -17,7 +17,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { LinkedFieldQueryDto } from "./dto/linked-field-query.dto";
 
 const fieldAdder =
-  (document: DocumentBuilder, formType: FormType, nameSuffix: string) =>
+  (document: DocumentBuilder, formType: FormModelType, nameSuffix: string) =>
   ([id, field]: [string, LinkedField | LinkedFile | LinkedRelation]) => {
     document.addData(
       id,
@@ -41,7 +41,7 @@ export class LinkedFieldsController {
   @JsonApiResponse({ data: LinkedFieldDto, hasMany: true })
   @ExceptionResponse(BadRequestException, { description: "None of the requested formTypes were found." })
   async linkedFieldsIndex(@Query() { formTypes }: LinkedFieldQueryDto) {
-    formTypes ??= Object.keys(LinkedFieldsConfiguration) as FormType[];
+    formTypes ??= Object.keys(LinkedFieldsConfiguration) as FormModelType[];
 
     const document = buildJsonApi(LinkedFieldDto, { forceDataArray: true });
     for (const formType of formTypes) {

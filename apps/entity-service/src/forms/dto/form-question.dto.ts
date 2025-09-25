@@ -4,6 +4,7 @@ import { INPUT_TYPES, InputType } from "@terramatch-microservices/database/const
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormQuestion } from "@terramatch-microservices/database/entities";
 import { OptionLabelDto } from "./option-label.dto";
+import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/common/linkedFields";
 
 export class FormTableHeaderDto {
   @ApiProperty({ nullable: true, type: String })
@@ -79,6 +80,9 @@ export class FormQuestionDto {
 
   @ApiProperty({ nullable: true, type: Boolean })
   showOnParentCondition: boolean | null;
+
+  @ApiProperty({ nullable: true, enum: FORM_MODEL_TYPES })
+  model: FormModelType | null;
 
   @ApiProperty({ nullable: true, type: String })
   linkedFieldKey: string | null;

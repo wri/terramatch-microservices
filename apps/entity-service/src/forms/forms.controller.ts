@@ -96,13 +96,12 @@ export class FormsController {
     const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
     const optionsByQuestionId = groupBy(options, "formQuestionId");
     for (const question of questions) {
-      const collection =
-        (question.inputType === "file"
-          ? getLinkedFieldConfig(question.linkedFieldKey ?? "")?.property
-          : question.collection) ?? null;
+      const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
+      const collection = (question.inputType === "file" ? config?.field.property : question.collection) ?? null;
       document.addData<FormQuestionDto>(
         question.uuid,
         new FormQuestionDto(question, {
+          model: config?.model ?? null,
           collection,
           label: translations[question.labelId ?? -1] ?? question.label,
           description: translations[question.descriptionId ?? -1] ?? question.description,

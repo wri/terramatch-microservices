@@ -1,11 +1,11 @@
-import { FORM_TYPES, FormType } from "@terramatch-microservices/common/linkedFields";
+import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/common/linkedFields";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsIn, IsOptional } from "class-validator";
 
 export class LinkedFieldQueryDto {
-  @ApiProperty({ enum: FORM_TYPES, isArray: true, required: false })
+  @ApiProperty({ enum: FORM_MODEL_TYPES, isArray: true, required: false })
   @IsOptional()
   @IsArray()
-  @IsIn(FORM_TYPES, { each: true })
-  formTypes?: FormType[];
+  @IsIn(FORM_MODEL_TYPES, { each: true })
+  formTypes?: FormModelType[];
 }

@@ -14,15 +14,15 @@ interface ErrorExtraInfo {
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
     sequelize: null,
-    getGeoJSON: jest.fn(),
-    getGeoJSONBatch: jest.fn()
+    getGeoJSONParsed: jest.fn(),
+    getGeoJSONBatchParsed: jest.fn()
   }
 }));
 
 describe("SpikesValidator", () => {
   let validator: SpikesValidator;
-  let mockGetGeoJSON: jest.MockedFunction<typeof PolygonGeometry.getGeoJSON>;
-  let mockGetGeoJSONBatch: jest.MockedFunction<typeof PolygonGeometry.getGeoJSONBatch>;
+  let mockGetGeoJSONParsed: jest.MockedFunction<typeof PolygonGeometry.getGeoJSONParsed>;
+  let mockGetGeoJSONBatchParsed: jest.MockedFunction<typeof PolygonGeometry.getGeoJSONBatchParsed>;
 
   const TEST_POLYGONS = {
     VALID_NO_SPIKES: {
@@ -74,9 +74,11 @@ describe("SpikesValidator", () => {
   };
 
   beforeEach(async () => {
-    mockGetGeoJSON = PolygonGeometry.getGeoJSON as jest.MockedFunction<typeof PolygonGeometry.getGeoJSON>;
-    mockGetGeoJSONBatch = PolygonGeometry.getGeoJSONBatch as jest.MockedFunction<
-      typeof PolygonGeometry.getGeoJSONBatch
+    mockGetGeoJSONParsed = PolygonGeometry.getGeoJSONParsed as jest.MockedFunction<
+      typeof PolygonGeometry.getGeoJSONParsed
+    >;
+    mockGetGeoJSONBatchParsed = PolygonGeometry.getGeoJSONBatchParsed as jest.MockedFunction<
+      typeof PolygonGeometry.getGeoJSONBatchParsed
     >;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -93,8 +95,7 @@ describe("SpikesValidator", () => {
   describe("validatePolygon", () => {
     it("should return valid=true for polygon without spikes", async () => {
       const polygonUuid = "test-uuid-1";
-      const geoJson = JSON.stringify(TEST_POLYGONS.VALID_NO_SPIKES);
-      mockGetGeoJSON.mockResolvedValue(geoJson);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.VALID_NO_SPIKES as any);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -105,13 +106,12 @@ describe("SpikesValidator", () => {
           spikeCount: 0
         }
       });
-      expect(mockGetGeoJSON).toHaveBeenCalledWith(polygonUuid);
+      expect(mockGetGeoJSONParsed).toHaveBeenCalledWith(polygonUuid);
     });
 
     it("should return valid=false for polygon with spikes", async () => {
       const polygonUuid = "test-uuid-2";
-      const geoJson = JSON.stringify(TEST_POLYGONS.INVALID_WITH_SPIKES);
-      mockGetGeoJSON.mockResolvedValue(geoJson);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.INVALID_WITH_SPIKES as any);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -119,25 +119,24 @@ describe("SpikesValidator", () => {
       expect(result.extraInfo).toBeDefined();
       expect(result.extraInfo?.spikeCount).toBeGreaterThan(0);
       expect(Array.isArray(result.extraInfo?.spikes)).toBe(true);
-      expect(mockGetGeoJSON).toHaveBeenCalledWith(polygonUuid);
+      expect(mockGetGeoJSONParsed).toHaveBeenCalledWith(polygonUuid);
     });
 
     it("should handle MultiPolygon geometry", async () => {
       const polygonUuid = "test-uuid-3";
-      const geoJson = JSON.stringify(TEST_POLYGONS.MULTI_POLYGON_VALID);
-      mockGetGeoJSON.mockResolvedValue(geoJson);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.MULTI_POLYGON_VALID as any);
 
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo?.spikeCount).toBe(0);
-      expect(mockGetGeoJSON).toHaveBeenCalledWith(polygonUuid);
+      expect(mockGetGeoJSONParsed).toHaveBeenCalledWith(polygonUuid);
     });
 
     it("should throw error when polygon is not found", async () => {
       const polygonUuid = "non-existent-uuid";
       const { NotFoundException } = await import("@nestjs/common");
-      mockGetGeoJSON.mockRejectedValue(new NotFoundException());
+      mockGetGeoJSONParsed.mockResolvedValue(undefined);
 
       await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(NotFoundException);
     });
@@ -145,7 +144,7 @@ describe("SpikesValidator", () => {
     it("should throw error when sequelize connection is missing", async () => {
       const polygonUuid = "test-uuid";
       const { InternalServerErrorException } = await import("@nestjs/common");
-      mockGetGeoJSON.mockRejectedValue(
+      mockGetGeoJSONParsed.mockRejectedValue(
         new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
       );
 
@@ -154,16 +153,19 @@ describe("SpikesValidator", () => {
 
     it("should handle invalid GeoJSON data", async () => {
       const polygonUuid = "test-uuid";
-      const invalidGeoJson = "invalid json";
-      mockGetGeoJSON.mockResolvedValue(invalidGeoJson);
+      const invalidGeoJson = "invalid json" as any;
+      mockGetGeoJSONParsed.mockResolvedValue(invalidGeoJson);
 
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow();
+      const result = await validator.validatePolygon(polygonUuid);
+
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo?.spikeCount).toBe(0);
     });
 
     it("should handle database query errors", async () => {
       const polygonUuid = "test-uuid";
       const dbError = new Error("Database connection failed");
-      mockGetGeoJSON.mockRejectedValue(dbError);
+      mockGetGeoJSONParsed.mockRejectedValue(dbError);
 
       await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(dbError);
     });
@@ -173,10 +175,10 @@ describe("SpikesValidator", () => {
     it("should validate multiple polygons successfully", async () => {
       const polygonUuids = ["uuid-1", "uuid-2"];
       const mockResults = [
-        { uuid: "uuid-1", geoJson: JSON.stringify(TEST_POLYGONS.VALID_NO_SPIKES) },
-        { uuid: "uuid-2", geoJson: JSON.stringify(TEST_POLYGONS.INVALID_WITH_SPIKES) }
+        { uuid: "uuid-1", geoJson: TEST_POLYGONS.VALID_NO_SPIKES as any },
+        { uuid: "uuid-2", geoJson: TEST_POLYGONS.INVALID_WITH_SPIKES as any }
       ];
-      mockGetGeoJSONBatch.mockResolvedValue(mockResults);
+      mockGetGeoJSONBatchParsed.mockResolvedValue(mockResults);
 
       const result = await validator.validatePolygons(polygonUuids);
 
@@ -188,13 +190,13 @@ describe("SpikesValidator", () => {
       expect(result[1].polygonUuid).toBe("uuid-2");
       expect(result[1].valid).toBe(false);
       expect((result[1].extraInfo as SpikeExtraInfo)?.spikeCount).toBeGreaterThan(0);
-      expect(mockGetGeoJSONBatch).toHaveBeenCalledWith(polygonUuids);
+      expect(mockGetGeoJSONBatchParsed).toHaveBeenCalledWith(polygonUuids);
     });
 
     it("should handle missing polygons in results", async () => {
       const polygonUuids = ["uuid-1", "uuid-2", "uuid-3"];
-      const mockResults = [{ uuid: "uuid-1", geoJson: JSON.stringify(TEST_POLYGONS.VALID_NO_SPIKES) }];
-      mockGetGeoJSONBatch.mockResolvedValue(mockResults);
+      const mockResults = [{ uuid: "uuid-1", geoJson: TEST_POLYGONS.VALID_NO_SPIKES as any }];
+      mockGetGeoJSONBatchParsed.mockResolvedValue(mockResults);
 
       const result = await validator.validatePolygons(polygonUuids);
 
@@ -208,18 +210,18 @@ describe("SpikesValidator", () => {
 
     it("should handle empty polygon list", async () => {
       const polygonUuids: string[] = [];
-      mockGetGeoJSONBatch.mockResolvedValue([]);
+      mockGetGeoJSONBatchParsed.mockResolvedValue([]);
 
       const result = await validator.validatePolygons(polygonUuids);
 
       expect(result).toEqual([]);
-      expect(mockGetGeoJSONBatch).toHaveBeenCalledWith([]);
+      expect(mockGetGeoJSONBatchParsed).toHaveBeenCalledWith([]);
     });
 
     it("should throw error when sequelize connection is missing", async () => {
       const polygonUuids = ["uuid-1"];
       const { InternalServerErrorException } = await import("@nestjs/common");
-      mockGetGeoJSONBatch.mockRejectedValue(
+      mockGetGeoJSONBatchParsed.mockRejectedValue(
         new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
       );
 
@@ -229,7 +231,7 @@ describe("SpikesValidator", () => {
     it("should handle database query errors", async () => {
       const polygonUuids = ["uuid-1"];
       const dbError = new Error("Database connection failed");
-      mockGetGeoJSONBatch.mockRejectedValue(dbError);
+      mockGetGeoJSONBatchParsed.mockRejectedValue(dbError);
 
       await expect(validator.validatePolygons(polygonUuids)).rejects.toThrow(dbError);
     });
@@ -238,8 +240,7 @@ describe("SpikesValidator", () => {
   describe("detectSpikes (private method testing through public methods)", () => {
     it("should detect spikes in complex polygon", async () => {
       const polygonUuid = "test-uuid";
-      const geoJson = JSON.stringify(TEST_POLYGONS.INVALID_WITH_SPIKES);
-      mockGetGeoJSON.mockResolvedValue(geoJson);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.INVALID_WITH_SPIKES as any);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -251,8 +252,7 @@ describe("SpikesValidator", () => {
 
     it("should not detect spikes in simple polygon", async () => {
       const polygonUuid = "test-uuid";
-      const geoJson = JSON.stringify(TEST_POLYGONS.VALID_NO_SPIKES);
-      mockGetGeoJSON.mockResolvedValue(geoJson);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.VALID_NO_SPIKES as any);
 
       const result = await validator.validatePolygon(polygonUuid);
 

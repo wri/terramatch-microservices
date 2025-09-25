@@ -69,6 +69,7 @@ export class OptionLabelsController {
   @ApiOperation({ operationId: "optionLabelsGetList", description: "Get a list of option labels by list key" })
   @ApiParam({ name: "listKey", type: "string", description: "The list key" })
   @ExceptionResponse(NotFoundException, { description: "List for listKey not found" })
+  @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
   async findList(@Param("listKey") listKey: string, @Request() { authenticatedUserId }) {
     const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
     if (locale == null) throw new BadRequestException("Locale is required");

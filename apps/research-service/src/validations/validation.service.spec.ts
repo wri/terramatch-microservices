@@ -445,5 +445,76 @@ describe("ValidationService", () => {
 
       await expect(service.validatePolygons(request)).rejects.toThrow(validatorError);
     });
+
+    it("should throw BadRequestException for unknown validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["UNKNOWN_TYPE" as ValidationType]
+      };
+
+      await expect(service.validatePolygons(request)).rejects.toThrow(
+        new BadRequestException("Unknown validation type: UNKNOWN_TYPE")
+      );
+    });
+  });
+
+  describe("getSiteValidations - edge cases", () => {
+    it("should throw BadRequestException for invalid page size (too large)", async () => {
+      await expect(service.getSiteValidations("site-uuid", 1001, 1)).rejects.toThrow(
+        new BadRequestException("Invalid page size: 1001")
+      );
+    });
+
+    it("should throw BadRequestException for invalid page size (less than 1)", async () => {
+      await expect(service.getSiteValidations("site-uuid", 0, 1)).rejects.toThrow(
+        new BadRequestException("Invalid page size: 0")
+      );
+    });
+
+    it("should throw BadRequestException for invalid page number", async () => {
+      await expect(service.getSiteValidations("site-uuid", 10, 0)).rejects.toThrow(
+        new BadRequestException("Invalid page number: 0")
+      );
+    });
+
+    it("should filter by criteriaId when provided", async () => {
+      const siteUuid = "site-uuid-123";
+      const criteriaId = 4;
+
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([
+        { polygonUuid: "polygon-1" },
+        { polygonUuid: "polygon-2" }
+      ]);
+
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        {
+          polygonId: "polygon-1",
+          criteriaId: 4,
+          valid: false,
+          createdAt: new Date(),
+          extraInfo: null
+        },
+        {
+          polygonId: "polygon-1",
+          criteriaId: 8,
+          valid: true,
+          createdAt: new Date(),
+          extraInfo: null
+        },
+        {
+          polygonId: "polygon-2",
+          criteriaId: 4,
+          valid: true,
+          createdAt: new Date(),
+          extraInfo: null
+        }
+      ]);
+
+      const result = await service.getSiteValidations(siteUuid, 10, 1, criteriaId);
+
+      expect(result.total).toBe(1); // Only polygon-1 has criteriaId=4 with valid=false
+      expect(result.validations).toHaveLength(1);
+      expect(result.validations[0].polygonId).toBe("polygon-1");
+    });
   });
 });

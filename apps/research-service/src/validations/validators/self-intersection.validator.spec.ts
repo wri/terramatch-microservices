@@ -59,7 +59,17 @@ describe("SelfIntersectionValidator", () => {
       expect(mockCheckIsSimple).toHaveBeenCalledWith(polygonUuid);
     });
 
-    it("should throw error when polygon is not found", async () => {
+    it("should throw error when polygon is not found (undefined response)", async () => {
+      const polygonUuid = "non-existent-uuid";
+      const { NotFoundException } = await import("@nestjs/common");
+      mockCheckIsSimple.mockResolvedValue(undefined);
+
+      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(
+        new NotFoundException(`Polygon with UUID ${polygonUuid} not found`)
+      );
+    });
+
+    it("should throw error when polygon is not found (rejected promise)", async () => {
       const polygonUuid = "non-existent-uuid";
       const { NotFoundException } = await import("@nestjs/common");
       mockCheckIsSimple.mockRejectedValue(new NotFoundException());

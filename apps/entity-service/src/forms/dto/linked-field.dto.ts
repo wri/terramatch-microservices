@@ -9,7 +9,7 @@ export class LinkedFieldDto {
   id: string;
 
   @ApiProperty({ enum: FORM_MODEL_TYPES })
-  formType: FormModelType;
+  formModelType: FormModelType;
 
   @ApiProperty()
   label: string;

@@ -17,13 +17,13 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { LinkedFieldQueryDto } from "./dto/linked-field-query.dto";
 
 const fieldAdder =
-  (document: DocumentBuilder, formType: FormModelType, nameSuffix: string) =>
+  (document: DocumentBuilder, formModelType: FormModelType, nameSuffix: string) =>
   ([id, field]: [string, LinkedField | LinkedFile | LinkedRelation]) => {
     document.addData(
       id,
       populateDto<LinkedFieldDto>(new LinkedFieldDto(), {
         id,
-        formType,
+        formModelType,
         label: field.label,
         name: `${field.label}${nameSuffix}`,
         inputType: field.inputType,
@@ -40,23 +40,21 @@ export class LinkedFieldsController {
   @ApiOperation({ operationId: "linkedFieldsIndex" })
   @JsonApiResponse({ data: LinkedFieldDto, hasMany: true })
   @ExceptionResponse(BadRequestException, { description: "None of the requested formTypes were found." })
-  async linkedFieldsIndex(@Query() { formTypes }: LinkedFieldQueryDto) {
-    formTypes ??= Object.keys(LinkedFieldsConfiguration) as FormModelType[];
-
+  async linkedFieldsIndex(@Query() { formModelTypes }: LinkedFieldQueryDto) {
     const document = buildJsonApi(LinkedFieldDto, { forceDataArray: true });
-    for (const formType of formTypes) {
-      const configuration = LinkedFieldsConfiguration[formType];
+    for (const modelType of formModelTypes ?? (Object.keys(LinkedFieldsConfiguration) as FormModelType[])) {
+      const configuration = LinkedFieldsConfiguration[modelType];
       if (configuration == null) continue;
 
       const nameSuffix = ` (${configuration.label})`;
-      const addFields = fieldAdder(document, formType, nameSuffix);
+      const addFields = fieldAdder(document, modelType, nameSuffix);
       Object.entries(configuration.fields).forEach(addFields);
       Object.entries(configuration.fileCollections).forEach(addFields);
       Object.entries(configuration.relations).forEach(addFields);
     }
 
     let requestPath = "/forms/v3/linkedFields";
-    if (!isEmpty(formTypes)) requestPath += getStableRequestQuery({ formTypes });
+    if (!isEmpty(formModelTypes)) requestPath += getStableRequestQuery({ formModelTypes });
     return document.addIndex({ requestPath });
   }
 }

@@ -7,5 +7,5 @@ export class LinkedFieldQueryDto {
   @IsOptional()
   @IsArray()
   @IsIn(FORM_MODEL_TYPES, { each: true })
-  formTypes?: FormModelType[];
+  formModelTypes?: FormModelType[];
 }

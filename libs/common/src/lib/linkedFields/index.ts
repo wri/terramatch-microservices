@@ -15,28 +15,28 @@ import {
 } from "@terramatch-microservices/database/constants/linked-fields";
 
 export const FORM_MODEL_TYPES = [
-  "organisation",
-  "financialReport",
-  "nursery",
-  "nurseryReport",
-  "project",
-  "projectPitch",
-  "projectReport",
-  "site",
-  "siteReport"
+  "organisations",
+  "financialReports",
+  "nurseries",
+  "nurseryReports",
+  "projects",
+  "projectPitches",
+  "projectReports",
+  "sites",
+  "siteReports"
 ] as const;
 export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
 
 export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfiguration> = {
-  organisation: OrganisationConfiguration,
-  financialReport: FinancialReportConfiguration,
-  nursery: NurseryConfiguration,
-  nurseryReport: NurseryReportConfiguration,
-  project: ProjectConfiguration,
-  projectPitch: ProjectPitchConfiguration,
-  projectReport: ProjectReportConfiguration,
-  site: SiteConfiguration,
-  siteReport: SiteReportConfiguration
+  organisations: OrganisationConfiguration,
+  financialReports: FinancialReportConfiguration,
+  nurseries: NurseryConfiguration,
+  nurseryReports: NurseryReportConfiguration,
+  projects: ProjectConfiguration,
+  projectPitches: ProjectPitchConfiguration,
+  projectReports: ProjectReportConfiguration,
+  sites: SiteConfiguration,
+  siteReports: SiteReportConfiguration
 } as const;
 
 type LinkedFieldSpecification = {

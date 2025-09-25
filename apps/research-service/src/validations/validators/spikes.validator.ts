@@ -1,4 +1,3 @@
-import { QueryTypes } from "sequelize";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 
@@ -23,32 +22,13 @@ interface SpikeDetectionResult extends ValidationResult {
 
 export class SpikesValidator implements Validator {
   async validatePolygon(polygonUuid: string): Promise<SpikeDetectionResult> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new Error("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const result = await PolygonGeometry.sequelize.query(
-      `
-        SELECT ST_AsGeoJSON(geom) as geo_json
-        FROM polygon_geometry 
-        WHERE uuid = :polygonUuid
-      `,
-      {
-        replacements: { polygonUuid },
-        type: QueryTypes.SELECT
-      }
-    );
-
-    if (result.length === 0) {
-      throw new Error(`Polygon with UUID ${polygonUuid} not found`);
-    }
-
-    const geoJson = JSON.parse((result[0] as { geo_json: string }).geo_json) as GeoJSONGeometry;
+    const geoJsonString = await PolygonGeometry.getGeoJSON(polygonUuid);
+    const geoJson = JSON.parse(geoJsonString) as GeoJSONGeometry;
     const spikes = this.detectSpikes(geoJson);
     const valid = spikes.length === 0;
 
     return {
-      valid: Boolean(valid),
+      valid,
       extraInfo: {
         spikes,
         spikeCount: spikes.length
@@ -57,28 +37,8 @@ export class SpikesValidator implements Validator {
   }
 
   async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new Error("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const results = await PolygonGeometry.sequelize.query(
-      `
-        SELECT uuid, ST_AsGeoJSON(geom) as geo_json
-        FROM polygon_geometry 
-        WHERE uuid IN (:polygonUuids)
-      `,
-      {
-        replacements: { polygonUuids },
-        type: QueryTypes.SELECT
-      }
-    );
-
-    const resultMap = new Map(
-      (results as Array<{ uuid: string; geo_json: string }>).map(r => [
-        r.uuid,
-        JSON.parse(r.geo_json) as GeoJSONGeometry
-      ])
-    );
+    const results = await PolygonGeometry.getGeoJSONBatch(polygonUuids);
+    const resultMap = new Map(results.map(r => [r.uuid, JSON.parse(r.geoJson) as GeoJSONGeometry]));
 
     return polygonUuids.map(polygonUuid => {
       const geoJson = resultMap.get(polygonUuid);
@@ -95,7 +55,7 @@ export class SpikesValidator implements Validator {
 
       return {
         polygonUuid,
-        valid: Boolean(valid),
+        valid,
         extraInfo: {
           spikes,
           spikeCount: spikes.length

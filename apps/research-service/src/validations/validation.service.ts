@@ -14,7 +14,7 @@ import { groupBy } from "lodash";
 import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
 import { SpikesValidator } from "./validators/spikes.validator";
 import { Validator } from "./validators/validator.interface";
-import { ValidationType, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
 
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
@@ -40,8 +40,8 @@ export class ValidationService {
     });
 
     const criteriaList: ValidationCriteriaDto[] = criteriaData.map(criteria => ({
-      criteriaId: criteria.criteriaId,
-      valid: Boolean(criteria.valid),
+      criteriaId: criteria.criteriaId as CriteriaId,
+      valid: criteria.valid,
       createdAt: criteria.createdAt,
       extraInfo: criteria.extraInfo
     }));
@@ -117,7 +117,7 @@ export class ValidationService {
       populateDto<ValidationDto>(new ValidationDto(), {
         polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
-          criteriaId: criteria.criteriaId,
+          criteriaId: criteria.criteriaId as CriteriaId,
           valid: criteria.valid,
           createdAt: criteria.createdAt,
           extraInfo: criteria.extraInfo
@@ -148,8 +148,9 @@ export class ValidationService {
 
         results.push({
           polygonUuid: polygonUuid,
-          criteriaId: criteriaId,
-          valid: Boolean(validationResult.valid),
+          criteriaId: criteriaId as CriteriaId,
+          valid: validationResult.valid,
+          createdAt: new Date(),
           extraInfo: validationResult.extraInfo
         });
       }
@@ -179,19 +180,19 @@ export class ValidationService {
       const historicRecord = new CriteriaSiteHistoric();
       historicRecord.polygonId = polygonUuid;
       historicRecord.criteriaId = criteriaId;
-      historicRecord.valid = Boolean(existingCriteria.valid);
+      historicRecord.valid = existingCriteria.valid;
       historicRecord.extraInfo = existingCriteria.extraInfo;
       await historicRecord.save();
 
       await existingCriteria.update({
-        valid: Boolean(valid),
+        valid,
         extraInfo
       });
     } else {
       const newRecord = new CriteriaSite();
       newRecord.polygonId = polygonUuid;
       newRecord.criteriaId = criteriaId;
-      newRecord.valid = Boolean(valid);
+      newRecord.valid = valid;
       newRecord.extraInfo = extraInfo;
       await newRecord.save();
     }

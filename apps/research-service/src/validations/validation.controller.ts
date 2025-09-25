@@ -69,6 +69,12 @@ export class ValidationController {
     summary: "Validate multiple polygons for various criteria"
   })
   @JsonApiResponse(ValidationDto)
+  @ExceptionResponse(NotFoundException, {
+    description: "One or more polygons not found"
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid validation request"
+  })
   async createPolygonValidations(@Body() request: ValidationRequestDto) {
     const validationResponse = await this.validationService.validatePolygons(request);
 

@@ -1,15 +1,5 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  BelongsTo,
-  Column,
-  ForeignKey,
-  Index,
-  Model,
-  PrimaryKey,
-  Table
-} from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
+import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 
 @Table({
@@ -36,7 +26,6 @@ export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
   @Column(INTEGER)
   criteriaId: number;
 
-  @ForeignKey(() => PolygonGeometry)
   @Column(UUID)
   polygonId: string;
 
@@ -49,10 +38,4 @@ export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
   @AllowNull
   @Column(JSON)
   extraInfo: object | null;
-
-  @Column(DATE)
-  override createdAt: Date;
-
-  @Column(DATE)
-  override updatedAt: Date;
 }

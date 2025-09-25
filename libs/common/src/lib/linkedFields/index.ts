@@ -7,7 +7,12 @@ import { SiteConfiguration } from "./site.configuration";
 import { SiteReportConfiguration } from "./site-report.configuration";
 import { NurseryConfiguration } from "./nursery.configuration";
 import { NurseryReportConfiguration } from "./nursery-report.configuration";
-import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
+import {
+  LinkedField,
+  LinkedFieldConfiguration,
+  LinkedFile,
+  LinkedRelation
+} from "@terramatch-microservices/database/constants/linked-fields";
 
 export const FORM_TYPES = [
   "organisation",
@@ -33,3 +38,15 @@ export const LinkedFieldsConfiguration: Record<FormType, LinkedFieldConfiguratio
   site: SiteConfiguration,
   siteReport: SiteReportConfiguration
 } as const;
+
+// Memoize all linked field configurations by linked field key to make getLinkedFieldConfig (which
+// is used heavily in form work) faster.
+const LINKED_FIELDS = new Map<string, LinkedField | LinkedFile | LinkedRelation>(
+  Object.values(LinkedFieldsConfiguration).flatMap(config => [
+    ...Object.entries(config.fields),
+    ...Object.entries(config.relations),
+    ...Object.entries(config.fileCollections)
+  ])
+);
+
+export const getLinkedFieldConfig = (linkedFieldKey: string) => LINKED_FIELDS.get(linkedFieldKey);

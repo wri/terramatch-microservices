@@ -21,7 +21,7 @@ export class FormQuestionOptionDto extends OptionLabelDto {
   order: number;
 }
 
-type FormQuestionWithoutTranslations = Omit<FormQuestion, "label" | "description" | "placeholder">;
+type FormQuestionWithoutTranslations = Omit<FormQuestion, "label" | "description" | "placeholder" | "collection">;
 
 @JsonApiDto({ type: "formQuestions" })
 export class FormQuestionDto {

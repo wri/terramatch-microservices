@@ -17,6 +17,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { filter, flattenDeep, groupBy, uniq } from "lodash";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 
 @Controller("forms/v3/forms")
 export class FormsController {
@@ -95,9 +96,14 @@ export class FormsController {
     const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
     const optionsByQuestionId = groupBy(options, "formQuestionId");
     for (const question of questions) {
+      const collection =
+        (question.inputType === "file"
+          ? getLinkedFieldConfig(question.linkedFieldKey ?? "")?.property
+          : question.collection) ?? null;
       document.addData<FormQuestionDto>(
         question.uuid,
         new FormQuestionDto(question, {
+          collection,
           label: translations[question.labelId ?? -1] ?? question.label,
           description: translations[question.descriptionId ?? -1] ?? question.description,
           placeholder: translations[question.placeholderId ?? -1] ?? question.placeholder,

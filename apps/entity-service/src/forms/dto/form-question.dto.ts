@@ -3,6 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { INPUT_TYPES, InputType } from "@terramatch-microservices/database/constants/linked-fields";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormQuestion } from "@terramatch-microservices/database/entities";
+import { OptionLabelDto } from "./option-label.dto";
 
 export class FormTableHeaderDto {
   @ApiProperty({ nullable: true, type: String })
@@ -13,6 +14,11 @@ export class FormTableHeaderDto {
 
   @ApiProperty({ nullable: true, type: Number })
   order: number | null;
+}
+
+export class FormQuestionOptionDto extends OptionLabelDto {
+  @ApiProperty()
+  order: number;
 }
 
 type FormQuestionWithoutTranslations = Omit<FormQuestion, "label" | "description" | "placeholder">;
@@ -67,6 +73,9 @@ export class FormQuestionDto {
 
   @ApiProperty({ nullable: true, type: Boolean })
   optionsOther: boolean | null;
+
+  @ApiProperty({ nullable: true, type: FormQuestionOptionDto, isArray: true })
+  options: FormQuestionOptionDto[] | null;
 
   @ApiProperty({ nullable: true, type: Boolean })
   showOnParentCondition: boolean | null;

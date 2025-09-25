@@ -2,10 +2,17 @@ import { Controller, Get, NotFoundException, Param, Request } from "@nestjs/comm
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { FormDto } from "./dto/form.dto";
-import { FormQuestionDto, FormTableHeaderDto } from "./dto/form-question.dto";
+import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { Form, FormQuestion, FormSection, FormTableHeader, User } from "@terramatch-microservices/database/entities";
+import {
+  Form,
+  FormQuestion,
+  FormQuestionOption,
+  FormSection,
+  FormTableHeader,
+  User
+} from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { filter, flattenDeep, groupBy, uniq } from "lodash";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -42,6 +49,7 @@ export class FormsController {
     const sections = await FormSection.findAll({ where: { formId: form.uuid } });
     const questions = await FormQuestion.findAll({ where: { formSectionId: sections.map(({ id }) => id) } });
     const tableHeaders = await FormTableHeader.findAll({ where: { formQuestionId: questions.map(({ id }) => id) } });
+    const options = await FormQuestionOption.findAll({ where: { formQuestionId: questions.map(({ id }) => id) } });
 
     // Get all the translations at once.
     const formI18nIds = [form.titleId, form.subtitleId, form.descriptionId, form.submissionMessageId];
@@ -52,8 +60,12 @@ export class FormsController {
       placeholderId
     ]);
     const tableHeaderI18nIds = tableHeaders.map(({ labelId }) => labelId);
+    const optionI18nIds = options.map(({ labelId }) => labelId);
     const translations = await this.localizationService.translateIds(
-      filter(uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds])), id => id != null),
+      filter(
+        uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds, optionI18nIds])),
+        id => id != null
+      ),
       locale
     );
 
@@ -81,6 +93,7 @@ export class FormsController {
 
     const sectionsById = groupBy(sections, "id");
     const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
+    const optionsByQuestionId = groupBy(options, "formQuestionId");
     for (const question of questions) {
       document.addData<FormQuestionDto>(
         question.uuid,
@@ -94,6 +107,15 @@ export class FormsController {
               slug: header.slug,
               label: translations[header.labelId ?? -1] ?? header.label,
               order: header.order
+            })
+          ),
+          options: optionsByQuestionId[question.id]?.map(option =>
+            populateDto<FormQuestionOptionDto>(new FormQuestionOptionDto(), {
+              slug: option.slug ?? "",
+              imageUrl: option.imageUrl,
+              label: translations[option.labelId ?? -1] ?? option.label,
+              altValue: null,
+              order: option.order
             })
           )
         })

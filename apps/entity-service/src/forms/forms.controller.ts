@@ -97,6 +97,7 @@ export class FormsController {
     const optionsByQuestionId = groupBy(options, "formQuestionId");
     for (const question of questions) {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
+      // For file questions, the collection is the property of the field.
       const collection = (question.inputType === "file" ? config?.field.property : question.collection) ?? null;
       document.addData<FormQuestionDto>(
         question.uuid,

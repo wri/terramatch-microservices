@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SpikesValidator } from "./spikes.validator";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Polygon } from "geojson";
 
 interface SpikeExtraInfo {
   spikes: number[][];
@@ -9,6 +10,16 @@ interface SpikeExtraInfo {
 
 interface ErrorExtraInfo {
   error: string;
+}
+
+interface GeoJSONPolygon {
+  type: "Polygon";
+  coordinates: number[][][];
+}
+
+interface GeoJSONMultiPolygon {
+  type: "MultiPolygon";
+  coordinates: number[][][][];
 }
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
@@ -24,7 +35,11 @@ describe("SpikesValidator", () => {
   let mockGetGeoJSONParsed: jest.MockedFunction<typeof PolygonGeometry.getGeoJSONParsed>;
   let mockGetGeoJSONBatchParsed: jest.MockedFunction<typeof PolygonGeometry.getGeoJSONBatchParsed>;
 
-  const TEST_POLYGONS = {
+  const TEST_POLYGONS: {
+    VALID_NO_SPIKES: GeoJSONPolygon;
+    INVALID_WITH_SPIKES: GeoJSONPolygon;
+    MULTI_POLYGON_VALID: GeoJSONMultiPolygon;
+  } = {
     VALID_NO_SPIKES: {
       type: "Polygon",
       coordinates: [
@@ -95,7 +110,7 @@ describe("SpikesValidator", () => {
   describe("validatePolygon", () => {
     it("should return valid=true for polygon without spikes", async () => {
       const polygonUuid = "test-uuid-1";
-      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.VALID_NO_SPIKES as any);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.VALID_NO_SPIKES as unknown as Polygon);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -111,7 +126,7 @@ describe("SpikesValidator", () => {
 
     it("should return valid=false for polygon with spikes", async () => {
       const polygonUuid = "test-uuid-2";
-      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.INVALID_WITH_SPIKES as any);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.INVALID_WITH_SPIKES as unknown as Polygon);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -124,7 +139,7 @@ describe("SpikesValidator", () => {
 
     it("should handle MultiPolygon geometry", async () => {
       const polygonUuid = "test-uuid-3";
-      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.MULTI_POLYGON_VALID as any);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.MULTI_POLYGON_VALID as unknown as Polygon);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -153,7 +168,7 @@ describe("SpikesValidator", () => {
 
     it("should handle invalid GeoJSON data", async () => {
       const polygonUuid = "test-uuid";
-      const invalidGeoJson = "invalid json" as any;
+      const invalidGeoJson = "invalid json" as unknown as Polygon;
       mockGetGeoJSONParsed.mockResolvedValue(invalidGeoJson);
 
       const result = await validator.validatePolygon(polygonUuid);
@@ -175,8 +190,8 @@ describe("SpikesValidator", () => {
     it("should validate multiple polygons successfully", async () => {
       const polygonUuids = ["uuid-1", "uuid-2"];
       const mockResults = [
-        { uuid: "uuid-1", geoJson: TEST_POLYGONS.VALID_NO_SPIKES as any },
-        { uuid: "uuid-2", geoJson: TEST_POLYGONS.INVALID_WITH_SPIKES as any }
+        { uuid: "uuid-1", geoJson: TEST_POLYGONS.VALID_NO_SPIKES as unknown as Polygon },
+        { uuid: "uuid-2", geoJson: TEST_POLYGONS.INVALID_WITH_SPIKES as unknown as Polygon }
       ];
       mockGetGeoJSONBatchParsed.mockResolvedValue(mockResults);
 
@@ -195,7 +210,7 @@ describe("SpikesValidator", () => {
 
     it("should handle missing polygons in results", async () => {
       const polygonUuids = ["uuid-1", "uuid-2", "uuid-3"];
-      const mockResults = [{ uuid: "uuid-1", geoJson: TEST_POLYGONS.VALID_NO_SPIKES as any }];
+      const mockResults = [{ uuid: "uuid-1", geoJson: TEST_POLYGONS.VALID_NO_SPIKES as unknown as Polygon }];
       mockGetGeoJSONBatchParsed.mockResolvedValue(mockResults);
 
       const result = await validator.validatePolygons(polygonUuids);
@@ -240,7 +255,7 @@ describe("SpikesValidator", () => {
   describe("detectSpikes (private method testing through public methods)", () => {
     it("should detect spikes in complex polygon", async () => {
       const polygonUuid = "test-uuid";
-      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.INVALID_WITH_SPIKES as any);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.INVALID_WITH_SPIKES as unknown as Polygon);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -252,7 +267,7 @@ describe("SpikesValidator", () => {
 
     it("should not detect spikes in simple polygon", async () => {
       const polygonUuid = "test-uuid";
-      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.VALID_NO_SPIKES as any);
+      mockGetGeoJSONParsed.mockResolvedValue(TEST_POLYGONS.VALID_NO_SPIKES as unknown as Polygon);
 
       const result = await validator.validatePolygon(polygonUuid);
 

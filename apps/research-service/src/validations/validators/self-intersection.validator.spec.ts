@@ -2,31 +2,24 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { SelfIntersectionValidator } from "./self-intersection.validator";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 
-interface MockSequelize {
-  query: jest.MockedFunction<
-    (sql: string, options: { replacements: Record<string, unknown>; type: string }) => Promise<unknown[]>
-  >;
-}
-
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
-    sequelize: null
+    sequelize: null,
+    checkIsSimple: jest.fn(),
+    checkIsSimpleBatch: jest.fn()
   }
 }));
 
 describe("SelfIntersectionValidator", () => {
   let validator: SelfIntersectionValidator;
-  let mockSequelize: MockSequelize;
+  let mockCheckIsSimple: jest.MockedFunction<typeof PolygonGeometry.checkIsSimple>;
+  let mockCheckIsSimpleBatch: jest.MockedFunction<typeof PolygonGeometry.checkIsSimpleBatch>;
 
   beforeEach(async () => {
-    mockSequelize = {
-      query: jest.fn()
-    } as MockSequelize;
-
-    Object.defineProperty(PolygonGeometry, "sequelize", {
-      get: () => mockSequelize,
-      configurable: true
-    });
+    mockCheckIsSimple = PolygonGeometry.checkIsSimple as jest.MockedFunction<typeof PolygonGeometry.checkIsSimple>;
+    mockCheckIsSimpleBatch = PolygonGeometry.checkIsSimpleBatch as jest.MockedFunction<
+      typeof PolygonGeometry.checkIsSimpleBatch
+    >;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [SelfIntersectionValidator]
@@ -42,7 +35,7 @@ describe("SelfIntersectionValidator", () => {
   describe("validatePolygon", () => {
     it("should return valid=true for simple polygon", async () => {
       const polygonUuid = "test-uuid-1";
-      mockSequelize.query.mockResolvedValue([{ is_simple: true }]);
+      mockCheckIsSimple.mockResolvedValue(true);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -50,15 +43,12 @@ describe("SelfIntersectionValidator", () => {
         valid: true,
         extraInfo: null
       });
-      expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("ST_IsSimple(geom) as is_simple"), {
-        replacements: { polygonUuid },
-        type: "SELECT"
-      });
+      expect(mockCheckIsSimple).toHaveBeenCalledWith(polygonUuid);
     });
 
     it("should return valid=false for self-intersecting polygon", async () => {
       const polygonUuid = "test-uuid-2";
-      mockSequelize.query.mockResolvedValue([{ is_simple: false }]);
+      mockCheckIsSimple.mockResolvedValue(false);
 
       const result = await validator.validatePolygon(polygonUuid);
 
@@ -66,34 +56,31 @@ describe("SelfIntersectionValidator", () => {
         valid: false,
         extraInfo: null
       });
+      expect(mockCheckIsSimple).toHaveBeenCalledWith(polygonUuid);
     });
 
     it("should throw error when polygon is not found", async () => {
       const polygonUuid = "non-existent-uuid";
-      mockSequelize.query.mockResolvedValue([]);
+      const { NotFoundException } = await import("@nestjs/common");
+      mockCheckIsSimple.mockRejectedValue(new NotFoundException());
 
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(
-        `Polygon with UUID ${polygonUuid} not found`
-      );
+      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(NotFoundException);
     });
 
     it("should throw error when sequelize connection is missing", async () => {
-      Object.defineProperty(PolygonGeometry, "sequelize", {
-        get: () => null,
-        configurable: true
-      });
-
       const polygonUuid = "test-uuid";
-
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(
-        "PolygonGeometry model is missing sequelize connection"
+      const { InternalServerErrorException } = await import("@nestjs/common");
+      mockCheckIsSimple.mockRejectedValue(
+        new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
       );
+
+      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(InternalServerErrorException);
     });
 
     it("should handle database query errors", async () => {
       const polygonUuid = "test-uuid";
       const dbError = new Error("Database connection failed");
-      mockSequelize.query.mockRejectedValue(dbError);
+      mockCheckIsSimple.mockRejectedValue(dbError);
 
       await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(dbError);
     });
@@ -103,11 +90,11 @@ describe("SelfIntersectionValidator", () => {
     it("should validate multiple polygons successfully", async () => {
       const polygonUuids = ["uuid-1", "uuid-2", "uuid-3"];
       const mockResults = [
-        { uuid: "uuid-1", is_simple: true },
-        { uuid: "uuid-2", is_simple: false },
-        { uuid: "uuid-3", is_simple: true }
+        { uuid: "uuid-1", isSimple: true },
+        { uuid: "uuid-2", isSimple: false },
+        { uuid: "uuid-3", isSimple: true }
       ];
-      mockSequelize.query.mockResolvedValue(mockResults);
+      mockCheckIsSimpleBatch.mockResolvedValue(mockResults);
 
       const result = await validator.validatePolygons(polygonUuids);
 
@@ -116,19 +103,16 @@ describe("SelfIntersectionValidator", () => {
         { polygonUuid: "uuid-2", valid: false, extraInfo: null },
         { polygonUuid: "uuid-3", valid: true, extraInfo: null }
       ]);
-      expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("ST_IsSimple(geom) as is_simple"), {
-        replacements: { polygonUuids },
-        type: "SELECT"
-      });
+      expect(mockCheckIsSimpleBatch).toHaveBeenCalledWith(polygonUuids);
     });
 
     it("should handle missing polygons in results", async () => {
       const polygonUuids = ["uuid-1", "uuid-2", "uuid-3"];
       const mockResults = [
-        { uuid: "uuid-1", is_simple: true },
-        { uuid: "uuid-3", is_simple: false }
+        { uuid: "uuid-1", isSimple: true },
+        { uuid: "uuid-3", isSimple: false }
       ];
-      mockSequelize.query.mockResolvedValue(mockResults);
+      mockCheckIsSimpleBatch.mockResolvedValue(mockResults);
 
       const result = await validator.validatePolygons(polygonUuids);
 
@@ -141,34 +125,28 @@ describe("SelfIntersectionValidator", () => {
 
     it("should handle empty polygon list", async () => {
       const polygonUuids: string[] = [];
-      mockSequelize.query.mockResolvedValue([]);
+      mockCheckIsSimpleBatch.mockResolvedValue([]);
 
       const result = await validator.validatePolygons(polygonUuids);
 
       expect(result).toEqual([]);
-      expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("ST_IsSimple(geom) as is_simple"), {
-        replacements: { polygonUuids: [] },
-        type: "SELECT"
-      });
+      expect(mockCheckIsSimpleBatch).toHaveBeenCalledWith([]);
     });
 
     it("should throw error when sequelize connection is missing", async () => {
-      Object.defineProperty(PolygonGeometry, "sequelize", {
-        get: () => null,
-        configurable: true
-      });
-
       const polygonUuids = ["uuid-1"];
-
-      await expect(validator.validatePolygons(polygonUuids)).rejects.toThrow(
-        "PolygonGeometry model is missing sequelize connection"
+      const { InternalServerErrorException } = await import("@nestjs/common");
+      mockCheckIsSimpleBatch.mockRejectedValue(
+        new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
       );
+
+      await expect(validator.validatePolygons(polygonUuids)).rejects.toThrow(InternalServerErrorException);
     });
 
     it("should handle database query errors", async () => {
       const polygonUuids = ["uuid-1"];
       const dbError = new Error("Database connection failed");
-      mockSequelize.query.mockRejectedValue(dbError);
+      mockCheckIsSimpleBatch.mockRejectedValue(dbError);
 
       await expect(validator.validatePolygons(polygonUuids)).rejects.toThrow(dbError);
     });

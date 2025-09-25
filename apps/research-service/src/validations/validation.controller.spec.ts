@@ -14,13 +14,13 @@ describe("ValidationController", () => {
     polygonId: "7631be34-bbe0-4e1e-b4fe-592677dc4b50",
     criteriaList: [
       {
-        criteriaId: 3,
+        criteriaId: 4,
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
       },
       {
-        criteriaId: 4,
+        criteriaId: 8,
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -33,7 +33,7 @@ describe("ValidationController", () => {
     polygonId: "polygon-uuid-123",
     criteriaList: [
       {
-        criteriaId: 1,
+        criteriaId: 4,
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -46,7 +46,7 @@ describe("ValidationController", () => {
     polygonId: "polygon-uuid-456",
     criteriaList: [
       {
-        criteriaId: 2,
+        criteriaId: 8,
         valid: false,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: { reason: "Test" }

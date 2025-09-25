@@ -297,12 +297,14 @@ describe("ValidationService", () => {
         polygonUuid: "uuid-1",
         criteriaId: 4,
         valid: true,
+        createdAt: expect.any(Date),
         extraInfo: null
       });
       expect(result.results[1]).toEqual({
         polygonUuid: "uuid-2",
         criteriaId: 4,
         valid: false,
+        createdAt: expect.any(Date),
         extraInfo: null
       });
 
@@ -334,6 +336,7 @@ describe("ValidationService", () => {
         polygonUuid: "uuid-1",
         criteriaId: 8,
         valid: false,
+        createdAt: expect.any(Date),
         extraInfo: spikesResult.extraInfo
       });
 

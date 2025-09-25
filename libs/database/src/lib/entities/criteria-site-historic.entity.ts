@@ -1,6 +1,7 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
+import { CriteriaId } from "../constants/validation-types";
 
 @Table({
   tableName: "criteria_site_historic",
@@ -24,7 +25,7 @@ export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
   uuid: string;
 
   @Column(INTEGER)
-  criteriaId: number;
+  criteriaId: CriteriaId;
 
   @Column(UUID)
   polygonId: string;

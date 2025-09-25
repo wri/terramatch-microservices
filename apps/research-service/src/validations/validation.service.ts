@@ -40,7 +40,7 @@ export class ValidationService {
     });
 
     const criteriaList: ValidationCriteriaDto[] = criteriaData.map(criteria => ({
-      criteriaId: criteria.criteriaId as CriteriaId,
+      criteriaId: criteria.criteriaId,
       valid: criteria.valid,
       createdAt: criteria.createdAt,
       extraInfo: criteria.extraInfo
@@ -117,7 +117,7 @@ export class ValidationService {
       populateDto<ValidationDto>(new ValidationDto(), {
         polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
-          criteriaId: criteria.criteriaId as CriteriaId,
+          criteriaId: criteria.criteriaId,
           valid: criteria.valid,
           createdAt: criteria.createdAt,
           extraInfo: criteria.extraInfo
@@ -148,7 +148,7 @@ export class ValidationService {
 
         results.push({
           polygonUuid: polygonUuid,
-          criteriaId: criteriaId as CriteriaId,
+          criteriaId: criteriaId,
           valid: validationResult.valid,
           createdAt: new Date(),
           extraInfo: validationResult.extraInfo
@@ -159,13 +159,13 @@ export class ValidationService {
     return { results };
   }
 
-  private getCriteriaIdForValidationType(validationType: ValidationType): number {
+  private getCriteriaIdForValidationType(validationType: ValidationType): CriteriaId {
     return VALIDATION_CRITERIA_IDS[validationType];
   }
 
   private async saveValidationResult(
     polygonUuid: string,
-    criteriaId: number,
+    criteriaId: CriteriaId,
     valid: boolean,
     extraInfo: object | null
   ): Promise<void> {

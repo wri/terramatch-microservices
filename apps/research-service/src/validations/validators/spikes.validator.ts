@@ -1,5 +1,6 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { NotFoundException } from "@nestjs/common";
 
 interface GeoJSONPolygon {
   type: "Polygon";
@@ -22,9 +23,12 @@ interface SpikeDetectionResult extends ValidationResult {
 
 export class SpikesValidator implements Validator {
   async validatePolygon(polygonUuid: string): Promise<SpikeDetectionResult> {
-    const geoJsonString = await PolygonGeometry.getGeoJSON(polygonUuid);
-    const geoJson = JSON.parse(geoJsonString) as GeoJSONGeometry;
-    const spikes = this.detectSpikes(geoJson);
+    const geoJson = await PolygonGeometry.getGeoJSONParsed(polygonUuid);
+    if (geoJson == null) {
+      throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
+    }
+
+    const spikes = this.detectSpikes(geoJson as GeoJSONGeometry);
     const valid = spikes.length === 0;
 
     return {
@@ -37,8 +41,8 @@ export class SpikesValidator implements Validator {
   }
 
   async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
-    const results = await PolygonGeometry.getGeoJSONBatch(polygonUuids);
-    const resultMap = new Map(results.map(r => [r.uuid, JSON.parse(r.geoJson) as GeoJSONGeometry]));
+    const results = await PolygonGeometry.getGeoJSONBatchParsed(polygonUuids);
+    const resultMap = new Map(results.map(r => [r.uuid, r.geoJson as GeoJSONGeometry]));
 
     return polygonUuids.map(polygonUuid => {
       const geoJson = resultMap.get(polygonUuid);

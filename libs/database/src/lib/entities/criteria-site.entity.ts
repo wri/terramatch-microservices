@@ -11,6 +11,7 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
+import { CriteriaId } from "../constants/validation-types";
 
 @Table({
   tableName: "criteria_site",
@@ -33,7 +34,7 @@ export class CriteriaSite extends Model<CriteriaSite> {
   uuid: string;
 
   @Column(INTEGER)
-  criteriaId: number;
+  criteriaId: CriteriaId;
 
   @ForeignKey(() => PolygonGeometry)
   @Column(UUID)

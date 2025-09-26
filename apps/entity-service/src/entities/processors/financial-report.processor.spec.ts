@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { FinancialReport, Media } from "@terramatch-microservices/database/entities";
+import {
+  FinancialReport,
+  FinancialIndicator,
+  Media,
+  Organisation,
+  FundingType
+} from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -30,6 +36,9 @@ describe("FinancialReportProcessor", () => {
 
   beforeEach(async () => {
     await FinancialReport.truncate();
+    await FinancialIndicator.truncate();
+    await FundingType.truncate();
+    await Organisation.truncate();
 
     const module = await Test.createTestingModule({
       providers: [
@@ -234,6 +243,280 @@ describe("FinancialReportProcessor", () => {
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(Promise);
+    });
+  });
+
+  describe("processFinancialReportSpecificLogic", () => {
+    it("should update organisation fields when financial report is approved", async () => {
+      const organisation = await OrganisationFactory.create({
+        finStartMonth: null,
+        currency: undefined
+      });
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id,
+        finStartMonth: 3,
+        currency: "USD"
+      });
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      await organisation.reload();
+      expect(organisation.finStartMonth).toBe(3);
+      expect(organisation.currency).toBe("USD");
+    });
+
+    it("should log warning and return early when organisation is not found", async () => {
+      const organisation = await OrganisationFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id
+      });
+
+      financialReport.organisationId = 99999;
+
+      const mockWarn = jest.fn();
+      (processor as unknown as { logger: { warn: jest.Mock } }).logger = {
+        warn: mockWarn
+      };
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      expect(mockWarn).toHaveBeenCalledWith(`Organisation not found for FinancialReport ${financialReport.uuid}`);
+    });
+
+    it("should create new financial indicators when none exist in organisation", async () => {
+      const organisation = await OrganisationFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id
+      });
+
+      await FinancialIndicatorFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "revenue",
+        amount: 1000,
+        description: "Test revenue",
+        exchangeRate: 1.0
+      });
+
+      await FinancialIndicatorFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "expenses",
+        amount: 500,
+        description: "Test expenses",
+        exchangeRate: 1.0
+      });
+
+      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
+      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      expect(mockBulkCreate).toHaveBeenCalledWith([
+        {
+          organisationId: organisation.id,
+          year: 2023,
+          collection: "revenue",
+          amount: 1000,
+          description: "Test revenue",
+          exchangeRate: 1.0
+        },
+        {
+          organisationId: organisation.id,
+          year: 2023,
+          collection: "expenses",
+          amount: 500,
+          description: "Test expenses",
+          exchangeRate: 1.0
+        }
+      ]);
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+
+      mockBulkCreate.mockRestore();
+      mockUpdate.mockRestore();
+    });
+
+    it("should update existing financial indicators when they exist in organisation", async () => {
+      const organisation = await OrganisationFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id
+      });
+
+      const existingIndicator1 = await FinancialIndicatorFactory.create({
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "revenue",
+        amount: 500,
+        description: "Old revenue",
+        exchangeRate: 1.2
+      });
+
+      const existingIndicator2 = await FinancialIndicatorFactory.create({
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "expenses",
+        amount: 200,
+        description: "Old expenses",
+        exchangeRate: 1.1
+      });
+
+      await FinancialIndicatorFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "revenue",
+        amount: 1000,
+        description: "New revenue",
+        exchangeRate: 1.0
+      });
+
+      await FinancialIndicatorFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "expenses",
+        amount: 500,
+        description: "New expenses",
+        exchangeRate: 1.0
+      });
+
+      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
+      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      expect(mockUpdate).toHaveBeenCalledTimes(2);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        {
+          amount: 1000,
+          description: "New revenue",
+          exchangeRate: 1.0
+        },
+        { where: { id: existingIndicator1.id } }
+      );
+      expect(mockUpdate).toHaveBeenCalledWith(
+        {
+          amount: 500,
+          description: "New expenses",
+          exchangeRate: 1.0
+        },
+        { where: { id: existingIndicator2.id } }
+      );
+
+      expect(mockBulkCreate).not.toHaveBeenCalled();
+
+      mockBulkCreate.mockRestore();
+      mockUpdate.mockRestore();
+    });
+
+    it("should handle mixed scenario with both creating and updating indicators", async () => {
+      const organisation = await OrganisationFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id
+      });
+
+      const existingIndicator = await FinancialIndicatorFactory.create({
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "revenue",
+        amount: 500,
+        description: "Old revenue",
+        exchangeRate: 1.2
+      });
+
+      await FinancialIndicatorFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "revenue",
+        amount: 1000,
+        description: "New revenue",
+        exchangeRate: 1.0
+      });
+
+      await FinancialIndicatorFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.id,
+        year: 2023,
+        collection: "expenses",
+        amount: 500,
+        description: "New expenses",
+        exchangeRate: 1.0
+      });
+
+      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
+      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      expect(mockBulkCreate).toHaveBeenCalledWith([
+        {
+          organisationId: organisation.id,
+          year: 2023,
+          collection: "expenses",
+          amount: 500,
+          description: "New expenses",
+          exchangeRate: 1.0
+        }
+      ]);
+
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        {
+          amount: 1000,
+          description: "New revenue",
+          exchangeRate: 1.0
+        },
+        { where: { id: existingIndicator.id } }
+      );
+
+      mockBulkCreate.mockRestore();
+      mockUpdate.mockRestore();
+    });
+
+    it("should handle case when no financial indicators exist in report", async () => {
+      const organisation = await OrganisationFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id
+      });
+
+      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
+      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      expect(mockBulkCreate).not.toHaveBeenCalled();
+      expect(mockUpdate).not.toHaveBeenCalled();
+
+      mockBulkCreate.mockRestore();
+      mockUpdate.mockRestore();
     });
   });
 });

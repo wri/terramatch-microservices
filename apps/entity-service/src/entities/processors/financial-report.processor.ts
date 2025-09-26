@@ -13,6 +13,7 @@ import { FundingTypeDto } from "../dto/funding-type.dto";
 import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial-indicator.dto";
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus"];
 
@@ -28,6 +29,7 @@ export class FinancialReportProcessor extends ReportProcessor<
 > {
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;
+  private logger = new TMLogger(FinancialReportProcessor.name);
 
   /**
    * Specific method for FinancialReport custom logic. This is called automatically when nothingToReport is updated
@@ -35,7 +37,7 @@ export class FinancialReportProcessor extends ReportProcessor<
   protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
     const organisation = await Organisation.findByPk(model.organisationId);
     if (organisation == null) {
-      console.warn(`Organisation not found for FinancialReport ${model.uuid}`);
+      this.logger.warn(`Organisation not found for FinancialReport ${model.uuid}`);
       return;
     }
 
@@ -56,27 +58,40 @@ export class FinancialReportProcessor extends ReportProcessor<
       orgIndicatorMap.set(key, indicator);
     });
 
+    const indicatorsToCreate: Partial<FinancialIndicator>[] = [];
+    const indicatorsToUpdate: { id: number; data: Partial<FinancialIndicator> }[] = [];
+
     for (const reportIndicator of reportIndicators) {
       const key = `${reportIndicator.year}-${reportIndicator.collection}`;
-      let orgIndicator = orgIndicatorMap.get(key);
+      const orgIndicator = orgIndicatorMap.get(key);
 
       if (orgIndicator == null) {
-        orgIndicator = await FinancialIndicator.create({
+        indicatorsToCreate.push({
           organisationId: organisation.id,
           year: reportIndicator.year,
           collection: reportIndicator.collection,
           amount: reportIndicator.amount,
           description: reportIndicator.description,
           exchangeRate: reportIndicator.exchangeRate
-        } as FinancialIndicator);
-        orgIndicatorMap.set(key, orgIndicator);
+        });
       } else {
-        await orgIndicator.update({
-          amount: reportIndicator.amount,
-          description: reportIndicator.description,
-          exchangeRate: reportIndicator.exchangeRate
+        indicatorsToUpdate.push({
+          id: orgIndicator.id,
+          data: {
+            amount: reportIndicator.amount,
+            description: reportIndicator.description,
+            exchangeRate: reportIndicator.exchangeRate
+          }
         });
       }
+    }
+
+    if (indicatorsToCreate.length > 0) {
+      await FinancialIndicator.bulkCreate(indicatorsToCreate as FinancialIndicator[]);
+    }
+
+    if (indicatorsToUpdate.length > 0) {
+      await Promise.all(indicatorsToUpdate.map(({ id, data }) => FinancialIndicator.update(data, { where: { id } })));
     }
   }
 

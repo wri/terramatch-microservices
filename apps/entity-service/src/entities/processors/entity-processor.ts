@@ -223,6 +223,7 @@ export abstract class ReportProcessor<
    * Override this method in specific report processors to add custom logic
    * @param model The report model being processed
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
     // This method will be overridden in FinancialReportProcessor
   }

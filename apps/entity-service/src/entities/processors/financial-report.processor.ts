@@ -34,7 +34,7 @@ export class FinancialReportProcessor extends ReportProcessor<
    */
   protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
     const organisation = await Organisation.findByPk(model.organisationId);
-    if (!organisation) {
+    if (organisation == null) {
       console.warn(`Organisation not found for FinancialReport ${model.uuid}`);
       return;
     }
@@ -60,7 +60,7 @@ export class FinancialReportProcessor extends ReportProcessor<
       const key = `${reportIndicator.year}-${reportIndicator.collection}`;
       let orgIndicator = orgIndicatorMap.get(key);
 
-      if (!orgIndicator) {
+      if (orgIndicator == null) {
         orgIndicator = await FinancialIndicator.create({
           organisationId: organisation.id,
           year: reportIndicator.year,

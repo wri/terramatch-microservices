@@ -316,5 +316,50 @@ describe("ValidationController", () => {
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
+
+    it("should create polygon validations with POLYGON_SIZE validation type", async () => {
+      const request: ValidationRequestDto = {
+        polygonUuids: ["polygon-1"],
+        validationTypes: ["POLYGON_SIZE"]
+      };
+
+      mockValidationService.validatePolygons.mockResolvedValueOnce({
+        results: [
+          {
+            polygonUuid: "polygon-1",
+            criteriaId: 6,
+            valid: false,
+            createdAt: new Date("2025-01-08T22:15:15.000Z"),
+            extraInfo: {
+              areaHectares: 1500,
+              maxAllowedHectares: 1000
+            }
+          }
+        ]
+      });
+
+      const result = serialize(await controller.createPolygonValidations(request));
+
+      expect(mockValidationService.validatePolygons).toHaveBeenCalledWith(request);
+      expect(result.data).toBeDefined();
+
+      if (Array.isArray(result.data)) {
+        expect(result.data).toHaveLength(1);
+        const dataArray = result.data as unknown as Array<{
+          id: string;
+          attributes: { polygonId: string; criteriaList: unknown[] };
+        }>;
+        const polygonData = dataArray[0];
+        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.criteriaList).toHaveLength(1);
+      } else {
+        const singleData = result.data as unknown as {
+          id: string;
+          attributes: { polygonId: string; criteriaList: unknown[] };
+        };
+        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.criteriaList).toHaveLength(1);
+      }
+    });
   });
 });

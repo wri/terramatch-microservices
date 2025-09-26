@@ -445,6 +445,38 @@ describe("ValidationService", () => {
       });
     });
 
+    it("should validate polygons with POLYGON_SIZE validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["POLYGON_SIZE" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        calcArea: 500
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 6,
+        valid: true,
+        createdAt: expect.any(Date),
+        extraInfo: {
+          areaHectares: 500,
+          maxAllowedHectares: 1000
+        }
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1", isActive: true },
+        attributes: ["calcArea"]
+      });
+    });
+
     it("should validate polygon with SELF_INTERSECTION when specified", async () => {
       const request = {
         polygonUuids: ["uuid-1"],

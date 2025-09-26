@@ -15,11 +15,13 @@ import { SelfIntersectionValidator } from "./validators/self-intersection.valida
 import { SpikesValidator } from "./validators/spikes.validator";
 import { DataCompletenessValidator } from "./validators/data-completeness.validator";
 import { PlantStartDateValidator } from "./validators/plant-start-date.validator";
+import { PolygonSizeValidator } from "./validators/polygon-size.validator";
 import { Validator } from "./validators/validator.interface";
 import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
 
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
+  POLYGON_SIZE: new PolygonSizeValidator(),
   SPIKES: new SpikesValidator(),
   DATA_COMPLETENESS: new DataCompletenessValidator(),
   PLANT_START_DATE: new PlantStartDateValidator()

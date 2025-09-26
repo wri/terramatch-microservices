@@ -175,7 +175,7 @@ describe("DataCompletenessValidator", () => {
       expect(result.extraInfo?.missingFields).toHaveLength(6);
     });
 
-    it("should handle zero numTrees as valid", async () => {
+    it("should handle zero numTrees as invalid", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
         practice: "tree-planting",
@@ -189,7 +189,13 @@ describe("DataCompletenessValidator", () => {
 
       const result = await validator.validatePolygon("test-uuid");
 
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.extraInfo?.validationErrors).toHaveLength(1);
+      expect(result.extraInfo?.validationErrors[0]).toEqual({
+        field: "numTrees",
+        error: "Invalid number of trees. Must be a valid integer and cannot be 0",
+        exists: true
+      });
     });
 
     it("should handle negative numTrees as invalid", async () => {
@@ -210,7 +216,7 @@ describe("DataCompletenessValidator", () => {
       expect(result.extraInfo?.validationErrors).toHaveLength(1);
       expect(result.extraInfo?.validationErrors[0]).toEqual({
         field: "numTrees",
-        error: "Invalid number of trees. Must be a valid integer",
+        error: "Invalid number of trees. Must be a valid integer and cannot be 0",
         exists: true
       });
     });

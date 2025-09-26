@@ -14,13 +14,15 @@ import { groupBy } from "lodash";
 import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
 import { SpikesValidator } from "./validators/spikes.validator";
 import { DataCompletenessValidator } from "./validators/data-completeness.validator";
+import { PlantStartDateValidator } from "./validators/plant-start-date.validator";
 import { Validator } from "./validators/validator.interface";
 import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
 
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
   SPIKES: new SpikesValidator(),
-  DATA_COMPLETENESS: new DataCompletenessValidator()
+  DATA_COMPLETENESS: new DataCompletenessValidator(),
+  PLANT_START_DATE: new PlantStartDateValidator()
 };
 
 @Injectable()

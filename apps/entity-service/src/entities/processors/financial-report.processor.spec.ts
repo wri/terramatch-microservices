@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { FinancialReport, Media } from "@terramatch-microservices/database/entities";
+import {
+  FinancialReport,
+  FinancialIndicator,
+  Media,
+  Organisation,
+  FundingType
+} from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -30,6 +36,9 @@ describe("FinancialReportProcessor", () => {
 
   beforeEach(async () => {
     await FinancialReport.truncate();
+    await FinancialIndicator.truncate();
+    await FundingType.truncate();
+    await Organisation.truncate();
 
     const module = await Test.createTestingModule({
       providers: [
@@ -234,6 +243,30 @@ describe("FinancialReportProcessor", () => {
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(Promise);
+    });
+  });
+
+  describe("processFinancialReportSpecificLogic", () => {
+    it("should update organisation fields when financial report is approved", async () => {
+      const organisation = await OrganisationFactory.create({
+        finStartMonth: null,
+        currency: undefined
+      });
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id,
+        finStartMonth: 3,
+        currency: "USD"
+      });
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      await organisation.reload();
+      expect(organisation.finStartMonth).toBe(3);
+      expect(organisation.currency).toBe("USD");
     });
   });
 });

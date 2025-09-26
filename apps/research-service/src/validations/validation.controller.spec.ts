@@ -219,5 +219,53 @@ describe("ValidationController", () => {
         expect(singleData.id).toBe("polygon-1");
       }
     });
+
+    it("should create polygon validations with DATA_COMPLETENESS validation type", async () => {
+      const request: ValidationRequestDto = {
+        polygonUuids: ["polygon-1"],
+        validationTypes: ["DATA_COMPLETENESS"]
+      };
+
+      mockValidationService.validatePolygons.mockResolvedValueOnce({
+        results: [
+          {
+            polygonUuid: "polygon-1",
+            criteriaId: 14,
+            valid: false,
+            createdAt: new Date("2025-01-08T22:15:15.000Z"),
+            extraInfo: {
+              validationErrors: [
+                { field: "polyName", error: "Field is required", exists: false },
+                { field: "practice", error: "Field is required", exists: false }
+              ],
+              missingFields: ["polyName", "practice"]
+            }
+          }
+        ]
+      });
+
+      const result = serialize(await controller.createPolygonValidations(request));
+
+      expect(mockValidationService.validatePolygons).toHaveBeenCalledWith(request);
+      expect(result.data).toBeDefined();
+
+      if (Array.isArray(result.data)) {
+        expect(result.data).toHaveLength(1);
+        const dataArray = result.data as unknown as Array<{
+          id: string;
+          attributes: { polygonId: string; criteriaList: unknown[] };
+        }>;
+        const polygonData = dataArray[0];
+        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.criteriaList).toHaveLength(1);
+      } else {
+        const singleData = result.data as unknown as {
+          id: string;
+          attributes: { polygonId: string; criteriaList: unknown[] };
+        };
+        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.criteriaList).toHaveLength(1);
+      }
+    });
   });
 });

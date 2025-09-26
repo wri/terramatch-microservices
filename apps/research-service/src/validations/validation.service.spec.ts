@@ -539,7 +539,7 @@ describe("ValidationService", () => {
           {
             model: expect.anything(),
             as: "site",
-            attributes: ["hectaresToRestoreGoal"]
+            attributes: ["hectaresToRestoreGoal", "projectId"]
           }
         ]
       });

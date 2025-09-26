@@ -15,7 +15,8 @@ import { FinancialReport } from "./financial-report.entity";
 import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
-  financialReport: (id: number) => ({ where: { financialReportId: id } })
+  financialReport: (id: number) => ({ where: { financialReportId: id } }),
+  organisation: (id: number) => ({ where: { organisationId: id, financialReportId: null } })
 }))
 @Table({ tableName: "financial_indicators", underscored: true, paranoid: true })
 export class FinancialIndicator extends Model<FinancialIndicator> {
@@ -23,6 +24,10 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
 
   static financialReport(id: number) {
     return chainScope(this, "financialReport", id) as typeof FinancialIndicator;
+  }
+
+  static organisation(id: number) {
+    return chainScope(this, "organisation", id) as typeof FinancialIndicator;
   }
 
   static readonly MEDIA = {

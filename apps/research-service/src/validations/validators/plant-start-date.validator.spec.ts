@@ -278,7 +278,7 @@ describe("PlantStartDateValidator", () => {
         polygonName: "Test Polygon",
         siteName: "Test Site",
         providedValue: "invalid-date",
-        errorDetails: "Invalid date format"
+        errorDetails: "unparsable"
       });
     });
 

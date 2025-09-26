@@ -278,7 +278,7 @@ describe("FinancialReportProcessor", () => {
       financialReport.organisationId = 99999;
 
       const mockWarn = jest.fn();
-      (processor as any).logger = {
+      (processor as unknown as { logger: { warn: jest.Mock } }).logger = {
         warn: mockWarn
       };
 

@@ -11,9 +11,9 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { MediaDto } from "../entities/dto/media.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { SingleMediaDto } from "../entities/dto/media-query.dto";
-import { MediaUpdateBody } from "../entities/dto/media-update.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
+import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
 
 @Controller("entities/v3/medias")
 export class MediasController {

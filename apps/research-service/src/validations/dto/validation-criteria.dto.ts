@@ -1,29 +1,43 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
 
+@JsonApiDto({ type: "validationCriterias" })
 export class ValidationCriteriaDto {
   @ApiProperty({
-    description: "The criteria ID that was validated",
-    example: 3
+    description: "The polygon UUID that was validated (optional for historic data)",
+    required: false
   })
-  criteriaId: number;
+  polygonUuid?: string;
 
   @ApiProperty({
-    description: "Whether the polygon passed this validation criteria",
-    example: true
+    description: "The validation criteria ID",
+    enum: VALIDATION_CRITERIA_IDS
+  })
+  criteriaId: CriteriaId;
+
+  @ApiProperty({
+    description: "Whether the polygon passed this validation"
   })
   valid: boolean;
 
   @ApiProperty({
-    description: "When this validation was last run",
-    example: "2025-02-20T22:01:31Z"
+    description: "When this validation was last run"
   })
   createdAt: Date;
 
   @ApiProperty({
     description: "Additional information about the validation result",
-    example: null,
-    required: false,
-    type: Object
+    required: false
   })
   extraInfo?: object | null;
+}
+
+@JsonApiDto({ type: "validationResponses" })
+export class ValidationResponseDto {
+  @ApiProperty({
+    description: "Array of validation results for each polygon",
+    isArray: true
+  })
+  results: ValidationCriteriaDto[];
 }

@@ -1,7 +1,9 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Post, Body } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
+import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -59,5 +61,46 @@ export class ValidationController {
         total,
         pageNumber
       });
+  }
+
+  @Post("polygonValidations")
+  @ApiOperation({
+    operationId: "createPolygonValidations",
+    summary: "Validate multiple polygons for various criteria"
+  })
+  @JsonApiResponse(ValidationDto)
+  @ExceptionResponse(NotFoundException, {
+    description: "One or more polygons not found"
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid validation request"
+  })
+  async createPolygonValidations(@Body() request: ValidationRequestDto) {
+    const validationResponse = await this.validationService.validatePolygons(request);
+
+    const document = buildJsonApi(ValidationDto);
+
+    const resultsByPolygon = new Map<string, ValidationCriteriaDto[]>();
+
+    for (const result of validationResponse.results) {
+      if (result.polygonUuid != null) {
+        if (!resultsByPolygon.has(result.polygonUuid)) {
+          resultsByPolygon.set(result.polygonUuid, []);
+        }
+        const criteriaList = resultsByPolygon.get(result.polygonUuid);
+        if (criteriaList != null) {
+          criteriaList.push(result);
+        }
+      }
+    }
+
+    for (const [polygonUuid, criteriaList] of resultsByPolygon) {
+      const validation = new ValidationDto();
+      validation.polygonId = polygonUuid;
+      validation.criteriaList = criteriaList;
+      document.addData(polygonUuid, validation);
+    }
+
+    return document;
   }
 }

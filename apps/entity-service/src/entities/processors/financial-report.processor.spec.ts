@@ -268,5 +268,27 @@ describe("FinancialReportProcessor", () => {
       expect(organisation.finStartMonth).toBe(3);
       expect(organisation.currency).toBe("USD");
     });
+
+    it("should log warning and return early when organisation is not found", async () => {
+      const organisation = await OrganisationFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        organisationId: organisation.id
+      });
+
+      financialReport.organisationId = 99999;
+
+      const mockWarn = jest.fn();
+      (processor as any).logger = {
+        warn: mockWarn
+      };
+
+      await (
+        processor as unknown as {
+          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+        }
+      ).processFinancialReportSpecificLogic(financialReport);
+
+      expect(mockWarn).toHaveBeenCalledWith(`Organisation not found for FinancialReport ${financialReport.uuid}`);
+    });
   });
 });

@@ -1,4 +1,10 @@
-import { FinancialReport, FundingType, FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
+import {
+  FinancialReport,
+  FundingType,
+  FinancialIndicator,
+  Media,
+  Organisation
+} from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
@@ -22,6 +28,57 @@ export class FinancialReportProcessor extends ReportProcessor<
 > {
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;
+
+  /**
+   * Specific method for FinancialReport custom logic. This is called automatically when nothingToReport is updated
+   */
+  protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
+    const organisation = await Organisation.findByPk(model.organisationId);
+    if (!organisation) {
+      console.warn(`Organisation not found for FinancialReport ${model.uuid}`);
+      return;
+    }
+
+    if (model.finStartMonth != null || model.currency != null) {
+      const updateData: Partial<Organisation> = {};
+      if (model.finStartMonth != null) updateData.finStartMonth = model.finStartMonth;
+      if (model.currency != null) updateData.currency = model.currency;
+
+      await organisation.update(updateData);
+    }
+
+    const reportIndicators = await FinancialIndicator.financialReport(model.id).findAll();
+    const existingOrgIndicators = await FinancialIndicator.organisation(organisation.id).findAll();
+
+    const orgIndicatorMap = new Map<string, FinancialIndicator>();
+    existingOrgIndicators.forEach(indicator => {
+      const key = `${indicator.year}-${indicator.collection}`;
+      orgIndicatorMap.set(key, indicator);
+    });
+
+    for (const reportIndicator of reportIndicators) {
+      const key = `${reportIndicator.year}-${reportIndicator.collection}`;
+      let orgIndicator = orgIndicatorMap.get(key);
+
+      if (!orgIndicator) {
+        orgIndicator = await FinancialIndicator.create({
+          organisationId: organisation.id,
+          year: reportIndicator.year,
+          collection: reportIndicator.collection,
+          amount: reportIndicator.amount,
+          description: reportIndicator.description,
+          exchangeRate: reportIndicator.exchangeRate
+        } as FinancialIndicator);
+        orgIndicatorMap.set(key, orgIndicator);
+      } else {
+        await orgIndicator.update({
+          amount: reportIndicator.amount,
+          description: reportIndicator.description,
+          exchangeRate: reportIndicator.exchangeRate
+        });
+      }
+    }
+  }
 
   async findOne(uuid: string) {
     return await FinancialReport.findOne({

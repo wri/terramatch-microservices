@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media } from "@terramatch-microservices/database/entities";
-import { MediaUpdateBody } from "../../../../../apps/entity-service/src/entities/dto/media-update.dto";
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
+import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
 
 @Injectable()

@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { CreateDataDto, JsonApiBodyDto } from "../util/json-api-update-dto";
 import { IsBoolean, IsOptional, IsString } from "class-validator";
 
 export class MediaUpdateAttributes {

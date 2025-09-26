@@ -5,7 +5,9 @@ import {
   CriteriaSite,
   CriteriaSiteHistoric,
   PolygonGeometry,
-  SitePolygon
+  SitePolygon,
+  Site,
+  Project
 } from "@terramatch-microservices/database/entities";
 import { ValidationType } from "@terramatch-microservices/database/constants";
 
@@ -44,7 +46,14 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   SitePolygon: {
     findAndCountAll: jest.fn(),
     findAll: jest.fn(),
-    findOne: jest.fn()
+    findOne: jest.fn(),
+    sum: jest.fn()
+  },
+  Site: {
+    findAll: jest.fn()
+  },
+  Project: {
+    findByPk: jest.fn()
   }
 }));
 
@@ -437,7 +446,7 @@ describe("ValidationService", () => {
         attributes: ["polyName", "plantStart", "siteUuid"],
         include: [
           {
-            model: undefined,
+            model: expect.anything(),
             as: "site",
             attributes: ["name", "startDate"]
           }
@@ -474,6 +483,65 @@ describe("ValidationService", () => {
       expect(SitePolygon.findOne).toHaveBeenCalledWith({
         where: { polygonUuid: "uuid-1", isActive: true },
         attributes: ["calcArea"]
+      });
+    });
+
+    it("should validate polygons with ESTIMATED_AREA validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["ESTIMATED_AREA" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        polygonUuid: "uuid-1",
+        loadSite: jest.fn().mockResolvedValue({
+          uuid: "site-uuid-1",
+          projectId: 1,
+          hectaresToRestoreGoal: 1000
+        })
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (Project.findByPk as jest.Mock).mockResolvedValue({
+        id: 1,
+        totalHectaresRestoredGoal: 5000
+      });
+      (Site.findAll as jest.Mock).mockResolvedValue([{ uuid: "site-uuid-1" }]);
+      (SitePolygon.sum as jest.Mock)
+        .mockResolvedValueOnce(800) // Site area sum
+        .mockResolvedValueOnce(4000); // Project area sum
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 12,
+        valid: true,
+        createdAt: expect.any(Date),
+        extraInfo: expect.objectContaining({
+          sumAreaSite: 800,
+          sumAreaProject: 4000,
+          percentageSite: 80,
+          percentageProject: 80,
+          totalAreaSite: 1000,
+          totalAreaProject: 5000,
+          lowerBoundSite: 750,
+          upperBoundSite: 1250,
+          lowerBoundProject: 3750,
+          upperBoundProject: 6250
+        })
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1", isActive: true },
+        include: [
+          {
+            model: expect.anything(),
+            as: "site",
+            attributes: ["hectaresToRestoreGoal"]
+          }
+        ]
       });
     });
 

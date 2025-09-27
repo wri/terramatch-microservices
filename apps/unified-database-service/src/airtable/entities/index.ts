@@ -3,6 +3,7 @@ export * from "./demographic.airtable-entity";
 export * from "./demographic-entry.airtable-entity";
 export * from "./disturbance.airtable-entity";
 export * from "./financial-indicator.airtable-entity";
+export * from "./financial-report.airtable-entity";
 export * from "./funding-programme.airtable-entity";
 export * from "./funding-type.airtable-entity";
 export * from "./investment.airtable-entity";

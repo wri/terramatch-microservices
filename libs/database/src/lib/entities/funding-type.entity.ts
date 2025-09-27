@@ -51,17 +51,14 @@ export class FundingType extends Model<FundingType> {
   @Column(STRING)
   source: string | null;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  amount: number | null;
+  amount: number;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  year: number | null;
+  year: number;
 
-  @AllowNull
   @Column(TEXT)
-  type: string | null;
+  type: string;
 
   @ForeignKey(() => FinancialReport)
   @Column(BIGINT.UNSIGNED)

@@ -1,7 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Request } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FormDto } from "./dto/form.dto";
+import { FormDto, FormLightDto } from "./dto/form.dto";
 import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -30,7 +30,7 @@ export class FormsController {
     description: "Get a form by uuid. Includes all sections and questions within the form."
   })
   @ApiParam({ name: "uuid", type: String, description: "Form uuid" })
-  @JsonApiResponse({ data: FormDto, included: [FormSectionDto, FormQuestionDto] })
+  @JsonApiResponse({ data: FormLightDto, included: [FormSectionDto, FormQuestionDto] })
   @ExceptionResponse(NotFoundException, { description: "Form not found" })
   @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
   async formGet(@Param("uuid") uuid: string, @Request() { authenticatedUserId }) {
@@ -132,7 +132,7 @@ export class FormsController {
     return document;
   }
 
-  @Get("")
+  @Get()
   @ApiOperation({
     operationId: "formIndex",
     description: "Get a paginated and filtered list of forms. Includes all sections and questions within the form."

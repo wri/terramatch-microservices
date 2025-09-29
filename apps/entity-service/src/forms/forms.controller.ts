@@ -11,6 +11,7 @@ import {
   FormQuestionOption,
   FormSection,
   FormTableHeader,
+  Media,
   User
 } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
@@ -18,11 +19,13 @@ import { filter, flattenDeep, groupBy, uniq } from "lodash";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
+import { MediaDto } from "../entities/dto/media.dto";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
 // TODO (NJC): Specs for this controller before epic TM-2411 is merged
 @Controller("forms/v3/forms")
 export class FormsController {
-  constructor(private readonly localizationService: LocalizationService) {}
+  constructor(private readonly localizationService: LocalizationService, private readonly mediaService: MediaService) {}
 
   @Get(":uuid")
   @ApiOperation({
@@ -71,6 +74,10 @@ export class FormsController {
       locale
     );
 
+    const media = await Media.for(form).findAll();
+    const bannerMedia = media.find(({ collectionName }) => collectionName === "banner");
+    const documentMedia = media.find(({ collectionName }) => collectionName !== "banner");
+
     const document = buildJsonApi<FormDto>(FormDto);
     document.addData<FormDto>(
       form.uuid,
@@ -79,7 +86,25 @@ export class FormsController {
         subtitle: translations[form.subtitleId ?? -1] ?? form.subtitle,
         description: translations[form.descriptionId ?? -1] ?? form.description,
         submissionMessage: translations[form.submissionMessageId ?? -1] ?? form.submissionMessage,
-        fundingProgrammeId: form.stage?.fundingProgrammeId ?? null
+        fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
+        banner:
+          bannerMedia == null
+            ? null
+            : new MediaDto(bannerMedia, {
+                url: this.mediaService.getUrl(bannerMedia),
+                thumbUrl: this.mediaService.getUrl(bannerMedia, "thumbnail"),
+                entityType: "forms",
+                entityUuid: form.uuid
+              }),
+        document:
+          documentMedia == null
+            ? null
+            : new MediaDto(documentMedia, {
+                url: this.mediaService.getUrl(documentMedia),
+                thumbUrl: null,
+                entityType: "forms",
+                entityUuid: form.uuid
+              })
       })
     );
 

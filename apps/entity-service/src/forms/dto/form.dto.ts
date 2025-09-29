@@ -4,8 +4,11 @@ import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database
 import { Form } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { MediaDto } from "../../entities/dto/media.dto";
 
 type FormWithoutTranslations = Omit<Form, "title" | "subtitle" | "description" | "submissionMessage">;
+
+export type FormMedia = Pick<FormLightDto, keyof typeof Form.MEDIA>;
 
 @JsonApiDto({ type: "forms" })
 export class FormLightDto extends HybridSupportDto {
@@ -27,6 +30,12 @@ export class FormLightDto extends HybridSupportDto {
 
   @ApiProperty()
   published: boolean;
+
+  @ApiProperty({ nullable: true, type: () => MediaDto })
+  banner: MediaDto | null;
+
+  @ApiProperty({ nullable: true, type: () => MediaDto })
+  document: MediaDto | null;
 }
 
 export class FormDto extends FormLightDto {

@@ -1,6 +1,7 @@
 import { SitePolygon, Site } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
+import { DateTime } from "luxon";
 
 interface PlantStartDateValidationResult extends ValidationResult {
   extraInfo: {
@@ -79,7 +80,9 @@ export class PlantStartDateValidator implements Validator {
   } {
     const plantStart = sitePolygon.plantStart;
     const plantStartString =
-      plantStart instanceof Date ? plantStart.toISOString().split("T")[0] : plantStart ?? undefined;
+      plantStart instanceof Date
+        ? DateTime.fromJSDate(plantStart, { zone: "utc" }).toISODate() ?? undefined
+        : plantStart ?? undefined;
 
     if (plantStart == null || plantStartString === "") {
       return {
@@ -107,11 +110,11 @@ export class PlantStartDateValidator implements Validator {
     }
 
     try {
-      const plantStartDate = new Date(plantStartString ?? "");
-      const minDate = new Date(MIN_DATE);
-      const currentDate = new Date();
+      const plantStartDate = DateTime.fromISO(plantStartString ?? "");
+      const minDate = DateTime.fromISO(MIN_DATE);
+      const currentDate = DateTime.now();
 
-      if (isNaN(plantStartDate.getTime())) {
+      if (!plantStartDate.isValid) {
         return {
           valid: false,
           extraInfo: {
@@ -120,7 +123,7 @@ export class PlantStartDateValidator implements Validator {
             polygonName: sitePolygon.polyName ?? undefined,
             siteName: sitePolygon.site?.name ?? undefined,
             providedValue: plantStartString,
-            errorDetails: "Invalid date format"
+            errorDetails: plantStartDate.invalidReason ?? "Invalid date format"
           }
         };
       }
@@ -148,7 +151,7 @@ export class PlantStartDateValidator implements Validator {
             polygonName: sitePolygon.polyName ?? undefined,
             siteName: sitePolygon.site?.name ?? undefined,
             providedValue: plantStartString,
-            currentDate: currentDate.toISOString().split("T")[0]
+            currentDate: currentDate.toISODate()
           }
         };
       }
@@ -156,11 +159,11 @@ export class PlantStartDateValidator implements Validator {
       if (sitePolygon.site?.startDate != null) {
         const siteStartDateString =
           sitePolygon.site.startDate instanceof Date
-            ? sitePolygon.site.startDate.toISOString().split("T")[0]
+            ? DateTime.fromJSDate(sitePolygon.site.startDate, { zone: "utc" }).toISODate()
             : sitePolygon.site.startDate;
-        const siteStartDate = new Date(siteStartDateString ?? "");
+        const siteStartDate = DateTime.fromISO(siteStartDateString ?? "");
 
-        if (isNaN(siteStartDate.getTime())) {
+        if (!siteStartDate.isValid) {
           return {
             valid: false,
             extraInfo: {
@@ -169,15 +172,13 @@ export class PlantStartDateValidator implements Validator {
               polygonName: sitePolygon.polyName ?? undefined,
               siteName: sitePolygon.site.name ?? undefined,
               providedValue: plantStartString,
-              errorDetails: "Invalid site start date"
+              errorDetails: `Invalid site start date: ${siteStartDate.invalidReason}`
             }
           };
         }
 
-        const twoYearsBefore = new Date(siteStartDate);
-        twoYearsBefore.setFullYear(siteStartDate.getFullYear() - 2);
-        const twoYearsAfter = new Date(siteStartDate);
-        twoYearsAfter.setFullYear(siteStartDate.getFullYear() + 2);
+        const twoYearsBefore = siteStartDate.minus({ years: 2 });
+        const twoYearsAfter = siteStartDate.plus({ years: 2 });
 
         if (plantStartDate < twoYearsBefore || plantStartDate > twoYearsAfter) {
           return {
@@ -188,10 +189,10 @@ export class PlantStartDateValidator implements Validator {
               polygonName: sitePolygon.polyName ?? undefined,
               siteName: sitePolygon.site.name ?? undefined,
               providedValue: plantStartString,
-              siteStartDate: siteStartDate.toISOString().split("T")[0],
+              siteStartDate: siteStartDate.toISODate(),
               allowedRange: {
-                min: twoYearsBefore.toISOString().split("T")[0],
-                max: twoYearsAfter.toISOString().split("T")[0]
+                min: twoYearsBefore.toISODate(),
+                max: twoYearsAfter.toISODate()
               }
             }
           };

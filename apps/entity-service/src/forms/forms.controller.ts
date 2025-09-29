@@ -121,6 +121,21 @@ export class FormsController {
     const sectionsById = groupBy(sections, "id");
     const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
     const optionsByQuestionId = groupBy(options, "formQuestionId");
+    const optionsMedia = options.length == 0 ? [] : await Media.for(options).findAll();
+    const optionMediaByOptionId = optionsMedia
+      // we only expect `image` type media, but best to be sure.
+      .filter(({ collectionName }) => collectionName === "image")
+      .reduce(
+        (map, media) => ({
+          ...map,
+          [media.modelId]: {
+            url: this.mediaService.getUrl(media),
+            thumbUrl: this.mediaService.getUrl(media, "thumbnail")
+          }
+        }),
+        {} as Record<number, { url: string | null; thumbUrl: string | null }>
+      );
+
     for (const question of questions) {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
       // For file questions, the collection is the property of the field.
@@ -144,7 +159,8 @@ export class FormsController {
           options: optionsByQuestionId[question.id]?.map(option =>
             populateDto<FormQuestionOptionDto>(new FormQuestionOptionDto(), {
               slug: option.slug ?? "",
-              imageUrl: option.imageUrl,
+              imageUrl: optionMediaByOptionId[option.id]?.url ?? option.imageUrl,
+              thumbUrl: optionMediaByOptionId[option.id]?.thumbUrl ?? null,
               label: translations[option.labelId ?? -1] ?? option.label,
               altValue: null,
               order: option.order

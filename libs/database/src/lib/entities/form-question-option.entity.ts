@@ -1,15 +1,14 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
-import { MediaConfiguration } from "../constants/media-owners";
 import { FormQuestion } from "./form-question.entity";
 
 @Table({ tableName: "form_question_options", underscored: true, paranoid: true })
 export class FormQuestionOption extends Model<FormQuestionOption> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormQuestionOption";
 
-  static readonly MEDIA: Record<string, MediaConfiguration> = {
-    image: { dbCollection: "image", multiple: true, validation: "photos" }
-  };
+  static readonly MEDIA = {
+    image: { dbCollection: "image", multiple: false, validation: "photos" }
+  } as const;
 
   @PrimaryKey
   @AutoIncrement

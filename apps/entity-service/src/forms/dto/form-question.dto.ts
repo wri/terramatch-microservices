@@ -20,6 +20,9 @@ export class FormTableHeaderDto {
 export class FormQuestionOptionDto extends OptionLabelDto {
   @ApiProperty()
   order: number;
+
+  @ApiProperty({ nullable: true, type: String })
+  thumbUrl: string | null;
 }
 
 type FormQuestionWithoutTranslations = Omit<FormQuestion, "label" | "description" | "placeholder" | "collection">;

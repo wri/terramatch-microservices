@@ -20,12 +20,15 @@ import { LaravelModel, laravelType } from "../types/util";
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
   collection: (collectionName: string) => ({ where: { collectionName } }),
-  association: (association: LaravelModel) => ({
-    where: {
-      modelType: laravelType(association),
-      modelId: association.id
-    }
-  })
+  associations: <T extends LaravelModel>(associations: T | T[]) => {
+    const models = Array.isArray(associations) ? associations : [associations];
+    return {
+      where: {
+        modelType: laravelType(models[0]),
+        modelId: models.map(({ id }) => id)
+      }
+    };
+  }
 }))
 @Table({
   tableName: "media",
@@ -41,8 +44,12 @@ export class Media extends Model<Media> {
     return chainScope(this, "collection", collectionName) as typeof Media;
   }
 
-  static for(model: LaravelModel) {
-    return chainScope(this, "association", model) as typeof Media;
+  /**
+   * Note: this only works for an array of a _single model type_. The association scope only
+   * checks the first model in the array for the model type.
+   */
+  static for<T extends LaravelModel>(models: T | T[]) {
+    return chainScope(this, "associations", models) as typeof Media;
   }
 
   @PrimaryKey

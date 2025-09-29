@@ -33,7 +33,7 @@ export class FormsController {
     description: "Get a form by uuid. Includes all sections and questions within the form."
   })
   @ApiParam({ name: "uuid", type: String, description: "Form uuid" })
-  @JsonApiResponse({ data: FormLightDto, included: [FormSectionDto, FormQuestionDto] })
+  @JsonApiResponse({ data: FormDto, included: [FormSectionDto, FormQuestionDto] })
   @ExceptionResponse(NotFoundException, { description: "Form not found" })
   @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
   async formGet(@Param("uuid") uuid: string, @Request() { authenticatedUserId }) {
@@ -162,7 +162,7 @@ export class FormsController {
     operationId: "formIndex",
     description: "Get a paginated and filtered list of forms. Includes all sections and questions within the form."
   })
-  @JsonApiResponse({ data: FormDto, included: [FormSectionDto, FormQuestionDto], pagination: "number" })
+  @JsonApiResponse({ data: FormLightDto, included: [FormSectionDto, FormQuestionDto], pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
   async formIndex(@Request() { authenticatedUserId }) {
     const locale = await User.findLocale(authenticatedUserId);

@@ -57,7 +57,7 @@ export class ValidationService {
     siteUuid: string,
     pageSize: number,
     pageNumber = 1,
-    criteriaId?: number
+    criteriaId?: CriteriaId
   ): Promise<{
     validations: ValidationDto[];
     total: number;

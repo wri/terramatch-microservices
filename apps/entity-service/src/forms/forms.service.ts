@@ -20,7 +20,7 @@ import { FormSectionDto } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { Attributes, Model } from "sequelize";
+import { Attributes, Model, Op } from "sequelize";
 import { FormQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
@@ -54,6 +54,10 @@ export class FormsService {
 
     for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) builder.where({ [term]: query[term] });
+    }
+
+    if (query.search != null) {
+      builder.where({ title: { [Op.like]: `%${query.search}%` } });
     }
 
     return { forms: await builder.execute(), paginationTotal: await builder.paginationTotal() };

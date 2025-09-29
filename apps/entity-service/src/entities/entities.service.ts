@@ -43,6 +43,7 @@ import { Strata } from "@terramatch-microservices/database/entities/stratas.enti
 import { StrataDto } from "./dto/strata.dto";
 import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -129,11 +130,10 @@ export class EntitiesService {
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
   }
 
-  private _userLocale?: string;
+  private _userLocale?: ValidLocale;
   async getUserLocale() {
     if (this._userLocale == null) {
-      this._userLocale =
-        (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] }))?.locale ?? "en-GB";
+      this._userLocale = (await User.findLocale(this.userId)) ?? "en-US";
     }
     return this._userLocale;
   }

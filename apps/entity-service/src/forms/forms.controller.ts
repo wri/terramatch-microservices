@@ -34,7 +34,7 @@ export class FormsController {
   @ExceptionResponse(NotFoundException, { description: "Form not found" })
   @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
   async formGet(@Param("uuid") uuid: string, @Request() { authenticatedUserId }) {
-    const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
+    const locale = await User.findLocale(authenticatedUserId);
     if (locale == null) throw new BadRequestException("Locale is required");
 
     // Note: a lot of this method will likely be abstracted to a service when the form index endpoint is implemented.
@@ -130,5 +130,17 @@ export class FormsController {
     }
 
     return document;
+  }
+
+  @Get("")
+  @ApiOperation({
+    operationId: "formIndex",
+    description: "Get a paginated and filtered list of forms. Includes all sections and questions within the form."
+  })
+  @JsonApiResponse({ data: FormDto, included: [FormSectionDto, FormQuestionDto], pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
+  async formIndex(@Request() { authenticatedUserId }) {
+    const locale = await User.findLocale(authenticatedUserId);
+    if (locale == null) throw new BadRequestException("Locale is required");
   }
 }

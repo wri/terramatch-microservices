@@ -34,7 +34,8 @@ export class OptionLabelsController {
   @ExceptionResponse(NotFoundException, { description: "No records matching the given slugs exist" })
   async optionLabelsIndex(@Query("ids") ids: string[], @Request() { authenticatedUserId }) {
     if (isEmpty(ids)) throw new BadRequestException("Set of ids is required");
-    const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
+
+    const locale = await User.findLocale(authenticatedUserId);
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const listOptions = (await FormOptionListOption.findAll({
@@ -71,7 +72,7 @@ export class OptionLabelsController {
   @ExceptionResponse(NotFoundException, { description: "List for listKey not found" })
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
   async findList(@Param("listKey") listKey: string, @Request() { authenticatedUserId }) {
-    const locale = (await User.findOne({ where: { id: authenticatedUserId }, attributes: ["locale"] }))?.locale;
+    const locale = await User.findLocale(authenticatedUserId);
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const list = await FormOptionList.findOne({

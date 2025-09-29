@@ -33,10 +33,10 @@ export class FormLightDto extends HybridSupportDto {
   bannerUrl: string | null;
 }
 
-export class FormDto extends FormLightDto {
-  constructor(form: FormWithoutTranslations, props: HybridSupportProps<FormDto, FormWithoutTranslations>) {
+export class FormFullDto extends FormLightDto {
+  constructor(form: FormWithoutTranslations, props: HybridSupportProps<FormFullDto, FormWithoutTranslations>) {
     super();
-    populateDto<FormDto, FormWithoutTranslations>(this, form, { lightResource: false, ...props });
+    populateDto<FormFullDto, FormWithoutTranslations>(this, form, { lightResource: false, ...props });
   }
 
   @ApiProperty({ nullable: true, type: String, description: "Translated form subtitle" })

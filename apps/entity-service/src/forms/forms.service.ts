@@ -15,7 +15,7 @@ import {
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { filter, flattenDeep, groupBy, uniq } from "lodash";
-import { FormDto, FormLightDto } from "./dto/form.dto";
+import { FormFullDto, FormLightDto } from "./dto/form.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
@@ -101,9 +101,9 @@ export class FormsService {
     const translations = await this.getTranslationsForFullDto(form, sections, questions, tableHeaders, options);
 
     const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
-    document.addData<FormDto>(
+    document.addData<FormFullDto>(
       form.uuid,
-      new FormDto(form, {
+      new FormFullDto(form, {
         ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
         fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
         bannerUrl: bannerMedia == null ? null : this.mediaService.getUrl(bannerMedia)

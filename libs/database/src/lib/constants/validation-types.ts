@@ -3,8 +3,14 @@ export const VALIDATION_TYPES = ["SELF_INTERSECTION", "SPIKES"] as const;
 export type ValidationType = (typeof VALIDATION_TYPES)[number];
 
 export const VALIDATION_CRITERIA_IDS = {
+  OVERLAPPING: 3,
   SELF_INTERSECTION: 4,
-  SPIKES: 8
+  POLYGON_SIZE: 6,
+  WITHIN_COUNTRY: 7,
+  SPIKES: 8,
+  ESTIMATED_AREA: 12,
+  DATA_COMPLETENESS: 14,
+  PLANT_START_DATE: 15
 } as const;
 
 export type CriteriaId = (typeof VALIDATION_CRITERIA_IDS)[ValidationType];

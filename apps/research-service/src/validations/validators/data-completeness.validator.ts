@@ -1,6 +1,7 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
+import { Attributes } from "sequelize";
 
 interface DataCompletenessValidationResult extends ValidationResult {
   extraInfo: {
@@ -13,7 +14,14 @@ interface DataCompletenessValidationResult extends ValidationResult {
   } | null;
 }
 
-const VALIDATION_FIELDS = ["polyName", "practice", "targetSys", "distr", "numTrees", "plantStart"];
+const VALIDATION_FIELDS: (keyof Attributes<SitePolygon>)[] = [
+  "polyName",
+  "practice",
+  "targetSys",
+  "distr",
+  "numTrees",
+  "plantStart"
+];
 
 const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
 

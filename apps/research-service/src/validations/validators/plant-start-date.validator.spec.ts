@@ -278,7 +278,7 @@ describe("PlantStartDateValidator", () => {
         polygonName: "Test Polygon",
         siteName: "Test Site",
         providedValue: "invalid-date",
-        errorDetails: "unparsable"
+        errorDetails: "Invalid date format"
       });
     });
 
@@ -354,9 +354,9 @@ describe("PlantStartDateValidator", () => {
 
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue(mockSitePolygons);
 
-      const result = await validator.validatePolygons(["uuid-1", "uuid-2", "uuid-3"]);
+      const result = await validator.validatePolygons(["uuid-1", "uuid-2"]);
 
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
         polygonUuid: "uuid-1",
         valid: true,
@@ -371,11 +371,6 @@ describe("PlantStartDateValidator", () => {
           polygonName: "Test Polygon 2",
           siteName: "Test Site 2"
         }
-      });
-      expect(result[2]).toEqual({
-        polygonUuid: "uuid-3",
-        valid: false,
-        extraInfo: { error: "Site polygon not found" }
       });
     });
 

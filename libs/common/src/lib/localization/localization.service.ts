@@ -7,7 +7,7 @@ import { Dictionary } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
-type Translations = Record<number, string | null>;
+export type Translations = Record<number, string | null>;
 
 @Injectable()
 export class LocalizationService {

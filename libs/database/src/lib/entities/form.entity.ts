@@ -18,8 +18,7 @@ export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 
   static readonly MEDIA = {
-    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" },
-    document: { dbCollection: "document", multiple: false, validation: "general-documents" }
+    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
   } as const;
 
   @PrimaryKey

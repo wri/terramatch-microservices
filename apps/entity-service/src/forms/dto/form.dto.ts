@@ -5,8 +5,15 @@ import { Form } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";
+import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
 
 type FormWithoutTranslations = Omit<Form, "title" | "subtitle" | "description" | "submissionMessage">;
+
+@JsonApiConstants
+export class Forms {
+  @ApiProperty({ example: FORM_TYPES })
+  FORM_TYPES: string[];
+}
 
 @JsonApiDto({ type: "forms" })
 export class FormLightDto extends HybridSupportDto {

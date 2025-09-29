@@ -1,7 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
-import { ApiOperation, ApiParam } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FormFullDto, FormLightDto } from "./dto/form.dto";
+import { FormFullDto, FormLightDto, Forms } from "./dto/form.dto";
 import { FormQuestionDto } from "./dto/form-question.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -11,6 +11,7 @@ import { FormQueryDto } from "./dto/form-query.dto";
 
 // TODO (NJC): Specs for this controller before epic TM-2411 is merged
 @Controller("forms/v3/forms")
+@ApiExtraModels(Forms)
 export class FormsController {
   constructor(private readonly formsService: FormsService) {}
 

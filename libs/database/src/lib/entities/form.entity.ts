@@ -12,6 +12,7 @@ import {
 import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
+import { FormType } from "../constants/forms";
 
 @Table({ tableName: "forms", underscored: true, paranoid: true })
 export class Form extends Model<Form> {
@@ -46,7 +47,7 @@ export class Form extends Model<Form> {
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  type: FormType | null;
 
   @Column(TEXT)
   title: string;

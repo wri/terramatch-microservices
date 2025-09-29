@@ -4,6 +4,7 @@ import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database
 import { Form } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";
 
 type FormWithoutTranslations = Omit<Form, "title" | "subtitle" | "description" | "submissionMessage">;
 
@@ -22,8 +23,8 @@ export class FormLightDto extends HybridSupportDto {
   @ApiProperty({ description: "Translated form title" })
   title: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  type: string | null;
+  @ApiProperty({ nullable: true, enum: FORM_TYPES })
+  type: FormType | null;
 
   @ApiProperty()
   published: boolean;

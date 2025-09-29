@@ -13,14 +13,19 @@ import {
   User
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { filter, flattenDeep, groupBy, uniq } from "lodash";
-import { FormDto } from "./dto/form.dto";
+import { FormDto, FormLightDto } from "./dto/form.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Attributes, Model } from "sequelize";
+import { FormQueryDto } from "./dto/form-query.dto";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+
+const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
+const SIMPLE_FILTERS: (keyof FormQueryDto)[] = ["type"];
 
 @Injectable({ scope: Scope.REQUEST })
 export class FormsService {
@@ -36,6 +41,51 @@ export class FormsService {
     return form;
   }
 
+  async findMany(query: FormQueryDto) {
+    const builder = PaginatedQueryBuilder.forNumberPage(Form, query.page);
+
+    if (query.sort?.field != null) {
+      if (SORTABLE_FIELDS.includes(query.sort?.field as keyof Attributes<Form>)) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else {
+        throw new BadRequestException(`Invalid sort field: ${query.sort?.field}`);
+      }
+    }
+
+    for (const term of SIMPLE_FILTERS) {
+      if (query[term] != null) builder.where({ [term]: query[term] });
+    }
+
+    return { forms: await builder.execute(), paginationTotal: await builder.paginationTotal() };
+  }
+
+  async addIndex(document: DocumentBuilder, query: FormQueryDto) {
+    const { forms, paginationTotal } = await this.findMany(query);
+    const i18nIds = uniq(forms.map(({ titleId }) => titleId)).filter(id => id != null);
+    const translations = await this.localizationService.translateIds(i18nIds, await this.getUserLocale());
+    const bannerMediaByFormId = groupBy(
+      await Media.for(forms).findAll({ where: { collectionName: "banner" } }),
+      "modelId"
+    );
+
+    for (const form of forms) {
+      const banner = bannerMediaByFormId[form.id]?.[0];
+      document.addData(
+        form.uuid,
+        new FormLightDto(form, {
+          ...this.translateFields(translations, form, ["title"]),
+          bannerUrl: banner == null ? null : this.mediaService.getUrl(banner)
+        })
+      );
+    }
+
+    return document.addIndex({
+      requestPath: `/forms/v3/forms${getStableRequestQuery(query)}`,
+      total: paginationTotal,
+      pageNumber: query.page?.number ?? 1
+    });
+  }
+
   async addFullDto(document: DocumentBuilder, form: Form): Promise<DocumentBuilder> {
     // Note: Fetching the sections / questions / table headers as their own queries is substantially
     // more efficient than joining these large tables together into the form query above.
@@ -48,7 +98,7 @@ export class FormsService {
     const optionsImages =
       options.length == 0 ? [] : await Media.for(options).findAll({ where: { collectionName: "image" } });
 
-    const translations = await this.getTranslations(form, sections, questions, tableHeaders, options);
+    const translations = await this.getTranslationsForFullDto(form, sections, questions, tableHeaders, options);
 
     const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
     document.addData<FormDto>(
@@ -128,7 +178,7 @@ export class FormsService {
     return this._userLocale;
   }
 
-  private async getTranslations(
+  private async getTranslationsForFullDto(
     form: Form,
     sections: FormSection[],
     questions: FormQuestion[],

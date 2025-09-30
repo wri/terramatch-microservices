@@ -8,6 +8,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
+import { CriteriaId } from "@terramatch-microservices/database/constants";
 
 @Controller("validations/v3")
 @ApiTags("Validations")
@@ -44,11 +45,17 @@ export class ValidationController {
     const pageSize = query.page?.size ?? MAX_PAGE_SIZE;
     const pageNumber = query.page?.number ?? 1;
 
+    const criteriaId = query.criteriaId != null ? (Number(query.criteriaId) as CriteriaId) : undefined;
+
+    if (criteriaId != null && (criteriaId < 1 || Number.isInteger(criteriaId) === false)) {
+      throw new BadRequestException("criteriaId must be a valid integer greater than or equal to 1");
+    }
+
     const { validations, total } = await this.validationService.getSiteValidations(
       siteUuid,
       pageSize,
       pageNumber,
-      query.criteriaId
+      criteriaId
     );
 
     return validations

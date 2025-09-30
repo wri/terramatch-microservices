@@ -1,34 +1,18 @@
-import {
-  DisturbanceReport,
-  FinancialReport,
-  Nursery,
-  NurseryReport,
-  Project,
-  ProjectReport,
-  Site,
-  SiteReport
-} from "../entities";
+import { FinancialReport, Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";
 
-export const REPORT_TYPES = [
-  "projectReports",
-  "siteReports",
-  "nurseryReports",
-  "financialReports",
-  "disturbanceReports"
-] as const;
+export const REPORT_TYPES = ["projectReports", "siteReports", "nurseryReports", "financialReports"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
-export type ReportModel = ProjectReport | SiteReport | NurseryReport | FinancialReport | DisturbanceReport;
+export type ReportModel = ProjectReport | SiteReport | NurseryReport | FinancialReport;
 export type ReportClass<T extends ReportModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
   projectReports: ProjectReport,
   siteReports: SiteReport,
   nurseryReports: NurseryReport,
-  financialReports: FinancialReport,
-  disturbanceReports: DisturbanceReport
+  financialReports: FinancialReport
 };
 
 export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] as const;
@@ -55,13 +39,7 @@ export const isReport = (entity: EntityModel): entity is ReportModel =>
  */
 export async function getProjectId(entity: EntityModel) {
   if (entity instanceof Project) return entity.id;
-  if (
-    entity instanceof Site ||
-    entity instanceof Nursery ||
-    entity instanceof ProjectReport ||
-    entity instanceof DisturbanceReport
-  )
-    return entity.projectId;
+  if (entity instanceof Site || entity instanceof Nursery || entity instanceof ProjectReport) return entity.projectId;
 
   // FinancialReport does not have a projectId, return undefined
   if (entity instanceof FinancialReport) return undefined;

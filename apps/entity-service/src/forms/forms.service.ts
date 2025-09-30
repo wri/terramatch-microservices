@@ -21,11 +21,11 @@ import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFie
 import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Attributes, Model, Op } from "sequelize";
-import { FormQueryDto } from "./dto/form-query.dto";
+import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
-const SIMPLE_FILTERS: (keyof FormQueryDto)[] = ["type"];
+const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
 
 @Injectable({ scope: Scope.REQUEST })
 export class FormsService {
@@ -41,7 +41,7 @@ export class FormsService {
     return form;
   }
 
-  async findMany(query: FormQueryDto) {
+  async findMany(query: FormIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Form, query.page);
 
     if (query.sort?.field != null) {
@@ -63,10 +63,8 @@ export class FormsService {
     return { forms: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addIndex(document: DocumentBuilder, query: FormQueryDto) {
+  async addIndex(document: DocumentBuilder, query: FormIndexQueryDto) {
     const { forms, paginationTotal } = await this.findMany(query);
-    const i18nIds = uniq(forms.map(({ titleId }) => titleId)).filter(id => id != null);
-    const translations = await this.localizationService.translateIds(i18nIds, await this.getUserLocale());
     const bannerMediaByFormId = groupBy(
       await Media.for(forms).findAll({ where: { collectionName: "banner" } }),
       "modelId"
@@ -77,7 +75,7 @@ export class FormsService {
       document.addData(
         form.uuid,
         new FormLightDto(form, {
-          ...this.translateFields(translations, form, ["title"]),
+          title: form.title,
           bannerUrl: banner == null ? null : this.mediaService.getUrl(banner)
         })
       );
@@ -90,7 +88,7 @@ export class FormsService {
     });
   }
 
-  async addFullDto(document: DocumentBuilder, form: Form): Promise<DocumentBuilder> {
+  async addFullDto(document: DocumentBuilder, form: Form, translated: boolean): Promise<DocumentBuilder> {
     // Note: Fetching the sections / questions / table headers as their own queries is substantially
     // more efficient than joining these large tables together into the form query above.
     // Note: Form / section / question relations are odd - form_sections.form_id is the form uuid, but
@@ -102,12 +100,15 @@ export class FormsService {
     const optionsImages =
       options.length == 0 ? [] : await Media.for(options).findAll({ where: { collectionName: "image" } });
 
-    const translations = await this.getTranslationsForFullDto(form, sections, questions, tableHeaders, options);
+    const translations = translated
+      ? await this.getTranslationsForFullDto(form, sections, questions, tableHeaders, options)
+      : {};
 
     const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
     document.addData<FormFullDto>(
       form.uuid,
       new FormFullDto(form, {
+        translated,
         ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
         fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
         bannerUrl: bannerMedia == null ? null : this.mediaService.getUrl(bannerMedia)

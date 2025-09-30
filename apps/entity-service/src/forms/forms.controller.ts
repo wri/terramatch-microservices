@@ -7,7 +7,7 @@ import { FormSectionDto } from "./dto/form-section.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
-import { FormQueryDto } from "./dto/form-query.dto";
+import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 
 // TODO (NJC): Specs for this controller before epic TM-2411 is merged
 @Controller("forms/v3/forms")
@@ -22,7 +22,7 @@ export class FormsController {
   })
   @JsonApiResponse({ data: FormLightDto, included: [FormSectionDto, FormQuestionDto], pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params are invalid" })
-  async formIndex(@Query() query: FormQueryDto) {
+  async formIndex(@Query() query: FormIndexQueryDto) {
     return await this.formsService.addIndex(buildJsonApi<FormLightDto>(FormLightDto, { pagination: "number" }), query);
   }
 
@@ -35,8 +35,8 @@ export class FormsController {
   @JsonApiResponse({ data: FormFullDto, included: [FormSectionDto, FormQuestionDto] })
   @ExceptionResponse(NotFoundException, { description: "Form not found" })
   @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
-  async formGet(@Param("uuid") uuid: string) {
+  async formGet(@Param("uuid") uuid: string, @Query() query: FormGetQueryDto) {
     const form = await this.formsService.findOne(uuid);
-    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, query.translated ?? true);
   }
 }

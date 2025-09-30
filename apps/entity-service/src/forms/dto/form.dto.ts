@@ -46,10 +46,15 @@ export class FormFullDto extends FormLightDto {
     populateDto<FormFullDto, FormWithoutTranslations>(this, form, { lightResource: false, ...props });
   }
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated form subtitle" })
+  @ApiProperty({
+    description: "Indicates whether the text fields in this form response have been translated to the user's locale"
+  })
+  translated: boolean;
+
+  @ApiProperty({ nullable: true, type: String })
   subtitle: string | null;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated form description" })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 
   @ApiProperty({ nullable: true, enum: FRAMEWORK_KEYS })
@@ -64,7 +69,7 @@ export class FormFullDto extends FormLightDto {
   @ApiProperty({ nullable: true, type: Date })
   deadlineAt: Date | null;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated submission message" })
+  @ApiProperty({ nullable: true, type: String })
   submissionMessage: string | null;
 
   @ApiProperty({ nullable: true, type: String })

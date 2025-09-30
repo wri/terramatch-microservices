@@ -10,7 +10,7 @@ export class FormTableHeaderDto {
   @ApiProperty({ nullable: true, type: String })
   slug: string | null;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated header label" })
+  @ApiProperty({ nullable: true, type: String })
   label: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
@@ -51,13 +51,13 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
 
-  @ApiProperty({ description: "Translated question label" })
+  @ApiProperty()
   label: string;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated question placeholder" })
+  @ApiProperty({ nullable: true, type: String })
   placeholder: string | null;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated question description" })
+  @ApiProperty({ nullable: true, type: String })
   description: string | null;
 
   @ApiProperty({ nullable: true, type: Object })

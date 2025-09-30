@@ -43,7 +43,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   })),
   SitePolygon: {
     findAndCountAll: jest.fn(),
-    findAll: jest.fn()
+    findAll: jest.fn(),
+    findOne: jest.fn()
   }
 }));
 
@@ -360,6 +361,88 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(2);
       expect(result.results[0].criteriaId).toBe(4);
       expect(result.results[1].criteriaId).toBe(8);
+    });
+
+    it("should validate polygons with DATA_COMPLETENESS validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["DATA_COMPLETENESS" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        polyName: null,
+        practice: null,
+        targetSys: "agroforest",
+        distr: "single-line",
+        numTrees: 100,
+        plantStart: new Date("2023-01-01")
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 14,
+        valid: false,
+        createdAt: expect.any(Date),
+        extraInfo: expect.objectContaining({
+          validationErrors: expect.arrayContaining([
+            expect.objectContaining({ field: "polyName", exists: false }),
+            expect.objectContaining({ field: "practice", exists: false })
+          ]),
+          missingFields: expect.arrayContaining(["polyName", "practice"])
+        })
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1" },
+        attributes: ["polyName", "practice", "targetSys", "distr", "numTrees", "plantStart"]
+      });
+    });
+
+    it("should validate polygons with PLANT_START_DATE validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["PLANT_START_DATE" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        polyName: "Test Polygon",
+        plantStart: "2020-06-15",
+        siteUuid: "site-uuid-1",
+        site: {
+          name: "Test Site",
+          startDate: new Date("2019-01-01")
+        }
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 15,
+        valid: true,
+        createdAt: expect.any(Date),
+        extraInfo: null
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1" },
+        attributes: ["polyName", "plantStart", "siteUuid"],
+        include: [
+          {
+            model: undefined,
+            as: "site",
+            attributes: ["name", "startDate"]
+          }
+        ]
+      });
     });
 
     it("should validate polygon with SELF_INTERSECTION when specified", async () => {

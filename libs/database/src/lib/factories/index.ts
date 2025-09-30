@@ -2,8 +2,6 @@ export * from "./application.factory";
 export * from "./delayed-job.factory";
 export * from "./demographic.factory";
 export * from "./demographic-entry.factory";
-export * from "./disturbance-report.factory";
-export * from "./disturbance-report-entry.factory";
 export * from "./financial-indicator.factory";
 export * from "./financial-report.factory";
 export * from "./funding-type.factory";

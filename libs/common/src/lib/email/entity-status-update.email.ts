@@ -15,7 +15,6 @@ import {
   FinancialReport,
   ProjectReport,
   ProjectUser,
-  DisturbanceReport,
   SiteReport,
   UpdateRequest,
   User
@@ -110,7 +109,6 @@ export class EntityStatusUpdateEmail extends EmailSender {
     if (report instanceof ProjectReport) return report.projectName;
     if (report instanceof SiteReport) return report.siteName;
     if (report instanceof FinancialReport) return report.organisationName;
-    if (report instanceof DisturbanceReport) return report.projectName;
     return report.nurseryName;
   }
 

@@ -8,12 +8,10 @@ import { SiteReportConfiguration } from "./site-report.configuration";
 import { NurseryConfiguration } from "./nursery.configuration";
 import { NurseryReportConfiguration } from "./nursery-report.configuration";
 import { LinkedFieldConfiguration } from "../types";
-import { DisturbanceReportConfiguration } from "./disturbance-report.configuration";
 
 export const FORM_TYPES = [
   "organisation",
   "financialReport",
-  "disturbanceReport",
   "nursery",
   "nurseryReport",
   "project",
@@ -27,7 +25,6 @@ export type FormType = (typeof FORM_TYPES)[number];
 export const LinkedFieldsConfiguration: Record<FormType, LinkedFieldConfiguration> = {
   organisation: OrganisationConfiguration,
   financialReport: FinancialReportConfiguration,
-  disturbanceReport: DisturbanceReportConfiguration,
   nursery: NurseryConfiguration,
   nurseryReport: NurseryReportConfiguration,
   project: ProjectConfiguration,

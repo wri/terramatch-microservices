@@ -23,7 +23,7 @@ export class LinkedFieldDto {
   @ApiProperty({ nullable: true, type: String })
   optionListKey: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  @ApiProperty({ nullable: true, type: Boolean })
   multiChoice: boolean | null;
 
   @ApiProperty({ nullable: true, type: String })

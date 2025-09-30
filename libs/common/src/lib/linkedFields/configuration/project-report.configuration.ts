@@ -167,6 +167,13 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
       multiChoice: false,
       optionListKey: "local-engagement"
     },
+    "pro-rep-planting-status": {
+      property: "planting_status",
+      label: "What is the status of planting for this project?",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "planting-status"
+    },
     "pro-rep-site-addition": { property: "site_addition", label: "Site Addition", inputType: "boolean" },
     "pro-rep-resilience_progress": {
       property: "resilience_progress",

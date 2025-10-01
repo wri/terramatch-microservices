@@ -1,4 +1,11 @@
-export const VALIDATION_TYPES = ["SELF_INTERSECTION", "SPIKES", "DATA_COMPLETENESS", "PLANT_START_DATE"] as const;
+export const VALIDATION_TYPES = [
+  "SELF_INTERSECTION",
+  "POLYGON_SIZE",
+  "SPIKES",
+  "ESTIMATED_AREA",
+  "DATA_COMPLETENESS",
+  "PLANT_START_DATE"
+] as const;
 
 export type ValidationType = (typeof VALIDATION_TYPES)[number];
 

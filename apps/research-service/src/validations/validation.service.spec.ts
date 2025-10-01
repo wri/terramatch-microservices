@@ -9,6 +9,7 @@ import {
   Site,
   Project
 } from "@terramatch-microservices/database/entities";
+import { Literal } from "sequelize/types/utils";
 import { ValidationType } from "@terramatch-microservices/database/constants";
 
 interface MockCriteriaSite {
@@ -50,7 +51,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     sum: jest.fn()
   },
   Site: {
-    findAll: jest.fn()
+    findAll: jest.fn(),
+    uuidsSubquery: jest.fn()
   },
   Project: {
     findByPk: jest.fn()
@@ -506,7 +508,7 @@ describe("ValidationService", () => {
         id: 1,
         totalHectaresRestoredGoal: 5000
       });
-      (Site.findAll as jest.Mock).mockResolvedValue([{ uuid: "site-uuid-1" }]);
+      (Site.uuidsSubquery as jest.Mock).mockReturnValue("subquery-literal" as unknown as Literal);
       (SitePolygon.sum as jest.Mock)
         .mockResolvedValueOnce(800) // Site area sum
         .mockResolvedValueOnce(4000); // Project area sum

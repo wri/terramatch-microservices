@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { EstimatedAreaValidator } from "./estimated-area.validator";
 import { SitePolygon, Site, Project } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
+import { Literal } from "sequelize/types/utils";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   SitePolygon: {
@@ -9,7 +10,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     sum: jest.fn()
   },
   Site: {
-    findAll: jest.fn()
+    findAll: jest.fn(),
+    uuidsSubquery: jest.fn()
   },
   Project: {
     findByPk: jest.fn()
@@ -20,13 +22,13 @@ describe("EstimatedAreaValidator", () => {
   let validator: EstimatedAreaValidator;
   let mockSitePolygonFindOne: jest.MockedFunction<typeof SitePolygon.findOne>;
   let mockSitePolygonSum: jest.MockedFunction<typeof SitePolygon.sum>;
-  let mockSiteFindAll: jest.MockedFunction<typeof Site.findAll>;
+  let mockSiteUuidsSubquery: jest.MockedFunction<typeof Site.uuidsSubquery>;
   let mockProjectFindByPk: jest.MockedFunction<typeof Project.findByPk>;
 
   beforeEach(async () => {
     mockSitePolygonFindOne = SitePolygon.findOne as jest.MockedFunction<typeof SitePolygon.findOne>;
     mockSitePolygonSum = SitePolygon.sum as jest.MockedFunction<typeof SitePolygon.sum>;
-    mockSiteFindAll = Site.findAll as jest.MockedFunction<typeof Site.findAll>;
+    mockSiteUuidsSubquery = Site.uuidsSubquery as jest.MockedFunction<typeof Site.uuidsSubquery>;
     mockProjectFindByPk = Project.findByPk as jest.MockedFunction<typeof Project.findByPk>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -57,7 +59,7 @@ describe("EstimatedAreaValidator", () => {
         id: 1,
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
-      mockSiteFindAll.mockResolvedValue([{ uuid: "site-uuid-1" }, { uuid: "site-uuid-2" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
       mockSitePolygonSum
         .mockResolvedValueOnce(800) // Site area sum
         .mockResolvedValueOnce(4000); // Project area sum
@@ -95,7 +97,7 @@ describe("EstimatedAreaValidator", () => {
         id: 2,
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
-      mockSiteFindAll.mockResolvedValue([{ uuid: "site-uuid-2" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
       mockSitePolygonSum
         .mockResolvedValueOnce(500) // Site area sum - too low
         .mockResolvedValueOnce(2000); // Project area sum - too low
@@ -133,7 +135,7 @@ describe("EstimatedAreaValidator", () => {
         id: 3,
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
-      mockSiteFindAll.mockResolvedValue([{ uuid: "site-uuid-3" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
       mockSitePolygonSum
         .mockResolvedValueOnce(800) // Site area sum - within bounds
         .mockResolvedValueOnce(2000); // Project area sum - outside bounds
@@ -159,7 +161,7 @@ describe("EstimatedAreaValidator", () => {
         id: 4,
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
-      mockSiteFindAll.mockResolvedValue([{ uuid: "site-uuid-4" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
       mockSitePolygonSum
         .mockResolvedValueOnce(500) // Site area sum - outside bounds
         .mockResolvedValueOnce(4000); // Project area sum - within bounds
@@ -185,7 +187,7 @@ describe("EstimatedAreaValidator", () => {
         id: 5,
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
-      mockSiteFindAll.mockResolvedValue([{ uuid: "site-uuid-5" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
       mockSitePolygonSum.mockResolvedValueOnce(4000); // Project area sum
 
       const result = await validator.validatePolygon(polygonUuid);
@@ -245,7 +247,7 @@ describe("EstimatedAreaValidator", () => {
         id: 7,
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
-      mockSiteFindAll.mockResolvedValue([{ uuid: "site-uuid-7" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
       mockSitePolygonSum.mockResolvedValueOnce(4000); // Project area sum
 
       const result = await validator.validatePolygon(polygonUuid);
@@ -314,9 +316,9 @@ describe("EstimatedAreaValidator", () => {
           totalHectaresRestoredGoal: 10000
         } as unknown as Project);
 
-      mockSiteFindAll
-        .mockResolvedValueOnce([{ uuid: "site-uuid-1" }] as unknown as Site[])
-        .mockResolvedValueOnce([{ uuid: "site-uuid-2" }] as unknown as Site[]);
+      mockSiteUuidsSubquery
+        .mockReturnValueOnce("subquery-literal-1" as unknown as Literal)
+        .mockReturnValueOnce("subquery-literal-2" as unknown as Literal);
 
       mockSitePolygonSum
         .mockResolvedValueOnce(800) // Site area sum for uuid-1
@@ -363,7 +365,7 @@ describe("EstimatedAreaValidator", () => {
         totalHectaresRestoredGoal: 5000
       } as unknown as Project);
 
-      mockSiteFindAll.mockResolvedValueOnce([{ uuid: "site-uuid-1" }] as unknown as Site[]);
+      mockSiteUuidsSubquery.mockReturnValueOnce("subquery-literal" as unknown as Literal);
 
       mockSitePolygonSum
         .mockResolvedValueOnce(800) // Site area sum for uuid-1

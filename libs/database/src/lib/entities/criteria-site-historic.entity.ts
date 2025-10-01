@@ -1,28 +1,19 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  BelongsTo,
-  Column,
-  ForeignKey,
-  Index,
-  Model,
-  PrimaryKey,
-  Table
-} from "sequelize-typescript";
+import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { CriteriaId } from "../constants/validation-types";
 
 @Table({
-  tableName: "criteria_site",
+  tableName: "criteria_site_historic",
   underscored: true,
+  paranoid: false,
   indexes: [
-    { name: "criteria_site_polygon_id_index", fields: ["polygon_id"] },
-    { name: "criteria_site_criteria_id_index", fields: ["criteria_id"] }
+    { name: "criteria_site_historic_polygon_id_index", fields: ["polygon_id"] },
+    { name: "criteria_site_historic_criteria_id_index", fields: ["criteria_id"] }
   ]
 })
-export class CriteriaSite extends Model<CriteriaSite> {
-  static readonly LARAVEL_TYPE = "App\\Models\\V2\\CriteriaSite";
+export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\CriteriaSiteHistoric";
 
   @PrimaryKey
   @AutoIncrement
@@ -36,7 +27,6 @@ export class CriteriaSite extends Model<CriteriaSite> {
   @Column(INTEGER)
   criteriaId: CriteriaId;
 
-  @ForeignKey(() => PolygonGeometry)
   @Column(UUID)
   polygonId: string;
 

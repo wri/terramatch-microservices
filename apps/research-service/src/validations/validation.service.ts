@@ -1,10 +1,25 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { CriteriaSite, PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
+import {
+  CriteriaSite,
+  CriteriaSiteHistoric,
+  PolygonGeometry,
+  SitePolygon
+} from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";
+import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
+import { SpikesValidator } from "./validators/spikes.validator";
+import { Validator } from "./validators/validator.interface";
+import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
+
+export const VALIDATORS: Record<ValidationType, Validator> = {
+  SELF_INTERSECTION: new SelfIntersectionValidator(),
+  SPIKES: new SpikesValidator()
+};
 
 @Injectable()
 export class ValidationService {
@@ -114,5 +129,72 @@ export class ValidationService {
       validations,
       total
     };
+  }
+
+  async validatePolygons(request: ValidationRequestDto): Promise<ValidationResponseDto> {
+    const results: ValidationCriteriaDto[] = [];
+
+    for (const polygonUuid of request.polygonUuids) {
+      for (const validationType of request.validationTypes) {
+        const validator = VALIDATORS[validationType];
+        if (validator == null) {
+          throw new BadRequestException(`Unknown validation type: ${validationType}`);
+        }
+
+        const validationResult = await validator.validatePolygon(polygonUuid);
+        const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+        await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
+
+        results.push({
+          polygonUuid: polygonUuid,
+          criteriaId: criteriaId,
+          valid: validationResult.valid,
+          createdAt: new Date(),
+          extraInfo: validationResult.extraInfo
+        });
+      }
+    }
+
+    return { results };
+  }
+
+  private getCriteriaIdForValidationType(validationType: ValidationType): CriteriaId {
+    return VALIDATION_CRITERIA_IDS[validationType];
+  }
+
+  private async saveValidationResult(
+    polygonUuid: string,
+    criteriaId: CriteriaId,
+    valid: boolean,
+    extraInfo: object | null
+  ): Promise<void> {
+    const existingCriteria = await CriteriaSite.findOne({
+      where: {
+        polygonId: polygonUuid,
+        criteriaId
+      }
+    });
+
+    if (existingCriteria !== null) {
+      const historicRecord = new CriteriaSiteHistoric();
+      historicRecord.polygonId = polygonUuid;
+      historicRecord.criteriaId = criteriaId;
+      historicRecord.valid = existingCriteria.valid;
+      historicRecord.extraInfo = existingCriteria.extraInfo;
+      await historicRecord.save();
+
+      await existingCriteria.update({
+        valid,
+        extraInfo
+      });
+    } else {
+      const newRecord = new CriteriaSite();
+      newRecord.polygonId = polygonUuid;
+      newRecord.criteriaId = criteriaId;
+      newRecord.valid = valid;
+      newRecord.extraInfo = extraInfo;
+      await newRecord.save();
+    }
   }
 }

@@ -1,15 +1,15 @@
 import {
-  BelongsTo,
   AllowNull,
   AutoIncrement,
+  BelongsTo,
   Column,
-  ForeignKey,
   Index,
   Model,
   PrimaryKey,
-  Table
+  Table,
+  Unique
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, INTEGER, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { Form } from "./form.entity";
 
 @Table({ tableName: "form_sections", underscored: true, paranoid: true })
@@ -22,17 +22,17 @@ export class FormSection extends Model<FormSection> {
   override id: number;
 
   @Index
+  @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @Column(INTEGER)
+  @Column(TINYINT.UNSIGNED)
   order: number;
 
-  @ForeignKey(() => Form)
   @Column(UUID)
   formId: string;
 
-  @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid" })
+  @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid", constraints: false })
   form: Form | null;
 
   @AllowNull
@@ -48,14 +48,14 @@ export class FormSection extends Model<FormSection> {
   subtitle: string | null;
 
   @AllowNull
-  @Column(INTEGER)
-  subtitleId: number | null;
+  @Column(STRING)
+  subtitleId: string | null;
 
   @AllowNull
   @Column(STRING)
   description: string | null;
 
   @AllowNull
-  @Column(STRING)
+  @Column(INTEGER)
   descriptionId: number | null;
 }

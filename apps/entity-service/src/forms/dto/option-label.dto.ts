@@ -12,6 +12,6 @@ export class OptionLabelDto {
   @ApiProperty({ description: "Option label text in requesting user's locale, if available" })
   label: string;
 
-  @ApiProperty({ description: "Option label text in English", type: String, nullable: true })
+  @ApiProperty({ description: "Option image", type: String, nullable: true })
   imageUrl: string | null;
 }

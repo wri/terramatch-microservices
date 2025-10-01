@@ -1,4 +1,4 @@
-import { LinkedFieldConfiguration } from "../types";
+import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
 import { ProjectPitch } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.

@@ -1,4 +1,14 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  Index,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { MediaConfiguration } from "../constants/media-owners";
@@ -19,6 +29,7 @@ export class Form extends Model<Form> {
   override id: number;
 
   @Index
+  @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
@@ -39,9 +50,8 @@ export class Form extends Model<Form> {
   @Column(STRING)
   type: string | null;
 
-  @AllowNull
   @Column(TEXT)
-  title: string | null;
+  title: string;
 
   @AllowNull
   @Column(INTEGER)
@@ -66,10 +76,6 @@ export class Form extends Model<Form> {
   @AllowNull
   @Column(TEXT)
   documentation: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  documentationId: number | null;
 
   @AllowNull
   @Column(TEXT)

@@ -93,7 +93,7 @@ export class EstimatedAreaValidator implements Validator {
     lowerBoundSite: number | null;
     upperBoundSite: number | null;
   }> {
-    const site = sitePolygon.site != null ? sitePolygon.site : await sitePolygon.loadSite();
+    const site = await sitePolygon.loadSite();
     if (site == null || site.hectaresToRestoreGoal == null || site.hectaresToRestoreGoal <= 0) {
       return {
         valid: false,
@@ -129,7 +129,7 @@ export class EstimatedAreaValidator implements Validator {
     lowerBoundProject: number | null;
     upperBoundProject: number | null;
   }> {
-    const site = sitePolygon.site != null ? sitePolygon.site : await sitePolygon.loadSite();
+    const site = await sitePolygon.loadSite();
     if (site == null || site.projectId == null) {
       return {
         valid: false,
@@ -177,19 +177,9 @@ export class EstimatedAreaValidator implements Validator {
   }
 
   private async calculateProjectAreaSum(projectId: number): Promise<number> {
-    const sites = await Site.findAll({
-      where: { projectId },
-      attributes: ["uuid"]
-    });
-
-    if (sites.length === 0) {
-      return 0;
-    }
-
-    const siteUuids = sites.map(site => site.uuid);
     const result = await SitePolygon.sum("calcArea", {
       where: {
-        siteUuid: siteUuids,
+        siteUuid: Site.uuidsSubquery(projectId),
         isActive: true
       }
     });

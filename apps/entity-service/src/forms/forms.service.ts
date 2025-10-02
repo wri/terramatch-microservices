@@ -14,11 +14,11 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { filter, flattenDeep, groupBy, uniq } from "lodash";
+import { filter, flattenDeep, groupBy, sortBy, uniq } from "lodash";
 import { FormFullDto, FormLightDto } from "./dto/form.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
-import { FormQuestionDto, FormQuestionOptionDto, FormTableHeaderDto } from "./dto/form-question.dto";
+import { FormQuestionDto, FormQuestionOptionDto } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Attributes, Model, Op } from "sequelize";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
@@ -104,25 +104,6 @@ export class FormsService {
       ? await this.getTranslationsForFullDto(form, sections, questions, tableHeaders, options)
       : {};
 
-    const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
-    document.addData<FormFullDto>(
-      form.uuid,
-      new FormFullDto(form, {
-        translated,
-        ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
-        fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
-        bannerUrl: bannerMedia == null ? null : this.mediaService.getUrl(bannerMedia)
-      })
-    );
-
-    for (const section of sections) {
-      document.addData<FormSectionDto>(
-        section.uuid,
-        new FormSectionDto(section, this.translateFields(translations, section, ["title", "description"]))
-      );
-    }
-
-    const sectionsById = groupBy(sections, "id");
     const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
     const optionsByQuestionId = groupBy(options, "formQuestionId");
     const optionMediaByOptionId = optionsImages.reduce(
@@ -136,37 +117,64 @@ export class FormsService {
       {} as Record<number, { url: string | null; thumbUrl: string | null }>
     );
 
-    for (const question of questions) {
+    const questionToDto = (question: FormQuestion, sectionQuestions: FormQuestion[] = []) => {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
       // For file questions, the collection is the property of the field.
       const collection = (question.inputType === "file" ? config?.field.property : question.collection) ?? null;
-      document.addData<FormQuestionDto>(
-        question.uuid,
-        new FormQuestionDto(question, {
-          model: config?.model ?? null,
-          collection,
-          ...this.translateFields(translations, question, ["label", "description", "placeholder"]),
-          sectionId: sectionsById[question.formSectionId]?.[0]?.uuid,
-          tableHeaders: tableHeadersByQuestionId[question.id]?.map(header =>
-            populateDto<FormTableHeaderDto>(new FormTableHeaderDto(), {
-              slug: header.slug,
-              ...this.translateFields(translations, header, ["label"]),
-              order: header.order
-            })
-          ),
-          options: optionsByQuestionId[question.id]?.map(option =>
-            populateDto<FormQuestionOptionDto>(new FormQuestionOptionDto(), {
-              slug: option.slug ?? "",
-              imageUrl: optionMediaByOptionId[option.id]?.url ?? option.imageUrl,
-              thumbUrl: optionMediaByOptionId[option.id]?.thumbUrl ?? null,
-              ...this.translateFields(translations, option, ["label"]),
-              altValue: null,
-              order: option.order
-            })
-          )
-        })
+      const childQuestions = sectionQuestions.filter(({ parentId }) => parentId === question.uuid);
+      const options = optionsByQuestionId[question.id];
+      const tableHeaders = tableHeadersByQuestionId[question.id];
+      return new FormQuestionDto(question, {
+        name: question.uuid,
+        model: config?.model ?? null,
+        collection,
+        ...this.translateFields(translations, question, ["label", "description", "placeholder"]),
+        tableHeaders:
+          tableHeaders == null
+            ? null
+            : sortBy(tableHeaders, "order").map(header => this.translateFields(translations, header, ["label"]).label),
+        options:
+          options == null
+            ? null
+            : sortBy(options, "order").map(option =>
+                populateDto<FormQuestionOptionDto>(new FormQuestionOptionDto(), {
+                  slug: option.slug ?? "",
+                  imageUrl: optionMediaByOptionId[option.id]?.url ?? option.imageUrl,
+                  thumbUrl: optionMediaByOptionId[option.id]?.thumbUrl ?? null,
+                  ...this.translateFields(translations, option, ["label"]),
+                  altValue: null
+                })
+              ),
+        children: childQuestions.length === 0 ? null : childQuestions.map(child => questionToDto(child))
+      });
+    };
+
+    const sectionToDto = (section: FormSection) => {
+      const sectionQuestions = sortBy(
+        questions.filter(({ formSectionId }) => formSectionId === section.id),
+        "order"
       );
-    }
+
+      return new FormSectionDto(section, {
+        id: section.uuid,
+        ...this.translateFields(translations, section, ["title", "description"]),
+        questions: sectionQuestions
+          .filter(({ parentId }) => parentId == null)
+          .map(question => questionToDto(question, sectionQuestions))
+      });
+    };
+
+    const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
+    document.addData<FormFullDto>(
+      form.uuid,
+      new FormFullDto(form, {
+        translated,
+        ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
+        fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
+        bannerUrl: bannerMedia == null ? null : this.mediaService.getUrl(bannerMedia),
+        sections: sortBy(sections, "order").map(sectionToDto)
+      })
+    );
 
     return document;
   }

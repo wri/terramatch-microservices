@@ -6,6 +6,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
+import { FormSectionDto } from "./form-section.dto";
 
 type FormWithoutTranslations = Omit<Form, "title" | "subtitle" | "description" | "submissionMessage">;
 
@@ -77,4 +78,7 @@ export class FormFullDto extends FormLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   fundingProgrammeId: string | null;
+
+  @ApiProperty({ type: () => FormSectionDto, isArray: true })
+  sections: FormSectionDto[];
 }

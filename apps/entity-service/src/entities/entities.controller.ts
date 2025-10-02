@@ -30,8 +30,6 @@ import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
 import { EntityUpdateBody } from "./dto/entity-update.dto";
 import { SupportedEntities } from "./dto/entity.dto";
 import { FinancialReportLightDto, FinancialReportFullDto } from "./dto/financial-report.dto";
-import { DisturbanceReportFullDto } from "./dto/disturbance-report.dto";
-import { DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -50,8 +48,7 @@ export class EntitiesController {
     { data: ProjectReportLightDto, pagination: "number" },
     { data: NurseryReportLightDto, pagination: "number" },
     { data: SiteReportLightDto, pagination: "number" },
-    { data: FinancialReportLightDto, pagination: "number" },
-    { data: DisturbanceReportLightDto, pagination: "number" }
+    { data: FinancialReportLightDto, pagination: "number" }
   ])
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async entityIndex<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Query() query: EntityQueryDto) {
@@ -74,8 +71,7 @@ export class EntitiesController {
     ProjectReportFullDto,
     NurseryReportFullDto,
     SiteReportFullDto,
-    FinancialReportFullDto,
-    DisturbanceReportFullDto
+    FinancialReportFullDto
   ])
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."

@@ -43,7 +43,6 @@ export type LinkedFile = Omit<LinkedField, "optionListKey" | "inputType"> & {
 export const RELATION_INPUT_TYPES = [
   "allBeneficiaries",
   "associates",
-  "disturbanceReportEntries",
   "disturbances",
   "employees",
   "financialIndicators",

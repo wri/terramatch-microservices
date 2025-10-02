@@ -49,18 +49,15 @@ export class FinancialReport extends Model<FinancialReport> {
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
 
-  @AllowNull
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
   organisationId: number;
 
-  @AllowNull
   @Column(STRING)
-  title: string | null;
+  title: string;
 
-  @AllowNull
   @Column(INTEGER)
-  yearOfReport: number | null;
+  yearOfReport: number;
 
   @AllowNull
   @Column(STRING)

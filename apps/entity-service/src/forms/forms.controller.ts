@@ -7,7 +7,6 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
 import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 
-// TODO (NJC): Specs for this controller before epic TM-2411 is merged
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
 export class FormsController {

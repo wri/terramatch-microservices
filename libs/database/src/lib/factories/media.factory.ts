@@ -1,4 +1,4 @@
-import { Media, Project, Site, Nursery, ProjectReport, SiteReport } from "../entities";
+import { Media, Project, Site, Nursery, ProjectReport, SiteReport, Form } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { ProjectFactory } from "./project.factory";
 import { SiteFactory } from "./site.factory";
@@ -6,6 +6,7 @@ import { NurseryFactory } from "./nursery.factory";
 import { ProjectReportFactory } from "./project-report.factory";
 import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
+import { FormFactory } from "./form.factory";
 
 const defaultAttributesFactory = async () => ({
   collectionName: faker.lorem.words(1),
@@ -46,5 +47,10 @@ export const MediaFactory = {
     ...(await defaultAttributesFactory()),
     modelType: SiteReport.LARAVEL_TYPE,
     modelId: SiteReportFactory.associate("id")
+  })),
+  forForm: FactoryGirl.define(Media, async () => ({
+    ...(await defaultAttributesFactory()),
+    modelType: Form.LARAVEL_TYPE,
+    modelId: FormFactory.associate("id")
   }))
 };

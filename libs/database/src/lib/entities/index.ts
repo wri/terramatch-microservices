@@ -2,6 +2,7 @@ export * from "./action.entity";
 export * from "./audit-status.entity";
 export * from "./application.entity";
 export * from "./criteria-site.entity";
+export * from "./criteria-site-historic.entity";
 export * from "./delayed-job.entity";
 export * from "./demographic.entity";
 export * from "./demographic-entry.entity";

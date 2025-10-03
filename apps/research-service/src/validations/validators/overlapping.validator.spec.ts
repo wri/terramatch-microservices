@@ -1,58 +1,54 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { OverlappingValidator } from "./overlapping.validator";
-import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { NotFoundException } from "@nestjs/common";
-import { Sequelize } from "sequelize";
+import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
+
+interface MockTransaction {
+  commit: jest.Mock;
+  rollback: jest.Mock;
+}
+
+jest.mock("@terramatch-microservices/database/entities", () => ({
+  SitePolygon: {
+    findOne: jest.fn(),
+    findAll: jest.fn()
+  },
+  Site: {
+    findByPk: jest.fn()
+  },
+  PolygonGeometry: {
+    sequelize: {
+      query: jest.fn(),
+      transaction: jest.fn()
+    }
+  }
+}));
 
 describe("OverlappingValidator", () => {
   let validator: OverlappingValidator;
-  let sequelize: Sequelize;
+  let mockSitePolygonFindOne: jest.MockedFunction<typeof SitePolygon.findOne>;
+  let mockSitePolygonFindAll: jest.MockedFunction<typeof SitePolygon.findAll>;
+  let mockPolygonGeometryQuery: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
+  let mockTransaction: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
 
-  const TEST_POLYGONS = {
-    "25128475-00d4-44f2-8573-82f807fbcb91": {
-      type: "Polygon",
-      coordinates: [
-        [
-          [143.23334803138664, -38.520624013387476],
-          [143.23241588768315, -38.52108391858792],
-          [143.23224759035406, -38.52019817000951],
-          [143.2327841960339, -38.51992980781432],
-          [143.23334803138664, -38.520624013387476]
-        ]
-      ]
-    },
-    "d3b9202b-d268-42e9-8aa4-c9cd80861616": {
-      type: "Polygon",
-      coordinates: [
-        [
-          [143.23331767280024, -38.52047557910399],
-          [143.2333078408945, -38.52087942596131],
-          [143.23437951872864, -38.52094865662333],
-          [143.23454666114372, -38.520406347986956],
-          [143.23384367981237, -38.519979421293],
-          [143.23331767280024, -38.52047557910399]
-        ]
-      ]
-    },
-    "3b742306-234d-4b4d-8a87-8515a5b60c62": {
-      type: "Polygon",
-      coordinates: [
-        [
-          [143.23268581159294, -38.519941738752955],
-          [143.23426288751273, -38.52002249071761],
-          [143.23422985974366, -38.51971563277105],
-          [143.23273122477292, -38.51971886286175],
-          [143.23268581159294, -38.519941738752955]
-        ]
-      ]
-    }
+  const testUuids = {
+    polygon1: "d2239d63-83ed-4df8-996c-2b79555385f9",
+    polygon2: "0aacf213-2cf3-45e3-be12-3a28580b2a06",
+    polygon3: "695caaa6-aae0-4d6a-b362-c13dcd7dc8b9"
   };
 
-  beforeAll(async () => {
-    sequelize = PolygonGeometry.sequelize as Sequelize;
-    if (sequelize == null) {
-      throw new Error("Sequelize connection not available for testing");
-    }
+  const testSiteUuid = "a4fdb842-da5e-45a8-a681-d29d9fef0af2";
+  const testProjectId = 123;
+
+  beforeEach(async () => {
+    mockSitePolygonFindOne = SitePolygon.findOne as jest.MockedFunction<typeof SitePolygon.findOne>;
+    mockSitePolygonFindAll = SitePolygon.findAll as jest.MockedFunction<typeof SitePolygon.findAll>;
+    mockPolygonGeometryQuery = PolygonGeometry.sequelize?.query as jest.MockedFunction<
+      (...args: unknown[]) => Promise<unknown>
+    >;
+    mockTransaction = PolygonGeometry.sequelize?.transaction as jest.MockedFunction<
+      (...args: unknown[]) => Promise<unknown>
+    >;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [OverlappingValidator]
@@ -61,475 +57,492 @@ describe("OverlappingValidator", () => {
     validator = module.get<OverlappingValidator>(OverlappingValidator);
   });
 
-  beforeEach(async () => {
-    await sequelize.query("DELETE FROM site_polygon WHERE polygon_uuid IN (:uuids)", {
-      replacements: { uuids: Object.keys(TEST_POLYGONS) }
-    });
-    await sequelize.query("DELETE FROM polygon_geometry WHERE uuid IN (:uuids)", {
-      replacements: { uuids: Object.keys(TEST_POLYGONS) }
-    });
-    await sequelize.query("DELETE FROM v2_sites WHERE uuid = :siteUuid", {
-      replacements: { siteUuid: "test-site-uuid" }
-    });
-
-    await sequelize.query(`
-      INSERT INTO v2_sites (uuid, name, project_id, created_at, updated_at) 
-      VALUES ('test-site-uuid', 'CAPULIN VMRL CAFE CAPITAN', 1, NOW(), NOW())
-    `);
-
-    // Insert test polygons into database with PostGIS geometry
-    for (const [uuid, polygon] of Object.entries(TEST_POLYGONS)) {
-      await sequelize.query(
-        `
-        INSERT INTO polygon_geometry (uuid, geom, created_at, updated_at) 
-        VALUES (:uuid, ST_GeomFromGeoJSON(:geoJson), NOW(), NOW())
-      `,
-        {
-          replacements: {
-            uuid,
-            geoJson: JSON.stringify(polygon)
-          }
-        }
-      );
-
-      const polyName =
-        uuid === "25128475-00d4-44f2-8573-82f807fbcb91"
-          ? "14-1 (new)"
-          : uuid === "d3b9202b-d268-42e9-8aa4-c9cd80861616"
-          ? "A"
-          : "B";
-
-      await sequelize.query(
-        `
-        INSERT INTO site_polygon (poly_id, site_id, poly_name, is_active, created_at, updated_at) 
-        VALUES (:polyId, 'test-site-uuid', :polyName, 1, NOW(), NOW())
-      `,
-        {
-          replacements: {
-            polyId: uuid,
-            polyName
-          }
-        }
-      );
-    }
-  });
-
-  afterEach(async () => {
-    // Clean up test data
-    await sequelize.query("DELETE FROM site_polygon WHERE polygon_uuid IN (:uuids)", {
-      replacements: { uuids: Object.keys(TEST_POLYGONS) }
-    });
-    await sequelize.query("DELETE FROM polygon_geometry WHERE uuid IN (:uuids)", {
-      replacements: { uuids: Object.keys(TEST_POLYGONS) }
-    });
-    await sequelize.query("DELETE FROM v2_sites WHERE uuid = :siteUuid", {
-      replacements: { siteUuid: "test-site-uuid" }
-    });
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   describe("validatePolygon", () => {
-    it("should return valid=true when no related polygons exist", async () => {
-      const isolatedUuid = "isolated-polygon-uuid";
-      const isolatedPolygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [140.0, -40.0],
-            [140.1, -40.0],
-            [140.1, -40.1],
-            [140.0, -40.1],
-            [140.0, -40.0]
-          ]
-        ]
+    it("should return valid when polygon has no overlaps", async () => {
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: {
+          projectId: testProjectId
+        }
       };
 
-      await sequelize.query(
-        `
-        INSERT INTO polygon_geometry (uuid, geom, created_at, updated_at) 
-        VALUES (:uuid, ST_GeomFromGeoJSON(:geoJson), NOW(), NOW())
-      `,
-        {
-          replacements: {
-            uuid: isolatedUuid,
-            geoJson: JSON.stringify(isolatedPolygon)
-          }
-        }
-      );
+      const mockRelatedSitePolygons = [];
 
-      await sequelize.query(`
-        INSERT INTO v2_sites (uuid, name, project_id, created_at, updated_at) 
-        VALUES ('isolated-site-uuid', 'Isolated Site', 999, NOW(), NOW())
-      `);
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
 
-      await sequelize.query(
-        `
-        INSERT INTO site_polygon (poly_id, site_id, poly_name, is_active, created_at, updated_at) 
-        VALUES (:polyId, 'isolated-site-uuid', 'Isolated', 1, NOW(), NOW())
-      `,
-        {
-          replacements: { polyId: isolatedUuid }
-        }
-      );
-
-      const result = await validator.validatePolygon(isolatedUuid);
+      const result = await validator.validatePolygon(testUuids.polygon1);
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toBeNull();
-
-      // Clean up
-      await sequelize.query("DELETE FROM site_polygon WHERE poly_id = :uuid", {
-        replacements: { uuid: isolatedUuid }
-      });
-      await sequelize.query("DELETE FROM polygon_geometry WHERE uuid = :uuid", {
-        replacements: { uuid: isolatedUuid }
-      });
-      await sequelize.query("DELETE FROM v2_sites WHERE uuid = :uuid", {
-        replacements: { uuid: "isolated-site-uuid" }
-      });
     });
 
-    it("should return valid=false for overlapping polygons", async () => {
-      const polygonUuid = "25128475-00d4-44f2-8573-82f807fbcb91";
+    it("should return valid with null extraInfo when no overlaps found", async () => {
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: {
+          projectId: testProjectId
+        }
+      };
 
-      const result = await validator.validatePolygon(polygonUuid);
+      const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }];
+
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+      const result = await validator.validatePolygon(testUuids.polygon1);
+
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return invalid when polygon has overlaps", async () => {
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: {
+          projectId: testProjectId
+        }
+      };
+
+      const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }, { polygonUuid: testUuids.polygon3 }];
+
+      const mockBboxResults = [
+        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon2 },
+        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon3 }
+      ];
+
+      const mockIntersectionResults = [
+        {
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "CAPULIN VMRL CAFE CAPITAN",
+          target_area: 1000,
+          candidate_area: 800,
+          intersection_area: 1.4
+        },
+        {
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon3,
+          candidate_name: "B",
+          site_name: "CAPULIN VMRL CAFE CAPITAN",
+          target_area: 1000,
+          candidate_area: 1200,
+          intersection_area: 0.9
+        }
+      ];
+
+      const mockTransactionInstance = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      // Reset mocks for this test
+      jest.clearAllMocks();
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
+
+      const result = await validator.validatePolygon(testUuids.polygon1);
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo).toBeDefined();
-      expect(Array.isArray(result.extraInfo)).toBe(true);
-      expect(result.extraInfo?.length).toBeGreaterThan(0);
-
-      if (result.extraInfo != null && Array.isArray(result.extraInfo)) {
-        // Verify we get overlap information for the intersecting polygons
-        const overlapUuids = result.extraInfo.map(overlap => overlap.poly_uuid);
-        expect(overlapUuids).toContain("d3b9202b-d268-42e9-8aa4-c9cd80861616");
-        expect(overlapUuids).toContain("3b742306-234d-4b4d-8a87-8515a5b60c62");
-
-        // Verify overlap properties
-        result.extraInfo.forEach(overlap => {
-          expect(overlap).toHaveProperty("poly_uuid");
-          expect(overlap).toHaveProperty("poly_name");
-          expect(overlap).toHaveProperty("site_name", "CAPULIN VMRL CAFE CAPITAN");
-          expect(overlap).toHaveProperty("percentage");
-          expect(overlap).toHaveProperty("intersectSmaller");
-          expect(typeof overlap.percentage).toBe("number");
-          expect(typeof overlap.intersectSmaller).toBe("boolean");
-        });
-      }
+      expect(result.extraInfo).toHaveLength(2);
+      expect(result.extraInfo?.[0]).toMatchObject({
+        poly_uuid: testUuids.polygon2,
+        poly_name: "A",
+        site_name: "CAPULIN VMRL CAFE CAPITAN",
+        percentage: 0.18,
+        intersectSmaller: true
+      });
+      expect(result.extraInfo?.[1]).toMatchObject({
+        poly_uuid: testUuids.polygon3,
+        poly_name: "B",
+        site_name: "CAPULIN VMRL CAFE CAPITAN",
+        percentage: 0.09,
+        intersectSmaller: false
+      });
     });
 
-    it("should return valid=true for non-overlapping polygons", async () => {
-      // Create a non-overlapping polygon
-      const nonOverlappingPolygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [140.0, -40.0],
-            [140.1, -40.0],
-            [140.1, -40.1],
-            [140.0, -40.1],
-            [140.0, -40.0]
-          ]
-        ]
+    it("should throw NotFoundException when polygon not found", async () => {
+      mockSitePolygonFindOne.mockResolvedValueOnce(null);
+
+      await expect(validator.validatePolygon("non-existent-uuid")).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw NotFoundException when polygon has no associated site", async () => {
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: null
       };
 
-      const testUuid = "non-overlapping-uuid";
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
 
-      // Insert the non-overlapping polygon
-      await sequelize.query(
-        `
-        INSERT INTO polygon_geometry (uuid, geom, created_at, updated_at) 
-        VALUES (:uuid, ST_GeomFromGeoJSON(:geoJson), NOW(), NOW())
-      `,
-        {
-          replacements: {
-            uuid: testUuid,
-            geoJson: JSON.stringify(nonOverlappingPolygon)
-          }
-        }
-      );
-
-      await sequelize.query(
-        `
-        INSERT INTO site_polygon (poly_id, site_id, poly_name, is_active, created_at, updated_at) 
-        VALUES (:polyId, 'test-site-uuid', 'Non-overlapping', 1, NOW(), NOW())
-      `,
-        {
-          replacements: { polyId: testUuid }
-        }
-      );
-
-      const result = await validator.validatePolygon(testUuid);
-
-      expect(result.valid).toBe(true);
-      expect(result.extraInfo).toBeNull();
-
-      // Clean up
-      await sequelize.query("DELETE FROM site_polygon WHERE poly_id = :uuid", {
-        replacements: { uuid: testUuid }
-      });
-      await sequelize.query("DELETE FROM polygon_geometry WHERE uuid = :uuid", {
-        replacements: { uuid: testUuid }
-      });
+      await expect(validator.validatePolygon(testUuids.polygon1)).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw NotFoundException when polygon is not found", async () => {
-      const polygonUuid = "non-existent-uuid";
+    it("should handle database errors gracefully", async () => {
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: {
+          projectId: testProjectId
+        }
+      };
 
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(NotFoundException);
+      const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }];
+
+      const mockTransactionInstance = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      // Reset mocks for this test
+      jest.clearAllMocks();
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockRejectedValueOnce(new Error("Database error"));
+
+      await expect(validator.validatePolygon(testUuids.polygon1)).rejects.toThrow("Database error");
+
+      expect(mockTransactionInstance.rollback).toHaveBeenCalled();
+    });
+
+    it("should throw InternalServerErrorException when sequelize is not available", async () => {
+      const originalSequelize = PolygonGeometry.sequelize;
+      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
+
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: {
+          projectId: testProjectId
+        }
+      };
+
+      const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }];
+
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
+
+      await expect(validator.validatePolygon(testUuids.polygon1)).rejects.toThrow(InternalServerErrorException);
+
+      (PolygonGeometry as unknown as { sequelize: typeof originalSequelize }).sequelize = originalSequelize;
     });
   });
 
   describe("validatePolygons", () => {
+    it("should validate multiple polygons correctly when they have overlaps with other polygons", async () => {
+      const polygonUuids = [testUuids.polygon1, testUuids.polygon2];
+
+      const mockSitePolygons = [
+        {
+          polygonUuid: testUuids.polygon1,
+          site: { projectId: testProjectId }
+        },
+        {
+          polygonUuid: testUuids.polygon2,
+          site: { projectId: testProjectId }
+        }
+      ];
+
+      const mockAllProjectPolygons = [
+        { polygonUuid: testUuids.polygon1 },
+        { polygonUuid: testUuids.polygon2 },
+        { polygonUuid: testUuids.polygon3 }
+      ];
+
+      const mockBboxResults = [
+        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon3 },
+        { target_uuid: testUuids.polygon2, candidate_uuid: testUuids.polygon3 }
+      ];
+
+      const mockIntersectionResults = [
+        {
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon3,
+          candidate_name: "B",
+          site_name: "CAPULIN VMRL CAFE CAPITAN",
+          target_area: 1000,
+          candidate_area: 1200,
+          intersection_area: 0.9
+        },
+        {
+          target_uuid: testUuids.polygon2,
+          candidate_uuid: testUuids.polygon3,
+          candidate_name: "B",
+          site_name: "CAPULIN VMRL CAFE CAPITAN",
+          target_area: 800,
+          candidate_area: 1200,
+          intersection_area: 1.2
+        }
+      ];
+
+      const mockTransactionInstance = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      mockSitePolygonFindAll
+        .mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[])
+        .mockResolvedValueOnce(mockAllProjectPolygons as unknown as SitePolygon[]);
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
+
+      const results = await validator.validatePolygons(polygonUuids);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].polygonUuid).toBe(testUuids.polygon1);
+      expect(results[0].valid).toBe(false);
+      expect(results[0].extraInfo).toHaveLength(1);
+      expect(results[1].polygonUuid).toBe(testUuids.polygon2);
+      expect(results[1].valid).toBe(false);
+      expect(results[1].extraInfo).toHaveLength(1);
+    });
+
+    it("should handle polygons from different projects", async () => {
+      const polygonUuids = [testUuids.polygon1, testUuids.polygon2];
+
+      const mockSitePolygons = [
+        {
+          polygonUuid: testUuids.polygon1,
+          site: { projectId: testProjectId }
+        },
+        {
+          polygonUuid: testUuids.polygon2,
+          site: { projectId: testProjectId + 1 }
+        }
+      ];
+
+      const mockAllProjectPolygons1 = [{ polygonUuid: testUuids.polygon1 }];
+      const mockAllProjectPolygons2 = [{ polygonUuid: testUuids.polygon2 }];
+
+      mockSitePolygonFindAll
+        .mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[])
+        .mockResolvedValueOnce(mockAllProjectPolygons1 as unknown as SitePolygon[])
+        .mockResolvedValueOnce(mockAllProjectPolygons2 as unknown as SitePolygon[]);
+
+      const results = await validator.validatePolygons(polygonUuids);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].valid).toBe(true);
+      expect(results[1].valid).toBe(true);
+    });
+
     it("should handle empty polygon list", async () => {
-      const result = await validator.validatePolygons([]);
+      mockSitePolygonFindAll.mockResolvedValueOnce([]);
+      const results = await validator.validatePolygons([]);
+      expect(results).toEqual([]);
+    });
+
+    it("should handle case when candidateUuids is empty in validatePolygons", async () => {
+      const polygonUuids = [testUuids.polygon1, testUuids.polygon2];
+
+      const mockSitePolygons = [
+        {
+          polygonUuid: testUuids.polygon1,
+          site: { projectId: testProjectId }
+        },
+        {
+          polygonUuid: testUuids.polygon2,
+          site: { projectId: testProjectId }
+        }
+      ];
+
+      const mockAllProjectPolygons = [{ polygonUuid: testUuids.polygon1 }, { polygonUuid: testUuids.polygon2 }];
+
+      mockSitePolygonFindAll
+        .mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[])
+        .mockResolvedValueOnce(mockAllProjectPolygons as unknown as SitePolygon[]);
+
+      const results = await validator.validatePolygons(polygonUuids);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].valid).toBe(true);
+      expect(results[0].extraInfo).toBeNull();
+      expect(results[1].valid).toBe(true);
+      expect(results[1].extraInfo).toBeNull();
+    });
+
+    it("should handle polygons not found in database", async () => {
+      const polygonUuids = ["non-existent-1", "non-existent-2"];
+
+      mockSitePolygonFindAll.mockResolvedValueOnce([]);
+
+      const results = await validator.validatePolygons(polygonUuids);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].valid).toBe(false);
+      expect(results[0].extraInfo).toEqual({ error: "Polygon not found or has no associated project" });
+      expect(results[1].valid).toBe(false);
+      expect(results[1].extraInfo).toEqual({ error: "Polygon not found or has no associated project" });
+    });
+  });
+
+  describe("checkIntersections", () => {
+    it("should return empty array when targetUuids is empty", async () => {
+      const result = await validator["checkIntersections"]([], [testUuids.polygon2]);
       expect(result).toEqual([]);
     });
 
-    it("should handle polygons with no project associations", async () => {
-      const result = await validator.validatePolygons(["non-existent-1", "non-existent-2"]);
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        polygonUuid: "non-existent-1",
-        valid: false,
-        extraInfo: { error: "Polygon not found or has no associated project" }
-      });
-      expect(result[1]).toEqual({
-        polygonUuid: "non-existent-2",
-        valid: false,
-        extraInfo: { error: "Polygon not found or has no associated project" }
-      });
+    it("should return empty array when candidateUuids is empty", async () => {
+      const result = await validator["checkIntersections"]([testUuids.polygon1], []);
+      expect(result).toEqual([]);
     });
 
-    it("should handle polygons with no candidate polygons in project", async () => {
-      // Create a polygon with no other polygons in the same project
-      const isolatedUuid = "isolated-batch-uuid";
-      const isolatedPolygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [140.0, -40.0],
-            [140.1, -40.0],
-            [140.1, -40.1],
-            [140.0, -40.1],
-            [140.0, -40.0]
-          ]
-        ]
+    it("should return empty array when bboxFilteredResults is empty", async () => {
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
       };
 
-      // Insert isolated polygon with different project
-      await sequelize.query(
-        `
-        INSERT INTO polygon_geometry (uuid, geom, created_at, updated_at) 
-        VALUES (:uuid, ST_GeomFromGeoJSON(:geoJson), NOW(), NOW())
-      `,
+      // Reset mocks for this test
+      jest.clearAllMocks();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockResolvedValueOnce([]);
+
+      const result = await validator["checkIntersections"]([testUuids.polygon1], [testUuids.polygon2]);
+
+      expect(result).toEqual([]);
+      expect(mockTransactionInstance.commit).toHaveBeenCalled();
+    });
+
+    it("should handle null candidate_name and site_name", async () => {
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      const mockBboxResults = [{ target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon2 }];
+
+      const mockIntersectionResults = [
         {
-          replacements: {
-            uuid: isolatedUuid,
-            geoJson: JSON.stringify(isolatedPolygon)
-          }
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: null,
+          site_name: null,
+          target_area: 1000,
+          candidate_area: 800,
+          intersection_area: 1.4
         }
-      );
+      ];
 
-      await sequelize.query(`
-        INSERT INTO v2_sites (uuid, name, project_id, created_at, updated_at) 
-        VALUES ('isolated-batch-site-uuid', 'Isolated Batch Site', 888, NOW(), NOW())
-      `);
+      // Reset mocks for this test
+      jest.clearAllMocks();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
 
-      await sequelize.query(
-        `
-        INSERT INTO site_polygon (poly_id, site_id, poly_name, is_active, created_at, updated_at) 
-        VALUES (:polyId, 'isolated-batch-site-uuid', 'Isolated Batch', 1, NOW(), NOW())
-      `,
-        {
-          replacements: { polyId: isolatedUuid }
-        }
-      );
-
-      const result = await validator.validatePolygons([isolatedUuid]);
+      const result = await validator["checkIntersections"]([testUuids.polygon1], [testUuids.polygon2]);
 
       expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
-        polygonUuid: isolatedUuid,
-        valid: true,
-        extraInfo: null
-      });
-
-      // Clean up
-      await sequelize.query("DELETE FROM site_polygon WHERE poly_id = :uuid", {
-        replacements: { uuid: isolatedUuid }
-      });
-      await sequelize.query("DELETE FROM polygon_geometry WHERE uuid = :uuid", {
-        replacements: { uuid: isolatedUuid }
-      });
-      await sequelize.query("DELETE FROM v2_sites WHERE uuid = :uuid", {
-        replacements: { uuid: "isolated-batch-site-uuid" }
-      });
-    });
-
-    it("should validate multiple overlapping polygons", async () => {
-      const polygonUuids = ["25128475-00d4-44f2-8573-82f807fbcb91", "d3b9202b-d268-42e9-8aa4-c9cd80861616"];
-
-      const result = await validator.validatePolygons(polygonUuids);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].polygonUuid).toBe("25128475-00d4-44f2-8573-82f807fbcb91");
-      expect(result[1].polygonUuid).toBe("d3b9202b-d268-42e9-8aa4-c9cd80861616");
-
-      // Both polygons should have overlaps
-      expect(result[0].valid).toBe(false);
-      expect(result[1].valid).toBe(false);
-
-      // Verify overlap information
-      result.forEach(polygonResult => {
-        if (polygonResult.extraInfo != null && Array.isArray(polygonResult.extraInfo)) {
-          expect(polygonResult.extraInfo.length).toBeGreaterThan(0);
-          polygonResult.extraInfo.forEach(overlap => {
-            expect(overlap).toHaveProperty("poly_uuid");
-            expect(overlap).toHaveProperty("poly_name");
-            expect(overlap).toHaveProperty("site_name", "CAPULIN VMRL CAFE CAPITAN");
-            expect(overlap).toHaveProperty("percentage");
-            expect(overlap).toHaveProperty("intersectSmaller");
-          });
-        }
-      });
+      expect(result[0].candidate_name).toBeNull();
+      expect(result[0].site_name).toBeNull();
     });
   });
 
-  describe("error handling", () => {
-    it("should handle database transaction errors", async () => {
-      // Mock sequelize to throw an error during transaction
-      const originalTransaction = PolygonGeometry.sequelize?.transaction;
-      if (PolygonGeometry.sequelize != null) {
-        (PolygonGeometry.sequelize as unknown as { transaction: jest.Mock }).transaction = jest
-          .fn()
-          .mockRejectedValue(new Error("Transaction failed"));
-      }
-
-      const polygonUuid = "25128475-00d4-44f2-8573-82f807fbcb91";
-
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow("Transaction failed");
-
-      // Restore original transaction method
-      if (PolygonGeometry.sequelize != null) {
-        (PolygonGeometry.sequelize as unknown as { transaction: unknown }).transaction = originalTransaction;
-      }
-    });
-
-    it("should handle missing sequelize connection", async () => {
-      // Mock sequelize to be null
-      const originalSequelize = PolygonGeometry.sequelize;
-      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
-
-      const polygonUuid = "25128475-00d4-44f2-8573-82f807fbcb91";
-
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(
-        "PolygonGeometry model is missing sequelize connection"
-      );
-
-      // Restore original sequelize
-      if (originalSequelize != null) {
-        (PolygonGeometry as unknown as { sequelize: Sequelize }).sequelize = originalSequelize;
-      }
-    });
-
-    it("should handle empty target or candidate arrays in checkIntersections", async () => {
-      // This tests the early return in checkIntersections when arrays are empty
-
-      // Create a polygon with no related polygons to trigger empty candidate array
-      const isolatedUuid = "test-empty-candidates";
-      const isolatedPolygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [150.0, -50.0],
-            [150.1, -50.0],
-            [150.1, -50.1],
-            [150.0, -50.1],
-            [150.0, -50.0]
-          ]
-        ]
-      };
-
-      await sequelize.query(
-        `
-        INSERT INTO polygon_geometry (uuid, geom, created_at, updated_at) 
-        VALUES (:uuid, ST_GeomFromGeoJSON(:geoJson), NOW(), NOW())
-      `,
+  describe("buildOverlapInfo", () => {
+    it("should calculate percentage correctly for smaller intersecting polygon", () => {
+      const intersections = [
         {
-          replacements: {
-            uuid: isolatedUuid,
-            geoJson: JSON.stringify(isolatedPolygon)
-          }
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "Test Site",
+          target_area: 1000,
+          candidate_area: 500,
+          intersection_area: 50
         }
-      );
+      ];
 
-      await sequelize.query(`
-        INSERT INTO v2_sites (uuid, name, project_id, created_at, updated_at) 
-        VALUES ('empty-candidates-site-uuid', 'Empty Candidates Site', 777, NOW(), NOW())
-      `);
+      const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
 
-      await sequelize.query(
-        `
-        INSERT INTO site_polygon (poly_id, site_id, poly_name, is_active, created_at, updated_at) 
-        VALUES (:polyId, 'empty-candidates-site-uuid', 'Empty Candidates', 1, NOW(), NOW())
-      `,
+      expect(result).toHaveLength(1);
+      expect(result[0].percentage).toBe(10);
+      expect(result[0].intersectSmaller).toBe(true);
+    });
+
+    it("should calculate percentage correctly for larger intersecting polygon", () => {
+      const intersections = [
         {
-          replacements: { polyId: isolatedUuid }
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "Test Site",
+          target_area: 500,
+          candidate_area: 1000,
+          intersection_area: 50
         }
-      );
+      ];
 
-      const result = await validator.validatePolygon(isolatedUuid);
+      const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
 
-      expect(result.valid).toBe(true);
-      expect(result.extraInfo).toBeNull();
-
-      // Clean up
-      await sequelize.query("DELETE FROM site_polygon WHERE poly_id = :uuid", {
-        replacements: { uuid: isolatedUuid }
-      });
-      await sequelize.query("DELETE FROM polygon_geometry WHERE uuid = :uuid", {
-        replacements: { uuid: isolatedUuid }
-      });
-      await sequelize.query("DELETE FROM v2_sites WHERE uuid = :uuid", {
-        replacements: { uuid: "empty-candidates-site-uuid" }
-      });
-    });
-  });
-
-  describe("buildOverlapInfo edge cases", () => {
-    it("should handle intersection with zero area", async () => {
-      // This tests the filter in checkIntersections that removes intersections with area <= 1e-10
-      // and the percentage calculation in buildOverlapInfo when minArea is 0
-      const polygonUuid = "25128475-00d4-44f2-8573-82f807fbcb91";
-
-      const result = await validator.validatePolygon(polygonUuid);
-
-      // The buildOverlapInfo method should handle edge cases properly
-      if (result.extraInfo != null && Array.isArray(result.extraInfo)) {
-        result.extraInfo.forEach(overlap => {
-          expect(typeof overlap.percentage).toBe("number");
-          expect(overlap.percentage).toBeGreaterThanOrEqual(0);
-          expect(overlap.percentage).toBeLessThanOrEqual(100);
-        });
-      }
+      expect(result).toHaveLength(1);
+      expect(result[0].percentage).toBe(10);
+      expect(result[0].intersectSmaller).toBe(false);
     });
 
-    it("should handle missing polygon names and site names", async () => {
-      // This tests the null coalescing in buildOverlapInfo for candidate_name and site_name
-      const polygonUuid = "25128475-00d4-44f2-8573-82f807fbcb91";
+    it("should handle zero area polygons", () => {
+      const intersections = [
+        {
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "Test Site",
+          target_area: 0,
+          candidate_area: 0,
+          intersection_area: 0
+        }
+      ];
 
-      const result = await validator.validatePolygon(polygonUuid);
+      const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
 
-      if (result.extraInfo != null && Array.isArray(result.extraInfo)) {
-        result.extraInfo.forEach(overlap => {
-          expect(typeof overlap.poly_name).toBe("string");
-          expect(typeof overlap.site_name).toBe("string");
-          // Should not be undefined, should be empty string if null
-          expect(overlap.poly_name).toBeDefined();
-          expect(overlap.site_name).toBeDefined();
-        });
-      }
+      expect(result).toHaveLength(1);
+      expect(result[0].percentage).toBe(100);
+    });
+
+    it("should filter intersections by target UUID", () => {
+      const intersections = [
+        {
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "Test Site",
+          target_area: 1000,
+          candidate_area: 500,
+          intersection_area: 50
+        },
+        {
+          target_uuid: testUuids.polygon3,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "Test Site",
+          target_area: 1000,
+          candidate_area: 500,
+          intersection_area: 50
+        }
+      ];
+
+      const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].poly_uuid).toBe(testUuids.polygon2);
     });
   });
 });

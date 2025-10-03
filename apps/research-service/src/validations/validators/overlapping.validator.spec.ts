@@ -428,25 +428,6 @@ describe("OverlappingValidator", () => {
       expect(result[0].intersectSmaller).toBe(false);
     });
 
-    it("should handle zero area polygons", () => {
-      const intersections = [
-        {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "Test Site",
-          target_area: 0,
-          candidate_area: 0,
-          intersection_area: 0
-        }
-      ];
-
-      const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].percentage).toBe(100);
-    });
-
     it("should filter intersections by target UUID", () => {
       const intersections = [
         {

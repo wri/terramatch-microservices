@@ -7,8 +7,11 @@ import {
   ApplicationEntity,
   DemographicEntity,
   DemographicEntryEntity,
+  DisturbanceEntity,
   FinancialIndicatorEntity,
+  FinancialReportEntity,
   FundingProgrammeEntity,
+  FundingTypeEntity,
   InvestmentEntity,
   InvestmentSplitEntity,
   LeadershipEntity,
@@ -26,7 +29,6 @@ import * as Sentry from "@sentry/node";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
-import { DisturbanceEntity } from "./entities/disturbance.airtable-entity";
 import { UserEntity } from "./entities/users.airtable-entity";
 
 export const AIRTABLE_ENTITIES = {
@@ -35,7 +37,9 @@ export const AIRTABLE_ENTITIES = {
   demographicEntries: DemographicEntryEntity,
   disturbances: DisturbanceEntity,
   financialIndicators: FinancialIndicatorEntity,
+  financialReports: FinancialReportEntity,
   fundingProgrammes: FundingProgrammeEntity,
+  fundingTypes: FundingTypeEntity,
   investments: InvestmentEntity,
   investmentSplits: InvestmentSplitEntity,
   leaderships: LeadershipEntity,

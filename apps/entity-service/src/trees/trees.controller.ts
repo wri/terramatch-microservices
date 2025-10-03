@@ -22,9 +22,10 @@ import { PlantingCountDto } from "./dto/planting-count.dto";
 import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { SpeciesDto } from "./dto/species.dto";
 
 @Controller("trees/v3")
-@ApiExtraModels(PlantingCountDto, TreeEntityTypes)
+@ApiExtraModels(PlantingCountDto, SpeciesDto, TreeEntityTypes)
 export class TreesController {
   constructor(private readonly treeService: TreeService, private readonly policyService: PolicyService) {}
 

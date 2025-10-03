@@ -38,9 +38,13 @@ export class DisturbancesController {
       await this.policyService.authorize("read", data);
       for (const disturbance of data) {
         const { disturbanceableType: laravelType, disturbanceableId } = disturbance;
+        if (laravelType == null) {
+          this.logger.error("Disturbance has null disturbanceableType", { disturbanceId: disturbance.id });
+          continue;
+        }
         const model = LARAVEL_MODELS[laravelType];
         if (model == null) {
-          this.logger.error("Unknown model type", model);
+          this.logger.error("Unknown model type", { laravelType });
           throw new InternalServerErrorException("Unexpected disturbance association type");
         }
         const entity = await model.findOne({ where: { id: disturbanceableId }, attributes: ["uuid"] });

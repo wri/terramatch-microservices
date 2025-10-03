@@ -1,4 +1,10 @@
-import { FinancialReport, FundingType, FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
+import {
+  FinancialReport,
+  FundingType,
+  FinancialIndicator,
+  Media,
+  Organisation
+} from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
@@ -7,6 +13,7 @@ import { FundingTypeDto } from "../dto/funding-type.dto";
 import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial-indicator.dto";
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus"];
 
@@ -22,6 +29,71 @@ export class FinancialReportProcessor extends ReportProcessor<
 > {
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;
+  private logger = new TMLogger(FinancialReportProcessor.name);
+
+  /**
+   * Specific method for FinancialReport custom logic. This is called automatically when nothingToReport is updated
+   */
+  protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
+    const organisation = await Organisation.findByPk(model.organisationId);
+    if (organisation == null) {
+      this.logger.warn(`Organisation not found for FinancialReport ${model.uuid}`);
+      return;
+    }
+
+    if (model.finStartMonth != null || model.currency != null) {
+      const updateData: Partial<Organisation> = {};
+      if (model.finStartMonth != null) updateData.finStartMonth = model.finStartMonth;
+      if (model.currency != null) updateData.currency = model.currency;
+
+      await organisation.update(updateData);
+    }
+
+    const reportIndicators = await FinancialIndicator.financialReport(model.id).findAll();
+    const existingOrgIndicators = await FinancialIndicator.organisation(organisation.id).findAll();
+
+    const orgIndicatorMap = new Map<string, FinancialIndicator>();
+    existingOrgIndicators.forEach(indicator => {
+      const key = `${indicator.year}-${indicator.collection}`;
+      orgIndicatorMap.set(key, indicator);
+    });
+
+    const indicatorsToCreate: Partial<FinancialIndicator>[] = [];
+    const indicatorsToUpdate: { id: number; data: Partial<FinancialIndicator> }[] = [];
+
+    for (const reportIndicator of reportIndicators) {
+      const key = `${reportIndicator.year}-${reportIndicator.collection}`;
+      const orgIndicator = orgIndicatorMap.get(key);
+
+      if (orgIndicator == null) {
+        indicatorsToCreate.push({
+          organisationId: organisation.id,
+          year: reportIndicator.year,
+          collection: reportIndicator.collection,
+          amount: reportIndicator.amount,
+          description: reportIndicator.description,
+          exchangeRate: reportIndicator.exchangeRate
+        });
+      } else {
+        indicatorsToUpdate.push({
+          id: orgIndicator.id,
+          data: {
+            amount: reportIndicator.amount,
+            description: reportIndicator.description,
+            exchangeRate: reportIndicator.exchangeRate
+          }
+        });
+      }
+    }
+
+    if (indicatorsToCreate.length > 0) {
+      await FinancialIndicator.bulkCreate(indicatorsToCreate as FinancialIndicator[]);
+    }
+
+    if (indicatorsToUpdate.length > 0) {
+      await Promise.all(indicatorsToUpdate.map(({ id, data }) => FinancialIndicator.update(data, { where: { id } })));
+    }
+  }
 
   async findOne(uuid: string) {
     return await FinancialReport.findOne({
@@ -95,7 +167,7 @@ export class FinancialReportProcessor extends ReportProcessor<
   }
 
   protected async getFundingTypes(financialReport: FinancialReport) {
-    const fundingTypes = await FundingType.organisationByUuid(financialReport.organisation.uuid).findAll({
+    const fundingTypes = await FundingType.financialReport(financialReport.id).findAll({
       include: [
         {
           association: "organisation",
@@ -103,12 +175,11 @@ export class FinancialReportProcessor extends ReportProcessor<
         }
       ]
     });
-
     return fundingTypes.map(
       ft =>
         new FundingTypeDto(ft, {
-          entityType: "organisations" as const,
-          entityUuid: financialReport.organisation.uuid
+          entityType: "financialReports" as const,
+          entityUuid: financialReport.uuid
         })
     );
   }

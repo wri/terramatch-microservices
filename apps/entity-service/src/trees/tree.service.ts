@@ -11,9 +11,10 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Dictionary, filter, flatten, flattenDeep, groupBy, omit, uniq } from "lodash";
+import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
+import { SpeciesDto } from "./dto/species.dto";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -39,13 +40,18 @@ const treeAssociations = (model: TreeModelType, attributes: string[], where?: Wh
     where: { ...where, hidden: false }
   }));
 
-const uniqueTreeNames = (trees: Dictionary<TreeSpecies[]>) =>
+const uniqueTreeNames = (trees: Dictionary<TreeSpecies[] | Seeding[]>): Dictionary<SpeciesDto[]> =>
   Object.keys(trees).reduce(
     (dict, collection) => ({
       ...dict,
-      [collection]: uniq(filter(trees[collection].map(({ name }) => name)))
+      [collection]: uniqBy(
+        filter(
+          trees[collection].map(({ name, taxonId }) => (isEmpty(name) ? null : { name, taxonId }))
+        ) as SpeciesDto[],
+        "name"
+      )
     }),
-    {} as Dictionary<string[]>
+    {} as Dictionary<SpeciesDto[]>
   );
 
 const countPlants = (trees: TreeSpecies[] | Seeding[]): Dictionary<PlantingCountDto> =>
@@ -93,7 +99,7 @@ export class TreeService {
     ).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));
   }
 
-  async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<Dictionary<string[]>> {
+  async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<Dictionary<SpeciesDto[]>> {
     if (entity === "siteReports" || entity === "nurseryReports") {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
@@ -104,13 +110,13 @@ export class TreeService {
         // the nested includes
         attributes: ["id"],
         include: [
-          ...treeAssociations(parentModel, ["name", "collection"]),
+          ...treeAssociations(parentModel, ["name", "collection", "taxonId"]),
           {
             model: Project,
             // This id isn't necessary for the data we want to fetch, but sequelize requires it for
             // the nested includes
             attributes: ["id"],
-            include: treeAssociations(Project, ["name", "collection"])
+            include: treeAssociations(Project, ["name", "collection", "taxonId"])
           }
         ]
       };
@@ -119,7 +125,7 @@ export class TreeService {
         include.include.push({
           required: false,
           association: "seedsPlanted",
-          attributes: ["name"],
+          attributes: ["name", "taxonId"],
           where: { hidden: false }
         });
       }
@@ -142,11 +148,13 @@ export class TreeService {
           Project.TREE_ASSOCIATIONS.map(association => parent?.project?.[association] ?? ([] as TreeSpecies[]))
         ]),
         "collection"
-      );
+      ) as Dictionary<TreeSpecies[]>;
 
-      const treeNames = uniqueTreeNames(trees) as Dictionary<string[]>;
+      const treeNames = uniqueTreeNames(trees);
       if (entity === "siteReports") {
-        treeNames["seeds"] = uniq(((parent as Site).seedsPlanted ?? []).map(({ name }) => name)) as string[];
+        treeNames["seeds"] = uniq(
+          ((parent as Site).seedsPlanted ?? []).map(({ name, taxonId }) => ({ name: name ?? "", taxonId }))
+        );
       }
       return treeNames;
     } else if (["sites", "nurseries", "projectReports"].includes(entity)) {
@@ -156,7 +164,7 @@ export class TreeService {
           // This id isn't necessary for the data we want to fetch, but sequelize requires it for
           // the nested includes
           attributes: ["id"],
-          include: treeAssociations(Project, ["name", "collection"])
+          include: treeAssociations(Project, ["name", "taxonId", "collection"])
         }
       ] as Includeable[];
 
@@ -164,7 +172,7 @@ export class TreeService {
         include.push({
           required: false,
           association: "seedsPlanted",
-          attributes: ["name"],
+          attributes: ["name", "taxonId"],
           where: { hidden: false }
         });
       }
@@ -187,7 +195,7 @@ export class TreeService {
           flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project?.[association] ?? [])),
           "collection"
         )
-      ) as Dictionary<string[]>;
+      );
       if (entity === "projectReports" && entityModel.frameworkKey === "ppc") {
         // For PPC Project reports, we have to pretend the establishment species are "nursery-seedling" because
         // that's the collection used at the report level, but "tree-planted" is used at the establishment level.
@@ -200,7 +208,9 @@ export class TreeService {
       }
 
       if (entity === "sites") {
-        uniqueTrees["seeds"] = uniq(((entityModel as Site).seedsPlanted ?? []).map(({ name }) => name)) as string[];
+        uniqueTrees["seeds"] = uniq(
+          ((entityModel as Site).seedsPlanted ?? []).map(({ name, taxonId }) => ({ name: name ?? "", taxonId }))
+        );
       }
 
       return uniqueTrees;

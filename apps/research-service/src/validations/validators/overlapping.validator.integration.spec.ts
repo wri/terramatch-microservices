@@ -138,24 +138,6 @@ describe("OverlappingValidator - Integration Tests", () => {
       });
     });
 
-    it("should validate multiple polygons with real database", async () => {
-      const results = await validator.validatePolygons(testPolygonUuids);
-
-      expect(results).toHaveLength(3);
-
-      expect(results[0].polygonUuid).toBe(testPolygonUuids[0]);
-      expect(results[0].valid).toBe(false);
-      expect(results[0].extraInfo).toHaveLength(2);
-
-      expect(results[1].polygonUuid).toBe(testPolygonUuids[1]);
-      expect(results[1].valid).toBe(false);
-      expect(results[1].extraInfo).toHaveLength(2);
-
-      expect(results[2].polygonUuid).toBe(testPolygonUuids[2]);
-      expect(results[2].valid).toBe(false);
-      expect(results[2].extraInfo).toHaveLength(2);
-    });
-
     it("should handle non-overlapping polygons correctly", async () => {
       const nonOverlappingGeometry = {
         type: "Polygon" as const,

@@ -1,8 +1,7 @@
 import { PolygonGeometry, SitePolygon, Site } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { Validator, ValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
 import { QueryTypes, Transaction } from "sequelize";
-import { groupBy } from "lodash";
 
 interface OverlapInfo {
   poly_uuid: string;
@@ -52,53 +51,6 @@ export class OverlappingValidator implements Validator {
     };
   }
 
-  async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
-    const polygonProjectMap = await this.getPolygonProjectMap(polygonUuids);
-
-    const resultsByPolygon = new Map<string, PolygonValidationResult>();
-
-    for (const polygonUuid of polygonUuids) {
-      resultsByPolygon.set(polygonUuid, {
-        polygonUuid,
-        valid: false,
-        extraInfo: { error: "Polygon not found or has no associated project" }
-      });
-    }
-
-    const polygonsByProject = groupBy(
-      Array.from(polygonProjectMap.entries()).map(([uuid, projectId]) => ({ uuid, projectId })),
-      "projectId"
-    );
-
-    for (const [projectId, polygons] of Object.entries(polygonsByProject)) {
-      const allProjectPolygons = await this.getProjectPolygonsByProjectId(parseInt(projectId));
-
-      for (const polygon of polygons) {
-        const candidateUuids = allProjectPolygons.filter(uuid => uuid !== polygon.uuid);
-
-        if (candidateUuids.length === 0) {
-          resultsByPolygon.set(polygon.uuid, {
-            polygonUuid: polygon.uuid,
-            valid: true,
-            extraInfo: null
-          });
-          continue;
-        }
-
-        const intersections = await this.checkIntersections([polygon.uuid], candidateUuids);
-        const overlaps = this.buildOverlapInfo(intersections, polygon.uuid);
-
-        resultsByPolygon.set(polygon.uuid, {
-          polygonUuid: polygon.uuid,
-          valid: overlaps.length === 0,
-          extraInfo: overlaps.length > 0 ? overlaps : null
-        });
-      }
-    }
-
-    return Array.from(resultsByPolygon.values());
-  }
-
   private async getProjectPolygons(
     polygonUuid: string
   ): Promise<{ projectId: number; relatedPolygonUuids: string[] } | null> {
@@ -140,48 +92,6 @@ export class OverlappingValidator implements Validator {
       .filter(uuid => uuid != null && uuid !== polygonUuid) as string[];
 
     return { projectId, relatedPolygonUuids };
-  }
-
-  private async getPolygonProjectMap(polygonUuids: string[]): Promise<Map<string, number>> {
-    const sitePolygons = await SitePolygon.findAll({
-      where: { polygonUuid: polygonUuids, isActive: true },
-      include: [
-        {
-          model: Site,
-          as: "site",
-          required: true,
-          attributes: ["projectId"]
-        }
-      ],
-      attributes: ["polygonUuid"]
-    });
-
-    const map = new Map<string, number>();
-    for (const sp of sitePolygons) {
-      if (sp.site != null && sp.polygonUuid != null) {
-        map.set(sp.polygonUuid, sp.site.projectId);
-      }
-    }
-
-    return map;
-  }
-
-  private async getProjectPolygonsByProjectId(projectId: number): Promise<string[]> {
-    const sitePolygons = await SitePolygon.findAll({
-      where: { isActive: true },
-      include: [
-        {
-          model: Site,
-          as: "site",
-          required: true,
-          where: { projectId },
-          attributes: ["projectId"]
-        }
-      ],
-      attributes: ["polygonUuid"]
-    });
-
-    return sitePolygons.map(sp => sp.polygonUuid).filter(uuid => uuid != null) as string[];
   }
 
   private async checkIntersections(

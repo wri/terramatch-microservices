@@ -17,6 +17,7 @@ import { DataCompletenessValidator } from "./validators/data-completeness.valida
 import { PlantStartDateValidator } from "./validators/plant-start-date.validator";
 import { PolygonSizeValidator } from "./validators/polygon-size.validator";
 import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
+import { OverlappingValidator } from "./validators/overlapping.validator";
 import { Validator } from "./validators/validator.interface";
 import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
 
@@ -26,7 +27,8 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
   SPIKES: new SpikesValidator(),
   ESTIMATED_AREA: new EstimatedAreaValidator(),
   DATA_COMPLETENESS: new DataCompletenessValidator(),
-  PLANT_START_DATE: new PlantStartDateValidator()
+  PLANT_START_DATE: new PlantStartDateValidator(),
+  OVERLAPPING: new OverlappingValidator()
 };
 
 @Injectable()

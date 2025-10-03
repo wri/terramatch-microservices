@@ -4,7 +4,8 @@ export const VALIDATION_TYPES = [
   "SPIKES",
   "ESTIMATED_AREA",
   "DATA_COMPLETENESS",
-  "PLANT_START_DATE"
+  "PLANT_START_DATE",
+  "OVERLAPPING"
 ] as const;
 
 export type ValidationType = (typeof VALIDATION_TYPES)[number];

@@ -1,5 +1,5 @@
 import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
-import { FileUploadService, ExtractedRequestData } from "./file-upload.service";
+import { FileUploadService } from "./file-upload.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities/entities.service";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
@@ -11,6 +11,7 @@ import {
   MediaOwnerType,
   MEDIA_OWNER_MODELS
 } from "@terramatch-microservices/database/constants/media-owners";
+import { ExtraMediaRequestBody } from "../entities/dto/extra-media-request";
 
 describe("FileUploadService", () => {
   let mediaService: jest.Mocked<MediaService>;
@@ -93,7 +94,9 @@ describe("FileUploadService", () => {
     const COLLECTION = "uploadCollection";
     const ENTITY: MediaOwnerType = "projects";
     const model = { id: 7 } as MediaOwnerModel;
-    const body: ExtractedRequestData = { isPublic: false, lat: 10, lng: 20 };
+    const body = {
+      data: { type: "media", attributes: { isPublic: false, lat: 10, lng: 20, formData: new FormData() } }
+    } as ExtraMediaRequestBody;
     let originalModel: EntityMediaOwnerClass<MediaOwnerModel>;
     let file: Express.Multer.File;
 

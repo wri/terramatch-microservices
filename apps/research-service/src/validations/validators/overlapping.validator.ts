@@ -176,7 +176,7 @@ export class OverlappingValidator implements Validator {
 
     return targetIntersections.map(intersection => {
       const minArea = Math.min(intersection.target_area, intersection.candidate_area);
-      const percentage = minArea > 0 ? Math.round((intersection.intersection_area / minArea) * 100 * 100) / 100 : 100;
+      const percentage = Math.round((intersection.intersection_area / minArea) * 100 * 100) / 100;
 
       return {
         poly_uuid: intersection.candidate_uuid,

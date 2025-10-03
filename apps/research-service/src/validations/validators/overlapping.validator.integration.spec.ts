@@ -174,7 +174,7 @@ describe("OverlappingValidator - Integration Tests", () => {
         polygon: nonOverlappingGeometry
       });
 
-      const sitePolygon = await SitePolygonFactory.create({
+      await SitePolygonFactory.create({
         polygonUuid: polygonGeometry.uuid,
         siteUuid: testSite.uuid,
         polyName: "Non-overlapping",

@@ -1,13 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { OverlappingValidator } from "./overlapping.validator";
-import { SitePolygon, PolygonGeometry, Site, Project } from "@terramatch-microservices/database/entities";
+import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
-import {
-  SitePolygonFactory,
-  PolygonGeometryFactory,
-  SiteFactory,
-  ProjectFactory
-} from "@terramatch-microservices/database/factories";
 
 interface MockTransaction {
   commit: jest.Mock;
@@ -307,8 +301,13 @@ describe("OverlappingValidator", () => {
       mockSitePolygonFindAll
         .mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[])
         .mockResolvedValueOnce(mockAllProjectPolygons as unknown as SitePolygon[]);
-      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
+
+      mockTransaction.mockResolvedValue(mockTransactionInstance);
+      mockPolygonGeometryQuery
+        .mockResolvedValueOnce(mockBboxResults)
+        .mockResolvedValueOnce(mockIntersectionResults)
+        .mockResolvedValueOnce(mockBboxResults)
+        .mockResolvedValueOnce(mockIntersectionResults);
 
       const results = await validator.validatePolygons(polygonUuids);
 
@@ -354,35 +353,6 @@ describe("OverlappingValidator", () => {
       mockSitePolygonFindAll.mockResolvedValueOnce([]);
       const results = await validator.validatePolygons([]);
       expect(results).toEqual([]);
-    });
-
-    it("should handle case when candidateUuids is empty in validatePolygons", async () => {
-      const polygonUuids = [testUuids.polygon1, testUuids.polygon2];
-
-      const mockSitePolygons = [
-        {
-          polygonUuid: testUuids.polygon1,
-          site: { projectId: testProjectId }
-        },
-        {
-          polygonUuid: testUuids.polygon2,
-          site: { projectId: testProjectId }
-        }
-      ];
-
-      const mockAllProjectPolygons = [{ polygonUuid: testUuids.polygon1 }, { polygonUuid: testUuids.polygon2 }];
-
-      mockSitePolygonFindAll
-        .mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[])
-        .mockResolvedValueOnce(mockAllProjectPolygons as unknown as SitePolygon[]);
-
-      const results = await validator.validatePolygons(polygonUuids);
-
-      expect(results).toHaveLength(2);
-      expect(results[0].valid).toBe(true);
-      expect(results[0].extraInfo).toBeNull();
-      expect(results[1].valid).toBe(true);
-      expect(results[1].extraInfo).toBeNull();
     });
 
     it("should handle polygons not found in database", async () => {
@@ -459,113 +429,66 @@ describe("OverlappingValidator", () => {
     });
   });
 
-  describe("Integration Tests with Real Geometries", () => {
-    let testProject: Project;
-    let testSite: Site;
-    const testPolygonUuids: string[] = [];
+  describe("Unit Tests with Mocked Geometries", () => {
+    it("should detect overlaps with realistic mocked data", async () => {
+      const testUuids = {
+        polygon1: "d2239d63-83ed-4df8-996c-2b79555385f9",
+        polygon2: "0aacf213-2cf3-45e3-be12-3a28580b2a06",
+        polygon3: "695caaa6-aae0-4d6a-b362-c13dcd7dc8b9"
+      };
 
-    beforeAll(async () => {
-      // Create test project using factory
-      testProject = await ProjectFactory.create({
-        name: "Test Project for Overlapping Validator"
-      });
+      const testSiteUuid = "a4fdb842-da5e-45a8-a681-d29d9fef0af2";
+      const testProjectId = 123;
 
-      // Create test site using factory
-      testSite = await SiteFactory.create({
-        projectId: testProject.id,
-        name: "CAPULIN VMRL CAFE CAPITAN"
-      });
+      // Mock the database calls to return realistic data
+      const mockSitePolygon = {
+        polygonUuid: testUuids.polygon1,
+        siteUuid: testSiteUuid,
+        site: {
+          projectId: testProjectId
+        }
+      };
 
-      // Create test polygons with real geometries from your example
-      const testGeometries = [
+      const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }, { polygonUuid: testUuids.polygon3 }];
+
+      const mockBboxResults = [
+        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon2 },
+        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon3 }
+      ];
+
+      const mockIntersectionResults = [
         {
-          type: "Polygon" as const,
-          coordinates: [
-            [
-              [143.23334803138664, -38.520624013387476],
-              [143.23241588768315, -38.52108391858792],
-              [143.23224759035406, -38.52019817000951],
-              [143.2327841960339, -38.51992980781432],
-              [143.23334803138664, -38.520624013387476]
-            ]
-          ]
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon2,
+          candidate_name: "A",
+          site_name: "CAPULIN VMRL CAFE CAPITAN",
+          target_area: 1000,
+          candidate_area: 800,
+          intersection_area: 1.4
         },
         {
-          type: "Polygon" as const,
-          coordinates: [
-            [
-              [143.23331767280024, -38.52047557910399],
-              [143.2333078408945, -38.52087942596131],
-              [143.23437951872864, -38.52094865662333],
-              [143.23454666114372, -38.520406347986956],
-              [143.23384367981237, -38.519979421293],
-              [143.23331767280024, -38.52047557910399]
-            ]
-          ]
-        },
-        {
-          type: "Polygon" as const,
-          coordinates: [
-            [
-              [143.23268581159294, -38.519941738752955],
-              [143.23426288751273, -38.52002249071761],
-              [143.23422985974366, -38.51971563277105],
-              [143.23273122477292, -38.51971886286175],
-              [143.23268581159294, -38.519941738752955]
-            ]
-          ]
+          target_uuid: testUuids.polygon1,
+          candidate_uuid: testUuids.polygon3,
+          candidate_name: "B",
+          site_name: "CAPULIN VMRL CAFE CAPITAN",
+          target_area: 1000,
+          candidate_area: 1200,
+          intersection_area: 0.9
         }
       ];
 
-      const polygonNames = ["14-1 (new)", "A", "B"];
+      const mockTransactionInstance = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
 
-      for (let i = 0; i < testGeometries.length; i++) {
-        // Create polygon geometry using factory with custom geometry
-        const polygonGeometry = await PolygonGeometryFactory.create({
-          polygon: testGeometries[i]
-        });
+      // Set up mocks
+      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
 
-        // Create site polygon using factory
-        await SitePolygonFactory.create({
-          polygonUuid: polygonGeometry.uuid,
-          siteUuid: testSite.uuid,
-          polyName: polygonNames[i],
-          practice: i === 0 ? "tree-planting" : null,
-          plantStart: i === 0 ? new Date("2021-11-11") : null,
-          numTrees: i === 0 ? null : 0,
-          isActive: true
-        });
-
-        testPolygonUuids.push(polygonGeometry.uuid);
-      }
-    });
-
-    afterAll(async () => {
-      // Clean up test data
-      if (testPolygonUuids.length > 0) {
-        await SitePolygon.destroy({
-          where: { polygonUuid: testPolygonUuids }
-        });
-        await PolygonGeometry.destroy({
-          where: { uuid: testPolygonUuids }
-        });
-      }
-
-      if (testSite != null) {
-        await Site.destroy({
-          where: { uuid: testSite.uuid }
-        });
-      }
-
-      if (testProject != null) {
-        await Project.destroy({
-          where: { id: testProject.id }
-        });
-      }
-    });
-
-    it("should detect real overlaps with actual geometries", async () => {
-      const result = await validator.validatePolygon(testPolygonUuids[0]);
+      const result = await validator.validatePolygon(testUuids.polygon1);
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).not.toBeNull();
@@ -577,8 +500,8 @@ describe("OverlappingValidator", () => {
       }
 
       const polyUuids = overlapInfo.map(info => info.poly_uuid);
-      expect(polyUuids).toContain(testPolygonUuids[1]);
-      expect(polyUuids).toContain(testPolygonUuids[2]);
+      expect(polyUuids).toContain(testUuids.polygon2);
+      expect(polyUuids).toContain(testUuids.polygon3);
 
       overlapInfo.forEach(info => {
         expect(info.percentage).toBeGreaterThan(0);

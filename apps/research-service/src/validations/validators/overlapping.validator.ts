@@ -71,26 +71,23 @@ export class OverlappingValidator implements Validator {
     );
 
     for (const [projectId, polygons] of Object.entries(polygonsByProject)) {
-      const targetUuids = polygons.map(p => p.uuid);
       const allProjectPolygons = await this.getProjectPolygonsByProjectId(parseInt(projectId));
 
-      const candidateUuids = allProjectPolygons.filter(uuid => !targetUuids.includes(uuid));
+      for (const polygon of polygons) {
+        const candidateUuids = allProjectPolygons.filter(uuid => uuid !== polygon.uuid);
 
-      if (candidateUuids.length === 0) {
-        for (const polygon of polygons) {
+        if (candidateUuids.length === 0) {
           resultsByPolygon.set(polygon.uuid, {
             polygonUuid: polygon.uuid,
             valid: true,
             extraInfo: null
           });
+          continue;
         }
-        continue;
-      }
 
-      const intersections = await this.checkIntersections(targetUuids, candidateUuids);
-
-      for (const polygon of polygons) {
+        const intersections = await this.checkIntersections([polygon.uuid], candidateUuids);
         const overlaps = this.buildOverlapInfo(intersections, polygon.uuid);
+
         resultsByPolygon.set(polygon.uuid, {
           polygonUuid: polygon.uuid,
           valid: overlaps.length === 0,

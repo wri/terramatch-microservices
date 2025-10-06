@@ -2,15 +2,24 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
+  Param,
   Patch,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { buildJsonApi, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery,
+  IndexData
+} from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
 import {
@@ -213,5 +222,26 @@ export class SitePolygonsController {
 
       await Promise.all(updates);
     });
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({
+    operationId: "deleteSitePolygon",
+    summary: "Delete a site polygon and all associated records",
+    description: `Deletes a site polygon and all its associated records including indicators, 
+       criteria site records, audit statuses, actions, and geometry data. This operation 
+       follows the same cascade deletion pattern as the EntityService.`
+  })
+  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
+    description: "Site polygon and all associated records were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  async deleteOne(@Param("uuid") uuid: string) {
+    await this.policyService.authorize("deleteAll", SitePolygon);
+
+    await this.sitePolygonService.deleteSitePolygon(uuid);
+
+    return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
   }
 }

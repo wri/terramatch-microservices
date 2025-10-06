@@ -7,14 +7,12 @@ interface WithinCountryValidationResult extends ValidationResult {
   extraInfo: {
     insidePercentage: number;
     countryName: string;
-    polygonArea: number;
-    intersectionArea: number;
   } | null;
 }
 
 interface WithinCountryQueryResult {
-  polygon_area: number;
-  intersection_area: number;
+  polygonArea: number;
+  intersectionArea: number;
   country: string;
 }
 
@@ -28,16 +26,14 @@ export class WithinCountryValidator implements Validator {
       throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found or has no associated project`);
     }
 
-    const insidePercentage = Math.round((result.intersection_area / result.polygon_area) * 100 * 100) / 100;
+    const insidePercentage = Math.round((result.intersectionArea / result.polygonArea) * 100 * 100) / 100;
     const valid = insidePercentage >= this.THRESHOLD_PERCENTAGE;
 
     return {
       valid,
       extraInfo: {
         insidePercentage,
-        countryName: result.country,
-        polygonArea: result.polygon_area,
-        intersectionArea: result.intersection_area
+        countryName: result.country
       }
     };
   }
@@ -48,7 +44,7 @@ export class WithinCountryValidator implements Validator {
     }
 
     const results = await this.getIntersectionDataBatch(polygonUuids);
-    const resultMap = new Map(results.map(r => [r.polygon_uuid, r]));
+    const resultMap = new Map(results.map(r => [r.polygonUuid, r]));
 
     return polygonUuids.map(polygonUuid => {
       const result = resultMap.get(polygonUuid);
@@ -61,7 +57,7 @@ export class WithinCountryValidator implements Validator {
         };
       }
 
-      const insidePercentage = Math.round((result.intersection_area / result.polygon_area) * 100 * 100) / 100;
+      const insidePercentage = Math.round((result.intersectionArea / result.polygonArea) * 100 * 100) / 100;
       const valid = insidePercentage >= this.THRESHOLD_PERCENTAGE;
 
       return {
@@ -69,9 +65,7 @@ export class WithinCountryValidator implements Validator {
         valid,
         extraInfo: {
           insidePercentage,
-          countryName: result.country,
-          polygonArea: result.polygon_area,
-          intersectionArea: result.intersection_area
+          countryName: result.country
         }
       };
     });
@@ -90,8 +84,8 @@ export class WithinCountryValidator implements Validator {
       const results = (await PolygonGeometry.sequelize.query(
         `
         SELECT 
-          ST_Area(pg.geom) as polygon_area,
-          ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as intersection_area,
+          ST_Area(pg.geom) as "polygonArea",
+          ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
           wcg.country
         FROM polygon_geometry pg
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
@@ -119,7 +113,7 @@ export class WithinCountryValidator implements Validator {
 
   private async getIntersectionDataBatch(
     polygonUuids: string[]
-  ): Promise<(WithinCountryQueryResult & { polygon_uuid: string })[]> {
+  ): Promise<(WithinCountryQueryResult & { polygonUuid: string })[]> {
     if (PolygonGeometry.sequelize == null) {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
     }
@@ -132,9 +126,9 @@ export class WithinCountryValidator implements Validator {
       const results = (await PolygonGeometry.sequelize.query(
         `
         SELECT 
-          pg.uuid as polygon_uuid,
-          ST_Area(pg.geom) as polygon_area,
-          ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as intersection_area,
+          pg.uuid as "polygonUuid",
+          ST_Area(pg.geom) as "polygonArea",
+          ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
           wcg.country
         FROM polygon_geometry pg
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
@@ -149,7 +143,7 @@ export class WithinCountryValidator implements Validator {
           type: QueryTypes.SELECT,
           transaction
         }
-      )) as (WithinCountryQueryResult & { polygon_uuid: string })[];
+      )) as (WithinCountryQueryResult & { polygonUuid: string })[];
 
       await transaction.commit();
 

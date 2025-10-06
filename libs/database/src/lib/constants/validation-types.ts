@@ -1,12 +1,12 @@
 export const VALIDATION_TYPES = [
+  "OVERLAPPING",
   "SELF_INTERSECTION",
   "POLYGON_SIZE",
+  "WITHIN_COUNTRY",
   "SPIKES",
   "ESTIMATED_AREA",
   "DATA_COMPLETENESS",
-  "PLANT_START_DATE",
-  "OVERLAPPING",
-  "WITHIN_COUNTRY"
+  "PLANT_START_DATE"
 ] as const;
 
 export type ValidationType = (typeof VALIDATION_TYPES)[number];

@@ -4,11 +4,12 @@ import { NotFoundException, InternalServerErrorException } from "@nestjs/common"
 import { QueryTypes, Transaction } from "sequelize";
 
 interface OverlapInfo {
-  poly_uuid: string;
-  poly_name: string;
-  site_name: string;
+  polyUuid: string;
+  polyName: string;
+  siteName: string;
   percentage: number;
   intersectSmaller: boolean;
+  intersectionArea: number; // in hectares
 }
 
 interface OverlappingValidationResult extends ValidationResult {
@@ -16,13 +17,14 @@ interface OverlappingValidationResult extends ValidationResult {
 }
 
 interface IntersectionQueryResult {
-  target_uuid: string;
-  candidate_uuid: string;
-  candidate_name: string;
-  site_name: string;
-  target_area: number;
-  candidate_area: number;
-  intersection_area: number;
+  targetUuid: string;
+  candidateUuid: string;
+  candidateName: string;
+  siteName: string;
+  targetArea: number;
+  candidateArea: number;
+  intersectionArea: number;
+  intersectionLatitude: number;
 }
 
 export class OverlappingValidator implements Validator {
@@ -114,8 +116,8 @@ export class OverlappingValidator implements Validator {
       const bboxFilteredResults = (await PolygonGeometry.sequelize.query(
         `
         SELECT DISTINCT
-          target.uuid as target_uuid,
-          candidate.uuid as candidate_uuid
+          target.uuid as targetUuid,
+          candidate.uuid as candidateUuid
         FROM polygon_geometry target
         CROSS JOIN polygon_geometry candidate
         WHERE target.uuid IN (:targetUuids)
@@ -127,26 +129,31 @@ export class OverlappingValidator implements Validator {
           type: QueryTypes.SELECT,
           transaction
         }
-      )) as { target_uuid: string; candidate_uuid: string }[];
+      )) as { targetUuid: string; candidateUuid: string }[];
 
       if (bboxFilteredResults.length === 0) {
         await transaction.commit();
         return [];
       }
 
-      const bboxTargets = [...new Set(bboxFilteredResults.map(r => r.target_uuid))];
-      const bboxCandidates = [...new Set(bboxFilteredResults.map(r => r.candidate_uuid))];
+      const bboxTargets = [...new Set(bboxFilteredResults.map(r => r.targetUuid))];
+      const bboxCandidates = [...new Set(bboxFilteredResults.map(r => r.candidateUuid))];
+
+      // as the area in this validator is only for information purposes
+      // Using fixed 35° latitude for area conversion to avoid performance impact of ST_Centroid()
+      // 35° provides balance for most planting regions
 
       const intersectionResults = (await PolygonGeometry.sequelize.query(
         `
         SELECT 
-          target.uuid as target_uuid,
-          candidate.uuid as candidate_uuid,
-          sp.poly_name as candidate_name,
-          s.name as site_name,
-          ST_Area(target.geom) as target_area,
-          ST_Area(candidate.geom) as candidate_area,
-          ST_Area(ST_Intersection(target.geom, candidate.geom)) as intersection_area
+          target.uuid as targetUuid,
+          candidate.uuid as candidateUuid,
+          sp.poly_name as candidateName,
+          s.name as siteName,
+          ST_Area(target.geom) as targetArea,
+          ST_Area(candidate.geom) as candidateArea,
+          ST_Area(ST_Intersection(target.geom, candidate.geom)) as intersectionArea,
+          35.0 as intersectionLatitude
         FROM polygon_geometry target
         CROSS JOIN polygon_geometry candidate
         LEFT JOIN site_polygon sp ON sp.poly_id = candidate.uuid AND sp.is_active = 1
@@ -164,26 +171,39 @@ export class OverlappingValidator implements Validator {
 
       await transaction.commit();
 
-      return intersectionResults.filter(result => result.intersection_area > 1e-10);
+      return intersectionResults.filter(result => result.intersectionArea > 1e-10);
     } catch (error) {
       await transaction.rollback();
       throw error;
     }
   }
 
+  private convertSquareDegreesToHectares(squareDegrees: number, latitude: number): number {
+    const metersPerDegree = 111320;
+    const latitudeFactor = Math.cos((latitude * Math.PI) / 180);
+    const squareMeters = squareDegrees * metersPerDegree * metersPerDegree * latitudeFactor;
+    return squareMeters / 10000;
+  }
+
   private buildOverlapInfo(intersections: IntersectionQueryResult[], targetUuid: string): OverlapInfo[] {
-    const targetIntersections = intersections.filter(i => i.target_uuid === targetUuid);
+    const targetIntersections = intersections.filter(i => i.targetUuid === targetUuid);
 
     return targetIntersections.map(intersection => {
-      const minArea = Math.min(intersection.target_area, intersection.candidate_area);
-      const percentage = Math.round((intersection.intersection_area / minArea) * 100 * 100) / 100;
+      const minArea = Math.min(intersection.targetArea, intersection.candidateArea);
+      const percentage = Math.round((intersection.intersectionArea / minArea) * 100 * 100) / 100;
+
+      const intersectionAreaInHectares = this.convertSquareDegreesToHectares(
+        intersection.intersectionArea,
+        intersection.intersectionLatitude
+      );
 
       return {
-        poly_uuid: intersection.candidate_uuid,
-        poly_name: intersection.candidate_name ?? "",
-        site_name: intersection.site_name ?? "",
+        polyUuid: intersection.candidateUuid,
+        polyName: intersection.candidateName ?? "",
+        siteName: intersection.siteName ?? "",
         percentage,
-        intersectSmaller: intersection.candidate_area < intersection.target_area
+        intersectSmaller: intersection.candidateArea < intersection.targetArea,
+        intersectionArea: intersectionAreaInHectares
       };
     });
   }

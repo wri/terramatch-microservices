@@ -122,28 +122,30 @@ describe("OverlappingValidator", () => {
       const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }, { polygonUuid: testUuids.polygon3 }];
 
       const mockBboxResults = [
-        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon2 },
-        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon3 }
+        { targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon2 },
+        { targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon3 }
       ];
 
       const mockIntersectionResults = [
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "CAPULIN VMRL CAFE CAPITAN",
-          target_area: 1000,
-          candidate_area: 800,
-          intersection_area: 1.4
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon2,
+          candidateName: "A",
+          siteName: "CAPULIN VMRL CAFE CAPITAN",
+          targetArea: 1000,
+          candidateArea: 800,
+          intersectionArea: 1.4,
+          intersectionLatitude: 35.0
         },
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon3,
-          candidate_name: "B",
-          site_name: "CAPULIN VMRL CAFE CAPITAN",
-          target_area: 1000,
-          candidate_area: 1200,
-          intersection_area: 0.9
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon3,
+          candidateName: "B",
+          siteName: "CAPULIN VMRL CAFE CAPITAN",
+          targetArea: 1000,
+          candidateArea: 1200,
+          intersectionArea: 0.9,
+          intersectionLatitude: 35.0
         }
       ];
 
@@ -163,16 +165,16 @@ describe("OverlappingValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toHaveLength(2);
       expect(result.extraInfo?.[0]).toMatchObject({
-        poly_uuid: testUuids.polygon2,
-        poly_name: "A",
-        site_name: "CAPULIN VMRL CAFE CAPITAN",
+        polyUuid: testUuids.polygon2,
+        polyName: "A",
+        siteName: "CAPULIN VMRL CAFE CAPITAN",
         percentage: 0.18,
         intersectSmaller: true
       });
       expect(result.extraInfo?.[1]).toMatchObject({
-        poly_uuid: testUuids.polygon3,
-        poly_name: "B",
-        site_name: "CAPULIN VMRL CAFE CAPITAN",
+        polyUuid: testUuids.polygon3,
+        polyName: "B",
+        siteName: "CAPULIN VMRL CAFE CAPITAN",
         percentage: 0.09,
         intersectSmaller: false
       });
@@ -273,23 +275,24 @@ describe("OverlappingValidator", () => {
       expect(mockTransactionInstance.commit).toHaveBeenCalled();
     });
 
-    it("should handle null candidate_name and site_name", async () => {
+    it("should handle null candidateName and siteName", async () => {
       const mockTransactionInstance: MockTransaction = {
         commit: jest.fn(),
         rollback: jest.fn()
       };
 
-      const mockBboxResults = [{ target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon2 }];
+      const mockBboxResults = [{ targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon2 }];
 
       const mockIntersectionResults = [
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: null,
-          site_name: null,
-          target_area: 1000,
-          candidate_area: 800,
-          intersection_area: 1.4
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon2,
+          candidateName: null,
+          siteName: null,
+          targetArea: 1000,
+          candidateArea: 800,
+          intersectionArea: 1.4,
+          intersectionLatitude: 35.0
         }
       ];
 
@@ -300,8 +303,8 @@ describe("OverlappingValidator", () => {
       const result = await validator["checkIntersections"]([testUuids.polygon1], [testUuids.polygon2]);
 
       expect(result).toHaveLength(1);
-      expect(result[0].candidate_name).toBeNull();
-      expect(result[0].site_name).toBeNull();
+      expect(result[0].candidateName).toBeNull();
+      expect(result[0].siteName).toBeNull();
     });
   });
 
@@ -328,28 +331,30 @@ describe("OverlappingValidator", () => {
       const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }, { polygonUuid: testUuids.polygon3 }];
 
       const mockBboxResults = [
-        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon2 },
-        { target_uuid: testUuids.polygon1, candidate_uuid: testUuids.polygon3 }
+        { targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon2 },
+        { targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon3 }
       ];
 
       const mockIntersectionResults = [
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "CAPULIN VMRL CAFE CAPITAN",
-          target_area: 1000,
-          candidate_area: 800,
-          intersection_area: 1.4
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon2,
+          candidateName: "A",
+          siteName: "CAPULIN VMRL CAFE CAPITAN",
+          targetArea: 1000,
+          candidateArea: 800,
+          intersectionArea: 1.4,
+          intersectionLatitude: 35.0
         },
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon3,
-          candidate_name: "B",
-          site_name: "CAPULIN VMRL CAFE CAPITAN",
-          target_area: 1000,
-          candidate_area: 1200,
-          intersection_area: 0.9
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon3,
+          candidateName: "B",
+          siteName: "CAPULIN VMRL CAFE CAPITAN",
+          targetArea: 1000,
+          candidateArea: 1200,
+          intersectionArea: 0.9,
+          intersectionLatitude: 35.0
         }
       ];
 
@@ -375,14 +380,14 @@ describe("OverlappingValidator", () => {
         throw new Error("Expected overlap info to be present");
       }
 
-      const polyUuids = overlapInfo.map(info => info.poly_uuid);
+      const polyUuids = overlapInfo.map(info => info.polyUuid);
       expect(polyUuids).toContain(testUuids.polygon2);
       expect(polyUuids).toContain(testUuids.polygon3);
 
       overlapInfo.forEach(info => {
         expect(info.percentage).toBeGreaterThan(0);
         expect(info.percentage).toBeLessThan(50);
-        expect(info.site_name).toBe("CAPULIN VMRL CAFE CAPITAN");
+        expect(info.siteName).toBe("CAPULIN VMRL CAFE CAPITAN");
       });
     });
   });
@@ -391,13 +396,14 @@ describe("OverlappingValidator", () => {
     it("should calculate percentage correctly for smaller intersecting polygon", () => {
       const intersections = [
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "Test Site",
-          target_area: 1000,
-          candidate_area: 500,
-          intersection_area: 50
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon2,
+          candidateName: "A",
+          siteName: "Test Site",
+          targetArea: 1000,
+          candidateArea: 500,
+          intersectionArea: 50,
+          intersectionLatitude: 35.0
         }
       ];
 
@@ -411,13 +417,14 @@ describe("OverlappingValidator", () => {
     it("should calculate percentage correctly for larger intersecting polygon", () => {
       const intersections = [
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "Test Site",
-          target_area: 500,
-          candidate_area: 1000,
-          intersection_area: 50
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon2,
+          candidateName: "A",
+          siteName: "Test Site",
+          targetArea: 500,
+          candidateArea: 1000,
+          intersectionArea: 50,
+          intersectionLatitude: 35.0
         }
       ];
 
@@ -431,29 +438,31 @@ describe("OverlappingValidator", () => {
     it("should filter intersections by target UUID", () => {
       const intersections = [
         {
-          target_uuid: testUuids.polygon1,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "Test Site",
-          target_area: 1000,
-          candidate_area: 500,
-          intersection_area: 50
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon2,
+          candidateName: "A",
+          siteName: "Test Site",
+          targetArea: 1000,
+          candidateArea: 500,
+          intersectionArea: 50,
+          intersectionLatitude: 35.0
         },
         {
-          target_uuid: testUuids.polygon3,
-          candidate_uuid: testUuids.polygon2,
-          candidate_name: "A",
-          site_name: "Test Site",
-          target_area: 1000,
-          candidate_area: 500,
-          intersection_area: 50
+          targetUuid: testUuids.polygon3,
+          candidateUuid: testUuids.polygon2,
+          candidateName: "A",
+          siteName: "Test Site",
+          targetArea: 1000,
+          candidateArea: 500,
+          intersectionArea: 50,
+          intersectionLatitude: 35.0
         }
       ];
 
       const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
 
       expect(result).toHaveLength(1);
-      expect(result[0].poly_uuid).toBe(testUuids.polygon2);
+      expect(result[0].polyUuid).toBe(testUuids.polygon2);
     });
   });
 });

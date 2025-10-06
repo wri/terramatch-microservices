@@ -23,6 +23,13 @@ export const SiteReportConfiguration: LinkedFieldConfiguration = {
     "site-rep-seeds-planted": { property: "seeds_planted", label: "Seeds planted", inputType: "number" },
     "site-rep-workdays-volunteer": { property: "workdays_volunteer", label: "Workdays volunteer", inputType: "number" },
     "site-rep-polygon-status": { property: "polygon_status", label: "Polygon status", inputType: "long-text" },
+    "site-rep-planting-status": {
+      property: "planting_status",
+      label: "What is the status of planting at this site?",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "planting-status"
+    },
     "site-rep-invasive_species_removed": {
       property: "invasive_species_removed",
       label: "Invasive Species Removed",

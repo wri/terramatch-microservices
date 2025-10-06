@@ -242,6 +242,9 @@ export class SiteReportFullDto extends SiteReportLightDto {
   totalSeedsPlantedCount: number | null;
 
   @ApiProperty({ nullable: true, type: String })
+  plantingStatus: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
   survivalCalculation: string | null;
 
   @ApiProperty({ nullable: true, type: String })

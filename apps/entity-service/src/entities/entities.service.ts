@@ -43,6 +43,7 @@ import { Strata } from "@terramatch-microservices/database/entities/stratas.enti
 import { StrataDto } from "./dto/strata.dto";
 import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
+import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -52,7 +53,8 @@ export const ENTITY_PROCESSORS = {
   projectReports: ProjectReportProcessor,
   nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor,
-  financialReports: FinancialReportProcessor
+  financialReports: FinancialReportProcessor,
+  disturbanceReports: DisturbanceReportProcessor
 } as const;
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;

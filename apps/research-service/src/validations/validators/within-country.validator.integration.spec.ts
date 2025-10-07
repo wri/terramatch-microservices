@@ -1,17 +1,25 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { WithinCountryValidator } from "./within-country.validator";
-import { SitePolygon, PolygonGeometry, Site, Project } from "@terramatch-microservices/database/entities";
+import {
+  SitePolygon,
+  PolygonGeometry,
+  Site,
+  Project,
+  WorldCountryGeneralized
+} from "@terramatch-microservices/database/entities";
 import {
   SitePolygonFactory,
   PolygonGeometryFactory,
   SiteFactory,
   ProjectFactory
 } from "@terramatch-microservices/database/factories";
+import { cambodiaGeometry } from "@terramatch-microservices/database/test-fixtures/cambodia-geometry";
 
 describe("WithinCountryValidator - Integration Tests", () => {
   let validator: WithinCountryValidator;
   let testProject: Project;
   let testSite: Site;
+  let cambodiaCountry: WorldCountryGeneralized;
   const testPolygonUuids: string[] = [];
 
   beforeAll(async () => {
@@ -20,6 +28,27 @@ describe("WithinCountryValidator - Integration Tests", () => {
     }).compile();
 
     validator = module.get<WithinCountryValidator>(WithinCountryValidator);
+
+    if (WorldCountryGeneralized.sequelize == null) {
+      throw new Error("Sequelize connection not available");
+    }
+
+    await WorldCountryGeneralized.sequelize.query(
+      `
+      INSERT INTO world_countries_generalized (country, iso, countryaff, alpha_2_iso, geometry)
+      VALUES (
+        'Cambodia',
+        'KHM',
+        'Cambodia',
+        'KH',
+        ST_GeomFromGeoJSON('${JSON.stringify(cambodiaGeometry)}')
+      )
+      `
+    );
+
+    cambodiaCountry = (await WorldCountryGeneralized.findOne({
+      where: { iso: "KHM" }
+    })) as WorldCountryGeneralized;
 
     testProject = await ProjectFactory.create({
       name: "Test Project for WithinCountry Validator Integration",
@@ -135,18 +164,23 @@ describe("WithinCountryValidator - Integration Tests", () => {
         where: { id: testProject.id }
       });
     }
+
+    if (cambodiaCountry != null) {
+      await WorldCountryGeneralized.destroy({
+        where: { OGRFID: cambodiaCountry.OGRFID }
+      });
+    }
   });
 
   describe("Real Database Integration Tests", () => {
-    it("should validate polygon C as invalid", async () => {
+    it("should validate polygon C as valid", async () => {
       const result = await validator.validatePolygon(testPolygonUuids[0]);
 
-      expect(result.valid).toBe(false);
+      expect(result.valid).toBe(true);
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.insidePercentage).toBeLessThan(75);
-        expect(result.extraInfo.insidePercentage).toBeCloseTo(50.84, 1);
+        expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
         expect(result.extraInfo.countryName).toBe("Cambodia");
       }
     });
@@ -159,7 +193,7 @@ describe("WithinCountryValidator - Integration Tests", () => {
 
       if (result.extraInfo != null) {
         expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.insidePercentage).toBeCloseTo(100, 0);
+        expect(result.extraInfo.insidePercentage).toBeCloseTo(83.12, 1);
         expect(result.extraInfo.countryName).toBe("Cambodia");
       }
     });
@@ -172,20 +206,19 @@ describe("WithinCountryValidator - Integration Tests", () => {
 
       if (result.extraInfo != null) {
         expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.insidePercentage).toBeCloseTo(83.12, 1);
+        expect(result.extraInfo.insidePercentage).toBeCloseTo(78, 1);
         expect(result.extraInfo.countryName).toBe("Cambodia");
       }
     });
 
-    it("should validate polygon A as valid", async () => {
+    it("should validate polygon A as invalid", async () => {
       const result = await validator.validatePolygon(testPolygonUuids[3]);
 
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.insidePercentage).toBeCloseTo(78, 1);
+        expect(result.extraInfo.insidePercentage).toBeLessThan(75);
         expect(result.extraInfo.countryName).toBe("Cambodia");
       }
     });

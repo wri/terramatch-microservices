@@ -8,5 +8,6 @@ export default {
   },
   moduleFileExtensions: ["ts", "js", "html"],
   coveragePathIgnorePatterns: [".dto.ts"],
-  coverageDirectory: "../../coverage/apps/research-service"
+  coverageDirectory: "../../coverage/apps/research-service",
+  setupFilesAfterEnv: ["../../jest/setup-jest.ts", "../../jest/sync-sequelize.ts"]
 };

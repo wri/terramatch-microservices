@@ -1,7 +1,7 @@
 import { PolygonGeometry, SitePolygon, Site } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
-import { QueryTypes, Transaction } from "sequelize";
+import { Transaction } from "sequelize";
 
 interface OverlapInfo {
   polyUuid: string;
@@ -19,8 +19,8 @@ interface OverlappingValidationResult extends ValidationResult {
 interface IntersectionQueryResult {
   targetUuid: string;
   candidateUuid: string;
-  candidateName: string;
-  siteName: string;
+  candidateName: string | null;
+  siteName: string | null;
   targetArea: number;
   candidateArea: number;
   intersectionArea: number;
@@ -69,7 +69,7 @@ export class OverlappingValidator implements Validator {
       attributes: ["polygonUuid", "siteUuid"]
     });
 
-    if (sitePolygon == null || sitePolygon.site == null) {
+    if (sitePolygon?.site == null) {
       return null;
     }
 
@@ -112,27 +112,16 @@ export class OverlappingValidator implements Validator {
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 
+    let shouldCommit = true;
+
     try {
-      const bboxFilteredResults = (await PolygonGeometry.sequelize.query(
-        `
-        SELECT DISTINCT
-          target.uuid as targetUuid,
-          candidate.uuid as candidateUuid
-        FROM polygon_geometry target
-        CROSS JOIN polygon_geometry candidate
-        WHERE target.uuid IN (:targetUuids)
-          AND candidate.uuid IN (:candidateUuids)
-          AND ST_Intersects(ST_Envelope(target.geom), ST_Envelope(candidate.geom))
-        `,
-        {
-          replacements: { targetUuids, candidateUuids },
-          type: QueryTypes.SELECT,
-          transaction
-        }
-      )) as { targetUuid: string; candidateUuid: string }[];
+      const bboxFilteredResults = await PolygonGeometry.checkBoundingBoxIntersections(
+        targetUuids,
+        candidateUuids,
+        transaction
+      );
 
       if (bboxFilteredResults.length === 0) {
-        await transaction.commit();
         return [];
       }
 
@@ -143,38 +132,21 @@ export class OverlappingValidator implements Validator {
       // Using fixed 35° latitude for area conversion to avoid performance impact of ST_Centroid()
       // 35° provides balance for most planting regions
 
-      const intersectionResults = (await PolygonGeometry.sequelize.query(
-        `
-        SELECT 
-          target.uuid as targetUuid,
-          candidate.uuid as candidateUuid,
-          sp.poly_name as candidateName,
-          s.name as siteName,
-          ST_Area(target.geom) as targetArea,
-          ST_Area(candidate.geom) as candidateArea,
-          ST_Area(ST_Intersection(target.geom, candidate.geom)) as intersectionArea,
-          35.0 as intersectionLatitude
-        FROM polygon_geometry target
-        CROSS JOIN polygon_geometry candidate
-        LEFT JOIN site_polygon sp ON sp.poly_id = candidate.uuid AND sp.is_active = 1
-        LEFT JOIN v2_sites s ON s.uuid = sp.site_id
-        WHERE target.uuid IN (:bboxTargets)
-          AND candidate.uuid IN (:bboxCandidates)
-          AND ST_Intersects(target.geom, candidate.geom)
-        `,
-        {
-          replacements: { bboxTargets, bboxCandidates },
-          type: QueryTypes.SELECT,
-          transaction
-        }
-      )) as IntersectionQueryResult[];
-
-      await transaction.commit();
+      const intersectionResults = await PolygonGeometry.checkGeometryIntersections(
+        bboxTargets,
+        bboxCandidates,
+        transaction
+      );
 
       return intersectionResults.filter(result => result.intersectionArea > 1e-10);
     } catch (error) {
+      shouldCommit = false;
       await transaction.rollback();
       throw error;
+    } finally {
+      if (shouldCommit) {
+        await transaction.commit();
+      }
     }
   }
 

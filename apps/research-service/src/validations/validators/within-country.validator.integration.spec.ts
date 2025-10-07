@@ -35,12 +35,10 @@ describe("WithinCountryValidator - Integration Tests", () => {
 
     await WorldCountryGeneralized.sequelize.query(
       `
-      INSERT INTO world_countries_generalized (country, iso, countryaff, alpha_2_iso, geometry)
+      INSERT INTO world_countries_generalized (country, iso, geometry)
       VALUES (
         'Cambodia',
         'KHM',
-        'Cambodia',
-        'KH',
         ST_GeomFromGeoJSON('${JSON.stringify(cambodiaGeometry)}')
       )
       `

@@ -20,7 +20,9 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     sequelize: {
       query: jest.fn(),
       transaction: jest.fn()
-    }
+    },
+    checkBoundingBoxIntersections: jest.fn(),
+    checkGeometryIntersections: jest.fn()
   }
 }));
 
@@ -28,8 +30,9 @@ describe("OverlappingValidator", () => {
   let validator: OverlappingValidator;
   let mockSitePolygonFindOne: jest.MockedFunction<typeof SitePolygon.findOne>;
   let mockSitePolygonFindAll: jest.MockedFunction<typeof SitePolygon.findAll>;
-  let mockPolygonGeometryQuery: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
   let mockTransaction: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
+  let mockCheckBoundingBoxIntersections: jest.MockedFunction<typeof PolygonGeometry.checkBoundingBoxIntersections>;
+  let mockCheckGeometryIntersections: jest.MockedFunction<typeof PolygonGeometry.checkGeometryIntersections>;
 
   const testUuids = {
     polygon1: "d2239d63-83ed-4df8-996c-2b79555385f9",
@@ -43,11 +46,14 @@ describe("OverlappingValidator", () => {
   beforeEach(async () => {
     mockSitePolygonFindOne = SitePolygon.findOne as jest.MockedFunction<typeof SitePolygon.findOne>;
     mockSitePolygonFindAll = SitePolygon.findAll as jest.MockedFunction<typeof SitePolygon.findAll>;
-    mockPolygonGeometryQuery = PolygonGeometry.sequelize?.query as jest.MockedFunction<
-      (...args: unknown[]) => Promise<unknown>
-    >;
     mockTransaction = PolygonGeometry.sequelize?.transaction as jest.MockedFunction<
       (...args: unknown[]) => Promise<unknown>
+    >;
+    mockCheckBoundingBoxIntersections = PolygonGeometry.checkBoundingBoxIntersections as jest.MockedFunction<
+      typeof PolygonGeometry.checkBoundingBoxIntersections
+    >;
+    mockCheckGeometryIntersections = PolygonGeometry.checkGeometryIntersections as jest.MockedFunction<
+      typeof PolygonGeometry.checkGeometryIntersections
     >;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -102,7 +108,7 @@ describe("OverlappingValidator", () => {
       mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
       mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce([]);
 
       const result = await validator.validatePolygon(testUuids.polygon1);
 
@@ -158,7 +164,8 @@ describe("OverlappingValidator", () => {
       mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
       mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce(mockBboxResults);
+      mockCheckGeometryIntersections.mockResolvedValueOnce(mockIntersectionResults);
 
       const result = await validator.validatePolygon(testUuids.polygon1);
 
@@ -218,7 +225,7 @@ describe("OverlappingValidator", () => {
       mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
       mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockRejectedValueOnce(new Error("Database error"));
+      mockCheckBoundingBoxIntersections.mockRejectedValueOnce(new Error("Database error"));
 
       await expect(validator.validatePolygon(testUuids.polygon1)).rejects.toThrow("Database error");
 
@@ -267,7 +274,7 @@ describe("OverlappingValidator", () => {
 
       jest.clearAllMocks();
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockResolvedValueOnce([]);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce([]);
 
       const result = await validator["checkIntersections"]([testUuids.polygon1], [testUuids.polygon2]);
 
@@ -298,7 +305,8 @@ describe("OverlappingValidator", () => {
 
       jest.clearAllMocks();
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce(mockBboxResults);
+      mockCheckGeometryIntersections.mockResolvedValueOnce(mockIntersectionResults);
 
       const result = await validator["checkIntersections"]([testUuids.polygon1], [testUuids.polygon2]);
 
@@ -367,7 +375,8 @@ describe("OverlappingValidator", () => {
       mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
       mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
-      mockPolygonGeometryQuery.mockResolvedValueOnce(mockBboxResults).mockResolvedValueOnce(mockIntersectionResults);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce(mockBboxResults);
+      mockCheckGeometryIntersections.mockResolvedValueOnce(mockIntersectionResults);
 
       const result = await validator.validatePolygon(testUuids.polygon1);
 

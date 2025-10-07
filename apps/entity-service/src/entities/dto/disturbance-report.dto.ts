@@ -95,4 +95,10 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   answers: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  description: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  actionDescription: string | null;
 }

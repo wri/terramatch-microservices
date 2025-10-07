@@ -1,11 +1,14 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Post, Body } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
+import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
+import { CriteriaId } from "@terramatch-microservices/database/constants";
 
 @Controller("validations/v3")
 @ApiTags("Validations")
@@ -42,11 +45,17 @@ export class ValidationController {
     const pageSize = query.page?.size ?? MAX_PAGE_SIZE;
     const pageNumber = query.page?.number ?? 1;
 
+    const criteriaId = query.criteriaId != null ? (Number(query.criteriaId) as CriteriaId) : undefined;
+
+    if (criteriaId != null && (criteriaId < 1 || Number.isInteger(criteriaId) === false)) {
+      throw new BadRequestException("criteriaId must be a valid integer greater than or equal to 1");
+    }
+
     const { validations, total } = await this.validationService.getSiteValidations(
       siteUuid,
       pageSize,
       pageNumber,
-      query.criteriaId
+      criteriaId
     );
 
     return validations
@@ -59,5 +68,46 @@ export class ValidationController {
         total,
         pageNumber
       });
+  }
+
+  @Post("polygonValidations")
+  @ApiOperation({
+    operationId: "createPolygonValidations",
+    summary: "Validate multiple polygons for various criteria"
+  })
+  @JsonApiResponse(ValidationDto)
+  @ExceptionResponse(NotFoundException, {
+    description: "One or more polygons not found"
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid validation request"
+  })
+  async createPolygonValidations(@Body() request: ValidationRequestDto) {
+    const validationResponse = await this.validationService.validatePolygons(request);
+
+    const document = buildJsonApi(ValidationDto);
+
+    const resultsByPolygon = new Map<string, ValidationCriteriaDto[]>();
+
+    for (const result of validationResponse.results) {
+      if (result.polygonUuid != null) {
+        if (!resultsByPolygon.has(result.polygonUuid)) {
+          resultsByPolygon.set(result.polygonUuid, []);
+        }
+        const criteriaList = resultsByPolygon.get(result.polygonUuid);
+        if (criteriaList != null) {
+          criteriaList.push(result);
+        }
+      }
+    }
+
+    for (const [polygonUuid, criteriaList] of resultsByPolygon) {
+      const validation = new ValidationDto();
+      validation.polygonId = polygonUuid;
+      validation.criteriaList = criteriaList;
+      document.addData(polygonUuid, validation);
+    }
+
+    return document;
   }
 }

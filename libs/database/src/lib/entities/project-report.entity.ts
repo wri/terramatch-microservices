@@ -32,6 +32,7 @@ import { User } from "./user.entity";
 import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { PlantingStatus } from "../constants/planting-status";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -494,6 +495,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT("long"))
   answers: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  plantingStatus: PlantingStatus | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

@@ -32,6 +32,7 @@ import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
+import { PlantingStatus } from "../constants/planting-status";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -316,6 +317,10 @@ export class SiteReport extends Model<SiteReport> {
   @AllowNull
   @Column(TEXT)
   paidOtherActivityDescription: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  plantingStatus: PlantingStatus | null;
 
   @Column({ type: TEXT, defaultValue: "" })
   invasiveSpeciesRemoved: string;

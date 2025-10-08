@@ -34,7 +34,7 @@ export class FinancialReportProcessor extends ReportProcessor<
   /**
    * Specific method for FinancialReport custom logic. This is called automatically when nothingToReport is updated
    */
-  protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
+  protected async processReportSpecificLogic(model: FinancialReport): Promise<void> {
     const organisation = await Organisation.findByPk(model.organisationId);
     if (organisation == null) {
       this.logger.warn(`Organisation not found for FinancialReport ${model.uuid}`);

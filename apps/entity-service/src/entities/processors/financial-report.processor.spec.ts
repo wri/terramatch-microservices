@@ -246,7 +246,7 @@ describe("FinancialReportProcessor", () => {
     });
   });
 
-  describe("processFinancialReportSpecificLogic", () => {
+  describe("processReportSpecificLogic", () => {
     it("should update organisation fields when financial report is approved", async () => {
       const organisation = await OrganisationFactory.create({
         finStartMonth: null,
@@ -260,9 +260,9 @@ describe("FinancialReportProcessor", () => {
 
       await (
         processor as unknown as {
-          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
         }
-      ).processFinancialReportSpecificLogic(financialReport);
+      ).processReportSpecificLogic(financialReport);
 
       await organisation.reload();
       expect(organisation.finStartMonth).toBe(3);
@@ -284,9 +284,9 @@ describe("FinancialReportProcessor", () => {
 
       await (
         processor as unknown as {
-          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
         }
-      ).processFinancialReportSpecificLogic(financialReport);
+      ).processReportSpecificLogic(financialReport);
 
       expect(mockWarn).toHaveBeenCalledWith(`Organisation not found for FinancialReport ${financialReport.uuid}`);
     });
@@ -322,9 +322,9 @@ describe("FinancialReportProcessor", () => {
 
       await (
         processor as unknown as {
-          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
         }
-      ).processFinancialReportSpecificLogic(financialReport);
+      ).processReportSpecificLogic(financialReport);
 
       expect(mockBulkCreate).toHaveBeenCalledWith([
         {
@@ -400,9 +400,9 @@ describe("FinancialReportProcessor", () => {
 
       await (
         processor as unknown as {
-          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
         }
-      ).processFinancialReportSpecificLogic(financialReport);
+      ).processReportSpecificLogic(financialReport);
 
       expect(mockUpdate).toHaveBeenCalledTimes(2);
       expect(mockUpdate).toHaveBeenCalledWith(
@@ -468,9 +468,9 @@ describe("FinancialReportProcessor", () => {
 
       await (
         processor as unknown as {
-          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
         }
-      ).processFinancialReportSpecificLogic(financialReport);
+      ).processReportSpecificLogic(financialReport);
 
       expect(mockBulkCreate).toHaveBeenCalledWith([
         {
@@ -508,9 +508,9 @@ describe("FinancialReportProcessor", () => {
 
       await (
         processor as unknown as {
-          processFinancialReportSpecificLogic: (report: FinancialReport) => Promise<void>;
+          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
         }
-      ).processFinancialReportSpecificLogic(financialReport);
+      ).processReportSpecificLogic(financialReport);
 
       expect(mockBulkCreate).not.toHaveBeenCalled();
       expect(mockUpdate).not.toHaveBeenCalled();

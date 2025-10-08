@@ -70,7 +70,6 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       if (polygonFieldNames.includes(entry.name) && entry.value) {
         this.logger.debug(`Processing polygon field: ${entry.name} with value: ${entry.value}`);
         try {
-          // Parse as JSON array of arrays containing polygon objects
           const parsedValue = JSON.parse(entry.value);
           if (Array.isArray(parsedValue)) {
             parsedValue.forEach((polygonGroup, groupIndex) => {
@@ -88,10 +87,6 @@ export class DisturbanceReportProcessor extends ReportProcessor<
                 // Handle direct object format (fallback)
                 this.logger.debug(`Adding polygon UUID: ${polygonGroup.polyUuid} (${polygonGroup.polyName})`);
                 affectedPolygonUuids.add(polygonGroup.polyUuid);
-              } else if (typeof polygonGroup === "string" && polygonGroup.trim()) {
-                // Fallback for simple string UUIDs
-                this.logger.debug(`Adding polygon UUID (string): ${polygonGroup.trim()}`);
-                affectedPolygonUuids.add(polygonGroup.trim());
               }
             });
           }

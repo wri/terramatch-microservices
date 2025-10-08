@@ -4,16 +4,26 @@ import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
 import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationSummaryDto } from "./dto/validation-summary.dto";
+import { SiteValidationRequestDto } from "./dto/site-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
-import { CriteriaId } from "@terramatch-microservices/database/constants";
+import { CriteriaId, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("validations/v3")
 @ApiTags("Validations")
 export class ValidationController {
-  constructor(private readonly validationService: ValidationService) {}
+  constructor(
+    private readonly validationService: ValidationService,
+    @InjectQueue("validation") private readonly validationQueue: Queue
+  ) {}
 
   @Get("polygons/:polygonUuid")
   @ApiOperation({
@@ -109,5 +119,50 @@ export class ValidationController {
     }
 
     return document;
+  }
+
+  @Post("sites/:siteUuid/validation")
+  @ApiOperation({
+    operationId: "createSiteValidation",
+    summary: "Start asynchronous validation for all polygons in a site"
+  })
+  @JsonApiResponse([ValidationSummaryDto, DelayedJobDto])
+  @ExceptionResponse(NotFoundException, {
+    description: "Site not found or has no polygons"
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid validation request"
+  })
+  async createSiteValidation(@Param("siteUuid") siteUuid: string, @Body() request: SiteValidationRequestDto) {
+    // Check if site exists and get polygon count
+    const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
+
+    if (polygonUuids.length === 0) {
+      throw new NotFoundException(`No polygons found for site ${siteUuid}`);
+    }
+
+    // If no validation types provided, run all validations
+    const validationTypes = request.validationTypes ?? VALIDATION_TYPES;
+
+    // Create delayed job
+    const delayedJob = await DelayedJob.create();
+    delayedJob.name = "Site Polygon Validation";
+    delayedJob.totalContent = polygonUuids.length;
+    delayedJob.processedContent = 0;
+    delayedJob.progressMessage = "Starting validation...";
+    delayedJob.metadata = {
+      entity_name: `Site Validation (${polygonUuids.length} polygons)`
+    };
+    await delayedJob.save();
+
+    // Queue the job
+    await this.validationQueue.add("siteValidation", {
+      siteUuid,
+      validationTypes,
+      delayedJobId: delayedJob.id
+    });
+
+    const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto);
   }
 }

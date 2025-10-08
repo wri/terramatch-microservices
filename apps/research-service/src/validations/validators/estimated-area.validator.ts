@@ -1,6 +1,7 @@
 import { SitePolygon, Site, Project } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 interface EstimatedAreaResult extends ValidationResult {
   extraInfo: {
@@ -170,6 +171,10 @@ export class EstimatedAreaValidator implements Validator {
   }
 
   private async calculateSiteAreaSum(siteUuid: string): Promise<number> {
+    if (siteUuid == null || siteUuid === "") {
+      return 0;
+    }
+
     const result = await SitePolygon.sum("calcArea", {
       where: { siteUuid, isActive: true }
     });
@@ -179,7 +184,7 @@ export class EstimatedAreaValidator implements Validator {
   private async calculateProjectAreaSum(projectId: number): Promise<number> {
     const result = await SitePolygon.sum("calcArea", {
       where: {
-        siteUuid: Site.uuidsSubquery(projectId),
+        siteUuid: { [Op.in]: Site.uuidsSubquery(projectId) },
         isActive: true
       }
     });

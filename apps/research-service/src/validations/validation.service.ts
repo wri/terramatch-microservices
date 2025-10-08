@@ -3,11 +3,13 @@ import {
   CriteriaSite,
   CriteriaSiteHistoric,
   PolygonGeometry,
-  SitePolygon
+  SitePolygon,
+  Site
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
 import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationSummaryDto, ValidationTypeSummary } from "./dto/validation-summary.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";
@@ -21,6 +23,8 @@ import { OverlappingValidator } from "./validators/overlapping.validator";
 import { WithinCountryValidator } from "./validators/within-country.validator";
 import { Validator } from "./validators/validator.interface";
 import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
+import { Op } from "sequelize";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
@@ -35,6 +39,8 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
 
 @Injectable()
 export class ValidationService {
+  private readonly logger = new TMLogger(ValidationService.name);
+
   async getPolygonValidation(polygonUuid: string): Promise<ValidationDto> {
     const polygon = await PolygonGeometry.findOne({
       where: { uuid: polygonUuid },
@@ -208,5 +214,91 @@ export class ValidationService {
       newRecord.extraInfo = extraInfo;
       await newRecord.save();
     }
+  }
+
+  async getSitePolygonUuids(siteUuid: string): Promise<string[]> {
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["uuid"]
+    });
+
+    if (site === null) {
+      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+    }
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        siteUuid,
+        polygonUuid: { [Op.ne]: "" },
+        isActive: true,
+        deletedAt: null
+      },
+      attributes: ["polygonUuid"]
+    });
+
+    return sitePolygons.map(sp => sp.polygonUuid).filter(uuid => uuid != null && uuid !== "") as string[];
+  }
+
+  async validatePolygonsBatch(polygonUuids: string[], validationTypes: ValidationType[]): Promise<void> {
+    for (const polygonUuid of polygonUuids) {
+      for (const validationType of validationTypes) {
+        const validator = VALIDATORS[validationType];
+        if (validator == null) {
+          this.logger.warn(`Unknown validation type: ${validationType}`);
+          continue;
+        }
+
+        try {
+          const validationResult = await validator.validatePolygon(polygonUuid);
+          const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+          await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
+        } catch (error) {
+          this.logger.error(`Error validating polygon ${polygonUuid} with ${validationType}:`, error);
+          // Continue with next validation instead of failing the entire batch
+        }
+      }
+    }
+  }
+
+  async generateValidationSummary(siteUuid: string, validationTypes: ValidationType[]): Promise<ValidationSummaryDto> {
+    const polygonUuids = await this.getSitePolygonUuids(siteUuid);
+
+    if (polygonUuids.length === 0) {
+      throw new NotFoundException(`No polygons found for site with UUID ${siteUuid}`);
+    }
+
+    const validationSummary: Record<ValidationType, ValidationTypeSummary> = {} as Record<
+      ValidationType,
+      ValidationTypeSummary
+    >;
+
+    for (const validationType of validationTypes) {
+      const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+      const criteriaData = await CriteriaSite.findAll({
+        where: {
+          polygonId: { [Op.in]: polygonUuids },
+          criteriaId
+        },
+        attributes: ["valid"]
+      });
+
+      const validCount = criteriaData.filter(c => c.valid === true).length;
+      const invalidCount = criteriaData.filter(c => c.valid === false).length;
+
+      validationSummary[validationType] = {
+        valid: validCount,
+        invalid: invalidCount
+      };
+    }
+
+    return {
+      siteUuid,
+      totalPolygons: polygonUuids.length,
+      validatedPolygons: polygonUuids.length,
+      validationSummary,
+      completedAt: new Date()
+    };
   }
 }

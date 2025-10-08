@@ -30,8 +30,7 @@ import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
 import { EntityUpdateBody } from "./dto/entity-update.dto";
 import { SupportedEntities } from "./dto/entity.dto";
 import { FinancialReportLightDto, FinancialReportFullDto } from "./dto/financial-report.dto";
-import { DisturbanceReportFullDto } from "./dto/disturbance-report.dto";
-import { DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
+import { DisturbanceReportFullDto, DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)

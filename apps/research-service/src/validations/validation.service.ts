@@ -13,12 +13,22 @@ import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-q
 import { groupBy } from "lodash";
 import { SelfIntersectionValidator } from "./validators/self-intersection.validator";
 import { SpikesValidator } from "./validators/spikes.validator";
+import { DataCompletenessValidator } from "./validators/data-completeness.validator";
+import { PlantStartDateValidator } from "./validators/plant-start-date.validator";
+import { PolygonSizeValidator } from "./validators/polygon-size.validator";
+import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
+import { OverlappingValidator } from "./validators/overlapping.validator";
 import { Validator } from "./validators/validator.interface";
 import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
 
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
-  SPIKES: new SpikesValidator()
+  POLYGON_SIZE: new PolygonSizeValidator(),
+  SPIKES: new SpikesValidator(),
+  ESTIMATED_AREA: new EstimatedAreaValidator(),
+  DATA_COMPLETENESS: new DataCompletenessValidator(),
+  PLANT_START_DATE: new PlantStartDateValidator(),
+  OVERLAPPING: new OverlappingValidator()
 };
 
 @Injectable()
@@ -57,7 +67,7 @@ export class ValidationService {
     siteUuid: string,
     pageSize: number,
     pageNumber = 1,
-    criteriaId?: number
+    criteriaId?: CriteriaId
   ): Promise<{
     validations: ValidationDto[];
     total: number;

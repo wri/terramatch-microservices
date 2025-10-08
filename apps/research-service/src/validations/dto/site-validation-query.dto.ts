@@ -1,6 +1,7 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsInt, IsOptional, Min, ValidateNested } from "class-validator";
+import { IsOptional, ValidateNested } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { CriteriaId } from "@terramatch-microservices/database/constants";
 
 export class SiteValidationQueryDto extends IntersectionType(NumberPage) {
   @ValidateNested()
@@ -8,12 +9,10 @@ export class SiteValidationQueryDto extends IntersectionType(NumberPage) {
   page?: NumberPage;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
   @ApiProperty({
     description: "Filter validations by criteria ID",
     required: false,
     example: 3
   })
-  criteriaId?: number;
+  criteriaId?: CriteriaId;
 }

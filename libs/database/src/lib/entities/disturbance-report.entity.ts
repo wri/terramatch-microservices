@@ -102,6 +102,14 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(TEXT("long"))
   answers: string | null;
 
+  @AllowNull
+  @Column(TEXT)
+  description: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  actionDescription: string | null;
+
   @BelongsTo(() => Project)
   project: Project | null;
 

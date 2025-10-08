@@ -5,8 +5,11 @@ import {
   CriteriaSite,
   CriteriaSiteHistoric,
   PolygonGeometry,
-  SitePolygon
+  SitePolygon,
+  Site,
+  Project
 } from "@terramatch-microservices/database/entities";
+import { Literal } from "sequelize/types/utils";
 import { ValidationType } from "@terramatch-microservices/database/constants";
 
 interface MockCriteriaSite {
@@ -43,7 +46,16 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   })),
   SitePolygon: {
     findAndCountAll: jest.fn(),
-    findAll: jest.fn()
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    sum: jest.fn()
+  },
+  Site: {
+    findAll: jest.fn(),
+    uuidsSubquery: jest.fn()
+  },
+  Project: {
+    findByPk: jest.fn()
   }
 }));
 
@@ -360,6 +372,179 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(2);
       expect(result.results[0].criteriaId).toBe(4);
       expect(result.results[1].criteriaId).toBe(8);
+    });
+
+    it("should validate polygons with DATA_COMPLETENESS validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["DATA_COMPLETENESS" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        polyName: null,
+        practice: null,
+        targetSys: "agroforest",
+        distr: "single-line",
+        numTrees: 100,
+        plantStart: new Date("2023-01-01")
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 14,
+        valid: false,
+        createdAt: expect.any(Date),
+        extraInfo: expect.objectContaining({
+          validationErrors: expect.arrayContaining([
+            expect.objectContaining({ field: "polyName", exists: false }),
+            expect.objectContaining({ field: "practice", exists: false })
+          ]),
+          missingFields: expect.arrayContaining(["polyName", "practice"])
+        })
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1" },
+        attributes: ["polyName", "practice", "targetSys", "distr", "numTrees", "plantStart"]
+      });
+    });
+
+    it("should validate polygons with PLANT_START_DATE validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["PLANT_START_DATE" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        polyName: "Test Polygon",
+        plantStart: "2020-06-15",
+        siteUuid: "site-uuid-1",
+        site: {
+          name: "Test Site",
+          startDate: new Date("2019-01-01")
+        }
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 15,
+        valid: true,
+        createdAt: expect.any(Date),
+        extraInfo: null
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1" },
+        attributes: ["polyName", "plantStart", "siteUuid"],
+        include: [
+          {
+            model: expect.anything(),
+            as: "site",
+            attributes: ["name", "startDate"]
+          }
+        ]
+      });
+    });
+
+    it("should validate polygons with POLYGON_SIZE validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["POLYGON_SIZE" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        calcArea: 500
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 6,
+        valid: true,
+        createdAt: expect.any(Date),
+        extraInfo: {
+          areaHectares: 500,
+          maxAllowedHectares: 1000
+        }
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1", isActive: true },
+        attributes: ["calcArea"]
+      });
+    });
+
+    it("should validate polygons with ESTIMATED_AREA validation type", async () => {
+      const request = {
+        polygonUuids: ["uuid-1"],
+        validationTypes: ["ESTIMATED_AREA" as ValidationType]
+      };
+
+      const mockSitePolygon = {
+        polygonUuid: "uuid-1",
+        loadSite: jest.fn().mockResolvedValue({
+          uuid: "site-uuid-1",
+          projectId: 1,
+          hectaresToRestoreGoal: 1000
+        })
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (Project.findByPk as jest.Mock).mockResolvedValue({
+        id: 1,
+        totalHectaresRestoredGoal: 5000
+      });
+      (Site.uuidsSubquery as jest.Mock).mockReturnValue("subquery-literal" as unknown as Literal);
+      (SitePolygon.sum as jest.Mock)
+        .mockResolvedValueOnce(800) // Site area sum
+        .mockResolvedValueOnce(4000); // Project area sum
+
+      const result = await service.validatePolygons(request);
+
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toEqual({
+        polygonUuid: "uuid-1",
+        criteriaId: 12,
+        valid: true,
+        createdAt: expect.any(Date),
+        extraInfo: expect.objectContaining({
+          sumAreaSite: 800,
+          sumAreaProject: 4000,
+          percentageSite: 80,
+          percentageProject: 80,
+          totalAreaSite: 1000,
+          totalAreaProject: 5000,
+          lowerBoundSite: 750,
+          upperBoundSite: 1250,
+          lowerBoundProject: 3750,
+          upperBoundProject: 6250
+        })
+      });
+
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "uuid-1", isActive: true },
+        include: [
+          {
+            model: expect.anything(),
+            as: "site",
+            attributes: ["hectaresToRestoreGoal", "projectId"]
+          }
+        ]
+      });
     });
 
     it("should validate polygon with SELF_INTERSECTION when specified", async () => {

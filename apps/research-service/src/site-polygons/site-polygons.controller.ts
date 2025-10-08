@@ -229,8 +229,9 @@ export class SitePolygonsController {
     operationId: "deleteSitePolygon",
     summary: "Delete a site polygon and all associated records",
     description: `Deletes a site polygon and all its associated records including indicators, 
-       criteria site records, audit statuses, actions, and geometry data. This operation 
-       follows the same cascade deletion pattern as the EntityService.`
+       criteria site records, audit statuses, and geometry data. This operation soft deletes 
+       ALL related site polygons by primaryUuid (version management) and deletes polygon 
+       geometry for all related site polygons.`
   })
   @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
     description: "Site polygon and all associated records were deleted"

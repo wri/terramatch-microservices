@@ -851,8 +851,7 @@ describe("SitePolygonsService", () => {
       );
     });
 
-    it("should successfully delete a site polygon with basic associations", async () => {
-      // Create test data
+    it("should successfully delete a site polygon with all associated records", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
       const polygonGeometry = await PolygonGeometryFactory.create();
@@ -863,23 +862,48 @@ describe("SitePolygonsService", () => {
         isActive: true
       });
 
-      // Create an indicator
+      const relatedSitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: sitePolygon.primaryUuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: false
+      });
+
       const indicator = await IndicatorOutputHectaresFactory.create({
         sitePolygonId: sitePolygon.id
       });
 
-      // Execute deletion
       await service.deleteSitePolygon(sitePolygon.uuid);
 
-      // Verify site polygon is soft deleted (isActive = false)
       await sitePolygon.reload({ paranoid: false });
-      expect(sitePolygon.isActive).toBe(false);
+      expect(sitePolygon.deletedAt).not.toBeNull();
 
-      // Verify indicator is deleted
+      await relatedSitePolygon.reload({ paranoid: false });
+      expect(relatedSitePolygon.deletedAt).not.toBeNull();
+
       const deletedIndicator = await IndicatorOutputHectares.findByPk(indicator.id, { paranoid: false });
       expect(deletedIndicator?.deletedAt).not.toBeNull();
 
-      // Verify polygon geometry is deleted
+      const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
+      expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
+    });
+
+    it("should successfully delete a site polygon with minimal associations", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: true
+      });
+
+      await service.deleteSitePolygon(sitePolygon.uuid);
+
+      await sitePolygon.reload({ paranoid: false });
+      expect(sitePolygon.deletedAt).not.toBeNull();
+
       const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
       expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
     });

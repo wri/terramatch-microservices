@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
 import {
-  Action,
   AuditStatus,
   CriteriaSite,
+  CriteriaSiteHistoric,
   PointGeometry,
   PolygonGeometry,
   ProjectPolygon,
@@ -89,12 +89,11 @@ export class SitePolygonsService {
   }
 
   /**
-   * Deletes a site polygon and all its associated records following the same pattern as EntityService.
-   * This method handles cascade deletion of all related entities in the correct order.
+   * Deletes a site polygon and all its associated records.
+   * This method handles cascade deletion of all related entities.
    */
   async deleteSitePolygon(uuid: string): Promise<void> {
     await this.transaction(async transaction => {
-      // 1. Find the site polygon
       const sitePolygon = await SitePolygon.findOne({
         where: { uuid },
         include: [
@@ -109,17 +108,16 @@ export class SitePolygonsService {
         throw new NotFoundException(`SitePolygon not found for uuid: ${uuid}`);
       }
 
-      // 2. Find all related site polygons by primaryUuid (version management)
       const relatedSitePolygons = await SitePolygon.findAll({
         where: { primaryUuid: sitePolygon.primaryUuid },
-        attributes: ["id", "uuid", "isActive"],
+        attributes: ["id", "uuid", "polygonUuid", "pointUuid"],
         transaction
       });
 
       const sitePolygonIds = relatedSitePolygons.map(sp => sp.id);
-      const polygonUuid = sitePolygon.polygonUuid;
+      const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
+      const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
 
-      // 3. Delete all indicator records (6 types)
       for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
         await IndicatorClass.destroy({
           where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
@@ -127,15 +125,17 @@ export class SitePolygonsService {
         });
       }
 
-      // 4. Delete criteria site records (linked by polygon UUID)
-      if (polygonUuid != null) {
+      if (polygonUuids.length > 0) {
         await CriteriaSite.destroy({
-          where: { polygonId: polygonUuid },
+          where: { polygonId: { [Op.in]: polygonUuids } },
+          transaction
+        });
+        await CriteriaSiteHistoric.destroy({
+          where: { polygonId: { [Op.in]: polygonUuids } },
           transaction
         });
       }
 
-      // 5. Delete audit status records (polymorphic relationship)
       await AuditStatus.destroy({
         where: {
           auditableType: SitePolygon.LARAVEL_TYPE,
@@ -144,53 +144,31 @@ export class SitePolygonsService {
         transaction
       });
 
-      // 6. Delete actions (polymorphic relationship)
-      await Action.destroy({
-        where: {
-          targetableType: SitePolygon.LARAVEL_TYPE,
-          targetableId: { [Op.in]: sitePolygonIds }
-        },
+      if (polygonUuids.length > 0) {
+        await ProjectPolygon.destroy({
+          where: { polyUuid: { [Op.in]: polygonUuids } },
+          transaction
+        });
+      }
+
+      if (pointUuids.length > 0) {
+        await PointGeometry.destroy({
+          where: { uuid: { [Op.in]: pointUuids } },
+          transaction
+        });
+      }
+
+      if (polygonUuids.length > 0) {
+        await PolygonGeometry.destroy({
+          where: { uuid: { [Op.in]: polygonUuids } },
+          transaction
+        });
+      }
+
+      await SitePolygon.destroy({
+        where: { primaryUuid: sitePolygon.primaryUuid },
         transaction
       });
-
-      // 7. Delete point geometry if exists
-      if (sitePolygon.pointUuid != null) {
-        await PointGeometry.destroy({
-          where: { uuid: sitePolygon.pointUuid },
-          transaction
-        });
-      }
-
-      // 8. Soft delete site polygons (set isActive = false for active ones)
-      const activeSitePolygons = relatedSitePolygons.filter(sp => sp.isActive);
-      if (activeSitePolygons.length > 0) {
-        await SitePolygon.update(
-          { isActive: false },
-          {
-            where: { id: { [Op.in]: activeSitePolygons.map(sp => sp.id) } },
-            transaction
-          }
-        );
-      }
-
-      // 9. Delete polygon geometry
-      if (polygonUuid != null) {
-        await PolygonGeometry.destroy({
-          where: { uuid: polygonUuid },
-          transaction
-        });
-      }
-
-      // 10. Delete project polygon if exists
-      if (polygonUuid != null) {
-        await ProjectPolygon.destroy({
-          where: { polyUuid: polygonUuid },
-          transaction
-        });
-      }
-
-      // TODO: Phase 2 - Update project centroid after deletion
-      // This will be implemented in the next phase
     });
   }
 

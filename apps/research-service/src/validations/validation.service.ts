@@ -26,6 +26,20 @@ import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch
 import { Op } from "sequelize";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
+type ValidationResult = {
+  polygonUuid: string;
+  criteriaId: CriteriaId;
+  valid: boolean;
+  extraInfo: object | null;
+};
+
+type CriteriaRecord = {
+  polygonId: string;
+  criteriaId: CriteriaId;
+  valid: boolean;
+  extraInfo: object | null;
+};
+
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
   POLYGON_SIZE: new PolygonSizeValidator(),
@@ -240,24 +254,113 @@ export class ValidationService {
   }
 
   async validatePolygonsBatch(polygonUuids: string[], validationTypes: ValidationType[]): Promise<void> {
-    for (const polygonUuid of polygonUuids) {
-      for (const validationType of validationTypes) {
-        const validator = VALIDATORS[validationType];
-        if (validator == null) {
-          this.logger.warn(`Unknown validation type: ${validationType}`);
-          continue;
+    const validationResults: ValidationResult[] = [];
+
+    for (const validationType of validationTypes) {
+      const validator = VALIDATORS[validationType];
+      if (validator == null) {
+        throw new BadRequestException(`Unknown validation type: ${validationType}`);
+      }
+
+      const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+      if (validator.validatePolygons != null) {
+        const batchResults = await validator.validatePolygons(polygonUuids);
+
+        const seenPolygons = new Set<string>();
+        for (const result of batchResults) {
+          if (seenPolygons.has(result.polygonUuid)) {
+            throw new BadRequestException(
+              `Duplicate result from ${validationType} validator for polygon ${result.polygonUuid}`
+            );
+          }
+          seenPolygons.add(result.polygonUuid);
+
+          validationResults.push({
+            polygonUuid: result.polygonUuid,
+            criteriaId,
+            valid: result.valid,
+            extraInfo: result.extraInfo
+          });
         }
-
-        try {
+      } else {
+        for (const polygonUuid of polygonUuids) {
           const validationResult = await validator.validatePolygon(polygonUuid);
-          const criteriaId = this.getCriteriaIdForValidationType(validationType);
-
-          await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
-        } catch (error) {
-          this.logger.error(`Error validating polygon ${polygonUuid} with ${validationType}:`, error);
-          // Continue with next validation instead of failing the entire batch
+          validationResults.push({
+            polygonUuid,
+            criteriaId,
+            valid: validationResult.valid,
+            extraInfo: validationResult.extraInfo
+          });
         }
       }
+    }
+
+    await this.saveValidationResultsBatch(validationResults);
+  }
+
+  private async saveValidationResultsBatch(results: ValidationResult[]): Promise<void> {
+    if (results.length === 0) {
+      return;
+    }
+
+    const polygonIds = [...new Set(results.map(r => r.polygonUuid))];
+    const criteriaIds = [...new Set(results.map(r => r.criteriaId))];
+
+    const existingCriteria = await CriteriaSite.findAll({
+      where: {
+        polygonId: polygonIds,
+        criteriaId: criteriaIds
+      },
+      attributes: ["polygonId", "criteriaId", "valid", "extraInfo"]
+    });
+
+    const existingMap = new Map<string, CriteriaSite>();
+    for (const criteria of existingCriteria) {
+      const key = `${criteria.polygonId}_${criteria.criteriaId}`;
+      existingMap.set(key, criteria);
+    }
+
+    const deduplicatedResults = new Map<string, (typeof results)[0]>();
+    for (const result of results) {
+      const key = `${result.polygonUuid}_${result.criteriaId}`;
+      deduplicatedResults.set(key, result);
+    }
+
+    const historicRecords: CriteriaRecord[] = [];
+    const recordsToUpsert: CriteriaRecord[] = [];
+
+    for (const [key, result] of deduplicatedResults.entries()) {
+      const existing = existingMap.get(key);
+
+      if (existing != null) {
+        historicRecords.push({
+          polygonId: existing.polygonId,
+          criteriaId: existing.criteriaId,
+          valid: existing.valid,
+          extraInfo: existing.extraInfo
+        });
+      }
+
+      recordsToUpsert.push({
+        polygonId: result.polygonUuid,
+        criteriaId: result.criteriaId,
+        valid: result.valid,
+        extraInfo: result.extraInfo
+      });
+    }
+
+    if (historicRecords.length > 0) {
+      await CriteriaSiteHistoric.bulkCreate(historicRecords as never, {
+        validate: true
+      });
+    }
+
+    if (recordsToUpsert.length > 0) {
+      await CriteriaSite.bulkCreate(recordsToUpsert as never, {
+        updateOnDuplicate: ["valid", "extraInfo", "updatedAt"],
+        validate: true
+      });
     }
   }
 

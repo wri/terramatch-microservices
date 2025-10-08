@@ -215,19 +215,15 @@ export class ValidationService {
       historicRecord.valid = existingCriteria.valid;
       historicRecord.extraInfo = existingCriteria.extraInfo;
       await historicRecord.save();
-
-      await existingCriteria.update({
-        valid,
-        extraInfo
-      });
-    } else {
-      const newRecord = new CriteriaSite();
-      newRecord.polygonId = polygonUuid;
-      newRecord.criteriaId = criteriaId;
-      newRecord.valid = valid;
-      newRecord.extraInfo = extraInfo;
-      await newRecord.save();
+      await existingCriteria.destroy();
     }
+
+    const newRecord = new CriteriaSite();
+    newRecord.polygonId = polygonUuid;
+    newRecord.criteriaId = criteriaId;
+    newRecord.valid = valid;
+    newRecord.extraInfo = extraInfo;
+    await newRecord.save();
   }
 
   async getSitePolygonUuids(siteUuid: string): Promise<string[]> {
@@ -312,7 +308,7 @@ export class ValidationService {
         polygonId: polygonIds,
         criteriaId: criteriaIds
       },
-      attributes: ["polygonId", "criteriaId", "valid", "extraInfo"]
+      attributes: ["id", "polygonId", "criteriaId", "valid", "extraInfo"]
     });
 
     const existingMap = new Map<string, CriteriaSite>();
@@ -328,21 +324,24 @@ export class ValidationService {
     }
 
     const historicRecords: CriteriaRecord[] = [];
-    const recordsToUpsert: CriteriaRecord[] = [];
+    const recordsToCreate: CriteriaRecord[] = [];
+    const recordsToDelete: number[] = [];
 
     for (const [key, result] of deduplicatedResults.entries()) {
       const existing = existingMap.get(key);
 
       if (existing != null) {
+        // Move existing record to historic
         historicRecords.push({
           polygonId: existing.polygonId,
           criteriaId: existing.criteriaId,
           valid: existing.valid,
           extraInfo: existing.extraInfo
         });
+        recordsToDelete.push(existing.id);
       }
 
-      recordsToUpsert.push({
+      recordsToCreate.push({
         polygonId: result.polygonUuid,
         criteriaId: result.criteriaId,
         valid: result.valid,
@@ -356,9 +355,16 @@ export class ValidationService {
       });
     }
 
-    if (recordsToUpsert.length > 0) {
-      await CriteriaSite.bulkCreate(recordsToUpsert as never, {
-        updateOnDuplicate: ["valid", "extraInfo", "updatedAt"],
+    if (recordsToDelete.length > 0) {
+      await CriteriaSite.destroy({
+        where: {
+          id: recordsToDelete
+        }
+      });
+    }
+
+    if (recordsToCreate.length > 0) {
+      await CriteriaSite.bulkCreate(recordsToCreate as never, {
         validate: true
       });
     }

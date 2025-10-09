@@ -133,7 +133,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     for (const entry of entries) {
       // Look for entries that contain affected polygon UUIDs
       // Based on the task requirements, this should identify which polygons have been impacted
-      if (entry.name == "polygon-affected" && entry.value !== null) {
+      if (entry.name === "polygon-affected" && entry.value != null) {
         this.logger.log(`Processing polygon field: ${entry.name} with value: ${entry.value}`);
         try {
           const parsedValue = JSON.parse(entry.value);
@@ -142,14 +142,14 @@ export class DisturbanceReportProcessor extends ReportProcessor<
               if (Array.isArray(polygonGroup)) {
                 // Handle array of arrays format
                 polygonGroup.forEach(polygonObj => {
-                  if (polygonObj !== null && typeof polygonObj === "object" && polygonObj.polyUuid !== null) {
+                  if (polygonObj != null && typeof polygonObj === "object" && polygonObj.polyUuid != null) {
                     this.logger.log(
                       `Adding polygon UUID: ${polygonObj.polyUuid} (${polygonObj.polyName}) from group ${groupIndex}`
                     );
                     affectedPolygonUuids.add(polygonObj.polyUuid);
                   }
                 });
-              } else if (polygonGroup !== null && typeof polygonGroup === "object" && polygonGroup.polyUuid !== null) {
+              } else if (polygonGroup != null && typeof polygonGroup === "object" && polygonGroup.polyUuid != null) {
                 // Handle direct object format (fallback)
                 this.logger.log(`Adding polygon UUID: ${polygonGroup.polyUuid} (${polygonGroup.polyName})`);
                 affectedPolygonUuids.add(polygonGroup.polyUuid);
@@ -162,7 +162,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
           const uuids = entry.value
             .split(",")
             .map(uuid => uuid.trim())
-            .filter(uuid => uuid !== null);
+            .filter(uuid => uuid != null && uuid !== "");
           uuids.forEach(uuid => affectedPolygonUuids.add(uuid));
         }
       }
@@ -172,7 +172,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   private processDisturbanceDataEntry(entry: DisturbanceReportEntry, disturbanceData: Partial<Disturbance>): void {
-    if (entry.value === null) return;
+    if (entry.value == null) return;
 
     switch (entry.name) {
       case "intensity":
@@ -186,35 +186,41 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         break;
       case "disturbance-subtype":
         try {
-          disturbanceData.subtype = JSON.parse(entry.value);
+          const parsed = JSON.parse(entry.value);
+          if (parsed != null) {
+            disturbanceData.subtype = parsed;
+          }
         } catch {
           this.logger.warn(`Failed to parse subtype JSON: ${entry.value}`);
         }
         break;
       case "people-affected": {
         const peopleAffected = Number(entry.value);
-        if (!isNaN(peopleAffected)) {
+        if (!isNaN(peopleAffected) && peopleAffected > 0) {
           disturbanceData.peopleAffected = peopleAffected;
         }
         break;
       }
       case "monetary-damage": {
         const monetaryDamage = Number(entry.value);
-        if (!isNaN(monetaryDamage)) {
+        if (!isNaN(monetaryDamage) && monetaryDamage >= 0) {
           disturbanceData.monetaryDamage = monetaryDamage;
         }
         break;
       }
       case "property-affected":
         try {
-          disturbanceData.propertyAffected = JSON.parse(entry.value);
+          const parsed = JSON.parse(entry.value);
+          if (parsed != null) {
+            disturbanceData.propertyAffected = parsed;
+          }
         } catch {
           this.logger.warn(`Failed to parse propertyAffected JSON: ${entry.value}`);
         }
         break;
       case "date-of-disturbance": {
         const date = new Date(entry.value);
-        if (!isNaN(date.getTime())) {
+        if (!isNaN(date.getTime()) && date.getTime() > 0) {
           disturbanceData.disturbanceDate = date;
         }
         break;

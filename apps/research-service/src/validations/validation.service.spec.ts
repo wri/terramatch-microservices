@@ -11,6 +11,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Literal } from "sequelize/types/utils";
 import { ValidationType } from "@terramatch-microservices/database/constants";
+import { Op } from "sequelize";
 
 interface MockCriteriaSite {
   update: jest.MockedFunction<(data: { valid: boolean; extraInfo: object | null }) => Promise<void>>;
@@ -51,7 +52,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findAll: jest.fn(),
     findOne: jest.fn(),
     save: jest.fn(),
-    sum: jest.fn()
+    sum: jest.fn(),
+    update: jest.fn()
   },
   Site: {
     findAll: jest.fn(),
@@ -870,132 +872,173 @@ describe("ValidationService", () => {
     });
   });
 
-  describe("updateSitePolygonValidity", () => {
-    it("should return 'skipped' when SitePolygon not found", async () => {
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
+  describe("updateSitePolygonValidityBatch", () => {
+    it("should handle empty polygon UUIDs array", async () => {
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch([]);
 
-      const result = await (service as any).updateSitePolygonValidity("non-existent-polygon");
+      expect(SitePolygon.findAll).not.toHaveBeenCalled();
+    });
 
-      expect(result).toBe("skipped");
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: { polygonUuid: "non-existent-polygon", isActive: true }
+    it("should handle no SitePolygons found", async () => {
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
+
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
+
+      expect(SitePolygon.findAll).toHaveBeenCalledWith({
+        where: {
+          polygonUuid: { [Op.in]: ["polygon-1"] },
+          isActive: true
+        }
       });
+      expect(CriteriaSite.findAll).not.toHaveBeenCalled();
     });
 
     it("should set validation status to null when no criteria exist", async () => {
       const mockSitePolygon = {
+        id: 1,
         polygonUuid: "polygon-1",
-        validationStatus: "passed",
-        save: jest.fn()
+        validationStatus: "passed"
       };
 
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
 
-      expect(result).toBe("updated");
-      expect(mockSitePolygon.validationStatus).toBeNull();
-      expect(mockSitePolygon.save).toHaveBeenCalled();
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: null }, { where: { id: 1 } });
     });
 
     it("should set validation status to 'passed' when all criteria pass", async () => {
       const mockSitePolygon = {
+        id: 1,
         polygonUuid: "polygon-1",
-        validationStatus: null,
-        save: jest.fn()
+        validationStatus: null
       };
 
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
-        { criteriaId: 3, valid: true },
-        { criteriaId: 4, valid: true }
+        { polygonId: "polygon-1", criteriaId: 3, valid: true },
+        { polygonId: "polygon-1", criteriaId: 4, valid: true }
       ]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
 
-      expect(result).toBe("updated");
-      expect(mockSitePolygon.validationStatus).toBe("passed");
-      expect(mockSitePolygon.save).toHaveBeenCalled();
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "passed" }, { where: { id: 1 } });
     });
 
     it("should set validation status to 'failed' when non-excluded criteria fail", async () => {
       const mockSitePolygon = {
+        id: 1,
         polygonUuid: "polygon-1",
-        validationStatus: "passed",
-        save: jest.fn()
+        validationStatus: "passed"
       };
 
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
-        { criteriaId: 3, valid: true }, // Non-excluded, passing
-        { criteriaId: 4, valid: false } // Non-excluded, failing
+        { polygonId: "polygon-1", criteriaId: 3, valid: true }, // Non-excluded, passing
+        { polygonId: "polygon-1", criteriaId: 4, valid: false } // Non-excluded, failing
       ]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
 
-      expect(result).toBe("updated");
-      expect(mockSitePolygon.validationStatus).toBe("failed");
-      expect(mockSitePolygon.save).toHaveBeenCalled();
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "failed" }, { where: { id: 1 } });
     });
 
     it("should set validation status to 'partial' when only excluded criteria fail", async () => {
       const mockSitePolygon = {
+        id: 1,
         polygonUuid: "polygon-1",
-        validationStatus: "passed",
-        save: jest.fn()
+        validationStatus: "passed"
       };
 
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
-        { criteriaId: 7, valid: false }, // WITHIN_COUNTRY - excluded criteria, failing
-        { criteriaId: 12, valid: false } // ESTIMATED_AREA - excluded criteria, failing
+        { polygonId: "polygon-1", criteriaId: 7, valid: false }, // WITHIN_COUNTRY - excluded criteria, failing
+        { polygonId: "polygon-1", criteriaId: 12, valid: false } // ESTIMATED_AREA - excluded criteria, failing
       ]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
 
-      expect(result).toBe("updated");
-      expect(mockSitePolygon.validationStatus).toBe("partial");
-      expect(mockSitePolygon.save).toHaveBeenCalled();
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "partial" }, { where: { id: 1 } });
     });
 
     it("should set validation status to 'failed' when both excluded and non-excluded criteria fail", async () => {
       const mockSitePolygon = {
+        id: 1,
         polygonUuid: "polygon-1",
-        validationStatus: "passed",
-        save: jest.fn()
+        validationStatus: "passed"
       };
 
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
-        { criteriaId: 7, valid: false }, // WITHIN_COUNTRY - excluded criteria, failing
-        { criteriaId: 4, valid: false } // SELF_INTERSECTION - non-excluded criteria, failing
+        { polygonId: "polygon-1", criteriaId: 7, valid: false }, // WITHIN_COUNTRY - excluded criteria, failing
+        { polygonId: "polygon-1", criteriaId: 4, valid: false } // SELF_INTERSECTION - non-excluded criteria, failing
       ]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
 
-      expect(result).toBe("updated");
-      expect(mockSitePolygon.validationStatus).toBe("failed");
-      expect(mockSitePolygon.save).toHaveBeenCalled();
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "failed" }, { where: { id: 1 } });
     });
 
-    it("should return 'skipped' when validation status does not need updating", async () => {
+    it("should not update when validation status does not need updating", async () => {
       const mockSitePolygon = {
+        id: 1,
         polygonUuid: "polygon-1",
-        validationStatus: "passed",
-        save: jest.fn()
+        validationStatus: "passed"
       };
 
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
-        { criteriaId: 3, valid: true },
-        { criteriaId: 4, valid: true }
+        { polygonId: "polygon-1", criteriaId: 3, valid: true },
+        { polygonId: "polygon-1", criteriaId: 4, valid: true }
       ]);
 
-      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
 
-      expect(result).toBe("skipped");
-      expect(mockSitePolygon.save).not.toHaveBeenCalled();
+      expect(SitePolygon.update).not.toHaveBeenCalled();
+    });
+
+    it("should handle multiple polygons in batch", async () => {
+      const mockSitePolygons = [
+        { id: 1, polygonUuid: "polygon-1", validationStatus: "passed" },
+        { id: 2, polygonUuid: "polygon-2", validationStatus: null }
+      ];
+
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue(mockSitePolygons);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { polygonId: "polygon-1", criteriaId: 4, valid: false }, // polygon-1 fails
+        { polygonId: "polygon-2", criteriaId: 4, valid: true } // polygon-2 passes
+      ]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
+
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1", "polygon-2"]);
+
+      expect(SitePolygon.update).toHaveBeenCalledTimes(2);
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "failed" }, { where: { id: 1 } });
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "passed" }, { where: { id: 2 } });
     });
   });
 });

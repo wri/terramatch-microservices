@@ -15,6 +15,7 @@ import { ValidationType } from "@terramatch-microservices/database/constants";
 interface MockCriteriaSite {
   update: jest.MockedFunction<(data: { valid: boolean; extraInfo: object | null }) => Promise<void>>;
   save: jest.MockedFunction<() => Promise<void>>;
+  destroy: jest.MockedFunction<() => Promise<void>>;
 }
 
 interface MockSelfIntersectionValidator {
@@ -39,7 +40,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     }
   },
   CriteriaSite: jest.fn().mockImplementation(() => ({
-    save: jest.fn()
+    save: jest.fn(),
+    destroy: jest.fn()
   })),
   CriteriaSiteHistoric: jest.fn().mockImplementation(() => ({
     save: jest.fn()
@@ -285,7 +287,8 @@ describe("ValidationService", () => {
   describe("validatePolygons", () => {
     const mockCriteriaSite: MockCriteriaSite = {
       update: jest.fn(),
-      save: jest.fn()
+      save: jest.fn(),
+      destroy: jest.fn()
     };
 
     beforeEach(() => {
@@ -604,7 +607,8 @@ describe("ValidationService", () => {
         valid: false,
         extraInfo: { old: "data" },
         update: jest.fn(),
-        save: jest.fn()
+        save: jest.fn(),
+        destroy: jest.fn()
       };
 
       (CriteriaSite.findOne as jest.Mock).mockResolvedValue(existingCriteria);
@@ -613,10 +617,8 @@ describe("ValidationService", () => {
       await service.validatePolygons(request);
 
       expect(CriteriaSiteHistoric).toHaveBeenCalled();
-      expect(existingCriteria.update).toHaveBeenCalledWith({
-        valid: true,
-        extraInfo: null
-      });
+      expect(existingCriteria.destroy).toHaveBeenCalled();
+      expect(CriteriaSite).toHaveBeenCalledTimes(1); // Once for new record
     });
 
     it("should handle validator errors gracefully", async () => {

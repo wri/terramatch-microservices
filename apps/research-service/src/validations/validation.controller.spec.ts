@@ -6,6 +6,8 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { getQueueToken } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
 
 describe("ValidationController", () => {
   let controller: ValidationController;
@@ -97,6 +99,12 @@ describe("ValidationController", () => {
         {
           provide: ValidationService,
           useValue: mockValidationService
+        },
+        {
+          provide: getQueueToken("validation"),
+          useValue: {
+            add: jest.fn()
+          }
         }
       ]
     }).compile();

@@ -7,7 +7,6 @@ import { serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
-import { Queue } from "bullmq";
 
 describe("ValidationController", () => {
   let controller: ValidationController;

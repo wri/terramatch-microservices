@@ -62,78 +62,14 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const affectedPolygonUuids = new Set<string>();
     const disturbanceData: Partial<Disturbance> = {};
 
-    for (const entry of entries) {
-      // Look for entries that contain affected polygon UUIDs
-      // Based on the task requirements, this should identify which polygons have been impacted
-      const polygonFieldNames = ["polygon-affected"];
-
-      if (polygonFieldNames.includes(entry.name) && entry.value) {
-        this.logger.debug(`Processing polygon field: ${entry.name} with value: ${entry.value}`);
-        try {
-          const parsedValue = JSON.parse(entry.value);
-          if (Array.isArray(parsedValue)) {
-            parsedValue.forEach((polygonGroup, groupIndex) => {
-              if (Array.isArray(polygonGroup)) {
-                // Handle array of arrays format
-                polygonGroup.forEach(polygonObj => {
-                  if (polygonObj && typeof polygonObj === "object" && polygonObj.polyUuid) {
-                    this.logger.debug(
-                      `Adding polygon UUID: ${polygonObj.polyUuid} (${polygonObj.polyName}) from group ${groupIndex}`
-                    );
-                    affectedPolygonUuids.add(polygonObj.polyUuid);
-                  }
-                });
-              } else if (polygonGroup && typeof polygonGroup === "object" && polygonGroup.polyUuid) {
-                // Handle direct object format (fallback)
-                this.logger.debug(`Adding polygon UUID: ${polygonGroup.polyUuid} (${polygonGroup.polyName})`);
-                affectedPolygonUuids.add(polygonGroup.polyUuid);
-              }
-            });
-          }
-        } catch (error) {
-          this.logger.warn(`Failed to parse polygon JSON: ${error.message}, trying comma-separated values`);
-          // If JSON parsing fails, try comma-separated values
-          const uuids = entry.value
-            .split(",")
-            .map(uuid => uuid.trim())
-            .filter(uuid => uuid);
-          uuids.forEach(uuid => affectedPolygonUuids.add(uuid));
-        }
-      }
-
-      switch (entry.name) {
-        case "intensity":
-          if (entry.value) disturbanceData.intensity = entry.value;
-          break;
-        case "extent":
-          if (entry.value) disturbanceData.extent = entry.value;
-          break;
-        case "disturbance-type":
-          if (entry.value) disturbanceData.type = entry.value;
-          break;
-        case "disturbance-subtype":
-          if (entry.value) disturbanceData.subtype = entry.value ? JSON.parse(entry.value) : [];
-          break;
-        case "people-affected":
-          if (entry.value) disturbanceData.peopleAffected = entry.value ? Number(entry.value) : null;
-          break;
-        case "monetary-damage":
-          if (entry.value) disturbanceData.monetaryDamage = entry.value ? Number(entry.value) : null;
-          break;
-        case "property-affected":
-          if (entry.value) disturbanceData.propertyAffected = entry.value ? JSON.parse(entry.value) : [];
-          break;
-        case "date-of-disturbance":
-          if (entry.value) disturbanceData.disturbanceDate = entry.value ? new Date(entry.value) : null;
-          break;
-      }
-    }
+    this.processPolygonEntry(entries, affectedPolygonUuids, disturbanceData);
 
     if (affectedPolygonUuids.size === 0) {
       return;
     }
 
-    const disturbanceCreateData = {
+    // Upsert disturbance for this report (align with PHP logic)
+    const disturbanceUpsertData = {
       disturbanceableType: DisturbanceReport.LARAVEL_TYPE,
       disturbanceableId: model.id,
       disturbanceDate: disturbanceData.disturbanceDate,
@@ -149,7 +85,14 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       hidden: 0
     } as Disturbance;
 
-    const disturbance = await Disturbance.create(disturbanceCreateData);
+    let disturbance = await Disturbance.findOne({
+      where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: model.id }
+    });
+    if (disturbance != null) {
+      await disturbance.update(disturbanceUpsertData);
+    } else {
+      disturbance = await Disturbance.create(disturbanceUpsertData);
+    }
 
     // Find all affected site polygons and validate they're not already affected by another disturbance
     const affectedPolygons = await SitePolygon.findAll({
@@ -180,6 +123,103 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         }
       }
     );
+  }
+
+  private processPolygonEntry(
+    entries: DisturbanceReportEntry[],
+    affectedPolygonUuids: Set<string>,
+    disturbanceData: Partial<Disturbance>
+  ): void {
+    for (const entry of entries) {
+      // Look for entries that contain affected polygon UUIDs
+      // Based on the task requirements, this should identify which polygons have been impacted
+      if (entry.name == "polygon-affected" && entry.value !== null) {
+        this.logger.log(`Processing polygon field: ${entry.name} with value: ${entry.value}`);
+        try {
+          const parsedValue = JSON.parse(entry.value);
+          if (Array.isArray(parsedValue)) {
+            parsedValue.forEach((polygonGroup, groupIndex) => {
+              if (Array.isArray(polygonGroup)) {
+                // Handle array of arrays format
+                polygonGroup.forEach(polygonObj => {
+                  if (polygonObj !== null && typeof polygonObj === "object" && polygonObj.polyUuid !== null) {
+                    this.logger.log(
+                      `Adding polygon UUID: ${polygonObj.polyUuid} (${polygonObj.polyName}) from group ${groupIndex}`
+                    );
+                    affectedPolygonUuids.add(polygonObj.polyUuid);
+                  }
+                });
+              } else if (polygonGroup !== null && typeof polygonGroup === "object" && polygonGroup.polyUuid !== null) {
+                // Handle direct object format (fallback)
+                this.logger.log(`Adding polygon UUID: ${polygonGroup.polyUuid} (${polygonGroup.polyName})`);
+                affectedPolygonUuids.add(polygonGroup.polyUuid);
+              }
+            });
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to parse polygon JSON: ${error.message}, trying comma-separated values`);
+          // If JSON parsing fails, try comma-separated values
+          const uuids = entry.value
+            .split(",")
+            .map(uuid => uuid.trim())
+            .filter(uuid => uuid !== null);
+          uuids.forEach(uuid => affectedPolygonUuids.add(uuid));
+        }
+      }
+
+      this.processDisturbanceDataEntry(entry, disturbanceData);
+    }
+  }
+
+  private processDisturbanceDataEntry(entry: DisturbanceReportEntry, disturbanceData: Partial<Disturbance>): void {
+    if (entry.value === null) return;
+
+    switch (entry.name) {
+      case "intensity":
+        disturbanceData.intensity = entry.value;
+        break;
+      case "extent":
+        disturbanceData.extent = entry.value;
+        break;
+      case "disturbance-type":
+        disturbanceData.type = entry.value;
+        break;
+      case "disturbance-subtype":
+        try {
+          disturbanceData.subtype = JSON.parse(entry.value);
+        } catch {
+          this.logger.warn(`Failed to parse subtype JSON: ${entry.value}`);
+        }
+        break;
+      case "people-affected": {
+        const peopleAffected = Number(entry.value);
+        if (!isNaN(peopleAffected)) {
+          disturbanceData.peopleAffected = peopleAffected;
+        }
+        break;
+      }
+      case "monetary-damage": {
+        const monetaryDamage = Number(entry.value);
+        if (!isNaN(monetaryDamage)) {
+          disturbanceData.monetaryDamage = monetaryDamage;
+        }
+        break;
+      }
+      case "property-affected":
+        try {
+          disturbanceData.propertyAffected = JSON.parse(entry.value);
+        } catch {
+          this.logger.warn(`Failed to parse propertyAffected JSON: ${entry.value}`);
+        }
+        break;
+      case "date-of-disturbance": {
+        const date = new Date(entry.value);
+        if (!isNaN(date.getTime())) {
+          disturbanceData.disturbanceDate = date;
+        }
+        break;
+      }
+    }
   }
 
   async findOne(uuid: string) {
@@ -263,6 +303,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
     const mediaCollection = await Media.for(disturbanceReport).findAll();
     const dto = new DisturbanceReportFullDto(disturbanceReport, {
+      disturbanceableId: disturbanceReport.id,
       entries,
       intensity,
       dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null,
@@ -298,6 +339,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     return {
       id: disturbanceReport.uuid,
       dto: new DisturbanceReportLightDto(disturbanceReport, {
+        disturbanceableId: disturbanceReport.id,
         entries,
         intensity,
         dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null

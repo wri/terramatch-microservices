@@ -22,7 +22,12 @@ import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
 import { OverlappingValidator } from "./validators/overlapping.validator";
 import { WithinCountryValidator } from "./validators/within-country.validator";
 import { Validator } from "./validators/validator.interface";
-import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
+import {
+  ValidationType,
+  VALIDATION_CRITERIA_IDS,
+  CriteriaId,
+  EXCLUDED_VALIDATION_CRITERIA
+} from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
@@ -331,7 +336,6 @@ export class ValidationService {
       const existing = existingMap.get(key);
 
       if (existing != null) {
-        // Move existing record to historic
         historicRecords.push({
           polygonId: existing.polygonId,
           criteriaId: existing.criteriaId,
@@ -367,6 +371,9 @@ export class ValidationService {
       await CriteriaSite.bulkCreate(recordsToCreate as never, {
         validate: true
       });
+
+      const affectedPolygonUuids = [...new Set(recordsToCreate.map(r => r.polygonId))];
+      await this.updateSitePolygonValidityBatch(affectedPolygonUuids);
     }
   }
 
@@ -409,5 +416,78 @@ export class ValidationService {
       validationSummary,
       completedAt: new Date()
     };
+  }
+
+  private async updateSitePolygonValidityBatch(polygonUuids: string[]): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: { [Op.in]: polygonUuids },
+        isActive: true
+      }
+    });
+
+    if (sitePolygons.length === 0) {
+      return;
+    }
+
+    const allCriteria = await CriteriaSite.findAll({
+      where: { polygonId: { [Op.in]: polygonUuids } },
+      attributes: ["polygonId", "criteriaId", "valid"]
+    });
+
+    const criteriaByPolygon = new Map<string, CriteriaSite[]>();
+    for (const criteria of allCriteria) {
+      if (!criteriaByPolygon.has(criteria.polygonId)) {
+        criteriaByPolygon.set(criteria.polygonId, []);
+      }
+      const criteriaList = criteriaByPolygon.get(criteria.polygonId);
+      if (criteriaList != null) {
+        criteriaList.push(criteria);
+      }
+    }
+
+    const excludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
+    const updates: Array<{ id: number; validationStatus: string | null }> = [];
+
+    for (const sitePolygon of sitePolygons) {
+      if (sitePolygon.polygonUuid == null) continue;
+
+      const polygonCriteria = criteriaByPolygon.get(sitePolygon.polygonUuid) ?? [];
+      let newValidationStatus: string | null;
+
+      if (polygonCriteria.length === 0) {
+        newValidationStatus = null;
+      } else {
+        const hasAnyFailing = polygonCriteria.some(c => c.valid === false);
+
+        if (!hasAnyFailing) {
+          newValidationStatus = "passed";
+        } else {
+          const nonExcludedCriteria = polygonCriteria.filter(c => !excludedCriteriaSet.has(c.criteriaId));
+          const hasFailingNonExcluded = nonExcludedCriteria.some(c => c.valid === false);
+
+          newValidationStatus = hasFailingNonExcluded ? "failed" : "partial";
+        }
+      }
+
+      if (sitePolygon.validationStatus !== newValidationStatus) {
+        updates.push({
+          id: sitePolygon.id,
+          validationStatus: newValidationStatus
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await Promise.all(
+        updates.map(update =>
+          SitePolygon.update({ validationStatus: update.validationStatus }, { where: { id: update.id } })
+        )
+      );
+    }
   }
 }

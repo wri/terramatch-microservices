@@ -50,6 +50,7 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findAndCountAll: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
+    save: jest.fn(),
     sum: jest.fn()
   },
   Site: {
@@ -96,6 +97,7 @@ describe("ValidationService", () => {
     jest.clearAllMocks();
 
     (PolygonGeometry.sequelize?.query as jest.Mock)?.mockResolvedValue([{ is_simple: true }]);
+    (CriteriaSite.findAll as jest.Mock).mockResolvedValue([]);
 
     mockSelfIntersectionValidator = {
       validatePolygon: jest.fn(),
@@ -865,6 +867,135 @@ describe("ValidationService", () => {
       await expect(service.generateValidationSummary("site-uuid", ["SELF_INTERSECTION"])).rejects.toThrow(
         NotFoundException
       );
+    });
+  });
+
+  describe("updateSitePolygonValidity", () => {
+    it("should return 'skipped' when SitePolygon not found", async () => {
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result = await (service as any).updateSitePolygonValidity("non-existent-polygon");
+
+      expect(result).toBe("skipped");
+      expect(SitePolygon.findOne).toHaveBeenCalledWith({
+        where: { polygonUuid: "non-existent-polygon", isActive: true }
+      });
+    });
+
+    it("should set validation status to null when no criteria exist", async () => {
+      const mockSitePolygon = {
+        polygonUuid: "polygon-1",
+        validationStatus: "passed",
+        save: jest.fn()
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([]);
+
+      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+
+      expect(result).toBe("updated");
+      expect(mockSitePolygon.validationStatus).toBeNull();
+      expect(mockSitePolygon.save).toHaveBeenCalled();
+    });
+
+    it("should set validation status to 'passed' when all criteria pass", async () => {
+      const mockSitePolygon = {
+        polygonUuid: "polygon-1",
+        validationStatus: null,
+        save: jest.fn()
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { criteriaId: 3, valid: true },
+        { criteriaId: 4, valid: true }
+      ]);
+
+      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+
+      expect(result).toBe("updated");
+      expect(mockSitePolygon.validationStatus).toBe("passed");
+      expect(mockSitePolygon.save).toHaveBeenCalled();
+    });
+
+    it("should set validation status to 'failed' when non-excluded criteria fail", async () => {
+      const mockSitePolygon = {
+        polygonUuid: "polygon-1",
+        validationStatus: "passed",
+        save: jest.fn()
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { criteriaId: 3, valid: true }, // Non-excluded, passing
+        { criteriaId: 4, valid: false } // Non-excluded, failing
+      ]);
+
+      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+
+      expect(result).toBe("updated");
+      expect(mockSitePolygon.validationStatus).toBe("failed");
+      expect(mockSitePolygon.save).toHaveBeenCalled();
+    });
+
+    it("should set validation status to 'partial' when only excluded criteria fail", async () => {
+      const mockSitePolygon = {
+        polygonUuid: "polygon-1",
+        validationStatus: "passed",
+        save: jest.fn()
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { criteriaId: 7, valid: false }, // WITHIN_COUNTRY - excluded criteria, failing
+        { criteriaId: 12, valid: false } // ESTIMATED_AREA - excluded criteria, failing
+      ]);
+
+      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+
+      expect(result).toBe("updated");
+      expect(mockSitePolygon.validationStatus).toBe("partial");
+      expect(mockSitePolygon.save).toHaveBeenCalled();
+    });
+
+    it("should set validation status to 'failed' when both excluded and non-excluded criteria fail", async () => {
+      const mockSitePolygon = {
+        polygonUuid: "polygon-1",
+        validationStatus: "passed",
+        save: jest.fn()
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { criteriaId: 7, valid: false }, // WITHIN_COUNTRY - excluded criteria, failing
+        { criteriaId: 4, valid: false } // SELF_INTERSECTION - non-excluded criteria, failing
+      ]);
+
+      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+
+      expect(result).toBe("updated");
+      expect(mockSitePolygon.validationStatus).toBe("failed");
+      expect(mockSitePolygon.save).toHaveBeenCalled();
+    });
+
+    it("should return 'skipped' when validation status does not need updating", async () => {
+      const mockSitePolygon = {
+        polygonUuid: "polygon-1",
+        validationStatus: "passed",
+        save: jest.fn()
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { criteriaId: 3, valid: true },
+        { criteriaId: 4, valid: true }
+      ]);
+
+      const result = await (service as any).updateSitePolygonValidity("polygon-1");
+
+      expect(result).toBe("skipped");
+      expect(mockSitePolygon.save).not.toHaveBeenCalled();
     });
   });
 });

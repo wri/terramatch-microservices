@@ -7,6 +7,9 @@ import { serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { ValidationType } from "@terramatch-microservices/database/constants";
 
 describe("ValidationController", () => {
   let controller: ValidationController;
@@ -86,11 +89,27 @@ describe("ValidationController", () => {
           extraInfo: null
         }
       ]
-    })
+    }),
+    getSitePolygonUuids: jest.fn().mockResolvedValue(["polygon-1", "polygon-2"])
+  };
+
+  const mockQueue = {
+    add: jest.fn()
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    jest.spyOn(DelayedJob, "create").mockResolvedValue({
+      id: 1,
+      uuid: "job-uuid-123",
+      name: "",
+      totalContent: 0,
+      processedContent: 0,
+      progressMessage: "",
+      metadata: {},
+      save: jest.fn().mockResolvedValue(undefined)
+    } as unknown as DelayedJob);
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ValidationController],
@@ -101,9 +120,7 @@ describe("ValidationController", () => {
         },
         {
           provide: getQueueToken("validation"),
-          useValue: {
-            add: jest.fn()
-          }
+          useValue: mockQueue
         }
       ]
     }).compile();
@@ -152,6 +169,26 @@ describe("ValidationController", () => {
       await controller.getSiteValidation(siteUuid, query);
 
       expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 10, 3, undefined);
+    });
+
+    it("should throw BadRequestException for invalid criteriaId", async () => {
+      const query = { criteriaId: "0" };
+      await expect(controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException for non-integer criteriaId", async () => {
+      const query = { criteriaId: "1.5" };
+      await expect(controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should use criteriaId when provided", async () => {
+      const query = { criteriaId: 4 };
+      await controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto);
+      expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 100, 1, 4);
     });
   });
 
@@ -420,6 +457,35 @@ describe("ValidationController", () => {
         expect(singleData.attributes.polygonId).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
+    });
+  });
+
+  describe("createSiteValidation", () => {
+    const siteUuid = "site-uuid-123";
+
+    it("should create a site validation job", async () => {
+      const request = { validationTypes: ["SELF_INTERSECTION", "SPIKES"] as ValidationType[] };
+      const result = serialize(await controller.createSiteValidation(siteUuid, request));
+
+      expect(mockValidationService.getSitePolygonUuids).toHaveBeenCalledWith(siteUuid);
+      expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", {
+        siteUuid,
+        validationTypes: ["SELF_INTERSECTION", "SPIKES"],
+        delayedJobId: 1
+      });
+      expect(result.data).toBeDefined();
+    });
+
+    it("should throw NotFoundException when site has no polygons", async () => {
+      mockValidationService.getSitePolygonUuids.mockResolvedValueOnce([]);
+      const request = { validationTypes: ["SELF_INTERSECTION"] as ValidationType[] };
+      await expect(controller.createSiteValidation(siteUuid, request)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should use all validation types when none provided", async () => {
+      const request = {};
+      await controller.createSiteValidation(siteUuid, request);
+      expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
     });
   });
 });

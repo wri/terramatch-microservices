@@ -30,6 +30,9 @@ import { Project } from "./project.entity";
 })
 export class DisturbanceReport extends Model<DisturbanceReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReport";
+  static readonly MEDIA = {
+    media: { dbCollection: "media", multiple: true, validation: "general-documents" }
+  } as const;
 
   static project(id: number) {
     return chainScope(this, "project", id) as typeof DisturbanceReport;

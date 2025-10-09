@@ -57,6 +57,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         projectShortName: sitePolygon.site?.project?.shortName,
         indicators: indicators ?? [],
         siteName: sitePolygon.site?.name,
+        disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
         lightResource: true
       });
     }
@@ -169,6 +170,12 @@ export class SitePolygonLightDto extends HybridSupportDto {
     description: "UUID of the site polygon"
   })
   uuid: string;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true
+  })
+  disturbanceableId: number | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })
@@ -191,6 +198,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       geometry: sitePolygon.polygon?.polygon,
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],
+      disturbanceableId: sitePolygon.disturbance?.disturbanceableId ?? null,
       lightResource: false
     });
   }

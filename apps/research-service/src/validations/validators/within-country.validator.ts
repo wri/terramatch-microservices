@@ -38,7 +38,7 @@ export class WithinCountryValidator implements Validator {
     }
 
     const results = await this.getIntersectionDataBatch(polygonUuids);
-    const resultMap = new Map(results.map(r => [r.polygonUuid, r]));
+    const resultMap = new Map(results.filter(r => r != null).map(r => [r.polygonUuid, r]));
 
     return polygonUuids.map(polygonUuid => {
       const result = resultMap.get(polygonUuid);

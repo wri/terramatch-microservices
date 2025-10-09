@@ -295,7 +295,7 @@ export class ValidationService {
     await this.saveValidationResultsBatch(validationResults);
   }
 
-  private async saveValidationResultsBatch(results: ValidationResult[]): Promise<void> {
+  async saveValidationResultsBatch(results: ValidationResult[]): Promise<void> {
     if (results.length === 0) {
       return;
     }

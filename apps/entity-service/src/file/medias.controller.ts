@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   NotFoundException,
   Param,
   Patch,
@@ -18,6 +19,18 @@ import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-upda
 @Controller("entities/v3/medias")
 export class MediasController {
   constructor(private readonly mediaService: MediaService, private readonly policyService: PolicyService) {}
+
+  @Get(":uuid")
+  @ApiOperation({
+    operationId: "mediaGet",
+    summary: "Get a media by uuid"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async mediaGet(@Param() { uuid }: SingleMediaDto) {
+    return this.mediaService.getMedia(uuid);
+  }
 
   @Patch(":uuid")
   @ApiOperation({

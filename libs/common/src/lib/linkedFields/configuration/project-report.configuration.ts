@@ -169,7 +169,7 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
     },
     "pro-rep-planting-status": {
       property: "planting_status",
-      label: "What is the status of planting for this project?",
+      label: "Planting status",
       inputType: "select",
       multiChoice: false,
       optionListKey: "planting-status"

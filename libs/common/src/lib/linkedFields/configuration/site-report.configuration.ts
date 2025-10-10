@@ -25,7 +25,7 @@ export const SiteReportConfiguration: LinkedFieldConfiguration = {
     "site-rep-polygon-status": { property: "polygon_status", label: "Polygon status", inputType: "long-text" },
     "site-rep-planting-status": {
       property: "planting_status",
-      label: "What is the status of planting at this site?",
+      label: "Planting status",
       inputType: "select",
       multiChoice: false,
       optionListKey: "planting-status"

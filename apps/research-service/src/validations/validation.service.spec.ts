@@ -146,7 +146,7 @@ describe("ValidationService", () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.polygonId).toBe(polygonUuid);
+      expect(result.polygonUuid).toBe(polygonUuid);
       expect(result.criteriaList).toHaveLength(3);
       expect(result.criteriaList[0]).toEqual({
         criteriaId: 3,
@@ -176,7 +176,7 @@ describe("ValidationService", () => {
 
       const result = await service.getPolygonValidation(polygonUuid);
 
-      expect(result.polygonId).toBe(polygonUuid);
+      expect(result.polygonUuid).toBe(polygonUuid);
       expect(result.criteriaList).toEqual([]);
     });
   });
@@ -233,9 +233,9 @@ describe("ValidationService", () => {
 
       expect(result.validations).toHaveLength(2);
       expect(result.total).toBe(2);
-      expect(result.validations[0].polygonId).toBe(polygonUuid1);
+      expect(result.validations[0].polygonUuid).toBe(polygonUuid1);
       expect(result.validations[0].criteriaList).toHaveLength(2);
-      expect(result.validations[1].polygonId).toBe(polygonUuid2);
+      expect(result.validations[1].polygonUuid).toBe(polygonUuid2);
       expect(result.validations[1].criteriaList).toHaveLength(1);
     });
 
@@ -314,14 +314,12 @@ describe("ValidationService", () => {
 
       expect(result.results).toHaveLength(2);
       expect(result.results[0]).toEqual({
-        polygonUuid: "uuid-1",
         criteriaId: 4,
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: null
       });
       expect(result.results[1]).toEqual({
-        polygonUuid: "uuid-2",
         criteriaId: 4,
         valid: false,
         createdAt: expect.any(Date),
@@ -353,7 +351,6 @@ describe("ValidationService", () => {
 
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
-        polygonUuid: "uuid-1",
         criteriaId: 8,
         valid: false,
         createdAt: expect.any(Date),
@@ -403,7 +400,6 @@ describe("ValidationService", () => {
 
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
-        polygonUuid: "uuid-1",
         criteriaId: 14,
         valid: false,
         createdAt: expect.any(Date),
@@ -444,7 +440,6 @@ describe("ValidationService", () => {
 
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
-        polygonUuid: "uuid-1",
         criteriaId: 15,
         valid: true,
         createdAt: expect.any(Date),
@@ -480,7 +475,6 @@ describe("ValidationService", () => {
 
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
-        polygonUuid: "uuid-1",
         criteriaId: 6,
         valid: true,
         createdAt: expect.any(Date),
@@ -525,7 +519,6 @@ describe("ValidationService", () => {
 
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
-        polygonUuid: "uuid-1",
         criteriaId: 12,
         valid: true,
         createdAt: expect.any(Date),
@@ -706,7 +699,7 @@ describe("ValidationService", () => {
 
       expect(result.total).toBe(1); // Only polygon-1 has criteriaId=4 with valid=false
       expect(result.validations).toHaveLength(1);
-      expect(result.validations[0].polygonId).toBe("polygon-1");
+      expect(result.validations[0].polygonUuid).toBe("polygon-1");
     });
   });
 

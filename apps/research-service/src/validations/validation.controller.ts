@@ -70,7 +70,7 @@ export class ValidationController {
 
     return validations
       .reduce(
-        (document, validation) => document.addData(validation.polygonId, validation).document,
+        (document, validation) => document.addData(validation.polygonUuid, validation).document,
         buildJsonApi(ValidationDto)
       )
       .addIndex({
@@ -93,27 +93,35 @@ export class ValidationController {
     description: "Invalid validation request"
   })
   async createPolygonValidations(@Body() request: ValidationRequestDto) {
-    const validationResponse = await this.validationService.validatePolygons(request);
+    const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
+
+    const validationResponse = await this.validationService.validatePolygons({
+      ...request,
+      validationTypes
+    });
 
     const document = buildJsonApi(ValidationDto);
 
     const resultsByPolygon = new Map<string, ValidationCriteriaDto[]>();
 
-    for (const result of validationResponse.results) {
-      if (result.polygonUuid != null) {
-        if (!resultsByPolygon.has(result.polygonUuid)) {
-          resultsByPolygon.set(result.polygonUuid, []);
-        }
-        const criteriaList = resultsByPolygon.get(result.polygonUuid);
-        if (criteriaList != null) {
-          criteriaList.push(result);
-        }
+    for (let i = 0; i < request.polygonUuids.length; i++) {
+      const polygonUuid = request.polygonUuids[i];
+      const polygonResults: ValidationCriteriaDto[] = [];
+      const startIdx = i * validationTypes.length;
+      const endIdx = startIdx + validationTypes.length;
+
+      for (let j = startIdx; j < endIdx && j < validationResponse.results.length; j++) {
+        polygonResults.push(validationResponse.results[j]);
+      }
+
+      if (polygonResults.length > 0) {
+        resultsByPolygon.set(polygonUuid, polygonResults);
       }
     }
 
     for (const [polygonUuid, criteriaList] of resultsByPolygon) {
       const validation = new ValidationDto();
-      validation.polygonId = polygonUuid;
+      validation.polygonUuid = polygonUuid;
       validation.criteriaList = criteriaList;
       document.addData(polygonUuid, validation);
     }
@@ -134,17 +142,14 @@ export class ValidationController {
     description: "Invalid validation request"
   })
   async createSiteValidation(@Param("siteUuid") siteUuid: string, @Body() request: SiteValidationRequestDto) {
-    // Check if site exists and get polygon count
     const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
 
     if (polygonUuids.length === 0) {
       throw new NotFoundException(`No polygons found for site ${siteUuid}`);
     }
 
-    // If no validation types provided, run all validations
     const validationTypes = request.validationTypes ?? VALIDATION_TYPES;
 
-    // Create delayed job
     const delayedJob = await DelayedJob.create();
     delayedJob.name = "Site Polygon Validation";
     delayedJob.totalContent = polygonUuids.length;
@@ -155,7 +160,6 @@ export class ValidationController {
     };
     await delayedJob.save();
 
-    // Queue the job
     await this.validationQueue.add("siteValidation", {
       siteUuid,
       validationTypes,

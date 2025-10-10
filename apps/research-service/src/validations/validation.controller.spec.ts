@@ -16,7 +16,7 @@ describe("ValidationController", () => {
 
   const sampleValidation = new ValidationDto();
   populateDto(sampleValidation, {
-    polygonId: "7631be34-bbe0-4e1e-b4fe-592677dc4b50",
+    polygonUuid: "7631be34-bbe0-4e1e-b4fe-592677dc4b50",
     criteriaList: [
       {
         criteriaId: 4,
@@ -35,7 +35,7 @@ describe("ValidationController", () => {
 
   const siteValidation1 = new ValidationDto();
   populateDto(siteValidation1, {
-    polygonId: "polygon-uuid-123",
+    polygonUuid: "polygon-uuid-123",
     criteriaList: [
       {
         criteriaId: 4,
@@ -48,7 +48,7 @@ describe("ValidationController", () => {
 
   const siteValidation2 = new ValidationDto();
   populateDto(siteValidation2, {
-    polygonId: "polygon-uuid-456",
+    polygonUuid: "polygon-uuid-456",
     criteriaList: [
       {
         criteriaId: 8,
@@ -208,20 +208,20 @@ describe("ValidationController", () => {
 
       const dataArray = result.data as unknown as Array<{
         id: string;
-        attributes: { polygonId: string; criteriaList: unknown[] };
+        attributes: { polygonUuid: string; criteriaList: unknown[] };
       }>;
       const polygon1Data = dataArray.find(item => item.id === "polygon-1");
       const polygon2Data = dataArray.find(item => item.id === "polygon-2");
 
       expect(polygon1Data).toBeDefined();
       if (polygon1Data != null) {
-        expect(polygon1Data.attributes.polygonId).toBe("polygon-1");
+        expect(polygon1Data.attributes.polygonUuid).toBe("polygon-1");
         expect(polygon1Data.attributes.criteriaList).toHaveLength(2);
       }
 
       expect(polygon2Data).toBeDefined();
       if (polygon2Data != null) {
-        expect(polygon2Data.attributes.polygonId).toBe("polygon-2");
+        expect(polygon2Data.attributes.polygonUuid).toBe("polygon-2");
         expect(polygon2Data.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -297,17 +297,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -346,17 +346,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -391,17 +391,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -444,17 +444,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });

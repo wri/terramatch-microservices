@@ -25,6 +25,7 @@ import { Validator } from "./validators/validator.interface";
 import {
   ValidationType,
   VALIDATION_CRITERIA_IDS,
+  VALIDATION_TYPES,
   CriteriaId,
   EXCLUDED_VALIDATION_CRITERIA
 } from "@terramatch-microservices/database/constants";
@@ -85,7 +86,7 @@ export class ValidationService {
 
     const dto = new ValidationDto();
     return populateDto(dto, {
-      polygonId: polygonUuid,
+      polygonUuid,
       criteriaList
     });
   }
@@ -152,7 +153,7 @@ export class ValidationService {
 
     const validations = paginatedPolygonIds.map(polygonId =>
       populateDto<ValidationDto>(new ValidationDto(), {
-        polygonId,
+        polygonUuid: polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
           criteriaId: criteria.criteriaId,
           valid: criteria.valid,
@@ -170,9 +171,10 @@ export class ValidationService {
 
   async validatePolygons(request: ValidationRequestDto): Promise<ValidationResponseDto> {
     const results: ValidationCriteriaDto[] = [];
+    const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
 
     for (const polygonUuid of request.polygonUuids) {
-      for (const validationType of request.validationTypes) {
+      for (const validationType of validationTypes) {
         const validator = VALIDATORS[validationType];
         if (validator == null) {
           throw new BadRequestException(`Unknown validation type: ${validationType}`);
@@ -184,7 +186,6 @@ export class ValidationService {
         await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
 
         results.push({
-          polygonUuid: polygonUuid,
           criteriaId: criteriaId,
           valid: validationResult.valid,
           createdAt: new Date(),

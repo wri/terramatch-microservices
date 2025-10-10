@@ -3,6 +3,7 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
+  ForeignKey,
   Index,
   Model,
   PrimaryKey,
@@ -12,9 +13,11 @@ import {
 import { BIGINT, INTEGER, STRING, TEXT, UUIDV4, UUID } from "sequelize";
 import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
+import { FinancialReport } from "./financial-report.entity";
 
 @Scopes(() => ({
-  organisationByUuid: (uuid: string) => ({ where: { organisationId: uuid } })
+  organisationByUuid: (uuid: string) => ({ where: { organisationId: uuid } }),
+  financialReport: (id: number) => ({ where: { financialReportId: id } })
 }))
 @Table({
   tableName: "v2_funding_types",
@@ -26,6 +29,10 @@ export class FundingType extends Model<FundingType> {
 
   static organisationByUuid(uuid: string) {
     return chainScope(this, "organisationByUuid", uuid) as typeof FundingType;
+  }
+
+  static financialReport(id: number) {
+    return chainScope(this, "financialReport", id) as typeof FundingType;
   }
 
   @PrimaryKey
@@ -44,17 +51,18 @@ export class FundingType extends Model<FundingType> {
   @Column(STRING)
   source: string | null;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  amount: number | null;
+  amount: number;
 
-  @AllowNull
   @Column(INTEGER.UNSIGNED)
-  year: number | null;
+  year: number;
 
-  @AllowNull
   @Column(TEXT)
-  type: string | null;
+  type: string;
+
+  @ForeignKey(() => FinancialReport)
+  @Column(BIGINT.UNSIGNED)
+  financialReportId: number;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid" })
   organisation: Organisation;

@@ -325,31 +325,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       label: "Community Members Engaged - Backward Class (3 years)",
       inputType: "number"
     },
-    "org-total-board-members": {
-      property: "total_board_members",
-      label: "Total Number of Board Members",
-      inputType: "number"
-    },
-    "org-pct-board-women": {
-      property: "pct_board_women",
-      label: "% of board members that are women",
-      inputType: "number-percentage"
-    },
-    "org-pct-board-men": {
-      property: "pct_board_men",
-      label: "% of board members that are men",
-      inputType: "number-percentage"
-    },
-    "org-pct-board-youth": {
-      property: "pct_board_youth",
-      label: "% of board members that are youth",
-      inputType: "number-percentage"
-    },
-    "org-pct-board-non-youth": {
-      property: "pct_board_non_youth",
-      label: "% of board members that are non-youth",
-      inputType: "number-percentage"
-    },
     "org-field-staff-skills": { property: "field_staff_skills", label: "Field staff skills", inputType: "long-text" },
     "org-fpc-company": {
       property: "fpc_company",
@@ -357,11 +332,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       inputType: "radio",
       multiChoice: false,
       optionListKey: "yes-no"
-    },
-    "org-num-of-farmers-on-board": {
-      property: "num_of_farmers_on_board",
-      label: "How many farmers on board: FPC company",
-      inputType: "number"
     },
     "org-num_of-marginalised-employees": {
       property: "num_of_marginalised_employees",
@@ -697,20 +667,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
-    },
-    "org-leadership-team": {
-      property: "leadershipTeam",
-      label: "Leadership Team",
-      resource: "App\\Http\\Resources\\V2\\LeadershipsResource",
-      inputType: "leaderships",
-      collection: "leadership-team"
-    },
-    "org-core-team-leaders": {
-      property: "coreTeamLeaders",
-      label: "Core Team Leaders",
-      resource: "App\\Http\\Resources\\V2\\LeadershipsResource",
-      inputType: "leaderships",
-      collection: "core-team-leaders"
     },
     "org-tree-species-restored": {
       property: "treeSpeciesHistorical",

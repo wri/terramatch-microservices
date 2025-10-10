@@ -233,5 +233,21 @@ describe("EntityStatusUpdate EventProcessor", () => {
       expect(task.updatedAt).not.toEqual(task.createdAt);
       expect(task.status).toBe(AWAITING_APPROVAL);
     });
+
+    it("should send status update email for FinancialReport to createdBy user", async () => {
+      mockUserId();
+      const user = await UserFactory.create();
+      const financialReport = await FinancialReportFactory.create({
+        status: APPROVED,
+        createdBy: user.id
+      });
+
+      await new EntityStatusUpdate(eventService, financialReport).handle();
+
+      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
+        "statusUpdate",
+        expect.objectContaining({ type: "financialReports", id: financialReport.id })
+      );
+    });
   });
 });

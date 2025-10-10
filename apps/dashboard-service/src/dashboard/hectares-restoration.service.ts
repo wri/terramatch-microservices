@@ -99,7 +99,13 @@ export class HectaresRestorationService {
           if (!(key in hectaresRestored)) {
             hectaresRestored[key] = 0;
           }
-          hectaresRestored[key] += typeof value === "number" ? value : parseFloat(value as string);
+
+          if (value != null && value !== "") {
+            const numericValue = typeof value === "number" ? value : parseFloat(value as string);
+            if (!isNaN(numericValue)) {
+              hectaresRestored[key] += numericValue;
+            }
+          }
         }
       }
     });

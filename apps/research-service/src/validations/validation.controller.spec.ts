@@ -6,13 +6,17 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { getQueueToken } from "@nestjs/bullmq";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { ValidationType } from "@terramatch-microservices/database/constants";
 
 describe("ValidationController", () => {
   let controller: ValidationController;
 
   const sampleValidation = new ValidationDto();
   populateDto(sampleValidation, {
-    polygonId: "7631be34-bbe0-4e1e-b4fe-592677dc4b50",
+    polygonUuid: "7631be34-bbe0-4e1e-b4fe-592677dc4b50",
     criteriaList: [
       {
         criteriaId: 4,
@@ -31,7 +35,7 @@ describe("ValidationController", () => {
 
   const siteValidation1 = new ValidationDto();
   populateDto(siteValidation1, {
-    polygonId: "polygon-uuid-123",
+    polygonUuid: "polygon-uuid-123",
     criteriaList: [
       {
         criteriaId: 4,
@@ -44,7 +48,7 @@ describe("ValidationController", () => {
 
   const siteValidation2 = new ValidationDto();
   populateDto(siteValidation2, {
-    polygonId: "polygon-uuid-456",
+    polygonUuid: "polygon-uuid-456",
     criteriaList: [
       {
         criteriaId: 8,
@@ -85,11 +89,27 @@ describe("ValidationController", () => {
           extraInfo: null
         }
       ]
-    })
+    }),
+    getSitePolygonUuids: jest.fn().mockResolvedValue(["polygon-1", "polygon-2"])
+  };
+
+  const mockQueue = {
+    add: jest.fn()
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    jest.spyOn(DelayedJob, "create").mockResolvedValue({
+      id: 1,
+      uuid: "job-uuid-123",
+      name: "",
+      totalContent: 0,
+      processedContent: 0,
+      progressMessage: "",
+      metadata: {},
+      save: jest.fn().mockResolvedValue(undefined)
+    } as unknown as DelayedJob);
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ValidationController],
@@ -97,6 +117,10 @@ describe("ValidationController", () => {
         {
           provide: ValidationService,
           useValue: mockValidationService
+        },
+        {
+          provide: getQueueToken("validation"),
+          useValue: mockQueue
         }
       ]
     }).compile();
@@ -146,6 +170,26 @@ describe("ValidationController", () => {
 
       expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 10, 3, undefined);
     });
+
+    it("should throw BadRequestException for invalid criteriaId", async () => {
+      const query = { criteriaId: "0" };
+      await expect(controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException for non-integer criteriaId", async () => {
+      const query = { criteriaId: "1.5" };
+      await expect(controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should use criteriaId when provided", async () => {
+      const query = { criteriaId: 4 };
+      await controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto);
+      expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 100, 1, 4);
+    });
   });
 
   describe("createPolygonValidations", () => {
@@ -164,20 +208,20 @@ describe("ValidationController", () => {
 
       const dataArray = result.data as unknown as Array<{
         id: string;
-        attributes: { polygonId: string; criteriaList: unknown[] };
+        attributes: { polygonUuid: string; criteriaList: unknown[] };
       }>;
       const polygon1Data = dataArray.find(item => item.id === "polygon-1");
       const polygon2Data = dataArray.find(item => item.id === "polygon-2");
 
       expect(polygon1Data).toBeDefined();
       if (polygon1Data != null) {
-        expect(polygon1Data.attributes.polygonId).toBe("polygon-1");
+        expect(polygon1Data.attributes.polygonUuid).toBe("polygon-1");
         expect(polygon1Data.attributes.criteriaList).toHaveLength(2);
       }
 
       expect(polygon2Data).toBeDefined();
       if (polygon2Data != null) {
-        expect(polygon2Data.attributes.polygonId).toBe("polygon-2");
+        expect(polygon2Data.attributes.polygonUuid).toBe("polygon-2");
         expect(polygon2Data.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -253,17 +297,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -302,17 +346,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -347,17 +391,17 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
@@ -400,19 +444,48 @@ describe("ValidationController", () => {
         expect(result.data).toHaveLength(1);
         const dataArray = result.data as unknown as Array<{
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         }>;
         const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonId).toBe("polygon-1");
+        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
         expect(polygonData.attributes.criteriaList).toHaveLength(1);
       } else {
         const singleData = result.data as unknown as {
           id: string;
-          attributes: { polygonId: string; criteriaList: unknown[] };
+          attributes: { polygonUuid: string; criteriaList: unknown[] };
         };
-        expect(singleData.attributes.polygonId).toBe("polygon-1");
+        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
+    });
+  });
+
+  describe("createSiteValidation", () => {
+    const siteUuid = "site-uuid-123";
+
+    it("should create a site validation job", async () => {
+      const request = { validationTypes: ["SELF_INTERSECTION", "SPIKES"] as ValidationType[] };
+      const result = serialize(await controller.createSiteValidation(siteUuid, request));
+
+      expect(mockValidationService.getSitePolygonUuids).toHaveBeenCalledWith(siteUuid);
+      expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", {
+        siteUuid,
+        validationTypes: ["SELF_INTERSECTION", "SPIKES"],
+        delayedJobId: 1
+      });
+      expect(result.data).toBeDefined();
+    });
+
+    it("should throw NotFoundException when site has no polygons", async () => {
+      mockValidationService.getSitePolygonUuids.mockResolvedValueOnce([]);
+      const request = { validationTypes: ["SELF_INTERSECTION"] as ValidationType[] };
+      await expect(controller.createSiteValidation(siteUuid, request)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should use all validation types when none provided", async () => {
+      const request = {};
+      await controller.createSiteValidation(siteUuid, request);
+      expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
     });
   });
 });

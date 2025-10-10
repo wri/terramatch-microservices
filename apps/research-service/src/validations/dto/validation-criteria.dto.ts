@@ -5,12 +5,6 @@ import { VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/d
 @JsonApiDto({ type: "validationCriterias" })
 export class ValidationCriteriaDto {
   @ApiProperty({
-    description: "The polygon UUID that was validated (optional for historic data)",
-    required: false
-  })
-  polygonUuid?: string;
-
-  @ApiProperty({
     description: "The validation criteria ID",
     enum: VALIDATION_CRITERIA_IDS
   })

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { OverlappingValidator } from "./overlapping.validator";
 import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
+import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
 
 interface MockTransaction {
   commit: jest.Mock;
@@ -472,6 +472,78 @@ describe("OverlappingValidator", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].polyUuid).toBe(testUuids.polygon2);
+    });
+  });
+
+  describe("validatePolygons", () => {
+    it("should return empty array for empty input", async () => {
+      const result = await validator.validatePolygons([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should validate multiple polygons in batch", async () => {
+      const mockSitePolygons = [
+        { polygonUuid: testUuids.polygon1, site: { projectId: testProjectId } },
+        { polygonUuid: testUuids.polygon2, site: { projectId: testProjectId } }
+      ];
+
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+
+      const mockTransactionInstance = { commit: jest.fn(), rollback: jest.fn() };
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce([]);
+
+      const result = await validator.validatePolygons([testUuids.polygon1, testUuids.polygon2]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].polygonUuid).toBe(testUuids.polygon1);
+      expect(result[1].polygonUuid).toBe(testUuids.polygon2);
+    });
+
+    it("should throw BadRequestException for duplicate polygon UUIDs", async () => {
+      await expect(validator.validatePolygons([testUuids.polygon1, testUuids.polygon1])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should handle polygon not found in batch", async () => {
+      mockSitePolygonFindAll.mockResolvedValueOnce([]);
+      const result = await validator.validatePolygons([testUuids.polygon1]);
+      expect(result[0].valid).toBe(false);
+    });
+
+    it("should filter self-intersections in batch", async () => {
+      const mockSitePolygons = [
+        { polygonUuid: testUuids.polygon1, site: { projectId: testProjectId } },
+        { polygonUuid: testUuids.polygon2, site: { projectId: testProjectId } }
+      ];
+
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+
+      const mockTransactionInstance = { commit: jest.fn(), rollback: jest.fn() };
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce([
+        { targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon1 }
+      ]);
+      mockCheckGeometryIntersections.mockResolvedValueOnce([
+        {
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon1,
+          candidateName: "A",
+          siteName: "Test",
+          targetArea: 1000,
+          candidateArea: 1000,
+          intersectionArea: 1000,
+          intersectionLatitude: 35.0
+        }
+      ]);
+
+      const result = await validator.validatePolygons([testUuids.polygon1, testUuids.polygon2]);
+
+      expect(result[0].valid).toBe(true);
+      expect(result[1].valid).toBe(true);
     });
   });
 });

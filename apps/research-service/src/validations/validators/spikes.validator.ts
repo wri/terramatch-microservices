@@ -22,6 +22,10 @@ interface SpikeDetectionResult extends ValidationResult {
 }
 
 export class SpikesValidator implements Validator {
+  private readonly SPIKE_ANGLE_THRESHOLD = 10;
+
+  private readonly SPIKE_RATIO_THRESHOLD = 5;
+
   async validatePolygon(polygonUuid: string): Promise<SpikeDetectionResult> {
     const geoJson = await PolygonGeometry.getGeoJSONParsed(polygonUuid);
     if (geoJson == null) {
@@ -71,31 +75,66 @@ export class SpikesValidator implements Validator {
   private detectSpikes(geometry: GeoJSONGeometry): number[][] {
     const spikes: number[][] = [];
 
-    if (geometry.type == "Polygon" || geometry.type == "MultiPolygon") {
-      const coordinates = geometry.type == "Polygon" ? geometry.coordinates[0] : geometry.coordinates[0][0];
-
-      const numVertices = coordinates.length;
-      let totalDistance = 0;
-
-      for (let i = 0; i < numVertices - 1; i++) {
-        totalDistance += this.calculateDistance(coordinates[i], coordinates[i + 1]);
+    if (geometry.type === "Polygon") {
+      for (const ring of geometry.coordinates) {
+        spikes.push(...this.detectSpikesInRing(ring));
       }
-
-      for (let i = 0; i < numVertices - 1; i++) {
-        const distance1 = this.calculateDistance(coordinates[i], coordinates[(i + 1) % numVertices]);
-        const distance2 = this.calculateDistance(
-          coordinates[(i + 1) % numVertices],
-          coordinates[(i + 2) % numVertices]
-        );
-        const combinedDistance = distance1 + distance2;
-
-        if (combinedDistance > 0.6 * totalDistance) {
-          spikes.push(coordinates[(i + 1) % numVertices]);
+    } else if (geometry.type === "MultiPolygon") {
+      for (const polygon of geometry.coordinates) {
+        for (const ring of polygon) {
+          spikes.push(...this.detectSpikesInRing(ring));
         }
       }
     }
 
     return spikes;
+  }
+
+  private detectSpikesInRing(coordinates: number[][]): number[][] {
+    const spikes: number[][] = [];
+    const n = coordinates.length;
+
+    if (n < 4) return spikes;
+
+    for (let i = 1; i < n - 1; i++) {
+      const prev = coordinates[i - 1];
+      const current = coordinates[i];
+      const next = coordinates[i + 1];
+
+      const angle = this.calculateAngle(prev, current, next);
+
+      const d1 = this.calculateDistance(prev, current);
+      const d2 = this.calculateDistance(current, next);
+      const baseDistance = this.calculateDistance(prev, next);
+
+      const isSharpAngle = angle < this.SPIKE_ANGLE_THRESHOLD;
+      const isSkinny = baseDistance > 0 && (d1 + d2) / baseDistance > this.SPIKE_RATIO_THRESHOLD;
+
+      if (isSharpAngle && isSkinny) {
+        spikes.push(current);
+      }
+    }
+
+    return spikes;
+  }
+
+  private calculateAngle(p1: number[], p2: number[], p3: number[]): number {
+    const v1 = [p1[0] - p2[0], p1[1] - p2[1]];
+    const v2 = [p3[0] - p2[0], p3[1] - p2[1]];
+
+    const dot = v1[0] * v2[0] + v1[1] * v2[1];
+
+    const mag1 = Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1]);
+    const mag2 = Math.sqrt(v2[0] * v2[0] + v2[1] * v2[1]);
+
+    if (mag1 === 0 || mag2 === 0) return 180;
+
+    const cosAngle = dot / (mag1 * mag2);
+    const clampedCos = Math.max(-1, Math.min(1, cosAngle));
+    const angleRad = Math.acos(clampedCos);
+    const angleDeg = angleRad * (180 / Math.PI);
+
+    return angleDeg;
   }
 
   private calculateDistance(point1: number[], point2: number[]): number {
@@ -108,7 +147,9 @@ export class SpikesValidator implements Validator {
     const dist =
       Math.sin(this.deg2rad(lat1)) * Math.sin(this.deg2rad(lat2)) +
       Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * Math.cos(this.deg2rad(theta));
-    const acosDist = Math.acos(dist);
+
+    const clampedDist = Math.max(-1, Math.min(1, dist));
+    const acosDist = Math.acos(clampedDist);
     const rad2degDist = this.rad2deg(acosDist);
     const miles = rad2degDist * 60 * 1.1515;
 

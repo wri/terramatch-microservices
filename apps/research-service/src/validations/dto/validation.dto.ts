@@ -8,7 +8,7 @@ export class ValidationDto {
     description: "The UUID of the polygon that was validated",
     example: "d6502d4c-dfd6-461e-af62-21a0ec2f3e65"
   })
-  polygonId: string;
+  polygonUuid: string;
 
   @ApiProperty({
     description: "List of validation criteria results for this polygon",

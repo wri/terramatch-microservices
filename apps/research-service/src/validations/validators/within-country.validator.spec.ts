@@ -247,4 +247,83 @@ describe("WithinCountryValidator", () => {
       });
     });
   });
+
+  describe("validatePolygons", () => {
+    it("should return empty array for empty input", async () => {
+      const result = await validator.validatePolygons([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should validate multiple polygons in batch", async () => {
+      const testPolygonUuid2 = "e3349d63-83ed-4df8-996c-2b79555385fa";
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      const mockResults = [
+        { polygonUuid: testPolygonUuid, polygonArea: 1000, intersectionArea: 800, country: "Cambodia" },
+        { polygonUuid: testPolygonUuid2, polygonArea: 1000, intersectionArea: 900, country: "Cambodia" }
+      ];
+
+      (
+        PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
+      ).checkWithinCountryIntersectionBatch = jest.fn();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockResolvedValueOnce(mockResults);
+
+      const result = await validator.validatePolygons([testPolygonUuid, testPolygonUuid2]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].polygonUuid).toBe(testPolygonUuid);
+      expect(result[0].valid).toBe(true);
+      expect(result[1].polygonUuid).toBe(testPolygonUuid2);
+      expect(result[1].valid).toBe(true);
+    });
+
+    it("should handle polygon not found in batch", async () => {
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      (
+        PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
+      ).checkWithinCountryIntersectionBatch = jest.fn();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockResolvedValueOnce([]);
+
+      const result = await validator.validatePolygons([testPolygonUuid]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].valid).toBe(false);
+    });
+
+    it("should throw InternalServerErrorException when sequelize is not available in batch", async () => {
+      const originalSequelize = PolygonGeometry.sequelize;
+      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
+
+      await expect(validator.validatePolygons([testPolygonUuid])).rejects.toThrow(InternalServerErrorException);
+
+      (PolygonGeometry as unknown as { sequelize: typeof originalSequelize }).sequelize = originalSequelize;
+    });
+
+    it("should handle database errors gracefully in batch", async () => {
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      (
+        PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
+      ).checkWithinCountryIntersectionBatch = jest.fn();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockRejectedValueOnce(
+        new Error("Database error")
+      );
+
+      await expect(validator.validatePolygons([testPolygonUuid])).rejects.toThrow("Database error");
+      expect(mockTransactionInstance.rollback).toHaveBeenCalled();
+    });
+  });
 });

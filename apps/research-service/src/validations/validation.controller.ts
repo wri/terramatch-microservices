@@ -13,7 +13,7 @@ import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { CriteriaId, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
@@ -151,20 +151,32 @@ export class ValidationController {
       throw new NotFoundException(`No polygons found for site ${siteUuid}`);
     }
 
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+    }
+
     const validationTypes =
       request.validationTypes == null || request.validationTypes.length === 0
         ? VALIDATION_TYPES
         : request.validationTypes;
 
-    const delayedJob = await DelayedJob.create({ isAcknowledged: false } as DelayedJob);
-    delayedJob.name = "Site Polygon Validation";
-    delayedJob.totalContent = polygonUuids.length;
-    delayedJob.processedContent = 0;
-    delayedJob.progressMessage = "Starting validation...";
-    delayedJob.metadata = {
-      entity_name: `Site Validation (${polygonUuids.length} polygons)`
-    };
-    await delayedJob.save();
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Polygon Validation",
+      totalContent: polygonUuids.length,
+      processedContent: 0,
+      progressMessage: "Starting validation...",
+      metadata: {
+        entity_id: site.id,
+        entity_type: "App\\Models\\V2\\Sites\\Site",
+        entity_name: site.name
+      }
+    } as DelayedJob);
 
     await this.validationQueue.add("siteValidation", {
       siteUuid,

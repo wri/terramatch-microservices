@@ -1,8 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media } from "@terramatch-microservices/database/entities";
+
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
+import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
 
 @Injectable()
@@ -19,6 +21,19 @@ export class MediaService {
         secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY") ?? ""
       }
     });
+  }
+
+  async getMedia(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+
+    return media;
+  }
+
+  async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
+    await media.update(updatePayload.data.attributes);
   }
 
   async uploadFile(file: Express.Multer.File, bucket: string = this.configService.get<string>("AWS_BUCKET") ?? "") {

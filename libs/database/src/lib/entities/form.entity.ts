@@ -11,17 +11,16 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
-import { MediaConfiguration } from "../constants/media-owners";
 import { Stage } from "./stage.entity";
+import { FormType } from "../constants/forms";
 
 @Table({ tableName: "forms", underscored: true, paranoid: true })
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 
-  static readonly MEDIA: Record<string, MediaConfiguration> = {
-    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" },
-    document: { dbCollection: "document", multiple: false, validation: "general-documents" }
-  };
+  static readonly MEDIA = {
+    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
+  } as const;
 
   @PrimaryKey
   @AutoIncrement
@@ -48,7 +47,7 @@ export class Form extends Model<Form> {
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  type: FormType | null;
 
   @Column(TEXT)
   title: string;

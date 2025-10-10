@@ -62,8 +62,8 @@ describe("LocalizationService", () => {
       (tx.setCurrentLocale as jest.Mock).mockResolvedValue(undefined);
       (t as jest.Mock).mockReturnValue(translatedText);
 
-      const result = await service.localizeText(text, "es_ES");
-      expect(normalizeLocale).toHaveBeenCalledWith("es_ES");
+      const result = await service.localizeText(text, "es-MX");
+      expect(normalizeLocale).toHaveBeenCalledWith("es-MX");
       expect(tx.setCurrentLocale).toHaveBeenCalledWith(locale);
       expect(t).toHaveBeenCalledWith(text, undefined);
       expect(result).toBe(translatedText);

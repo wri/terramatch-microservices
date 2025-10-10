@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
-import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { LinkedFieldDto } from "./dto/linked-field.dto";
 import { FormModelType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -13,7 +13,6 @@ import {
 } from "@terramatch-microservices/database/constants/linked-fields";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { isEmpty } from "lodash";
-import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { LinkedFieldQueryDto } from "./dto/linked-field-query.dto";
 
 const fieldAdder =
@@ -34,13 +33,11 @@ const fieldAdder =
     );
   };
 
-// TODO (NJC): Specs for this controller before epic TM-2411 is merged
 @Controller("forms/v3/linkedFields")
 export class LinkedFieldsController {
   @Get()
   @ApiOperation({ operationId: "linkedFieldsIndex" })
   @JsonApiResponse({ data: LinkedFieldDto, hasMany: true })
-  @ExceptionResponse(BadRequestException, { description: "None of the requested formTypes were found." })
   async linkedFieldsIndex(@Query() { formModelTypes }: LinkedFieldQueryDto) {
     const document = buildJsonApi(LinkedFieldDto, { forceDataArray: true });
     for (const modelType of formModelTypes ?? (Object.keys(LinkedFieldsConfiguration) as FormModelType[])) {

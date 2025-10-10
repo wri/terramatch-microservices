@@ -7,7 +7,7 @@ import { Dictionary } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
-type Translations = Record<number, string | null>;
+export type Translations = Record<number, string | null>;
 
 @Injectable()
 export class LocalizationService {
@@ -68,7 +68,7 @@ export class LocalizationService {
    * @param params The optional translation substitution params
    * @returns The translated text.
    */
-  async localizeText(text: string, locale: string, params?: ITranslateParams) {
+  async localizeText(text: string, locale: ValidLocale, params?: ITranslateParams) {
     // Set the locale for the SDK
     const txLocale = normalizeLocale(locale);
     await tx.setCurrentLocale(txLocale);

@@ -156,7 +156,7 @@ export class ValidationController {
         ? VALIDATION_TYPES
         : request.validationTypes;
 
-    const delayedJob = await DelayedJob.create();
+    const delayedJob = await DelayedJob.create({ isAcknowledged: false } as DelayedJob);
     delayedJob.name = "Site Polygon Validation";
     delayedJob.totalContent = polygonUuids.length;
     delayedJob.processedContent = 0;

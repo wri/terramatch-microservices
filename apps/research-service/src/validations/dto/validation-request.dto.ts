@@ -19,7 +19,7 @@ export class ValidationRequestDto {
     name: "validationTypes[]",
     isArray: true,
     required: false,
-    description: "Array of validation types to run. If not provided, all validation types will be run."
+    description: "Array of validation types to run. If not provided or empty, all validation types will be run."
   })
   @IsOptional()
   @IsArray()

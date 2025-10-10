@@ -9,7 +9,7 @@ export class SiteValidationRequestDto {
     isArray: true,
     required: false,
     description:
-      "Array of validation types to run on all polygons in the site. If not provided, all validation types will be run."
+      "Array of validation types to run on all polygons in the site. If not provided or empty, all validation types will be run."
   })
   @IsOptional()
   @IsArray()

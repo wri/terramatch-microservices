@@ -93,7 +93,10 @@ export class ValidationController {
     description: "Invalid validation request"
   })
   async createPolygonValidations(@Body() request: ValidationRequestDto) {
-    const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
+    const validationTypes =
+      request.validationTypes == null || request.validationTypes.length === 0
+        ? [...VALIDATION_TYPES]
+        : request.validationTypes;
 
     const validationResponse = await this.validationService.validatePolygons({
       ...request,
@@ -148,7 +151,10 @@ export class ValidationController {
       throw new NotFoundException(`No polygons found for site ${siteUuid}`);
     }
 
-    const validationTypes = request.validationTypes ?? VALIDATION_TYPES;
+    const validationTypes =
+      request.validationTypes == null || request.validationTypes.length === 0
+        ? VALIDATION_TYPES
+        : request.validationTypes;
 
     const delayedJob = await DelayedJob.create();
     delayedJob.name = "Site Polygon Validation";

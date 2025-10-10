@@ -1,4 +1,14 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Post, Body } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  Post,
+  Body,
+  Request
+} from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
@@ -144,7 +154,11 @@ export class ValidationController {
   @ExceptionResponse(BadRequestException, {
     description: "Invalid validation request"
   })
-  async createSiteValidation(@Param("siteUuid") siteUuid: string, @Body() request: SiteValidationRequestDto) {
+  async createSiteValidation(
+    @Param("siteUuid") siteUuid: string,
+    @Body() request: SiteValidationRequestDto,
+    @Request() { authenticatedUserId }
+  ) {
     const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
 
     if (polygonUuids.length === 0) {
@@ -171,6 +185,7 @@ export class ValidationController {
       totalContent: polygonUuids.length,
       processedContent: 0,
       progressMessage: "Starting validation...",
+      createdBy: authenticatedUserId,
       metadata: {
         entity_id: site.id,
         entity_type: "App\\Models\\V2\\Sites\\Site",

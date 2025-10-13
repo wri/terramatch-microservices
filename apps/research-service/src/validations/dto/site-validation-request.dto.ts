@@ -6,7 +6,6 @@ import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/
 export class SiteValidationRequestAttributes {
   @ApiProperty({
     enum: VALIDATION_TYPES,
-    name: "validationTypes[]",
     isArray: true,
     required: false,
     description:

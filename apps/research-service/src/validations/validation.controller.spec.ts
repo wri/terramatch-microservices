@@ -179,7 +179,7 @@ describe("ValidationController", () => {
     it("should create polygon validations and return proper JSON API format", async () => {
       const request: ValidationRequestBody = {
         data: {
-          type: "validationRequests",
+          type: "validations",
           attributes: {
             polygonUuids: ["polygon-1", "polygon-2"],
             validationTypes: ["SELF_INTERSECTION", "SPIKES"]
@@ -259,7 +259,7 @@ describe("ValidationController", () => {
     it("should handle single polygon validation", async () => {
       const request: ValidationRequestBody = {
         data: {
-          type: "validationRequests",
+          type: "validations",
           attributes: {
             polygonUuids: ["polygon-1"],
             validationTypes: ["SELF_INTERSECTION"]
@@ -299,7 +299,7 @@ describe("ValidationController", () => {
     it("should create polygon validations with DATA_COMPLETENESS validation type", async () => {
       const request: ValidationRequestBody = {
         data: {
-          type: "validationRequests",
+          type: "validations",
           attributes: {
             polygonUuids: ["polygon-1"],
             validationTypes: ["DATA_COMPLETENESS"]
@@ -355,7 +355,7 @@ describe("ValidationController", () => {
     it("should create polygon validations with PLANT_START_DATE validation type", async () => {
       const request: ValidationRequestBody = {
         data: {
-          type: "validationRequests",
+          type: "validations",
           attributes: {
             polygonUuids: ["polygon-1"],
             validationTypes: ["PLANT_START_DATE"]
@@ -412,7 +412,7 @@ describe("ValidationController", () => {
     it("should create polygon validations with POLYGON_SIZE validation type", async () => {
       const request: ValidationRequestBody = {
         data: {
-          type: "validationRequests",
+          type: "validations",
           attributes: {
             polygonUuids: ["polygon-1"],
             validationTypes: ["POLYGON_SIZE"]
@@ -465,7 +465,7 @@ describe("ValidationController", () => {
     it("should create polygon validations with ESTIMATED_AREA validation type", async () => {
       const request: ValidationRequestBody = {
         data: {
-          type: "validationRequests",
+          type: "validations",
           attributes: {
             polygonUuids: ["polygon-1"],
             validationTypes: ["ESTIMATED_AREA"]
@@ -531,7 +531,7 @@ describe("ValidationController", () => {
     it("should create a site validation job", async () => {
       const request: SiteValidationRequestBody = {
         data: {
-          type: "siteValidationRequests",
+          type: "validations",
           attributes: {
             validationTypes: ["SELF_INTERSECTION", "SPIKES"] as ValidationType[]
           }
@@ -552,7 +552,7 @@ describe("ValidationController", () => {
       mockValidationService.getSitePolygonUuids.mockResolvedValueOnce([]);
       const request: SiteValidationRequestBody = {
         data: {
-          type: "siteValidationRequests",
+          type: "validations",
           attributes: {
             validationTypes: ["SELF_INTERSECTION"] as ValidationType[]
           }
@@ -564,7 +564,7 @@ describe("ValidationController", () => {
     it("should use all validation types when none provided", async () => {
       const request: SiteValidationRequestBody = {
         data: {
-          type: "siteValidationRequests",
+          type: "validations",
           attributes: {}
         }
       };

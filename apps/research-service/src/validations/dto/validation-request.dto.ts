@@ -27,5 +27,5 @@ export class ValidationRequestAttributes {
 }
 
 export class ValidationRequestBody extends JsonApiBodyDto(
-  class ValidationRequestData extends CreateDataDto("validationRequests", ValidationRequestAttributes) {}
+  class ValidationRequestData extends CreateDataDto("validations", ValidationRequestAttributes) {}
 ) {}

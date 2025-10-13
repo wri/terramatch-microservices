@@ -18,5 +18,5 @@ export class SiteValidationRequestAttributes {
 }
 
 export class SiteValidationRequestBody extends JsonApiBodyDto(
-  class SiteValidationRequestData extends CreateDataDto("siteValidationRequests", SiteValidationRequestAttributes) {}
+  class SiteValidationRequestData extends CreateDataDto("validations", SiteValidationRequestAttributes) {}
 ) {}

@@ -95,12 +95,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     }
 
     // Find all affected site polygons and validate they're not already affected by another disturbance
-    const affectedPolygons = await SitePolygon.findAll({
-      where: {
-        uuid: { [Op.in]: Array.from(affectedPolygonUuids) },
-        isActive: true
-      }
-    });
+    const affectedPolygons = await SitePolygon.active().forUuids(Array.from(affectedPolygonUuids)).findAll();
 
     // Check for polygons that are already affected by another disturbance
     const alreadyAffectedPolygons = affectedPolygons.filter(polygon => polygon.disturbanceId != null);
@@ -112,13 +107,11 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       );
     }
 
-    // Update all affected polygons with the disturbance_id, where they are not already affected by another disturbance
     await SitePolygon.update(
       { disturbanceId: disturbance.id },
       {
         where: {
           uuid: { [Op.in]: Array.from(affectedPolygonUuids) },
-          isActive: true,
           disturbanceId: null
         }
       }
@@ -134,31 +127,23 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       // Look for entries that contain affected polygon UUIDs
       // Based on the task requirements, this should identify which polygons have been impacted
       if (entry.name === "polygon-affected" && entry.value != null) {
-        this.logger.log(`Processing polygon field: ${entry.name} with value: ${entry.value}`);
         try {
           const parsedValue = JSON.parse(entry.value);
           if (Array.isArray(parsedValue)) {
-            parsedValue.forEach((polygonGroup, groupIndex) => {
+            parsedValue.forEach(polygonGroup => {
               if (Array.isArray(polygonGroup)) {
-                // Handle array of arrays format
                 polygonGroup.forEach(polygonObj => {
                   if (polygonObj != null && typeof polygonObj === "object" && polygonObj.polyUuid != null) {
-                    this.logger.log(
-                      `Adding polygon UUID: ${polygonObj.polyUuid} (${polygonObj.polyName}) from group ${groupIndex}`
-                    );
                     affectedPolygonUuids.add(polygonObj.polyUuid);
                   }
                 });
               } else if (polygonGroup != null && typeof polygonGroup === "object" && polygonGroup.polyUuid != null) {
-                // Handle direct object format (fallback)
-                this.logger.log(`Adding polygon UUID: ${polygonGroup.polyUuid} (${polygonGroup.polyName})`);
                 affectedPolygonUuids.add(polygonGroup.polyUuid);
               }
             });
           }
         } catch (error) {
           this.logger.warn(`Failed to parse polygon JSON: ${error.message}, trying comma-separated values`);
-          // If JSON parsing fails, try comma-separated values
           const uuids = entry.value
             .split(",")
             .map(uuid => uuid.trim())
@@ -196,14 +181,14 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         break;
       case "people-affected": {
         const peopleAffected = Number(entry.value);
-        if (!isNaN(peopleAffected) && peopleAffected > 0) {
+        if (!isNaN(peopleAffected)) {
           disturbanceData.peopleAffected = peopleAffected;
         }
         break;
       }
       case "monetary-damage": {
         const monetaryDamage = Number(entry.value);
-        if (!isNaN(monetaryDamage) && monetaryDamage >= 0) {
+        if (!isNaN(monetaryDamage)) {
           disturbanceData.monetaryDamage = monetaryDamage;
         }
         break;

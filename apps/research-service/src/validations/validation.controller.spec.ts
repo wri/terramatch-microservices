@@ -5,7 +5,8 @@ import { ValidationDto } from "./dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
-import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationRequestBody } from "./dto/validation-request.dto";
+import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
@@ -176,9 +177,14 @@ describe("ValidationController", () => {
 
   describe("createPolygonValidations", () => {
     it("should create polygon validations and return proper JSON API format", async () => {
-      const request: ValidationRequestDto = {
-        polygonUuids: ["polygon-1", "polygon-2"],
-        validationTypes: ["SELF_INTERSECTION", "SPIKES"]
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validationRequests",
+          attributes: {
+            polygonUuids: ["polygon-1", "polygon-2"],
+            validationTypes: ["SELF_INTERSECTION", "SPIKES"]
+          }
+        }
       };
 
       const polygon1Validation = new ValidationDto();
@@ -251,9 +257,14 @@ describe("ValidationController", () => {
     });
 
     it("should handle single polygon validation", async () => {
-      const request: ValidationRequestDto = {
-        polygonUuids: ["polygon-1"],
-        validationTypes: ["SELF_INTERSECTION"]
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validationRequests",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: ["SELF_INTERSECTION"]
+          }
+        }
       };
 
       const polygon1Validation = new ValidationDto();
@@ -286,9 +297,14 @@ describe("ValidationController", () => {
     });
 
     it("should create polygon validations with DATA_COMPLETENESS validation type", async () => {
-      const request: ValidationRequestDto = {
-        polygonUuids: ["polygon-1"],
-        validationTypes: ["DATA_COMPLETENESS"]
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validationRequests",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: ["DATA_COMPLETENESS"]
+          }
+        }
       };
 
       const polygon1Validation = new ValidationDto();
@@ -337,9 +353,14 @@ describe("ValidationController", () => {
     });
 
     it("should create polygon validations with PLANT_START_DATE validation type", async () => {
-      const request: ValidationRequestDto = {
-        polygonUuids: ["polygon-1"],
-        validationTypes: ["PLANT_START_DATE"]
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validationRequests",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: ["PLANT_START_DATE"]
+          }
+        }
       };
 
       const polygon1Validation = new ValidationDto();
@@ -389,9 +410,14 @@ describe("ValidationController", () => {
     });
 
     it("should create polygon validations with POLYGON_SIZE validation type", async () => {
-      const request: ValidationRequestDto = {
-        polygonUuids: ["polygon-1"],
-        validationTypes: ["POLYGON_SIZE"]
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validationRequests",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: ["POLYGON_SIZE"]
+          }
+        }
       };
 
       const polygon1Validation = new ValidationDto();
@@ -437,9 +463,14 @@ describe("ValidationController", () => {
     });
 
     it("should create polygon validations with ESTIMATED_AREA validation type", async () => {
-      const request: ValidationRequestDto = {
-        polygonUuids: ["polygon-1"],
-        validationTypes: ["ESTIMATED_AREA"]
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validationRequests",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: ["ESTIMATED_AREA"]
+          }
+        }
       };
 
       const polygon1Validation = new ValidationDto();
@@ -498,7 +529,14 @@ describe("ValidationController", () => {
     const mockRequest = { authenticatedUserId: 1 };
 
     it("should create a site validation job", async () => {
-      const request = { validationTypes: ["SELF_INTERSECTION", "SPIKES"] as ValidationType[] };
+      const request: SiteValidationRequestBody = {
+        data: {
+          type: "siteValidationRequests",
+          attributes: {
+            validationTypes: ["SELF_INTERSECTION", "SPIKES"] as ValidationType[]
+          }
+        }
+      };
       const result = serialize(await controller.createSiteValidation(siteUuid, request, mockRequest));
 
       expect(mockValidationService.getSitePolygonUuids).toHaveBeenCalledWith(siteUuid);
@@ -512,12 +550,24 @@ describe("ValidationController", () => {
 
     it("should throw NotFoundException when site has no polygons", async () => {
       mockValidationService.getSitePolygonUuids.mockResolvedValueOnce([]);
-      const request = { validationTypes: ["SELF_INTERSECTION"] as ValidationType[] };
+      const request: SiteValidationRequestBody = {
+        data: {
+          type: "siteValidationRequests",
+          attributes: {
+            validationTypes: ["SELF_INTERSECTION"] as ValidationType[]
+          }
+        }
+      };
       await expect(controller.createSiteValidation(siteUuid, request, mockRequest)).rejects.toThrow(NotFoundException);
     });
 
     it("should use all validation types when none provided", async () => {
-      const request = {};
+      const request: SiteValidationRequestBody = {
+        data: {
+          type: "siteValidationRequests",
+          attributes: {}
+        }
+      };
       await controller.createSiteValidation(siteUuid, request, mockRequest);
       expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
     });

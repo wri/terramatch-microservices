@@ -1,8 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsIn, IsOptional } from "class-validator";
 import { VALIDATION_TYPES, ValidationType } from "@terramatch-microservices/database/constants";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
-export class SiteValidationRequestDto {
+export class SiteValidationRequestAttributes {
   @ApiProperty({
     enum: VALIDATION_TYPES,
     name: "validationTypes[]",
@@ -16,3 +17,7 @@ export class SiteValidationRequestDto {
   @IsIn(VALIDATION_TYPES, { each: true })
   validationTypes?: ValidationType[];
 }
+
+export class SiteValidationRequestBody extends JsonApiBodyDto(
+  class SiteValidationRequestData extends CreateDataDto("siteValidationRequests", SiteValidationRequestAttributes) {}
+) {}

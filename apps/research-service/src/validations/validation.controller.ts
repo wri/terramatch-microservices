@@ -12,9 +12,9 @@ import {
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { ValidationSummaryDto } from "./dto/validation-summary.dto";
-import { SiteValidationRequestDto } from "./dto/site-validation-request.dto";
+import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -101,7 +101,9 @@ export class ValidationController {
   @ExceptionResponse(BadRequestException, {
     description: "Invalid validation request"
   })
-  async createPolygonValidations(@Body() request: ValidationRequestDto) {
+  async createPolygonValidations(@Body() payload: ValidationRequestBody) {
+    const request = payload.data.attributes;
+
     const validationTypes =
       request.validationTypes == null || request.validationTypes.length === 0
         ? [...VALIDATION_TYPES]
@@ -133,9 +135,11 @@ export class ValidationController {
   })
   async createSiteValidation(
     @Param("siteUuid") siteUuid: string,
-    @Body() request: SiteValidationRequestDto,
+    @Body() payload: SiteValidationRequestBody,
     @Request() { authenticatedUserId }
   ) {
+    const request = payload.data.attributes;
+
     const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
 
     if (polygonUuids.length === 0) {

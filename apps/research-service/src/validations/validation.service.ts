@@ -7,7 +7,7 @@ import {
   Site
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationRequestAttributes } from "./dto/validation-request.dto";
 import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { ValidationSummaryDto, ValidationTypeSummary } from "./dto/validation-summary.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -169,7 +169,7 @@ export class ValidationService {
   /**
    * @deprecated Use validatePolygonsBatch instead to avoid duplicate results with batch validators
    */
-  async validatePolygons(request: ValidationRequestDto): Promise<ValidationResponseDto> {
+  async validatePolygons(request: ValidationRequestAttributes): Promise<ValidationResponseDto> {
     const results: ValidationCriteriaDto[] = [];
     const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
 

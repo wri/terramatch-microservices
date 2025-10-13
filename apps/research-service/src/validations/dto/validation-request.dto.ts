@@ -1,8 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsString, ArrayMinSize, IsIn, IsOptional } from "class-validator";
 import { VALIDATION_TYPES, ValidationType } from "@terramatch-microservices/database/constants";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
-export class ValidationRequestDto {
+export class ValidationRequestAttributes {
   @ApiProperty({
     description: "Array of polygon UUIDs to validate",
     example: ["7631be34-bbe0-4e1e-b4fe-592677dc4b50", "d6502d4c-dfd6-461e-af62-21a0ec2f3e65"],
@@ -26,3 +27,7 @@ export class ValidationRequestDto {
   @IsIn(VALIDATION_TYPES, { each: true })
   validationTypes?: ValidationType[];
 }
+
+export class ValidationRequestBody extends JsonApiBodyDto(
+  class ValidationRequestData extends CreateDataDto("validationRequests", ValidationRequestAttributes) {}
+) {}

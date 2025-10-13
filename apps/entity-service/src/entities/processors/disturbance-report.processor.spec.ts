@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { DisturbanceReport } from "@terramatch-microservices/database/entities";
+import { DisturbanceReport, Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -11,7 +11,8 @@ import {
   DisturbanceReportEntryFactory,
   ProjectFactory,
   ProjectUserFactory,
-  UserFactory
+  UserFactory,
+  SitePolygonFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
@@ -321,6 +322,258 @@ describe("DisturbanceReportProcessor", () => {
       const entries = await processor.getDisturbanceReportEntries(disturbanceReport);
 
       expect(entries).toHaveLength(0);
+    });
+  });
+
+  describe("processReportSpecificLogic", () => {
+    it("upserts disturbance and sets disturbanceId on polygons parsed from JSON", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        description: "desc",
+        actionDescription: "act"
+      });
+
+      const poly1 = await SitePolygonFactory.create();
+      const poly2 = await SitePolygonFactory.create();
+
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "polygon-affected",
+        value: JSON.stringify([{ polyUuid: poly1.uuid }, { polyUuid: poly2.uuid }]),
+        inputType: "text"
+      });
+
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "intensity",
+        value: "high",
+        inputType: "select"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "extent",
+        value: "large",
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "disturbance-type",
+        value: "fire",
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "disturbance-subtype",
+        value: JSON.stringify({ code: "wild" }),
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "people-affected",
+        value: "12",
+        inputType: "number"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "monetary-damage",
+        value: "345.6",
+        inputType: "number"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "property-affected",
+        value: JSON.stringify({ houses: 3 }),
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "date-of-disturbance",
+        value: "2024-01-05",
+        inputType: "date"
+      });
+
+      await (
+        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
+      ).processReportSpecificLogic(disturbanceReport);
+
+      const disturbance = await Disturbance.findOne({
+        where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
+      });
+      expect(disturbance).toBeTruthy();
+      expect(disturbance?.intensity).toBe("high");
+      expect(disturbance?.extent).toBe("large");
+      expect(disturbance?.type).toBe("fire");
+      expect(disturbance?.peopleAffected).toBe(12);
+      expect(disturbance?.monetaryDamage).toBe(345.6);
+      expect(disturbance?.description).toBe("desc");
+      expect(disturbance?.actionDescription).toBe("act");
+      expect(disturbance?.disturbanceDate?.toISOString()).toBe(new Date("2024-01-05").toISOString());
+
+      const updatedPoly1 = await SitePolygon.findOne({ where: { uuid: poly1.uuid } });
+      const updatedPoly2 = await SitePolygon.findOne({ where: { uuid: poly2.uuid } });
+      expect(updatedPoly1?.disturbanceId).toBe(disturbance?.id);
+      expect(updatedPoly2?.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("does not overwrite existing polygon disturbanceId and updates only null ones", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      const preExistingDisturbance = await Disturbance.create({
+        disturbanceableType: DisturbanceReport.LARAVEL_TYPE,
+        disturbanceableId: disturbanceReport.id,
+        hidden: 0
+      } as Disturbance);
+
+      const polyWithDist = await SitePolygonFactory.create();
+      await polyWithDist.update({ disturbanceId: preExistingDisturbance.id });
+      const polyWithoutDist = await SitePolygonFactory.create();
+
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "polygon-affected",
+        value: JSON.stringify([{ polyUuid: polyWithDist.uuid }, { polyUuid: polyWithoutDist.uuid }]),
+        inputType: "text"
+      });
+
+      await (
+        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
+      ).processReportSpecificLogic(disturbanceReport);
+
+      const refreshedWith = await SitePolygon.findOne({ where: { uuid: polyWithDist.uuid } });
+      const refreshedWithout = await SitePolygon.findOne({ where: { uuid: polyWithoutDist.uuid } });
+
+      expect(refreshedWith?.disturbanceId).toBe(preExistingDisturbance.id);
+      expect(refreshedWithout?.disturbanceId).toBeTruthy();
+    });
+
+    it("parses CSV fallback for polygon-affected when JSON fails", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      const p1 = await SitePolygonFactory.create();
+      const p2 = await SitePolygonFactory.create();
+
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "polygon-affected",
+        value: `${p1.uuid}, ${p2.uuid}`,
+        inputType: "text"
+      });
+
+      await (
+        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
+      ).processReportSpecificLogic(disturbanceReport);
+
+      const disturbance = await Disturbance.findOne({
+        where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
+      });
+      expect(disturbance).toBeTruthy();
+
+      const up1 = await SitePolygon.findOne({ where: { uuid: p1.uuid } });
+      const up2 = await SitePolygon.findOne({ where: { uuid: p2.uuid } });
+      expect(up1?.disturbanceId).toBe(disturbance?.id);
+      expect(up2?.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("returns early and does not create disturbance when no polygons provided", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "intensity",
+        value: "low",
+        inputType: "select"
+      });
+
+      await (
+        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
+      ).processReportSpecificLogic(disturbanceReport);
+
+      const disturbance = await Disturbance.findOne({
+        where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
+      });
+      expect(disturbance).toBeNull();
+    });
+
+    it("handles nested arrays in polygon-affected JSON", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      const p1 = await SitePolygonFactory.create();
+      const p2 = await SitePolygonFactory.create();
+
+      const nested = [[{ polyUuid: p1.uuid }], [{ polyUuid: p2.uuid }]];
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "polygon-affected",
+        value: JSON.stringify(nested),
+        inputType: "text"
+      });
+
+      await (
+        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
+      ).processReportSpecificLogic(disturbanceReport);
+
+      const disturbance = await Disturbance.findOne({
+        where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
+      });
+      expect(disturbance).toBeTruthy();
+
+      const up1 = await SitePolygon.findOne({ where: { uuid: p1.uuid } });
+      const up2 = await SitePolygon.findOne({ where: { uuid: p2.uuid } });
+      expect(up1?.disturbanceId).toBe(disturbance?.id);
+      expect(up2?.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("warns on invalid JSON for subtype and property-affected and ignores invalid date", async () => {
+      const project = await ProjectFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+
+      const p = await SitePolygonFactory.create();
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "polygon-affected",
+        value: JSON.stringify([{ polyUuid: p.uuid }]),
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "disturbance-subtype",
+        value: "{invalid}",
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "property-affected",
+        value: "{invalid}",
+        inputType: "text"
+      });
+      await DisturbanceReportEntryFactory.create({
+        disturbanceReportId: disturbanceReport.id,
+        name: "date-of-disturbance",
+        value: "not-a-date",
+        inputType: "date"
+      });
+
+      const warnSpy = jest.spyOn((processor as unknown as { logger: { warn: (m: string) => void } }).logger, "warn");
+
+      await (
+        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
+      ).processReportSpecificLogic(disturbanceReport);
+
+      const disturbance = await Disturbance.findOne({
+        where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
+      });
+      expect(disturbance).toBeTruthy();
+      expect(disturbance?.subtype).toBeNull();
+      expect(disturbance?.propertyAffected).toBeNull();
+      expect(disturbance?.disturbanceDate).toBeNull();
+
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
     });
   });
 });

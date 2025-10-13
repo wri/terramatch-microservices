@@ -13,7 +13,6 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestDto } from "./dto/validation-request.dto";
-import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { ValidationSummaryDto } from "./dto/validation-summary.dto";
 import { SiteValidationRequestDto } from "./dto/site-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -108,34 +107,12 @@ export class ValidationController {
         ? [...VALIDATION_TYPES]
         : request.validationTypes;
 
-    const validationResponse = await this.validationService.validatePolygons({
-      ...request,
-      validationTypes
-    });
+    await this.validationService.validatePolygonsBatch(request.polygonUuids, validationTypes);
 
     const document = buildJsonApi(ValidationDto);
 
-    const resultsByPolygon = new Map<string, ValidationCriteriaDto[]>();
-
-    for (let i = 0; i < request.polygonUuids.length; i++) {
-      const polygonUuid = request.polygonUuids[i];
-      const polygonResults: ValidationCriteriaDto[] = [];
-      const startIdx = i * validationTypes.length;
-      const endIdx = startIdx + validationTypes.length;
-
-      for (let j = startIdx; j < endIdx && j < validationResponse.results.length; j++) {
-        polygonResults.push(validationResponse.results[j]);
-      }
-
-      if (polygonResults.length > 0) {
-        resultsByPolygon.set(polygonUuid, polygonResults);
-      }
-    }
-
-    for (const [polygonUuid, criteriaList] of resultsByPolygon) {
-      const validation = new ValidationDto();
-      validation.polygonUuid = polygonUuid;
-      validation.criteriaList = criteriaList;
+    for (const polygonUuid of request.polygonUuids) {
+      const validation = await this.validationService.getPolygonValidation(polygonUuid);
       document.addData(polygonUuid, validation);
     }
 

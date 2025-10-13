@@ -169,6 +169,9 @@ export class ValidationService {
     };
   }
 
+  /**
+   * @deprecated Use validatePolygonsBatch instead to avoid duplicate results with batch validators
+   */
   async validatePolygons(request: ValidationRequestDto): Promise<ValidationResponseDto> {
     const results: ValidationCriteriaDto[] = [];
     const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];

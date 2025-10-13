@@ -30,7 +30,6 @@ import {
   EXCLUDED_VALIDATION_CRITERIA
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 type ValidationResult = {
   polygonUuid: string;
@@ -59,8 +58,6 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
 
 @Injectable()
 export class ValidationService {
-  private readonly logger = new TMLogger(ValidationService.name);
-
   async getPolygonValidation(polygonUuid: string): Promise<ValidationDto> {
     const polygon = await PolygonGeometry.findOne({
       where: { uuid: polygonUuid },

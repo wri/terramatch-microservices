@@ -21,10 +21,8 @@ export class ValidationProcessor extends WorkerHost {
 
   async process(job: Job<SiteValidationJobData>) {
     const { siteUuid, validationTypes, delayedJobId } = job.data;
-    this.logger.log(`Processing site validation job for site ${siteUuid} with types: ${validationTypes.join(", ")}`);
 
     try {
-      // Get all polygons for the site
       const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
 
       if (polygonUuids.length === 0) {
@@ -39,7 +37,6 @@ export class ValidationProcessor extends WorkerHost {
         return;
       }
 
-      // Update job with total content
       await DelayedJob.update(
         {
           totalContent: polygonUuids.length,
@@ -49,23 +46,16 @@ export class ValidationProcessor extends WorkerHost {
         { where: { id: delayedJobId } }
       );
 
-      // Process in batches to avoid memory issues
       const batchSize = 50;
       let processed = 0;
 
       for (let i = 0; i < polygonUuids.length; i += batchSize) {
         const batch = polygonUuids.slice(i, i + batchSize);
 
-        this.logger.log(
-          `Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(polygonUuids.length / batchSize)}`
-        );
-
-        // Process batch
         await this.validationService.validatePolygonsBatch(batch, validationTypes);
 
         processed += batch.length;
 
-        // Update progress with percentage (matching PHP v2 pattern)
         const progressPercentage = Math.floor((processed / polygonUuids.length) * 100);
         await DelayedJob.update(
           {
@@ -76,11 +66,8 @@ export class ValidationProcessor extends WorkerHost {
         );
       }
 
-      // Generate summary
-      this.logger.log(`Generating validation summary for site ${siteUuid}`);
       const summary = await this.validationService.generateValidationSummary(siteUuid, validationTypes);
 
-      // Mark job as complete
       await DelayedJob.update(
         {
           status: "succeeded",
@@ -90,8 +77,6 @@ export class ValidationProcessor extends WorkerHost {
         },
         { where: { id: delayedJobId } }
       );
-
-      this.logger.log(`Successfully completed site validation for site ${siteUuid}`);
     } catch (error) {
       this.logger.error(`Error processing site validation for site ${siteUuid}:`, error);
 

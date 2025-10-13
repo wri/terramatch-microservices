@@ -239,7 +239,12 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
   async deleteOne(@Param("uuid") uuid: string) {
-    await this.policyService.authorize("deleteAll", SitePolygon);
+    const sitePolygon = await SitePolygon.findOne({ where: { uuid } });
+    if (sitePolygon == null) {
+      throw new NotFoundException(`Site polygon not found for uuid: ${uuid}`);
+    }
+
+    await this.policyService.authorize("delete", sitePolygon);
 
     await this.sitePolygonService.deleteSitePolygon(uuid);
 

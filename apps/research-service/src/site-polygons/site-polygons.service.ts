@@ -1,5 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
-import { Site, SitePolygon, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import {
+  AuditStatus,
+  CriteriaSite,
+  CriteriaSiteHistoric,
+  PointGeometry,
+  PolygonGeometry,
+  ProjectPolygon,
+  Site,
+  SitePolygon,
+  SiteReport,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import {
   IndicatorDto,
   ReportingPeriodDto,
@@ -75,6 +86,90 @@ export class SitePolygonsService {
       await transaction.rollback();
       throw e;
     }
+  }
+
+  /**
+   * Deletes a site polygon and all its associated records.
+   * This method handles cascade deletion of all related entities.
+   */
+  async deleteSitePolygon(uuid: string): Promise<void> {
+    await this.transaction(async transaction => {
+      const sitePolygon = await SitePolygon.findOne({
+        where: { uuid },
+        include: [
+          { model: Site, attributes: ["id", "uuid", "projectId"] },
+          { model: PolygonGeometry, attributes: ["id", "uuid"] },
+          { model: PointGeometry, attributes: ["id", "uuid"] }
+        ],
+        transaction
+      });
+
+      if (sitePolygon == null) {
+        throw new NotFoundException(`SitePolygon not found for uuid: ${uuid}`);
+      }
+
+      const relatedSitePolygons = await SitePolygon.findAll({
+        where: { primaryUuid: sitePolygon.primaryUuid },
+        attributes: ["id", "uuid", "polygonUuid", "pointUuid"],
+        transaction
+      });
+
+      const sitePolygonIds = relatedSitePolygons.map(sp => sp.id);
+      const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
+      const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
+
+      for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
+        await IndicatorClass.destroy({
+          where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
+          transaction
+        });
+      }
+
+      if (polygonUuids.length > 0) {
+        await CriteriaSite.destroy({
+          where: { polygonId: { [Op.in]: polygonUuids } },
+          transaction
+        });
+        await CriteriaSiteHistoric.destroy({
+          where: { polygonId: { [Op.in]: polygonUuids } },
+          transaction
+        });
+      }
+
+      await AuditStatus.destroy({
+        where: {
+          auditableType: SitePolygon.LARAVEL_TYPE,
+          auditableId: { [Op.in]: sitePolygonIds }
+        },
+        transaction
+      });
+
+      if (polygonUuids.length > 0) {
+        await ProjectPolygon.destroy({
+          where: { polyUuid: { [Op.in]: polygonUuids } },
+          transaction
+        });
+      }
+
+      if (pointUuids.length > 0) {
+        await PointGeometry.destroy({
+          where: { uuid: { [Op.in]: pointUuids } },
+          transaction
+        });
+      }
+
+      if (polygonUuids.length > 0) {
+        await PolygonGeometry.destroy({
+          where: { uuid: { [Op.in]: polygonUuids } },
+          transaction
+        });
+      }
+
+      await SitePolygon.destroy({
+        where: { primaryUuid: sitePolygon.primaryUuid },
+        transaction
+      });
+    });
   }
 
   async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {

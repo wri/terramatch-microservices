@@ -9,6 +9,7 @@ import {
   IndicatorOutputTreeCoverFactory,
   IndicatorOutputTreeCoverLossFactory,
   LandscapeGeometryFactory,
+  PolygonGeometryFactory,
   ProjectFactory,
   SiteFactory,
   SitePolygonFactory,
@@ -17,6 +18,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import {
   Indicator,
+  IndicatorOutputHectares,
   PolygonGeometry,
   Project,
   Site,
@@ -837,6 +839,73 @@ describe("SitePolygonsService", () => {
           ? new Date(siteReport.submittedAt.getTime() - (siteReport.submittedAt.getTime() % 1000))
           : null,
       treeSpecies: [{ name: "ReportMaple", amount: 100 }]
+    });
+  });
+
+  describe("deleteSitePolygon", () => {
+    it("should throw NotFoundException when site polygon does not exist", async () => {
+      const nonExistentUuid = "00000000-0000-0000-0000-000000000000";
+
+      await expect(service.deleteSitePolygon(nonExistentUuid)).rejects.toThrow(
+        new NotFoundException(`SitePolygon not found for uuid: ${nonExistentUuid}`)
+      );
+    });
+
+    it("should successfully delete a site polygon with all associated records", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: true
+      });
+
+      const relatedSitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: sitePolygon.primaryUuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: false
+      });
+
+      const indicator = await IndicatorOutputHectaresFactory.create({
+        sitePolygonId: sitePolygon.id
+      });
+
+      await service.deleteSitePolygon(sitePolygon.uuid);
+
+      await sitePolygon.reload({ paranoid: false });
+      expect(sitePolygon.deletedAt).not.toBeNull();
+
+      await relatedSitePolygon.reload({ paranoid: false });
+      expect(relatedSitePolygon.deletedAt).not.toBeNull();
+
+      const deletedIndicator = await IndicatorOutputHectares.findByPk(indicator.id, { paranoid: false });
+      expect(deletedIndicator?.deletedAt).not.toBeNull();
+
+      const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
+      expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
+    });
+
+    it("should successfully delete a site polygon with minimal associations", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: true
+      });
+
+      await service.deleteSitePolygon(sitePolygon.uuid);
+
+      await sitePolygon.reload({ paranoid: false });
+      expect(sitePolygon.deletedAt).not.toBeNull();
+
+      const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
+      expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
     });
   });
 });

@@ -29,6 +29,7 @@ export class InvasiveEntity extends AirtableEntity<Invasive, InvasiveAssociation
   readonly TABLE_NAME = "Invasives";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Invasive;
+  readonly FILTER_FLAGS = ["hidden"];
 
   protected async loadAssociations(stratas: Invasive[]) {
     return this.loadPolymorphicUuidAssociations(LARAVEL_TYPE_MAPPING, "invasiveableType", "invasiveableId", stratas);

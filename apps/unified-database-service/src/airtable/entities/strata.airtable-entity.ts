@@ -30,6 +30,7 @@ export class StrataEntity extends AirtableEntity<Strata, StrataAssociations> {
   readonly TABLE_NAME = "Stratas";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Strata;
+  readonly FILTER_FLAGS = ["hidden"];
 
   protected async loadAssociations(stratas: Strata[]) {
     return this.loadPolymorphicUuidAssociations(LARAVEL_TYPE_MAPPING, "stratasableType", "stratasableId", stratas);

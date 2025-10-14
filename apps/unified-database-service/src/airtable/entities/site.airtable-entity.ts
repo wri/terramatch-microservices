@@ -13,7 +13,24 @@ const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
   "status",
   "updateRequestStatus",
   "sitingStrategy",
-  "descriptionSitingStrategy"
+  "descriptionSitingStrategy",
+  "controlSite",
+  "landUseTypes",
+  "restorationStrategy",
+  "description",
+  "history",
+  "startDate",
+  "endDate",
+  "landTenures",
+  "survivalRatePlanted",
+  "directSeedingSurvivalRate",
+  "aimYearFiveCrownCover",
+  "aNatRegenerationTreesPerHectare",
+  "aNatRegeneration",
+  "landscapeCommunityContribution",
+  "aimNumberOfMatureTrees",
+  "soilCondition",
+  "plantingPattern"
 ];
 
 export class SiteEntity extends AirtableEntity<Site, SiteAssociations> {

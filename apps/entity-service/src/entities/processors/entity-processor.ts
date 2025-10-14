@@ -13,7 +13,7 @@ import {
   NEEDS_MORE_INFORMATION,
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
-import { FinancialReport, ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -204,10 +204,6 @@ export abstract class ReportProcessor<
       }
     }
 
-    if (model instanceof FinancialReport && update.status === "approved") {
-      await this.processFinancialReportSpecificLogic(model);
-    }
-
     await super.update(model, update);
   }
 
@@ -218,13 +214,4 @@ export abstract class ReportProcessor<
       return { [Op.or]: [null, false] };
     }
   };
-
-  /**
-   * Override this method in specific report processors to add custom logic
-   * @param model The report model being processed
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
-    // This method will be overridden in FinancialReportProcessor
-  }
 }

@@ -7,18 +7,27 @@ import {
   ForeignKey,
   BelongsTo,
   Model,
-  Index
+  Index,
+  Scopes
 } from "sequelize-typescript";
 import { BIGINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { DisturbanceReport } from "./disturbance-report.entity";
+import { chainScope } from "../util/chain-scope";
 
 @Table({
   tableName: "disturbance_report_entries",
   underscored: true,
   paranoid: true
 })
+@Scopes(() => ({
+  report: (id: number) => ({ where: { disturbanceReportId: id } })
+}))
 export class DisturbanceReportEntry extends Model<DisturbanceReportEntry> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReportEntry";
+
+  static report(id: number) {
+    return chainScope(this, "report", id) as typeof DisturbanceReportEntry;
+  }
 
   @PrimaryKey
   @AutoIncrement

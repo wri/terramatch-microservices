@@ -31,10 +31,18 @@ export class FinancialReportProcessor extends ReportProcessor<
   readonly FULL_DTO = FinancialReportFullDto;
   private logger = new TMLogger(FinancialReportProcessor.name);
 
+  async update(model: FinancialReport, update: ReportUpdateAttributes) {
+    await super.update(model, update);
+
+    if (update.status === "approved") {
+      await this.processReportSpecificLogic(model);
+    }
+  }
+
   /**
-   * Specific method for FinancialReport custom logic. This is called automatically when nothingToReport is updated
+   * Specific method for FinancialReport custom logic. This is called automatically when the report is approved
    */
-  protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
+  private async processReportSpecificLogic(model: FinancialReport): Promise<void> {
     const organisation = await Organisation.findByPk(model.organisationId);
     if (organisation == null) {
       this.logger.warn(`Organisation not found for FinancialReport ${model.uuid}`);

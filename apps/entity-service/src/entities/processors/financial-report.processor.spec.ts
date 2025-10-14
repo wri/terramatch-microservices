@@ -258,11 +258,7 @@ describe("FinancialReportProcessor", () => {
         currency: "USD"
       });
 
-      await (
-        processor as unknown as {
-          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
-        }
-      ).processReportSpecificLogic(financialReport);
+      await processor.update(financialReport, { status: "approved" });
 
       await organisation.reload();
       expect(organisation.finStartMonth).toBe(3);
@@ -282,11 +278,7 @@ describe("FinancialReportProcessor", () => {
         warn: mockWarn
       };
 
-      await (
-        processor as unknown as {
-          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
-        }
-      ).processReportSpecificLogic(financialReport);
+      await processor.update(financialReport, { status: "approved" });
 
       expect(mockWarn).toHaveBeenCalledWith(`Organisation not found for FinancialReport ${financialReport.uuid}`);
     });
@@ -320,11 +312,7 @@ describe("FinancialReportProcessor", () => {
       const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
       const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
 
-      await (
-        processor as unknown as {
-          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
-        }
-      ).processReportSpecificLogic(financialReport);
+      await processor.update(financialReport, { status: "approved" });
 
       expect(mockBulkCreate).toHaveBeenCalledWith([
         {
@@ -398,11 +386,7 @@ describe("FinancialReportProcessor", () => {
       const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
       const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
 
-      await (
-        processor as unknown as {
-          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
-        }
-      ).processReportSpecificLogic(financialReport);
+      await processor.update(financialReport, { status: "approved" });
 
       expect(mockUpdate).toHaveBeenCalledTimes(2);
       expect(mockUpdate).toHaveBeenCalledWith(
@@ -466,11 +450,7 @@ describe("FinancialReportProcessor", () => {
       const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
       const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
 
-      await (
-        processor as unknown as {
-          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
-        }
-      ).processReportSpecificLogic(financialReport);
+      await processor.update(financialReport, { status: "approved" });
 
       expect(mockBulkCreate).toHaveBeenCalledWith([
         {
@@ -506,11 +486,7 @@ describe("FinancialReportProcessor", () => {
       const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
       const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
 
-      await (
-        processor as unknown as {
-          processReportSpecificLogic: (report: FinancialReport) => Promise<void>;
-        }
-      ).processReportSpecificLogic(financialReport);
+      await processor.update(financialReport, { status: "approved" });
 
       expect(mockBulkCreate).not.toHaveBeenCalled();
       expect(mockUpdate).not.toHaveBeenCalled();

@@ -393,9 +393,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "date"
       });
 
-      await (
-        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
-      ).processReportSpecificLogic(disturbanceReport);
+      await processor.update(disturbanceReport, { status: "approved" });
 
       const disturbance = await Disturbance.findOne({
         where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
@@ -437,9 +435,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "text"
       });
 
-      await (
-        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
-      ).processReportSpecificLogic(disturbanceReport);
+      await processor.update(disturbanceReport, { status: "approved" });
 
       const refreshedWith = await SitePolygon.findOne({ where: { uuid: polyWithDist.uuid } });
       const refreshedWithout = await SitePolygon.findOne({ where: { uuid: polyWithoutDist.uuid } });
@@ -462,9 +458,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "text"
       });
 
-      await (
-        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
-      ).processReportSpecificLogic(disturbanceReport);
+      await processor.update(disturbanceReport, { status: "approved" });
 
       const disturbance = await Disturbance.findOne({
         where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
@@ -488,9 +482,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
 
-      await (
-        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
-      ).processReportSpecificLogic(disturbanceReport);
+      await processor.update(disturbanceReport, { status: "approved" });
 
       const disturbance = await Disturbance.findOne({
         where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
@@ -513,9 +505,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "text"
       });
 
-      await (
-        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
-      ).processReportSpecificLogic(disturbanceReport);
+      await processor.update(disturbanceReport, { status: "approved" });
 
       const disturbance = await Disturbance.findOne({
         where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }
@@ -560,9 +550,7 @@ describe("DisturbanceReportProcessor", () => {
 
       const warnSpy = jest.spyOn((processor as unknown as { logger: { warn: (m: string) => void } }).logger, "warn");
 
-      await (
-        processor as unknown as { processReportSpecificLogic: (report: DisturbanceReport) => Promise<void> }
-      ).processReportSpecificLogic(disturbanceReport);
+      await processor.update(disturbanceReport, { status: "approved" });
 
       const disturbance = await Disturbance.findOne({
         where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: disturbanceReport.id }

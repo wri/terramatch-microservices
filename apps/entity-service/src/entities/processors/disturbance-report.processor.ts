@@ -45,6 +45,15 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   readonly LIGHT_DTO = DisturbanceReportLightDto;
   readonly FULL_DTO = DisturbanceReportFullDto;
   private logger = new TMLogger(DisturbanceReportProcessor.name);
+
+  async update(model: DisturbanceReport, update: ReportUpdateAttributes) {
+    await super.update(model, update);
+
+    if (update.status === "approved") {
+      await this.processReportSpecificLogic(model);
+    }
+  }
+
   /**
    * Specific method for DisturbanceReport custom logic. This is called automatically when the report is approved.
    *
@@ -56,7 +65,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
    * - Extracts disturbance details (intensity, extent, type, subtype, peopleAffected, monetaryDamage, propertyAffected)
    *   from disturbance report entries and populates the disturbance record
    */
-  protected async processReportSpecificLogic(model: DisturbanceReport): Promise<void> {
+  private async processReportSpecificLogic(model: DisturbanceReport): Promise<void> {
     const entries = await DisturbanceReportEntry.report(model.id).findAll();
 
     const affectedPolygonUuids = new Set<string>();
@@ -210,6 +219,9 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         }
         break;
       }
+      default:
+        this.logger.error(`Unknown disturbance report entry name: ${entry.name}`);
+        break;
     }
   }
 

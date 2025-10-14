@@ -204,14 +204,6 @@ export abstract class ReportProcessor<
       }
     }
 
-    if (model instanceof FinancialReport && update.status === "approved") {
-      await this.processReportSpecificLogic(model);
-    }
-
-    if (model instanceof DisturbanceReport && update.status === "approved") {
-      await this.processReportSpecificLogic(model);
-    }
-
     await super.update(model, update);
   }
 
@@ -222,13 +214,4 @@ export abstract class ReportProcessor<
       return { [Op.or]: [null, false] };
     }
   };
-
-  /**
-   * Override this method in specific report processors to add custom logic
-   * @param model The report model being processed
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected async processReportSpecificLogic(model: ReportModel): Promise<void> {
-    // This method will be overridden in FinancialReportProcessor
-  }
 }

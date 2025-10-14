@@ -23,6 +23,7 @@ import {
   ProjectReportEntity,
   SiteEntity,
   SiteReportEntity,
+  StrataEntity,
   TreeSpeciesEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
@@ -51,6 +52,7 @@ export const AIRTABLE_ENTITIES = {
   projectReports: ProjectReportEntity,
   sites: SiteEntity,
   siteReports: SiteReportEntity,
+  stratas: StrataEntity,
   treeSpecies: TreeSpeciesEntity,
   users: UserEntity
 };

@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media } from "@terramatch-microservices/database/entities";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
 import "multer";
 
@@ -55,5 +55,28 @@ export class MediaService {
     const extension = conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex);
 
     return `${baseUrl}/conversions/${baseFileName}-${conversion}${extension}`;
+  }
+
+  async deleteMedia(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+
+    const key = `${media.id}/${media.fileName}`;
+
+    console.log(key);
+    console.log(this.configService.get<string>("AWS_BUCKET") ?? "");
+
+    const command = new DeleteObjectCommand({
+      Bucket: this.configService.get<string>("AWS_BUCKET") ?? "",
+      Key: key
+    });
+
+    this.logger.log(`Deleting media ${uuid} from S3`);
+    await this.s3.send(command);
+    await media.destroy();
+
+    return media;
   }
 }

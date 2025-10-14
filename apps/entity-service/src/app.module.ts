@@ -22,6 +22,7 @@ import { DisturbancesController } from "./entities/disturbances.controller";
 import { DisturbanceService } from "./entities/disturbance.service";
 import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
+import { MediasController } from "./entities/medias.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -29,6 +30,7 @@ import { LinkedFieldsController } from "./forms/linked-fields.controller";
   // needs to be provided in this list before EntitiesController, or it will be superseded by the
   // wildcard route on EntitiesController.
   controllers: [
+    MediasController,
     ProjectPitchesController,
     ImpactStoriesController,
     TasksController,

@@ -12,7 +12,8 @@ const COLUMNS: ColumnMapping<NurseryReport, NurseryReportAssociations>[] = [
   "status",
   "updateRequestStatus",
   "dueAt",
-  "seedlingsYoungTrees"
+  "seedlingsYoungTrees",
+  "nothingToReport"
 ];
 
 export class NurseryReportEntity extends AirtableEntity<NurseryReport, NurseryReportAssociations> {

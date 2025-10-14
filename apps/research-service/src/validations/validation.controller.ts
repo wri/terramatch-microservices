@@ -1,19 +1,38 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Post, Body } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  Post,
+  Body,
+  Request
+} from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationRequestDto } from "./dto/validation-request.dto";
-import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationRequestBody } from "./dto/validation-request.dto";
+import { ValidationSummaryDto } from "./dto/validation-summary.dto";
+import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
-import { CriteriaId } from "@terramatch-microservices/database/constants";
+import { CriteriaId, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("validations/v3")
 @ApiTags("Validations")
 export class ValidationController {
-  constructor(private readonly validationService: ValidationService) {}
+  constructor(
+    private readonly validationService: ValidationService,
+    @InjectQueue("validation") private readonly validationQueue: Queue
+  ) {}
 
   @Get("polygons/:polygonUuid")
   @ApiOperation({
@@ -60,7 +79,7 @@ export class ValidationController {
 
     return validations
       .reduce(
-        (document, validation) => document.addData(validation.polygonId, validation).document,
+        (document, validation) => document.addData(validation.polygonUuid, validation).document,
         buildJsonApi(ValidationDto)
       )
       .addIndex({
@@ -82,32 +101,86 @@ export class ValidationController {
   @ExceptionResponse(BadRequestException, {
     description: "Invalid validation request"
   })
-  async createPolygonValidations(@Body() request: ValidationRequestDto) {
-    const validationResponse = await this.validationService.validatePolygons(request);
+  async createPolygonValidations(@Body() payload: ValidationRequestBody) {
+    const request = payload.data.attributes;
+
+    const validationTypes =
+      request.validationTypes == null || request.validationTypes.length === 0
+        ? [...VALIDATION_TYPES]
+        : request.validationTypes;
+
+    await this.validationService.validatePolygonsBatch(request.polygonUuids, validationTypes);
 
     const document = buildJsonApi(ValidationDto);
 
-    const resultsByPolygon = new Map<string, ValidationCriteriaDto[]>();
-
-    for (const result of validationResponse.results) {
-      if (result.polygonUuid != null) {
-        if (!resultsByPolygon.has(result.polygonUuid)) {
-          resultsByPolygon.set(result.polygonUuid, []);
-        }
-        const criteriaList = resultsByPolygon.get(result.polygonUuid);
-        if (criteriaList != null) {
-          criteriaList.push(result);
-        }
-      }
-    }
-
-    for (const [polygonUuid, criteriaList] of resultsByPolygon) {
-      const validation = new ValidationDto();
-      validation.polygonId = polygonUuid;
-      validation.criteriaList = criteriaList;
+    for (const polygonUuid of request.polygonUuids) {
+      const validation = await this.validationService.getPolygonValidation(polygonUuid);
       document.addData(polygonUuid, validation);
     }
 
     return document;
+  }
+
+  @Post("sites/:siteUuid/validation")
+  @ApiOperation({
+    operationId: "createSiteValidation",
+    summary: "Start asynchronous validation for all polygons in a site"
+  })
+  @JsonApiResponse([ValidationSummaryDto, DelayedJobDto])
+  @ExceptionResponse(NotFoundException, {
+    description: "Site not found or has no polygons"
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid validation request"
+  })
+  async createSiteValidation(
+    @Param("siteUuid") siteUuid: string,
+    @Body() payload: SiteValidationRequestBody,
+    @Request() { authenticatedUserId }
+  ) {
+    const request = payload.data.attributes;
+
+    const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
+
+    if (polygonUuids.length === 0) {
+      throw new NotFoundException(`No polygons found for site ${siteUuid}`);
+    }
+
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+    }
+
+    const validationTypes =
+      request.validationTypes == null || request.validationTypes.length === 0
+        ? VALIDATION_TYPES
+        : request.validationTypes;
+
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Polygon Validation",
+      totalContent: polygonUuids.length,
+      processedContent: 0,
+      progressMessage: "Starting validation...",
+      createdBy: authenticatedUserId,
+      metadata: {
+        entity_id: site.id,
+        entity_type: "App\\Models\\V2\\Sites\\Site",
+        entity_name: site.name
+      }
+    } as DelayedJob);
+
+    await this.validationQueue.add("siteValidation", {
+      siteUuid,
+      validationTypes,
+      delayedJobId: delayedJob.id
+    });
+
+    const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto);
   }
 }

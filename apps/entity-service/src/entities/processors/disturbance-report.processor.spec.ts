@@ -331,7 +331,8 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({
         projectId: project.id,
         description: "desc",
-        actionDescription: "act"
+        actionDescription: "act",
+        status: "awaiting-approval"
       });
 
       const poly1 = await SitePolygonFactory.create();
@@ -416,7 +417,10 @@ describe("DisturbanceReportProcessor", () => {
 
     it("does not overwrite existing polygon disturbanceId and updates only null ones", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "awaiting-approval"
+      });
 
       const preExistingDisturbance = await Disturbance.create({
         disturbanceableType: DisturbanceReport.LARAVEL_TYPE,
@@ -446,7 +450,10 @@ describe("DisturbanceReportProcessor", () => {
 
     it("parses CSV fallback for polygon-affected when JSON fails", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "awaiting-approval"
+      });
 
       const p1 = await SitePolygonFactory.create();
       const p2 = await SitePolygonFactory.create();
@@ -473,7 +480,10 @@ describe("DisturbanceReportProcessor", () => {
 
     it("returns early and does not create disturbance when no polygons provided", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "awaiting-approval"
+      });
 
       await DisturbanceReportEntryFactory.create({
         disturbanceReportId: disturbanceReport.id,
@@ -492,7 +502,10 @@ describe("DisturbanceReportProcessor", () => {
 
     it("handles nested arrays in polygon-affected JSON", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "awaiting-approval"
+      });
 
       const p1 = await SitePolygonFactory.create();
       const p2 = await SitePolygonFactory.create();
@@ -520,7 +533,10 @@ describe("DisturbanceReportProcessor", () => {
 
     it("warns on invalid JSON for subtype and property-affected and ignores invalid date", async () => {
       const project = await ProjectFactory.create();
-      const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
+      const disturbanceReport = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "awaiting-approval"
+      });
 
       const p = await SitePolygonFactory.create();
       await DisturbanceReportEntryFactory.create({

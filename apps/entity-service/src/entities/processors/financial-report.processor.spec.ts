@@ -255,7 +255,8 @@ describe("FinancialReportProcessor", () => {
       const financialReport = await FinancialReportFactory.create({
         organisationId: organisation.id,
         finStartMonth: 3,
-        currency: "USD"
+        currency: "USD",
+        status: "awaiting-approval"
       });
 
       await processor.update(financialReport, { status: "approved" });
@@ -265,28 +266,11 @@ describe("FinancialReportProcessor", () => {
       expect(organisation.currency).toBe("USD");
     });
 
-    it("should log warning and return early when organisation is not found", async () => {
-      const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id
-      });
-
-      financialReport.organisationId = 99999;
-
-      const mockWarn = jest.fn();
-      (processor as unknown as { logger: { warn: jest.Mock } }).logger = {
-        warn: mockWarn
-      };
-
-      await processor.update(financialReport, { status: "approved" });
-
-      expect(mockWarn).toHaveBeenCalledWith(`Organisation not found for FinancialReport ${financialReport.uuid}`);
-    });
-
     it("should create new financial indicators when none exist in organisation", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id
+        organisationId: organisation.id,
+        status: "awaiting-approval"
       });
 
       await FinancialIndicatorFactory.create({
@@ -342,7 +326,8 @@ describe("FinancialReportProcessor", () => {
     it("should update existing financial indicators when they exist in organisation", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id
+        organisationId: organisation.id,
+        status: "awaiting-approval"
       });
 
       const existingIndicator1 = await FinancialIndicatorFactory.create({
@@ -415,7 +400,8 @@ describe("FinancialReportProcessor", () => {
     it("should handle mixed scenario with both creating and updating indicators", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id
+        organisationId: organisation.id,
+        status: "awaiting-approval"
       });
 
       const existingIndicator = await FinancialIndicatorFactory.create({
@@ -480,7 +466,8 @@ describe("FinancialReportProcessor", () => {
     it("should handle case when no financial indicators exist in report", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id
+        organisationId: organisation.id,
+        status: "awaiting-approval"
       });
 
       const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);

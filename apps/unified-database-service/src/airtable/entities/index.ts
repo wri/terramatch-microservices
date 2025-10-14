@@ -6,6 +6,7 @@ export * from "./financial-indicator.airtable-entity";
 export * from "./financial-report.airtable-entity";
 export * from "./funding-programme.airtable-entity";
 export * from "./funding-type.airtable-entity";
+export * from "./invasive.airtable-entity";
 export * from "./investment.airtable-entity";
 export * from "./investment-split.airtable-entity";
 export * from "./leadership.airtable-entity";

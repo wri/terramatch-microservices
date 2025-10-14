@@ -306,7 +306,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
     const mediaCollection = await Media.for(disturbanceReport).findAll();
     const dto = new DisturbanceReportFullDto(disturbanceReport, {
-      disturbanceableId: disturbanceReport.id,
+      reportId: disturbanceReport.id,
       entries,
       intensity,
       dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null,
@@ -342,7 +342,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     return {
       id: disturbanceReport.uuid,
       dto: new DisturbanceReportLightDto(disturbanceReport, {
-        disturbanceableId: disturbanceReport.id,
+        reportId: disturbanceReport.id,
         entries,
         intensity,
         dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null

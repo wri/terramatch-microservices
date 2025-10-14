@@ -52,8 +52,8 @@ export class DisturbanceReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: DisturbanceReportEntryDto, isArray: true })
   entries: DisturbanceReportEntryDto[] | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  disturbanceableId: number | null;
+  @ApiProperty({ type: Number })
+  reportId: number;
 }
 
 export type DisturbanceReportMedia = Pick<DisturbanceReportFullDto, keyof typeof DisturbanceReport.MEDIA>;

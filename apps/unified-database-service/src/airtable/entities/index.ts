@@ -16,6 +16,7 @@ export * from "./organisation.airtable-entity";
 export * from "./project.airtable-entity";
 export * from "./project-pitch.airtable-entity";
 export * from "./project-report.airtable-entity";
+export * from "./seeding.airtable-entity";
 export * from "./site.airtable-entity";
 export * from "./site-report.airtable-entity";
 export * from "./strata.airtable-entity";

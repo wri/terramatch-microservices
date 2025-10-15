@@ -9,10 +9,30 @@ import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller"
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
 import { ValidationController } from "./validations/validation.controller";
 import { ValidationService } from "./validations/validation.service";
+import { ValidationProcessor } from "./validations/validation.processor";
 import { DataApiModule } from "@terramatch-microservices/data-api";
+import { BullModule } from "@nestjs/bullmq";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
-  imports: [SentryModule.forRoot(), CommonModule, HealthModule, DataApiModule],
+  imports: [
+    SentryModule.forRoot(),
+    CommonModule,
+    HealthModule,
+    DataApiModule,
+    ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get("REDIS_HOST"),
+          port: configService.get("REDIS_PORT")
+        }
+      })
+    }),
+    BullModule.registerQueue({ name: "validation" })
+  ],
   controllers: [SitePolygonsController, BoundingBoxController, ValidationController],
   providers: [
     {
@@ -21,7 +41,8 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
     },
     SitePolygonsService,
     BoundingBoxService,
-    ValidationService
+    ValidationService,
+    ValidationProcessor
   ]
 })
 export class AppModule {}

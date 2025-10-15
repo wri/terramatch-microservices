@@ -4,8 +4,7 @@ import { NotFoundException } from "@nestjs/common";
 
 interface PolygonSizeValidationResult extends ValidationResult {
   extraInfo: {
-    areaHectares: number;
-    maxAllowedHectares: number;
+    area_hectares: number;
   } | null;
 }
 
@@ -28,8 +27,7 @@ export class PolygonSizeValidator implements Validator {
     return {
       valid,
       extraInfo: {
-        areaHectares,
-        maxAllowedHectares: PolygonSizeValidator.MAX_AREA_HECTARES
+        area_hectares: areaHectares
       }
     };
   }
@@ -53,8 +51,7 @@ export class PolygonSizeValidator implements Validator {
         polygonUuid,
         valid,
         extraInfo: {
-          areaHectares,
-          maxAllowedHectares: PolygonSizeValidator.MAX_AREA_HECTARES
+          area_hectares: areaHectares
         }
       };
     });

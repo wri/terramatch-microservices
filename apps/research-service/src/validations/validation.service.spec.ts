@@ -479,8 +479,7 @@ describe("ValidationService", () => {
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: {
-          areaHectares: 500,
-          maxAllowedHectares: 1000
+          area_hectares: 500
         }
       });
 

@@ -5,6 +5,7 @@ import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import "multer";
+import sharp from "sharp";
 import {
   MEDIA_OWNER_MODELS,
   EntityMediaOwnerClass,
@@ -30,6 +31,8 @@ const mappingMimeTypes = {
   "application/vnd.ms-word": "doc",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
 };
+
+const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
 
 const VALIDATION: {
   VALIDATION_RULES: Record<ValidationKey, string>;
@@ -82,8 +85,6 @@ export class FileUploadService {
 
     this.validateFile(file, configuration);
 
-    await this.mediaService.uploadFile(file);
-
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["firstName", "lastName"]
@@ -98,18 +99,33 @@ export class FileUploadService {
     media.mimeType = file.mimetype;
     media.fileType = this.getMediaType(file, configuration);
     media.isPublic = body.data["attributes"]["isPublic"];
-    media.disk = "s3";
-    media.manipulations = [];
     media.customProperties = { custom_headers: { ACL: "public-read" } };
     media.generatedConversions = {};
-    media.responsiveImages = [];
     media.lat = body.data["attributes"]["lat"];
     media.lng = body.data["attributes"]["lng"];
     media.size = file.size;
     media.createdBy = this.entitiesService.userId;
     media.photographer = user?.fullName ?? null;
 
-    return await media.save();
+    await media.save();
+    try {
+      const { buffer, originalname, mimetype } = file;
+      await this.mediaService.uploadFile(buffer, `${media.id}/${originalname}`, mimetype);
+
+      if (SUPPORTS_THUMBNAIL.includes(media.mimeType)) {
+        const thumbnail = await sharp(buffer).resize({ width: 250, height: 211, fit: "inside" }).toBuffer();
+        const extensionIdx = originalname.lastIndexOf(".");
+        const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${originalname.substring(extensionIdx)}`;
+        await this.mediaService.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
+        await media.update({ generatedConversions: { thumbnail: true } });
+      }
+
+      return media;
+    } catch (error) {
+      this.logger.error(`Error uploading file to S3 [${error}]`);
+      await media.destroy({ force: true });
+      throw error;
+    }
   }
 
   private getConfiguration(
@@ -168,7 +184,7 @@ export class FileUploadService {
       const sizeInBytes = parseInt(removeSuffix) * 1024 * 1024;
 
       if (file.size > sizeInBytes) {
-        throw new BadRequestException("File size must be less than 10MB");
+        throw new BadRequestException(`File size must be less than ${size}`);
       }
 
       return true;

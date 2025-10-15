@@ -79,4 +79,11 @@ export class MediaService {
 
     return media;
   }
+
+  bulkDeleteMedia(uuids: string[]) {
+    const;
+    return Media.destroy({
+      where: { uuid: { [Op.in]: uuids } }
+    });
+  }
 }

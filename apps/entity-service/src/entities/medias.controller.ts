@@ -4,6 +4,7 @@ import {
   Delete,
   NotFoundException,
   Param,
+  Query,
   UnauthorizedException
 } from "@nestjs/common";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -34,5 +35,18 @@ export class MediasController {
     // await this.policyService.authorize("delete", uuid);
     await this.mediaService.deleteMedia(uuid);
     return buildDeletedResponse("medias", uuid);
+  }
+
+  @Delete()
+  @ApiOperation({
+    operationId: "mediaBulkDelete",
+    summary: "Delete multiple media"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
+    await this.mediaService.bulkDeleteMedia(uuids);
   }
 }

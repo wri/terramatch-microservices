@@ -11,5 +11,5 @@ export interface PolygonValidationResult {
 
 export interface Validator {
   validatePolygon(polygonUuid: string): Promise<ValidationResult>;
-  validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]>;
+  validatePolygons?(polygonUuids: string[]): Promise<PolygonValidationResult[]>;
 }

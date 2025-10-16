@@ -1,4 +1,10 @@
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import {
+  AirtableEntity,
+  associatedValueColumn,
+  ColumnMapping,
+  commonEntityColumns,
+  percentageColumn
+} from "./airtable-entity";
 import { Project, Site } from "@terramatch-microservices/database/entities";
 import { uniq } from "lodash";
 
@@ -13,7 +19,24 @@ const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
   "status",
   "updateRequestStatus",
   "sitingStrategy",
-  "descriptionSitingStrategy"
+  "descriptionSitingStrategy",
+  "controlSite",
+  "landUseTypes",
+  "restorationStrategy",
+  "description",
+  "history",
+  "startDate",
+  "endDate",
+  "landTenures",
+  percentageColumn("survivalRatePlanted"),
+  percentageColumn("directSeedingSurvivalRate"),
+  percentageColumn("aimYearFiveCrownCover"),
+  "aNatRegenerationTreesPerHectare",
+  "aNatRegeneration",
+  "landscapeCommunityContribution",
+  "aimNumberOfMatureTrees",
+  "soilCondition",
+  "plantingPattern"
 ];
 
 export class SiteEntity extends AirtableEntity<Site, SiteAssociations> {

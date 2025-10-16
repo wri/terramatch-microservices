@@ -30,7 +30,6 @@ import {
   ProjectFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
-  SeedingFactory,
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
@@ -819,7 +818,6 @@ describe("AirtableEntity", () => {
 
   describe("SiteReportEntity", () => {
     let siteUuids: Record<number, string>;
-    let totalSeedsPlanted: Record<number, number>;
     let reports: SiteReport[];
 
     beforeAll(async () => {
@@ -834,21 +832,17 @@ describe("AirtableEntity", () => {
       }
       allReports.push(await SiteReportFactory.create({ siteId: undefined }));
 
-      const seedings = await SeedingFactory.forSiteReport.createMany(3, { seedableId: allReports[0].id });
-      totalSeedsPlanted = { [allReports[0].id]: seedings.reduce((total, { amount }) => total + (amount ?? 0), 0) };
-
       await allReports[6].destroy();
       reports = allReports.filter(report => !report.isSoftDeleted());
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new SiteReportEntity(dataApi), reports, ({ id, uuid, siteId, status, dueAt }) => ({
+      await testAirtableUpdates(new SiteReportEntity(dataApi), reports, ({ uuid, siteId, status, dueAt }) => ({
         fields: {
           uuid,
           siteUuid: siteUuids[siteId],
           status,
-          dueAt,
-          totalSeedsPlanted: totalSeedsPlanted[id] ?? 0
+          dueAt
         }
       }));
     });

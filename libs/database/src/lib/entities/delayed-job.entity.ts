@@ -17,6 +17,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 // references.
 interface Metadata {
   entity_name?: string;
+  entity_type?: string;
+  entity_id?: number;
 }
 @Table({ tableName: "delayed_jobs", underscored: true })
 export class DelayedJob extends Model<DelayedJob> {

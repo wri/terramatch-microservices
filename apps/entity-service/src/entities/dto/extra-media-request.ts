@@ -2,7 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { FormDataDataDto, ApiFormDataBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsBoolean, IsNumber, IsOptional } from "class-validator";
 
-class ExtraMediaRequest {
+export class ExtraMediaRequest {
   @IsBoolean()
   @ApiProperty({ description: "Whether the media is public" })
   isPublic: boolean;

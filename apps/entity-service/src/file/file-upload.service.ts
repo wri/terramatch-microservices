@@ -7,14 +7,14 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import "multer";
 import sharp from "sharp";
 import {
-  MEDIA_OWNER_MODELS,
   EntityMediaOwnerClass,
+  MEDIA_OWNER_MODELS,
+  MediaConfiguration,
   MediaOwnerModel,
   MediaOwnerType,
-  MediaConfiguration,
   ValidationKey
 } from "@terramatch-microservices/database/constants/media-owners";
-import { ExtraMediaRequestBody } from "../entities/dto/extra-media-request";
+import { ExtraMediaRequest } from "../entities/dto/extra-media-request";
 
 const mappingMimeTypes = {
   "image/png": "png",
@@ -73,7 +73,7 @@ export class FileUploadService {
     entity: MediaOwnerType,
     collection: string,
     file: Express.Multer.File,
-    body: ExtraMediaRequestBody
+    data: ExtraMediaRequest
   ): Promise<Media> {
     if (file == null) {
       throw new BadRequestException("No file provided");
@@ -98,11 +98,11 @@ export class FileUploadService {
     media.fileName = file.originalname;
     media.mimeType = file.mimetype;
     media.fileType = this.getMediaType(file, configuration);
-    media.isPublic = body.data["attributes"]["isPublic"];
+    media.isPublic = data.isPublic;
     media.customProperties = { custom_headers: { ACL: "public-read" } };
     media.generatedConversions = {};
-    media.lat = body.data["attributes"]["lat"];
-    media.lng = body.data["attributes"]["lng"];
+    media.lat = data.lat;
+    media.lng = data.lng;
     media.size = file.size;
     media.createdBy = this.entitiesService.userId;
     media.photographer = user?.fullName ?? null;

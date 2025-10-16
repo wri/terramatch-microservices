@@ -15,7 +15,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
         attributes: ["uuid"]
       });
       const siteUuids = sites.map(site => site.uuid);
-      this.builder.can("manage", SitePolygon, { siteUuid: { $in: siteUuids } });
+      this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
     }
     if (this.permissions.includes("manage-own")) {
       const sites = await Site.findAll({
@@ -24,7 +24,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
       });
       const siteUuids = sites.map(site => site.uuid);
       if (siteUuids.length > 0) {
-        this.builder.can("manage", SitePolygon, { siteUuid: { $in: siteUuids } });
+        this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
       }
     }
 
@@ -39,7 +39,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
           });
           const siteUuids = sites.map(site => site.uuid);
           if (siteUuids.length > 0) {
-            this.builder.can("manage", SitePolygon, { siteUuid: { $in: siteUuids } });
+            this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
           }
         }
       }

@@ -5,6 +5,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { DisturbanceReportEntryDto } from "./disturbance-report-entry.dto";
+import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "disturbanceReports" })
 export class DisturbanceReportLightDto extends EntityDto {
@@ -50,7 +51,12 @@ export class DisturbanceReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: DisturbanceReportEntryDto, isArray: true })
   entries: DisturbanceReportEntryDto[] | null;
+
+  @ApiProperty({ type: Number })
+  reportId: number;
 }
+
+export type DisturbanceReportMedia = Pick<DisturbanceReportFullDto, keyof typeof DisturbanceReport.MEDIA>;
 
 export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
   constructor(
@@ -101,4 +107,7 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   actionDescription: string | null;
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
 }

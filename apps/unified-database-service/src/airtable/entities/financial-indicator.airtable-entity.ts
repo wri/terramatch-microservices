@@ -1,10 +1,11 @@
 /* istanbul ignore file */
-import { FinancialIndicator, Organisation } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associatedValueColumn, ColumnMapping } from "./airtable-entity";
 import { uniq } from "lodash";
 
 type FinancialIndicatorAssociations = {
   organisationUuid?: string;
+  financialReportUuid?: string;
 };
 
 const COLUMNS: ColumnMapping<FinancialIndicator, FinancialIndicatorAssociations>[] = [
@@ -19,7 +20,8 @@ const COLUMNS: ColumnMapping<FinancialIndicator, FinancialIndicatorAssociations>
   "collection",
   "amount",
   "description",
-  associatedValueColumn("organisationUuid", "organisationId")
+  associatedValueColumn("organisationUuid", "organisationId"),
+  associatedValueColumn("financialReportUuid", "financialReportId")
 ];
 
 export class FinancialIndicatorEntity extends AirtableEntity<FinancialIndicator, FinancialIndicatorAssociations> {
@@ -32,11 +34,16 @@ export class FinancialIndicatorEntity extends AirtableEntity<FinancialIndicator,
       where: { id: uniq(indicators.map(({ organisationId }) => organisationId)) },
       attributes: ["id", "uuid"]
     });
+    const financialReports = await FinancialReport.findAll({
+      where: { id: uniq(indicators.map(({ financialReportId }) => financialReportId)) },
+      attributes: ["id", "uuid"]
+    });
     return indicators.reduce(
-      (associations, { id, organisationId }) => ({
+      (associations, { id, organisationId, financialReportId }) => ({
         ...associations,
         [id]: {
-          organisationUuid: orgs.find(({ id }) => id === organisationId)?.uuid
+          organisationUuid: orgs.find(({ id }) => id === organisationId)?.uuid,
+          financialReportUuid: financialReports.find(({ id }) => id === financialReportId)?.uuid
         }
       }),
       {} as Record<number, FinancialIndicatorAssociations>

@@ -229,6 +229,53 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     return results.length > 0 ? results[0] : null;
   }
 
+  static async checkWithinCountryIntersectionBatch(
+    polygonUuids: string[],
+    transaction?: Transaction
+  ): Promise<
+    {
+      polygonUuid: string;
+      polygonArea: number;
+      intersectionArea: number;
+      country: string;
+    }[]
+  > {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    if (polygonUuids.length === 0) {
+      return [];
+    }
+
+    return (await this.sequelize.query(
+      `
+        SELECT 
+          pg.uuid as polygonUuid,
+          ST_Area(pg.geom) as "polygonArea",
+          ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
+          wcg.country
+        FROM polygon_geometry pg
+        JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
+        JOIN v2_sites s ON s.uuid = sp.site_id
+        JOIN v2_projects p ON p.id = s.project_id
+        JOIN world_countries_generalized wcg ON wcg.iso = p.country
+        WHERE pg.uuid IN (:polygonUuids)
+          AND ST_Area(pg.geom) > 0
+      `,
+      {
+        replacements: { polygonUuids },
+        type: QueryTypes.SELECT,
+        transaction
+      }
+    )) as {
+      polygonUuid: string;
+      polygonArea: number;
+      intersectionArea: number;
+      country: string;
+    }[];
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

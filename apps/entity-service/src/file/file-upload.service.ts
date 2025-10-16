@@ -118,7 +118,7 @@ export class FileUploadService {
 
       if (SUPPORTS_THUMBNAIL.includes(media.mimeType)) {
         const thumbnail = await sharp(original)
-          .resize({ width: 250, height: 211, fit: "inside" })
+          .resize({ width: 350, height: 211, fit: "inside" })
           .keepExif()
           .toBuffer();
         const extensionIdx = originalname.lastIndexOf(".");

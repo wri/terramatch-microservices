@@ -110,10 +110,17 @@ export class FileUploadService {
     await media.save();
     try {
       const { buffer, originalname, mimetype } = file;
-      await this.mediaService.uploadFile(buffer, `${media.id}/${originalname}`, mimetype);
+
+      // orient the photo according to the EXIF metadata. rotate() with no arguments uses the
+      // EXIF orientation tags to set up the photo the way it's meant to be viewed.
+      const original = await sharp(buffer).rotate().keepExif().toBuffer();
+      await this.mediaService.uploadFile(original, `${media.id}/${originalname}`, mimetype);
 
       if (SUPPORTS_THUMBNAIL.includes(media.mimeType)) {
-        const thumbnail = await sharp(buffer).resize({ width: 250, height: 211, fit: "inside" }).toBuffer();
+        const thumbnail = await sharp(original)
+          .resize({ width: 250, height: 211, fit: "inside" })
+          .keepExif()
+          .toBuffer();
         const extensionIdx = originalname.lastIndexOf(".");
         const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${originalname.substring(extensionIdx)}`;
         await this.mediaService.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);

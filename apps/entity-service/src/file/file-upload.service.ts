@@ -112,9 +112,11 @@ export class FileUploadService {
     try {
       const { buffer, originalname, mimetype } = file;
 
-      // orient the photo according to the EXIF metadata. rotate() with no arguments uses the
-      // EXIF orientation tags to set up the photo the way it's meant to be viewed.
-      const original = await sharp(buffer).rotate().keepExif().toBuffer();
+      const original = SUPPORTS_THUMBNAIL.includes(media.mimeType)
+        ? // orient the photo according to the EXIF metadata. rotate() with no arguments uses the
+          // EXIF orientation tags to set up the photo the way it's meant to be viewed.
+          await sharp(buffer).rotate().keepExif().toBuffer()
+        : buffer;
       await this.mediaService.uploadFile(original, `${media.id}/${originalname}`, mimetype);
 
       if (SUPPORTS_THUMBNAIL.includes(media.mimeType)) {

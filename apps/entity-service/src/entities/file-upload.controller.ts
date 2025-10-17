@@ -1,13 +1,12 @@
 import {
-  Controller,
-  Post,
-  Param,
-  NotFoundException,
-  UnauthorizedException,
-  UseInterceptors,
-  UploadedFile,
   Body,
-  BadRequestException
+  Controller,
+  NotFoundException,
+  Param,
+  Post,
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
 import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
@@ -21,6 +20,7 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { EntitiesService } from "./entities.service";
 import "multer";
 import { ExtraMediaRequest, ExtraMediaRequestBody } from "./dto/extra-media-request";
+import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 @Controller("entities/v3/files")
 export class FileUploadController {
@@ -41,7 +41,7 @@ export class FileUploadController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @ExceptionResponse(TranslatableException, { description: "Invalid request." })
   @UseInterceptors(FileInterceptor("uploadFile"))
   @JsonApiResponse({
     data: MediaDto

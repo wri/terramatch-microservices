@@ -15,6 +15,7 @@ import {
   ValidationKey
 } from "@terramatch-microservices/database/constants/media-owners";
 import { ExtraMediaRequest } from "../entities/dto/extra-media-request";
+import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 const mappingMimeTypes = {
   "image/png": "png",
@@ -181,17 +182,19 @@ export class FileUploadService {
       const abbreviatedMimeType = mappingMimeTypes[file.mimetype as keyof typeof mappingMimeTypes];
       if (!mimeTypes.includes(abbreviatedMimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
-        throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
+        throw new TranslatableException(`Invalid file type: ${file.mimetype}`, "MIMES", {
+          values: mimeTypes.join(", ")
+        });
       }
     }
 
     if (sizeValidation != null) {
       const size = sizeValidation.split(":")[1];
-      const removeSuffix = size.replace("MB", "");
-      const sizeInBytes = parseInt(removeSuffix) * 1024 * 1024;
+      const sizeInMB = parseInt(size.replace("MB", ""));
+      const sizeInBytes = sizeInMB * 1024 * 1024;
 
       if (file.size > sizeInBytes) {
-        throw new BadRequestException(`File size must be less than ${size}`);
+        throw new TranslatableException(`File size must be less than ${size}`, "FILE_SIZE", { max: sizeInMB });
       }
 
       return true;

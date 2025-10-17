@@ -1,7 +1,18 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  Index,
+  Model,
+  PrimaryKey,
+  Table,
+  AfterFind
+} from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { CriteriaId } from "../constants/validation-types";
+import { transformKeysToCamelCase } from "../util/case-transformation.util";
 
 @Table({
   tableName: "criteria_site_historic",
@@ -39,4 +50,18 @@ export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
   @AllowNull
   @Column(JSON)
   extraInfo: object | null;
+
+  /**
+   * Transform snake_case to camelCase after reading from database
+   */
+  @AfterFind
+  static transformExtraInfoForApi(instances: CriteriaSiteHistoric | CriteriaSiteHistoric[]) {
+    const records = Array.isArray(instances) ? instances : [instances];
+
+    for (const instance of records) {
+      if (instance.extraInfo != null) {
+        instance.extraInfo = transformKeysToCamelCase(instance.extraInfo, instance.criteriaId) as object | null;
+      }
+    }
+  }
 }

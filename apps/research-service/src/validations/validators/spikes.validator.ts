@@ -17,7 +17,7 @@ type GeoJSONGeometry = GeoJSONPolygon | GeoJSONMultiPolygon;
 interface SpikeDetectionResult extends ValidationResult {
   extraInfo: {
     spikes: number[][];
-    spikeCount: number;
+    spike_count: number;
   } | null;
 }
 
@@ -39,7 +39,7 @@ export class SpikesValidator implements Validator {
       valid,
       extraInfo: {
         spikes,
-        spikeCount: spikes.length
+        spike_count: spikes.length
       }
     };
   }
@@ -66,7 +66,7 @@ export class SpikesValidator implements Validator {
         valid,
         extraInfo: {
           spikes,
-          spikeCount: spikes.length
+          spike_count: spikes.length
         }
       };
     });

@@ -41,8 +41,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          areaHectares: 500,
-          maxAllowedHectares: 1000
+          area_hectares: 500
         }
       });
       expect(mockFindOne).toHaveBeenCalledWith({
@@ -61,8 +60,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: false,
         extraInfo: {
-          areaHectares: 1500,
-          maxAllowedHectares: 1000
+          area_hectares: 1500
         }
       });
     });
@@ -77,8 +75,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          areaHectares: 1000,
-          maxAllowedHectares: 1000
+          area_hectares: 1000
         }
       });
     });
@@ -93,8 +90,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          areaHectares: 0,
-          maxAllowedHectares: 1000
+          area_hectares: 0
         }
       });
     });
@@ -134,24 +130,21 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            areaHectares: 500,
-            maxAllowedHectares: 1000
+            area_hectares: 500
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: false,
           extraInfo: {
-            areaHectares: 1500,
-            maxAllowedHectares: 1000
+            area_hectares: 1500
           }
         },
         {
           polygonUuid: "uuid-3",
           valid: true,
           extraInfo: {
-            areaHectares: 1000,
-            maxAllowedHectares: 1000
+            area_hectares: 1000
           }
         }
       ]);
@@ -179,24 +172,21 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            areaHectares: 500,
-            maxAllowedHectares: 1000
+            area_hectares: 500
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: true,
           extraInfo: {
-            areaHectares: 0,
-            maxAllowedHectares: 1000
+            area_hectares: 0
           }
         },
         {
           polygonUuid: "uuid-3",
           valid: false,
           extraInfo: {
-            areaHectares: 1500,
-            maxAllowedHectares: 1000
+            area_hectares: 1500
           }
         }
       ]);
@@ -233,16 +223,14 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            areaHectares: 0,
-            maxAllowedHectares: 1000
+            area_hectares: 0
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: true,
           extraInfo: {
-            areaHectares: 500,
-            maxAllowedHectares: 1000
+            area_hectares: 500
           }
         }
       ]);

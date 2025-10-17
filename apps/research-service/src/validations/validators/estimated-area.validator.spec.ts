@@ -68,16 +68,12 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        sumAreaSite: 800,
-        sumAreaProject: 4000,
-        percentageSite: 80,
-        percentageProject: 80,
-        totalAreaSite: 1000,
-        totalAreaProject: 5000,
-        lowerBoundSite: 750,
-        upperBoundSite: 1250,
-        lowerBoundProject: 3750,
-        upperBoundProject: 6250
+        sum_area_site: 800,
+        sum_area_project: 4000,
+        percentage_site: 80,
+        percentage_project: 80,
+        total_area_site: 1000,
+        total_area_project: 5000
       });
     });
 
@@ -106,16 +102,12 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        sumAreaSite: 500,
-        sumAreaProject: 2000,
-        percentageSite: 50,
-        percentageProject: 40,
-        totalAreaSite: 1000,
-        totalAreaProject: 5000,
-        lowerBoundSite: 750,
-        upperBoundSite: 1250,
-        lowerBoundProject: 3750,
-        upperBoundProject: 6250
+        sum_area_site: 500,
+        sum_area_project: 2000,
+        percentage_site: 50,
+        percentage_project: 40,
+        total_area_site: 1000,
+        total_area_project: 5000
       });
     });
 
@@ -193,8 +185,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only project validation matters
-      expect(result.extraInfo?.sumAreaSite).toBeNull();
-      expect(result.extraInfo?.totalAreaSite).toBeNull();
+      expect(result.extraInfo?.sum_area_site).toBeNull();
+      expect(result.extraInfo?.total_area_site).toBeNull();
     });
 
     it("should handle null project totalHectaresRestoredGoal", async () => {
@@ -218,8 +210,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only site validation matters
-      expect(result.extraInfo?.sumAreaProject).toBeNull();
-      expect(result.extraInfo?.totalAreaProject).toBeNull();
+      expect(result.extraInfo?.sum_area_project).toBeNull();
+      expect(result.extraInfo?.total_area_project).toBeNull();
     });
 
     it("should throw NotFoundException when site polygon is not found", async () => {
@@ -253,8 +245,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only project validation matters
-      expect(result.extraInfo?.sumAreaSite).toBeNull();
-      expect(result.extraInfo?.totalAreaSite).toBe(0);
+      expect(result.extraInfo?.sum_area_site).toBeNull();
+      expect(result.extraInfo?.total_area_site).toBe(0);
     });
 
     it("should handle zero totalHectaresRestoredGoal", async () => {
@@ -278,8 +270,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only site validation matters
-      expect(result.extraInfo?.sumAreaProject).toBeNull();
-      expect(result.extraInfo?.totalAreaProject).toBe(0);
+      expect(result.extraInfo?.sum_area_project).toBeNull();
+      expect(result.extraInfo?.total_area_project).toBe(0);
     });
   });
 
@@ -333,16 +325,16 @@ describe("EstimatedAreaValidator", () => {
         polygonUuid: "uuid-1",
         valid: true,
         extraInfo: expect.objectContaining({
-          sumAreaSite: 800,
-          sumAreaProject: 4000
+          sum_area_site: 800,
+          sum_area_project: 4000
         })
       });
       expect(result[1]).toEqual({
         polygonUuid: "uuid-2",
         valid: true,
         extraInfo: expect.objectContaining({
-          sumAreaSite: 1500,
-          sumAreaProject: 8000
+          sum_area_site: 1500,
+          sum_area_project: 8000
         })
       });
     });
@@ -378,8 +370,8 @@ describe("EstimatedAreaValidator", () => {
         polygonUuid: "uuid-1",
         valid: true,
         extraInfo: expect.objectContaining({
-          sumAreaSite: 800,
-          sumAreaProject: 4000
+          sum_area_site: 800,
+          sum_area_project: 4000
         })
       });
       expect(result[1]).toEqual({

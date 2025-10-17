@@ -5,16 +5,12 @@ import { Op } from "sequelize";
 
 interface EstimatedAreaResult extends ValidationResult {
   extraInfo: {
-    sumAreaSite: number | null;
-    sumAreaProject: number | null;
-    percentageSite: number | null;
-    percentageProject: number | null;
-    totalAreaSite: number | null;
-    totalAreaProject: number | null;
-    lowerBoundSite: number | null;
-    upperBoundSite: number | null;
-    lowerBoundProject: number | null;
-    upperBoundProject: number | null;
+    sum_area_site: number | null;
+    sum_area_project: number | null;
+    percentage_site: number | null;
+    percentage_project: number | null;
+    total_area_site: number | null;
+    total_area_project: number | null;
   } | null;
 }
 
@@ -36,16 +32,12 @@ export class EstimatedAreaValidator implements Validator {
     return {
       valid,
       extraInfo: {
-        sumAreaSite: siteData.sumAreaSite,
-        sumAreaProject: projectData.sumAreaProject,
-        percentageSite: siteData.percentageSite,
-        percentageProject: projectData.percentageProject,
-        totalAreaSite: siteData.totalAreaSite,
-        totalAreaProject: projectData.totalAreaProject,
-        lowerBoundSite: siteData.lowerBoundSite,
-        upperBoundSite: siteData.upperBoundSite,
-        lowerBoundProject: projectData.lowerBoundProject,
-        upperBoundProject: projectData.upperBoundProject
+        sum_area_site: siteData.sumAreaSite,
+        sum_area_project: projectData.sumAreaProject,
+        percentage_site: siteData.percentageSite,
+        percentage_project: projectData.percentageProject,
+        total_area_site: siteData.totalAreaSite,
+        total_area_project: projectData.totalAreaProject
       }
     };
   }
@@ -91,8 +83,6 @@ export class EstimatedAreaValidator implements Validator {
     sumAreaSite: number | null;
     percentageSite: number | null;
     totalAreaSite: number | null;
-    lowerBoundSite: number | null;
-    upperBoundSite: number | null;
   }> {
     const site = await sitePolygon.loadSite();
     if (site == null || site.hectaresToRestoreGoal == null || site.hectaresToRestoreGoal <= 0) {
@@ -100,9 +90,7 @@ export class EstimatedAreaValidator implements Validator {
         valid: false,
         sumAreaSite: null,
         percentageSite: null,
-        totalAreaSite: site != null ? site.hectaresToRestoreGoal : null,
-        lowerBoundSite: null,
-        upperBoundSite: null
+        totalAreaSite: site != null ? site.hectaresToRestoreGoal : null
       };
     }
 
@@ -116,9 +104,7 @@ export class EstimatedAreaValidator implements Validator {
       valid,
       sumAreaSite: Math.round(sumAreaSite),
       percentageSite: Math.round(percentage),
-      totalAreaSite: site.hectaresToRestoreGoal,
-      lowerBoundSite: lowerBound,
-      upperBoundSite: upperBound
+      totalAreaSite: site.hectaresToRestoreGoal
     };
   }
 
@@ -127,8 +113,6 @@ export class EstimatedAreaValidator implements Validator {
     sumAreaProject: number | null;
     percentageProject: number | null;
     totalAreaProject: number | null;
-    lowerBoundProject: number | null;
-    upperBoundProject: number | null;
   }> {
     const site = await sitePolygon.loadSite();
     if (site == null || site.projectId == null) {
@@ -136,9 +120,7 @@ export class EstimatedAreaValidator implements Validator {
         valid: false,
         sumAreaProject: null,
         percentageProject: null,
-        totalAreaProject: null,
-        lowerBoundProject: null,
-        upperBoundProject: null
+        totalAreaProject: null
       };
     }
 
@@ -148,9 +130,7 @@ export class EstimatedAreaValidator implements Validator {
         valid: false,
         sumAreaProject: null,
         percentageProject: null,
-        totalAreaProject: project?.totalHectaresRestoredGoal ?? null,
-        lowerBoundProject: null,
-        upperBoundProject: null
+        totalAreaProject: project?.totalHectaresRestoredGoal ?? null
       };
     }
 
@@ -164,9 +144,7 @@ export class EstimatedAreaValidator implements Validator {
       valid,
       sumAreaProject: Math.round(sumAreaProject),
       percentageProject: Math.round(percentage),
-      totalAreaProject: project.totalHectaresRestoredGoal,
-      lowerBoundProject: lowerBound,
-      upperBoundProject: upperBound
+      totalAreaProject: project.totalHectaresRestoredGoal
     };
   }
 

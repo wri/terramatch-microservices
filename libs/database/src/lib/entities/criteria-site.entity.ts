@@ -7,11 +7,15 @@ import {
   Index,
   Model,
   PrimaryKey,
-  Table
+  Table,
+  BeforeCreate,
+  BeforeUpdate,
+  AfterFind
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { CriteriaId } from "../constants/validation-types";
+import { transformKeysToSnakeCase, transformKeysToCamelCase } from "../util/case-transformation.util";
 
 @Table({
   tableName: "criteria_site",
@@ -49,4 +53,29 @@ export class CriteriaSite extends Model<CriteriaSite> {
   @AllowNull
   @Column(JSON)
   extraInfo: object | null;
+
+  /**
+   * Transform camelCase to snake_case before saving to database
+   */
+  @BeforeCreate
+  @BeforeUpdate
+  static transformExtraInfoForDb(instance: CriteriaSite) {
+    if (instance.extraInfo != null) {
+      instance.extraInfo = transformKeysToSnakeCase(instance.extraInfo, instance.criteriaId) as object | null;
+    }
+  }
+
+  /**
+   * Transform snake_case to camelCase after reading from database
+   */
+  @AfterFind
+  static transformExtraInfoForApi(instances: CriteriaSite | CriteriaSite[]) {
+    const records = Array.isArray(instances) ? instances : [instances];
+
+    for (const instance of records) {
+      if (instance.extraInfo != null) {
+        instance.extraInfo = transformKeysToCamelCase(instance.extraInfo, instance.criteriaId) as object | null;
+      }
+    }
+  }
 }

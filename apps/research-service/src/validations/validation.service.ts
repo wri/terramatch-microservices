@@ -224,12 +224,12 @@ export class ValidationService {
       await existingCriteria.destroy();
     }
 
-    const newRecord = new CriteriaSite();
-    newRecord.polygonId = polygonUuid;
-    newRecord.criteriaId = criteriaId;
-    newRecord.valid = valid;
-    newRecord.extraInfo = extraInfo;
-    await newRecord.save();
+    await CriteriaSite.create({
+      polygonId: polygonUuid,
+      criteriaId: criteriaId,
+      valid: valid,
+      extraInfo: extraInfo
+    } as CriteriaSite);
   }
 
   async getSitePolygonUuids(siteUuid: string): Promise<string[]> {

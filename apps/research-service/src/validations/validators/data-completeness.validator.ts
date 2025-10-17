@@ -4,14 +4,11 @@ import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
 
 interface DataCompletenessValidationResult extends ValidationResult {
-  extraInfo: {
-    validationErrors: Array<{
-      field: string;
-      error: string;
-      exists: boolean;
-    }>;
-    missingFields: string[];
-  } | null;
+  extraInfo: Array<{
+    field: string;
+    error: string;
+    exists: boolean;
+  }> | null;
 }
 
 const VALIDATION_FIELDS: (keyof Attributes<SitePolygon>)[] = [
@@ -22,6 +19,15 @@ const VALIDATION_FIELDS: (keyof Attributes<SitePolygon>)[] = [
   "numTrees",
   "plantStart"
 ];
+
+const FIELD_NAME_MAP: Record<string, string> = {
+  polyName: "poly_name",
+  practice: "practice",
+  targetSys: "target_sys",
+  distr: "distr",
+  numTrees: "num_trees",
+  plantStart: "plantstart"
+};
 
 const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
 
@@ -52,14 +58,10 @@ export class DataCompletenessValidator implements Validator {
 
     const validationErrors = this.validateSitePolygonData(sitePolygon);
     const valid = validationErrors.length === 0;
-    const missingFields = validationErrors.filter(error => !error.exists).map(error => error.field);
 
     return {
       valid,
-      extraInfo: {
-        validationErrors,
-        missingFields
-      }
+      extraInfo: validationErrors.length > 0 ? validationErrors : null
     };
   }
 
@@ -83,15 +85,11 @@ export class DataCompletenessValidator implements Validator {
 
       const validationErrors = this.validateSitePolygonData(sitePolygon);
       const valid = validationErrors.length === 0;
-      const missingFields = validationErrors.filter(error => !error.exists).map(error => error.field);
 
       return {
         polygonUuid,
         valid,
-        extraInfo: {
-          validationErrors,
-          missingFields
-        }
+        extraInfo: validationErrors.length > 0 ? validationErrors : null
       };
     });
   }
@@ -111,7 +109,7 @@ export class DataCompletenessValidator implements Validator {
       const value = sitePolygon[field];
       if (this.isInvalidField(field, value)) {
         validationErrors.push({
-          field,
+          field: FIELD_NAME_MAP[field] ?? field,
           error: this.getFieldError(field, value),
           exists: value != null && value !== ""
         });

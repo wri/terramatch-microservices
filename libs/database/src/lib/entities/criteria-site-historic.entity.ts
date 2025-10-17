@@ -12,6 +12,7 @@ import {
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { CriteriaId } from "../constants/validation-types";
+import { transformKeysToCamelCase } from "../util/case-transformation.util";
 
 @Table({
   tableName: "criteria_site_historic",
@@ -59,40 +60,8 @@ export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
 
     for (const instance of records) {
       if (instance.extraInfo != null) {
-        instance.extraInfo = this.transformKeysToCamelCase(instance.extraInfo, instance.criteriaId) as object | null;
+        instance.extraInfo = transformKeysToCamelCase(instance.extraInfo, instance.criteriaId) as object | null;
       }
     }
-  }
-
-  /**
-   * Convert snake_case to camelCase
-   */
-  private static toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-
-  /**
-   * Transform object keys from snake_case to camelCase
-   */
-  private static transformKeysToCamelCase(obj: unknown, criteriaId: CriteriaId): unknown {
-    if (obj === null || obj === undefined) {
-      return obj;
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.transformKeysToCamelCase(item, criteriaId));
-    }
-
-    if (typeof obj === "object") {
-      const transformed: Record<string, unknown> = {};
-
-      for (const [key, value] of Object.entries(obj)) {
-        const camelKey = this.toCamelCase(key);
-        transformed[camelKey] = this.transformKeysToCamelCase(value, criteriaId);
-      }
-      return transformed;
-    }
-
-    return obj;
   }
 }

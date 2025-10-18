@@ -62,19 +62,6 @@ function StringDataDto<T>(type: string, AttributesDto: new () => T) {
   return DataDto;
 }
 
-export function FormDataDataDto<T>(type: string, AttributesDto: new () => T) {
-  class DataDto {
-    @Equals(type)
-    @ApiProperty({ enum: [type] })
-    type: string;
-
-    @Type(() => AttributesDto)
-    @ApiProperty({ type: () => AttributesDto })
-    attributes: T;
-  }
-  return DataDto;
-}
-
 export function CreateDataDto<T>(type: string, AttributesDto: new () => T) {
   class DataDto {
     @Equals(type)
@@ -107,17 +94,6 @@ export function JsonApiDataDto<T>(options: DtoOptions, AttributesDto: new () => 
   }
 
   throw new InternalServerErrorException(`Options id not recognized [${options.id}]`);
-}
-
-export function ApiFormDataBodyDto<T>(DataDto: new () => T) {
-  class BodyDto extends FormData {
-    @IsNotEmpty()
-    @Type(() => DataDto)
-    @ApiProperty({ type: () => DataDto })
-    data: T;
-  }
-
-  return BodyDto;
 }
 
 export function JsonApiBodyDto<T>(DataDto: new () => T) {

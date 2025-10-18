@@ -11,7 +11,7 @@ import {
   MediaOwnerType,
   MEDIA_OWNER_MODELS
 } from "@terramatch-microservices/database/constants/media-owners";
-import { ExtraMediaRequestBody } from "../entities/dto/extra-media-request";
+import { MediaRequestBody } from "../entities/dto/media-request.dto";
 
 describe("FileUploadService", () => {
   let mediaService: jest.Mocked<MediaService>;
@@ -96,18 +96,17 @@ describe("FileUploadService", () => {
     const model = { id: 7 } as MediaOwnerModel;
     const body = {
       data: { type: "media", attributes: { isPublic: false, lat: 10, lng: 20, formData: new FormData() } }
-    } as ExtraMediaRequestBody;
+    } as MediaRequestBody;
     let originalModel: EntityMediaOwnerClass<MediaOwnerModel>;
     let file: Express.Multer.File;
 
     beforeEach(() => {
       originalModel = MEDIA_OWNER_MODELS[ENTITY];
       const cfg: MediaConfiguration = { multiple: false, validation: "documents" };
-      const fakeModel = {
+      MEDIA_OWNER_MODELS[ENTITY] = {
         MEDIA: { [COLLECTION]: cfg },
         LARAVEL_TYPE: "laravel"
       } as unknown as EntityMediaOwnerClass<MediaOwnerModel>;
-      MEDIA_OWNER_MODELS[ENTITY] = fakeModel;
       file = {
         originalname: "test.txt",
         mimetype: "text/plain",

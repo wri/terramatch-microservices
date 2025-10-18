@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApiOperation } from "@nestjs/swagger";
@@ -19,7 +20,7 @@ import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import "multer";
-import { ExtraMediaRequest, ExtraMediaRequestBody } from "./dto/extra-media-request";
+import { MediaRequestBody } from "./dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 @Controller("entities/v3/files")
@@ -42,20 +43,17 @@ export class FileUploadController {
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   @ExceptionResponse(TranslatableException, { description: "Invalid request." })
-  @UseInterceptors(FileInterceptor("uploadFile"))
-  @JsonApiResponse({
-    data: MediaDto
-  })
+  @UseInterceptors(FileInterceptor("uploadFile"), FormDtoInterceptor)
+  @JsonApiResponse(MediaDto)
   async uploadFile(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: ExtraMediaRequestBody
+    @Body() payload: MediaRequestBody
   ) {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const data = JSON.parse(body.data as unknown as string).attributes as ExtraMediaRequest;
-    const media = await this.fileUploadService.uploadFile(model, entity, collection, file, data);
+    const media = await this.fileUploadService.uploadFile(model, entity, collection, file, payload.data.attributes);
     return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {

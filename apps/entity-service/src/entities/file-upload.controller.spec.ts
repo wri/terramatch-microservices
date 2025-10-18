@@ -9,7 +9,7 @@ import { EntitiesService } from "./entities.service";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { Resource } from "@terramatch-microservices/common/util";
-import { ExtraMediaRequestBody } from "./dto/extra-media-request";
+import { MediaRequestBody } from "./dto/media-request.dto";
 
 describe("FileUploadController", () => {
   let controller: FileUploadController;
@@ -48,9 +48,9 @@ describe("FileUploadController", () => {
       uuid: "entity-uuid",
       collection: "collectionName"
     };
-    const body: ExtraMediaRequestBody = {
+    const body: MediaRequestBody = {
       data: { type: "media", attributes: { isPublic: true, lat: 0, lng: 0, formData: new FormData() } }
-    } as ExtraMediaRequestBody;
+    } as MediaRequestBody;
     const file: Partial<Express.Multer.File> = {
       fieldname: "uploadFile",
       originalname: "file.png",

@@ -14,7 +14,7 @@ import {
   MediaOwnerType,
   ValidationKey
 } from "@terramatch-microservices/database/constants/media-owners";
-import { ExtraMediaRequest } from "../entities/dto/extra-media-request";
+import { MediaRequestAttributes } from "../entities/dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 const mappingMimeTypes = {
@@ -74,7 +74,7 @@ export class FileUploadService {
     entity: MediaOwnerType,
     collection: string,
     file: Express.Multer.File,
-    data: ExtraMediaRequest
+    data: MediaRequestAttributes
   ): Promise<Media> {
     if (file == null) {
       throw new BadRequestException("No file provided");

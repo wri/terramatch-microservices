@@ -25,7 +25,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update"], Nursery, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "delete", "update", "uploadFiles"], Nursery, { projectId: { $in: projectIds } });
         }
       }
     }

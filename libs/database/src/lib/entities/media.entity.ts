@@ -136,25 +136,25 @@ export class Media extends Model<Media> {
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
-  @Column(STRING)
+  @Column({ type: STRING, defaultValue: "s3" })
   disk: string;
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
   @AllowNull
-  @Column(STRING)
+  @Column({ type: STRING, defaultValue: "s3" })
   conversionsDisk: string | null;
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
-  @JsonColumn()
+  @JsonColumn({ defaultValue: [] })
   manipulations: string[];
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
-  @JsonColumn()
+  @JsonColumn({ defaultValue: [] })
   responsiveImages: string[];
 }

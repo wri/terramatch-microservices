@@ -25,7 +25,7 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "update"], ProjectReport, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "update", "uploadFiles"], ProjectReport, { projectId: { $in: projectIds } });
         }
       }
     }

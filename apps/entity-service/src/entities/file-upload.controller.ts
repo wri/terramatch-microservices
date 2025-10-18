@@ -1,16 +1,16 @@
 import {
-  Controller,
-  Post,
-  Param,
-  NotFoundException,
-  UnauthorizedException,
-  UseInterceptors,
-  UploadedFile,
   Body,
-  BadRequestException
+  Controller,
+  NotFoundException,
+  Param,
+  Post,
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
-import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
+import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApiOperation } from "@nestjs/swagger";
@@ -20,6 +20,8 @@ import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import "multer";
+import { MediaRequestBody } from "./dto/media-request.dto";
+import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 @Controller("entities/v3/files")
 export class FileUploadController {
@@ -40,18 +42,18 @@ export class FileUploadController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
-  @UseInterceptors(FileInterceptor("uploadFile"))
+  @ExceptionResponse(TranslatableException, { description: "Invalid request." })
+  @UseInterceptors(FileInterceptor("uploadFile"), FormDtoInterceptor)
   @JsonApiResponse(MediaDto)
   async uploadFile(
     @Param() { collection, entity, uuid }: MediaCollectionEntityDto,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: ExtractedRequestData
+    @Body() payload: MediaRequestBody
   ) {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const media = await this.fileUploadService.uploadFile(model, entity, collection, file, body);
+    const media = await this.fileUploadService.uploadFile(model, entity, collection, file, payload.data.attributes);
     return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {

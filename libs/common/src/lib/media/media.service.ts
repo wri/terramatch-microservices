@@ -12,28 +12,30 @@ export class MediaService {
   private readonly s3: S3Client;
 
   constructor(private readonly configService: ConfigService) {
+    const endpoint = this.configService.get<string>("AWS_ENDPOINT");
     this.s3 = new S3Client({
+      endpoint,
       region: this.configService.get<string>("AWS_REGION"),
       credentials: {
         accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID") ?? "",
         secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY") ?? ""
-      }
+      },
+      // required for local dev when accessing the minio docker container
+      forcePathStyle: (endpoint ?? "").includes("localhost") ? true : undefined
     });
   }
 
-  async uploadFile(file: Express.Multer.File, bucket: string = this.configService.get<string>("AWS_BUCKET") ?? "") {
-    const { buffer, originalname, mimetype } = file;
-
+  async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {
     const command = new PutObjectCommand({
-      Bucket: bucket,
-      Key: originalname,
+      Bucket: this.configService.get<string>("AWS_BUCKET"),
+      Key: path,
       Body: buffer,
       ContentType: mimetype,
       ACL: "public-read"
     });
 
     await this.s3.send(command);
-    this.logger.log(`Uploaded ${originalname} to S3`);
+    this.logger.log(`Uploaded ${path} to S3`);
   }
 
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some

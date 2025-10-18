@@ -49,7 +49,7 @@ describe("FileUploadController", () => {
       collection: "collectionName"
     };
     const body: MediaRequestBody = {
-      data: { type: "media", attributes: { isPublic: true, lat: 0, lng: 0, formData: new FormData() } }
+      data: { type: "media", attributes: { isPublic: true, lat: 0, lng: 0 } }
     } as MediaRequestBody;
     const file: Partial<Express.Multer.File> = {
       fieldname: "uploadFile",
@@ -75,7 +75,13 @@ describe("FileUploadController", () => {
       expect(entitiesService.createMediaOwnerProcessor).toHaveBeenCalledWith(params.entity, params.uuid);
       expect(mockMediaOwnerProcessor.getBaseEntity).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("uploadFiles", model);
-      expect(fileUploadService.uploadFile).toHaveBeenCalledWith(model, params.entity, params.collection, file, body);
+      expect(fileUploadService.uploadFile).toHaveBeenCalledWith(
+        model,
+        params.entity,
+        params.collection,
+        file,
+        body.data.attributes
+      );
       expect((result.data as Resource).id).toEqual(media.uuid);
       expect((result.data as Resource).attributes).toMatchObject(media);
     });

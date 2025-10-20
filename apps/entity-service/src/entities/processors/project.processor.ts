@@ -26,6 +26,7 @@ import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
+import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -46,7 +47,8 @@ export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
   ProjectFullDto,
-  ProjectUpdateAttributes
+  ProjectUpdateAttributes,
+  EntityCreateAttributes
 > {
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;

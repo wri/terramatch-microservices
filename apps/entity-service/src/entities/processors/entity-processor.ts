@@ -14,6 +14,7 @@ import {
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
 import { ProjectReport } from "@terramatch-microservices/database/entities";
+import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -61,7 +62,8 @@ export abstract class EntityProcessor<
   ModelType extends EntityModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto,
-  UpdateDto extends EntityUpdateData
+  UpdateDto extends EntityUpdateData,
+  CreateDto extends EntityCreateData
 > {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
@@ -169,14 +171,27 @@ export abstract class EntityProcessor<
   loadAssociationData(ids: number[]): Promise<Record<number, object>> {
     return Promise.resolve({});
   }
-}
 
+  /**
+   * Creates a new entity with the provided attributes.
+   * This method should be implemented by concrete processors.
+   */
+  async create(attributes: CreateDto): Promise<ModelType> {
+    const model = await this.findOne(attributes.entityUuid);
+    if (model == null) {
+      throw new BadRequestException(`${this.resource} with UUID ${attributes.entityUuid} not found`);
+    }
+
+    return model;
+  }
+}
 export abstract class ReportProcessor<
   ModelType extends ReportModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto,
-  UpdateDto extends ReportUpdateAttributes
-> extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto> {
+  UpdateDto extends ReportUpdateAttributes,
+  CreateDto extends EntityCreateAttributes
+> extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto, CreateDto> {
   async update(model: ModelType, update: UpdateDto) {
     if (update.nothingToReport != null) {
       if (model instanceof ProjectReport) {
@@ -205,6 +220,19 @@ export abstract class ReportProcessor<
     }
 
     await super.update(model, update);
+  }
+
+  /**
+   * Creates a new report entity with the provided projectUuid.
+   * This method can be overridden in concrete report processors if custom creation logic is needed.
+   */
+  async create(attributes: CreateDto): Promise<ModelType> {
+    const model = await this.findOne(attributes.entityUuid);
+    if (model == null) {
+      throw new BadRequestException(`${this.resource} with UUID ${attributes.entityUuid} not found`);
+    }
+
+    return model;
   }
 
   protected nothingToReportConditions = (queryValue: boolean) => {

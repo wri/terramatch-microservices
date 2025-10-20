@@ -13,8 +13,15 @@ import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { EntityCreateAttributes } from "./dto/entity-create.dto";
 
-class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
+class StubProcessor extends EntityProcessor<
+  Project,
+  ProjectLightDto,
+  ProjectFullDto,
+  EntityUpdateData,
+  EntityCreateAttributes
+> {
   LIGHT_DTO = ProjectLightDto;
   FULL_DTO = ProjectFullDto;
 
@@ -29,6 +36,7 @@ class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFul
   getLightDto = jest.fn(() => Promise.resolve({ id: faker.string.uuid(), dto: new ProjectLightDto() }));
   delete = jest.fn(() => Promise.resolve());
   update = jest.fn(() => Promise.resolve());
+  create = jest.fn(() => Promise.resolve(new Project()));
   loadAssociationData = jest.fn(() => Promise.resolve({} as Record<number, ProjectLightDto>));
 }
 
@@ -188,6 +196,40 @@ describe("EntitiesController", () => {
 
       expect(processor.update).toHaveBeenCalledWith(project, attributes);
       expect(processor.getFullDto).toHaveBeenCalledWith(project);
+    });
+  });
+
+  describe("entityCreate", () => {
+    it("should throw if the entity payload type does not match the path type", async () => {
+      await expect(
+        controller.entityCreate(
+          { entity: "sites" },
+          {
+            data: {
+              type: "projects",
+              id: "123e4567-e89b-12d3-a456-426614174000",
+              attributes: { entityUuid: "123e4567-e89b-12d3-a456-426614174000" }
+            }
+          }
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should call create on the processor and return the created entity", async () => {
+      const project = await ProjectFactory.create();
+      processor.create.mockResolvedValue(project);
+      const attributes = { entityUuid: "123e4567-e89b-12d3-a456-426614174000" };
+
+      const result = serialize(
+        await controller.entityCreate(
+          { entity: "projects" },
+          { data: { type: "projects", id: "123e4567-e89b-12d3-a456-426614174000", attributes } }
+        )
+      );
+
+      expect(processor.create).toHaveBeenCalledWith(attributes);
+      expect(processor.getFullDto).toHaveBeenCalledWith(project);
+      expect(result.meta.resourceType).toBe("projects");
     });
   });
 });

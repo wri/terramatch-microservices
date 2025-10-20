@@ -6,6 +6,7 @@ import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -26,7 +27,8 @@ export class NurseryProcessor extends EntityProcessor<
   Nursery,
   NurseryLightDto,
   NurseryFullDto,
-  EntityUpdateAttributes
+  EntityUpdateAttributes,
+  EntityCreateAttributes
 > {
   readonly LIGHT_DTO = NurseryLightDto;
   readonly FULL_DTO = NurseryFullDto;

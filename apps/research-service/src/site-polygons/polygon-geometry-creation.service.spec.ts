@@ -7,7 +7,7 @@ import { QueryTypes } from "sequelize";
 
 describe("PolygonGeometryCreationService", () => {
   let service: PolygonGeometryCreationService;
-  let mockSequelize: any;
+  let mockSequelize: { query: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,9 +31,9 @@ describe("PolygonGeometryCreationService", () => {
     jest.clearAllMocks();
   });
 
-  describe("batchGetGeomsAndAreas", () => {
+  describe("batchPrepareGeometries", () => {
     it("should return empty array for empty input", async () => {
-      const result = await service.batchGetGeomsAndAreas([]);
+      const result = await service.batchPrepareGeometries([]);
       expect(result).toEqual([]);
     });
 
@@ -58,7 +58,7 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      await expect(service.batchGetGeomsAndAreas(geometries)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.batchPrepareGeometries(geometries)).rejects.toThrow(InternalServerErrorException);
     });
 
     it("should process single polygon geometry", async () => {
@@ -86,7 +86,7 @@ describe("PolygonGeometryCreationService", () => {
         }
       ]);
 
-      const result = await service.batchGetGeomsAndAreas(geometries);
+      const result = await service.batchPrepareGeometries(geometries);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty("uuid");
@@ -133,7 +133,7 @@ describe("PolygonGeometryCreationService", () => {
         { idx: 1, geoJson: JSON.stringify(geometries[1]), area: 8.3 }
       ]);
 
-      const result = await service.batchGetGeomsAndAreas(geometries);
+      const result = await service.batchPrepareGeometries(geometries);
 
       expect(result).toHaveLength(2);
       expect(result[0].area).toBe(10.5);
@@ -158,7 +158,7 @@ describe("PolygonGeometryCreationService", () => {
 
       mockSequelize.query.mockRejectedValue(new Error("SQL error"));
 
-      await expect(service.batchGetGeomsAndAreas(geometries)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.batchPrepareGeometries(geometries)).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -237,7 +237,7 @@ describe("PolygonGeometryCreationService", () => {
       ];
 
       jest
-        .spyOn(service, "batchGetGeomsAndAreas")
+        .spyOn(service, "batchPrepareGeometries")
         .mockResolvedValue([
           { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 }
         ]);
@@ -277,7 +277,7 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest.spyOn(service, "batchGetGeomsAndAreas").mockResolvedValue([
+      jest.spyOn(service, "batchPrepareGeometries").mockResolvedValue([
         { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 },
         { uuid: "uuid-2", geomJson: '{"type":"Polygon","coordinates":[[[2,2],[2,3],[3,3],[3,2],[2,2]]]}', area: 8.3 }
       ]);
@@ -288,8 +288,8 @@ describe("PolygonGeometryCreationService", () => {
 
       expect(result.uuids).toHaveLength(2);
       expect(result.areas).toHaveLength(2);
-      // batchGetGeomsAndAreas should have been called with 2 expanded Polygon geometries
-      expect(service.batchGetGeomsAndAreas).toHaveBeenCalledWith(
+      // batchPrepareGeometries should have been called with 2 expanded Polygon geometries
+      expect(service.batchPrepareGeometries).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({ type: "Polygon" }),
           expect.objectContaining({ type: "Polygon" })
@@ -327,7 +327,7 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest.spyOn(service, "batchGetGeomsAndAreas").mockResolvedValue([
+      jest.spyOn(service, "batchPrepareGeometries").mockResolvedValue([
         { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 },
         { uuid: "uuid-2", geomJson: '{"type":"Polygon","coordinates":[[[2,2],[2,3],[3,3],[3,2],[2,2]]]}', area: 8.3 }
       ]);

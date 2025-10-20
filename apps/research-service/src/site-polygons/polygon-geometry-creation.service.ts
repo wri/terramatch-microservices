@@ -6,19 +6,14 @@ import { Geometry } from "./dto/create-site-polygon-request.dto";
 
 export interface GeometryWithArea {
   uuid: string;
-  geomJson: string; // GeoJSON string for insertion
-  area: number; // Area in hectares
+  geomJson: string;
+  area: number;
 }
 
 @Injectable()
 export class PolygonGeometryCreationService {
   private readonly logger = new Logger(PolygonGeometryCreationService.name);
 
-  /**
-   * Batch calculate areas for geometries
-   * Uses PostGIS ST_Area function
-   * Returns GeoJSON strings (not WKB) for direct use with ST_GeomFromGeoJSON
-   */
   async batchGetGeomsAndAreas(geometries: Geometry[]): Promise<GeometryWithArea[]> {
     if (geometries.length === 0) {
       return [];
@@ -28,10 +23,8 @@ export class PolygonGeometryCreationService {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
     }
 
-    // Build UNION query to process all geometries in one SQL call
     const geoJsonStrings = geometries.map(geom => JSON.stringify(geom));
 
-    // Create a query that processes each geometry
     const sqlCases = geoJsonStrings
       .map((_, index) => `SELECT :geom${index} as geoJson, ${index} as idx`)
       .join(" UNION ALL ");
@@ -157,15 +150,51 @@ export class PolygonGeometryCreationService {
       }
     }
 
-    // Process geometries to calculate areas (keeps GeoJSON format)
     const geometriesWithAreas = await this.batchGetGeomsAndAreas(expandedGeometries);
 
-    // Bulk insert
     const uuids = await this.bulkInsertGeometries(geometriesWithAreas, createdBy, transaction);
 
     return {
       uuids,
       areas: geometriesWithAreas.map(g => g.area)
     };
+  }
+
+  async bulkUpdateSitePolygonCentroids(polygonUuids: string[], transaction?: Transaction): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    try {
+      const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
+      const replacements: Record<string, string> = {};
+      polygonUuids.forEach((uuid, index) => {
+        replacements[`uuid${index}`] = uuid;
+      });
+
+      const query = `
+        UPDATE site_polygon sp
+        JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
+        SET 
+          sp.lat = ST_Y(ST_Centroid(pg.geom)),
+          sp.long = ST_X(ST_Centroid(pg.geom))
+        WHERE sp.poly_id IN (${placeholders})
+      `;
+
+      await PolygonGeometry.sequelize.query(query, {
+        replacements,
+        type: QueryTypes.UPDATE,
+        transaction
+      });
+
+      this.logger.log(`Updated centroids for ${polygonUuids.length} site polygons`);
+    } catch (error) {
+      this.logger.error("Error bulk updating site polygon centroids", error);
+      throw new InternalServerErrorException("Failed to update site polygon centroids");
+    }
   }
 }

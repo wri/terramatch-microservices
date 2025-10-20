@@ -46,26 +46,18 @@ export class SitePolygonCreationService {
     const allPolygonUuids: string[] = [];
 
     try {
-      // Group geometries by site_id
       const groupedBySite = this.groupGeometriesBySiteId(geometries);
 
-      // Validate sites exist
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
-      // Process each site
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        // Group by geometry type within site
         const groupedByType = this.groupGeometriesByType(siteGeometries);
 
-        // Process each geometry type
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
-          // Check for duplicates
           const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId, transaction);
 
-          // Filter out duplicates
           const { filteredFeatures } = this.filterDuplicates(typeFeatures, duplicateIndexToUuid);
 
-          // Create polygons (with chunking if needed)
           let createdSitePolygons: SitePolygon[];
           if (filteredFeatures.length > 0) {
             if (filteredFeatures.length > LARGE_BATCH_THRESHOLD) {
@@ -82,9 +74,12 @@ export class SitePolygonCreationService {
         }
       }
 
+      if (allPolygonUuids.length > 0) {
+        await this.polygonGeometryService.bulkUpdateSitePolygonCentroids(allPolygonUuids, transaction);
+      }
+
       await transaction.commit();
 
-      // Queue indicator analysis asynchronously (after commit)
       if (allPolygonUuids.length > 0) {
         this.queueIndicatorAnalysis(allPolygonUuids).catch(error => {
           this.logger.error("Failed to queue indicator analysis", error);
@@ -99,9 +94,6 @@ export class SitePolygonCreationService {
     }
   }
 
-  /**
-   * Group geometries by site_id from properties
-   */
   private groupGeometriesBySiteId(geometries: { features: Feature[] }[]): { [siteId: string]: Feature[] } {
     const grouped: { [siteId: string]: Feature[] } = {};
 
@@ -128,9 +120,6 @@ export class SitePolygonCreationService {
     return grouped;
   }
 
-  /**
-   * Group geometries by geometry type
-   */
   private groupGeometriesByType(features: Feature[]): { [type: string]: Feature[] } {
     const grouped: { [type: string]: Feature[] } = {};
 
@@ -147,9 +136,6 @@ export class SitePolygonCreationService {
     return grouped;
   }
 
-  /**
-   * Validate that all sites exist
-   */
   private async validateSitesExist(siteUuids: string[], transaction: Transaction): Promise<void> {
     const sites = await Site.findAll({
       where: { uuid: siteUuids },
@@ -207,9 +193,6 @@ export class SitePolygonCreationService {
     return { filteredFeatures, filteredIndexOrder };
   }
 
-  /**
-   * Process large geometry batch with chunking
-   */
   private async processLargeGeometryBatch(
     features: Feature[],
     siteId: string,
@@ -227,9 +210,6 @@ export class SitePolygonCreationService {
     return allSitePolygons;
   }
 
-  /**
-   * Create polygons from features batch
-   */
   private async createPolygonsBatch(
     features: Feature[],
     siteId: string,
@@ -246,13 +226,9 @@ export class SitePolygonCreationService {
       transaction
     );
 
-    // Create site polygons
     return await this.createSitePolygonRecords(features, polygonUuids, areas, siteId, userId, transaction);
   }
 
-  /**
-   * Create site_polygon records
-   */
   private async createSitePolygonRecords(
     features: Feature[],
     polygonUuids: string[],
@@ -298,15 +274,5 @@ export class SitePolygonCreationService {
     }
 
     return await SitePolygon.bulkCreate(sitePolygons as SitePolygon[], { transaction });
-  }
-
-  /**
-   * Queue indicator analysis for created polygons
-   * TODO: Implement actual queue integration
-   */
-  private async queueIndicatorAnalysis(polygonUuids: string[]): Promise<void> {
-    this.logger.log(`Queueing indicator analysis for ${polygonUuids.length} polygons`);
-    // TODO: Integrate with actual queue service
-    // In V2, this calls IndicatorAnalysisService::dispatchBatchAnalysis
   }
 }

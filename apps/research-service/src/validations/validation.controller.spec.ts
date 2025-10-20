@@ -429,8 +429,7 @@ describe("ValidationController", () => {
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
-              areaHectares: 1500,
-              maxAllowedHectares: 1000
+              area_hectares: 1500
             }
           }
         ]

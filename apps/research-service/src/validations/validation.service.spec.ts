@@ -68,6 +68,10 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
 // Mock the static methods
 (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findAll = jest.fn();
 (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findOne = jest.fn();
+(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).create = jest.fn();
+(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).bulkCreate = jest.fn();
+(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).destroy = jest.fn();
+(CriteriaSiteHistoric as jest.MockedClass<typeof CriteriaSiteHistoric>).bulkCreate = jest.fn();
 
 describe("ValidationService", () => {
   let service: ValidationService;
@@ -403,13 +407,10 @@ describe("ValidationService", () => {
         criteriaId: 14,
         valid: false,
         createdAt: expect.any(Date),
-        extraInfo: expect.objectContaining({
-          validationErrors: expect.arrayContaining([
-            expect.objectContaining({ field: "polyName", exists: false }),
-            expect.objectContaining({ field: "practice", exists: false })
-          ]),
-          missingFields: expect.arrayContaining(["polyName", "practice"])
-        })
+        extraInfo: expect.arrayContaining([
+          expect.objectContaining({ field: "poly_name", exists: false }),
+          expect.objectContaining({ field: "practice", exists: false })
+        ])
       });
 
       expect(SitePolygon.findOne).toHaveBeenCalledWith({
@@ -479,8 +480,7 @@ describe("ValidationService", () => {
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: {
-          areaHectares: 500,
-          maxAllowedHectares: 1000
+          area_hectares: 500
         }
       });
 
@@ -523,16 +523,12 @@ describe("ValidationService", () => {
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: expect.objectContaining({
-          sumAreaSite: 800,
-          sumAreaProject: 4000,
-          percentageSite: 80,
-          percentageProject: 80,
-          totalAreaSite: 1000,
-          totalAreaProject: 5000,
-          lowerBoundSite: 750,
-          upperBoundSite: 1250,
-          lowerBoundProject: 3750,
-          upperBoundProject: 6250
+          sum_area_site: 800,
+          sum_area_project: 4000,
+          percentage_site: 80,
+          percentage_project: 80,
+          total_area_site: 1000,
+          total_area_project: 5000
         })
       });
 
@@ -592,7 +588,7 @@ describe("ValidationService", () => {
 
       await service.validatePolygons(request);
 
-      expect(CriteriaSite).toHaveBeenCalled();
+      expect(CriteriaSite.create).toHaveBeenCalled();
     });
 
     it("should update existing criteria record and create historic record", async () => {
@@ -614,9 +610,9 @@ describe("ValidationService", () => {
 
       await service.validatePolygons(request);
 
-      expect(CriteriaSiteHistoric).toHaveBeenCalled();
+      expect(CriteriaSiteHistoric).toHaveBeenCalledWith();
       expect(existingCriteria.destroy).toHaveBeenCalled();
-      expect(CriteriaSite).toHaveBeenCalledTimes(1); // Once for new record
+      expect(CriteriaSite.create).toHaveBeenCalledTimes(1); // Once for new record
     });
 
     it("should handle validator errors gracefully", async () => {

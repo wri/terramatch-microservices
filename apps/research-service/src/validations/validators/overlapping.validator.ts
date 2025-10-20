@@ -4,12 +4,12 @@ import { NotFoundException, InternalServerErrorException, BadRequestException } 
 import { Transaction } from "sequelize";
 
 interface OverlapInfo {
-  polyUuid: string;
-  polyName: string;
-  siteName: string;
+  poly_uuid: string;
+  poly_name: string;
+  site_name: string;
   percentage: number;
-  intersectSmaller: boolean;
-  intersectionArea: number; // in hectares
+  intersect_smaller: boolean;
+  intersection_area: number;
 }
 
 interface OverlappingValidationResult extends ValidationResult {
@@ -317,12 +317,12 @@ export class OverlappingValidator implements Validator {
       );
 
       return {
-        polyUuid: intersection.candidateUuid,
-        polyName: intersection.candidateName ?? "",
-        siteName: intersection.siteName ?? "",
+        poly_uuid: intersection.candidateUuid,
+        poly_name: intersection.candidateName ?? "",
+        site_name: intersection.siteName ?? "",
         percentage,
-        intersectSmaller: intersection.candidateArea < intersection.targetArea,
-        intersectionArea: intersectionAreaInHectares
+        intersect_smaller: intersection.candidateArea < intersection.targetArea,
+        intersection_area: intersectionAreaInHectares
       };
     });
   }

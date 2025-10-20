@@ -16,8 +16,7 @@ async function bootstrap() {
     logger: new TMLogger()
   });
   app.set("query parser", "extended");
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "5mb" }));
 
   if (process.env.NODE_ENV === "development") {
     // CORS is handled by the Api Gateway in AWS

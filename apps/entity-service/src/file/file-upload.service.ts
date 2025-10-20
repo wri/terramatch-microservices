@@ -142,7 +142,7 @@ export class FileUploadService {
     entityModel: EntityMediaOwnerClass<MediaOwnerModel>,
     collection: string
   ): MediaConfiguration {
-    const configuration = entityModel.MEDIA[collection];
+    const configuration = Object.values(entityModel.MEDIA).find(({ dbCollection }) => dbCollection === collection);
     if (configuration == null) {
       throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
     }

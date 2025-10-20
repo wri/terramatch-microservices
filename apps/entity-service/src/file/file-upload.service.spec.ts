@@ -47,7 +47,7 @@ describe("FileUploadService", () => {
 
   describe("getConfiguration", () => {
     const COLLECTION = "testCollection";
-    const config: MediaConfiguration = { multiple: false, validation: "documents" };
+    const config: MediaConfiguration = { dbCollection: COLLECTION, multiple: false, validation: "documents" };
     let fakeModel: EntityMediaOwnerClass<MediaOwnerModel>;
 
     beforeEach(() => {
@@ -100,7 +100,7 @@ describe("FileUploadService", () => {
 
     beforeEach(() => {
       originalModel = MEDIA_OWNER_MODELS[ENTITY];
-      const cfg: MediaConfiguration = { multiple: false, validation: "documents" };
+      const cfg: MediaConfiguration = { dbCollection: COLLECTION, multiple: false, validation: "documents" };
       MEDIA_OWNER_MODELS[ENTITY] = {
         MEDIA: { [COLLECTION]: cfg },
         LARAVEL_TYPE: "laravel"

@@ -30,7 +30,7 @@ describe("MediaOwnerProcessor", () => {
   describe("baseModelAttributes", () => {
     it("should return the expected attribute keys", () => {
       const processor = new MediaOwnerProcessor(MODEL_KEY as MediaOwnerType, FAKE_UUID, FakeModel);
-      expect(processor.baseModelAttributes).toEqual(["id", "frameworkKey", "projectId"]);
+      expect(processor.baseModelAttributes).toEqual(["id", "frameworkKey", "projectId", "siteId", "nurseryId"]);
     });
   });
 

@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
@@ -32,9 +33,11 @@ import {
 } from "./dto/indicators.dto";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
+import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { CreateSitePolygonBatchRequestDto } from "./dto/create-site-polygon-request.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -50,8 +53,44 @@ const MAX_PAGE_SIZE = 100 as const;
 export class SitePolygonsController {
   constructor(
     private readonly sitePolygonService: SitePolygonsService,
+    private readonly sitePolygonCreationService: SitePolygonCreationService,
     private readonly policyService: PolicyService
   ) {}
+
+  @Post()
+  @ApiOperation({
+    operationId: "createSitePolygons",
+    summary: "Create site polygons from GeoJSON",
+    description: `Create site polygons in bulk from GeoJSON FeatureCollections. Supports multi-site batch creation.
+      Each feature must have site_id in properties. Handles Polygon and MultiPolygon geometries.
+      Automatically groups by site and geometry type, checks for duplicates, and processes large batches in chunks.`
+  })
+  @JsonApiResponse([SitePolygonLightDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data or site not found." })
+  async create(@Body() createRequest: CreateSitePolygonBatchRequestDto) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const createdSitePolygons = await this.sitePolygonCreationService.createSitePolygons(createRequest, userId);
+
+    // Build JSON:API response
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
+
+    for (const sitePolygon of createdSitePolygons) {
+      document.addData(
+        sitePolygon.uuid,
+        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+      );
+    }
+
+    return document;
+  }
 
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })

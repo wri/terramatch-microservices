@@ -13,10 +13,12 @@ import {
   LinkedFile,
   LinkedRelation
 } from "@terramatch-microservices/database/constants/linked-fields";
+import { DisturbanceReportConfiguration } from "./disturbance-report.configuration";
 
 export const FORM_MODEL_TYPES = [
   "organisations",
   "financialReports",
+  "disturbanceReport",
   "nurseries",
   "nurseryReports",
   "projects",
@@ -30,6 +32,7 @@ export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
 export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfiguration> = {
   organisations: OrganisationConfiguration,
   financialReports: FinancialReportConfiguration,
+  disturbanceReport: DisturbanceReportConfiguration,
   nurseries: NurseryConfiguration,
   nurseryReports: NurseryReportConfiguration,
   projects: ProjectConfiguration,

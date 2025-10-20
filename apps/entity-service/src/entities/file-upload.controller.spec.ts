@@ -2,13 +2,14 @@ import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Test, TestingModule } from "@nestjs/testing";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FileUploadController } from "./file-upload.controller";
-import { ExtractedRequestData, FileUploadService } from "../file/file-upload.service";
+import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { Resource } from "@terramatch-microservices/common/util";
+import { MediaRequestBody } from "./dto/media-request.dto";
 
 describe("FileUploadController", () => {
   let controller: FileUploadController;
@@ -47,7 +48,9 @@ describe("FileUploadController", () => {
       uuid: "entity-uuid",
       collection: "collectionName"
     };
-    const body: ExtractedRequestData = { isPublic: true, lat: 0, lng: 0 };
+    const body: MediaRequestBody = {
+      data: { type: "media", attributes: { isPublic: true, lat: 0, lng: 0 } }
+    } as MediaRequestBody;
     const file: Partial<Express.Multer.File> = {
       fieldname: "uploadFile",
       originalname: "file.png",
@@ -72,7 +75,13 @@ describe("FileUploadController", () => {
       expect(entitiesService.createMediaOwnerProcessor).toHaveBeenCalledWith(params.entity, params.uuid);
       expect(mockMediaOwnerProcessor.getBaseEntity).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("uploadFiles", model);
-      expect(fileUploadService.uploadFile).toHaveBeenCalledWith(model, params.entity, params.collection, file, body);
+      expect(fileUploadService.uploadFile).toHaveBeenCalledWith(
+        model,
+        params.entity,
+        params.collection,
+        file,
+        body.data.attributes
+      );
       expect((result.data as Resource).id).toEqual(media.uuid);
       expect((result.data as Resource).attributes).toMatchObject(media);
     });

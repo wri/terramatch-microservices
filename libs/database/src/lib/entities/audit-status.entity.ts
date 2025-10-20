@@ -10,6 +10,7 @@ import { ProjectReport } from "./project-report.entity";
 import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { SitePolygon } from "./site-polygon.entity";
+import { DisturbanceReport } from "./disturbance-report.entity";
 
 const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
 type AuditStatusType = (typeof TYPES)[number];
@@ -42,7 +43,8 @@ export class AuditStatus extends Model<AuditStatus> {
     ProjectReport.LARAVEL_TYPE,
     SiteReport.LARAVEL_TYPE,
     NurseryReport.LARAVEL_TYPE,
-    SitePolygon.LARAVEL_TYPE
+    SitePolygon.LARAVEL_TYPE,
+    DisturbanceReport.LARAVEL_TYPE
   ];
 
   static for(auditable: LaravelModel) {

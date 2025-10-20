@@ -702,6 +702,20 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       inputType: "employees",
       collection: "full-time-clt"
     },
+    "org-leadership-team": {
+      property: "leadershipTeam",
+      label: "Leadership Team",
+      resource: "App\\Http\\Resources\\V2\\LeadershipsResource",
+      inputType: "leaderships",
+      collection: "leadership-team"
+    },
+    "org-core-team-leaders": {
+      property: "coreTeamLeaders",
+      label: "Core Team Leaders",
+      resource: "App\\Http\\Resources\\V2\\LeadershipsResource",
+      inputType: "leaderships",
+      collection: "core-team-leaders"
+    },
     "org-employees-part-time": {
       property: "employeesPartTime",
       label: "Part Time Employees",

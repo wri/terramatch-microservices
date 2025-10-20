@@ -249,6 +249,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   localEngagement: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  plantingStatus: string | null;
+
   @ApiProperty()
   siteAddition: boolean;
 

@@ -9,12 +9,29 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
+import { FormSection } from "./form-section.entity";
+import { FormQuestion } from "./form-question.entity";
 
-@Table({ tableName: "forms", underscored: true, paranoid: true })
+@Table({
+  tableName: "forms",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async beforeDestroy(form: Form) {
+      // Handle deleting all questions and sections in 2 queries and avoid N+1 cascading by forcing
+      // hooks off.
+      await FormQuestion.destroy({
+        where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } },
+        hooks: false
+      });
+      await FormSection.destroy({ where: { formId: form.uuid }, hooks: false });
+    }
+  }
+})
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 

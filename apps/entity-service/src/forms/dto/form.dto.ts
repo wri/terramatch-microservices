@@ -8,7 +8,8 @@ import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constan
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
 import { FormSectionDto } from "./form-section.dto";
 
-type FormWithoutTranslations = Omit<Form, "title" | "subtitle" | "description" | "submissionMessage">;
+type FormExtras = "title" | "subtitle" | "description" | "submissionMessage";
+type FormWithoutExtras = Omit<Form, FormExtras>;
 
 @JsonApiConstants
 export class Forms {
@@ -18,10 +19,10 @@ export class Forms {
 
 @JsonApiDto({ type: "forms" })
 export class FormLightDto extends HybridSupportDto {
-  constructor(form?: FormWithoutTranslations, props?: HybridSupportProps<FormLightDto, FormWithoutTranslations>) {
+  constructor(form?: FormWithoutExtras, props?: HybridSupportProps<FormLightDto, FormWithoutExtras>) {
     super();
     if (form != null && props != null) {
-      populateDto<FormLightDto, FormWithoutTranslations>(this, form, { lightResource: true, ...props });
+      populateDto<FormLightDto, FormWithoutExtras>(this, form, { lightResource: true, ...props });
     }
   }
 
@@ -42,9 +43,9 @@ export class FormLightDto extends HybridSupportDto {
 }
 
 export class FormFullDto extends FormLightDto {
-  constructor(form: FormWithoutTranslations, props: HybridSupportProps<FormFullDto, FormWithoutTranslations>) {
+  constructor(form: FormWithoutExtras, props: HybridSupportProps<FormFullDto, FormWithoutExtras>) {
     super();
-    populateDto<FormFullDto, FormWithoutTranslations>(this, form, { lightResource: false, ...props });
+    populateDto<FormFullDto, FormWithoutExtras>(this, form, { lightResource: false, ...props });
   }
 
   @ApiProperty({

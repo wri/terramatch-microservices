@@ -16,7 +16,17 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormSection } from "./form-section.entity";
 import { InputType } from "../constants/linked-fields";
 
-@Table({ tableName: "form_questions", underscored: true, paranoid: true })
+@Table({
+  tableName: "form_questions",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async beforeDestroy(question: FormQuestion) {
+      // Child questions cannot themselves have children, so avoid N+1 query by forcing hooks off
+      await FormQuestion.destroy({ where: { parentId: question.id }, hooks: false });
+    }
+  }
+})
 export class FormQuestion extends Model<FormQuestion> {
   @PrimaryKey
   @AutoIncrement

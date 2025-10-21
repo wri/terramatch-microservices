@@ -18,12 +18,11 @@ describe("FormPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("should allow uploading files for forms in your framework", async () => {
+  it("should allow uploading files to forms if you can forms manage", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
-    const frameworkKey = "ppc";
-    mockPermissions(`framework-${frameworkKey}`);
-    const form = await FormFactory.create({ frameworkKey });
+    mockPermissions("custom-forms-manage");
+    const form = await FormFactory.create();
     await expectCan(service, ["uploadFiles"], form);
   });
 
@@ -31,7 +30,7 @@ describe("FormPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("framework-terrafund");
-    const form = await FormFactory.create({ frameworkKey: "framework-ppc" });
+    const form = await FormFactory.create();
     await expectCannot(service, ["uploadFiles"], form);
   });
 });

@@ -47,7 +47,7 @@ export class FormsService {
     if (query.sort?.field != null) {
       if (SORTABLE_FIELDS.includes(query.sort?.field as keyof Attributes<Form>)) {
         builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
-      } else {
+      } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort?.field}`);
       }
     }

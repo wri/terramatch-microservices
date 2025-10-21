@@ -3,7 +3,7 @@ import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
+import { CreateSitePolygonBatchRequestDto, Feature, FeatureProperties } from "./dto/create-site-polygon-request.dto";
 
 // Mock Sequelize
 const mockTransaction = {
@@ -315,7 +315,7 @@ describe("SitePolygonCreationService", () => {
                     ]
                   ]
                 },
-                properties: {} as any // Missing site_id
+                properties: {} as FeatureProperties
               }
             ]
           }

@@ -76,15 +76,10 @@ export class SitePolygonCreationService {
 
       if (allPolygonUuids.length > 0) {
         await this.polygonGeometryService.bulkUpdateSitePolygonCentroids(allPolygonUuids, transaction);
+        await this.polygonGeometryService.bulkUpdateSitePolygonAreas(allPolygonUuids, transaction);
       }
 
       await transaction.commit();
-
-      if (allPolygonUuids.length > 0) {
-        this.queueIndicatorAnalysis(allPolygonUuids).catch(error => {
-          this.logger.error("Failed to queue indicator analysis", error);
-        });
-      }
 
       return allCreatedSitePolygons;
     } catch (error) {
@@ -244,8 +239,6 @@ export class SitePolygonCreationService {
       const feature = features[i];
       const geometry = feature.geometry;
       const properties = feature.properties;
-
-      // For MultiPolygon, we create multiple site_polygon records
       const numPolygons = geometry.type === "MultiPolygon" ? (geometry.coordinates as number[][][][]).length : 1;
 
       for (let j = 0; j < numPolygons; j++) {
@@ -262,7 +255,7 @@ export class SitePolygonCreationService {
           targetSys: properties.target_sys ?? null,
           distr: properties.distr ?? null,
           numTrees: properties.num_trees ?? null,
-          calcArea: areas[polygonIndex],
+          calcArea: null,
           source: SOURCE_GREENHOUSE,
           createdBy: userId,
           isActive: true,

@@ -26,7 +26,10 @@ describe("SitePolygonCreationService", () => {
         {
           provide: PolygonGeometryCreationService,
           useValue: {
-            createGeometriesFromFeatures: jest.fn()
+            createGeometriesFromFeatures: jest.fn(),
+            bulkUpdateSitePolygonCentroids: jest.fn(),
+            bulkUpdateSitePolygonAreas: jest.fn(),
+            bulkUpdateProjectCentroids: jest.fn()
           }
         }
       ]
@@ -289,6 +292,229 @@ describe("SitePolygonCreationService", () => {
       await expect(service.createSitePolygons(request, mockUserId)).rejects.toThrow();
       expect(mockTransaction.rollback).toHaveBeenCalled();
       expect(mockTransaction.commit).not.toHaveBeenCalled();
+    });
+
+    it("should set status to draft for new polygons", async () => {
+      const mockFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1",
+          poly_name: "Test Polygon"
+        }
+      };
+
+      const request = createMockRequest([mockFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      const bulkCreateSpy = jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          siteUuid: "site-uuid-1",
+          polygonUuid: "polygon-uuid-1",
+          status: "draft"
+        } as SitePolygon
+      ]);
+
+      await service.createSitePolygons(request, mockUserId);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ status: "draft" })]),
+        expect.anything()
+      );
+    });
+
+    it("should set calcArea to null initially", async () => {
+      const mockFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      const request = createMockRequest([mockFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      const bulkCreateSpy = jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          calcArea: null
+        } as SitePolygon
+      ]);
+
+      await service.createSitePolygons(request, mockUserId);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ calcArea: null })]),
+        expect.anything()
+      );
+    });
+
+    it("should update site polygon centroids after creation", async () => {
+      const mockFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      const request = createMockRequest([mockFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          polygonUuid: "polygon-uuid-1"
+        } as SitePolygon
+      ]);
+
+      await service.createSitePolygons(request, mockUserId);
+
+      expect(polygonGeometryService.bulkUpdateSitePolygonCentroids).toHaveBeenCalledWith(
+        ["polygon-uuid-1"],
+        mockTransaction
+      );
+    });
+
+    it("should update site polygon areas after creation", async () => {
+      const mockFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      const request = createMockRequest([mockFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          polygonUuid: "polygon-uuid-1"
+        } as SitePolygon
+      ]);
+
+      await service.createSitePolygons(request, mockUserId);
+
+      expect(polygonGeometryService.bulkUpdateSitePolygonAreas).toHaveBeenCalledWith(
+        ["polygon-uuid-1"],
+        mockTransaction
+      );
+    });
+
+    it("should update project centroids after creation", async () => {
+      const mockFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      const request = createMockRequest([mockFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          polygonUuid: "polygon-uuid-1"
+        } as SitePolygon
+      ]);
+
+      await service.createSitePolygons(request, mockUserId);
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        ["polygon-uuid-1"],
+        mockTransaction
+      );
     });
   });
 

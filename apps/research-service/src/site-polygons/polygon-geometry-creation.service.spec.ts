@@ -339,4 +339,134 @@ describe("PolygonGeometryCreationService", () => {
       expect(result.uuids).toHaveLength(2);
     });
   });
+
+  describe("bulkUpdateSitePolygonCentroids", () => {
+    it("should return early for empty polygon array", async () => {
+      await service.bulkUpdateSitePolygonCentroids([]);
+      expect(mockSequelize.query).not.toHaveBeenCalled();
+    });
+
+    it("should throw error if sequelize is not available", async () => {
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        get: jest.fn(() => null),
+        configurable: true
+      });
+
+      await expect(service.bulkUpdateSitePolygonCentroids(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should update centroids for site polygons", async () => {
+      mockSequelize.query.mockResolvedValue([]);
+
+      await service.bulkUpdateSitePolygonCentroids(["polygon-uuid-1", "polygon-uuid-2"]);
+
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE site_polygon"),
+        expect.objectContaining({
+          type: QueryTypes.UPDATE,
+          replacements: expect.objectContaining({
+            uuid0: "polygon-uuid-1",
+            uuid1: "polygon-uuid-2"
+          })
+        })
+      );
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("ST_Y(ST_Centroid(pg.geom))"),
+        expect.anything()
+      );
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("ST_X(ST_Centroid(pg.geom))"),
+        expect.anything()
+      );
+    });
+  });
+
+  describe("bulkUpdateSitePolygonAreas", () => {
+    it("should return early for empty polygon array", async () => {
+      await service.bulkUpdateSitePolygonAreas([]);
+      expect(mockSequelize.query).not.toHaveBeenCalled();
+    });
+
+    it("should throw error if sequelize is not available", async () => {
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        get: jest.fn(() => null),
+        configurable: true
+      });
+
+      await expect(service.bulkUpdateSitePolygonAreas(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should update areas for site polygons", async () => {
+      mockSequelize.query.mockResolvedValue([]);
+
+      await service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"]);
+
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE site_polygon"),
+        expect.objectContaining({
+          type: QueryTypes.UPDATE,
+          replacements: expect.objectContaining({
+            uuid0: "polygon-uuid-1"
+          })
+        })
+      );
+      expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("ST_Area(pg.geom)"), expect.anything());
+    });
+  });
+
+  describe("bulkUpdateProjectCentroids", () => {
+    it("should return early for empty polygon array", async () => {
+      await service.bulkUpdateProjectCentroids([]);
+      expect(mockSequelize.query).not.toHaveBeenCalled();
+    });
+
+    it("should throw error if sequelize is not available", async () => {
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        get: jest.fn(() => null),
+        configurable: true
+      });
+
+      await expect(service.bulkUpdateProjectCentroids(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should update project centroids using ALL active polygons", async () => {
+      mockSequelize.query.mockResolvedValue([]);
+
+      await service.bulkUpdateProjectCentroids(["polygon-uuid-1"]);
+
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE v2_projects"),
+        expect.objectContaining({
+          type: QueryTypes.UPDATE,
+          replacements: expect.objectContaining({
+            uuid0: "polygon-uuid-1"
+          })
+        })
+      );
+      // Should use subquery to get project_id
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT DISTINCT s2.project_id"),
+        expect.anything()
+      );
+      // Should filter by active polygons
+      expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("sp.is_active = 1"), expect.anything());
+      // Should calculate average centroids
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("AVG(ST_Y(ST_Centroid(pg.geom)))"),
+        expect.anything()
+      );
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("AVG(ST_X(ST_Centroid(pg.geom)))"),
+        expect.anything()
+      );
+    });
+
+    it("should handle errors gracefully", async () => {
+      mockSequelize.query.mockRejectedValue(new Error("Database error"));
+
+      await expect(service.bulkUpdateProjectCentroids(["polygon-uuid-1"])).rejects.toThrow(
+        InternalServerErrorException
+      );
+    });
+  });
 });

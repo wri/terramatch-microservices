@@ -68,6 +68,7 @@ export class SitePolygonCreationService {
       if (allPolygonUuids.length > 0) {
         await this.polygonGeometryService.bulkUpdateSitePolygonCentroids(allPolygonUuids, transaction);
         await this.polygonGeometryService.bulkUpdateSitePolygonAreas(allPolygonUuids, transaction);
+        await this.polygonGeometryService.bulkUpdateProjectCentroids(allPolygonUuids, transaction);
       }
 
       await transaction.commit();

@@ -266,7 +266,7 @@ export class SitePolygonCreationService {
           source: SOURCE_GREENHOUSE,
           createdBy: userId,
           isActive: true,
-          status: null
+          status: "draft"
         });
 
         polygonIndex++;

@@ -1,9 +1,10 @@
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
 import { Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
+import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
@@ -19,20 +20,10 @@ export class SitePolygonCreationService {
 
   constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
 
-  /**
-   * Create site polygons from batch request
-   * Main entry point for polygon creation
-   * Returns array of created SitePolygon models
-   */
   async createSitePolygons(request: CreateSitePolygonBatchRequestDto, userId: number): Promise<SitePolygon[]> {
     return await this.storeAndValidateGeometries(request.geometries, userId);
   }
 
-  /**
-   * Store and validate geometries - main processing logic
-   * Follows V2 pattern: group by site, then by type, check duplicates, create polygons
-   * Returns array of created SitePolygon models
-   */
   private async storeAndValidateGeometries(
     geometries: { type: string; features: Feature[] }[],
     userId: number
@@ -211,10 +202,8 @@ export class SitePolygonCreationService {
     userId: number,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
-    // Extract geometries from features
     const geometries = features.map(f => f.geometry);
 
-    // Create polygon geometries
     const { uuids: polygonUuids, areas } = await this.polygonGeometryService.createGeometriesFromFeatures(
       geometries,
       userId,
@@ -233,6 +222,7 @@ export class SitePolygonCreationService {
     transaction: Transaction
   ): Promise<SitePolygon[]> {
     const sitePolygons: Partial<SitePolygon>[] = [];
+    const additionalDataRecords: Partial<SitePolygonData>[] = [];
     let polygonIndex = 0;
 
     for (let i = 0; i < features.length; i++) {
@@ -243,29 +233,47 @@ export class SitePolygonCreationService {
 
       for (let j = 0; j < numPolygons; j++) {
         const primaryUuid = uuidv4();
+        const sitePolygonUuid = uuidv4();
+
+        const allProperties = { ...properties };
+        if (siteId != null) {
+          allProperties.site_id = siteId;
+        }
+
+        const validatedProperties = validateSitePolygonProperties(allProperties);
+        const additionalData = extractAdditionalData(allProperties);
+
+        validatedProperties.calcArea = areas[polygonIndex] ?? null;
 
         sitePolygons.push({
-          uuid: uuidv4(),
+          uuid: sitePolygonUuid,
           primaryUuid,
           siteUuid: siteId,
           polygonUuid: polygonUuids[polygonIndex],
-          polyName: properties.poly_name ?? null,
-          plantStart: properties.plantstart != null ? new Date(properties.plantstart) : null,
-          practice: properties.practice ?? null,
-          targetSys: properties.target_sys ?? null,
-          distr: properties.distr ?? null,
-          numTrees: properties.num_trees ?? null,
-          calcArea: null,
+          ...validatedProperties,
           source: SOURCE_GREENHOUSE,
           createdBy: userId,
           isActive: true,
           status: "draft"
         });
 
+        if (Object.keys(additionalData).length > 0) {
+          additionalDataRecords.push({
+            sitePolygonUuid,
+            data: additionalData
+          });
+        }
+
         polygonIndex++;
       }
     }
 
-    return await SitePolygon.bulkCreate(sitePolygons as SitePolygon[], { transaction });
+    const createdSitePolygons = await SitePolygon.bulkCreate(sitePolygons as SitePolygon[], { transaction });
+
+    if (additionalDataRecords.length > 0) {
+      await SitePolygonData.bulkCreate(additionalDataRecords as SitePolygonData[], { transaction });
+    }
+
+    return createdSitePolygons;
   }
 }

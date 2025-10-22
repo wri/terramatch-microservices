@@ -5,22 +5,24 @@ import { EntitiesService } from "../entities/entities.service";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import "multer";
+import sharp from "sharp";
 import {
-  MEDIA_OWNER_MODELS,
   EntityMediaOwnerClass,
+  MEDIA_OWNER_MODELS,
+  MediaConfiguration,
   MediaOwnerModel,
   MediaOwnerType,
-  MediaConfiguration,
   ValidationKey
 } from "@terramatch-microservices/database/constants/media-owners";
-
-export interface ExtractedRequestData {
-  isPublic: boolean;
-  lat: number;
-  lng: number;
-}
+import { MediaRequestAttributes } from "../entities/dto/media-request.dto";
+import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 const mappingMimeTypes = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/heif": "heif",
+  "image/heic": "heic",
+  "image/svg+xml": "svg",
   "text/plain": "txt",
   "application/pdf": "pdf",
   "application/vnd.ms-excel": "xls",
@@ -30,6 +32,8 @@ const mappingMimeTypes = {
   "application/vnd.ms-word": "doc",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
 };
+
+const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
 
 const VALIDATION: {
   VALIDATION_RULES: Record<ValidationKey, string>;
@@ -70,7 +74,7 @@ export class FileUploadService {
     entity: MediaOwnerType,
     collection: string,
     file: Express.Multer.File,
-    body: ExtractedRequestData
+    data: MediaRequestAttributes
   ): Promise<Media> {
     if (file == null) {
       throw new BadRequestException("No file provided");
@@ -81,8 +85,6 @@ export class FileUploadService {
     const configuration = this.getConfiguration(mediaOwnerModel, collection);
 
     this.validateFile(file, configuration);
-
-    await this.mediaService.uploadFile(file);
 
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
@@ -97,21 +99,50 @@ export class FileUploadService {
     media.fileName = file.originalname;
     media.mimeType = file.mimetype;
     media.fileType = this.getMediaType(file, configuration);
-    media.isPublic = body.isPublic;
-    media.lat = body.lat;
-    media.lng = body.lng;
+    media.isPublic = data.isPublic;
+    media.customProperties = { custom_headers: { ACL: "public-read" } };
+    media.generatedConversions = {};
+    media.lat = data.lat;
+    media.lng = data.lng;
     media.size = file.size;
     media.createdBy = this.entitiesService.userId;
     media.photographer = user?.fullName ?? null;
 
-    return await media.save();
+    await media.save();
+    try {
+      const { buffer, originalname, mimetype } = file;
+
+      const original = SUPPORTS_THUMBNAIL.includes(media.mimeType)
+        ? // orient the photo according to the EXIF metadata. rotate() with no arguments uses the
+          // EXIF orientation tags to set up the photo the way it's meant to be viewed.
+          await sharp(buffer).rotate().keepExif().toBuffer()
+        : buffer;
+      await this.mediaService.uploadFile(original, `${media.id}/${originalname}`, mimetype);
+
+      if (SUPPORTS_THUMBNAIL.includes(media.mimeType)) {
+        const thumbnail = await sharp(original)
+          .resize({ width: 350, height: 211, fit: "inside" })
+          .keepExif()
+          .toBuffer();
+        const extensionIdx = originalname.lastIndexOf(".");
+        const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${originalname.substring(extensionIdx)}`;
+        await this.mediaService.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
+        await media.update({ generatedConversions: { thumbnail: true } });
+      }
+
+      return media;
+    } catch (error) {
+      this.logger.error(`Error uploading file to S3 [${error}]`);
+      await media.destroy({ force: true });
+      throw error;
+    }
   }
 
   private getConfiguration(
     entityModel: EntityMediaOwnerClass<MediaOwnerModel>,
     collection: string
   ): MediaConfiguration {
-    const configuration = entityModel.MEDIA[collection];
+    const configuration = Object.values(entityModel.MEDIA).find(({ dbCollection }) => dbCollection === collection);
     if (configuration == null) {
       throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
     }
@@ -153,17 +184,19 @@ export class FileUploadService {
       const abbreviatedMimeType = mappingMimeTypes[file.mimetype as keyof typeof mappingMimeTypes];
       if (!mimeTypes.includes(abbreviatedMimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
-        throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
+        throw new TranslatableException(`Invalid file type: ${file.mimetype}`, "MIMES", {
+          values: mimeTypes.join(", ")
+        });
       }
     }
 
     if (sizeValidation != null) {
       const size = sizeValidation.split(":")[1];
-      const removeSuffix = size.replace("MB", "");
-      const sizeInBytes = parseInt(removeSuffix) * 1024 * 1024;
+      const sizeInMB = parseInt(size.replace("MB", ""));
+      const sizeInBytes = sizeInMB * 1024 * 1024;
 
       if (file.size > sizeInBytes) {
-        throw new BadRequestException("File size must be less than 10MB");
+        throw new TranslatableException(`File size must be less than ${size}`, "FILE_SIZE", { max: sizeInMB });
       }
 
       return true;

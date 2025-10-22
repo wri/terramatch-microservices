@@ -1,7 +1,17 @@
-import { Controller, Delete, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FormFullDto, FormLightDto, Forms } from "./dto/form.dto";
+import { FormCreateBody, FormFullDto, FormLightDto, Forms } from "./dto/form.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
@@ -21,7 +31,7 @@ export class FormsController {
   })
   @JsonApiResponse({ data: FormLightDto, pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params are invalid" })
-  async formIndex(@Query() query: FormIndexQueryDto) {
+  async index(@Query() query: FormIndexQueryDto) {
     return await this.formsService.addIndex(buildJsonApi<FormLightDto>(FormLightDto, { pagination: "number" }), query);
   }
 
@@ -34,7 +44,7 @@ export class FormsController {
   @JsonApiResponse({ data: FormFullDto })
   @ExceptionResponse(NotFoundException, { description: "Form not found" })
   @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
-  async formGet(@Param("uuid") uuid: string, @Query() query: FormGetQueryDto) {
+  async get(@Param("uuid") uuid: string, @Query() query: FormGetQueryDto) {
     const form = await this.formsService.findOne(uuid);
     return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, query.translated ?? true);
   }
@@ -47,7 +57,7 @@ export class FormsController {
   })
   @ExceptionResponse(NotFoundException, { description: "Form not found." })
   @ExceptionResponse(BadRequestException, { description: "Form is not allowed to be deleted." })
-  async formDelete(@Param("uuid") uuid: string) {
+  async delete(@Param("uuid") uuid: string) {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("delete", form);
     if (form.published) {
@@ -56,5 +66,14 @@ export class FormsController {
 
     await form.destroy();
     return buildDeletedResponse(getDtoType(FormFullDto), uuid);
+  }
+
+  @Post()
+  @ApiOperation({ operationId: "formCreate", description: "Create a new form" })
+  @JsonApiResponse(FormFullDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Form creation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
+  async create(@Body() payload: FormCreateBody) {
+    console.log("payload", JSON.stringify(payload, null, 2));
   }
 }

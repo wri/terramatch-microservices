@@ -1,12 +1,15 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Form } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
-import { FormSectionDto } from "./form-section.dto";
+import { CreateFormSectionAttributes, FormSectionDto } from "./form-section.dto";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 
 type FormExtras = "title" | "subtitle" | "description" | "submissionMessage";
 type FormWithoutExtras = Omit<Form, FormExtras>;
@@ -29,11 +32,14 @@ export class FormLightDto extends HybridSupportDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ description: "Translated form title" })
+  @IsString()
+  @ApiProperty({ description: "Translated form title", type: String })
   title: string;
 
-  @ApiProperty({ nullable: true, enum: FORM_TYPES })
-  type: FormType | null;
+  @IsOptional()
+  @IsIn(FORM_TYPES)
+  @ApiProperty({ nullable: true, required: false, enum: FORM_TYPES })
+  type?: FormType | null;
 
   @ApiProperty()
   published: boolean;
@@ -53,29 +59,46 @@ export class FormFullDto extends FormLightDto {
   })
   translated: boolean;
 
-  @ApiProperty({ nullable: true, type: String })
-  subtitle: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  subtitle?: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  description: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  description?: string | null;
 
-  @ApiProperty({ nullable: true, enum: FRAMEWORK_KEYS })
-  frameworkKey: FrameworkKey;
+  @IsOptional()
+  @IsIn(FRAMEWORK_KEYS)
+  @ApiProperty({ nullable: true, required: false, enum: FRAMEWORK_KEYS })
+  frameworkKey?: FrameworkKey;
 
-  @ApiProperty({ nullable: true, type: String })
-  documentation: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  documentation?: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
   documentationLabel: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  deadlineAt: Date | null;
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  @ApiProperty({ nullable: true, required: false, type: Date })
+  deadlineAt?: Date | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  submissionMessage: string | null;
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty()
+  submissionMessage: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  stageId: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  stageId?: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   fundingProgrammeId: string | null;
@@ -83,3 +106,26 @@ export class FormFullDto extends FormLightDto {
   @ApiProperty({ type: () => FormSectionDto, isArray: true })
   sections: FormSectionDto[];
 }
+
+export class CreateFormAttributes extends PickType(FormFullDto, [
+  "title",
+  "subtitle",
+  "frameworkKey",
+  "type",
+  "description",
+  "documentation",
+  "documentationLabel",
+  "deadlineAt",
+  "submissionMessage",
+  "stageId"
+]) {
+  @ValidateNested()
+  @IsOptional()
+  @Type(() => CreateFormSectionAttributes)
+  @ApiProperty({ required: false, type: () => CreateFormSectionAttributes, isArray: true })
+  sections?: CreateFormSectionAttributes[];
+}
+
+export class FormCreateBody extends JsonApiBodyDto(
+  class FormCreateData extends CreateDataDto("forms", CreateFormAttributes) {}
+) {}

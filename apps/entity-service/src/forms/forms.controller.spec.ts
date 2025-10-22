@@ -33,7 +33,7 @@ describe("FormsController", () => {
   describe("formsIndex", () => {
     it("calls addIndex on the service", async () => {
       const query: FormIndexQueryDto = { search: "foo", type: "nursery" };
-      await controller.formIndex(query);
+      await controller.index(query);
       expect(service.addIndex).toHaveBeenCalledWith(expect.any(DocumentBuilder), query);
     });
   });
@@ -43,7 +43,7 @@ describe("FormsController", () => {
       const form = {} as Form;
       const query: FormGetQueryDto = { translated: false };
       service.findOne.mockResolvedValue(form);
-      await controller.formGet("fake-uuid", query);
+      await controller.get("fake-uuid", query);
       expect(service.findOne).toHaveBeenCalledWith("fake-uuid");
       expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
     });
@@ -56,7 +56,7 @@ describe("FormsController", () => {
 
     it("throws if the form is published", async () => {
       service.findOne.mockResolvedValue({ published: true } as Form);
-      await expect(controller.formDelete("fake-uuid")).rejects.toThrow(BadRequestException);
+      await expect(controller.delete("fake-uuid")).rejects.toThrow(BadRequestException);
     });
 
     it("Destroys the form and all questions", async () => {
@@ -67,7 +67,7 @@ describe("FormsController", () => {
         ...(await FormQuestionFactory.createMany(2, { formSectionId: sections[1].id }))
       ];
       service.findOne.mockResolvedValue(form);
-      await controller.formDelete(form.uuid);
+      await controller.delete(form.uuid);
 
       await form.reload({ paranoid: false });
       await Promise.all(sections.map(section => section.reload({ paranoid: false })));

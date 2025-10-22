@@ -255,7 +255,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
           pg.uuid as polygonUuid,
           ST_Area(pg.geom) as "polygonArea",
           ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
-          wcg.country
+          p.country
         FROM polygon_geometry pg
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
         JOIN v2_sites s ON s.uuid = sp.site_id

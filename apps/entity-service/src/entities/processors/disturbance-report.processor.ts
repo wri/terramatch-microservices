@@ -22,6 +22,59 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
+const REPORT_ENTRIES = [
+  {
+    name: "disturbance-type",
+    inputType: "select",
+    title: "Disturbance Type"
+  },
+  {
+    name: "disturbance-subtype",
+    inputType: "select-multi",
+    title: "Disturbance Subtype"
+  },
+  {
+    name: "intensity",
+    inputType: "select",
+    title: "Intensity"
+  },
+  {
+    name: "extent",
+    inputType: "select",
+    title: "Extent"
+  },
+  {
+    name: "people-affected",
+    inputType: "number",
+    title: "People Affected"
+  },
+  {
+    name: "monetary-damage",
+    inputType: "number",
+    title: "Monetary Damage"
+  },
+  {
+    name: "property-affected",
+    inputType: "select-multi",
+    title: "Property Affected"
+  },
+  {
+    name: "date-of-disturbance",
+    inputType: "date",
+    title: "Date of Disturbance"
+  },
+  {
+    name: "site-affected",
+    inputType: "disturbanceAffectedSite",
+    title: "Site Affected"
+  },
+  {
+    name: "polygon-affected",
+    inputType: "disturbanceAffectedPolygon",
+    title: "Polygon Affected"
+  }
+];
+
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
   "updateRequestStatus",
@@ -254,60 +307,12 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       title: "Disturbance Report"
     } as DisturbanceReport);
 
-    const defaults = [
-      {
-        name: "disturbance-type",
-        inputType: "select",
-        title: "Disturbance Type",
+    await DisturbanceReportEntry.bulkCreate(
+      REPORT_ENTRIES.map(entry => ({
+        ...entry,
         disturbanceReportId: disturbanceReport.id
-      },
-      {
-        name: "disturbance-subtype",
-        inputType: "select-multi",
-        title: "Disturbance Subtype",
-        disturbanceReportId: disturbanceReport.id
-      },
-      { name: "intensity", inputType: "select", title: "Intensity", disturbanceReportId: disturbanceReport.id },
-      { name: "extent", inputType: "select", title: "Extent", disturbanceReportId: disturbanceReport.id },
-      {
-        name: "people-affected",
-        inputType: "number",
-        title: "People Affected",
-        disturbanceReportId: disturbanceReport.id
-      },
-      {
-        name: "monetary-damage",
-        inputType: "number",
-        title: "Monetary Damage",
-        disturbanceReportId: disturbanceReport.id
-      },
-      {
-        name: "property-affected",
-        inputType: "select-multi",
-        title: "Property Affected",
-        disturbanceReportId: disturbanceReport.id
-      },
-      {
-        name: "date-of-disturbance",
-        inputType: "date",
-        title: "Date of Disturbance",
-        disturbanceReportId: disturbanceReport.id
-      },
-      {
-        name: "site-affected",
-        inputType: "disturbanceAffectedSite",
-        title: "Site Affected",
-        disturbanceReportId: disturbanceReport.id
-      },
-      {
-        name: "polygon-affected",
-        inputType: "disturbanceAffectedPolygon",
-        title: "Polygon Affected",
-        disturbanceReportId: disturbanceReport.id
-      }
-    ];
-
-    await DisturbanceReportEntry.bulkCreate(defaults as CreationAttributes<DisturbanceReportEntry>[]);
+      })) as CreationAttributes<DisturbanceReportEntry>[]
+    );
 
     return disturbanceReport;
   }

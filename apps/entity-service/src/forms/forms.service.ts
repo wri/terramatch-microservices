@@ -22,7 +22,7 @@ import {
   FormQuestionDto,
   FormQuestionOptionDto,
   StoreFormQuestionOptionAttributes,
-  StormFormQuestionAttributes
+  StoreFormQuestionAttributes
 } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Attributes, Model, Op } from "sequelize";
@@ -291,7 +291,7 @@ export class FormsService {
 
   private async createQuestion(
     sectionId: number,
-    attributes: StormFormQuestionAttributes,
+    attributes: StoreFormQuestionAttributes,
     order: number,
     parentUuid?: string
   ) {

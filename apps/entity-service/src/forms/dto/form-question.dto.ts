@@ -120,7 +120,7 @@ export class FormQuestionDto {
 
 export class StoreFormQuestionOptionAttributes extends PickType(FormQuestionOptionDto, ["slug", "label", "imageUrl"]) {}
 
-export class StormFormQuestionAttributes extends PickType(FormQuestionDto, [
+export class StoreFormQuestionAttributes extends PickType(FormQuestionDto, [
   "linkedFieldKey",
   "collection",
   "label",
@@ -145,9 +145,9 @@ export class StormFormQuestionAttributes extends PickType(FormQuestionDto, [
   multiChoice?: boolean;
 
   @ValidateNested()
-  @Type(() => StormFormQuestionAttributes)
-  @ApiProperty({ required: false, type: () => StormFormQuestionAttributes, isArray: true })
-  children?: StormFormQuestionAttributes[];
+  @Type(() => StoreFormQuestionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormQuestionAttributes, isArray: true })
+  children?: StoreFormQuestionAttributes[];
 
   @ValidateNested()
   @Type(() => StoreFormQuestionOptionAttributes)

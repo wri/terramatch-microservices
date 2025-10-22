@@ -1,7 +1,7 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { StormFormQuestionAttributes, FormQuestionDto } from "./form-question.dto";
+import { StoreFormQuestionAttributes, FormQuestionDto } from "./form-question.dto";
 import { FormSection } from "@terramatch-microservices/database/entities";
 import { IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
@@ -34,7 +34,7 @@ export class FormSectionDto {
 
 export class StoreFormSectionAttributes extends PickType(FormSectionDto, ["title", "description"]) {
   @ValidateNested()
-  @Type(() => StormFormQuestionAttributes)
-  @ApiProperty({ required: false, type: () => StormFormQuestionAttributes, isArray: true })
-  questions?: StormFormQuestionAttributes[];
+  @Type(() => StoreFormQuestionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormQuestionAttributes, isArray: true })
+  questions?: StoreFormQuestionAttributes[];
 }

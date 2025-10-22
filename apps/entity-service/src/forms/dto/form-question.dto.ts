@@ -125,7 +125,6 @@ export class StoreFormQuestionAttributes extends PickType(FormQuestionDto, [
   "collection",
   "label",
   "inputType",
-  "name",
   "placeholder",
   "description",
   "validation",
@@ -138,6 +137,12 @@ export class StoreFormQuestionAttributes extends PickType(FormQuestionDto, [
   "minCharacterLimit",
   "maxCharacterLimit"
 ]) {
+  // optional on request, but not in response
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false })
+  name?: string;
+
   // optional on request, but not in response
   @IsOptional()
   @IsBoolean()

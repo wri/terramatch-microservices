@@ -14,7 +14,6 @@ import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus"];
 
@@ -26,8 +25,7 @@ export class FinancialReportProcessor extends ReportProcessor<
   FinancialReport,
   FinancialReportLightDto,
   FinancialReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;

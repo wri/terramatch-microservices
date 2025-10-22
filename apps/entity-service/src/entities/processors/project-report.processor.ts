@@ -20,7 +20,6 @@ import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Literal } from "sequelize/types/utils";
-import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
 
@@ -43,8 +42,7 @@ export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
   ProjectReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;

@@ -6,7 +6,6 @@ import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -30,8 +29,7 @@ export class NurseryReportProcessor extends ReportProcessor<
   NurseryReport,
   NurseryReportLightDto,
   NurseryReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;

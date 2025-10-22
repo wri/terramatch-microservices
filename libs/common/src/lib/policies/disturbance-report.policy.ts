@@ -25,7 +25,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "update"], DisturbanceReport, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "update", "delete"], DisturbanceReport, { projectId: { $in: projectIds } });
         }
       }
     }

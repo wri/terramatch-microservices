@@ -160,16 +160,7 @@ export class EntitiesController {
     operationId: "entityCreate",
     summary: "Create a new entity resource"
   })
-  @JsonApiResponse([
-    ProjectFullDto,
-    SiteFullDto,
-    NurseryFullDto,
-    ProjectReportFullDto,
-    NurseryReportFullDto,
-    SiteReportFullDto,
-    FinancialReportFullDto,
-    DisturbanceReportFullDto
-  ])
+  @JsonApiResponse([DisturbanceReportFullDto])
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })

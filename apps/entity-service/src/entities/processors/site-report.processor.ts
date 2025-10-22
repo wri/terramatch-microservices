@@ -16,7 +16,6 @@ import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/s
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { EntityCreateAttributes } from "../dto/entity-create.dto";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -42,8 +41,7 @@ export class SiteReportProcessor extends ReportProcessor<
   SiteReport,
   SiteReportLightDto,
   SiteReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;

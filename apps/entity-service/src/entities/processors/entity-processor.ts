@@ -63,7 +63,7 @@ export abstract class EntityProcessor<
   LightDto extends EntityDto,
   FullDto extends EntityDto,
   UpdateDto extends EntityUpdateData,
-  CreateDto extends EntityCreateData
+  CreateDto extends EntityCreateData = EntityCreateAttributes
 > {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
@@ -174,23 +174,19 @@ export abstract class EntityProcessor<
 
   /**
    * Creates a new entity with the provided attributes.
-   * This method should be implemented by concrete processors.
+   * This method must be implemented by concrete processors.
    */
   async create(attributes: CreateDto): Promise<ModelType> {
-    const model = await this.findOne(attributes.entityUuid);
-    if (model == null) {
-      throw new BadRequestException(`${this.resource} with UUID ${attributes.entityUuid} not found`);
-    }
-
-    return model;
+    throw new BadRequestException("Creation not supported for this entity type");
   }
 }
+
 export abstract class ReportProcessor<
   ModelType extends ReportModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto,
   UpdateDto extends ReportUpdateAttributes,
-  CreateDto extends EntityCreateAttributes
+  CreateDto extends EntityCreateAttributes = EntityCreateAttributes
 > extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto, CreateDto> {
   async update(model: ModelType, update: UpdateDto) {
     if (update.nothingToReport != null) {
@@ -220,19 +216,6 @@ export abstract class ReportProcessor<
     }
 
     await super.update(model, update);
-  }
-
-  /**
-   * Creates a new report entity with the provided projectUuid.
-   * This method can be overridden in concrete report processors if custom creation logic is needed.
-   */
-  async create(attributes: CreateDto): Promise<ModelType> {
-    const model = await this.findOne(attributes.entityUuid);
-    if (model == null) {
-      throw new BadRequestException(`${this.resource} with UUID ${attributes.entityUuid} not found`);
-    }
-
-    return model;
   }
 
   protected nothingToReportConditions = (queryValue: boolean) => {

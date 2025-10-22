@@ -206,9 +206,8 @@ describe("EntitiesController", () => {
           { entity: "sites" },
           {
             data: {
-              type: "projects",
-              id: "123e4567-e89b-12d3-a456-426614174000",
-              attributes: { entityUuid: "123e4567-e89b-12d3-a456-426614174000" }
+              type: "disturbanceReports",
+              attributes: { parentUuid: "123e4567-e89b-12d3-a456-426614174000" }
             }
           }
         )
@@ -218,18 +217,18 @@ describe("EntitiesController", () => {
     it("should call create on the processor and return the created entity", async () => {
       const project = await ProjectFactory.create();
       processor.create.mockResolvedValue(project);
-      const attributes = { entityUuid: "123e4567-e89b-12d3-a456-426614174000" };
+      const attributes = { parentUuid: "123e4567-e89b-12d3-a456-426614174000" };
 
       const result = serialize(
         await controller.entityCreate(
-          { entity: "projects" },
-          { data: { type: "projects", id: "123e4567-e89b-12d3-a456-426614174000", attributes } }
+          { entity: "disturbanceReports" },
+          { data: { type: "disturbanceReports", attributes } }
         )
       );
 
       expect(processor.create).toHaveBeenCalledWith(attributes);
       expect(processor.getFullDto).toHaveBeenCalledWith(project);
-      expect(result.meta.resourceType).toBe("projects");
+      expect(result.meta.resourceType).toBe("disturbanceReports");
     });
   });
 });

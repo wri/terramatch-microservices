@@ -16,9 +16,14 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { filter, flattenDeep, groupBy, sortBy, uniq } from "lodash";
 import { StoreFormAttributes, FormFullDto, FormLightDto } from "./dto/form.dto";
-import { FormSectionDto } from "./dto/form-section.dto";
+import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
-import { FormQuestionDto, FormQuestionOptionDto } from "./dto/form-question.dto";
+import {
+  FormQuestionDto,
+  FormQuestionOptionDto,
+  StoreFormQuestionOptionAttributes,
+  StormFormQuestionAttributes
+} from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Attributes, Model, Op } from "sequelize";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
@@ -180,30 +185,7 @@ export class FormsService {
   }
 
   async store(attributes: StoreFormAttributes) {
-    const form: Form = new Form();
-    // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
-    // rows are all numerical IDs.
-    form.updatedBy = `${RequestContext.currentContext.req.authenticatedUserId}`;
-    form.title = attributes.title;
-    form.titleId = await this.localizationService.generateI18nId(attributes.title);
-    form.subtitle = attributes.subtitle ?? null;
-    form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle);
-    form.frameworkKey = attributes.frameworkKey ?? null;
-    form.type = attributes.type ?? null;
-    form.description = attributes.description ?? null;
-    form.descriptionId = await this.localizationService.generateI18nId(attributes.description);
-    form.documentation = attributes.documentation ?? null;
-    form.documentationLabel = attributes.documentationLabel ?? null;
-    form.deadlineAt = attributes.deadlineAt ?? null;
-    form.submissionMessage = attributes.submissionMessage;
-    form.submissionMessageId = await this.localizationService.generateI18nId(attributes.submissionMessage);
-    form.stageId = attributes.stageId ?? null;
-    form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
-    // Newly created forms are always unpublished
-    form.published = false;
-    await form.save();
-
-    return form;
+    return await this.createForm(attributes);
   }
 
   private _userLocale?: ValidLocale;
@@ -256,5 +238,121 @@ export class FormsService {
       }),
       {} as Record<(typeof fields)[number], string>
     );
+  }
+
+  private async createForm(attributes: StoreFormAttributes) {
+    const form: Form = new Form();
+    // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
+    // rows are all numerical IDs.
+    form.updatedBy = `${RequestContext.currentContext.req.authenticatedUserId}`;
+    form.title = attributes.title;
+    form.titleId = await this.localizationService.generateI18nId(attributes.title);
+    form.subtitle = attributes.subtitle ?? null;
+    form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle);
+    form.frameworkKey = attributes.frameworkKey ?? null;
+    form.type = attributes.type ?? null;
+    form.description = attributes.description ?? null;
+    form.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    form.documentation = attributes.documentation ?? null;
+    form.documentationLabel = attributes.documentationLabel ?? null;
+    form.deadlineAt = attributes.deadlineAt ?? null;
+    form.submissionMessage = attributes.submissionMessage;
+    form.submissionMessageId = await this.localizationService.generateI18nId(attributes.submissionMessage);
+    form.stageId = attributes.stageId ?? null;
+    form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
+    // Newly created forms are always unpublished
+    form.published = false;
+    await form.save();
+
+    await Promise.all(
+      (attributes.sections ?? []).map((section, index) => this.createSection(form.uuid, section, index))
+    );
+
+    return form;
+  }
+
+  private async createSection(formUuid: string, attributes: StoreFormSectionAttributes, order: number) {
+    const section = new FormSection();
+    section.formId = formUuid;
+    section.order = order;
+    section.title = attributes.title ?? null;
+    section.titleId = await this.localizationService.generateI18nId(attributes.title);
+    section.description = attributes.description ?? null;
+    section.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    await section.save();
+
+    await Promise.all(
+      (attributes.questions ?? []).map((question, index) => this.createQuestion(section.id, question, index))
+    );
+
+    return section;
+  }
+
+  private async createQuestion(
+    sectionId: number,
+    attributes: StormFormQuestionAttributes,
+    order: number,
+    parentUuid?: string
+  ) {
+    const question = new FormQuestion();
+    question.formSectionId = sectionId;
+    question.order = order;
+    question.parentId = parentUuid ?? null;
+    question.linkedFieldKey = attributes.linkedFieldKey ?? null;
+    question.inputType = attributes.inputType;
+    question.label = attributes.label;
+    question.labelId = await this.localizationService.generateI18nId(attributes.label);
+    question.name = attributes.name ?? null;
+    question.placeholder = attributes.placeholder ?? null;
+    question.placeholderId = await this.localizationService.generateI18nId(attributes.placeholder);
+    question.description = attributes.description ?? null;
+    question.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    question.validation = attributes.validation ?? null;
+    question.additionalProps = attributes.additionalProps ?? null;
+    question.optionsOther = attributes.optionsOther ?? null;
+    question.multiChoice = attributes.multiChoice ?? false;
+    question.collection = attributes.collection ?? null;
+    question.optionsList = attributes.optionsList ?? null;
+    question.showOnParentCondition = attributes.showOnParentCondition ?? null;
+    question.years = attributes.years ?? null;
+    question.minCharacterLimit = attributes.minCharacterLimit ?? null;
+    question.maxCharacterLimit = attributes.maxCharacterLimit ?? null;
+    await question.save();
+
+    if (question.inputType === "tableInput") {
+      await Promise.all(
+        (attributes.tableHeaders ?? []).map(async (label, index) => {
+          const header = new FormTableHeader();
+          header.formQuestionId = question.id;
+          header.label = label;
+          header.labelId = await this.localizationService.generateI18nId(label);
+          header.order = index;
+          await header.save();
+        })
+      );
+    }
+
+    await Promise.all(
+      (attributes.options ?? []).map((option, index) => this.createFormQuestionOption(question.id, option, index))
+    );
+
+    await Promise.all(
+      (attributes.children ?? []).map((child, index) => this.createQuestion(sectionId, child, index, question.uuid))
+    );
+  }
+
+  private async createFormQuestionOption(
+    questionId: number,
+    attributes: StoreFormQuestionOptionAttributes,
+    order: number
+  ) {
+    const option = new FormQuestionOption();
+    option.formQuestionId = questionId;
+    option.order = order;
+    option.slug = attributes.slug;
+    option.label = attributes.label;
+    option.labelId = await this.localizationService.generateI18nId(attributes.label);
+    option.imageUrl = attributes.imageUrl ?? null;
+    await option.save();
   }
 }

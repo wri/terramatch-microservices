@@ -47,7 +47,7 @@ export class FormQuestion extends Model<FormQuestion> {
 
   @AllowNull
   @Column(UUID)
-  parentId: string;
+  parentId: string | null;
 
   @BelongsTo(() => FormQuestion, { foreignKey: "parentId", targetKey: "uuid", constraints: false })
   parent: FormQuestion | null;

@@ -49,7 +49,6 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, required: false, type: Object })
   validation?: object | null;
 
-  @IsBoolean()
   @ApiProperty()
   multiChoice: boolean;
 
@@ -71,8 +70,10 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, type: FormQuestionOptionDto, isArray: true })
   options: FormQuestionOptionDto[] | null;
 
-  @ApiProperty({ nullable: true, type: Boolean })
-  showOnParentCondition: boolean | null;
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Boolean })
+  showOnParentCondition?: boolean | null;
 
   @ApiProperty({ nullable: true, enum: FORM_MODEL_TYPES })
   model: FormModelType | null;
@@ -85,11 +86,15 @@ export class FormQuestionDto {
   @ApiProperty()
   isParentConditionalDefault: boolean;
 
-  @ApiProperty({ nullable: true, type: Number })
-  minCharacterLimit: number | null;
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Number })
+  minCharacterLimit?: number | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  maxCharacterLimit: number | null;
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Number })
+  maxCharacterLimit?: number | null;
 
   @IsNumber({ maxDecimalPlaces: 0 }, { each: true })
   @IsOptional()
@@ -121,13 +126,21 @@ export class StormFormQuestionAttributes extends PickType(FormQuestionDto, [
   "placeholder",
   "description",
   "validation",
-  "multiChoice",
   "additionalProps",
   "optionsList",
   "optionsOther",
   "years",
-  "tableHeaders"
+  "tableHeaders",
+  "showOnParentCondition",
+  "minCharacterLimit",
+  "maxCharacterLimit"
 ]) {
+  // optional on request, but not in response
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ required: false })
+  multiChoice?: boolean;
+
   @ValidateNested()
   @Type(() => StormFormQuestionAttributes)
   @ApiProperty({ required: false, type: () => StormFormQuestionAttributes, isArray: true })

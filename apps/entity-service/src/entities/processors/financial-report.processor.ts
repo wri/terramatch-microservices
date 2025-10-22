@@ -122,7 +122,7 @@ export class FinancialReportProcessor extends ReportProcessor<
         type: fundingType.type,
         amount: fundingType.amount,
         financialReportId: null
-      } as any);
+      } as FundingType);
     }
   }
 

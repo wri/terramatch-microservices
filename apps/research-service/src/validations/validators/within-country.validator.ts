@@ -40,14 +40,24 @@ export class WithinCountryValidator implements Validator {
     const results = await this.getIntersectionDataBatch(polygonUuids);
     const resultMap = new Map(results.filter(r => r != null).map(r => [r.polygonUuid, r]));
 
+    const foundPolygonUuids = new Set(results.map(r => r.polygonUuid));
+    const missingPolygonUuids = polygonUuids.filter(uuid => !foundPolygonUuids.has(uuid));
+
+    const projectCountries =
+      missingPolygonUuids.length > 0 ? await PolygonGeometry.getProjectCountriesBatch(missingPolygonUuids) : new Map();
+
     return polygonUuids.map(polygonUuid => {
       const result = resultMap.get(polygonUuid);
 
       if (result == null) {
+        const projectCountry = projectCountries.get(polygonUuid);
         return {
           polygonUuid,
           valid: false,
-          extraInfo: { error: "Polygon not found or has no associated project" }
+          extraInfo: {
+            inside_percentage: 0,
+            country_name: projectCountry ?? "Unknown"
+          }
         };
       }
 

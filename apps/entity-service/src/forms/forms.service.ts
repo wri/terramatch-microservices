@@ -15,7 +15,7 @@ import {
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { filter, flattenDeep, groupBy, sortBy, uniq } from "lodash";
-import { FormFullDto, FormLightDto } from "./dto/form.dto";
+import { StoreFormAttributes, FormFullDto, FormLightDto } from "./dto/form.dto";
 import { FormSectionDto } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { FormQuestionDto, FormQuestionOptionDto } from "./dto/form-question.dto";
@@ -177,6 +177,33 @@ export class FormsService {
     );
 
     return document;
+  }
+
+  async store(attributes: StoreFormAttributes) {
+    const form: Form = new Form();
+    // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
+    // rows are all numerical IDs.
+    form.updatedBy = `${RequestContext.currentContext.req.authenticatedUserId}`;
+    form.title = attributes.title;
+    form.titleId = await this.localizationService.generateI18nId(attributes.title);
+    form.subtitle = attributes.subtitle ?? null;
+    form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle);
+    form.frameworkKey = attributes.frameworkKey ?? null;
+    form.type = attributes.type ?? null;
+    form.description = attributes.description ?? null;
+    form.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    form.documentation = attributes.documentation ?? null;
+    form.documentationLabel = attributes.documentationLabel ?? null;
+    form.deadlineAt = attributes.deadlineAt ?? null;
+    form.submissionMessage = attributes.submissionMessage;
+    form.submissionMessageId = await this.localizationService.generateI18nId(attributes.submissionMessage);
+    form.stageId = attributes.stageId ?? null;
+    form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
+    // Newly created forms are always unpublished
+    form.published = false;
+    await form.save();
+
+    return form;
   }
 
   private _userLocale?: ValidLocale;

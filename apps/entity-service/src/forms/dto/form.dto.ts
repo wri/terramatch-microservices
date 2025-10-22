@@ -6,7 +6,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
-import { CreateFormSectionAttributes, FormSectionDto } from "./form-section.dto";
+import { StoreFormSectionAttributes, FormSectionDto } from "./form-section.dto";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
@@ -107,7 +107,7 @@ export class FormFullDto extends FormLightDto {
   sections: FormSectionDto[];
 }
 
-export class CreateFormAttributes extends PickType(FormFullDto, [
+export class StoreFormAttributes extends PickType(FormFullDto, [
   "title",
   "subtitle",
   "frameworkKey",
@@ -121,11 +121,11 @@ export class CreateFormAttributes extends PickType(FormFullDto, [
 ]) {
   @ValidateNested()
   @IsOptional()
-  @Type(() => CreateFormSectionAttributes)
-  @ApiProperty({ required: false, type: () => CreateFormSectionAttributes, isArray: true })
-  sections?: CreateFormSectionAttributes[];
+  @Type(() => StoreFormSectionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormSectionAttributes, isArray: true })
+  sections?: StoreFormSectionAttributes[];
 }
 
-export class FormCreateBody extends JsonApiBodyDto(
-  class FormCreateData extends CreateDataDto("forms", CreateFormAttributes) {}
+export class StoreFormBody extends JsonApiBodyDto(
+  class StormFormData extends CreateDataDto("forms", StoreFormAttributes) {}
 ) {}

@@ -11,13 +11,14 @@ import {
 } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FormCreateBody, FormFullDto, FormLightDto, Forms } from "./dto/form.dto";
+import { StoreFormBody, FormFullDto, FormLightDto, Forms } from "./dto/form.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
 import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { PolicyService } from "@terramatch-microservices/common";
+import { Form } from "@terramatch-microservices/database/entities";
 
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
@@ -73,7 +74,10 @@ export class FormsController {
   @JsonApiResponse(FormFullDto)
   @ExceptionResponse(UnauthorizedException, { description: "Form creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
-  async create(@Body() payload: FormCreateBody) {
-    console.log("payload", JSON.stringify(payload, null, 2));
+  async create(@Body() payload: StoreFormBody) {
+    await this.policyService.authorize("create", Form);
+
+    const form = await this.formsService.store(payload.data.attributes);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
   }
 }

@@ -110,13 +110,9 @@ export class FormQuestionDto {
   children: FormQuestionDto[] | null;
 }
 
-export class CreateFormQuestionOptionAttributes extends PickType(FormQuestionOptionDto, [
-  "slug",
-  "label",
-  "imageUrl"
-]) {}
+export class StoreFormQuestionOptionAttributes extends PickType(FormQuestionOptionDto, ["slug", "label", "imageUrl"]) {}
 
-export class CreateFormQuestionAttributes extends PickType(FormQuestionDto, [
+export class StormFormQuestionAttributes extends PickType(FormQuestionDto, [
   "linkedFieldKey",
   "collection",
   "label",
@@ -133,12 +129,12 @@ export class CreateFormQuestionAttributes extends PickType(FormQuestionDto, [
   "tableHeaders"
 ]) {
   @ValidateNested()
-  @Type(() => CreateFormQuestionAttributes)
-  @ApiProperty({ required: false, type: () => CreateFormQuestionAttributes, isArray: true })
-  children?: CreateFormQuestionAttributes[];
+  @Type(() => StormFormQuestionAttributes)
+  @ApiProperty({ required: false, type: () => StormFormQuestionAttributes, isArray: true })
+  children?: StormFormQuestionAttributes[];
 
   @ValidateNested()
-  @Type(() => CreateFormQuestionOptionAttributes)
-  @ApiProperty({ required: false, type: () => CreateFormQuestionOptionAttributes, isArray: true })
-  options?: CreateFormQuestionOptionAttributes[];
+  @Type(() => StoreFormQuestionOptionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormQuestionOptionAttributes, isArray: true })
+  options?: StoreFormQuestionOptionAttributes[];
 }

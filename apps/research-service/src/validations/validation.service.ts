@@ -3,11 +3,13 @@ import {
   CriteriaSite,
   CriteriaSiteHistoric,
   PolygonGeometry,
-  SitePolygon
+  SitePolygon,
+  Site
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationRequestDto } from "./dto/validation-request.dto";
+import { ValidationRequestAttributes } from "./dto/validation-request.dto";
 import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationSummaryDto, ValidationTypeSummary } from "./dto/validation-summary.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";
@@ -17,8 +19,31 @@ import { DataCompletenessValidator } from "./validators/data-completeness.valida
 import { PlantStartDateValidator } from "./validators/plant-start-date.validator";
 import { PolygonSizeValidator } from "./validators/polygon-size.validator";
 import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
+import { OverlappingValidator } from "./validators/overlapping.validator";
+import { WithinCountryValidator } from "./validators/within-country.validator";
 import { Validator } from "./validators/validator.interface";
-import { ValidationType, VALIDATION_CRITERIA_IDS, CriteriaId } from "@terramatch-microservices/database/constants";
+import {
+  ValidationType,
+  VALIDATION_CRITERIA_IDS,
+  VALIDATION_TYPES,
+  CriteriaId,
+  EXCLUDED_VALIDATION_CRITERIA
+} from "@terramatch-microservices/database/constants";
+import { Op } from "sequelize";
+
+type ValidationResult = {
+  polygonUuid: string;
+  criteriaId: CriteriaId;
+  valid: boolean;
+  extraInfo: object | null;
+};
+
+type CriteriaRecord = {
+  polygonId: string;
+  criteriaId: CriteriaId;
+  valid: boolean;
+  extraInfo: object | null;
+};
 
 export const VALIDATORS: Record<ValidationType, Validator> = {
   SELF_INTERSECTION: new SelfIntersectionValidator(),
@@ -26,7 +51,9 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
   SPIKES: new SpikesValidator(),
   ESTIMATED_AREA: new EstimatedAreaValidator(),
   DATA_COMPLETENESS: new DataCompletenessValidator(),
-  PLANT_START_DATE: new PlantStartDateValidator()
+  PLANT_START_DATE: new PlantStartDateValidator(),
+  OVERLAPPING: new OverlappingValidator(),
+  WITHIN_COUNTRY: new WithinCountryValidator()
 };
 
 @Injectable()
@@ -56,7 +83,7 @@ export class ValidationService {
 
     const dto = new ValidationDto();
     return populateDto(dto, {
-      polygonId: polygonUuid,
+      polygonUuid,
       criteriaList
     });
   }
@@ -123,7 +150,7 @@ export class ValidationService {
 
     const validations = paginatedPolygonIds.map(polygonId =>
       populateDto<ValidationDto>(new ValidationDto(), {
-        polygonId,
+        polygonUuid: polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
           criteriaId: criteria.criteriaId,
           valid: criteria.valid,
@@ -139,11 +166,15 @@ export class ValidationService {
     };
   }
 
-  async validatePolygons(request: ValidationRequestDto): Promise<ValidationResponseDto> {
+  /**
+   * @deprecated Use validatePolygonsBatch instead to avoid duplicate results with batch validators
+   */
+  async validatePolygons(request: ValidationRequestAttributes): Promise<ValidationResponseDto> {
     const results: ValidationCriteriaDto[] = [];
+    const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
 
     for (const polygonUuid of request.polygonUuids) {
-      for (const validationType of request.validationTypes) {
+      for (const validationType of validationTypes) {
         const validator = VALIDATORS[validationType];
         if (validator == null) {
           throw new BadRequestException(`Unknown validation type: ${validationType}`);
@@ -155,7 +186,6 @@ export class ValidationService {
         await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
 
         results.push({
-          polygonUuid: polygonUuid,
           criteriaId: criteriaId,
           valid: validationResult.valid,
           createdAt: new Date(),
@@ -191,18 +221,274 @@ export class ValidationService {
       historicRecord.valid = existingCriteria.valid;
       historicRecord.extraInfo = existingCriteria.extraInfo;
       await historicRecord.save();
+      await existingCriteria.destroy();
+    }
 
-      await existingCriteria.update({
-        valid,
-        extraInfo
+    await CriteriaSite.create({
+      polygonId: polygonUuid,
+      criteriaId: criteriaId,
+      valid: valid,
+      extraInfo: extraInfo
+    } as CriteriaSite);
+  }
+
+  async getSitePolygonUuids(siteUuid: string): Promise<string[]> {
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["uuid"]
+    });
+
+    if (site === null) {
+      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+    }
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        siteUuid,
+        polygonUuid: { [Op.ne]: "" },
+        isActive: true,
+        deletedAt: null
+      },
+      attributes: ["polygonUuid"]
+    });
+
+    return sitePolygons.map(sp => sp.polygonUuid).filter(uuid => uuid != null && uuid !== "") as string[];
+  }
+
+  async validatePolygonsBatch(polygonUuids: string[], validationTypes: ValidationType[]): Promise<void> {
+    const validationResults: ValidationResult[] = [];
+
+    for (const validationType of validationTypes) {
+      const validator = VALIDATORS[validationType];
+      if (validator == null) {
+        throw new BadRequestException(`Unknown validation type: ${validationType}`);
+      }
+
+      const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+      if (validator.validatePolygons != null) {
+        const batchResults = await validator.validatePolygons(polygonUuids);
+
+        const seenPolygons = new Set<string>();
+        for (const result of batchResults) {
+          if (seenPolygons.has(result.polygonUuid)) {
+            throw new BadRequestException(
+              `Duplicate result from ${validationType} validator for polygon ${result.polygonUuid}`
+            );
+          }
+          seenPolygons.add(result.polygonUuid);
+
+          validationResults.push({
+            polygonUuid: result.polygonUuid,
+            criteriaId,
+            valid: result.valid,
+            extraInfo: result.extraInfo
+          });
+        }
+      } else {
+        for (const polygonUuid of polygonUuids) {
+          const validationResult = await validator.validatePolygon(polygonUuid);
+          validationResults.push({
+            polygonUuid,
+            criteriaId,
+            valid: validationResult.valid,
+            extraInfo: validationResult.extraInfo
+          });
+        }
+      }
+    }
+
+    await this.saveValidationResultsBatch(validationResults);
+  }
+
+  async saveValidationResultsBatch(results: ValidationResult[]): Promise<void> {
+    if (results.length === 0) {
+      return;
+    }
+
+    const polygonIds = [...new Set(results.map(r => r.polygonUuid))];
+    const criteriaIds = [...new Set(results.map(r => r.criteriaId))];
+
+    const existingCriteria = await CriteriaSite.findAll({
+      where: {
+        polygonId: polygonIds,
+        criteriaId: criteriaIds
+      },
+      attributes: ["id", "polygonId", "criteriaId", "valid", "extraInfo"]
+    });
+
+    const existingMap = new Map<string, CriteriaSite>();
+    for (const criteria of existingCriteria) {
+      const key = `${criteria.polygonId}_${criteria.criteriaId}`;
+      existingMap.set(key, criteria);
+    }
+
+    const deduplicatedResults = new Map<string, (typeof results)[0]>();
+    for (const result of results) {
+      const key = `${result.polygonUuid}_${result.criteriaId}`;
+      deduplicatedResults.set(key, result);
+    }
+
+    const historicRecords: CriteriaRecord[] = [];
+    const recordsToCreate: CriteriaRecord[] = [];
+    const recordsToDelete: number[] = [];
+
+    for (const [key, result] of deduplicatedResults.entries()) {
+      const existing = existingMap.get(key);
+
+      if (existing != null) {
+        historicRecords.push({
+          polygonId: existing.polygonId,
+          criteriaId: existing.criteriaId,
+          valid: existing.valid,
+          extraInfo: existing.extraInfo
+        });
+        recordsToDelete.push(existing.id);
+      }
+
+      recordsToCreate.push({
+        polygonId: result.polygonUuid,
+        criteriaId: result.criteriaId,
+        valid: result.valid,
+        extraInfo: result.extraInfo
       });
-    } else {
-      const newRecord = new CriteriaSite();
-      newRecord.polygonId = polygonUuid;
-      newRecord.criteriaId = criteriaId;
-      newRecord.valid = valid;
-      newRecord.extraInfo = extraInfo;
-      await newRecord.save();
+    }
+
+    if (historicRecords.length > 0) {
+      await CriteriaSiteHistoric.bulkCreate(historicRecords as never, {
+        validate: true
+      });
+    }
+
+    if (recordsToDelete.length > 0) {
+      await CriteriaSite.destroy({
+        where: {
+          id: recordsToDelete
+        }
+      });
+    }
+
+    if (recordsToCreate.length > 0) {
+      await CriteriaSite.bulkCreate(recordsToCreate as never, {
+        validate: true
+      });
+
+      const affectedPolygonUuids = [...new Set(recordsToCreate.map(r => r.polygonId))];
+      await this.updateSitePolygonValidityBatch(affectedPolygonUuids);
+    }
+  }
+
+  async generateValidationSummary(siteUuid: string, validationTypes: ValidationType[]): Promise<ValidationSummaryDto> {
+    const polygonUuids = await this.getSitePolygonUuids(siteUuid);
+
+    if (polygonUuids.length === 0) {
+      throw new NotFoundException(`No polygons found for site with UUID ${siteUuid}`);
+    }
+
+    const validationSummary: Record<ValidationType, ValidationTypeSummary> = {} as Record<
+      ValidationType,
+      ValidationTypeSummary
+    >;
+
+    for (const validationType of validationTypes) {
+      const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+      const criteriaData = await CriteriaSite.findAll({
+        where: {
+          polygonId: { [Op.in]: polygonUuids },
+          criteriaId
+        },
+        attributes: ["valid"]
+      });
+
+      const validCount = criteriaData.filter(c => c.valid === true).length;
+      const invalidCount = criteriaData.filter(c => c.valid === false).length;
+
+      validationSummary[validationType] = {
+        valid: validCount,
+        invalid: invalidCount
+      };
+    }
+
+    return {
+      siteUuid,
+      totalPolygons: polygonUuids.length,
+      validatedPolygons: polygonUuids.length,
+      validationSummary,
+      completedAt: new Date()
+    };
+  }
+
+  private async updateSitePolygonValidityBatch(polygonUuids: string[]): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: { [Op.in]: polygonUuids },
+        isActive: true
+      }
+    });
+
+    if (sitePolygons.length === 0) {
+      return;
+    }
+
+    const allCriteria = await CriteriaSite.findAll({
+      where: { polygonId: { [Op.in]: polygonUuids } },
+      attributes: ["polygonId", "criteriaId", "valid"]
+    });
+
+    const criteriaByPolygon = new Map<string, CriteriaSite[]>();
+    for (const criteria of allCriteria) {
+      if (!criteriaByPolygon.has(criteria.polygonId)) {
+        criteriaByPolygon.set(criteria.polygonId, []);
+      }
+      const criteriaList = criteriaByPolygon.get(criteria.polygonId);
+      if (criteriaList != null) {
+        criteriaList.push(criteria);
+      }
+    }
+
+    const excludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
+    const updates: Array<{ id: number; validationStatus: string | null }> = [];
+
+    for (const sitePolygon of sitePolygons) {
+      if (sitePolygon.polygonUuid == null) continue;
+
+      const polygonCriteria = criteriaByPolygon.get(sitePolygon.polygonUuid) ?? [];
+      let newValidationStatus: string | null;
+
+      if (polygonCriteria.length === 0) {
+        newValidationStatus = null;
+      } else {
+        const hasAnyFailing = polygonCriteria.some(c => c.valid === false);
+
+        if (!hasAnyFailing) {
+          newValidationStatus = "passed";
+        } else {
+          const nonExcludedCriteria = polygonCriteria.filter(c => !excludedCriteriaSet.has(c.criteriaId));
+          const hasFailingNonExcluded = nonExcludedCriteria.some(c => c.valid === false);
+
+          newValidationStatus = hasFailingNonExcluded ? "failed" : "partial";
+        }
+      }
+
+      if (sitePolygon.validationStatus !== newValidationStatus) {
+        updates.push({
+          id: sitePolygon.id,
+          validationStatus: newValidationStatus
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await Promise.all(
+        updates.map(update =>
+          SitePolygon.update({ validationStatus: update.validationStatus }, { where: { id: update.id } })
+        )
+      );
     }
   }
 }

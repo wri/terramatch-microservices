@@ -4,7 +4,7 @@ import { SitePolygonsService } from "./site-polygons.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
@@ -385,6 +385,44 @@ describe("SitePolygonsController", () => {
       expect(sitePolygonService.updateIndicator).toHaveBeenNthCalledWith(1, "1234", indicator1, transaction);
       expect(sitePolygonService.updateIndicator).toHaveBeenNthCalledWith(2, "1234", indicator2, transaction);
       expect(sitePolygonService.updateIndicator).toHaveBeenNthCalledWith(3, "2345", indicator2, transaction);
+    });
+  });
+
+  describe("deleteOne", () => {
+    it("should throw NotFoundException when site polygon does not exist", async () => {
+      const uuid = "non-existent-uuid";
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+
+      await expect(controller.deleteOne(uuid)).rejects.toThrow(
+        new NotFoundException(`Site polygon not found for uuid: ${uuid}`)
+      );
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(sitePolygonService.deleteSitePolygon).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.deleteOne(sitePolygon.uuid)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(sitePolygonService.deleteSitePolygon).not.toHaveBeenCalled();
+    });
+
+    it("should successfully delete a site polygon when authorized", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.deleteSitePolygon.mockResolvedValue(undefined);
+
+      const result = await controller.deleteOne(sitePolygon.uuid);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(sitePolygonService.deleteSitePolygon).toHaveBeenCalledWith(sitePolygon.uuid);
+      expect(result).toHaveProperty("meta");
+      expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
+      expect(result.meta).toHaveProperty("resourceId", sitePolygon.uuid);
     });
   });
 });

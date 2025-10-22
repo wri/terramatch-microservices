@@ -5,7 +5,7 @@ import { Polygon } from "geojson";
 
 interface SpikeExtraInfo {
   spikes: number[][];
-  spikeCount: number;
+  spike_count: number;
 }
 
 interface ErrorExtraInfo {
@@ -118,7 +118,7 @@ describe("SpikesValidator", () => {
         valid: true,
         extraInfo: {
           spikes: [],
-          spikeCount: 0
+          spike_count: 0
         }
       });
       expect(mockGetGeoJSONParsed).toHaveBeenCalledWith(polygonUuid);
@@ -132,7 +132,7 @@ describe("SpikesValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toBeDefined();
-      expect(result.extraInfo?.spikeCount).toBeGreaterThan(0);
+      expect(result.extraInfo?.spike_count).toBeGreaterThan(0);
       expect(Array.isArray(result.extraInfo?.spikes)).toBe(true);
       expect(mockGetGeoJSONParsed).toHaveBeenCalledWith(polygonUuid);
     });
@@ -144,7 +144,7 @@ describe("SpikesValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.spikeCount).toBe(0);
+      expect(result.extraInfo?.spike_count).toBe(0);
       expect(mockGetGeoJSONParsed).toHaveBeenCalledWith(polygonUuid);
     });
 
@@ -174,7 +174,7 @@ describe("SpikesValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.spikeCount).toBe(0);
+      expect(result.extraInfo?.spike_count).toBe(0);
     });
 
     it("should handle database query errors", async () => {
@@ -200,11 +200,11 @@ describe("SpikesValidator", () => {
       expect(result).toHaveLength(2);
       expect(result[0].polygonUuid).toBe("uuid-1");
       expect(result[0].valid).toBe(true);
-      expect((result[0].extraInfo as SpikeExtraInfo)?.spikeCount).toBe(0);
+      expect((result[0].extraInfo as SpikeExtraInfo)?.spike_count).toBe(0);
 
       expect(result[1].polygonUuid).toBe("uuid-2");
       expect(result[1].valid).toBe(false);
-      expect((result[1].extraInfo as SpikeExtraInfo)?.spikeCount).toBeGreaterThan(0);
+      expect((result[1].extraInfo as SpikeExtraInfo)?.spike_count).toBeGreaterThan(0);
       expect(mockGetGeoJSONBatchParsed).toHaveBeenCalledWith(polygonUuids);
     });
 
@@ -262,7 +262,7 @@ describe("SpikesValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo?.spikes).toBeDefined();
       expect(Array.isArray(result.extraInfo?.spikes)).toBe(true);
-      expect(result.extraInfo?.spikeCount).toBeGreaterThan(0);
+      expect(result.extraInfo?.spike_count).toBeGreaterThan(0);
     });
 
     it("should not detect spikes in simple polygon", async () => {
@@ -273,7 +273,7 @@ describe("SpikesValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo?.spikes).toEqual([]);
-      expect(result.extraInfo?.spikeCount).toBe(0);
+      expect(result.extraInfo?.spike_count).toBe(0);
     });
   });
 });

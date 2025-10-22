@@ -10,7 +10,8 @@ import {
   PolygonGeometry,
   Project,
   Site,
-  SitePolygon
+  SitePolygon,
+  Disturbance
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
@@ -62,6 +63,11 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
       {
         model: PolygonGeometry,
         attributes: ["polygon"]
+      },
+      {
+        model: Disturbance,
+        attributes: ["disturbanceableId"],
+        required: false
       },
       this.siteJoin
     ];

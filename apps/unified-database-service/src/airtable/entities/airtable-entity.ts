@@ -291,6 +291,8 @@ export type Include = {
   attributes?: string[];
 };
 
+type AirtableValue = null | undefined | string | number | boolean | Date | string[];
+
 /**
  * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), or a more descriptive object
  */
@@ -302,7 +304,7 @@ export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
       dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
       // Include if this mapping should eager load an association on the DB query
       include?: Include[];
-      valueMap: (entity: T, associations: A) => Promise<null | undefined | string | number | boolean | Date | string[]>;
+      valueMap: (entity: T, associations: A) => Promise<AirtableValue>;
     };
 
 export type PolymorphicUuidAssociation<AssociationType> = {
@@ -377,9 +379,16 @@ export const commonEntityColumns = <T extends UuidModel, A = Record<string, neve
 export const associatedValueColumn = <T extends Model<T>, A>(
   valueName: keyof A,
   dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[]
-) =>
-  ({
-    airtableColumn: valueName,
-    dbColumn,
-    valueMap: async (_, associations: A) => associations?.[valueName]
-  } as ColumnMapping<T, A>);
+): ColumnMapping<T, A> => ({
+  airtableColumn: valueName as string,
+  dbColumn,
+  valueMap: async (_, associations: A) => associations?.[valueName] as AirtableValue
+});
+
+export const percentageColumn = <T extends Model<T>, A = Record<string, never>>(
+  dbColumn: keyof Attributes<T>
+): ColumnMapping<T, A> => ({
+  airtableColumn: dbColumn as string,
+  dbColumn,
+  valueMap: async model => ((model[dbColumn] as number | null) ?? 0) / 100
+});

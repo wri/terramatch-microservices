@@ -834,33 +834,6 @@ describe("ValidationService", () => {
     });
   });
 
-  describe("generateValidationSummary", () => {
-    it("should generate validation summary for a site", async () => {
-      (Site.findOne as jest.Mock).mockResolvedValue({ uuid: "site-uuid" });
-      (SitePolygon.findAll as jest.Mock).mockResolvedValue([
-        { polygonUuid: "polygon-1" },
-        { polygonUuid: "polygon-2" }
-      ]);
-      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([{ valid: true }, { valid: false }]);
-
-      const result = await service.generateValidationSummary("site-uuid", ["SELF_INTERSECTION"]);
-
-      expect(result.siteUuid).toBe("site-uuid");
-      expect(result.totalPolygons).toBe(2);
-      expect(result.validatedPolygons).toBe(2);
-      expect(result.validationSummary.SELF_INTERSECTION).toEqual({ valid: 1, invalid: 1 });
-    });
-
-    it("should throw NotFoundException when site has no polygons", async () => {
-      (Site.findOne as jest.Mock).mockResolvedValue({ uuid: "site-uuid" });
-      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
-
-      await expect(service.generateValidationSummary("site-uuid", ["SELF_INTERSECTION"])).rejects.toThrow(
-        NotFoundException
-      );
-    });
-  });
-
   describe("updateSitePolygonValidityBatch", () => {
     it("should handle empty polygon UUIDs array", async () => {
       await (

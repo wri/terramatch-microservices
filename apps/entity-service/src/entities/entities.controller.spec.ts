@@ -220,15 +220,12 @@ describe("EntitiesController", () => {
       const attributes = { parentUuid: "123e4567-e89b-12d3-a456-426614174000" };
 
       const result = serialize(
-        await controller.entityCreate(
-          { entity: "disturbanceReports" },
-          { data: { type: "disturbanceReports", attributes } }
-        )
+        await controller.entityCreate({ entity: "projects" }, { data: { type: "projects", attributes } })
       );
 
       expect(processor.create).toHaveBeenCalledWith(attributes);
       expect(processor.getFullDto).toHaveBeenCalledWith(project);
-      expect(result.meta.resourceType).toBe("disturbanceReports");
+      expect(result.meta.resourceType).toBe("projects");
     });
   });
 });

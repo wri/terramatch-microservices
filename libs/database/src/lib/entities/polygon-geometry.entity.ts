@@ -262,6 +262,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
         JOIN world_countries_generalized wcg ON wcg.iso = p.country
         WHERE pg.uuid IN (:polygonUuids)
           AND ST_Area(pg.geom) > 0
+          AND ST_Intersects(pg.geom, wcg.geometry)  -- ⚡ OPTIMIZATION: Only calculate intersection if polygons actually intersect
       `,
       {
         replacements: { polygonUuids },

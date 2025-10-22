@@ -106,7 +106,7 @@ export class FinancialReportProcessor extends ReportProcessor<
     await FundingType.destroy({
       where: {
         organisationId: organisation.uuid,
-        financialReportId: undefined
+        financialReportId: null
       }
     });
 
@@ -120,8 +120,9 @@ export class FinancialReportProcessor extends ReportProcessor<
         source: fundingType.source,
         year: fundingType.year,
         type: fundingType.type,
-        amount: fundingType.amount
-      } as FundingType);
+        amount: fundingType.amount,
+        financialReportId: null
+      } as any);
     }
   }
 

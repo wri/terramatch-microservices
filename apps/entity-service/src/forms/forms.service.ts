@@ -65,10 +65,10 @@ export class FormsService {
 
   async addIndex(document: DocumentBuilder, query: FormIndexQueryDto) {
     const { forms, paginationTotal } = await this.findMany(query);
-    const bannerMediaByFormId = groupBy(
-      await Media.for(forms).findAll({ where: { collectionName: "banner" } }),
-      "modelId"
-    );
+    const bannerMediaByFormId =
+      forms.length == 0
+        ? {}
+        : groupBy(await Media.for(forms).findAll({ where: { collectionName: "banner" } }), "modelId");
 
     for (const form of forms) {
       const banner = bannerMediaByFormId[form.id]?.[0];

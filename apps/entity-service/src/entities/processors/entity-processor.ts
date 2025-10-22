@@ -176,6 +176,7 @@ export abstract class EntityProcessor<
    * Creates a new entity with the provided attributes.
    * This method must be implemented by concrete processors.
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
   }

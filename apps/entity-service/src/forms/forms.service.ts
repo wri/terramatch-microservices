@@ -143,6 +143,7 @@ export class FormsService {
             ? null
             : sortBy(options, "order").map(option =>
                 populateDto<FormQuestionOptionDto>(new FormQuestionOptionDto(), {
+                  id: option.uuid,
                   slug: option.slug ?? "",
                   imageUrl: optionMediaByOptionId[option.id]?.url ?? option.imageUrl,
                   thumbUrl: optionMediaByOptionId[option.id]?.thumbUrl ?? null,

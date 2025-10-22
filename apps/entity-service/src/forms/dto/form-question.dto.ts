@@ -9,6 +9,9 @@ import { IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, ValidateNest
 import { Type } from "class-transformer";
 
 export class FormQuestionOptionDto extends OptionLabelDto {
+  @ApiProperty()
+  id: string;
+
   @ApiProperty({ nullable: true, type: String })
   thumbUrl: string | null;
 }

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
+import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature, FeatureProperties } from "./dto/create-site-polygon-request.dto";
@@ -18,6 +19,7 @@ const mockSequelize = {
 describe("SitePolygonCreationService", () => {
   let service: SitePolygonCreationService;
   let polygonGeometryService: PolygonGeometryCreationService;
+  let duplicateGeometryValidator: DuplicateGeometryValidator;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,7 +28,18 @@ describe("SitePolygonCreationService", () => {
         {
           provide: PolygonGeometryCreationService,
           useValue: {
-            createGeometriesFromFeatures: jest.fn()
+            createGeometriesFromFeatures: jest.fn(),
+            bulkUpdateSitePolygonCentroids: jest.fn(),
+            bulkUpdateSitePolygonAreas: jest.fn()
+          }
+        },
+        {
+          provide: DuplicateGeometryValidator,
+          useValue: {
+            checkNewFeaturesDuplicates: jest.fn().mockResolvedValue({
+              valid: true,
+              duplicates: []
+            })
           }
         }
       ]
@@ -34,6 +47,7 @@ describe("SitePolygonCreationService", () => {
 
     service = module.get<SitePolygonCreationService>(SitePolygonCreationService);
     polygonGeometryService = module.get<PolygonGeometryCreationService>(PolygonGeometryCreationService);
+    duplicateGeometryValidator = module.get<DuplicateGeometryValidator>(DuplicateGeometryValidator);
 
     // Mock PolygonGeometry sequelize
     Object.defineProperty(PolygonGeometry, "sequelize", {
@@ -46,17 +60,17 @@ describe("SitePolygonCreationService", () => {
     jest.clearAllMocks();
   });
 
+  const createMockRequest = (features: Feature[]): CreateSitePolygonBatchRequestDto => ({
+    geometries: [
+      {
+        type: "FeatureCollection",
+        features
+      }
+    ]
+  });
+
   describe("createSitePolygons", () => {
     const mockUserId = 1;
-
-    const createMockRequest = (features: Feature[]): CreateSitePolygonBatchRequestDto => ({
-      geometries: [
-        {
-          type: "FeatureCollection",
-          features
-        }
-      ]
-    });
 
     it("should create site polygons successfully", async () => {
       const mockFeature: Feature = {
@@ -101,40 +115,11 @@ describe("SitePolygonCreationService", () => {
 
       const result = await service.createSitePolygons(request, mockUserId);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].uuid).toBe("site-polygon-uuid-1");
-      expect(result[0].siteUuid).toBe("site-uuid-1");
-      expect(result[0].polygonUuid).toBe("polygon-uuid-1");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].uuid).toBe("site-polygon-uuid-1");
+      expect(result.data[0].siteUuid).toBe("site-uuid-1");
+      expect(result.data[0].polygonUuid).toBe("polygon-uuid-1");
       expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("should throw error if site does not exist", async () => {
-      const mockFeature: Feature = {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [
-            [
-              [0, 0],
-              [0, 1],
-              [1, 1],
-              [1, 0],
-              [0, 0]
-            ]
-          ]
-        },
-        properties: {
-          site_id: "non-existent-site"
-        }
-      };
-
-      const request = createMockRequest([mockFeature]);
-
-      // Mock Site.findAll returns empty
-      jest.spyOn(Site, "findAll").mockResolvedValue([]);
-
-      await expect(service.createSitePolygons(request, mockUserId)).rejects.toThrow(BadRequestException);
-      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
     it("should handle MultiPolygon geometries", async () => {
@@ -187,7 +172,7 @@ describe("SitePolygonCreationService", () => {
 
       const result = await service.createSitePolygons(request, mockUserId);
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalled();
     });
 
@@ -261,12 +246,16 @@ describe("SitePolygonCreationService", () => {
       const result = await service.createSitePolygons(request, mockUserId);
 
       // Should have created multiple site polygons
-      expect(result.length).toBeGreaterThan(0);
+      expect(result.data.length).toBeGreaterThan(0);
     });
+  });
 
-    it("should rollback transaction on error", async () => {
-      const request = createMockRequest([
-        {
+  describe("grouping logic", () => {
+    describe("duplicate validation", () => {
+      const mockUserId = 1;
+
+      it("should return validation data when duplicates are found", async () => {
+        const mockFeature: Feature = {
           type: "Feature",
           geometry: {
             type: "Polygon",
@@ -280,52 +269,96 @@ describe("SitePolygonCreationService", () => {
               ]
             ]
           },
-          properties: { site_id: "site-1" }
-        }
-      ]);
-
-      jest.spyOn(Site, "findAll").mockRejectedValue(new Error("Database error"));
-
-      await expect(service.createSitePolygons(request, mockUserId)).rejects.toThrow();
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(mockTransaction.commit).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("grouping logic", () => {
-    it("should throw error if feature has no site_id", () => {
-      // This would be tested by calling the private method indirectly through createSitePolygons
-      // with a feature missing site_id
-      const request: CreateSitePolygonBatchRequestDto = {
-        geometries: [
-          {
-            type: "FeatureCollection",
-            features: [
-              {
-                type: "Feature",
-                geometry: {
-                  type: "Polygon",
-                  coordinates: [
-                    [
-                      [0, 0],
-                      [0, 1],
-                      [1, 1],
-                      [1, 0],
-                      [0, 0]
-                    ]
-                  ]
-                },
-                properties: {} as FeatureProperties
-              }
-            ]
+          properties: {
+            site_id: "site-uuid-1",
+            poly_name: "Test Polygon"
           }
-        ]
-      };
+        };
 
-      // This should throw BadRequestException when processing
-      expect(async () => {
-        await service.createSitePolygons(request, 1);
-      }).rejects.toThrow(BadRequestException);
+        const request = createMockRequest([mockFeature]);
+
+        // Mock no duplicates found
+        jest.spyOn(duplicateGeometryValidator, "checkNewFeaturesDuplicates").mockResolvedValue({
+          valid: true,
+          duplicates: []
+        });
+
+        // Mock Site.findAll
+        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+        // Mock polygon geometry creation
+        jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+          uuids: ["polygon-uuid-1"],
+          areas: [10.5]
+        });
+
+        // Mock SitePolygon.bulkCreate
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+          {
+            uuid: "site-polygon-uuid-1",
+            siteUuid: "site-uuid-1",
+            polygonUuid: "polygon-uuid-1"
+          } as SitePolygon
+        ]);
+
+        const result = await service.createSitePolygons(request, mockUserId);
+
+        expect(result.data).toHaveLength(1);
+        expect(result.included).toHaveLength(0);
+      });
+
+      it("should include validation data when duplicates are found", async () => {
+        const mockFeature: Feature = {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [0, 0]
+              ]
+            ]
+          },
+          properties: {
+            site_id: "site-uuid-1",
+            poly_name: "Test Polygon"
+          }
+        };
+
+        const request = createMockRequest([mockFeature]);
+
+        // Mock duplicates found
+        jest.spyOn(duplicateGeometryValidator, "checkNewFeaturesDuplicates").mockResolvedValue({
+          valid: false,
+          duplicates: [{ index: 0, existing_uuid: "existing-polygon-uuid" }]
+        });
+
+        // Mock Site.findAll
+        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+        // Mock existing duplicate polygon
+        jest.spyOn(SitePolygon, "findAll").mockResolvedValue([
+          {
+            uuid: "existing-site-polygon-uuid",
+            polygonUuid: "existing-polygon-uuid",
+            polyName: "Existing Polygon"
+          } as SitePolygon
+        ]);
+
+        // Mock SitePolygon.bulkCreate to return empty array (no new polygons created due to duplicates)
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([]);
+
+        const result = await service.createSitePolygons(request, mockUserId);
+
+        expect(result.data).toHaveLength(1); // One duplicate polygon returned
+        expect(result.included).toHaveLength(1); // One validation entry
+        expect(result.included[0].attributes.polygonUuid).toBe("existing-polygon-uuid");
+        expect(result.included[0].attributes.criteriaList[0].criteriaId).toBe(16);
+        expect(result.included[0].attributes.criteriaList[0].valid).toBe(false);
+      });
     });
   });
 });

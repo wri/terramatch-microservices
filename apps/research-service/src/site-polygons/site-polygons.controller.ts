@@ -38,7 +38,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { CreateSitePolygonBatchRequestDto } from "./dto/create-site-polygon-request.dto";
-import { ValidationCriteriaDto } from "../validations/dto/validation-criteria.dto";
+import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 const MAX_PAGE_SIZE = 100 as const;
@@ -51,7 +51,7 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorTreeCoverDto,
   IndicatorFieldMonitoringDto,
   IndicatorMsuCarbonDto,
-  ValidationCriteriaDto
+  ValidationDto
 )
 export class SitePolygonsController {
   constructor(
@@ -95,11 +95,9 @@ export class SitePolygonsController {
 
     if (validations.length > 0) {
       for (const validation of validations) {
-        const validationDto = populateDto(new ValidationCriteriaDto(), {
-          criteriaId: validation.attributes.criteriaId,
-          valid: validation.attributes.valid,
-          createdAt: validation.attributes.createdAt,
-          extraInfo: validation.attributes.extraInfo
+        const validationDto = populateDto(new ValidationDto(), {
+          polygonUuid: validation.attributes.polygonUuid,
+          criteriaList: validation.attributes.criteriaList
         });
         document.addData(validation.id, validationDto);
       }

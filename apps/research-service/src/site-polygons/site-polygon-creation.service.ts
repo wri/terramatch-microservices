@@ -6,7 +6,7 @@ import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-pol
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
-import { ValidationCriteriaDto } from "../validations/dto/validation-criteria.dto";
+import { CriteriaId } from "@terramatch-microservices/database/constants";
 
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
@@ -15,7 +15,20 @@ interface DuplicateCheckResult {
 interface ValidationIncludedData {
   type: "validation";
   id: string;
-  attributes: ValidationCriteriaDto;
+  attributes: {
+    polygonUuid: string;
+    criteriaList: Array<{
+      criteriaId: CriteriaId;
+      valid: boolean;
+      createdAt: Date;
+      extraInfo: {
+        polygonUuid: string;
+        message: string;
+        sitePolygonUuid?: string;
+        sitePolygonName?: string;
+      };
+    }>;
+  };
 }
 
 const CHUNK_SIZE = 500;
@@ -84,25 +97,35 @@ export class SitePolygonCreationService {
 
           // Collect validation data for duplicates found and fetch existing duplicate polygons
           const existingDuplicateUuids: string[] = [];
+          const duplicateValidationMap = new Map<string, ValidationIncludedData>();
+
           for (const [, existingUuid] of duplicateIndexToUuid.entries()) {
             existingDuplicateUuids.push(existingUuid);
-            try {
-              // For duplicates, the validation should always be invalid (duplicate geometry is a validation failure)
-              duplicateValidations.push({
+
+            // Create or update validation entry for this polygon
+            if (!duplicateValidationMap.has(existingUuid)) {
+              duplicateValidationMap.set(existingUuid, {
                 type: "validation",
                 id: existingUuid,
                 attributes: {
-                  criteriaId: 16, // DUPLICATE_GEOMETRY criteria ID
-                  valid: false, // Duplicates are always invalid
-                  createdAt: new Date(),
-                  extraInfo: {
-                    polygonUuid: existingUuid,
-                    message: "This geometry already exists in the project"
-                  }
+                  polygonUuid: existingUuid,
+                  criteriaList: []
                 }
               });
-            } catch (error) {
-              this.logger.warn(`Could not create validation for duplicate polygon ${existingUuid}:`, error);
+            }
+
+            // Add duplicate criteria to the criteriaList
+            const validation = duplicateValidationMap.get(existingUuid);
+            if (validation != null) {
+              validation.attributes.criteriaList.push({
+                criteriaId: 16, // DUPLICATE_GEOMETRY criteria ID
+                valid: false, // Duplicates are always invalid
+                createdAt: new Date(),
+                extraInfo: {
+                  polygonUuid: existingUuid,
+                  message: "This geometry already exists in the project"
+                }
+              });
             }
           }
 
@@ -113,16 +136,24 @@ export class SitePolygonCreationService {
             });
             allDuplicatePolygons.push(...existingDuplicatePolygons);
 
+            // Update validation extraInfo with site polygon details
             for (const duplicatePolygon of existingDuplicatePolygons) {
-              const validationIndex = duplicateValidations.findIndex(v => v.id === duplicatePolygon.polygonUuid);
-              if (validationIndex !== -1) {
-                duplicateValidations[validationIndex].attributes.extraInfo = {
-                  ...duplicateValidations[validationIndex].attributes.extraInfo,
-                  sitePolygonUuid: duplicatePolygon.uuid,
-                  sitePolygonName: duplicatePolygon.polyName
-                };
+              const validation = duplicateValidationMap.get(duplicatePolygon.polygonUuid);
+              if (validation != null) {
+                // Update the extraInfo for the duplicate criteria
+                const duplicateCriteria = validation.attributes.criteriaList.find(c => c.criteriaId === 16);
+                if (duplicateCriteria != null) {
+                  duplicateCriteria.extraInfo = {
+                    ...duplicateCriteria.extraInfo,
+                    sitePolygonUuid: duplicatePolygon.uuid,
+                    sitePolygonName: duplicatePolygon.polyName ?? undefined
+                  };
+                }
               }
             }
+
+            // Add all validations to the array
+            duplicateValidations.push(...duplicateValidationMap.values());
           }
 
           const { filteredFeatures } = this.filterDuplicates(typeFeatures, duplicateIndexToUuid);

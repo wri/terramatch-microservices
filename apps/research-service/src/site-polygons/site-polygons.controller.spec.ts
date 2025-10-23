@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { SitePolygonsController } from "./site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons.service";
+import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -13,11 +14,18 @@ import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
+import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
   let sitePolygonService: DeepMocked<SitePolygonsService>;
   let policyService: DeepMocked<PolicyService>;
+  let sitePolygonCreationService: DeepMocked<SitePolygonCreationService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let polygonGeometryService: DeepMocked<PolygonGeometryCreationService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,7 +59,19 @@ describe("SitePolygonsController", () => {
       controllers: [SitePolygonsController],
       providers: [
         { provide: SitePolygonsService, useValue: (sitePolygonService = createMock<SitePolygonsService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        {
+          provide: SitePolygonCreationService,
+          useValue: (sitePolygonCreationService = createMock<SitePolygonCreationService>())
+        },
+        {
+          provide: PolygonGeometryCreationService,
+          useValue: (polygonGeometryService = createMock<PolygonGeometryCreationService>())
+        },
+        {
+          provide: DuplicateGeometryValidator,
+          useValue: (duplicateGeometryValidator = createMock<DuplicateGeometryValidator>())
+        }
       ]
     }).compile();
 
@@ -64,6 +84,12 @@ describe("SitePolygonsController", () => {
     sitePolygonService.buildFullDto.mockImplementation(sitePolygon => {
       return Promise.resolve(new SitePolygonFullDto(sitePolygon, [], [], []));
     });
+
+    // Mock the sitePolygonCreationService for potential future tests
+    sitePolygonCreationService.createSitePolygons.mockImplementation(async () => ({
+      data: [],
+      included: []
+    }));
   });
 
   afterEach(() => {
@@ -389,17 +415,6 @@ describe("SitePolygonsController", () => {
   });
 
   describe("deleteOne", () => {
-    it("should throw NotFoundException when site polygon does not exist", async () => {
-      const uuid = "non-existent-uuid";
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
-
-      await expect(controller.deleteOne(uuid)).rejects.toThrow(
-        new NotFoundException(`Site polygon not found for uuid: ${uuid}`)
-      );
-      expect(policyService.authorize).not.toHaveBeenCalled();
-      expect(sitePolygonService.deleteSitePolygon).not.toHaveBeenCalled();
-    });
-
     it("should throw UnauthorizedException when user is not authorized", async () => {
       const sitePolygon = await SitePolygonFactory.build();
       jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);

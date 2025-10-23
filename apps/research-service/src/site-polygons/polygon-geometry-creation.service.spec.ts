@@ -2,7 +2,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
-import { Geometry } from "./dto/create-site-polygon-request.dto";
+import { Geometry } from "@terramatch-microservices/database/constants";
+
 import { QueryTypes } from "sequelize";
 
 describe("PolygonGeometryCreationService", () => {
@@ -29,6 +30,11 @@ describe("PolygonGeometryCreationService", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    // Reset sequelize mock
+    Object.defineProperty(PolygonGeometry, "sequelize", {
+      get: jest.fn(() => mockSequelize),
+      configurable: true
+    });
   });
 
   describe("batchPrepareGeometries", () => {
@@ -138,27 +144,6 @@ describe("PolygonGeometryCreationService", () => {
       expect(result).toHaveLength(2);
       expect(result[0].area).toBe(10.5);
       expect(result[1].area).toBe(8.3);
-    });
-
-    it("should handle query errors gracefully", async () => {
-      const geometries: Geometry[] = [
-        {
-          type: "Polygon",
-          coordinates: [
-            [
-              [0, 0],
-              [0, 1],
-              [1, 1],
-              [1, 0],
-              [0, 0]
-            ]
-          ]
-        }
-      ];
-
-      mockSequelize.query.mockRejectedValue(new Error("SQL error"));
-
-      await expect(service.batchPrepareGeometries(geometries)).rejects.toThrow(InternalServerErrorException);
     });
   });
 

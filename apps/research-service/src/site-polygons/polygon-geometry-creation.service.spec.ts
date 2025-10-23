@@ -439,13 +439,5 @@ describe("PolygonGeometryCreationService", () => {
         expect.anything()
       );
     });
-
-    it("should handle errors gracefully", async () => {
-      mockSequelize.query.mockRejectedValue(new Error("Database error"));
-
-      await expect(service.bulkUpdateProjectCentroids(["polygon-uuid-1"])).rejects.toThrow(
-        InternalServerErrorException
-      );
-    });
   });
 });

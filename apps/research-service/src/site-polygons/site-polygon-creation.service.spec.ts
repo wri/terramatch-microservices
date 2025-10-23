@@ -28,8 +28,9 @@ describe("SitePolygonCreationService", () => {
           provide: PolygonGeometryCreationService,
           useValue: {
             createGeometriesFromFeatures: jest.fn(),
-            bulkUpdateSitePolygonCentroids: jest.fn(),
-            bulkUpdateSitePolygonAreas: jest.fn()
+            bulkUpdateSitePolygonCentroids: jest.fn().mockResolvedValue(undefined),
+            bulkUpdateSitePolygonAreas: jest.fn().mockResolvedValue(undefined),
+            bulkUpdateProjectCentroids: jest.fn().mockResolvedValue(undefined)
           }
         },
         {

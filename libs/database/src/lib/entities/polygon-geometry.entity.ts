@@ -214,6 +214,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
         JOIN world_countries_generalized wcg ON wcg.iso = p.country
         WHERE pg.uuid = :polygonUuid
           AND ST_Area(pg.geom) > 0
+          AND ST_Intersects(pg.geom, wcg.geometry)
       `,
       {
         replacements: { polygonUuid },
@@ -254,7 +255,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
           pg.uuid as polygonUuid,
           ST_Area(pg.geom) as "polygonArea",
           ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
-          wcg.country
+          p.country
         FROM polygon_geometry pg
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
         JOIN v2_sites s ON s.uuid = sp.site_id
@@ -262,6 +263,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
         JOIN world_countries_generalized wcg ON wcg.iso = p.country
         WHERE pg.uuid IN (:polygonUuids)
           AND ST_Area(pg.geom) > 0
+          AND ST_Intersects(pg.geom, wcg.geometry)
       `,
       {
         replacements: { polygonUuids },
@@ -274,6 +276,39 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
       intersectionArea: number;
       country: string;
     }[];
+  }
+
+  static async getProjectCountriesBatch(
+    polygonUuids: string[],
+    transaction?: Transaction
+  ): Promise<Map<string, string>> {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    if (polygonUuids.length === 0) {
+      return new Map();
+    }
+
+    const results = (await this.sequelize.query(
+      `
+        SELECT 
+          pg.uuid as polygonUuid,
+          p.country
+        FROM polygon_geometry pg
+        JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
+        JOIN v2_sites s ON s.uuid = sp.site_id
+        JOIN v2_projects p ON p.id = s.project_id
+        WHERE pg.uuid IN (:polygonUuids)
+      `,
+      {
+        replacements: { polygonUuids },
+        type: QueryTypes.SELECT,
+        transaction
+      }
+    )) as { polygonUuid: string; country: string }[];
+
+    return new Map(results.map(r => [r.polygonUuid, r.country]));
   }
 
   @PrimaryKey

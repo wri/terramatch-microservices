@@ -9,7 +9,6 @@ import {
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestAttributes } from "./dto/validation-request.dto";
 import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
-import { ValidationSummaryDto, ValidationTypeSummary } from "./dto/validation-summary.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";
@@ -376,47 +375,6 @@ export class ValidationService {
       const affectedPolygonUuids = [...new Set(recordsToCreate.map(r => r.polygonId))];
       await this.updateSitePolygonValidityBatch(affectedPolygonUuids);
     }
-  }
-
-  async generateValidationSummary(siteUuid: string, validationTypes: ValidationType[]): Promise<ValidationSummaryDto> {
-    const polygonUuids = await this.getSitePolygonUuids(siteUuid);
-
-    if (polygonUuids.length === 0) {
-      throw new NotFoundException(`No polygons found for site with UUID ${siteUuid}`);
-    }
-
-    const validationSummary: Record<ValidationType, ValidationTypeSummary> = {} as Record<
-      ValidationType,
-      ValidationTypeSummary
-    >;
-
-    for (const validationType of validationTypes) {
-      const criteriaId = this.getCriteriaIdForValidationType(validationType);
-
-      const criteriaData = await CriteriaSite.findAll({
-        where: {
-          polygonId: { [Op.in]: polygonUuids },
-          criteriaId
-        },
-        attributes: ["valid"]
-      });
-
-      const validCount = criteriaData.filter(c => c.valid === true).length;
-      const invalidCount = criteriaData.filter(c => c.valid === false).length;
-
-      validationSummary[validationType] = {
-        valid: validCount,
-        invalid: invalidCount
-      };
-    }
-
-    return {
-      siteUuid,
-      totalPolygons: polygonUuids.length,
-      validatedPolygons: polygonUuids.length,
-      validationSummary,
-      completedAt: new Date()
-    };
   }
 
   private async updateSitePolygonValidityBatch(polygonUuids: string[]): Promise<void> {

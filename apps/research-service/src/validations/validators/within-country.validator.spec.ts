@@ -13,7 +13,9 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     sequelize: {
       transaction: jest.fn()
     },
-    checkWithinCountryIntersection: jest.fn()
+    checkWithinCountryIntersection: jest.fn(),
+    checkWithinCountryIntersectionBatch: jest.fn(),
+    getProjectCountriesBatch: jest.fn()
   }
 }));
 
@@ -290,8 +292,13 @@ describe("WithinCountryValidator", () => {
       (
         PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
       ).checkWithinCountryIntersectionBatch = jest.fn();
+      (PolygonGeometry as unknown as { getProjectCountriesBatch: jest.Mock }).getProjectCountriesBatch = jest.fn();
+
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
       (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockResolvedValueOnce([]);
+      (PolygonGeometry.getProjectCountriesBatch as jest.Mock).mockResolvedValueOnce(
+        new Map([[testPolygonUuid, "Cambodia"]])
+      );
 
       const result = await validator.validatePolygons([testPolygonUuid]);
 

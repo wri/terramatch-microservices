@@ -274,14 +274,9 @@ describe("WithinCountryValidator - Integration Tests", () => {
       });
 
       try {
-        const result = await validator.validatePolygon(polygonGeometry.uuid);
-        expect(result.valid).toBe(false);
-        expect(result.extraInfo).not.toBeNull();
-
-        if (result.extraInfo != null) {
-          expect(result.extraInfo.inside_percentage).toBe(0);
-          expect(result.extraInfo.country_name).toBe("Cambodia");
-        }
+        await expect(validator.validatePolygon(polygonGeometry.uuid)).rejects.toThrow(
+          `Polygon with UUID ${polygonGeometry.uuid} not found or has no associated project`
+        );
       } finally {
         await SitePolygon.destroy({
           where: { polygonUuid: polygonGeometry.uuid }

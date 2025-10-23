@@ -5,7 +5,7 @@ import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
-import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
@@ -197,21 +197,18 @@ describe("SitePolygonsController", () => {
 
       await controller.findMany({ projectCohort: ["pants"] });
       expect(builder.filterProjectAttributes).toHaveBeenCalledWith(["pants"], undefined);
-      // when filtering by cohort, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();
       builder.filterProjectAttributes.mockClear();
 
       await controller.findMany({ landscape: "gcb" });
       expect(builder.filterProjectAttributes).toHaveBeenCalledWith(undefined, "gcb");
-      // when filtering by landscape, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();
       builder.filterProjectAttributes.mockClear();
 
       await controller.findMany({ projectCohort: ["shirts"], landscape: "ikr" });
       expect(builder.filterProjectAttributes).toHaveBeenCalledWith(["shirts"], "ikr");
-      // when filtering by landscape and cohort, we _do_ want to also exclude test projects
       expect(builder.excludeTestProjects).toHaveBeenCalled();
       builder.excludeTestProjects.mockClear();
       builder.filterProjectAttributes.mockClear();

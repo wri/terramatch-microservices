@@ -10,6 +10,12 @@ export interface GeometryWithArea {
   area: number;
 }
 
+interface QueryResult {
+  idx: number;
+  geoJson: string;
+  area: string | number;
+}
+
 @Injectable()
 export class PolygonGeometryCreationService {
   private readonly logger = new Logger(PolygonGeometryCreationService.name);
@@ -47,10 +53,15 @@ export class PolygonGeometryCreationService {
         type: QueryTypes.SELECT
       });
 
-      return results.map((result: any) => ({
+      return results.map((result: QueryResult) => ({
         uuid: uuidv4(),
         geomJson: result.geoJson,
-        area: parseFloat(result.area) || 0
+        area:
+          typeof result.area === "number"
+            ? result.area
+            : Number.isNaN(parseFloat(result.area as string))
+            ? 0
+            : parseFloat(result.area as string)
       }));
     } catch (error) {
       this.logger.error("Error preparing geometries", error);

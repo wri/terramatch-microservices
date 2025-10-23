@@ -17,7 +17,6 @@ describe("PolygonGeometryCreationService", () => {
 
     service = module.get<PolygonGeometryCreationService>(PolygonGeometryCreationService);
 
-    // Mock sequelize
     mockSequelize = {
       query: jest.fn()
     };
@@ -30,7 +29,6 @@ describe("PolygonGeometryCreationService", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-    // Reset sequelize mock
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
       configurable: true
@@ -273,7 +271,6 @@ describe("PolygonGeometryCreationService", () => {
 
       expect(result.uuids).toHaveLength(2);
       expect(result.areas).toHaveLength(2);
-      // batchPrepareGeometries should have been called with 2 expanded Polygon geometries
       expect(service.batchPrepareGeometries).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({ type: "Polygon" }),
@@ -428,14 +425,11 @@ describe("PolygonGeometryCreationService", () => {
           })
         })
       );
-      // Should use subquery to get project_id
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("SELECT DISTINCT s2.project_id"),
         expect.anything()
       );
-      // Should filter by active polygons
       expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("sp.is_active = 1"), expect.anything());
-      // Should calculate average centroids
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("AVG(ST_Y(ST_Centroid(pg.geom)))"),
         expect.anything()

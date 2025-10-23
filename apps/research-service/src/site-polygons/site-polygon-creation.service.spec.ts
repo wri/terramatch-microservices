@@ -2,9 +2,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
-import { BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { CreateSitePolygonBatchRequestDto, Feature, FeatureProperties } from "./dto/create-site-polygon-request.dto";
+import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 
 // Mock Sequelize
 const mockTransaction = {
@@ -49,7 +48,6 @@ describe("SitePolygonCreationService", () => {
     polygonGeometryService = module.get<PolygonGeometryCreationService>(PolygonGeometryCreationService);
     duplicateGeometryValidator = module.get<DuplicateGeometryValidator>(DuplicateGeometryValidator);
 
-    // Mock PolygonGeometry sequelize
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
       configurable: true
@@ -95,16 +93,13 @@ describe("SitePolygonCreationService", () => {
 
       const request = createMockRequest([mockFeature]);
 
-      // Mock Site.findAll
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
-      // Mock polygon geometry creation
       jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
         uuids: ["polygon-uuid-1"],
         areas: [10.5]
       });
 
-      // Mock SitePolygon.bulkCreate
       jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
         {
           uuid: "site-polygon-uuid-1",
@@ -157,7 +152,6 @@ describe("SitePolygonCreationService", () => {
 
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
-      // MultiPolygon expands to 2 polygons
       jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
         uuids: ["polygon-uuid-1", "polygon-uuid-2"],
         areas: [10.5, 8.3]
@@ -245,7 +239,6 @@ describe("SitePolygonCreationService", () => {
 
       const result = await service.createSitePolygons(request, mockUserId);
 
-      // Should have created multiple site polygons
       expect(result.data.length).toBeGreaterThan(0);
     });
   });
@@ -277,22 +270,18 @@ describe("SitePolygonCreationService", () => {
 
         const request = createMockRequest([mockFeature]);
 
-        // Mock no duplicates found
         jest.spyOn(duplicateGeometryValidator, "checkNewFeaturesDuplicates").mockResolvedValue({
           valid: true,
           duplicates: []
         });
 
-        // Mock Site.findAll
         jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
-        // Mock polygon geometry creation
         jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
           uuids: ["polygon-uuid-1"],
           areas: [10.5]
         });
 
-        // Mock SitePolygon.bulkCreate
         jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
           {
             uuid: "site-polygon-uuid-1",
@@ -330,16 +319,13 @@ describe("SitePolygonCreationService", () => {
 
         const request = createMockRequest([mockFeature]);
 
-        // Mock duplicates found
         jest.spyOn(duplicateGeometryValidator, "checkNewFeaturesDuplicates").mockResolvedValue({
           valid: false,
           duplicates: [{ index: 0, existing_uuid: "existing-polygon-uuid" }]
         });
 
-        // Mock Site.findAll
         jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
-        // Mock existing duplicate polygon
         jest.spyOn(SitePolygon, "findAll").mockResolvedValue([
           {
             uuid: "existing-site-polygon-uuid",
@@ -348,7 +334,6 @@ describe("SitePolygonCreationService", () => {
           } as SitePolygon
         ]);
 
-        // Mock SitePolygon.bulkCreate to return empty array (no new polygons created due to duplicates)
         jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([]);
 
         const result = await service.createSitePolygons(request, mockUserId);

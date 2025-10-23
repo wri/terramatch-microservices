@@ -1,8 +1,8 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Geometry } from "@terramatch-microservices/database/constants";
 import { QueryTypes, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { Geometry } from "./dto/create-site-polygon-request.dto";
 
 export interface GeometryWithArea {
   uuid: string;
@@ -56,7 +56,7 @@ export class PolygonGeometryCreationService {
       const replacements: Record<string, string | number | Date | null> = {};
       geometriesWithAreas.forEach((item, index) => {
         replacements[`uuid${index}`] = item.uuid;
-        replacements[`geomJson${index}`] = item.geomJson; // GeoJSON string, not WKB
+        replacements[`geomJson${index}`] = item.geomJson;
         replacements[`createdBy${index}`] = createdBy;
         replacements[`createdAt${index}`] = now;
         replacements[`updatedAt${index}`] = now;
@@ -85,9 +85,8 @@ export class PolygonGeometryCreationService {
     createdBy: number | null,
     transaction?: Transaction
   ): Promise<{ uuids: string[]; areas: number[] }> {
-    // Expand MultiPolygons into individual Polygons
     const expandedGeometries: Geometry[] = [];
-    const geometryIndexMap: number[] = []; // Track which original geometry each expanded one came from
+    const geometryIndexMap: number[] = [];
 
     for (let i = 0; i < geometries.length; i++) {
       const geom = geometries[i];
@@ -95,7 +94,6 @@ export class PolygonGeometryCreationService {
         expandedGeometries.push(geom);
         geometryIndexMap.push(i);
       } else if (geom.type === "MultiPolygon") {
-        // Expand MultiPolygon into multiple Polygon geometries
         const coordinates = geom.coordinates as number[][][][];
         for (const polyCoords of coordinates) {
           expandedGeometries.push({

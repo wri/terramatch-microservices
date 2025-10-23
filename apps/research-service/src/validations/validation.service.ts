@@ -21,6 +21,7 @@ import { PolygonSizeValidator } from "./validators/polygon-size.validator";
 import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
 import { OverlappingValidator } from "./validators/overlapping.validator";
 import { WithinCountryValidator } from "./validators/within-country.validator";
+import { DuplicateGeometryValidator } from "./validators/duplicate-geometry.validator";
 import { Validator } from "./validators/validator.interface";
 import {
   ValidationType,
@@ -53,6 +54,7 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
   DATA_COMPLETENESS: new DataCompletenessValidator(),
   PLANT_START_DATE: new PlantStartDateValidator(),
   OVERLAPPING: new OverlappingValidator(),
+  DUPLICATE_GEOMETRY: new DuplicateGeometryValidator(),
   WITHIN_COUNTRY: new WithinCountryValidator()
 };
 

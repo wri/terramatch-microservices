@@ -5,9 +5,17 @@ import { v4 as uuidv4 } from "uuid";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
+import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
+import { ValidationCriteriaDto } from "../validations/dto/validation-criteria.dto";
 
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
+}
+
+interface ValidationIncludedData {
+  type: "validation";
+  id: string;
+  attributes: ValidationCriteriaDto;
 }
 
 const CHUNK_SIZE = 500;
@@ -18,23 +26,49 @@ const SOURCE_GREENHOUSE = "greenhouse";
 export class SitePolygonCreationService {
   private readonly logger = new Logger(SitePolygonCreationService.name);
 
-  constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
+  constructor(
+    private readonly polygonGeometryService: PolygonGeometryCreationService,
+    private readonly duplicateGeometryValidator: DuplicateGeometryValidator
+  ) {}
 
-  async createSitePolygons(request: CreateSitePolygonBatchRequestDto, userId: number): Promise<SitePolygon[]> {
-    return await this.storeAndValidateGeometries(request.geometries, userId);
+  async createSitePolygons(
+    request: CreateSitePolygonBatchRequestDto,
+    userId: number
+  ): Promise<{
+    data: SitePolygon[];
+    included: ValidationIncludedData[];
+  }> {
+    const { createdPolygons, duplicatePolygons, duplicateValidations } = await this.storeAndValidateGeometries(
+      request.geometries,
+      userId
+    );
+
+    // Combine created and duplicate polygons in the response
+    const allPolygons = [...createdPolygons, ...duplicatePolygons];
+
+    return {
+      data: allPolygons,
+      included: duplicateValidations
+    };
   }
 
   private async storeAndValidateGeometries(
     geometries: { type: string; features: Feature[] }[],
     userId: number
-  ): Promise<SitePolygon[]> {
+  ): Promise<{
+    createdPolygons: SitePolygon[];
+    duplicatePolygons: SitePolygon[];
+    duplicateValidations: ValidationIncludedData[];
+  }> {
     if (PolygonGeometry.sequelize == null) {
       throw new BadRequestException("Database connection not available");
     }
 
     const transaction = await PolygonGeometry.sequelize.transaction();
     const allCreatedSitePolygons: SitePolygon[] = [];
+    const allDuplicatePolygons: SitePolygon[] = [];
     const allPolygonUuids: string[] = [];
+    const duplicateValidations: ValidationIncludedData[] = [];
 
     try {
       const groupedBySite = this.groupGeometriesBySiteId(geometries);
@@ -45,7 +79,51 @@ export class SitePolygonCreationService {
         const groupedByType = this.groupGeometriesByType(siteGeometries);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
-          const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId, transaction);
+          const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId);
+          this.logger.debug(`🔍 DUPLICATE_CHECK: Found ${duplicateIndexToUuid.size} duplicates for site ${siteId}`);
+
+          // Collect validation data for duplicates found and fetch existing duplicate polygons
+          const existingDuplicateUuids: string[] = [];
+          for (const [, existingUuid] of duplicateIndexToUuid.entries()) {
+            existingDuplicateUuids.push(existingUuid);
+            try {
+              // For duplicates, the validation should always be invalid (duplicate geometry is a validation failure)
+              duplicateValidations.push({
+                type: "validation",
+                id: existingUuid,
+                attributes: {
+                  criteriaId: 16, // DUPLICATE_GEOMETRY criteria ID
+                  valid: false, // Duplicates are always invalid
+                  createdAt: new Date(),
+                  extraInfo: {
+                    polygonUuid: existingUuid,
+                    message: "This geometry already exists in the project"
+                  }
+                }
+              });
+            } catch (error) {
+              this.logger.warn(`Could not create validation for duplicate polygon ${existingUuid}:`, error);
+            }
+          }
+
+          if (existingDuplicateUuids.length > 0) {
+            const existingDuplicatePolygons = await SitePolygon.findAll({
+              where: { polygonUuid: existingDuplicateUuids, isActive: true },
+              transaction
+            });
+            allDuplicatePolygons.push(...existingDuplicatePolygons);
+
+            for (const duplicatePolygon of existingDuplicatePolygons) {
+              const validationIndex = duplicateValidations.findIndex(v => v.id === duplicatePolygon.polygonUuid);
+              if (validationIndex !== -1) {
+                duplicateValidations[validationIndex].attributes.extraInfo = {
+                  ...duplicateValidations[validationIndex].attributes.extraInfo,
+                  sitePolygonUuid: duplicatePolygon.uuid,
+                  sitePolygonName: duplicatePolygon.polyName
+                };
+              }
+            }
+          }
 
           const { filteredFeatures } = this.filterDuplicates(typeFeatures, duplicateIndexToUuid);
 
@@ -72,7 +150,11 @@ export class SitePolygonCreationService {
 
       await transaction.commit();
 
-      return allCreatedSitePolygons;
+      return {
+        createdPolygons: allCreatedSitePolygons,
+        duplicatePolygons: allDuplicatePolygons,
+        duplicateValidations
+      };
     } catch (error) {
       await transaction.rollback();
       this.logger.error("Error creating site polygons", error);
@@ -137,31 +219,31 @@ export class SitePolygonCreationService {
     }
   }
 
-  /**
-   * Check for duplicate geometries
-   * TODO: Implement actual duplicate geometry checking using PostGIS ST_Equals
-   * For now, returns empty results
-   */
-  private async checkDuplicates(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    features: Feature[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    siteId: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    transaction: Transaction
-  ): Promise<DuplicateCheckResult> {
-    // Placeholder for duplicate checking
-    // V2 implementation uses DuplicateGeometry::checkNewFeaturesDuplicates
-    // which compares geometry using ST_Equals
+  private async checkDuplicates(features: Feature[], siteId: string): Promise<DuplicateCheckResult> {
+    try {
+      this.logger.debug(`🔍 DUPLICATE_CHECK: Checking duplicates for ${features.length} features in site ${siteId}`);
+      const duplicateResult = await this.duplicateGeometryValidator.checkNewFeaturesDuplicates(features, siteId);
+      this.logger.debug(
+        `🔍 DUPLICATE_CHECK: Result - valid=${duplicateResult.valid}, duplicates=${duplicateResult.duplicates.length}`
+      );
 
-    return {
-      duplicateIndexToUuid: new Map()
-    };
+      const duplicateIndexToUuid = new Map<number, string>();
+
+      if (!duplicateResult.valid && duplicateResult.duplicates.length > 0) {
+        this.logger.debug(`🔍 DUPLICATE_CHECK: Found ${duplicateResult.duplicates.length} duplicates`);
+        for (const duplicate of duplicateResult.duplicates) {
+          duplicateIndexToUuid.set(duplicate.index, duplicate.existing_uuid);
+          this.logger.debug(`🔍 DUPLICATE_CHECK: Index ${duplicate.index} matches existing ${duplicate.existing_uuid}`);
+        }
+      }
+
+      return { duplicateIndexToUuid };
+    } catch (error) {
+      this.logger.error("Error checking for duplicate geometries", error);
+      return { duplicateIndexToUuid: new Map() };
+    }
   }
 
-  /**
-   * Filter out duplicate features
-   */
   private filterDuplicates(
     features: Feature[],
     duplicateIndexToUuid: Map<number, string>

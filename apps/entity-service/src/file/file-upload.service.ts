@@ -17,20 +17,22 @@ import {
 import { MediaRequestAttributes } from "../entities/dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
-const mappingMimeTypes = {
+const MIME_TYPES = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/heif": "heif",
   "image/heic": "heic",
   "image/svg+xml": "svg",
   "text/plain": "txt",
+  "text/csv": "csv",
   "application/pdf": "pdf",
   "application/vnd.ms-excel": "xls",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
   "application/vnd.ms-powerpoint": "ppt",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
   "application/vnd.ms-word": "doc",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "video/mp4": "mp4"
 };
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
@@ -181,7 +183,7 @@ export class FileUploadService {
     if (mimeTypeValidation != null) {
       const mimeTypes: string[] = mimeTypeValidation.split(":")[1].split(",");
 
-      const abbreviatedMimeType = mappingMimeTypes[file.mimetype as keyof typeof mappingMimeTypes];
+      const abbreviatedMimeType = MIME_TYPES[file.mimetype as keyof typeof MIME_TYPES];
       if (!mimeTypes.includes(abbreviatedMimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
         throw new TranslatableException(`Invalid file type: ${file.mimetype}`, "MIMES", {

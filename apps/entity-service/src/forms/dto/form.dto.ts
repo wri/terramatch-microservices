@@ -82,7 +82,7 @@ export class FormFullDto extends FormLightDto {
   @IsOptional()
   @IsString()
   @ApiProperty({ nullable: true, required: false, type: String })
-  documentationLabel: string | null;
+  documentationLabel?: string | null;
 
   @IsOptional()
   @IsDate()

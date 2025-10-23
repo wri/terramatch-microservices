@@ -8,6 +8,7 @@ import { Form } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
+import { StoreFormAttributes } from "./dto/form.dto";
 
 describe("FormsController", () => {
   let controller: FormsController;
@@ -30,7 +31,7 @@ describe("FormsController", () => {
     jest.restoreAllMocks();
   });
 
-  describe("formsIndex", () => {
+  describe("index", () => {
     it("calls addIndex on the service", async () => {
       const query: FormIndexQueryDto = { search: "foo", type: "nursery" };
       await controller.index(query);
@@ -38,7 +39,7 @@ describe("FormsController", () => {
     });
   });
 
-  describe("formGet", () => {
+  describe("get", () => {
     it("pulls the form instance and builds the full DTO", async () => {
       const form = {} as Form;
       const query: FormGetQueryDto = { translated: false };
@@ -49,7 +50,7 @@ describe("FormsController", () => {
     });
   });
 
-  describe("formDelete", () => {
+  describe("delete", () => {
     beforeEach(() => {
       policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
     });
@@ -79,6 +80,24 @@ describe("FormsController", () => {
       for (const question of questions) {
         expect(question.deletedAt).not.toBeNull();
       }
+    });
+  });
+
+  describe("create", () => {
+    beforeEach(() => {
+      policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
+    });
+
+    it("calls store on the service", async () => {
+      const form = {} as Form;
+      service.store.mockResolvedValue(form);
+      const attributes: StoreFormAttributes = {
+        title: "",
+        submissionMessage: ""
+      };
+      await controller.create({ data: { type: "forms", attributes } });
+      expect(service.store).toHaveBeenCalledWith(attributes);
+      expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
     });
   });
 });

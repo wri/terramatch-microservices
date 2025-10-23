@@ -21,12 +21,12 @@ export class FormSectionDto {
   @IsString()
   @IsOptional()
   @ApiProperty({ nullable: true, required: false, type: String, description: "Translated section title" })
-  title: string | null;
+  title?: string | null;
 
   @IsString()
   @IsOptional()
   @ApiProperty({ nullable: true, required: false, type: String, description: "Translated section description" })
-  description: string | null;
+  description?: string | null;
 
   @ApiProperty({ type: () => FormQuestionDto, isArray: true })
   questions: FormQuestionDto[];

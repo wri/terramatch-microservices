@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { FormsService } from "./forms.service";
+import { faker } from "@faker-js/faker";
 import { Test } from "@nestjs/testing";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -14,9 +16,15 @@ import {
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { Form, FormQuestion, FormSection } from "@terramatch-microservices/database/entities";
+import {
+  Form,
+  FormQuestion,
+  FormQuestionOption,
+  FormSection,
+  FormTableHeader
+} from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
-import { FormFullDto, FormLightDto } from "./dto/form.dto";
+import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { pick } from "lodash";
 import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
@@ -292,6 +300,133 @@ describe("FormsService", () => {
       const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false));
       const dto = (document.data as Resource).attributes;
       expect(dto).toMatchObject(formMatch);
+    });
+  });
+
+  describe("store", () => {
+    it("creates a form from the attributes", async () => {
+      mockUserId(123);
+      localizationService.generateI18nId.mockResolvedValue(1);
+      const attributes: StoreFormAttributes = {
+        title: faker.lorem.sentence(),
+        frameworkKey: "ppc",
+        type: "project",
+        submissionMessage: faker.lorem.paragraph(),
+        deadlineAt: faker.date.soon(),
+        sections: [
+          {
+            title: faker.lorem.sentence(),
+            description: faker.lorem.paragraph(),
+            questions: [
+              {
+                linkedFieldKey: faker.lorem.slug(),
+                inputType: "conditional",
+                label: faker.lorem.slug(),
+                validation: { required: true },
+                children: [
+                  {
+                    inputType: "select",
+                    label: faker.lorem.slug(),
+                    options: [
+                      {
+                        slug: faker.lorem.slug(),
+                        label: faker.lorem.slug()
+                      },
+                      {
+                        slug: faker.lorem.slug(),
+                        label: faker.lorem.slug(),
+                        imageUrl: faker.image.url()
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: faker.lorem.sentence(),
+            questions: [
+              {
+                inputType: "tableInput",
+                label: faker.lorem.slug(),
+                tableHeaders: [faker.lorem.slug(), faker.lorem.slug()]
+              }
+            ]
+          }
+        ]
+      };
+
+      const form = await service.store(attributes);
+      expect(form.updatedBy).toBe("123");
+      expect(form.published).toBe(false);
+      expect(form.title).toBe(attributes.title);
+      expect(form.frameworkKey).toBe(attributes.frameworkKey);
+      expect(form.type).toBe(attributes.type);
+      expect(form.submissionMessage).toBe(attributes.submissionMessage);
+      expect(form.deadlineAt).toEqual(attributes.deadlineAt);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.title);
+
+      const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
+      expect(sections).toHaveLength(2);
+      expect(sections[0].order).toBe(0);
+      expect(sections[0].title).toBe(attributes.sections![0].title);
+      expect(sections[0].description).toBe(attributes.sections![0].description);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].title);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].description);
+      expect(sections[1].order).toBe(1);
+      expect(sections[1].title).toBe(attributes.sections![1].title);
+      expect(sections[1].description).toBeNull();
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![1].title);
+
+      const section0Questions = await FormQuestion.findAll({
+        where: { formSectionId: sections[0].id },
+        order: ["order"]
+      });
+      expect(section0Questions).toHaveLength(2);
+      const conditional = section0Questions.find(({ parentId }) => parentId == null)!;
+      const section0QuestionAttributes = attributes.sections![0].questions!;
+      expect(conditional.order).toBe(0);
+      expect(conditional.linkedFieldKey).toBe(section0QuestionAttributes[0].linkedFieldKey);
+      expect(conditional.inputType).toBe("conditional");
+      expect(conditional.label).toBe(section0QuestionAttributes[0].label);
+      // @ts-expect-error untyped validation object
+      expect(conditional.validation?.required).toBe(true);
+      const select = section0Questions.find(({ parentId }) => parentId != null)!;
+      expect(select.order).toBe(0);
+      expect(select.inputType).toBe("select");
+      expect(select.label).toBe(section0QuestionAttributes[0].children![0].label);
+      const options = await FormQuestionOption.findAll({ where: { formQuestionId: select.id }, order: ["order"] });
+      const optionsAttributes = section0QuestionAttributes[0].children![0].options!;
+      expect(options).toHaveLength(2);
+      expect(options[0].order).toBe(0);
+      expect(options[0].slug).toBe(optionsAttributes[0].slug);
+      expect(options[0].label).toBe(optionsAttributes[0].label);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[0].label);
+      expect(options[1].order).toBe(1);
+      expect(options[1].slug).toBe(optionsAttributes[1].slug);
+      expect(options[1].label).toBe(optionsAttributes[1].label);
+      expect(options[1].imageUrl).toBe(optionsAttributes[1].imageUrl);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[1].label);
+
+      const section1Questions = await FormQuestion.findAll({
+        where: { formSectionId: sections[1].id },
+        order: ["order"]
+      });
+      expect(section1Questions).toHaveLength(1);
+      const tableInput = section1Questions[0];
+      const section1QuestionAttributes = attributes.sections![1].questions!;
+      expect(tableInput.order).toBe(0);
+      expect(tableInput.label).toBe(section1QuestionAttributes[0].label);
+      expect(tableInput.inputType).toBe("tableInput");
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].label);
+      const headers = await FormTableHeader.findAll({ where: { formQuestionId: tableInput.id } });
+      expect(headers).toHaveLength(2);
+      expect(headers[0].order).toBe(0);
+      expect(headers[0].label).toBe(section1QuestionAttributes[0].tableHeaders![0]);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].tableHeaders![0]);
+      expect(headers[1].order).toBe(1);
+      expect(headers[1].label).toBe(section1QuestionAttributes[0].tableHeaders![1]);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].tableHeaders![1]);
     });
   });
 });

@@ -8,6 +8,7 @@ import { Form } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
+import { StoreFormAttributes } from "./dto/form.dto";
 
 describe("FormsController", () => {
   let controller: FormsController;
@@ -30,33 +31,33 @@ describe("FormsController", () => {
     jest.restoreAllMocks();
   });
 
-  describe("formsIndex", () => {
+  describe("index", () => {
     it("calls addIndex on the service", async () => {
       const query: FormIndexQueryDto = { search: "foo", type: "nursery" };
-      await controller.formIndex(query);
+      await controller.index(query);
       expect(service.addIndex).toHaveBeenCalledWith(expect.any(DocumentBuilder), query);
     });
   });
 
-  describe("formGet", () => {
+  describe("get", () => {
     it("pulls the form instance and builds the full DTO", async () => {
       const form = {} as Form;
       const query: FormGetQueryDto = { translated: false };
       service.findOne.mockResolvedValue(form);
-      await controller.formGet("fake-uuid", query);
+      await controller.get("fake-uuid", query);
       expect(service.findOne).toHaveBeenCalledWith("fake-uuid");
       expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
     });
   });
 
-  describe("formDelete", () => {
+  describe("delete", () => {
     beforeEach(() => {
       policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
     });
 
     it("throws if the form is published", async () => {
       service.findOne.mockResolvedValue({ published: true } as Form);
-      await expect(controller.formDelete("fake-uuid")).rejects.toThrow(BadRequestException);
+      await expect(controller.delete("fake-uuid")).rejects.toThrow(BadRequestException);
     });
 
     it("Destroys the form and all questions", async () => {
@@ -67,7 +68,7 @@ describe("FormsController", () => {
         ...(await FormQuestionFactory.createMany(2, { formSectionId: sections[1].id }))
       ];
       service.findOne.mockResolvedValue(form);
-      await controller.formDelete(form.uuid);
+      await controller.delete(form.uuid);
 
       await form.reload({ paranoid: false });
       await Promise.all(sections.map(section => section.reload({ paranoid: false })));
@@ -79,6 +80,24 @@ describe("FormsController", () => {
       for (const question of questions) {
         expect(question.deletedAt).not.toBeNull();
       }
+    });
+  });
+
+  describe("create", () => {
+    beforeEach(() => {
+      policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
+    });
+
+    it("calls store on the service", async () => {
+      const form = {} as Form;
+      service.store.mockResolvedValue(form);
+      const attributes: StoreFormAttributes = {
+        title: "",
+        submissionMessage: ""
+      };
+      await controller.create({ data: { type: "forms", attributes } });
+      expect(service.store).toHaveBeenCalledWith(attributes);
+      expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
     });
   });
 });

@@ -1,12 +1,17 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { INPUT_TYPES, InputType } from "@terramatch-microservices/database/constants/linked-fields";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormQuestion } from "@terramatch-microservices/database/entities";
 import { OptionLabelDto } from "./option-label.dto";
 import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/common/linkedFields";
+import { IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 
 export class FormQuestionOptionDto extends OptionLabelDto {
+  @ApiProperty()
+  id: string;
+
   @ApiProperty({ nullable: true, type: String })
   thumbUrl: string | null;
 }
@@ -20,66 +25,137 @@ export class FormQuestionDto {
     populateDto<FormQuestionDto, FormQuestionWithoutExtras>(this, question, props);
   }
 
+  @IsString()
   @ApiProperty()
   name: string;
 
+  @IsIn(INPUT_TYPES)
   @ApiProperty({ enum: INPUT_TYPES })
   inputType: InputType;
 
+  @IsString()
   @ApiProperty()
   label: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  placeholder: string | null;
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  placeholder?: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  description: string | null;
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  description?: string | null;
 
-  @ApiProperty({ nullable: true, type: Object })
-  validation: object | null;
+  @IsObject()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Object })
+  validation?: object | null;
 
   @ApiProperty()
   multiChoice: boolean;
 
-  @ApiProperty({ nullable: true, type: String })
-  collection: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  collection?: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  optionsList: string | null;
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  optionsList?: string | null;
 
-  @ApiProperty({ nullable: true, type: Boolean })
-  optionsOther: boolean | null;
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Boolean })
+  optionsOther?: boolean | null;
 
   @ApiProperty({ nullable: true, type: FormQuestionOptionDto, isArray: true })
   options: FormQuestionOptionDto[] | null;
 
-  @ApiProperty({ nullable: true, type: Boolean })
-  showOnParentCondition: boolean | null;
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Boolean })
+  showOnParentCondition?: boolean | null;
 
   @ApiProperty({ nullable: true, enum: FORM_MODEL_TYPES })
   model: FormModelType | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  linkedFieldKey: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ nullable: true, required: false, type: String })
+  linkedFieldKey?: string | null;
 
   @ApiProperty()
   isParentConditionalDefault: boolean;
 
-  @ApiProperty({ nullable: true, type: Number })
-  minCharacterLimit: number | null;
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Number })
+  minCharacterLimit?: number | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  maxCharacterLimit: number | null;
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Number })
+  maxCharacterLimit?: number | null;
 
-  @ApiProperty({ nullable: true, type: Number, isArray: true })
-  years: number[] | null;
+  @IsNumber({ maxDecimalPlaces: 0 }, { each: true })
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Number, isArray: true })
+  years?: number[] | null;
 
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  tableHeaders: string[] | null;
+  @IsString({ each: true })
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: String, isArray: true })
+  tableHeaders?: string[] | null;
 
-  @ApiProperty({ nullable: true, type: Object })
-  additionalProps: object | null;
+  @IsObject()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: Object })
+  additionalProps?: object | null;
 
   @ApiProperty({ nullable: true, type: () => FormQuestionDto, isArray: true })
   children: FormQuestionDto[] | null;
+}
+
+export class StoreFormQuestionOptionAttributes extends PickType(FormQuestionOptionDto, ["slug", "label", "imageUrl"]) {}
+
+export class StoreFormQuestionAttributes extends PickType(FormQuestionDto, [
+  "linkedFieldKey",
+  "collection",
+  "label",
+  "inputType",
+  "placeholder",
+  "description",
+  "validation",
+  "additionalProps",
+  "optionsList",
+  "optionsOther",
+  "years",
+  "tableHeaders",
+  "showOnParentCondition",
+  "minCharacterLimit",
+  "maxCharacterLimit"
+]) {
+  // optional on request, but not in response
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false })
+  name?: string;
+
+  // optional on request, but not in response
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ required: false })
+  multiChoice?: boolean;
+
+  @ValidateNested()
+  @Type(() => StoreFormQuestionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormQuestionAttributes, isArray: true })
+  children?: StoreFormQuestionAttributes[];
+
+  @ValidateNested()
+  @Type(() => StoreFormQuestionOptionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormQuestionOptionAttributes, isArray: true })
+  options?: StoreFormQuestionOptionAttributes[];
 }

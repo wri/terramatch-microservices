@@ -1,8 +1,10 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { FormQuestionDto } from "./form-question.dto";
+import { StoreFormQuestionAttributes, FormQuestionDto } from "./form-question.dto";
 import { FormSection } from "@terramatch-microservices/database/entities";
+import { IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 
 type StepDefinitionExtras = "title" | "description" | "id";
 type FormSectionWithoutExtras = Omit<FormSection, StepDefinitionExtras>;
@@ -16,12 +18,23 @@ export class FormSectionDto {
   @ApiProperty()
   id: string;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated section title" })
-  title: string | null;
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: String, description: "Translated section title" })
+  title?: string | null;
 
-  @ApiProperty({ nullable: true, type: String, description: "Translated section description" })
-  description: string | null;
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ nullable: true, required: false, type: String, description: "Translated section description" })
+  description?: string | null;
 
   @ApiProperty({ type: () => FormQuestionDto, isArray: true })
   questions: FormQuestionDto[];
+}
+
+export class StoreFormSectionAttributes extends PickType(FormSectionDto, ["title", "description"]) {
+  @ValidateNested()
+  @Type(() => StoreFormQuestionAttributes)
+  @ApiProperty({ required: false, type: () => StoreFormQuestionAttributes, isArray: true })
+  questions?: StoreFormQuestionAttributes[];
 }

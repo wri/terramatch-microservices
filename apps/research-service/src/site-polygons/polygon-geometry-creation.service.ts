@@ -218,4 +218,59 @@ export class PolygonGeometryCreationService {
       throw new InternalServerErrorException("Failed to update site polygon areas");
     }
   }
+
+  async bulkUpdateProjectCentroids(polygonUuids: string[], transaction?: Transaction): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    try {
+      const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
+      const replacements: Record<string, string> = {};
+      polygonUuids.forEach((uuid, index) => {
+        replacements[`uuid${index}`] = uuid;
+      });
+
+      const query = `
+        UPDATE v2_projects p
+        JOIN (
+          SELECT 
+            s.project_id,
+            AVG(ST_Y(ST_Centroid(pg.geom))) as avg_lat,
+            AVG(ST_X(ST_Centroid(pg.geom))) as avg_long
+          FROM site_polygon sp
+          JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
+          JOIN v2_sites s ON s.uuid = sp.site_id
+          WHERE s.project_id = (
+            SELECT DISTINCT s2.project_id
+            FROM site_polygon sp2
+            JOIN v2_sites s2 ON s2.uuid = sp2.site_id
+            WHERE sp2.poly_id IN (${placeholders})
+            LIMIT 1
+          )
+            AND sp.is_active = 1
+            AND pg.geom IS NOT NULL
+          GROUP BY s.project_id
+        ) centroids ON centroids.project_id = p.id
+        SET 
+          p.lat = centroids.avg_lat,
+          p.long = centroids.avg_long
+      `;
+
+      await PolygonGeometry.sequelize.query(query, {
+        replacements,
+        type: QueryTypes.UPDATE,
+        transaction
+      });
+
+      this.logger.log(`Updated project centroids for affected project`);
+    } catch (error) {
+      this.logger.error("Error bulk updating project centroids", error);
+      throw new InternalServerErrorException("Failed to update project centroids");
+    }
+  }
 }

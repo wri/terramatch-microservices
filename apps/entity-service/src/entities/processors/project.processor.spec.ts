@@ -348,7 +348,7 @@ describe("ProjectProcessor", () => {
         applicationId: application.id
       });
       const approvedSites = [await SiteFactory.create({ projectId, status: "approved" })];
-      approvedSites.push(await SiteFactory.create({ projectId, status: "awaiting-approval" }));
+      approvedSites.push(await SiteFactory.create({ projectId, status: "approved" }));
       await SiteFactory.create({ projectId, status: "started" });
       const approvedNurseries = await NurseryFactory.createMany(3, { projectId, status: "approved" });
       await NurseryFactory.create({ projectId, status: "needs-more-information" });

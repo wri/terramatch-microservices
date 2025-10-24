@@ -82,13 +82,8 @@ describe("PolygonGeometryCreationService", () => {
       ];
 
       const mockGeoJson = JSON.stringify(geometries[0]);
-      mockSequelize.query.mockResolvedValue([
-        {
-          idx: 0,
-          geoJson: mockGeoJson,
-          area: 10.5
-        }
-      ]);
+
+      jest.spyOn(PolygonGeometry, "batchCalculateAreas").mockResolvedValue([{ area: 10.5 }]);
 
       const result = await service.batchPrepareGeometries(geometries);
 
@@ -98,10 +93,8 @@ describe("PolygonGeometryCreationService", () => {
       expect(result[0]).toHaveProperty("area");
       expect(result[0].area).toBe(10.5);
       expect(result[0].geomJson).toBe(mockGeoJson);
-      expect(mockSequelize.query).toHaveBeenCalledWith(
-        expect.stringContaining("ST_GeomFromGeoJSON"),
-        expect.objectContaining({ type: QueryTypes.SELECT })
-      );
+
+      expect(PolygonGeometry.batchCalculateAreas).toHaveBeenCalledWith(geometries);
     });
 
     it("should process multiple geometries in batch", async () => {
@@ -131,17 +124,15 @@ describe("PolygonGeometryCreationService", () => {
           ]
         }
       ];
-
-      mockSequelize.query.mockResolvedValue([
-        { idx: 0, geoJson: JSON.stringify(geometries[0]), area: 10.5 },
-        { idx: 1, geoJson: JSON.stringify(geometries[1]), area: 8.3 }
-      ]);
+      jest.spyOn(PolygonGeometry, "batchCalculateAreas").mockResolvedValue([{ area: 10.5 }, { area: 8.3 }]);
 
       const result = await service.batchPrepareGeometries(geometries);
 
       expect(result).toHaveLength(2);
       expect(result[0].area).toBe(10.5);
       expect(result[1].area).toBe(8.3);
+
+      expect(PolygonGeometry.batchCalculateAreas).toHaveBeenCalledWith(geometries);
     });
   });
 

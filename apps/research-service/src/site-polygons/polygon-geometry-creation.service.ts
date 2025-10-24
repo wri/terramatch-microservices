@@ -10,12 +10,6 @@ export interface GeometryWithArea {
   area: number;
 }
 
-interface QueryResult {
-  idx: number;
-  geoJson: string;
-  area: string | number;
-}
-
 @Injectable()
 export class PolygonGeometryCreationService {
   private readonly logger = new Logger(PolygonGeometryCreationService.name);
@@ -25,43 +19,22 @@ export class PolygonGeometryCreationService {
       return [];
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
-      const caseStatements = geometries
-        .map((geom, index) => `WHEN ${index} THEN '${JSON.stringify(geom).replace(/'/g, "''")}'`)
-        .join(" ");
+      const polygonGeometries = geometries.filter(geom => geom.type === "Polygon" || geom.type === "MultiPolygon") as {
+        type: "Polygon" | "MultiPolygon";
+        coordinates: number[][][] | number[][][][];
+      }[];
 
-      const query = `
-        SELECT
-          idx,
-          geoJson,
-          ST_Area(ST_GeomFromGeoJSON(geoJson)) * POW(6378137 * PI() / 180, 2) * COS(RADIANS(ST_Y(ST_Centroid(ST_GeomFromGeoJSON(geoJson))))) / 10000 as area
-        FROM (
-          SELECT
-            CASE idx
-              ${caseStatements}
-            END as geoJson,
-            idx
-          FROM (VALUES ${geometries.map((_, index) => `(${index})`).join(",")}) AS indices(idx)
-        ) geometries
-      `;
+      const areaResults = await PolygonGeometry.batchCalculateAreas(polygonGeometries);
 
-      const results = await PolygonGeometry.sequelize.query(query, {
-        type: QueryTypes.SELECT
-      });
-
-      return results.map((result: QueryResult) => ({
+      return geometries.map(geom => ({
         uuid: uuidv4(),
-        geomJson: result.geoJson,
+        geomJson: JSON.stringify(geom),
         area:
-          typeof result.area === "number"
-            ? result.area
-            : Number.isNaN(parseFloat(result.area as string))
-            ? 0
-            : parseFloat(result.area as string)
+          geom.type === "Polygon" || geom.type === "MultiPolygon"
+            ? areaResults[geometries.filter(g => g.type === "Polygon" || g.type === "MultiPolygon").indexOf(geom)]
+                ?.area ?? 0
+            : 0
       }));
     } catch (error) {
       this.logger.error("Error preparing geometries", error);

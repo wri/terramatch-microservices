@@ -14,6 +14,7 @@ import {
   RESTORATION_IN_PROGRESS
 } from "@terramatch-microservices/database/constants/status";
 import { ProjectReport } from "@terramatch-microservices/database/entities";
+import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -61,7 +62,8 @@ export abstract class EntityProcessor<
   ModelType extends EntityModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto,
-  UpdateDto extends EntityUpdateData
+  UpdateDto extends EntityUpdateData,
+  CreateDto extends EntityCreateData = EntityCreateAttributes
 > {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
@@ -169,14 +171,24 @@ export abstract class EntityProcessor<
   loadAssociationData(ids: number[]): Promise<Record<number, object>> {
     return Promise.resolve({});
   }
+
+  /**
+   * Creates a new entity with the provided attributes.
+   * This method must be implemented by concrete processors.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async create(attributes: CreateDto): Promise<ModelType> {
+    throw new BadRequestException("Creation not supported for this entity type");
+  }
 }
 
 export abstract class ReportProcessor<
   ModelType extends ReportModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto,
-  UpdateDto extends ReportUpdateAttributes
-> extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto> {
+  UpdateDto extends ReportUpdateAttributes,
+  CreateDto extends EntityCreateAttributes = EntityCreateAttributes
+> extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto, CreateDto> {
   async update(model: ModelType, update: UpdateDto) {
     if (update.nothingToReport != null) {
       if (model instanceof ProjectReport) {

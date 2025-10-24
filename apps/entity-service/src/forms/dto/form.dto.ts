@@ -7,7 +7,11 @@ import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/
 import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";
 import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
 import { StoreFormSectionAttributes, FormSectionDto } from "./form-section.dto";
-import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import {
+  CreateDataDto,
+  JsonApiBodyDto,
+  JsonApiDataDto
+} from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
@@ -126,6 +130,10 @@ export class StoreFormAttributes extends PickType(FormFullDto, [
   sections?: StoreFormSectionAttributes[];
 }
 
-export class StoreFormBody extends JsonApiBodyDto(
-  class StormFormData extends CreateDataDto("forms", StoreFormAttributes) {}
+export class CreateFormBody extends JsonApiBodyDto(
+  class CreateFormData extends CreateDataDto("forms", StoreFormAttributes) {}
+) {}
+
+export class UpdateFormBody extends JsonApiBodyDto(
+  class UpdateFormData extends JsonApiDataDto({ type: "forms" }, StoreFormAttributes) {}
 ) {}

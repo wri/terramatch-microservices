@@ -10,11 +10,12 @@ import {
   FormSection,
   FormTableHeader,
   Media,
+  Stage,
   User
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { filter, flattenDeep, groupBy, sortBy, uniq } from "lodash";
+import { difference, filter, flatten, flattenDeep, groupBy, sortBy, union, uniq } from "lodash";
 import { StoreFormAttributes, FormFullDto, FormLightDto } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -185,8 +186,9 @@ export class FormsService {
     return document;
   }
 
-  async store(attributes: StoreFormAttributes) {
-    return await this.createForm(attributes);
+  async store(attributes: StoreFormAttributes, form = new Form()) {
+    await this.storeForm(form, attributes);
+    return form;
   }
 
   private _userLocale?: ValidLocale;
@@ -241,73 +243,113 @@ export class FormsService {
     );
   }
 
-  private async createForm(attributes: StoreFormAttributes) {
-    const form: Form = new Form();
+  private async storeForm(form: Form, attributes: StoreFormAttributes) {
     // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
     // rows are all numerical IDs.
     form.updatedBy = `${RequestContext.currentContext.req.authenticatedUserId}`;
     form.title = attributes.title;
-    form.titleId = await this.localizationService.generateI18nId(attributes.title);
+    form.titleId = await this.localizationService.generateI18nId(attributes.title, form.titleId);
     form.subtitle = attributes.subtitle ?? null;
-    form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle);
+    form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle, form.subtitleId);
     form.frameworkKey = attributes.frameworkKey ?? null;
     form.type = attributes.type ?? null;
     form.description = attributes.description ?? null;
-    form.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    form.descriptionId = await this.localizationService.generateI18nId(attributes.description, form.descriptionId);
     form.documentation = attributes.documentation ?? null;
     form.documentationLabel = attributes.documentationLabel ?? null;
     form.deadlineAt = attributes.deadlineAt ?? null;
     form.submissionMessage = attributes.submissionMessage;
-    form.submissionMessageId = await this.localizationService.generateI18nId(attributes.submissionMessage);
+    form.submissionMessageId = await this.localizationService.generateI18nId(
+      attributes.submissionMessage,
+      form.submissionMessageId
+    );
     form.stageId = attributes.stageId ?? null;
+    // attach the stage for the full form DTO
+    form.stage =
+      attributes.stageId == null
+        ? null
+        : await Stage.findOne({ where: { uuid: attributes.stageId }, attributes: ["fundingProgrammeId"] });
     form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
     // Newly created forms are always unpublished
     form.published = false;
     await form.save();
 
-    await Promise.all(
-      (attributes.sections ?? []).map((section, index) => this.createSection(form.uuid, section, index))
+    const currentSections = await FormSection.findAll({ where: { formId: form.uuid } });
+    const updateSections = await Promise.all(
+      (attributes.sections ?? []).map((section, index) => this.storeSection(form.uuid, section, index, currentSections))
     );
 
-    return form;
+    const currentIds = currentSections.map(({ id }) => id);
+    const updateIds = updateSections.map(({ id }) => id);
+    const removed = difference(currentIds, updateIds);
+    if (removed.length > 0) {
+      await FormSection.destroy({ where: { id: { [Op.in]: removed } } });
+      await FormQuestion.destroy({ where: { formSectionId: { [Op.in]: removed } } });
+    }
   }
 
-  private async createSection(formUuid: string, attributes: StoreFormSectionAttributes, order: number) {
-    const section = new FormSection();
+  private async storeSection(
+    formUuid: string,
+    attributes: StoreFormSectionAttributes,
+    order: number,
+    currentSections: FormSection[]
+  ) {
+    const section = currentSections.find(({ uuid }) => uuid === attributes.id) ?? new FormSection();
     section.formId = formUuid;
     section.order = order;
     section.title = attributes.title ?? null;
-    section.titleId = await this.localizationService.generateI18nId(attributes.title);
+    section.titleId = await this.localizationService.generateI18nId(attributes.title, section.titleId);
     section.description = attributes.description ?? null;
-    section.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    section.descriptionId = await this.localizationService.generateI18nId(
+      attributes.description,
+      section.descriptionId
+    );
     await section.save();
 
-    await Promise.all(
-      (attributes.questions ?? []).map((question, index) => this.createQuestion(section.id, question, index))
+    const currentQuestions = await FormQuestion.findAll({ where: { formSectionId: section.id } });
+    const updateQuestions = flatten(
+      await Promise.all(
+        (attributes.questions ?? []).map((question, index) =>
+          this.storeQuestion(section.id, question, index, currentQuestions)
+        )
+      )
     );
+    const currentIds = currentSections.map(({ id }) => id);
+    const updateIds = updateQuestions.map(({ id }) => id);
+    if (union(currentIds, updateIds).length !== updateIds.length) {
+      // We don't need hooks here because this will catch child questions.
+      await FormQuestion.destroy({ where: { formSectionId: section.id, id: { [Op.notIn]: updateIds } } });
+    }
 
     return section;
   }
 
-  private async createQuestion(
+  private async storeQuestion(
     sectionId: number,
     attributes: StoreFormQuestionAttributes,
     order: number,
+    currentQuestions: FormQuestion[],
     parentUuid?: string
-  ) {
-    const question = new FormQuestion();
+  ): Promise<FormQuestion[]> {
+    const question = currentQuestions.find(({ uuid }) => uuid === attributes.name) ?? new FormQuestion();
     question.formSectionId = sectionId;
     question.order = order;
     question.parentId = parentUuid ?? null;
     question.linkedFieldKey = attributes.linkedFieldKey ?? null;
     question.inputType = attributes.inputType;
     question.label = attributes.label;
-    question.labelId = await this.localizationService.generateI18nId(attributes.label);
+    question.labelId = await this.localizationService.generateI18nId(attributes.label, question.labelId);
     question.name = attributes.name ?? null;
     question.placeholder = attributes.placeholder ?? null;
-    question.placeholderId = await this.localizationService.generateI18nId(attributes.placeholder);
+    question.placeholderId = await this.localizationService.generateI18nId(
+      attributes.placeholder,
+      question.placeholderId
+    );
     question.description = attributes.description ?? null;
-    question.descriptionId = await this.localizationService.generateI18nId(attributes.description);
+    question.descriptionId = await this.localizationService.generateI18nId(
+      attributes.description,
+      question.descriptionId
+    );
     question.validation = attributes.validation ?? null;
     question.additionalProps = attributes.additionalProps ?? null;
     question.optionsOther = attributes.optionsOther ?? null;
@@ -320,40 +362,65 @@ export class FormsService {
     question.maxCharacterLimit = attributes.maxCharacterLimit ?? null;
     await question.save();
 
-    if (question.inputType === "tableInput") {
-      await Promise.all(
-        (attributes.tableHeaders ?? []).map(async (label, index) => {
-          const header = new FormTableHeader();
+    if (question.inputType === "tableInput" && attributes.tableHeaders != null) {
+      const currentHeaders = await FormTableHeader.findAll({ where: { formQuestionId: question.id } });
+      const updateHeaders = await Promise.all(
+        attributes.tableHeaders.map(async (label, index) => {
+          const header = currentHeaders.find(current => current.label === label) ?? new FormTableHeader();
           header.formQuestionId = question.id;
           header.label = label;
-          header.labelId = await this.localizationService.generateI18nId(label);
+          header.labelId = await this.localizationService.generateI18nId(label, header.labelId);
           header.order = index;
           await header.save();
+          return header;
         })
       );
+      const currentIds = currentHeaders.map(({ id }) => id);
+      const updateIds = updateHeaders.map(({ id }) => id);
+      if (union(currentIds, updateIds).length !== updateIds.length) {
+        await FormTableHeader.destroy({ where: { formQuestionId: question.id, id: { [Op.notIn]: updateIds } } });
+      }
     }
 
-    await Promise.all(
-      (attributes.options ?? []).map((option, index) => this.createFormQuestionOption(question.id, option, index))
+    if (attributes.options != null) {
+      const currentOptions = await FormQuestionOption.findAll({ where: { formQuestionId: question.id } });
+      const updateOptions = await Promise.all(
+        (attributes.options ?? []).map((option, index) =>
+          this.storeFormQuestionOption(question.id, option, index, currentOptions)
+        )
+      );
+      const currentIds = currentOptions.map(({ id }) => id);
+      const updateIds = updateOptions.map(({ id }) => id);
+      if (union(currentIds, updateIds).length !== updateIds.length) {
+        await FormQuestionOption.destroy({ where: { formQuestionId: question.id, id: { [Op.notIn]: updateIds } } });
+      }
+    }
+
+    const children = flatten(
+      await Promise.all(
+        (attributes.children ?? []).map((child, index) =>
+          this.storeQuestion(sectionId, child, index, currentQuestions, question.uuid)
+        )
+      )
     );
 
-    await Promise.all(
-      (attributes.children ?? []).map((child, index) => this.createQuestion(sectionId, child, index, question.uuid))
-    );
+    return [question, ...children];
   }
 
-  private async createFormQuestionOption(
+  private async storeFormQuestionOption(
     questionId: number,
     attributes: StoreFormQuestionOptionAttributes,
-    order: number
+    order: number,
+    currentOptions: FormQuestionOption[]
   ) {
-    const option = new FormQuestionOption();
+    const option = currentOptions.find(({ slug }) => slug === attributes.slug) ?? new FormQuestionOption();
     option.formQuestionId = questionId;
     option.order = order;
     option.slug = attributes.slug;
     option.label = attributes.label;
-    option.labelId = await this.localizationService.generateI18nId(attributes.label);
+    option.labelId = await this.localizationService.generateI18nId(attributes.label, option.labelId);
     option.imageUrl = attributes.imageUrl ?? null;
     await option.save();
+    return option;
   }
 }

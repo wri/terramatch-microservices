@@ -304,9 +304,12 @@ describe("FormsService", () => {
   });
 
   describe("store", () => {
-    it("creates a form from the attributes", async () => {
+    beforeEach(() => {
       mockUserId(123);
       localizationService.generateI18nId.mockResolvedValue(1);
+    });
+
+    it("creates a form from the attributes", async () => {
       const attributes: StoreFormAttributes = {
         title: faker.lorem.sentence(),
         frameworkKey: "ppc",
@@ -364,19 +367,19 @@ describe("FormsService", () => {
       expect(form.type).toBe(attributes.type);
       expect(form.submissionMessage).toBe(attributes.submissionMessage);
       expect(form.deadlineAt).toEqual(attributes.deadlineAt);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.title);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.title, undefined);
 
       const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
       expect(sections).toHaveLength(2);
       expect(sections[0].order).toBe(0);
       expect(sections[0].title).toBe(attributes.sections![0].title);
       expect(sections[0].description).toBe(attributes.sections![0].description);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].title);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].description);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].title, undefined);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].description, undefined);
       expect(sections[1].order).toBe(1);
       expect(sections[1].title).toBe(attributes.sections![1].title);
       expect(sections[1].description).toBeNull();
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![1].title);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![1].title, undefined);
 
       const section0Questions = await FormQuestion.findAll({
         where: { formSectionId: sections[0].id },
@@ -401,12 +404,12 @@ describe("FormsService", () => {
       expect(options[0].order).toBe(0);
       expect(options[0].slug).toBe(optionsAttributes[0].slug);
       expect(options[0].label).toBe(optionsAttributes[0].label);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[0].label);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[0].label, undefined);
       expect(options[1].order).toBe(1);
       expect(options[1].slug).toBe(optionsAttributes[1].slug);
       expect(options[1].label).toBe(optionsAttributes[1].label);
       expect(options[1].imageUrl).toBe(optionsAttributes[1].imageUrl);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[1].label);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[1].label, undefined);
 
       const section1Questions = await FormQuestion.findAll({
         where: { formSectionId: sections[1].id },
@@ -418,15 +421,181 @@ describe("FormsService", () => {
       expect(tableInput.order).toBe(0);
       expect(tableInput.label).toBe(section1QuestionAttributes[0].label);
       expect(tableInput.inputType).toBe("tableInput");
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].label);
-      const headers = await FormTableHeader.findAll({ where: { formQuestionId: tableInput.id } });
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].label, undefined);
+      const headers = await FormTableHeader.findAll({ where: { formQuestionId: tableInput.id }, order: ["order"] });
       expect(headers).toHaveLength(2);
-      expect(headers[0].order).toBe(0);
       expect(headers[0].label).toBe(section1QuestionAttributes[0].tableHeaders![0]);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].tableHeaders![0]);
-      expect(headers[1].order).toBe(1);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(
+        section1QuestionAttributes[0].tableHeaders![0],
+        undefined
+      );
       expect(headers[1].label).toBe(section1QuestionAttributes[0].tableHeaders![1]);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].tableHeaders![1]);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(
+        section1QuestionAttributes[0].tableHeaders![1],
+        undefined
+      );
+    });
+
+    it("updates or creates table headers as needed", async () => {
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.create({ formId: form.uuid });
+      const question = await FormQuestionFactory.create({ formSectionId: section.id, inputType: "tableInput" });
+      const headers = [
+        await FormTableHeaderFactory.create({ formQuestionId: question.id, order: 0 }),
+        await FormTableHeaderFactory.create({ formQuestionId: question.id, order: 1 })
+      ];
+      const attributes: StoreFormAttributes = {
+        title: form.title,
+        frameworkKey: form.frameworkKey ?? undefined,
+        type: form.type,
+        submissionMessage: form.submissionMessage!,
+        deadlineAt: faker.date.soon(),
+        sections: [
+          {
+            id: section.uuid,
+            title: section.title,
+            description: section.description,
+            questions: [
+              {
+                name: question.uuid,
+                inputType: question.inputType,
+                label: question.label,
+                tableHeaders: [headers[1].label!, faker.lorem.word()]
+              }
+            ]
+          }
+        ]
+      };
+
+      await service.store(attributes, form);
+      const updateHeaders = await FormTableHeader.findAll({ where: { formQuestionId: question.id }, order: ["order"] });
+      expect(updateHeaders).toHaveLength(2);
+      expect(updateHeaders[0].label).toBe(headers[1].label);
+      expect(updateHeaders[1].label).toBe(attributes.sections![0].questions![0].tableHeaders![1]);
+    });
+
+    it("updates or creates options as needed", async () => {
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.create({ formId: form.uuid });
+      const question = await FormQuestionFactory.create({ formSectionId: section.id, inputType: "select" });
+      const options = [
+        await FormQuestionOptionFactory.create({ formQuestionId: question.id, order: 0 }),
+        await FormQuestionOptionFactory.create({ formQuestionId: question.id, order: 1 }),
+        await FormQuestionOptionFactory.create({ formQuestionId: question.id, order: 2 })
+      ];
+      const attributes: StoreFormAttributes = {
+        title: form.title,
+        frameworkKey: form.frameworkKey ?? undefined,
+        type: form.type,
+        submissionMessage: form.submissionMessage!,
+        deadlineAt: faker.date.soon(),
+        sections: [
+          {
+            id: section.uuid,
+            title: section.title,
+            description: section.description,
+            questions: [
+              {
+                name: question.uuid,
+                inputType: question.inputType,
+                label: question.label,
+                options: [
+                  // result is new options at order 0 and 3, previous 0 should now be 1 and 2 is the same.
+                  { slug: faker.lorem.slug(), label: faker.lorem.word() },
+                  { slug: options[0].slug!, label: options[0].label },
+                  { slug: options[2].slug!, label: options[2].label },
+                  { slug: faker.lorem.slug(), label: faker.lorem.word() }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      await service.store(attributes, form);
+      const updateOptions = await FormQuestionOption.findAll({
+        where: { formQuestionId: question.id },
+        order: ["order"]
+      });
+      const attrOptions = attributes.sections![0].questions![0].options!;
+      expect(updateOptions).toHaveLength(4);
+      expect(updateOptions[0].dataValues).toMatchObject(attrOptions[0]);
+      expect(updateOptions[1].dataValues).toMatchObject(attrOptions[1]);
+      expect(updateOptions[2].dataValues).toMatchObject(attrOptions[2]);
+      expect(updateOptions[3].dataValues).toMatchObject(attrOptions[3]);
+    });
+
+    it("removes questions that aren't included in the attributes", async () => {
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.create({ formId: form.uuid });
+      const questions = [
+        await FormQuestionFactory.create({ formSectionId: section.id, order: 0 }),
+        await FormQuestionFactory.create({ formSectionId: section.id, order: 1 }),
+        await FormQuestionFactory.create({ formSectionId: section.id, order: 2 })
+      ];
+      const attributes: StoreFormAttributes = {
+        title: form.title,
+        frameworkKey: form.frameworkKey ?? undefined,
+        type: form.type,
+        submissionMessage: form.submissionMessage!,
+        deadlineAt: faker.date.soon(),
+        sections: [
+          {
+            id: section.uuid,
+            title: section.title,
+            description: section.description,
+            questions: [
+              // scramble order and drop question 1,
+              { name: questions[2].uuid, inputType: questions[2].inputType, label: questions[2].label },
+              { name: questions[0].uuid, inputType: questions[0].inputType, label: questions[0].label }
+            ]
+          }
+        ]
+      };
+
+      await service.store(attributes, form);
+      const updateQuestions = await FormQuestion.findAll({ where: { formSectionId: section.id }, order: ["order"] });
+      expect(updateQuestions).toHaveLength(2);
+      expect(updateQuestions.map(({ uuid }) => uuid)).toEqual([questions[2].uuid, questions[0].uuid]);
+    });
+
+    it("removes sections that aren't included in the attributes", async () => {
+      const form = await FormFactory.create();
+      const sections = [
+        await FormSectionFactory.create({ formId: form.uuid, order: 0 }),
+        await FormSectionFactory.create({ formId: form.uuid, order: 1 }),
+        await FormSectionFactory.create({ formId: form.uuid, order: 2 })
+      ];
+      const questions = await Promise.all(sections.map(({ id }) => FormQuestionFactory.create({ formSectionId: id })));
+      const attributes: StoreFormAttributes = {
+        title: form.title,
+        frameworkKey: form.frameworkKey ?? undefined,
+        type: form.type,
+        submissionMessage: form.submissionMessage!,
+        deadlineAt: faker.date.soon(),
+        sections: [
+          // scramble order and drop section 1
+          {
+            id: sections[2].uuid,
+            title: sections[2].title,
+            description: sections[2].description,
+            questions: [{ name: questions[2].uuid, inputType: questions[2].inputType, label: questions[2].label }]
+          },
+          {
+            id: sections[0].uuid,
+            title: sections[0].title,
+            description: sections[0].description,
+            questions: [{ name: questions[0].uuid, inputType: questions[0].inputType, label: questions[0].label }]
+          }
+        ]
+      };
+
+      await service.store(attributes, form);
+      const updateSections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
+      expect(updateSections).toHaveLength(2);
+      expect(updateSections.map(({ uuid }) => uuid)).toEqual([sections[2].uuid, sections[0].uuid]);
+      // make sure questions in the removed section are almost gone.
+      expect(await FormQuestion.count({ where: { formSectionId: sections[1].id } })).toBe(0);
     });
   });
 });

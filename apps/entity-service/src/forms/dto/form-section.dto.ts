@@ -33,6 +33,12 @@ export class FormSectionDto {
 }
 
 export class StoreFormSectionAttributes extends PickType(FormSectionDto, ["title", "description"]) {
+  // optional on request, but not in response
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false })
+  id?: string;
+
   @ValidateNested()
   @Type(() => StoreFormQuestionAttributes)
   @ApiProperty({ required: false, type: () => StoreFormQuestionAttributes, isArray: true })

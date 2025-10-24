@@ -1,13 +1,19 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Geometry } from "@terramatch-microservices/database/constants";
 import { QueryTypes, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { Geometry } from "./dto/create-site-polygon-request.dto";
 
 export interface GeometryWithArea {
   uuid: string;
   geomJson: string;
   area: number;
+}
+
+interface QueryResult {
+  idx: number;
+  geoJson: string;
+  area: string | number;
 }
 
 @Injectable()
@@ -19,11 +25,43 @@ export class PolygonGeometryCreationService {
       return [];
     }
 
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
     try {
-      return geometries.map(geom => ({
+      const caseStatements = geometries
+        .map((geom, index) => `WHEN ${index} THEN '${JSON.stringify(geom).replace(/'/g, "''")}'`)
+        .join(" ");
+
+      const query = `
+        SELECT
+          idx,
+          geoJson,
+          ST_Area(ST_GeomFromGeoJSON(geoJson)) * POW(6378137 * PI() / 180, 2) * COS(RADIANS(ST_Y(ST_Centroid(ST_GeomFromGeoJSON(geoJson))))) / 10000 as area
+        FROM (
+          SELECT
+            CASE idx
+              ${caseStatements}
+            END as geoJson,
+            idx
+          FROM (VALUES ${geometries.map((_, index) => `(${index})`).join(",")}) AS indices(idx)
+        ) geometries
+      `;
+
+      const results = await PolygonGeometry.sequelize.query(query, {
+        type: QueryTypes.SELECT
+      });
+
+      return results.map((result: QueryResult) => ({
         uuid: uuidv4(),
-        geomJson: JSON.stringify(geom),
-        area: 0
+        geomJson: result.geoJson,
+        area:
+          typeof result.area === "number"
+            ? result.area
+            : Number.isNaN(parseFloat(result.area as string))
+            ? 0
+            : parseFloat(result.area as string)
       }));
     } catch (error) {
       this.logger.error("Error preparing geometries", error);
@@ -56,7 +94,7 @@ export class PolygonGeometryCreationService {
       const replacements: Record<string, string | number | Date | null> = {};
       geometriesWithAreas.forEach((item, index) => {
         replacements[`uuid${index}`] = item.uuid;
-        replacements[`geomJson${index}`] = item.geomJson; // GeoJSON string, not WKB
+        replacements[`geomJson${index}`] = item.geomJson;
         replacements[`createdBy${index}`] = createdBy;
         replacements[`createdAt${index}`] = now;
         replacements[`updatedAt${index}`] = now;
@@ -85,9 +123,8 @@ export class PolygonGeometryCreationService {
     createdBy: number | null,
     transaction?: Transaction
   ): Promise<{ uuids: string[]; areas: number[] }> {
-    // Expand MultiPolygons into individual Polygons
     const expandedGeometries: Geometry[] = [];
-    const geometryIndexMap: number[] = []; // Track which original geometry each expanded one came from
+    const geometryIndexMap: number[] = [];
 
     for (let i = 0; i < geometries.length; i++) {
       const geom = geometries[i];
@@ -95,7 +132,6 @@ export class PolygonGeometryCreationService {
         expandedGeometries.push(geom);
         geometryIndexMap.push(i);
       } else if (geom.type === "MultiPolygon") {
-        // Expand MultiPolygon into multiple Polygon geometries
         const coordinates = geom.coordinates as number[][][][];
         for (const polyCoords of coordinates) {
           expandedGeometries.push({

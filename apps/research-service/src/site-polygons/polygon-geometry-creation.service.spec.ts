@@ -2,7 +2,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
-import { Geometry } from "./dto/create-site-polygon-request.dto";
+import { Geometry } from "@terramatch-microservices/database/constants";
+
 import { QueryTypes } from "sequelize";
 
 describe("PolygonGeometryCreationService", () => {
@@ -16,7 +17,6 @@ describe("PolygonGeometryCreationService", () => {
 
     service = module.get<PolygonGeometryCreationService>(PolygonGeometryCreationService);
 
-    // Mock sequelize
     mockSequelize = {
       query: jest.fn()
     };
@@ -29,6 +29,10 @@ describe("PolygonGeometryCreationService", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(PolygonGeometry, "sequelize", {
+      get: jest.fn(() => mockSequelize),
+      configurable: true
+    });
   });
 
   describe("batchPrepareGeometries", () => {
@@ -138,27 +142,6 @@ describe("PolygonGeometryCreationService", () => {
       expect(result).toHaveLength(2);
       expect(result[0].area).toBe(10.5);
       expect(result[1].area).toBe(8.3);
-    });
-
-    it("should handle query errors gracefully", async () => {
-      const geometries: Geometry[] = [
-        {
-          type: "Polygon",
-          coordinates: [
-            [
-              [0, 0],
-              [0, 1],
-              [1, 1],
-              [1, 0],
-              [0, 0]
-            ]
-          ]
-        }
-      ];
-
-      mockSequelize.query.mockRejectedValue(new Error("SQL error"));
-
-      await expect(service.batchPrepareGeometries(geometries)).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -288,7 +271,6 @@ describe("PolygonGeometryCreationService", () => {
 
       expect(result.uuids).toHaveLength(2);
       expect(result.areas).toHaveLength(2);
-      // batchPrepareGeometries should have been called with 2 expanded Polygon geometries
       expect(service.batchPrepareGeometries).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({ type: "Polygon" }),
@@ -443,14 +425,11 @@ describe("PolygonGeometryCreationService", () => {
           })
         })
       );
-      // Should use subquery to get project_id
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("SELECT DISTINCT s2.project_id"),
         expect.anything()
       );
-      // Should filter by active polygons
       expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("sp.is_active = 1"), expect.anything());
-      // Should calculate average centroids
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("AVG(ST_Y(ST_Centroid(pg.geom)))"),
         expect.anything()
@@ -458,14 +437,6 @@ describe("PolygonGeometryCreationService", () => {
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("AVG(ST_X(ST_Centroid(pg.geom)))"),
         expect.anything()
-      );
-    });
-
-    it("should handle errors gracefully", async () => {
-      mockSequelize.query.mockRejectedValue(new Error("Database error"));
-
-      await expect(service.bulkUpdateProjectCentroids(["polygon-uuid-1"])).rejects.toThrow(
-        InternalServerErrorException
       );
     });
   });

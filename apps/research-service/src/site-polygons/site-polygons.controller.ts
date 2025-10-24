@@ -38,6 +38,8 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { CreateSitePolygonBatchRequestDto } from "./dto/create-site-polygon-request.dto";
+import { ValidationDto } from "../validations/dto/validation.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -48,7 +50,8 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorTreeCountDto,
   IndicatorTreeCoverDto,
   IndicatorFieldMonitoringDto,
-  IndicatorMsuCarbonDto
+  IndicatorMsuCarbonDto,
+  ValidationDto
 )
 export class SitePolygonsController {
   constructor(
@@ -63,7 +66,8 @@ export class SitePolygonsController {
     summary: "Create site polygons from GeoJSON",
     description: `Create site polygons in bulk from GeoJSON FeatureCollections. Supports multi-site batch creation.
       Each feature must have site_id in properties. Handles Polygon and MultiPolygon geometries.
-      Automatically groups by site and geometry type, checks for duplicates, and processes large batches in chunks.`
+      Automatically groups by site and geometry type, checks for duplicates, and processes large batches in chunks.
+      Duplicate validation results are always included in the response when duplicates are found.`
   })
   @JsonApiResponse([SitePolygonLightDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
@@ -76,9 +80,9 @@ export class SitePolygonsController {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    const createdSitePolygons = await this.sitePolygonCreationService.createSitePolygons(createRequest, userId);
+    const { data: createdSitePolygons, included: validations } =
+      await this.sitePolygonCreationService.createSitePolygons(createRequest, userId);
 
-    // Build JSON:API response
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
 
@@ -87,6 +91,16 @@ export class SitePolygonsController {
         sitePolygon.uuid,
         await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
       );
+    }
+
+    if (validations.length > 0) {
+      for (const validation of validations) {
+        const validationDto = populateDto(new ValidationDto(), {
+          polygonUuid: validation.attributes.polygonUuid,
+          criteriaList: validation.attributes.criteriaList
+        });
+        document.addData(validation.id, validationDto);
+      }
     }
 
     return document;

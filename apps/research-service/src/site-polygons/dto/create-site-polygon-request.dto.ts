@@ -1,9 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsNotEmpty, IsString } from "class-validator";
+import { Feature as BaseFeature } from "@terramatch-microservices/database/constants";
 
-/**
- * GeoJSON Feature properties interface
- */
 export interface FeatureProperties {
   site_id: string;
   poly_name?: string;
@@ -14,26 +12,11 @@ export interface FeatureProperties {
   num_trees?: number;
 }
 
-/**
- * GeoJSON Geometry interface (Polygon or MultiPolygon)
- */
-export interface Geometry {
-  type: "Polygon" | "MultiPolygon";
-  coordinates: number[][][] | number[][][][];
-}
-
-/**
- * GeoJSON Feature interface
- */
-export interface Feature {
+export interface Feature extends BaseFeature {
   type: "Feature";
-  geometry: Geometry;
-  properties: FeatureProperties;
+  properties: FeatureProperties & Record<string, unknown>;
 }
 
-/**
- * GeoJSON FeatureCollection for creating site polygons
- */
 export class CreateSitePolygonRequestDto {
   @ApiProperty({
     description: "Feature collection type (always 'FeatureCollection')",
@@ -74,9 +57,6 @@ export class CreateSitePolygonRequestDto {
   features: Feature[];
 }
 
-/**
- * Batch request containing multiple geometry collections
- */
 export class CreateSitePolygonBatchRequestDto {
   @ApiProperty({
     description: "Array of feature collections (supports multi-site batch creation)",

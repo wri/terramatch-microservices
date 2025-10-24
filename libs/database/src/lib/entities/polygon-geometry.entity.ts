@@ -278,6 +278,39 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     }[];
   }
 
+  static async getProjectCountriesBatch(
+    polygonUuids: string[],
+    transaction?: Transaction
+  ): Promise<Map<string, string>> {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    if (polygonUuids.length === 0) {
+      return new Map();
+    }
+
+    const results = (await this.sequelize.query(
+      `
+        SELECT 
+          pg.uuid as polygonUuid,
+          p.country
+        FROM polygon_geometry pg
+        JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
+        JOIN v2_sites s ON s.uuid = sp.site_id
+        JOIN v2_projects p ON p.id = s.project_id
+        WHERE pg.uuid IN (:polygonUuids)
+      `,
+      {
+        replacements: { polygonUuids },
+        type: QueryTypes.SELECT,
+        transaction
+      }
+    )) as { polygonUuid: string; country: string }[];
+
+    return new Map(results.map(r => [r.polygonUuid, r.country]));
+  }
+
   static async calculateArea(geometry: { type: string; coordinates: number[][][] | number[][][][] }): Promise<number> {
     if (this.sequelize == null) {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");

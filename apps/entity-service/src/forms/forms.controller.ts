@@ -6,12 +6,13 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { StoreFormBody, FormFullDto, FormLightDto, Forms } from "./dto/form.dto";
+import { FormFullDto, FormLightDto, Forms, CreateFormBody, UpdateFormBody } from "./dto/form.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
@@ -74,10 +75,29 @@ export class FormsController {
   @JsonApiResponse(FormFullDto)
   @ExceptionResponse(UnauthorizedException, { description: "Form creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
-  async create(@Body() payload: StoreFormBody) {
+  async create(@Body() payload: CreateFormBody) {
     await this.policyService.authorize("create", Form);
 
     const form = await this.formsService.store(payload.data.attributes);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
+  }
+
+  // Using PUT instead of PATCH because if a question or section is left out of the attributes, it
+  // is removed from the form. PUT is the correct method for this mechanic.
+  @Put(":uuid")
+  @ApiOperation({ operationId: "formUpdate", description: "Update a form" })
+  @JsonApiResponse(FormFullDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Form update not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
+  @ExceptionResponse(NotFoundException, { description: "Form not found." })
+  async update(@Param("uuid") uuid: string, @Body() payload: UpdateFormBody) {
+    if (uuid !== payload.data.id) {
+      throw new BadRequestException("Form id in path and payload do not match");
+    }
+
+    const form = await this.formsService.findOne(uuid);
+    await this.policyService.authorize("update", form);
+    await this.formsService.store(payload.data.attributes, form);
     return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
   }
 }

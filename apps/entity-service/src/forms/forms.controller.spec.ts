@@ -84,10 +84,6 @@ describe("FormsController", () => {
   });
 
   describe("create", () => {
-    beforeEach(() => {
-      policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
-    });
-
     it("calls store on the service", async () => {
       const form = {} as Form;
       service.store.mockResolvedValue(form);
@@ -97,6 +93,21 @@ describe("FormsController", () => {
       };
       await controller.create({ data: { type: "forms", attributes } });
       expect(service.store).toHaveBeenCalledWith(attributes);
+      expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
+    });
+  });
+
+  describe("update", () => {
+    it("calls store on the service", async () => {
+      const form = {} as Form;
+      service.findOne.mockResolvedValue(form);
+      const attributes: StoreFormAttributes = {
+        title: "",
+        submissionMessage: ""
+      };
+      await controller.update("fake-uuid", { data: { id: "fake-uuid", type: "forms", attributes } });
+      expect(service.findOne).toHaveBeenCalledWith("fake-uuid");
+      expect(service.store).toHaveBeenCalledWith(attributes, form);
       expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
     });
   });

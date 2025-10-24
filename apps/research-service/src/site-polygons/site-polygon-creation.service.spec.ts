@@ -5,7 +5,6 @@ import { DuplicateGeometryValidator } from "../validations/validators/duplicate-
 import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 
-// Mock Sequelize
 const mockTransaction = {
   commit: jest.fn(),
   rollback: jest.fn()
@@ -339,8 +338,8 @@ describe("SitePolygonCreationService", () => {
 
         const result = await service.createSitePolygons(request, mockUserId);
 
-        expect(result.data).toHaveLength(1); // One duplicate polygon returned
-        expect(result.included).toHaveLength(1); // One validation entry
+        expect(result.data).toHaveLength(1);
+        expect(result.included).toHaveLength(1);
         expect(result.included[0].attributes.polygonUuid).toBe("existing-polygon-uuid");
         expect(result.included[0].attributes.criteriaList[0].criteriaId).toBe(16);
         expect(result.included[0].attributes.criteriaList[0].valid).toBe(false);

@@ -54,14 +54,9 @@ export class PolygonGeometryCreationService {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
     }
 
-    const now = new Date();
-
     try {
       const valueSets = geometriesWithAreas
-        .map(
-          (_, index) =>
-            `(:uuid${index}, ST_GeomFromGeoJSON(:geomJson${index}), :createdBy${index}, :createdAt${index}, :updatedAt${index})`
-        )
+        .map((_, index) => `(:uuid${index}, ST_GeomFromGeoJSON(:geomJson${index}), :createdBy${index})`)
         .join(", ");
 
       const replacements: Record<string, string | number | Date | null> = {};
@@ -69,12 +64,10 @@ export class PolygonGeometryCreationService {
         replacements[`uuid${index}`] = item.uuid;
         replacements[`geomJson${index}`] = item.geomJson;
         replacements[`createdBy${index}`] = createdBy;
-        replacements[`createdAt${index}`] = now;
-        replacements[`updatedAt${index}`] = now;
       });
 
       const query = `
-        INSERT INTO polygon_geometry (uuid, geom, created_by, created_at, updated_at)
+        INSERT INTO polygon_geometry (uuid, geom, created_by)
         VALUES ${valueSets}
       `;
 

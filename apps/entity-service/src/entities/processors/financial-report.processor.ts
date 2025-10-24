@@ -101,6 +101,29 @@ export class FinancialReportProcessor extends ReportProcessor<
     if (indicatorsToUpdate.length > 0) {
       await Promise.all(indicatorsToUpdate.map(({ id, data }) => FinancialIndicator.update(data, { where: { id } })));
     }
+
+    // Delete existing FundingTypes for this organisation where financial_report_id is null
+    await FundingType.destroy({
+      where: {
+        organisationId: organisation.uuid,
+        financialReportId: null
+      }
+    });
+
+    // Get the funding types from the financial report
+    const fundingTypes = await FundingType.financialReport(model.id).findAll();
+
+    // Create new FundingTypes for the organisation based on the financial report data
+    for (const fundingType of fundingTypes) {
+      await FundingType.create({
+        organisationId: organisation.uuid,
+        source: fundingType.source,
+        year: fundingType.year,
+        type: fundingType.type,
+        amount: fundingType.amount,
+        financialReportId: null
+      } as FundingType);
+    }
   }
 
   async findOne(uuid: string) {

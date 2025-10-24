@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsNotEmpty, IsString } from "class-validator";
+import { IsArray, IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 import { Feature as BaseFeature } from "@terramatch-microservices/database/constants";
 
 export interface FeatureProperties {
@@ -65,4 +66,45 @@ export class CreateSitePolygonBatchRequestDto {
   })
   @IsArray()
   geometries: CreateSitePolygonRequestDto[];
+}
+
+// New JSON:API compliant DTOs
+export class CreateSitePolygonAttributesDto {
+  @ApiProperty({
+    description: "Array of feature collections (supports multi-site batch creation)",
+    type: CreateSitePolygonRequestDto,
+    isArray: true
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateSitePolygonRequestDto)
+  geometries: CreateSitePolygonRequestDto[];
+}
+
+export class CreateSitePolygonDataDto {
+  @ApiProperty({
+    description: "Resource type",
+    example: "sitePolygons"
+  })
+  @IsString()
+  @IsNotEmpty()
+  type: "sitePolygons";
+
+  @ApiProperty({
+    description: "Attributes containing the geometries to create",
+    type: CreateSitePolygonAttributesDto
+  })
+  @ValidateNested()
+  @Type(() => CreateSitePolygonAttributesDto)
+  attributes: CreateSitePolygonAttributesDto;
+}
+
+export class CreateSitePolygonJsonApiRequestDto {
+  @ApiProperty({
+    description: "JSON:API data object",
+    type: CreateSitePolygonDataDto
+  })
+  @ValidateNested()
+  @Type(() => CreateSitePolygonDataDto)
+  data: CreateSitePolygonDataDto;
 }

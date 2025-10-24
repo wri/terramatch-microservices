@@ -33,7 +33,6 @@ interface ValidationIncludedData {
 
 const CHUNK_SIZE = 500;
 const LARGE_BATCH_THRESHOLD = 1000;
-const SOURCE_GREENHOUSE = "greenhouse";
 
 @Injectable()
 export class SitePolygonCreationService {
@@ -46,14 +45,16 @@ export class SitePolygonCreationService {
 
   async createSitePolygons(
     request: CreateSitePolygonBatchRequestDto,
-    userId: number
+    userId: number,
+    source: string
   ): Promise<{
     data: SitePolygon[];
     included: ValidationIncludedData[];
   }> {
     const { createdPolygons, duplicatePolygons, duplicateValidations } = await this.storeAndValidateGeometries(
       request.geometries,
-      userId
+      userId,
+      source
     );
 
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
@@ -66,7 +67,8 @@ export class SitePolygonCreationService {
 
   private async storeAndValidateGeometries(
     geometries: { type: string; features: Feature[] }[],
-    userId: number
+    userId: number,
+    source: string
   ): Promise<{
     createdPolygons: SitePolygon[];
     duplicatePolygons: SitePolygon[];
@@ -152,9 +154,21 @@ export class SitePolygonCreationService {
           let createdSitePolygons: SitePolygon[];
           if (filteredFeatures.length > 0) {
             if (filteredFeatures.length > LARGE_BATCH_THRESHOLD) {
-              createdSitePolygons = await this.processLargeGeometryBatch(filteredFeatures, siteId, userId, transaction);
+              createdSitePolygons = await this.processLargeGeometryBatch(
+                filteredFeatures,
+                siteId,
+                userId,
+                source,
+                transaction
+              );
             } else {
-              createdSitePolygons = await this.createPolygonsBatch(filteredFeatures, siteId, userId, transaction);
+              createdSitePolygons = await this.createPolygonsBatch(
+                filteredFeatures,
+                siteId,
+                userId,
+                source,
+                transaction
+              );
             }
 
             allCreatedSitePolygons.push(...createdSitePolygons);
@@ -281,13 +295,14 @@ export class SitePolygonCreationService {
     features: Feature[],
     siteId: string,
     userId: number,
+    source: string,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
     const allSitePolygons: SitePolygon[] = [];
 
     for (let i = 0; i < features.length; i += CHUNK_SIZE) {
       const chunk = features.slice(i, i + CHUNK_SIZE);
-      const chunkSitePolygons = await this.createPolygonsBatch(chunk, siteId, userId, transaction);
+      const chunkSitePolygons = await this.createPolygonsBatch(chunk, siteId, userId, source, transaction);
       allSitePolygons.push(...chunkSitePolygons);
     }
 
@@ -298,6 +313,7 @@ export class SitePolygonCreationService {
     features: Feature[],
     siteId: string,
     userId: number,
+    source: string,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
     const geometries = features.map(f => f.geometry);
@@ -308,7 +324,7 @@ export class SitePolygonCreationService {
       transaction
     );
 
-    return await this.createSitePolygonRecords(features, polygonUuids, areas, siteId, userId, transaction);
+    return await this.createSitePolygonRecords(features, polygonUuids, areas, siteId, userId, source, transaction);
   }
 
   private async createSitePolygonRecords(
@@ -317,6 +333,7 @@ export class SitePolygonCreationService {
     areas: number[],
     siteId: string,
     userId: number,
+    source: string,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
     const sitePolygons: Partial<SitePolygon>[] = [];
@@ -349,7 +366,7 @@ export class SitePolygonCreationService {
           siteUuid: siteId,
           polygonUuid: polygonUuids[polygonIndex],
           ...validatedProperties,
-          source: SOURCE_GREENHOUSE,
+          source,
           createdBy: userId,
           isActive: true,
           status: "draft"

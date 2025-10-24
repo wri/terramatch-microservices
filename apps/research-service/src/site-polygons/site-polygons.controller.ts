@@ -35,9 +35,12 @@ import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { CreateSitePolygonBatchRequestDto } from "./dto/create-site-polygon-request.dto";
+import {
+  CreateSitePolygonBatchRequestDto,
+  CreateSitePolygonJsonApiRequestDto
+} from "./dto/create-site-polygon-request.dto";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
@@ -64,15 +67,13 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "createSitePolygons",
     summary: "Create site polygons from GeoJSON",
-    description: `Create site polygons in bulk from GeoJSON FeatureCollections. Supports multi-site batch creation.
-      Each feature must have site_id in properties. Handles Polygon and MultiPolygon geometries.
-      Automatically groups by site and geometry type, checks for duplicates, and processes large batches in chunks.
+    description: `Create site polygons. Supports multi-site batch creation.
       Duplicate validation results are always included in the response when duplicates are found.`
   })
   @JsonApiResponse([SitePolygonLightDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data or site not found." })
-  async create(@Body() createRequest: CreateSitePolygonBatchRequestDto) {
+  async create(@Body() createRequest: CreateSitePolygonJsonApiRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
     const userId = this.policyService.userId;
@@ -80,8 +81,18 @@ export class SitePolygonsController {
       throw new UnauthorizedException("User must be authenticated");
     }
 
+    const user = await User.findByPk(userId, {
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    // Extract the geometries from the JSON:API format
+    const batchRequest: CreateSitePolygonBatchRequestDto = {
+      geometries: createRequest.data.attributes.geometries
+    };
+
     const { data: createdSitePolygons, included: validations } =
-      await this.sitePolygonCreationService.createSitePolygons(createRequest, userId);
+      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source);
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);

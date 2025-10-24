@@ -12,7 +12,7 @@ import {
   JsonApiBodyDto,
   JsonApiDataDto
 } from "@terramatch-microservices/common/util/json-api-update-dto";
-import { IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsBoolean, IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 type FormExtras = "title" | "subtitle" | "description" | "submissionMessage";
@@ -45,6 +45,7 @@ export class FormLightDto extends HybridSupportDto {
   @ApiProperty({ nullable: true, required: false, enum: FORM_TYPES })
   type?: FormType | null;
 
+  @IsBoolean()
   @ApiProperty()
   published: boolean;
 
@@ -121,7 +122,8 @@ export class StoreFormAttributes extends PickType(FormFullDto, [
   "documentationLabel",
   "deadlineAt",
   "submissionMessage",
-  "stageId"
+  "stageId",
+  "published"
 ]) {
   @ValidateNested()
   @IsOptional()

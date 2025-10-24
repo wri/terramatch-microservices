@@ -89,7 +89,8 @@ describe("FormsController", () => {
       service.store.mockResolvedValue(form);
       const attributes: StoreFormAttributes = {
         title: "",
-        submissionMessage: ""
+        submissionMessage: "",
+        published: false
       };
       await controller.create({ data: { type: "forms", attributes } });
       expect(service.store).toHaveBeenCalledWith(attributes);
@@ -103,7 +104,8 @@ describe("FormsController", () => {
       service.findOne.mockResolvedValue(form);
       const attributes: StoreFormAttributes = {
         title: "",
-        submissionMessage: ""
+        submissionMessage: "",
+        published: false
       };
       await controller.update("fake-uuid", { data: { id: "fake-uuid", type: "forms", attributes } });
       expect(service.findOne).toHaveBeenCalledWith("fake-uuid");

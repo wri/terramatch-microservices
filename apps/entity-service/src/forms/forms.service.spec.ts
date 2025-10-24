@@ -316,6 +316,7 @@ describe("FormsService", () => {
         type: "project",
         submissionMessage: faker.lorem.paragraph(),
         deadlineAt: faker.date.soon(),
+        published: false,
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -450,6 +451,7 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
+        published: false,
         sections: [
           {
             id: section.uuid,
@@ -489,6 +491,7 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
+        published: false,
         sections: [
           {
             id: section.uuid,
@@ -539,6 +542,7 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
+        published: false,
         sections: [
           {
             id: section.uuid,
@@ -573,6 +577,7 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
+        published: false,
         sections: [
           // scramble order and drop section 1
           {

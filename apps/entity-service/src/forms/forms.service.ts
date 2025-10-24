@@ -271,7 +271,7 @@ export class FormsService {
         : await Stage.findOne({ where: { uuid: attributes.stageId }, attributes: ["fundingProgrammeId"] });
     form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
     // Newly created forms are always unpublished
-    form.published = false;
+    form.published = form.id == null ? false : attributes.published;
     await form.save();
 
     const currentSections = await FormSection.findAll({ where: { formId: form.uuid } });

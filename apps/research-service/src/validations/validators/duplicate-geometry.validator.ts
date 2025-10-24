@@ -126,11 +126,6 @@ export class DuplicateGeometryValidator implements Validator {
       return { valid: true, duplicates: [] };
     }
 
-    const firstGeometryType = features[0]?.geometry?.type;
-    if (firstGeometryType === "Point") {
-      return this.checkNewPointsDuplicates(features, sitePolygon);
-    }
-
     return this.checkNewPolygonsDuplicates(features, existingPolygonUuids);
   }
 
@@ -266,86 +261,6 @@ export class DuplicateGeometryValidator implements Validator {
       INNER JOIN polygon_geometry pg ON pg.uuid IN (${existingPlaceholders})
       WHERE ST_Intersects(ST_Envelope(ng.geom), ST_Envelope(pg.geom))
       AND ST_Equals(ng.geom, pg.geom)
-    `;
-
-    try {
-      if (PolygonGeometry.sequelize == null) {
-        throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-      }
-
-      const results = (await PolygonGeometry.sequelize.query(sql, {
-        replacements: allParams,
-        type: QueryTypes.SELECT
-      })) as { idx: number; existing_uuid: string }[];
-
-      const duplicates = results.map(row => ({
-        index: row.idx,
-        existing_uuid: row.existing_uuid
-      }));
-
-      return {
-        valid: duplicates.length === 0,
-        duplicates
-      };
-    } catch {
-      return { valid: true, duplicates: [] };
-    }
-  }
-
-  private async checkNewPointsDuplicates(
-    features: Feature[],
-    sitePolygon: SitePolygon
-  ): Promise<{ valid: boolean; duplicates: DuplicateCheckResult[] }> {
-    const projectId = sitePolygon.site?.projectId;
-    if (projectId == null) {
-      return { valid: true, duplicates: [] };
-    }
-
-    const projectSites = await Site.findAll({
-      where: { projectId },
-      attributes: ["uuid"]
-    });
-
-    const projectSiteIds = projectSites.map(s => s.uuid);
-    if (projectSiteIds.length === 0) {
-      return { valid: true, duplicates: [] };
-    }
-
-    const geometryParams: string[] = [];
-    const indexMap: number[] = [];
-
-    for (let i = 0; i < features.length; i++) {
-      const feature = features[i];
-      if (feature?.geometry != null) {
-        const geomJson = JSON.stringify(feature.geometry);
-        geometryParams.push(geomJson);
-        indexMap.push(i);
-      }
-    }
-
-    if (geometryParams.length === 0) {
-      return { valid: true, duplicates: [] };
-    }
-
-    const unionParts: string[] = [];
-    const allParams: string[] = [];
-
-    for (let i = 0; i < geometryParams.length; i++) {
-      unionParts.push(`SELECT ${indexMap[i]} as idx, ST_GeomFromGeoJSON(?) as geom`);
-      allParams.push(geometryParams[i]);
-    }
-
-    const sitePlaceholders = projectSiteIds.map(() => "?").join(",");
-    allParams.push(...projectSiteIds);
-
-    const sql = `
-      SELECT DISTINCT ng.idx, sp.poly_id as existing_uuid
-      FROM (
-        ${unionParts.join(" UNION ALL ")}
-      ) ng
-      INNER JOIN point_geometry pg ON ST_Equals(ng.geom, pg.geom)
-      INNER JOIN site_polygon sp ON sp.point_id = pg.uuid
-      WHERE sp.site_id IN (${sitePlaceholders})
     `;
 
     try {

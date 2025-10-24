@@ -8,11 +8,7 @@ import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
-import {
-  APPROVED,
-  NEEDS_MORE_INFORMATION,
-  RESTORATION_IN_PROGRESS
-} from "@terramatch-microservices/database/constants/status";
+import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
 import { ProjectReport } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
@@ -68,7 +64,7 @@ export abstract class EntityProcessor<
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, RESTORATION_IN_PROGRESS];
+  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
 
   constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
 

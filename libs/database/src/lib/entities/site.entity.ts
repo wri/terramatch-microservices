@@ -18,7 +18,6 @@ import { Project } from "./project.entity";
 import { SitePolygon } from "./site-polygon.entity";
 import {
   APPROVED,
-  RESTORATION_IN_PROGRESS,
   SiteStatus,
   SiteStatusStates,
   STARTED,
@@ -42,7 +41,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true, hooks: { afterCreate: statusUpdateSequelizeHook } })
 export class Site extends Model<Site> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
-  static readonly APPROVED_STATUSES = [APPROVED, RESTORATION_IN_PROGRESS] as SiteStatus[];
+  static readonly APPROVED_STATUSES = [APPROVED] as SiteStatus[];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
   static readonly MEDIA = {

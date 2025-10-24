@@ -111,8 +111,6 @@ export class EntityStatusUpdate extends EventProcessor {
     // TODO: the update is different for UpdateRequest awaiting approval
     if (this.model.status === "approved") {
       auditStatus.comment = `Approved: ${this.model.feedback}`;
-    } else if (this.model.status === "restoration-in-progress") {
-      auditStatus.comment = "Restoration In Progress";
     } else if (this.model.status === "needs-more-information") {
       auditStatus.type = "change-request";
       auditStatus.comment = await this.getNeedsMoreInfoComment();

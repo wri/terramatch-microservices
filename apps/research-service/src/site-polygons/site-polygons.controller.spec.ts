@@ -85,7 +85,6 @@ describe("SitePolygonsController", () => {
       return Promise.resolve(new SitePolygonFullDto(sitePolygon, [], [], []));
     });
 
-    // Mock the sitePolygonCreationService for potential future tests
     sitePolygonCreationService.createSitePolygons.mockImplementation(async () => ({
       data: [],
       included: []

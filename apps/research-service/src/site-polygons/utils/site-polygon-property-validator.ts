@@ -1,4 +1,7 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+
+const logger = new TMLogger("SitePolygonPropertyValidator");
 
 const CORE_PROPERTY_KEYS = [
   "poly_name",
@@ -27,7 +30,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
       const parsedDate = new Date(properties.plantstart as string);
       plantstart = !isNaN(parsedDate.getTime()) ? parsedDate : null;
     } catch (error) {
-      console.error("Error parsing plantstart date:", error);
+      logger.error("Error parsing plantstart date:", error);
       plantstart = null;
     }
   }

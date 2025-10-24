@@ -301,7 +301,6 @@ export class DuplicateGeometryValidator implements Validator {
       return { valid: true, duplicates: [] };
     }
 
-    // Get all sites in the project
     const projectSites = await Site.findAll({
       where: { projectId },
       attributes: ["uuid"]

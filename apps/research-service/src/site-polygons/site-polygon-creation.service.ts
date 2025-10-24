@@ -6,7 +6,7 @@ import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-pol
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
-import { CriteriaId } from "@terramatch-microservices/database/constants";
+import { CriteriaId, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
@@ -56,7 +56,6 @@ export class SitePolygonCreationService {
       userId
     );
 
-    // Combine created and duplicate polygons in the response
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
 
     return {
@@ -93,16 +92,12 @@ export class SitePolygonCreationService {
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
           const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId);
-          this.logger.debug(`🔍 DUPLICATE_CHECK: Found ${duplicateIndexToUuid.size} duplicates for site ${siteId}`);
-
-          // Collect validation data for duplicates found and fetch existing duplicate polygons
           const existingDuplicateUuids: string[] = [];
           const duplicateValidationMap = new Map<string, ValidationIncludedData>();
 
           for (const [, existingUuid] of duplicateIndexToUuid.entries()) {
             existingDuplicateUuids.push(existingUuid);
 
-            // Create or update validation entry for this polygon
             if (!duplicateValidationMap.has(existingUuid)) {
               duplicateValidationMap.set(existingUuid, {
                 type: "validation",
@@ -114,12 +109,11 @@ export class SitePolygonCreationService {
               });
             }
 
-            // Add duplicate criteria to the criteriaList
             const validation = duplicateValidationMap.get(existingUuid);
             if (validation != null) {
               validation.attributes.criteriaList.push({
-                criteriaId: 16, // DUPLICATE_GEOMETRY criteria ID
-                valid: false, // Duplicates are always invalid
+                criteriaId: VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY,
+                valid: false,
                 createdAt: new Date(),
                 extraInfo: {
                   polygonUuid: existingUuid,
@@ -136,11 +130,9 @@ export class SitePolygonCreationService {
             });
             allDuplicatePolygons.push(...existingDuplicatePolygons);
 
-            // Update validation extraInfo with site polygon details
             for (const duplicatePolygon of existingDuplicatePolygons) {
               const validation = duplicateValidationMap.get(duplicatePolygon.polygonUuid);
               if (validation != null) {
-                // Update the extraInfo for the duplicate criteria
                 const duplicateCriteria = validation.attributes.criteriaList.find(c => c.criteriaId === 16);
                 if (duplicateCriteria != null) {
                   duplicateCriteria.extraInfo = {
@@ -152,7 +144,6 @@ export class SitePolygonCreationService {
               }
             }
 
-            // Add all validations to the array
             duplicateValidations.push(...duplicateValidationMap.values());
           }
 
@@ -253,19 +244,12 @@ export class SitePolygonCreationService {
 
   private async checkDuplicates(features: Feature[], siteId: string): Promise<DuplicateCheckResult> {
     try {
-      this.logger.debug(`🔍 DUPLICATE_CHECK: Checking duplicates for ${features.length} features in site ${siteId}`);
       const duplicateResult = await this.duplicateGeometryValidator.checkNewFeaturesDuplicates(features, siteId);
-      this.logger.debug(
-        `🔍 DUPLICATE_CHECK: Result - valid=${duplicateResult.valid}, duplicates=${duplicateResult.duplicates.length}`
-      );
-
       const duplicateIndexToUuid = new Map<number, string>();
 
       if (!duplicateResult.valid && duplicateResult.duplicates.length > 0) {
-        this.logger.debug(`🔍 DUPLICATE_CHECK: Found ${duplicateResult.duplicates.length} duplicates`);
         for (const duplicate of duplicateResult.duplicates) {
           duplicateIndexToUuid.set(duplicate.index, duplicate.existing_uuid);
-          this.logger.debug(`🔍 DUPLICATE_CHECK: Index ${duplicate.index} matches existing ${duplicate.existing_uuid}`);
         }
       }
 

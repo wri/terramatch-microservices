@@ -45,6 +45,7 @@ import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/da
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { EntityCreateData } from "./dto/entity-create.dto";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -150,7 +151,13 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<
+      T,
+      EntityDto,
+      EntityDto,
+      EntityUpdateData,
+      EntityCreateData
+    >;
   }
 
   createAssociationProcessor<T extends UuidModel, D extends AssociationDto>(

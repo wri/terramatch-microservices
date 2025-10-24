@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
@@ -31,6 +32,7 @@ import { EntityUpdateBody } from "./dto/entity-update.dto";
 import { SupportedEntities } from "./dto/entity.dto";
 import { FinancialReportLightDto, FinancialReportFullDto } from "./dto/financial-report.dto";
 import { DisturbanceReportFullDto, DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
+import { EntityCreateBody } from "./dto/entity-create.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -150,6 +152,33 @@ export class EntitiesController {
     await processor.update(model, updatePayload.data.attributes);
 
     const { id, dto } = await processor.getFullDto(model);
+    return buildJsonApi(processor.FULL_DTO).addData(id, dto);
+  }
+
+  @Post(":entity")
+  @ApiOperation({
+    operationId: "entityCreate",
+    summary: "Create a new entity resource"
+  })
+  @JsonApiResponse([DisturbanceReportFullDto])
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
+  async entityCreate<T extends EntityModel>(
+    @Param() { entity }: EntityIndexParamsDto,
+    @Body() createPayload: EntityCreateBody
+  ) {
+    if (entity !== createPayload.data.type) {
+      throw new BadRequestException("Entity type in path and payload do not match");
+    }
+
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+
+    const model = await processor.create(createPayload.data.attributes);
+
+    const { id, dto } = await processor.getFullDto(model);
+
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 }

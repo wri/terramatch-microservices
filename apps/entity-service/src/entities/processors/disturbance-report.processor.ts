@@ -10,7 +10,7 @@ import {
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
-import { Op, Includeable } from "sequelize";
+import { Op, Includeable, CreationAttributes } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
   DisturbanceReportFullDto,
@@ -20,6 +20,60 @@ import {
 import { DisturbanceReportEntryDto } from "../dto/disturbance-report-entry.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { EntityCreateAttributes } from "../dto/entity-create.dto";
+
+const REPORT_ENTRIES = [
+  {
+    name: "disturbance-type",
+    inputType: "select",
+    title: "Disturbance Type"
+  },
+  {
+    name: "disturbance-subtype",
+    inputType: "select-multi",
+    title: "Disturbance Subtype"
+  },
+  {
+    name: "intensity",
+    inputType: "select",
+    title: "Intensity"
+  },
+  {
+    name: "extent",
+    inputType: "select",
+    title: "Extent"
+  },
+  {
+    name: "people-affected",
+    inputType: "number",
+    title: "People Affected"
+  },
+  {
+    name: "monetary-damage",
+    inputType: "number",
+    title: "Monetary Damage"
+  },
+  {
+    name: "property-affected",
+    inputType: "select-multi",
+    title: "Property Affected"
+  },
+  {
+    name: "date-of-disturbance",
+    inputType: "date",
+    title: "Date of Disturbance"
+  },
+  {
+    name: "site-affected",
+    inputType: "disturbanceAffectedSite",
+    title: "Site Affected"
+  },
+  {
+    name: "polygon-affected",
+    inputType: "disturbanceAffectedPolygon",
+    title: "Polygon Affected"
+  }
+];
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -40,7 +94,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   DisturbanceReport,
   DisturbanceReportLightDto,
   DisturbanceReportFullDto,
-  ReportUpdateAttributes
+  ReportUpdateAttributes,
+  EntityCreateAttributes
 > {
   readonly LIGHT_DTO = DisturbanceReportLightDto;
   readonly FULL_DTO = DisturbanceReportFullDto;
@@ -236,6 +291,30 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         }
       ]
     });
+  }
+
+  async create(createPayload: EntityCreateAttributes) {
+    const project = await Project.findOne({ where: { uuid: createPayload.parentUuid } });
+    if (project == null) {
+      throw new BadRequestException(`Project with UUID ${createPayload.parentUuid} not found`);
+    }
+
+    const disturbanceReport = await DisturbanceReport.create({
+      frameworkKey: project.frameworkKey,
+      projectId: project.id,
+      status: "due",
+      updateRequestStatus: "no-update",
+      title: "Disturbance Report"
+    } as DisturbanceReport);
+
+    await DisturbanceReportEntry.bulkCreate(
+      REPORT_ENTRIES.map(entry => ({
+        ...entry,
+        disturbanceReportId: disturbanceReport.id
+      })) as CreationAttributes<DisturbanceReportEntry>[]
+    );
+
+    return disturbanceReport;
   }
 
   async findMany(query: EntityQueryDto) {

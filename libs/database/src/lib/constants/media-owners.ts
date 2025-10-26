@@ -1,18 +1,21 @@
 import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
-import { Project } from "../entities/project.entity";
-import { Site } from "../entities/site.entity";
-import { Nursery } from "../entities/nursery.entity";
-import { ProjectReport } from "../entities/project-report.entity";
-import { SiteReport } from "../entities/site-report.entity";
-import { NurseryReport } from "../entities/nursery-report.entity";
-import { Organisation } from "../entities/organisation.entity";
-import { AuditStatus } from "../entities/audit-status.entity";
-import { FormQuestionOption } from "../entities/form-question-option.entity";
-import { Form } from "../entities/form.entity";
-import { FundingProgramme } from "../entities/funding-programme.entity";
-import { ImpactStory } from "../entities/impact-story.entity";
-import { FinancialIndicator } from "../entities/financial-indicator.entity";
+import {
+  AuditStatus,
+  FinancialIndicator,
+  Form,
+  FormQuestionOption,
+  FundingProgramme,
+  ImpactStory,
+  Nursery,
+  NurseryReport,
+  Organisation,
+  Project,
+  ProjectPitch,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "../entities";
 
 export const MEDIA_OWNER_TYPES = [
   "projects",
@@ -27,7 +30,8 @@ export const MEDIA_OWNER_TYPES = [
   "formQuestionOptions",
   "fundingProgrammes",
   "impactStories",
-  "financialIndicators"
+  "financialIndicators",
+  "projectPitches"
 ] as const;
 
 export type MediaOwnerType = (typeof MEDIA_OWNER_TYPES)[number];
@@ -44,7 +48,8 @@ export type MediaOwnerModel =
   | FormQuestionOption
   | FundingProgramme
   | ImpactStory
-  | FinancialIndicator;
+  | FinancialIndicator
+  | ProjectPitch;
 
 export const VALIDATION_KEYS = [
   "logo-image",
@@ -81,5 +86,6 @@ export const MEDIA_OWNER_MODELS: { [E in MediaOwnerType]: EntityMediaOwnerClass<
   formQuestionOptions: FormQuestionOption,
   fundingProgrammes: FundingProgramme,
   impactStories: ImpactStory,
-  financialIndicators: FinancialIndicator
+  financialIndicators: FinancialIndicator,
+  projectPitches: ProjectPitch
 } as const;

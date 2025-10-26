@@ -60,9 +60,10 @@ export class FundingType extends Model<FundingType> {
   @Column(TEXT)
   type: string;
 
+  @AllowNull
   @ForeignKey(() => FinancialReport)
   @Column(BIGINT.UNSIGNED)
-  financialReportId: number;
+  financialReportId: number | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid" })
   organisation: Organisation;

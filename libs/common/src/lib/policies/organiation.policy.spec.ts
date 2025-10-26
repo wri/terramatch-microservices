@@ -2,6 +2,7 @@ import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { Organisation } from "@terramatch-microservices/database/entities";
+import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("OrganisationPolicy", () => {
   let service: PolicyService;
@@ -28,5 +29,21 @@ describe("OrganisationPolicy", () => {
     mockUserId(123);
     mockPermissions();
     await expectCannot(service, "create", Organisation);
+  });
+
+  it("allows uploading files to the user's org", async () => {
+    const org = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: org.id });
+    mockUserId(user.id);
+    mockPermissions("manage-own");
+    await expectCan(service, "uploadFiles", org);
+  });
+
+  it("disallows uploading files to other orgs", async () => {
+    const orgs = await OrganisationFactory.createMany(2);
+    const user = await UserFactory.create({ organisationId: orgs[0].id });
+    mockUserId(user.id);
+    mockPermissions("manage-own");
+    await expectCannot(service, "uploadFiles", orgs[1]);
   });
 });

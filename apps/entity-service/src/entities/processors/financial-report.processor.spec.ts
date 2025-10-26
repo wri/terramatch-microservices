@@ -273,6 +273,16 @@ describe("FinancialReportProcessor", () => {
         status: "awaiting-approval"
       });
 
+      // Create FundingTypes for the financial report
+      await FundingTypeFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.uuid,
+        source: "Government Grant",
+        year: 2023,
+        type: "Grant",
+        amount: 10000
+      });
+
       await FinancialIndicatorFactory.create({
         financialReportId: financialReport.id,
         organisationId: organisation.id,
@@ -328,6 +338,16 @@ describe("FinancialReportProcessor", () => {
       const financialReport = await FinancialReportFactory.create({
         organisationId: organisation.id,
         status: "awaiting-approval"
+      });
+
+      // Create FundingTypes for the financial report
+      await FundingTypeFactory.create({
+        financialReportId: financialReport.id,
+        organisationId: organisation.uuid,
+        source: "Private Donation",
+        year: 2023,
+        type: "Donation",
+        amount: 5000
       });
 
       const existingIndicator1 = await FinancialIndicatorFactory.create({

@@ -16,7 +16,7 @@ export class MediaOwnerProcessor {
 
   get baseModelAttributes() {
     // Only pull the attributes that are needed by the entity policies.
-    return ["id", "frameworkKey", "projectId"];
+    return ["id", "frameworkKey", "projectId", "siteId", "nurseryId", "organisationId"];
   }
 
   private _baseEntity: MediaOwnerModel;

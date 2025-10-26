@@ -66,7 +66,13 @@ export class ValidationProcessor extends WorkerHost {
         );
       }
 
-      const summary = await this.validationService.generateValidationSummary(siteUuid, validationTypes);
+      const summary = {
+        siteUuid,
+        totalPolygons: polygonUuids.length,
+        validatedPolygons: polygonUuids.length,
+        validationTypes: validationTypes,
+        completedAt: new Date()
+      };
 
       await DelayedJob.update(
         {

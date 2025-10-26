@@ -51,10 +51,10 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "MISSING_VALUE",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site"
+        error_type: "MISSING_VALUE",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site"
       });
     });
 
@@ -74,7 +74,7 @@ describe("PlantStartDateValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo?.errorType).toBe("MISSING_VALUE");
+      expect(result.extraInfo?.error_type).toBe("MISSING_VALUE");
     });
 
     it("should return invalid when plant start date is '0000-00-00'", async () => {
@@ -94,11 +94,11 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "INVALID_FORMAT",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site",
-        providedValue: "0000-00-00"
+        error_type: "INVALID_FORMAT",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site",
+        provided_value: "0000-00-00"
       });
     });
 
@@ -119,12 +119,12 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "DATE_TOO_EARLY",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site",
-        providedValue: "2017-12-31",
-        minDate: "2018-01-01"
+        error_type: "DATE_TOO_EARLY",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site",
+        provided_value: "2017-12-31",
+        min_date: "2018-01-01"
       });
     });
 
@@ -149,12 +149,12 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "DATE_IN_FUTURE",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site",
-        providedValue: futureDateString,
-        currentDate: expect.any(String)
+        error_type: "DATE_IN_FUTURE",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site",
+        provided_value: futureDateString,
+        current_date: expect.any(String)
       });
     });
 
@@ -175,13 +175,13 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "DATE_OUTSIDE_SITE_RANGE",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site",
-        providedValue: "2018-06-01",
-        siteStartDate: "2021-01-01",
-        allowedRange: {
+        error_type: "DATE_OUTSIDE_SITE_RANGE",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site",
+        provided_value: "2018-06-01",
+        site_start_date: "2021-01-01",
+        allowed_range: {
           min: "2019-01-01",
           max: "2023-01-01"
         }
@@ -205,13 +205,13 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "DATE_OUTSIDE_SITE_RANGE",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site",
-        providedValue: "2022-01-01",
-        siteStartDate: "2019-01-01",
-        allowedRange: {
+        error_type: "DATE_OUTSIDE_SITE_RANGE",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site",
+        provided_value: "2022-01-01",
+        site_start_date: "2019-01-01",
+        allowed_range: {
           min: "2017-01-01",
           max: "2021-01-01"
         }
@@ -273,12 +273,12 @@ describe("PlantStartDateValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        errorType: "PARSE_ERROR",
-        polygonUuid: "test-uuid",
-        polygonName: "Test Polygon",
-        siteName: "Test Site",
-        providedValue: "invalid-date",
-        errorDetails: "unparsable"
+        error_type: "PARSE_ERROR",
+        polygon_uuid: "test-uuid",
+        polygon_name: "Test Polygon",
+        site_name: "Test Site",
+        provided_value: "invalid-date",
+        error_details: "unparsable"
       });
     });
 
@@ -366,10 +366,10 @@ describe("PlantStartDateValidator", () => {
         polygonUuid: "uuid-2",
         valid: false,
         extraInfo: {
-          errorType: "MISSING_VALUE",
-          polygonUuid: "uuid-2",
-          polygonName: "Test Polygon 2",
-          siteName: "Test Site 2"
+          error_type: "MISSING_VALUE",
+          polygon_uuid: "uuid-2",
+          polygon_name: "Test Polygon 2",
+          site_name: "Test Site 2"
         }
       });
     });

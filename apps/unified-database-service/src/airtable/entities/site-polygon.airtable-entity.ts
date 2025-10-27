@@ -1,7 +1,7 @@
 /* istanbul ignore file */
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
-import { uniq } from "lodash";
+import { isDate, isString, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/common/util/array";
 
 type SitePolygonAssociations = {
@@ -30,8 +30,8 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
     dbColumn: "plantStart",
     valueMap: async ({ plantStart }) => {
       if (plantStart == null) return undefined;
-      if (plantStart instanceof Date && isNaN(plantStart.getTime())) return undefined;
-      if (plantStart instanceof String && String(plantStart) === "0000-00-00") return undefined;
+      if (isDate(plantStart) && isNaN(plantStart.getTime())) return undefined;
+      if (isString(plantStart) && plantStart === "0000-00-00") return undefined;
       return plantStart;
     }
   },

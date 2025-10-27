@@ -46,7 +46,8 @@ export class SitePolygonCreationService {
   async createSitePolygons(
     request: CreateSitePolygonBatchRequestDto,
     userId: number,
-    source: string
+    source: string,
+    userFullName: string | null
   ): Promise<{
     data: SitePolygon[];
     included: ValidationIncludedData[];
@@ -54,7 +55,8 @@ export class SitePolygonCreationService {
     const { createdPolygons, duplicatePolygons, duplicateValidations } = await this.storeAndValidateGeometries(
       request.geometries,
       userId,
-      source
+      source,
+      userFullName
     );
 
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
@@ -68,7 +70,8 @@ export class SitePolygonCreationService {
   private async storeAndValidateGeometries(
     geometries: { type: string; features: Feature[] }[],
     userId: number,
-    source: string
+    source: string,
+    userFullName: string | null
   ): Promise<{
     createdPolygons: SitePolygon[];
     duplicatePolygons: SitePolygon[];
@@ -177,6 +180,10 @@ export class SitePolygonCreationService {
             );
           }
         }
+      }
+
+      if (allCreatedSitePolygons.length > 0) {
+        await this.updateSitePolygonNames(allCreatedSitePolygons, userFullName, transaction);
       }
 
       if (allPolygonUuids.length > 0) {
@@ -347,7 +354,6 @@ export class SitePolygonCreationService {
       const numPolygons = geometry.type === "MultiPolygon" ? (geometry.coordinates as number[][][][]).length : 1;
 
       for (let j = 0; j < numPolygons; j++) {
-        const primaryUuid = uuidv4();
         const sitePolygonUuid = uuidv4();
 
         const allProperties = { ...properties };
@@ -362,7 +368,7 @@ export class SitePolygonCreationService {
 
         sitePolygons.push({
           uuid: sitePolygonUuid,
-          primaryUuid,
+          primaryUuid: sitePolygonUuid,
           siteUuid: siteId,
           polygonUuid: polygonUuids[polygonIndex],
           ...validatedProperties,
@@ -390,5 +396,30 @@ export class SitePolygonCreationService {
     }
 
     return createdSitePolygons;
+  }
+
+  private async updateSitePolygonNames(
+    sitePolygons: SitePolygon[],
+    userFullName: string | null,
+    transaction: Transaction
+  ): Promise<void> {
+    if (sitePolygons.length === 0) {
+      return;
+    }
+
+    const now = new Date();
+    const dateFormat = `${now.getDate()}_${now.toLocaleDateString("en-US", {
+      month: "long"
+    })}_${now.getFullYear()}_${String(now.getHours()).padStart(2, "0")}_${String(now.getMinutes()).padStart(
+      2,
+      "0"
+    )}_${String(now.getSeconds()).padStart(2, "0")}`;
+    const suffix = userFullName != null ? `_${userFullName}` : "";
+
+    const polygonsToUpdate = sitePolygons.filter(sp => sp.polyName == null || sp.polyName.trim() === "");
+
+    for (const polygon of polygonsToUpdate) {
+      await SitePolygon.update({ polyName: `${dateFormat}${suffix}` }, { where: { uuid: polygon.uuid }, transaction });
+    }
   }
 }

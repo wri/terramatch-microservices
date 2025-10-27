@@ -92,7 +92,7 @@ export class SitePolygonsController {
     };
 
     const { data: createdSitePolygons, included: validations } =
-      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source);
+      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);

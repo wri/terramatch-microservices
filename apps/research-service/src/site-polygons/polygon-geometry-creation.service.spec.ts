@@ -62,6 +62,8 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
+      jest.spyOn(service["logger"], "error").mockImplementation();
+
       await expect(service.batchPrepareGeometries(geometries)).rejects.toThrow(InternalServerErrorException);
     });
 
@@ -325,6 +327,8 @@ describe("PolygonGeometryCreationService", () => {
         configurable: true
       });
 
+      jest.spyOn(service["logger"], "error").mockImplementation();
+
       await expect(service.bulkUpdateSitePolygonCentroids(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
     });
 
@@ -366,6 +370,8 @@ describe("PolygonGeometryCreationService", () => {
         configurable: true
       });
 
+      jest.spyOn(service["logger"], "error").mockImplementation();
+
       await expect(service.bulkUpdateSitePolygonAreas(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
     });
 
@@ -398,6 +404,8 @@ describe("PolygonGeometryCreationService", () => {
         get: jest.fn(() => null),
         configurable: true
       });
+
+      jest.spyOn(service["logger"], "error").mockImplementation();
 
       await expect(service.bulkUpdateProjectCentroids(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
     });

@@ -109,7 +109,6 @@ describe("SitePolygonCreationService", () => {
 
       jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([mockSitePolygon]);
 
-      // Mock the update method to avoid errors
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 
       const result = await service.createSitePolygons(request, mockUserId, "test", null);
@@ -168,7 +167,6 @@ describe("SitePolygonCreationService", () => {
           { uuid: "site-polygon-uuid-2", polyName: null } as SitePolygon
         ]);
 
-      // Mock the update method to avoid errors
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 
       const result = await service.createSitePolygons(request, mockUserId, "test", null);
@@ -247,7 +245,6 @@ describe("SitePolygonCreationService", () => {
           { uuid: "sp-2", polyName: null } as SitePolygon
         ]);
 
-      // Mock the update method to avoid errors
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 
       const result = await service.createSitePolygons(request, mockUserId, "test", null);
@@ -304,7 +301,6 @@ describe("SitePolygonCreationService", () => {
           } as SitePolygon
         ]);
 
-        // Mock the update method to avoid errors
         jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 
         const result = await service.createSitePolygons(request, mockUserId, "test", null);

@@ -28,7 +28,12 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
   {
     airtableColumn: "plantStart",
     dbColumn: "plantStart",
-    valueMap: async ({ plantStart }) => (plantStart == null || isNaN(plantStart.getTime()) ? undefined : plantStart)
+    valueMap: async ({ plantStart }) => {
+      if (plantStart == null) return undefined;
+      if (plantStart instanceof Date && isNaN(plantStart.getTime())) return undefined;
+      if (plantStart instanceof String && String(plantStart) === "0000-00-00") return undefined;
+      return plantStart;
+    }
   },
   {
     airtableColumn: "practice",

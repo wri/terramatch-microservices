@@ -100,15 +100,19 @@ describe("SitePolygonCreationService", () => {
         areas: [10.5]
       });
 
-      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
-        {
-          uuid: "site-polygon-uuid-1",
-          siteUuid: "site-uuid-1",
-          polygonUuid: "polygon-uuid-1"
-        } as SitePolygon
-      ]);
+      const mockSitePolygon = {
+        uuid: "site-polygon-uuid-1",
+        siteUuid: "site-uuid-1",
+        polygonUuid: "polygon-uuid-1",
+        polyName: "Test Polygon"
+      } as SitePolygon;
 
-      const result = await service.createSitePolygons(request, mockUserId, "test");
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([mockSitePolygon]);
+
+      // Mock the update method to avoid errors
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      const result = await service.createSitePolygons(request, mockUserId, "test", null);
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].uuid).toBe("site-polygon-uuid-1");
@@ -160,11 +164,14 @@ describe("SitePolygonCreationService", () => {
       jest
         .spyOn(SitePolygon, "bulkCreate")
         .mockResolvedValue([
-          { uuid: "site-polygon-uuid-1" } as SitePolygon,
-          { uuid: "site-polygon-uuid-2" } as SitePolygon
+          { uuid: "site-polygon-uuid-1", polyName: null } as SitePolygon,
+          { uuid: "site-polygon-uuid-2", polyName: null } as SitePolygon
         ]);
 
-      const result = await service.createSitePolygons(request, mockUserId, "test");
+      // Mock the update method to avoid errors
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      const result = await service.createSitePolygons(request, mockUserId, "test", null);
 
       expect(result.data).toHaveLength(2);
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalled();
@@ -235,9 +242,15 @@ describe("SitePolygonCreationService", () => {
 
       jest
         .spyOn(SitePolygon, "bulkCreate")
-        .mockResolvedValue([{ uuid: "sp-1" } as SitePolygon, { uuid: "sp-2" } as SitePolygon]);
+        .mockResolvedValue([
+          { uuid: "sp-1", polyName: null } as SitePolygon,
+          { uuid: "sp-2", polyName: null } as SitePolygon
+        ]);
 
-      const result = await service.createSitePolygons(request, mockUserId, "test");
+      // Mock the update method to avoid errors
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      const result = await service.createSitePolygons(request, mockUserId, "test", null);
 
       expect(result.data.length).toBeGreaterThan(0);
     });
@@ -286,11 +299,15 @@ describe("SitePolygonCreationService", () => {
           {
             uuid: "site-polygon-uuid-1",
             siteUuid: "site-uuid-1",
-            polygonUuid: "polygon-uuid-1"
+            polygonUuid: "polygon-uuid-1",
+            polyName: null
           } as SitePolygon
         ]);
 
-        const result = await service.createSitePolygons(request, mockUserId, "test");
+        // Mock the update method to avoid errors
+        jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+        const result = await service.createSitePolygons(request, mockUserId, "test", null);
 
         expect(result.data).toHaveLength(1);
         expect(result.included).toHaveLength(0);
@@ -336,7 +353,7 @@ describe("SitePolygonCreationService", () => {
 
         jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([]);
 
-        const result = await service.createSitePolygons(request, mockUserId, "test");
+        const result = await service.createSitePolygons(request, mockUserId, "test", null);
 
         expect(result.data).toHaveLength(1);
         expect(result.included).toHaveLength(1);

@@ -108,7 +108,7 @@ describe("SitePolygonCreationService", () => {
         } as SitePolygon
       ]);
 
-      const result = await service.createSitePolygons(request, mockUserId);
+      const result = await service.createSitePolygons(request, mockUserId, "test");
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].uuid).toBe("site-polygon-uuid-1");
@@ -164,7 +164,7 @@ describe("SitePolygonCreationService", () => {
           { uuid: "site-polygon-uuid-2" } as SitePolygon
         ]);
 
-      const result = await service.createSitePolygons(request, mockUserId);
+      const result = await service.createSitePolygons(request, mockUserId, "test");
 
       expect(result.data).toHaveLength(2);
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalled();
@@ -237,7 +237,7 @@ describe("SitePolygonCreationService", () => {
         .spyOn(SitePolygon, "bulkCreate")
         .mockResolvedValue([{ uuid: "sp-1" } as SitePolygon, { uuid: "sp-2" } as SitePolygon]);
 
-      const result = await service.createSitePolygons(request, mockUserId);
+      const result = await service.createSitePolygons(request, mockUserId, "test");
 
       expect(result.data.length).toBeGreaterThan(0);
     });
@@ -290,7 +290,7 @@ describe("SitePolygonCreationService", () => {
           } as SitePolygon
         ]);
 
-        const result = await service.createSitePolygons(request, mockUserId);
+        const result = await service.createSitePolygons(request, mockUserId, "test");
 
         expect(result.data).toHaveLength(1);
         expect(result.included).toHaveLength(0);
@@ -336,7 +336,7 @@ describe("SitePolygonCreationService", () => {
 
         jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([]);
 
-        const result = await service.createSitePolygons(request, mockUserId);
+        const result = await service.createSitePolygons(request, mockUserId, "test");
 
         expect(result.data).toHaveLength(1);
         expect(result.included).toHaveLength(1);

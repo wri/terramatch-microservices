@@ -127,9 +127,13 @@ export class FileUploadService {
           .keepExif()
           .toBuffer();
         const extensionIdx = originalname.lastIndexOf(".");
-        const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${originalname.substring(extensionIdx)}`;
+        const extension = originalname.substring(extensionIdx);
+        const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${extension}`;
         await this.mediaService.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
-        await media.update({ generatedConversions: { thumbnail: true } });
+        await media.update({
+          generatedConversions: { thumbnail: true },
+          customProperties: { ...media.customProperties, thumbnailExtension: extension }
+        });
       }
 
       return media;

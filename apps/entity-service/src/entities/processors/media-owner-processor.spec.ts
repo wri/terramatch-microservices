@@ -36,7 +36,8 @@ describe("MediaOwnerProcessor", () => {
         "projectId",
         "siteId",
         "nurseryId",
-        "organisationId"
+        "organisationId",
+        "createdBy"
       ]);
     });
   });

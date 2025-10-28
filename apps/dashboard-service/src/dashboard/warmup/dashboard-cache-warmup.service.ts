@@ -44,7 +44,7 @@ export class DashboardCacheWarmupService {
 
       const landscapesList = ["gcb", "grv", "ikr"] as const;
       const organisationTypesList = ["non-profit-organization", "for-profit-organization"] as const;
-      const cohortsList = ["terrafund", "terrafund-landscapes"] as const;
+      const cohortsList = ["terrafund", "terrafund-landscapes", "terrafund-enterprises-rolling"] as const;
 
       const landscapeCombos = generateCombinations(landscapesList);
       const orgCombos = generateCombinations(organisationTypesList);

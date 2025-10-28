@@ -16,6 +16,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
+import { Dictionary } from "factory-girl-ts";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
@@ -102,10 +103,10 @@ export class Media extends Model<Media> {
   fileType: "media" | "documents" | null;
 
   @JsonColumn()
-  customProperties: object;
+  customProperties: Dictionary<object | string>;
 
   @JsonColumn()
-  generatedConversions: Record<string, boolean>;
+  generatedConversions: Dictionary<boolean>;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

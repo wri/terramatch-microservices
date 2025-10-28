@@ -29,7 +29,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
           })
         ).map(({ id }) => id);
         if (nurseryIds.length > 0) {
-          this.builder.can(["read", "update"], NurseryReport, { nurseryId: { $in: nurseryIds } });
+          this.builder.can(["read", "update", "uploadFiles"], NurseryReport, { nurseryId: { $in: nurseryIds } });
         }
       }
     }

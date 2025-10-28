@@ -163,6 +163,24 @@ export class User extends Model<User> {
     return this.firstName == null || this.lastName == null ? null : `${this.firstName} ${this.lastName}`;
   }
 
+  getSourceFromRoles(): string {
+    if (this.roles == null) {
+      return "terramatch";
+    }
+
+    const roleNames = this.roles.map(role => role.name);
+
+    if (roleNames.includes("greenhouse-service-account")) {
+      return "greenhouse";
+    }
+
+    if (roleNames.includes("research-service-account")) {
+      return "research";
+    }
+
+    return "terramatch";
+  }
+
   @BelongsToMany(() => Project, () => ProjectUser)
   projects: Array<Project & { ProjectUser: ProjectUser }>;
 

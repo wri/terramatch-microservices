@@ -8,6 +8,9 @@ type SitePolygonAssociations = {
   disturbanceUuid?: string;
 };
 
+// The data in these columns is really inconsistent. It would be nice to clean these up into a standard JSON string array at some point.
+const cleanMultiSelect = (value?: string | null) => value?.split(",").map(value => value.trim().toLowerCase());
+
 const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
   ...commonEntityColumns<SitePolygon, SitePolygonAssociations>(),
   "primaryUuid",
@@ -16,7 +19,7 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
   {
     airtableColumn: "distr",
     dbColumn: "distr",
-    valueMap: async ({ distr }) => distr?.split(",").map(value => value.trim())
+    valueMap: async ({ distr }) => cleanMultiSelect(distr)
   },
   "numTrees",
   "validationStatus",
@@ -30,6 +33,8 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
     dbColumn: "plantStart",
     valueMap: async ({ plantStart }) => {
       if (plantStart == null) return undefined;
+      // The invalid date I thought would come in as a Date instance with invalid time, but it seems
+      // to be coming in as a string instead. Covering both cases in case the behavior changes.
       if (isDate(plantStart) && isNaN(plantStart.getTime())) return undefined;
       if (isString(plantStart) && plantStart === "0000-00-00") return undefined;
       return plantStart;
@@ -38,7 +43,7 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
   {
     airtableColumn: "practice",
     dbColumn: "practice",
-    valueMap: async ({ practice }) => practice?.split(",").map(value => value.trim())
+    valueMap: async ({ practice }) => cleanMultiSelect(practice)
   },
   "targetSys"
 ];

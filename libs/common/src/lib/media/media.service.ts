@@ -4,6 +4,7 @@ import { Media } from "@terramatch-microservices/database/entities";
 import { PutObjectCommand, S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
 import "multer";
+import { Op } from "sequelize";
 
 @Injectable()
 export class MediaService {
@@ -83,7 +84,6 @@ export class MediaService {
   }
 
   bulkDeleteMedia(uuids: string[]) {
-    const;
     return Media.destroy({
       where: { uuid: { [Op.in]: uuids } }
     });

@@ -311,6 +311,82 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     return new Map(results.map(r => [r.polygonUuid, r.country]));
   }
 
+  static async calculateArea(geometry: { type: string; coordinates: number[][][] | number[][][][] }): Promise<number> {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    try {
+      const geojson = JSON.stringify(geometry);
+
+      const result = (await this.sequelize.query(
+        `
+        SELECT 
+          ST_Area(ST_GeomFromGeoJSON(?)) * 
+          POW(6378137 * PI() / 180, 2) * 
+          COS(RADIANS(ST_Y(ST_Centroid(ST_GeomFromGeoJSON(?))))) / 10000 as area_hectares
+      `,
+        {
+          replacements: [geojson, geojson],
+          type: QueryTypes.SELECT
+        }
+      )) as { area_hectares: number }[];
+
+      return parseFloat(String(result[0].area_hectares));
+    } catch {
+      throw new InternalServerErrorException("Area calculation failed");
+    }
+  }
+
+  static async batchCalculateAreas(
+    geometries: { type: string; coordinates: number[][][] | number[][][][] }[]
+  ): Promise<{ area: number }[]> {
+    if (geometries.length === 0) {
+      return [];
+    }
+
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    try {
+      const geoJsonStrings = geometries.map(geom => JSON.stringify(geom));
+
+      const sqlCases = geoJsonStrings
+        .map((_, index) => `SELECT :geom${index} as geoJson, ${index} as idx`)
+        .join(" UNION ALL ");
+
+      const replacements: Record<string, string> = {};
+      geoJsonStrings.forEach((geoJsonStr, index) => {
+        replacements[`geom${index}`] = geoJsonStr;
+      });
+
+      const query = `
+        WITH geom_data AS (
+          ${sqlCases}
+        )
+        SELECT 
+          idx,
+          ST_Area(ST_GeomFromGeoJSON(geoJson)) * 
+          POW(6378137 * PI() / 180, 2) * 
+          COS(RADIANS(ST_Y(ST_Centroid(ST_GeomFromGeoJSON(geoJson))))) / 10000 as area_hectares
+        FROM geom_data
+        ORDER BY idx
+      `;
+
+      const results = (await this.sequelize.query(query, {
+        replacements,
+        type: QueryTypes.SELECT
+      })) as { area_hectares: number }[];
+
+      return results.map(result => ({
+        area: parseFloat(String(result.area_hectares)) ?? 0
+      }));
+    } catch {
+      throw new InternalServerErrorException("Batch area calculation failed");
+    }
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

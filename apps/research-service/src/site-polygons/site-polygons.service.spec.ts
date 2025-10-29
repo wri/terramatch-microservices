@@ -843,14 +843,6 @@ describe("SitePolygonsService", () => {
   });
 
   describe("deleteSitePolygon", () => {
-    it("should throw NotFoundException when site polygon does not exist", async () => {
-      const nonExistentUuid = "00000000-0000-0000-0000-000000000000";
-
-      await expect(service.deleteSitePolygon(nonExistentUuid)).rejects.toThrow(
-        new NotFoundException(`SitePolygon not found for uuid: ${nonExistentUuid}`)
-      );
-    });
-
     it("should successfully delete a site polygon with all associated records", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });

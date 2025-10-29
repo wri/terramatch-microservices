@@ -9,12 +9,14 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilderInterceptor } from "@terramatch-microservices/common/util/document-builder-interceptor";
+import * as express from "express";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new TMLogger()
   });
   app.set("query parser", "extended");
+  app.use(express.json({ limit: "5mb" }));
 
   if (process.env.NODE_ENV === "development") {
     // CORS is handled by the Api Gateway in AWS

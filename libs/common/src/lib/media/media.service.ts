@@ -47,14 +47,17 @@ export class MediaService {
     const baseUrl = `${endpoint}/${bucket}/${media.id}`;
     const { fileName } = media;
     if (conversion == null) return `${baseUrl}/${fileName}`;
-
-    if (!media.generatedConversions[conversion]) return null;
+    if (media.generatedConversions[conversion] == null) return null;
 
     const lastIndex = fileName.lastIndexOf(".");
     const baseFileName = fileName.slice(0, lastIndex);
 
-    // For thumbnails, Spatie Media Library always generates .jpg files regardless of original extension
-    const extension = conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex);
+    // For thumbnails, Spatie Media Library in PHP always generates .jpg files regardless of
+    // original extension For images uploaded via the file upload service, we specify the extension
+    // in customProperties.
+    const extension =
+      (media.customProperties[`${conversion}Extension`] as string | undefined) ??
+      (conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex));
 
     return `${baseUrl}/conversions/${baseFileName}-${conversion}${extension}`;
   }

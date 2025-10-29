@@ -32,7 +32,8 @@ export class MediasController {
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async mediaDelete(@Param() { uuid }: { uuid: string }) {
     this.logger.log(`Deleting media ${uuid}`);
-    // await this.policyService.authorize("delete", uuid);
+    const media = await this.mediaService.getMedia(uuid);
+    await this.policyService.authorize("deleteFiles", media);
     await this.mediaService.deleteMedia(uuid);
     return buildDeletedResponse("medias", uuid);
   }

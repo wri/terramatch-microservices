@@ -63,6 +63,14 @@ export class MediaService {
     return `${baseUrl}/conversions/${baseFileName}-${conversion}${extension}`;
   }
 
+  async getMedia(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+    return media;
+  }
+
   async deleteMedia(uuid: string) {
     const media = await Media.findOne({
       where: { uuid }

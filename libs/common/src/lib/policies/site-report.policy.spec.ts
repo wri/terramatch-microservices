@@ -39,7 +39,7 @@ describe("SiteReportPolicy", () => {
     const ppc = await SiteReportFactory.create({ frameworkKey: "ppc" });
     const tf = await SiteReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], ppc]],
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
       cannot: [[["read", "delete", "update", "approve"], tf]]
     });
   });
@@ -69,15 +69,15 @@ describe("SiteReportPolicy", () => {
 
     await expectAuthority(service, {
       can: [
-        [["read", "update"], sr1],
-        [["read", "update"], sr3],
-        [["read", "update"], sr4]
+        [["read", "update", "deleteFiles"], sr1],
+        [["read", "update", "deleteFiles"], sr3],
+        [["read", "update", "deleteFiles"], sr4]
       ],
       cannot: [
         [["delete", "approve"], sr1],
-        [["read", "delete"], sr2],
-        ["delete", sr3],
-        ["delete", sr4]
+        [["read", "delete", "deleteFiles"], sr2],
+        [["delete", "deleteFiles"], sr3],
+        [["delete", "deleteFiles"], sr4]
       ]
     });
   });
@@ -98,8 +98,8 @@ describe("SiteReportPolicy", () => {
     const sr2 = await SiteReportFactory.create({ siteId: s2.id });
 
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], sr1]],
-      cannot: [[["read", "delete", "update", "approve"], sr2]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], sr1]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], sr2]]
     });
   });
 });

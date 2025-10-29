@@ -9,7 +9,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "create"], DisturbanceReport, {
+      this.builder.can(["read", "delete", "update", "approve", "create", "deleteFiles"], DisturbanceReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -25,7 +25,9 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "update", "create"], DisturbanceReport, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "update", "create", "deleteFiles"], DisturbanceReport, {
+            projectId: { $in: projectIds }
+          });
         }
       }
     }
@@ -35,7 +37,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "create"], DisturbanceReport, {
+          this.builder.can(["read", "delete", "update", "approve", "create", "deleteFiles"], DisturbanceReport, {
             projectId: { $in: projectIds }
           });
         }

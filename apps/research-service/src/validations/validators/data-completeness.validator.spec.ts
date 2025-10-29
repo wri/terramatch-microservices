@@ -30,10 +30,7 @@ describe("DataCompletenessValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo).toEqual({
-        validationErrors: [],
-        missingFields: []
-      });
+      expect(result.extraInfo).toBeNull();
     });
 
     it("should return invalid when required fields are missing", async () => {
@@ -51,8 +48,7 @@ describe("DataCompletenessValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo?.validationErrors).toHaveLength(6);
-      expect(result.extraInfo?.missingFields).toHaveLength(6);
+      expect(result.extraInfo).toHaveLength(6);
     });
 
     it("should return invalid when fields have invalid values", async () => {
@@ -70,14 +66,14 @@ describe("DataCompletenessValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo?.validationErrors).toHaveLength(5);
-      expect(result.extraInfo?.validationErrors).toEqual(
+      expect(result.extraInfo).toHaveLength(5);
+      expect(result.extraInfo).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ field: "practice", exists: true }),
-          expect.objectContaining({ field: "targetSys", exists: true }),
+          expect.objectContaining({ field: "target_sys", exists: true }),
           expect.objectContaining({ field: "distr", exists: true }),
-          expect.objectContaining({ field: "numTrees", exists: true }),
-          expect.objectContaining({ field: "plantStart", exists: true })
+          expect.objectContaining({ field: "num_trees", exists: true }),
+          expect.objectContaining({ field: "plantstart", exists: true })
         ])
       );
     });
@@ -171,8 +167,7 @@ describe("DataCompletenessValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo?.validationErrors).toHaveLength(6);
-      expect(result.extraInfo?.missingFields).toHaveLength(6);
+      expect(result.extraInfo).toHaveLength(6);
     });
 
     it("should handle zero numTrees as invalid", async () => {
@@ -190,9 +185,9 @@ describe("DataCompletenessValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo?.validationErrors).toHaveLength(1);
-      expect(result.extraInfo?.validationErrors[0]).toEqual({
-        field: "numTrees",
+      expect(result.extraInfo).toHaveLength(1);
+      expect(result.extraInfo?.[0]).toEqual({
+        field: "num_trees",
         error: "Invalid number of trees. Must be a valid integer and cannot be 0",
         exists: true
       });
@@ -213,9 +208,9 @@ describe("DataCompletenessValidator", () => {
       const result = await validator.validatePolygon("test-uuid");
 
       expect(result.valid).toBe(false);
-      expect(result.extraInfo?.validationErrors).toHaveLength(1);
-      expect(result.extraInfo?.validationErrors[0]).toEqual({
-        field: "numTrees",
+      expect(result.extraInfo).toHaveLength(1);
+      expect(result.extraInfo?.[0]).toEqual({
+        field: "num_trees",
         error: "Invalid number of trees. Must be a valid integer and cannot be 0",
         exists: true
       });
@@ -253,33 +248,20 @@ describe("DataCompletenessValidator", () => {
       expect(result[0]).toEqual({
         polygonUuid: "uuid-1",
         valid: true,
-        extraInfo: {
-          validationErrors: [],
-          missingFields: []
-        }
+        extraInfo: null
       });
-      expect(result[1]).toEqual({
-        polygonUuid: "uuid-2",
-        valid: false,
-        extraInfo: {
-          validationErrors: expect.arrayContaining([
-            expect.objectContaining({ field: "polyName", exists: false }),
-            expect.objectContaining({ field: "practice", exists: false }),
-            expect.objectContaining({ field: "targetSys", exists: false }),
-            expect.objectContaining({ field: "distr", exists: false }),
-            expect.objectContaining({ field: "numTrees", exists: false }),
-            expect.objectContaining({ field: "plantStart", exists: false })
-          ]),
-          missingFields: expect.arrayContaining([
-            "polyName",
-            "practice",
-            "targetSys",
-            "distr",
-            "numTrees",
-            "plantStart"
-          ])
-        }
-      });
+      expect(result[1].polygonUuid).toBe("uuid-2");
+      expect(result[1].valid).toBe(false);
+      expect(result[1].extraInfo).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: "poly_name", exists: false }),
+          expect.objectContaining({ field: "practice", exists: false }),
+          expect.objectContaining({ field: "target_sys", exists: false }),
+          expect.objectContaining({ field: "distr", exists: false }),
+          expect.objectContaining({ field: "num_trees", exists: false }),
+          expect.objectContaining({ field: "plantstart", exists: false })
+        ])
+      );
       expect(result[2]).toEqual({
         polygonUuid: "uuid-3",
         valid: false,

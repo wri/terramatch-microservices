@@ -8,6 +8,7 @@ import {
   ProjectPolygon,
   Site,
   SitePolygon,
+  SitePolygonData,
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
@@ -115,6 +116,7 @@ export class SitePolygonsService {
       });
 
       const sitePolygonIds = relatedSitePolygons.map(sp => sp.id);
+      const sitePolygonUuids = relatedSitePolygons.map(sp => sp.uuid);
       const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
       const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
 
@@ -135,6 +137,11 @@ export class SitePolygonsService {
           transaction
         });
       }
+
+      await SitePolygonData.destroy({
+        where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+        transaction
+      });
 
       await AuditStatus.destroy({
         where: {

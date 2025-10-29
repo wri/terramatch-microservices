@@ -12,28 +12,30 @@ export class MediaService {
   private readonly s3: S3Client;
 
   constructor(private readonly configService: ConfigService) {
+    const endpoint = this.configService.get<string>("AWS_ENDPOINT");
     this.s3 = new S3Client({
+      endpoint,
       region: this.configService.get<string>("AWS_REGION"),
       credentials: {
         accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID") ?? "",
         secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY") ?? ""
-      }
+      },
+      // required for local dev when accessing the minio docker container
+      forcePathStyle: (endpoint ?? "").includes("localhost") ? true : undefined
     });
   }
 
-  async uploadFile(file: Express.Multer.File, bucket: string = this.configService.get<string>("AWS_BUCKET") ?? "") {
-    const { buffer, originalname, mimetype } = file;
-
+  async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {
     const command = new PutObjectCommand({
-      Bucket: bucket,
-      Key: originalname,
+      Bucket: this.configService.get<string>("AWS_BUCKET"),
+      Key: path,
       Body: buffer,
       ContentType: mimetype,
       ACL: "public-read"
     });
 
     await this.s3.send(command);
-    this.logger.log(`Uploaded ${originalname} to S3`);
+    this.logger.log(`Uploaded ${path} to S3`);
   }
 
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
@@ -45,14 +47,17 @@ export class MediaService {
     const baseUrl = `${endpoint}/${bucket}/${media.id}`;
     const { fileName } = media;
     if (conversion == null) return `${baseUrl}/${fileName}`;
-
-    if (!media.generatedConversions[conversion]) return null;
+    if (media.generatedConversions[conversion] == null) return null;
 
     const lastIndex = fileName.lastIndexOf(".");
     const baseFileName = fileName.slice(0, lastIndex);
 
-    // For thumbnails, Spatie Media Library always generates .jpg files regardless of original extension
-    const extension = conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex);
+    // For thumbnails, Spatie Media Library in PHP always generates .jpg files regardless of
+    // original extension For images uploaded via the file upload service, we specify the extension
+    // in customProperties.
+    const extension =
+      (media.customProperties[`${conversion}Extension`] as string | undefined) ??
+      (conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex));
 
     return `${baseUrl}/conversions/${baseFileName}-${conversion}${extension}`;
   }

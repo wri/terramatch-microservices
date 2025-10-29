@@ -7,7 +7,6 @@ import { ReportModel } from "./entities";
 export const STARTED = "started";
 export const AWAITING_APPROVAL = "awaiting-approval";
 export const APPROVED = "approved";
-export const RESTORATION_IN_PROGRESS = "restoration-in-progress";
 export const NEEDS_MORE_INFORMATION = "needs-more-information";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
@@ -35,17 +34,13 @@ export const EntityStatusStates: States<Project | Nursery, EntityStatus> = {
   }
 };
 
-export const SITE_STATUSES = [...ENTITY_STATUSES, RESTORATION_IN_PROGRESS] as const;
+export const SITE_STATUSES = [...ENTITY_STATUSES] as const;
 export type SiteStatus = (typeof SITE_STATUSES)[number];
 
 export const SiteStatusStates: States<Site, SiteStatus> = {
   ...(EntityStatusStates as unknown as States<Site, SiteStatus>),
 
-  transitions: transitions<SiteStatus>(EntityStatusStates.transitions)
-    .from(AWAITING_APPROVAL, to => [...to, RESTORATION_IN_PROGRESS])
-    .from(NEEDS_MORE_INFORMATION, to => [...to, RESTORATION_IN_PROGRESS])
-    .from(APPROVED, to => [...to, RESTORATION_IN_PROGRESS])
-    .from(RESTORATION_IN_PROGRESS, () => [NEEDS_MORE_INFORMATION, APPROVED]).transitions
+  transitions: transitions<SiteStatus>(EntityStatusStates.transitions).from(APPROVED, to => [...to]).transitions
 };
 
 export const DUE = "due";
@@ -134,7 +129,6 @@ export const STATUS_DISPLAY_STRINGS: Record<AllStatuses, string> = {
   [AWAITING_APPROVAL]: "Awaiting approval",
   [NEEDS_MORE_INFORMATION]: "Needs more information",
   [APPROVED]: "Approved",
-  [RESTORATION_IN_PROGRESS]: "Restoration in progress",
   [REJECTED]: "Rejected",
   [NO_UPDATE]: "No update",
   [REQUIRES_MORE_INFORMATION]: "Requires more information"

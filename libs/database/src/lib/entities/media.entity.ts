@@ -16,6 +16,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
+import { Dictionary } from "factory-girl-ts";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
@@ -95,10 +96,10 @@ export class Media extends Model<Media> {
   fileType: "media" | "documents" | null;
 
   @JsonColumn()
-  customProperties: object;
+  customProperties: Dictionary<object | string>;
 
   @JsonColumn()
-  generatedConversions: Record<string, boolean>;
+  generatedConversions: Dictionary<boolean>;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -136,25 +137,25 @@ export class Media extends Model<Media> {
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
-  @Column(STRING)
+  @Column({ type: STRING, defaultValue: "s3" })
   disk: string;
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
   @AllowNull
-  @Column(STRING)
+  @Column({ type: STRING, defaultValue: "s3" })
   conversionsDisk: string | null;
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
-  @JsonColumn()
+  @JsonColumn({ defaultValue: [] })
   manipulations: string[];
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
-  @JsonColumn()
+  @JsonColumn({ defaultValue: [] })
   responsiveImages: string[];
 }

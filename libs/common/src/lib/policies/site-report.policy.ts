@@ -29,7 +29,7 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           })
         ).map(({ id }) => id);
         if (siteIds.length > 0) {
-          this.builder.can(["read", "update"], SiteReport, { siteId: { $in: siteIds } });
+          this.builder.can(["read", "update", "uploadFiles"], SiteReport, { siteId: { $in: siteIds } });
         }
       }
     }

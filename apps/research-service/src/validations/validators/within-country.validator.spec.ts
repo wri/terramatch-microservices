@@ -13,7 +13,9 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     sequelize: {
       transaction: jest.fn()
     },
-    checkWithinCountryIntersection: jest.fn()
+    checkWithinCountryIntersection: jest.fn(),
+    checkWithinCountryIntersectionBatch: jest.fn(),
+    getProjectCountriesBatch: jest.fn()
   }
 }));
 
@@ -63,8 +65,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        insidePercentage: 100,
-        countryName: "Cambodia"
+        inside_percentage: 100,
+        country_name: "Cambodia"
       });
       expect(mockTransactionInstance.commit).toHaveBeenCalled();
     });
@@ -88,8 +90,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        insidePercentage: 78,
-        countryName: "Cambodia"
+        inside_percentage: 78,
+        country_name: "Cambodia"
       });
     });
 
@@ -112,8 +114,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        insidePercentage: 50.84,
-        countryName: "Cambodia"
+        inside_percentage: 50.84,
+        country_name: "Cambodia"
       });
     });
 
@@ -178,7 +180,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.insidePercentage).toBe(83.12);
+      expect(result.extraInfo?.inside_percentage).toBe(83.12);
     });
 
     it("should handle exactly 75% threshold correctly", async () => {
@@ -199,7 +201,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.insidePercentage).toBe(75);
+      expect(result.extraInfo?.inside_percentage).toBe(75);
     });
 
     it("should handle different country names correctly", async () => {
@@ -220,7 +222,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.countryName).toBe("Australia");
+      expect(result.extraInfo?.country_name).toBe("Australia");
     });
   });
 
@@ -290,8 +292,13 @@ describe("WithinCountryValidator", () => {
       (
         PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
       ).checkWithinCountryIntersectionBatch = jest.fn();
+      (PolygonGeometry as unknown as { getProjectCountriesBatch: jest.Mock }).getProjectCountriesBatch = jest.fn();
+
       mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
       (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockResolvedValueOnce([]);
+      (PolygonGeometry.getProjectCountriesBatch as jest.Mock).mockResolvedValueOnce(
+        new Map([[testPolygonUuid, "Cambodia"]])
+      );
 
       const result = await validator.validatePolygons([testPolygonUuid]);
 

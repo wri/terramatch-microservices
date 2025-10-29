@@ -44,7 +44,7 @@ describe("SiteReportPolicy", () => {
     });
   });
 
-  it("allows managing site reports for own projects", async () => {
+  it("allows managing site reports for own site reports", async () => {
     mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
@@ -75,9 +75,9 @@ describe("SiteReportPolicy", () => {
       ],
       cannot: [
         [["delete", "approve"], sr1],
-        [["read", "delete", "deleteFiles"], sr2],
-        [["delete", "deleteFiles"], sr3],
-        [["delete", "deleteFiles"], sr4]
+        [["read", "delete"], sr2],
+        [["delete"], sr3],
+        [["delete"], sr4]
       ]
     });
   });

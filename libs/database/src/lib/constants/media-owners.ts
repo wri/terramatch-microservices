@@ -159,7 +159,7 @@ export const sizeValidation = (validation: ValidationKey) => {
 };
 
 export const mediaConfiguration = (mediaOwner: MediaOwnerType, collection: string) =>
-  Object.values(MEDIA_OWNER_MODELS[mediaOwner].MEDIA ?? {}).find(({ dbCollection }) => dbCollection === collection);
+  Object.values(MEDIA_OWNER_MODELS[mediaOwner]?.MEDIA ?? {}).find(({ dbCollection }) => dbCollection === collection);
 
 export const acceptMimeTypes = (mediaOwner: MediaOwnerType, collection: string): MimeType[] | undefined => {
   const configuration = mediaConfiguration(mediaOwner, collection);

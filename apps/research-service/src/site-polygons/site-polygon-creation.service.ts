@@ -7,6 +7,7 @@ import { PolygonGeometryCreationService } from "./polygon-geometry-creation.serv
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { CriteriaId, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+import { VoronoiService } from "../voronoi/voronoi.service";
 
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
@@ -40,7 +41,8 @@ export class SitePolygonCreationService {
 
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
-    private readonly duplicateGeometryValidator: DuplicateGeometryValidator
+    private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
+    private readonly voronoiService: VoronoiService
   ) {}
 
   async createSitePolygons(
@@ -93,7 +95,8 @@ export class SitePolygonCreationService {
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const groupedByType = this.groupGeometriesByType(siteGeometries);
+        const mergedFeatures = this.transformPointFeaturesToPolygons(siteGeometries);
+        const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
           const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId);
@@ -204,6 +207,25 @@ export class SitePolygonCreationService {
       this.logger.error("Error creating site polygons", error);
       throw error;
     }
+  }
+
+  private transformPointFeaturesToPolygons(features: Feature[]): Feature[] {
+    const points = features.filter(f => f.geometry.type === "Point");
+    if (points.length === 0) return features;
+
+    for (const p of points) {
+      const props = p.properties ?? {};
+      if (props.est_area == null) {
+        throw new BadRequestException("Point features must include properties.est_area");
+      }
+      if (props.site_id == null) {
+        throw new BadRequestException("Point features must include properties.site_id");
+      }
+    }
+
+    const voronoiPolys = this.voronoiService.transformPointsToPolygons(points as unknown as any[]);
+    const nonPoints = features.filter(f => f.geometry.type !== "Point");
+    return [...nonPoints, ...(voronoiPolys as unknown as Feature[])];
   }
 
   private groupGeometriesBySiteId(geometries: { features: Feature[] }[]): { [siteId: string]: Feature[] } {

@@ -2,6 +2,7 @@ import { ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import {
   AuditStatus,
+  DisturbanceReport,
   FinancialIndicator,
   Form,
   FormQuestionOption,
@@ -31,7 +32,8 @@ export const MEDIA_OWNER_TYPES = [
   "fundingProgrammes",
   "impactStories",
   "financialIndicators",
-  "projectPitches"
+  "projectPitches",
+  "disturbanceReports"
 ] as const;
 
 export type MediaOwnerType = (typeof MEDIA_OWNER_TYPES)[number];
@@ -49,7 +51,8 @@ export type MediaOwnerModel =
   | FundingProgramme
   | ImpactStory
   | FinancialIndicator
-  | ProjectPitch;
+  | ProjectPitch
+  | DisturbanceReport;
 
 export const VALIDATION_KEYS = [
   "logo-image",
@@ -87,5 +90,6 @@ export const MEDIA_OWNER_MODELS: { [E in MediaOwnerType]: EntityMediaOwnerClass<
   fundingProgrammes: FundingProgramme,
   impactStories: ImpactStory,
   financialIndicators: FinancialIndicator,
-  projectPitches: ProjectPitch
+  projectPitches: ProjectPitch,
+  disturbanceReports: DisturbanceReport
 } as const;

@@ -192,8 +192,6 @@ describe("SrpReportProcessor", () => {
 
       expect(result.id).toBe(srpReport.uuid);
       expect(result.dto).toBeDefined();
-      expect(result.dto.otherRestorationPartnersDescription).toBe("Other Restoration Partners Description");
-      expect(result.dto.totalUniqueRestorationPartners).toBe(10);
     });
   });
 

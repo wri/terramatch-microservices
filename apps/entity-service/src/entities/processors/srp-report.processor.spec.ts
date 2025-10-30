@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { SrpReport, Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
+import { SrpReport } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -10,9 +10,7 @@ import {
   SrpReportFactory,
   ProjectFactory,
   ProjectUserFactory,
-  UserFactory,
-  SitePolygonFactory,
-  DisturbanceReportFactory
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SrpReportProcessor } from "./srp-report.processor";

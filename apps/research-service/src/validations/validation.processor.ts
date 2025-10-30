@@ -30,7 +30,7 @@ export class ValidationProcessor extends WorkerHost {
           {
             status: "failed",
             statusCode: 404,
-            payload: { error: `No polygons found for site ${siteUuid}` }
+            payload: { message: `No polygons found for site ${siteUuid}` }
           },
           { where: { id: delayedJobId } }
         );
@@ -90,7 +90,7 @@ export class ValidationProcessor extends WorkerHost {
         {
           status: "failed",
           statusCode: 500,
-          payload: { error: error instanceof Error ? error.message : "Unknown error occurred" }
+          payload: { message: error instanceof Error ? error.message : "Unknown error occurred" }
         },
         { where: { id: delayedJobId } }
       );

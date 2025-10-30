@@ -437,6 +437,52 @@ describe("FormsService", () => {
       );
     });
 
+    it("sets accept additional props on file inputs", async () => {
+      const attributes: StoreFormAttributes = {
+        title: faker.lorem.sentence(),
+        frameworkKey: "ppc",
+        type: "site",
+        submissionMessage: faker.lorem.paragraph(),
+        deadlineAt: faker.date.soon(),
+        published: false,
+        sections: [
+          {
+            title: faker.lorem.sentence(),
+            description: faker.lorem.paragraph(),
+            questions: [
+              {
+                label: faker.lorem.slug(),
+                linkedFieldKey: "site-col-photos",
+                inputType: "file",
+                additionalProps: { with_private_checkbox: true }
+              },
+              {
+                label: faker.lorem.slug(),
+                linkedFieldKey: "invalid-linked-field",
+                inputType: "file",
+                additionalProps: { with_private_checkbox: false }
+              }
+            ]
+          }
+        ]
+      };
+
+      const form = await service.store(attributes);
+      const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
+      const questions = await FormQuestion.findAll({
+        where: { formSectionId: sections[0].id },
+        order: ["order"]
+      });
+      expect(questions).toHaveLength(2);
+      expect(questions[0].additionalProps).toEqual({
+        with_private_checkbox: true,
+        accept: ["image/jpeg", "image/png", "video/mp4"]
+      });
+      expect(questions[1].additionalProps).toEqual({
+        with_private_checkbox: false
+      });
+    });
+
     it("updates or creates table headers as needed", async () => {
       const form = await FormFactory.create();
       const section = await FormSectionFactory.create({ formId: form.uuid });

@@ -1,4 +1,5 @@
 export * from "./action.entity";
+export * from "./srp-report.entity";
 export * from "./audit-status.entity";
 export * from "./application.entity";
 export * from "./criteria-site.entity";

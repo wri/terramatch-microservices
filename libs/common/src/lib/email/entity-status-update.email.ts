@@ -18,7 +18,8 @@ import {
   DisturbanceReport,
   SiteReport,
   UpdateRequest,
-  User
+  User,
+  SrpReport
 } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { TMLogger } from "../util/tm-logger";
@@ -111,6 +112,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
     if (report instanceof SiteReport) return report.siteName;
     if (report instanceof FinancialReport) return report.organisationName;
     if (report instanceof DisturbanceReport) return report.projectName;
+    if (report instanceof SrpReport) return report.projectName;
     return report.nurseryName;
   }
 

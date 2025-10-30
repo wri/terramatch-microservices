@@ -23,7 +23,8 @@ import {
   FundingProgramme,
   Disturbance,
   Organisation,
-  DisturbanceReport
+  DisturbanceReport,
+  SrpReport
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -50,6 +51,7 @@ import { ImpactStoryPolicy } from "./impact-story.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
+import { SrpReportPolicy } from "./srp-report.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,6 +71,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [FinancialIndicator, FinancialIndicatorPolicy],
   [FinancialReport, FinancialReportPolicy],
   [DisturbanceReport, DisturbanceReportPolicy],
+  [SrpReport, SrpReportPolicy],
   [Form, FormPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],

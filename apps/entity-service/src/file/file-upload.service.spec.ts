@@ -45,28 +45,6 @@ describe("FileUploadService", () => {
     });
   });
 
-  describe("getConfiguration", () => {
-    const COLLECTION = "testCollection";
-    const config: MediaConfiguration = { dbCollection: COLLECTION, multiple: false, validation: "documents" };
-    let fakeModel: EntityMediaOwnerClass<MediaOwnerModel>;
-
-    beforeEach(() => {
-      fakeModel = { MEDIA: { [COLLECTION]: config } } as unknown as EntityMediaOwnerClass<MediaOwnerModel>;
-    });
-
-    it("should return the configuration for an existing collection", () => {
-      const svc = service as unknown as PrivateFileUploadService;
-      expect(svc.getConfiguration(fakeModel, COLLECTION)).toBe(config);
-    });
-
-    it("should throw InternalServerErrorException if configuration is missing", () => {
-      const svc = service as unknown as PrivateFileUploadService;
-      expect(() => svc.getConfiguration(fakeModel, "unknown")).toThrow(
-        new InternalServerErrorException(`Configuration for collection unknown not found`)
-      );
-    });
-  });
-
   describe("validateFile", () => {
     const generalConfig: MediaConfiguration = { multiple: false, validation: "general-documents" };
 

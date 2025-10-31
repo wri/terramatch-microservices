@@ -60,7 +60,7 @@ export class SrpReportProcessor extends ReportProcessor<
 
     if (query.sort?.field != null) {
       if (
-        ["title", "status", "updateRequestStatus", "createdAt", "dueAt", "updatedAt", "submittedAt"].includes(
+        ["title", "status", "updateRequestStatus", "createdAt", "dueAt", "updatedAt", "submittedAt", "year"].includes(
           query.sort.field
         )
       ) {

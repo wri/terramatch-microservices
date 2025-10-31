@@ -112,6 +112,9 @@ export class SrpReport extends Model<SrpReport> {
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
   totalUniqueRestorationPartners: number;
 
+  @Column(INTEGER)
+  year: number;
+
   @BelongsTo(() => Project)
   project: Project | null;
 

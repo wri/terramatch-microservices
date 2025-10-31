@@ -33,6 +33,12 @@ export class SrpReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation name" })
   organisationName: string | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  year: number | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  dueAt: Date | null;
+
   @ApiProperty()
   createdAt: Date;
 

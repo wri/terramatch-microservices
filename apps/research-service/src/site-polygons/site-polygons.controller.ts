@@ -106,29 +106,6 @@ export class SitePolygonsController {
 
     const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
-    // Concise diagnostics for route tracing
-    try {
-      let collectionsCount = 0;
-      let featuresCount = 0;
-      let pointsCount = 0;
-      if (batchRequest.geometries != null) {
-        collectionsCount = batchRequest.geometries.length;
-        for (const g of batchRequest.geometries) {
-          if (g != null && g.features != null) {
-            featuresCount += g.features.length;
-            for (const f of g.features) {
-              if (f != null && f.geometry != null && f.geometry.type === "Point") {
-                pointsCount += 1;
-              }
-            }
-          }
-        }
-      }
-      this.logger.log(`create() collections=${collectionsCount} features=${featuresCount} points=${pointsCount}`);
-    } catch (_e) {
-      this.logger.warn("create() diagnostics failed");
-    }
-
     const { data: createdSitePolygons, included: validations } =
       await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);
 

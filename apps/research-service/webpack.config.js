@@ -1,9 +1,8 @@
 const { NxAppWebpackPlugin } = require("@nx/webpack/app-plugin");
 const { join } = require("path");
 const { composePlugins } = require("@nx/webpack");
-const webpack = require("webpack");
 
-module.exports = composePlugins((config, { context }) => ({
+module.exports = composePlugins(config => ({
   ...config,
   output: {
     path: join(__dirname, "../../dist/apps/research-service")
@@ -12,10 +11,9 @@ module.exports = composePlugins((config, { context }) => ({
     node: true
   },
   externals: [
+    // Mark d3-delaunay as external so webpack doesn't try to bundle it
+    "d3-delaunay",
     function ({ request }, callback) {
-      if (request === "d3-delaunay") {
-        return callback(null, "commonjs " + request);
-      }
       if (config.externals != null) {
         if (typeof config.externals === "function") {
           return config.externals({ request }, callback);
@@ -33,9 +31,6 @@ module.exports = composePlugins((config, { context }) => ({
     }
   ],
   plugins: [
-    new webpack.IgnorePlugin({
-      resourceRegExp: /^d3-delaunay$/
-    }),
     new NxAppWebpackPlugin({
       target: "node",
       compiler: "tsc",

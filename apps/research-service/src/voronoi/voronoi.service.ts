@@ -13,6 +13,16 @@ type Point = [number, number];
 
 @Injectable()
 export class VoronoiService {
+  private delaunayModulePromise: Promise<typeof import("d3-delaunay")> | null = null;
+
+  private async getDelaunayModule(): Promise<typeof import("d3-delaunay")> {
+    if (this.delaunayModulePromise == null) {
+      const moduleName = "d3-delaunay";
+      const importFn = new Function("moduleName", "return import(moduleName)");
+      this.delaunayModulePromise = importFn(moduleName) as Promise<typeof import("d3-delaunay")>;
+    }
+    return this.delaunayModulePromise;
+  }
   private calculateCircleRadius(hectaresArea: number, additionalRadius: number = ADDITIONAL_RADIUS): number {
     try {
       const squareMeters = hectaresArea * 10000;
@@ -26,16 +36,24 @@ export class VoronoiService {
   private processFeatures(features: RequestFeature[]): {
     transformedPoints: Point[];
     bufferedPolygons: Feature<Polygon>[];
+    validFeatureIndices: number[];
     toWGS84: proj4.Converter;
     toProjected: proj4.Converter;
   } {
-    const points = features.map(f => {
-      const coords = f.geometry.coordinates as number[];
-      return [coords[0], coords[1]];
-    });
+    let centroidLonSum = 0;
+    let centroidLatSum = 0;
+    const points: Point[] = [];
 
-    const centroidLon = points.reduce((sum, p) => sum + p[0], 0) / points.length;
-    const centroidLat = points.reduce((sum, p) => sum + p[1], 0) / points.length;
+    for (let i = 0; i < features.length; i++) {
+      const coords = features[i].geometry.coordinates as number[];
+      const point: Point = [coords[0], coords[1]];
+      points.push(point);
+      centroidLonSum += point[0];
+      centroidLatSum += point[1];
+    }
+
+    const centroidLon = centroidLonSum / features.length;
+    const centroidLat = centroidLatSum / features.length;
 
     const customProjection = `+proj=tmerc +lat_0=${centroidLat} +lon_0=${centroidLon} +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
 
@@ -44,6 +62,7 @@ export class VoronoiService {
 
     const transformedPoints: Point[] = [];
     const bufferedPolygons: Feature<Polygon>[] = [];
+    const validFeatureIndices: number[] = [];
 
     for (let i = 0; i < features.length; i++) {
       const feature = features[i];
@@ -58,10 +77,10 @@ export class VoronoiService {
       }
 
       transformedPoints.push(projectedPoint);
+      validFeatureIndices.push(i);
 
       const bufferDistance = this.calculateCircleRadius(estArea);
 
-      // Create buffer in WGS84 to match the original (working) implementation
       const wgs84Point = toWGS84.forward(projectedPoint);
       const bufferPolygon = turf.circle(turf.point(wgs84Point), bufferDistance / 1000, { units: "kilometers" });
       bufferedPolygons.push(bufferPolygon);
@@ -70,23 +89,34 @@ export class VoronoiService {
     return {
       transformedPoints,
       bufferedPolygons,
+      validFeatureIndices,
       toWGS84,
       toProjected
     };
   }
 
   private async generateVoronoiPolygons(transformedPoints: Point[]): Promise<Voronoi<Point>> {
-    const loadDelaunay = new Function("return import('d3-delaunay')");
-    const delaunayModule = await loadDelaunay();
-    const { Delaunay } = delaunayModule;
-    const delaunay = Delaunay.from(transformedPoints);
+    const delaunayModule = await this.getDelaunayModule();
+    const delaunay = delaunayModule.Delaunay.from(transformedPoints);
 
-    const xs = transformedPoints.map(p => p[0]);
-    const ys = transformedPoints.map(p => p[1]);
-    const xmin = Math.min(...xs) - BUFFER_ENVELOPE_SIZE;
-    const xmax = Math.max(...xs) + BUFFER_ENVELOPE_SIZE;
-    const ymin = Math.min(...ys) - BUFFER_ENVELOPE_SIZE;
-    const ymax = Math.max(...ys) + BUFFER_ENVELOPE_SIZE;
+    // Optimize min/max calculation - avoid spread operator on large arrays
+    let xmin = Infinity;
+    let xmax = -Infinity;
+    let ymin = Infinity;
+    let ymax = -Infinity;
+
+    for (let i = 0; i < transformedPoints.length; i++) {
+      const [x, y] = transformedPoints[i];
+      if (x < xmin) xmin = x;
+      if (x > xmax) xmax = x;
+      if (y < ymin) ymin = y;
+      if (y > ymax) ymax = y;
+    }
+
+    xmin -= BUFFER_ENVELOPE_SIZE;
+    xmax += BUFFER_ENVELOPE_SIZE;
+    ymin -= BUFFER_ENVELOPE_SIZE;
+    ymax += BUFFER_ENVELOPE_SIZE;
 
     const voronoi = delaunay.voronoi([xmin, ymin, xmax, ymax]);
 
@@ -97,12 +127,21 @@ export class VoronoiService {
     features: RequestFeature[],
     transformedPoints: Point[],
     bufferedPolygons: Feature<Polygon>[],
+    validFeatureIndices: number[],
     voronoi: Voronoi<Point>,
     toWGS84: proj4.Converter
   ): RequestFeature[] {
     const outputFeatures: RequestFeature[] = [];
+    outputFeatures.length = 0;
 
     for (let i = 0; i < transformedPoints.length; i++) {
+      const originalFeatureIndex = validFeatureIndices[i];
+      const bufferFeature = bufferedPolygons[i];
+
+      if (bufferFeature == null || bufferFeature.geometry == null || bufferFeature.geometry.coordinates == null) {
+        continue;
+      }
+
       try {
         const cell = voronoi.cellPolygon(i);
 
@@ -111,26 +150,19 @@ export class VoronoiService {
         }
 
         const projectedCell = cell as Point[];
-        const wgs84Cell = projectedCell.map(coord => toWGS84.forward(coord) as Point);
+        const wgs84Cell: Point[] = [];
+        for (let j = 0; j < projectedCell.length; j++) {
+          wgs84Cell[j] = toWGS84.forward(projectedCell[j]) as Point;
+        }
 
-        const closedRing = wgs84Cell.concat([wgs84Cell[0]]);
+        const closedRing = [...wgs84Cell, wgs84Cell[0]];
         const voronoiPolygon = turf.polygon([closedRing]);
 
         if (voronoiPolygon == null || voronoiPolygon.geometry == null || voronoiPolygon.geometry.coordinates == null) {
           continue;
         }
 
-        const bufferFeature = bufferedPolygons[i];
-
-        if (bufferFeature == null) {
-          continue;
-        }
-
-        if (bufferFeature.geometry == null || bufferFeature.geometry.coordinates == null) {
-          continue;
-        }
-
-        let intersection;
+        let intersection: Feature<Polygon> | null = null;
         try {
           // Version 7.0+ requires turf.featureCollection([poly1, poly2])
           const featureCollection = turf.featureCollection([voronoiPolygon, bufferFeature]);
@@ -145,9 +177,10 @@ export class VoronoiService {
           continue;
         }
 
-        let cleanedIntersection;
+        let cleanedIntersection: Feature<Polygon>;
         try {
-          cleanedIntersection = turf.buffer(intersection, -0.1, { units: "meters" });
+          const buffered = turf.buffer(intersection, -0.1, { units: "meters" });
+          cleanedIntersection = (buffered != null ? buffered : intersection) as Feature<Polygon>;
         } catch {
           cleanedIntersection = intersection;
         }
@@ -162,7 +195,7 @@ export class VoronoiService {
             type: cleanedIntersection.geometry.type as "Polygon" | "MultiPolygon",
             coordinates: cleanedIntersection.geometry.coordinates as number[][][] | number[][][][]
           },
-          properties: features[i].properties ?? {}
+          properties: features[originalFeatureIndex].properties ?? {}
         };
 
         outputFeatures.push(outputFeature);
@@ -179,7 +212,7 @@ export class VoronoiService {
       return [];
     }
 
-    const { transformedPoints, bufferedPolygons, toWGS84 } = this.processFeatures(points);
+    const { transformedPoints, bufferedPolygons, validFeatureIndices, toWGS84 } = this.processFeatures(points);
 
     if (transformedPoints.length === 0) {
       return [];
@@ -187,7 +220,14 @@ export class VoronoiService {
 
     const voronoi = await this.generateVoronoiPolygons(transformedPoints);
 
-    const outputFeatures = this.createOutputGeoJSON(points, transformedPoints, bufferedPolygons, voronoi, toWGS84);
+    const outputFeatures = this.createOutputGeoJSON(
+      points,
+      transformedPoints,
+      bufferedPolygons,
+      validFeatureIndices,
+      voronoi,
+      toWGS84
+    );
     return outputFeatures;
   }
 }

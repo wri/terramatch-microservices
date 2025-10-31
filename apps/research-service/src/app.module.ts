@@ -16,6 +16,8 @@ import { DuplicateGeometryValidator } from "./validations/validators/duplicate-g
 import { DataApiModule } from "@terramatch-microservices/data-api";
 import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
+import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     }),
     BullModule.registerQueue({ name: "validation" })
   ],
-  controllers: [SitePolygonsController, BoundingBoxController, ValidationController],
+  controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
   providers: [
     {
       provide: APP_FILTER,
@@ -48,7 +50,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,
-    DuplicateGeometryValidator
+    DuplicateGeometryValidator,
+    PolygonClippingService
   ]
 })
 export class AppModule {}

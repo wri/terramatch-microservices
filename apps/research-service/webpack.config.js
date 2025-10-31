@@ -12,14 +12,10 @@ module.exports = composePlugins((config, { context }) => ({
     node: true
   },
   externals: [
-    // Externalize d3-delaunay completely - prevent webpack from processing it
     function ({ request }, callback) {
       if (request === "d3-delaunay") {
-        // Return a function that Node.js will call at runtime
-        // This prevents webpack from trying to bundle it
         return callback(null, "commonjs " + request);
       }
-      // Preserve existing externals from Nx config
       if (config.externals != null) {
         if (typeof config.externals === "function") {
           return config.externals({ request }, callback);
@@ -37,7 +33,6 @@ module.exports = composePlugins((config, { context }) => ({
     }
   ],
   plugins: [
-    // Ignore d3-delaunay during static analysis to prevent webpack from processing it
     new webpack.IgnorePlugin({
       resourceRegExp: /^d3-delaunay$/
     }),

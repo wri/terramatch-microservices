@@ -110,15 +110,12 @@ export class VoronoiService {
           continue;
         }
 
-        // Convert Voronoi cell back to WGS84 for intersection with WGS84 buffers
         const projectedCell = cell as Point[];
         const wgs84Cell = projectedCell.map(coord => toWGS84.forward(coord) as Point);
 
-        // Close the ring by adding the first point at the end
         const closedRing = wgs84Cell.concat([wgs84Cell[0]]);
         const voronoiPolygon = turf.polygon([closedRing]);
 
-        // Validate the created polygon
         if (voronoiPolygon == null || voronoiPolygon.geometry == null || voronoiPolygon.geometry.coordinates == null) {
           continue;
         }
@@ -129,23 +126,18 @@ export class VoronoiService {
           continue;
         }
 
-        // Validate buffer feature
         if (bufferFeature.geometry == null || bufferFeature.geometry.coordinates == null) {
           continue;
         }
 
         let intersection;
         try {
-          // Turf.js 7.x requires intersect to be called with a FeatureCollection
-          // Version 6.x used separate arguments (poly1, poly2)
           // Version 7.0+ requires turf.featureCollection([poly1, poly2])
           const featureCollection = turf.featureCollection([voronoiPolygon, bufferFeature]);
-          // Turf.js types may not match the runtime API, using type assertion for intersect
           intersection = (
             turf.intersect as (featureCollection: ReturnType<typeof turf.featureCollection>) => Feature<Polygon> | null
           )(featureCollection);
         } catch {
-          // Do not fallback to raw Voronoi; skip to maintain circular clipping
           continue;
         }
 
@@ -155,7 +147,6 @@ export class VoronoiService {
 
         let cleanedIntersection;
         try {
-          // Apply tiny cleanup in projected units (meters)
           cleanedIntersection = turf.buffer(intersection, -0.1, { units: "meters" });
         } catch {
           cleanedIntersection = intersection;
@@ -165,7 +156,6 @@ export class VoronoiService {
           continue;
         }
 
-        // Intersection already in WGS84
         const outputFeature: RequestFeature = {
           type: "Feature",
           geometry: {

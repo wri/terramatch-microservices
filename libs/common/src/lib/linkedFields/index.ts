@@ -18,7 +18,7 @@ import { DisturbanceReportConfiguration } from "./disturbance-report.configurati
 export const FORM_MODEL_TYPES = [
   "organisations",
   "financialReports",
-  "disturbanceReport",
+  "disturbanceReports",
   "nurseries",
   "nurseryReports",
   "projects",
@@ -32,7 +32,7 @@ export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
 export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfiguration> = {
   organisations: OrganisationConfiguration,
   financialReports: FinancialReportConfiguration,
-  disturbanceReport: DisturbanceReportConfiguration,
+  disturbanceReports: DisturbanceReportConfiguration,
   nurseries: NurseryConfiguration,
   nurseryReports: NurseryReportConfiguration,
   projects: ProjectConfiguration,

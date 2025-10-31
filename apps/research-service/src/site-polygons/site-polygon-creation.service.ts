@@ -95,7 +95,7 @@ export class SitePolygonCreationService {
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const mergedFeatures = this.transformPointFeaturesToPolygons(siteGeometries);
+        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries);
         const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
@@ -209,9 +209,14 @@ export class SitePolygonCreationService {
     }
   }
 
-  private transformPointFeaturesToPolygons(features: Feature[]): Feature[] {
+  private async transformPointFeaturesToPolygons(features: Feature[]): Promise<Feature[]> {
     const points = features.filter(f => f.geometry.type === "Point");
-    if (points.length === 0) return features;
+    if (points.length === 0) {
+      this.logger.log("transformPointFeaturesToPolygons: no points detected, skipping Voronoi");
+      return features;
+    }
+
+    this.logger.log(`transformPointFeaturesToPolygons: points_in=${points.length}`);
 
     for (const p of points) {
       const props = p.properties ?? {};
@@ -223,7 +228,8 @@ export class SitePolygonCreationService {
       }
     }
 
-    const voronoiPolys = this.voronoiService.transformPointsToPolygons(points as unknown as any[]);
+    const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points as unknown as any[]);
+    this.logger.log(`transformPointFeaturesToPolygons: voronoi_polygons=${voronoiPolys.length}`);
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
     return [...nonPoints, ...(voronoiPolys as unknown as Feature[])];
   }

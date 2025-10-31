@@ -116,17 +116,17 @@ describe("FormsService", () => {
       expect(dtos.length).toBe(forms.length);
       expect(dtos[0].attributes).toEqual({
         ...pick(forms[0], "uuid", "title", "type", "published"),
-        bannerUrl: "fake-url",
+        banner: expect.objectContaining({ url: "fake-url" }),
         lightResource: true
       });
       expect(dtos[1].attributes).toEqual({
         ...pick(forms[1], "uuid", "title", "type", "published"),
-        bannerUrl: null,
+        banner: null,
         lightResource: true
       });
       expect(dtos[2].attributes).toEqual({
         ...pick(forms[2], "uuid", "title", "type", "published"),
-        bannerUrl: null,
+        banner: null,
         lightResource: true
       });
     });
@@ -261,7 +261,7 @@ describe("FormsService", () => {
         ...pick(form, "subtitle", "description", "frameworkKey"),
         translated,
         title: translated ? "First Translation" : form.title ?? null,
-        bannerUrl: "fake-url",
+        banner: expect.objectContaining({ url: "fake-url" }),
         sections: [
           {
             id: sections[1].uuid,

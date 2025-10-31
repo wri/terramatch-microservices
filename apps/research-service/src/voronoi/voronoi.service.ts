@@ -3,11 +3,11 @@ import proj4 from "proj4";
 import * as turf from "@turf/turf";
 import { Feature, Polygon } from "geojson";
 import { Feature as RequestFeature } from "../site-polygons/dto/create-site-polygon-request.dto";
+import type { Voronoi } from "d3-delaunay";
 
 const WGS84_CRS = "EPSG:4326";
 const BUFFER_ENVELOPE_SIZE = 5000;
 const ADDITIONAL_RADIUS = 5;
-const INTERSECTION_BUFFER = 0.0000009;
 
 type Point = [number, number];
 
@@ -75,10 +75,7 @@ export class VoronoiService {
     };
   }
 
-  private async generateVoronoiPolygons(transformedPoints: Point[]): Promise<ReturnType<any["voronoi"]>> {
-    // Use Function constructor to prevent webpack from statically analyzing the import
-    // This is necessary because webpack tries to convert dynamic imports to require()
-    // even when marked as external. The Function constructor prevents static analysis.
+  private async generateVoronoiPolygons(transformedPoints: Point[]): Promise<Voronoi<Point>> {
     const loadDelaunay = new Function("return import('d3-delaunay')");
     const delaunayModule = await loadDelaunay();
     const { Delaunay } = delaunayModule;
@@ -100,7 +97,7 @@ export class VoronoiService {
     features: RequestFeature[],
     transformedPoints: Point[],
     bufferedPolygons: Feature<Polygon>[],
-    voronoi: any,
+    voronoi: Voronoi<Point>,
     toWGS84: proj4.Converter
   ): RequestFeature[] {
     const outputFeatures: RequestFeature[] = [];
@@ -143,8 +140,10 @@ export class VoronoiService {
           // Version 6.x used separate arguments (poly1, poly2)
           // Version 7.0+ requires turf.featureCollection([poly1, poly2])
           const featureCollection = turf.featureCollection([voronoiPolygon, bufferFeature]);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          intersection = (turf as any).intersect(featureCollection);
+          // Turf.js types may not match the runtime API, using type assertion for intersect
+          intersection = (
+            turf.intersect as (featureCollection: ReturnType<typeof turf.featureCollection>) => Feature<Polygon> | null
+          )(featureCollection);
         } catch {
           // Do not fallback to raw Voronoi; skip to maintain circular clipping
           continue;

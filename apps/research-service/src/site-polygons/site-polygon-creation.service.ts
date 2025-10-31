@@ -4,6 +4,7 @@ import { Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
+import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { CriteriaId, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
@@ -39,6 +40,7 @@ const LARGE_BATCH_THRESHOLD = 1000;
 export class SitePolygonCreationService {
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
+    private readonly pointGeometryService: PointGeometryCreationService,
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
     private readonly voronoiService: VoronoiService
   ) {}
@@ -93,7 +95,7 @@ export class SitePolygonCreationService {
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries);
+        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries, userId, transaction);
         const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
@@ -206,7 +208,11 @@ export class SitePolygonCreationService {
     }
   }
 
-  private async transformPointFeaturesToPolygons(features: Feature[]): Promise<Feature[]> {
+  private async transformPointFeaturesToPolygons(
+    features: Feature[],
+    userId: number,
+    transaction: Transaction
+  ): Promise<Feature[]> {
     const points = features.filter(f => f.geometry.type === "Point");
     if (points.length === 0) {
       return features;
@@ -222,7 +228,19 @@ export class SitePolygonCreationService {
       }
     }
 
+    const pointUuids = await this.pointGeometryService.createPointGeometriesFromFeatures(points, userId, transaction);
+
+    for (let i = 0; i < points.length && i < pointUuids.length; i++) {
+      const point = points[i];
+      if (point.properties == null) {
+        throw new BadRequestException("Point feature properties cannot be null");
+      }
+      point.properties._pointUuid = pointUuids[i];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points as unknown as any[]);
+
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
     return [...nonPoints, ...(voronoiPolys as unknown as Feature[])];
   }
@@ -295,7 +313,7 @@ export class SitePolygonCreationService {
       }
 
       return { duplicateIndexToUuid };
-    } catch (error) {
+    } catch {
       return { duplicateIndexToUuid: new Map() };
     }
   }
@@ -384,6 +402,11 @@ export class SitePolygonCreationService {
         const additionalData = extractAdditionalData(allProperties);
 
         validatedProperties.calcArea = areas[polygonIndex] ?? null;
+
+        const pointUuid = (allProperties._pointUuid as string) ?? null;
+        if (pointUuid != null) {
+          validatedProperties.pointUuid = pointUuid;
+        }
 
         sitePolygons.push({
           uuid: sitePolygonUuid,

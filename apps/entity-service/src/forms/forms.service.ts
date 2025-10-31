@@ -35,6 +35,7 @@ import {
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { MediaDto } from "../entities/dto/media.dto";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -82,7 +83,10 @@ export class FormsService {
     const bannerMediaByFormId =
       forms.length == 0
         ? {}
-        : groupBy(await Media.for(forms).findAll({ where: { collectionName: "banner" } }), "modelId");
+        : groupBy(
+            await Media.for(forms).findAll({ where: { collectionName: "banner" }, order: [["createdAt", "DESC"]] }),
+            "modelId"
+          );
 
     for (const form of forms) {
       const banner = bannerMediaByFormId[form.id]?.[0];
@@ -90,7 +94,15 @@ export class FormsService {
         form.uuid,
         new FormLightDto(form, {
           title: form.title,
-          bannerUrl: banner == null ? null : this.mediaService.getUrl(banner)
+          banner:
+            banner == null
+              ? null
+              : new MediaDto(banner, {
+                  url: this.mediaService.getUrl(banner),
+                  thumbUrl: this.mediaService.getUrl(banner, "thumbnail"),
+                  entityType: "forms",
+                  entityUuid: form.uuid
+                })
         })
       );
     }
@@ -179,14 +191,25 @@ export class FormsService {
       });
     };
 
-    const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
+    const bannerMedia = await Media.for(form).findOne({
+      where: { collectionName: "banner" },
+      order: [["createdAt", "DESC"]]
+    });
     document.addData<FormFullDto>(
       form.uuid,
       new FormFullDto(form, {
         translated,
         ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
         fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
-        bannerUrl: bannerMedia == null ? null : this.mediaService.getUrl(bannerMedia),
+        banner:
+          bannerMedia == null
+            ? null
+            : new MediaDto(bannerMedia, {
+                url: this.mediaService.getUrl(bannerMedia),
+                thumbUrl: this.mediaService.getUrl(bannerMedia, "thumbnail"),
+                entityType: "forms",
+                entityUuid: form.uuid
+              }),
         sections: sortBy(sections, "order").map(sectionToDto)
       })
     );

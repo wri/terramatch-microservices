@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
 import { Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
@@ -37,8 +37,6 @@ const LARGE_BATCH_THRESHOLD = 1000;
 
 @Injectable()
 export class SitePolygonCreationService {
-  private readonly logger = new Logger(SitePolygonCreationService.name);
-
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
@@ -204,7 +202,6 @@ export class SitePolygonCreationService {
       };
     } catch (error) {
       await transaction.rollback();
-      this.logger.error("Error creating site polygons", error);
       throw error;
     }
   }
@@ -212,11 +209,8 @@ export class SitePolygonCreationService {
   private async transformPointFeaturesToPolygons(features: Feature[]): Promise<Feature[]> {
     const points = features.filter(f => f.geometry.type === "Point");
     if (points.length === 0) {
-      this.logger.log("transformPointFeaturesToPolygons: no points detected, skipping Voronoi");
       return features;
     }
-
-    this.logger.log(`transformPointFeaturesToPolygons: points_in=${points.length}`);
 
     for (const p of points) {
       const props = p.properties ?? {};
@@ -229,7 +223,6 @@ export class SitePolygonCreationService {
     }
 
     const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points as unknown as any[]);
-    this.logger.log(`transformPointFeaturesToPolygons: voronoi_polygons=${voronoiPolys.length}`);
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
     return [...nonPoints, ...(voronoiPolys as unknown as Feature[])];
   }
@@ -239,7 +232,6 @@ export class SitePolygonCreationService {
 
     for (const geometryCollection of geometries) {
       if (geometryCollection.features == null) {
-        this.logger.warn("No features found in geometry collection");
         continue;
       }
 
@@ -304,7 +296,6 @@ export class SitePolygonCreationService {
 
       return { duplicateIndexToUuid };
     } catch (error) {
-      this.logger.error("Error checking for duplicate geometries", error);
       return { duplicateIndexToUuid: new Map() };
     }
   }

@@ -116,17 +116,17 @@ describe("FormsService", () => {
       expect(dtos.length).toBe(forms.length);
       expect(dtos[0].attributes).toEqual({
         ...pick(forms[0], "uuid", "title", "type", "published"),
-        bannerUrl: "fake-url",
+        banner: expect.objectContaining({ url: "fake-url" }),
         lightResource: true
       });
       expect(dtos[1].attributes).toEqual({
         ...pick(forms[1], "uuid", "title", "type", "published"),
-        bannerUrl: null,
+        banner: null,
         lightResource: true
       });
       expect(dtos[2].attributes).toEqual({
         ...pick(forms[2], "uuid", "title", "type", "published"),
-        bannerUrl: null,
+        banner: null,
         lightResource: true
       });
     });
@@ -261,7 +261,7 @@ describe("FormsService", () => {
         ...pick(form, "subtitle", "description", "frameworkKey"),
         translated,
         title: translated ? "First Translation" : form.title ?? null,
-        bannerUrl: "fake-url",
+        banner: expect.objectContaining({ url: "fake-url" }),
         sections: [
           {
             id: sections[1].uuid,
@@ -435,6 +435,52 @@ describe("FormsService", () => {
         section1QuestionAttributes[0].tableHeaders![1],
         undefined
       );
+    });
+
+    it("sets accept additional props on file inputs", async () => {
+      const attributes: StoreFormAttributes = {
+        title: faker.lorem.sentence(),
+        frameworkKey: "ppc",
+        type: "site",
+        submissionMessage: faker.lorem.paragraph(),
+        deadlineAt: faker.date.soon(),
+        published: false,
+        sections: [
+          {
+            title: faker.lorem.sentence(),
+            description: faker.lorem.paragraph(),
+            questions: [
+              {
+                label: faker.lorem.slug(),
+                linkedFieldKey: "site-col-photos",
+                inputType: "file",
+                additionalProps: { with_private_checkbox: true }
+              },
+              {
+                label: faker.lorem.slug(),
+                linkedFieldKey: "invalid-linked-field",
+                inputType: "file",
+                additionalProps: { with_private_checkbox: false }
+              }
+            ]
+          }
+        ]
+      };
+
+      const form = await service.store(attributes);
+      const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
+      const questions = await FormQuestion.findAll({
+        where: { formSectionId: sections[0].id },
+        order: ["order"]
+      });
+      expect(questions).toHaveLength(2);
+      expect(questions[0].additionalProps).toEqual({
+        with_private_checkbox: true,
+        accept: ["image/jpeg", "image/png", "video/mp4"]
+      });
+      expect(questions[1].additionalProps).toEqual({
+        with_private_checkbox: false
+      });
     });
 
     it("updates or creates table headers as needed", async () => {

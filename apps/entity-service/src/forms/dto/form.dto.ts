@@ -14,6 +14,7 @@ import {
 } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsBoolean, IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
+import { MediaDto } from "../../entities/dto/media.dto";
 
 type FormExtras = "title" | "subtitle" | "description" | "submissionMessage";
 type FormWithoutExtras = Omit<Form, FormExtras>;
@@ -49,8 +50,8 @@ export class FormLightDto extends HybridSupportDto {
   @ApiProperty()
   published: boolean;
 
-  @ApiProperty({ nullable: true, type: String })
-  bannerUrl: string | null;
+  @ApiProperty({ nullable: true, type: MediaDto })
+  banner: MediaDto | null;
 }
 
 export class FormFullDto extends FormLightDto {

@@ -15,26 +15,35 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { difference, filter, flatten, flattenDeep, groupBy, sortBy, union, uniq } from "lodash";
-import { StoreFormAttributes, FormFullDto, FormLightDto } from "./dto/form.dto";
+import { Dictionary, difference, filter, flatten, flattenDeep, groupBy, sortBy, union, uniq } from "lodash";
+import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import {
   FormQuestionDto,
   FormQuestionOptionDto,
-  StoreFormQuestionOptionAttributes,
-  StoreFormQuestionAttributes
+  StoreFormQuestionAttributes,
+  StoreFormQuestionOptionAttributes
 } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Attributes, Model, Op } from "sequelize";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import {
+  acceptMimeTypes,
+  MEDIA_OWNER_TYPES,
+  MediaOwnerType
+} from "@terramatch-microservices/database/constants/media-owners";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { MediaDto } from "../entities/dto/media.dto";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
 
 @Injectable({ scope: Scope.REQUEST })
 export class FormsService {
+  private readonly logger = new TMLogger(FormsService.name);
+
   constructor(private readonly localizationService: LocalizationService, private readonly mediaService: MediaService) {}
 
   async findOne(uuid: string) {
@@ -74,7 +83,10 @@ export class FormsService {
     const bannerMediaByFormId =
       forms.length == 0
         ? {}
-        : groupBy(await Media.for(forms).findAll({ where: { collectionName: "banner" } }), "modelId");
+        : groupBy(
+            await Media.for(forms).findAll({ where: { collectionName: "banner" }, order: [["createdAt", "DESC"]] }),
+            "modelId"
+          );
 
     for (const form of forms) {
       const banner = bannerMediaByFormId[form.id]?.[0];
@@ -82,7 +94,15 @@ export class FormsService {
         form.uuid,
         new FormLightDto(form, {
           title: form.title,
-          bannerUrl: banner == null ? null : this.mediaService.getUrl(banner)
+          banner:
+            banner == null
+              ? null
+              : new MediaDto(banner, {
+                  url: this.mediaService.getUrl(banner),
+                  thumbUrl: this.mediaService.getUrl(banner, "thumbnail"),
+                  entityType: "forms",
+                  entityUuid: form.uuid
+                })
         })
       );
     }
@@ -171,14 +191,25 @@ export class FormsService {
       });
     };
 
-    const bannerMedia = await Media.for(form).findOne({ where: { collectionName: "banner" } });
+    const bannerMedia = await Media.for(form).findOne({
+      where: { collectionName: "banner" },
+      order: [["createdAt", "DESC"]]
+    });
     document.addData<FormFullDto>(
       form.uuid,
       new FormFullDto(form, {
         translated,
         ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
         fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
-        bannerUrl: bannerMedia == null ? null : this.mediaService.getUrl(bannerMedia),
+        banner:
+          bannerMedia == null
+            ? null
+            : new MediaDto(bannerMedia, {
+                url: this.mediaService.getUrl(bannerMedia),
+                thumbUrl: this.mediaService.getUrl(bannerMedia, "thumbnail"),
+                entityType: "forms",
+                entityUuid: form.uuid
+              }),
         sections: sortBy(sections, "order").map(sectionToDto)
       })
     );
@@ -351,7 +382,7 @@ export class FormsService {
       question.descriptionId
     );
     question.validation = attributes.validation ?? null;
-    question.additionalProps = attributes.additionalProps ?? null;
+    question.additionalProps = this.getAdditionalProps(attributes);
     question.optionsOther = attributes.optionsOther ?? null;
     question.multiChoice = attributes.multiChoice ?? false;
     question.collection = attributes.collection ?? null;
@@ -422,5 +453,25 @@ export class FormsService {
     option.imageUrl = attributes.imageUrl ?? null;
     await option.save();
     return option;
+  }
+
+  private getAdditionalProps(attributes: StoreFormQuestionAttributes) {
+    const additionalProps: Dictionary<string | boolean | object | string[] | undefined> = {
+      ...attributes.additionalProps
+    };
+
+    if (attributes.inputType === "file" && attributes.linkedFieldKey != null) {
+      const config = getLinkedFieldConfig(attributes.linkedFieldKey);
+      if (config == null) return additionalProps;
+
+      if (!MEDIA_OWNER_TYPES.includes(config.model as MediaOwnerType)) {
+        this.logger.error(`Linked field model is not a media owner: ${config.model}`);
+        return additionalProps;
+      }
+
+      additionalProps.accept = acceptMimeTypes(config.model as MediaOwnerType, config.field.property);
+    }
+
+    return additionalProps;
   }
 }

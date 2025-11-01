@@ -7,63 +7,21 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import "multer";
 import sharp from "sharp";
 import {
-  EntityMediaOwnerClass,
+  abbreviatedValidationMimeTypes,
+  FILE_VALIDATION,
   MEDIA_OWNER_MODELS,
+  mediaConfiguration,
   MediaConfiguration,
   MediaOwnerModel,
   MediaOwnerType,
-  ValidationKey
+  MIME_TYPE_ABBREVIATIONS,
+  MimeType,
+  sizeValidation
 } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaRequestAttributes } from "../entities/dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
-const MIME_TYPES = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/heif": "heif",
-  "image/heic": "heic",
-  "image/svg+xml": "svg",
-  "text/plain": "txt",
-  "text/csv": "csv",
-  "application/pdf": "pdf",
-  "application/vnd.ms-excel": "xls",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-  "application/vnd.ms-powerpoint": "ppt",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
-  "application/vnd.ms-word": "doc",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-  "video/mp4": "mp4"
-};
-
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
-
-const VALIDATION: {
-  VALIDATION_RULES: Record<ValidationKey, string>;
-  VALIDATION_FILE_TYPES: Record<ValidationKey, "media" | "documents">;
-} = {
-  VALIDATION_RULES: {
-    "logo-image": "mimes:jpg,png",
-    "cover-image": "mimes:jpg,png",
-    "cover-image-with-svg": "mimes:jpg,png,svg",
-    photos: "mimes:jpg,png,mp4",
-    pdf: "mimes:pdf",
-    documents: "mimes:pdf,xls,xlsx,csv,txt,doc,docx,bin",
-    "general-documents": "mimes:pdf,xls,xlsx,csv,txt,png,jpg,doc,mp4,docx,bin|size:5MB",
-    spreadsheet: "mimes:pdf,xls,xlsx,csv,txt|size:5MB",
-    thumbnail: "mimes:jpg,png"
-  },
-  VALIDATION_FILE_TYPES: {
-    "logo-image": "media",
-    thumbnail: "media",
-    "cover-image": "media",
-    "cover-image-with-svg": "media",
-    photos: "media",
-    pdf: "media",
-    documents: "documents",
-    "general-documents": "documents",
-    spreadsheet: "documents"
-  }
-};
 
 @Injectable()
 export class FileUploadService {
@@ -84,7 +42,10 @@ export class FileUploadService {
 
     const mediaOwnerModel = MEDIA_OWNER_MODELS[entity];
 
-    const configuration = this.getConfiguration(mediaOwnerModel, collection);
+    const configuration = mediaConfiguration(entity, collection);
+    if (configuration == null) {
+      throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
+    }
 
     this.validateFile(file, configuration);
 
@@ -144,18 +105,6 @@ export class FileUploadService {
     }
   }
 
-  private getConfiguration(
-    entityModel: EntityMediaOwnerClass<MediaOwnerModel>,
-    collection: string
-  ): MediaConfiguration {
-    const configuration = Object.values(entityModel.MEDIA).find(({ dbCollection }) => dbCollection === collection);
-    if (configuration == null) {
-      throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
-    }
-
-    return configuration;
-  }
-
   private getMediaType(file: Express.Multer.File, configuration: MediaConfiguration) {
     const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
     const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
@@ -169,7 +118,7 @@ export class FileUploadService {
       return "media";
     }
 
-    return VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
+    return FILE_VALIDATION.VALIDATION_FILE_TYPES[configuration.validation];
   }
 
   private validateFile(file: Express.Multer.File, configuration: MediaConfiguration): boolean {
@@ -177,17 +126,9 @@ export class FileUploadService {
       return false;
     }
 
-    const validationRules = VALIDATION.VALIDATION_RULES[configuration.validation];
-
-    const validations = validationRules.split("|");
-
-    const mimeTypeValidation = validations.find(validation => validation.startsWith("mimes:"));
-    const sizeValidation = validations.find(validation => validation.startsWith("size:"));
-
-    if (mimeTypeValidation != null) {
-      const mimeTypes: string[] = mimeTypeValidation.split(":")[1].split(",");
-
-      const abbreviatedMimeType = MIME_TYPES[file.mimetype as keyof typeof MIME_TYPES];
+    const mimeTypes = abbreviatedValidationMimeTypes(configuration.validation);
+    if (mimeTypes != null) {
+      const abbreviatedMimeType = MIME_TYPE_ABBREVIATIONS[file.mimetype as MimeType];
       if (!mimeTypes.includes(abbreviatedMimeType)) {
         this.logger.error(`Invalid file type: ${file.mimetype}`);
         throw new TranslatableException(`Invalid file type: ${file.mimetype}`, "MIMES", {
@@ -196,8 +137,8 @@ export class FileUploadService {
       }
     }
 
-    if (sizeValidation != null) {
-      const size = sizeValidation.split(":")[1];
+    const size = sizeValidation(configuration.validation);
+    if (size != null) {
       const sizeInMB = parseInt(size.replace("MB", ""));
       const sizeInBytes = sizeInMB * 1024 * 1024;
 

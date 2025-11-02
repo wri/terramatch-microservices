@@ -99,7 +99,6 @@ export class VoronoiService {
     const delaunayModule = await this.getDelaunayModule();
     const delaunay = delaunayModule.Delaunay.from(transformedPoints);
 
-    // Optimize min/max calculation - avoid spread operator on large arrays
     let xmin = Infinity;
     let xmax = -Infinity;
     let ymin = Infinity;
@@ -164,7 +163,6 @@ export class VoronoiService {
 
         let intersection: Feature<Polygon> | null = null;
         try {
-          // Version 7.0+ requires turf.featureCollection([poly1, poly2])
           const featureCollection = turf.featureCollection([voronoiPolygon, bufferFeature]);
           intersection = (
             turf.intersect as (featureCollection: ReturnType<typeof turf.featureCollection>) => Feature<Polygon> | null

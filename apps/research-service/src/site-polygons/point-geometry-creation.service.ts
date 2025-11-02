@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException, Logger } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { PointGeometry } from "@terramatch-microservices/database/entities";
 import { QueryTypes, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";

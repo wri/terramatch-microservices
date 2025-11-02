@@ -17,9 +17,7 @@ export class VoronoiService {
 
   private async getDelaunayModule(): Promise<typeof import("d3-delaunay")> {
     if (this.delaunayModulePromise == null) {
-      const moduleName = "d3-delaunay";
-      const importFn = new Function("moduleName", "return import(moduleName)");
-      this.delaunayModulePromise = importFn(moduleName) as Promise<typeof import("d3-delaunay")>;
+      this.delaunayModulePromise = import("d3-delaunay");
     }
     return this.delaunayModulePromise;
   }

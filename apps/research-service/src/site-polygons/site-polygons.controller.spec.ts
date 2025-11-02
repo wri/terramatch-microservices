@@ -7,8 +7,8 @@ import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { SitePolygonFactory } from "@terramatch-microservices/database/factories";
+import { SitePolygon, User } from "@terramatch-microservices/database/entities";
+import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -349,6 +349,119 @@ describe("SitePolygonsController", () => {
       await expect(
         controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "invalid", direction: "ASC" } })
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("create", () => {
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+      const request = { data: { attributes: { geometries: [] } } };
+
+      await expect(controller.create(request as unknown as any)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw BadRequestException when geometries are missing", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const request = {};
+
+      await expect(controller.create(request as unknown as any)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should create site polygons with JSON:API format", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const sitePolygon = await SitePolygonFactory.build();
+      sitePolygonCreationService.createSitePolygons.mockResolvedValue({
+        data: [sitePolygon],
+        included: []
+      });
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      const geometries = [{ type: "FeatureCollection", features: [] }];
+      const request = { data: { attributes: { geometries } } };
+
+      const result = await controller.create(request as unknown as any);
+
+      expect(User.findByPk).toHaveBeenCalledWith(1, {
+        include: [{ association: "roles", attributes: ["name"] }]
+      });
+      expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith(
+        { geometries },
+        1,
+        "terramatch",
+        "Test User"
+      );
+      expect(result.data).toBeDefined();
+    });
+
+    it("should create site polygons with plain format", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: null, lastName: null });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("greenhouse");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const sitePolygon = await SitePolygonFactory.build();
+      sitePolygonCreationService.createSitePolygons.mockResolvedValue({
+        data: [sitePolygon],
+        included: []
+      });
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      const geometries = [{ type: "FeatureCollection", features: [] }];
+      const request = { geometries };
+
+      const result = await controller.create(request as unknown as any);
+
+      expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith({ geometries }, 1, "greenhouse", null);
+      expect(result.data).toBeDefined();
+    });
+
+    it("should include validations in response when present", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const sitePolygon = await SitePolygonFactory.build();
+      const validation = {
+        type: "validation" as const,
+        id: "validation-123",
+        attributes: {
+          polygonUuid: sitePolygon.uuid,
+          criteriaList: []
+        }
+      };
+      sitePolygonCreationService.createSitePolygons.mockResolvedValue({
+        data: [sitePolygon],
+        included: [validation]
+      });
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      const geometries = [{ type: "FeatureCollection", features: [] }];
+      const request = { data: { attributes: { geometries } } };
+
+      const result = await controller.create(request as unknown as any);
+
+      expect(result.data).toBeDefined();
     });
   });
 

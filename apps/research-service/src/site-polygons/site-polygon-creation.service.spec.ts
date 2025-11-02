@@ -6,6 +6,7 @@ import { DuplicateGeometryValidator } from "../validations/validators/duplicate-
 import { VoronoiService } from "../voronoi/voronoi.service";
 import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
+import { BadRequestException } from "@nestjs/common";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -20,6 +21,8 @@ describe("SitePolygonCreationService", () => {
   let service: SitePolygonCreationService;
   let polygonGeometryService: PolygonGeometryCreationService;
   let duplicateGeometryValidator: DuplicateGeometryValidator;
+  let pointGeometryService: PointGeometryCreationService;
+  let voronoiService: VoronoiService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +64,8 @@ describe("SitePolygonCreationService", () => {
     service = module.get<SitePolygonCreationService>(SitePolygonCreationService);
     polygonGeometryService = module.get<PolygonGeometryCreationService>(PolygonGeometryCreationService);
     duplicateGeometryValidator = module.get<DuplicateGeometryValidator>(DuplicateGeometryValidator);
+    pointGeometryService = module.get<PointGeometryCreationService>(PointGeometryCreationService);
+    voronoiService = module.get<VoronoiService>(VoronoiService);
 
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
@@ -371,6 +376,280 @@ describe("SitePolygonCreationService", () => {
         expect(result.included[0].attributes.criteriaList[0].criteriaId).toBe(16);
         expect(result.included[0].attributes.criteriaList[0].valid).toBe(false);
       });
+    });
+  });
+
+  describe("Point feature transformation", () => {
+    const mockUserId = 1;
+
+    it("should transform Point features to polygons via Voronoi", async () => {
+      const pointFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [0, 0]
+        },
+        properties: {
+          site_id: "site-uuid-1",
+          est_area: 10.5
+        }
+      };
+
+      const request = createMockRequest([pointFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue(["point-uuid-1"]);
+
+      const voronoiPolygon: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      jest.spyOn(voronoiService, "transformPointsToPolygons").mockResolvedValue([voronoiPolygon]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          polygonUuid: "polygon-uuid-1",
+          polyName: null
+        } as SitePolygon
+      ]);
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      await service.createSitePolygons(request, mockUserId, "test", null);
+
+      expect(pointGeometryService.createPointGeometriesFromFeatures).toHaveBeenCalled();
+      expect(pointFeature.properties._pointUuid).toBe("point-uuid-1");
+      expect(voronoiService.transformPointsToPolygons).toHaveBeenCalled();
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("should throw error when Point feature missing est_area", async () => {
+      const pointFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [0, 0]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      const request = createMockRequest([pointFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      await expect(service.createSitePolygons(request, mockUserId, "test", null)).rejects.toThrow(
+        new BadRequestException("Point features must include properties.est_area")
+      );
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("should throw error when Point feature missing site_id", async () => {
+      const pointFeature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [0, 0]
+        },
+        properties: {
+          est_area: 10.5
+        }
+      } as unknown as Feature;
+
+      const request = createMockRequest([pointFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      await expect(service.createSitePolygons(request, mockUserId, "test", null)).rejects.toThrow(
+        new BadRequestException("All features must have site_id in properties")
+      );
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("should handle case where point count exceeds UUID count", async () => {
+      const pointFeature1: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [0, 0]
+        },
+        properties: {
+          site_id: "site-uuid-1",
+          est_area: 10.5
+        }
+      };
+
+      const pointFeature2: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [1, 1]
+        },
+        properties: {
+          site_id: "site-uuid-1",
+          est_area: 5.0
+        }
+      };
+
+      const request = createMockRequest([pointFeature1, pointFeature2]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      // Return fewer UUIDs than points to test the loop condition
+      jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue(["point-uuid-1"]);
+
+      const voronoiPolygon: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      jest.spyOn(voronoiService, "transformPointsToPolygons").mockResolvedValue([voronoiPolygon]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1"],
+        areas: [10.5]
+      });
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          polygonUuid: "polygon-uuid-1",
+          polyName: null
+        } as SitePolygon
+      ]);
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      await service.createSitePolygons(request, mockUserId, "test", null);
+
+      // Only first point should have _pointUuid set
+      expect(pointFeature1.properties._pointUuid).toBe("point-uuid-1");
+      expect(pointFeature2.properties._pointUuid).toBeUndefined();
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("should mix Point and Polygon features", async () => {
+      const pointFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [0, 0]
+        },
+        properties: {
+          site_id: "site-uuid-1",
+          est_area: 10.5
+        }
+      };
+
+      const polygonFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [1, 1],
+              [1, 2],
+              [2, 2],
+              [2, 1],
+              [1, 1]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      const request = createMockRequest([pointFeature, polygonFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+      jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue(["point-uuid-1"]);
+
+      const voronoiPolygon: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1"
+        }
+      };
+
+      jest.spyOn(voronoiService, "transformPointsToPolygons").mockResolvedValue([voronoiPolygon]);
+
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["polygon-uuid-1", "polygon-uuid-2"],
+        areas: [10.5, 5.0]
+      });
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([
+        {
+          uuid: "site-polygon-uuid-1",
+          polygonUuid: "polygon-uuid-1",
+          polyName: null
+        } as SitePolygon,
+        {
+          uuid: "site-polygon-uuid-2",
+          polygonUuid: "polygon-uuid-2",
+          polyName: null
+        } as SitePolygon
+      ]);
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      await service.createSitePolygons(request, mockUserId, "test", null);
+
+      expect(pointGeometryService.createPointGeometriesFromFeatures).toHaveBeenCalled();
+      expect(voronoiService.transformPointsToPolygons).toHaveBeenCalled();
+      expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalled();
+      expect(mockTransaction.commit).toHaveBeenCalled();
     });
   });
 });

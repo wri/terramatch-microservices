@@ -10,6 +10,7 @@ import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
+import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -368,16 +369,20 @@ describe("SitePolygonsController", () => {
         writable: true,
         configurable: true
       });
-      const request = { data: { attributes: { geometries: [] } } };
+      const request = { data: { type: "sitePolygons", attributes: { geometries: [] } } };
 
-      await expect(controller.create(request as unknown as any)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
     });
 
     it("should throw BadRequestException when geometries are missing", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const request = {};
 
-      await expect(controller.create(request as unknown as any)).rejects.toThrow(BadRequestException);
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it("should create site polygons with JSON:API format", async () => {
@@ -395,9 +400,9 @@ describe("SitePolygonsController", () => {
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
 
       const geometries = [{ type: "FeatureCollection", features: [] }];
-      const request = { data: { attributes: { geometries } } };
+      const request = { data: { type: "sitePolygons", attributes: { geometries } } };
 
-      const result = await controller.create(request as unknown as any);
+      const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
 
       expect(User.findByPk).toHaveBeenCalledWith(1, {
         include: [{ association: "roles", attributes: ["name"] }]
@@ -428,7 +433,7 @@ describe("SitePolygonsController", () => {
       const geometries = [{ type: "FeatureCollection", features: [] }];
       const request = { geometries };
 
-      const result = await controller.create(request as unknown as any);
+      const result = await controller.create(request as unknown as CreateSitePolygonJsonApiRequestDto);
 
       expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith({ geometries }, 1, "greenhouse", null);
       expect(result.data).toBeDefined();
@@ -457,9 +462,9 @@ describe("SitePolygonsController", () => {
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
 
       const geometries = [{ type: "FeatureCollection", features: [] }];
-      const request = { data: { attributes: { geometries } } };
+      const request = { data: { type: "sitePolygons", attributes: { geometries } } };
 
-      const result = await controller.create(request as unknown as any);
+      const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
 
       expect(result.data).toBeDefined();
     });

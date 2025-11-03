@@ -34,7 +34,7 @@ export class MediasController {
     this.logger.log(`Deleting media ${uuid}`);
     const media = await this.mediaService.getMedia(uuid);
     await this.policyService.authorize("deleteFiles", media);
-    await this.mediaService.deleteMedia(uuid);
+    await this.mediaService.deleteMediaByUuid(uuid);
     return buildDeletedResponse("medias", uuid);
   }
 
@@ -48,6 +48,10 @@ export class MediasController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
-    await this.mediaService.bulkDeleteMedia(uuids);
+    const medias = await this.mediaService.getMedias(uuids);
+    medias.forEach(async media => {
+      await this.policyService.authorize("bulkDelete", media);
+      await this.mediaService.deleteMedia(media);
+    });
   }
 }

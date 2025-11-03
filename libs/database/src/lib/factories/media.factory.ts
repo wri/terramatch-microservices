@@ -6,6 +6,7 @@ import { NurseryFactory } from "./nursery.factory";
 import { ProjectReportFactory } from "./project-report.factory";
 import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
+import { UserFactory } from "./user.factory";
 
 const defaultAttributesFactory = async () => ({
   collectionName: faker.lorem.words(1),
@@ -18,7 +19,8 @@ const defaultAttributesFactory = async () => ({
   customProperties: {},
   disk: "s3",
   manipulation: [],
-  responsiveImages: []
+  responsiveImages: [],
+  createdBy: UserFactory.associate("id")
 });
 
 export const MediaFactory = {

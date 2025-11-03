@@ -71,12 +71,7 @@ export class MediaService {
     return media;
   }
 
-  async deleteMedia(uuid: string) {
-    const media = await Media.findOne({
-      where: { uuid }
-    });
-    if (media == null) throw new NotFoundException();
-
+  async deleteMedia(media: Media) {
     const key = `${media.id}/${media.fileName}`;
 
     console.log(key);
@@ -87,15 +82,24 @@ export class MediaService {
       Key: key
     });
 
-    this.logger.log(`Deleting media ${uuid} from S3`);
+    this.logger.log(`Deleting media ${media.uuid} from S3`);
     await this.s3.send(command);
     await media.destroy();
 
     return media;
   }
 
-  bulkDeleteMedia(uuids: string[]) {
-    return Media.destroy({
+  async deleteMediaByUuid(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+
+    return this.deleteMedia(media);
+  }
+
+  async getMedias(uuids: string[]) {
+    return Media.findAll({
       where: { uuid: { [Op.in]: uuids } }
     });
   }

@@ -21,6 +21,29 @@ export class MediasController {
 
   constructor(private readonly mediaService: MediaService, private readonly policyService: PolicyService) {}
 
+  @Delete("bulkDelete")
+  @ApiOperation({
+    operationId: "mediaBulkDelete",
+    summary: "Delete multiple media"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
+    this.logger.debug("Bulk deleting media with uuids: " + uuids);
+    const permissions = await this.policyService.getPermissions();
+    if (!permissions.includes("media-manage")) {
+      throw new UnauthorizedException();
+    }
+    const medias = await this.mediaService.getMedias(uuids);
+    medias.forEach(async media => {
+      await this.policyService.authorize("bulkDelete", media);
+      await this.mediaService.deleteMedia(media);
+    });
+    return buildDeletedResponse("medias", uuids.join(","));
+  }
+
   @Delete(":uuid")
   @ApiOperation({
     operationId: "mediaDelete",
@@ -31,27 +54,10 @@ export class MediasController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async mediaDelete(@Param() { uuid }: { uuid: string }) {
-    this.logger.log(`Deleting media ${uuid}`);
+    this.logger.debug(`Deleting media ${uuid}`);
     const media = await this.mediaService.getMedia(uuid);
     await this.policyService.authorize("deleteFiles", media);
     await this.mediaService.deleteMediaByUuid(uuid);
     return buildDeletedResponse("medias", uuid);
-  }
-
-  @Delete()
-  @ApiOperation({
-    operationId: "mediaBulkDelete",
-    summary: "Delete multiple media"
-  })
-  @JsonApiResponse({ data: MediaDto })
-  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
-  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
-    const medias = await this.mediaService.getMedias(uuids);
-    medias.forEach(async media => {
-      await this.policyService.authorize("bulkDelete", media);
-      await this.mediaService.deleteMedia(media);
-    });
   }
 }

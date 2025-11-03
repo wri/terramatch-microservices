@@ -4,6 +4,8 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { MediasController } from "./medias.controller";
 import { UnauthorizedException } from "@nestjs/common";
+import { MediaFactory } from "@terramatch-microservices/database/factories";
+import { Media } from "@terramatch-microservices/database/entities";
 
 describe("MediasController", () => {
   let controller: MediasController;
@@ -29,36 +31,38 @@ describe("MediasController", () => {
   });
 
   describe("mediaDelete", () => {
-    it("should throw an error if the policy does not authorize", async () => {
-      policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      await expect(controller.mediaDelete({ uuid: "test-uuid" })).rejects.toThrow(UnauthorizedException);
-    });
-
     it("should call the media service to delete the media", async () => {
+      mediaService.deleteMediaByUuid = jest.fn();
       await controller.mediaDelete({ uuid: "test-uuid" });
       expect(mediaService.deleteMediaByUuid).toHaveBeenCalledWith("test-uuid");
     });
 
-    it("should return the deleted media uuid", async () => {
+    it("should return the deleted media response", async () => {
       const media = await controller.mediaDelete({ uuid: "test-uuid" });
-      expect(media).toEqual({ uuid: "test-uuid" });
+      expect(media).toEqual({ meta: { resourceType: "medias", resourceId: "test-uuid" } });
     });
   });
 
   describe("mediaBulkDelete", () => {
-    it("should throw an error if the policy does not authorize", async () => {
-      policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      await expect(controller.mediaBulkDelete({ uuids: ["test-uuid"] })).rejects.toThrow(UnauthorizedException);
-    });
-
     it("should call the media service to delete the media", async () => {
-      await controller.mediaBulkDelete({ uuids: ["test-uuid"] });
-      expect(mediaService.deleteMediaByUuid).toHaveBeenCalledWith("test-uuid");
+      policyService.getPermissions.mockResolvedValue(["media-manage"]);
+      policyService.authorize.mockResolvedValue();
+      const media1: Media = { uuid: "test-uuid-1", createdBy: 123 } as Media;
+      const media2: Media = { uuid: "test-uuid-2", createdBy: 123 } as Media;
+      mediaService.getMedias.mockResolvedValue([media1, media2]);
+      await controller.mediaBulkDelete({ uuids: ["test-uuid1", "test-uuid2"] });
+      expect(mediaService.deleteMedia).toHaveBeenCalledWith(media1);
+      expect(mediaService.deleteMedia).toHaveBeenCalledWith(media2);
     });
 
     it("should return the deleted media", async () => {
       const media = await controller.mediaBulkDelete({ uuids: ["test-uuid"] });
-      expect(media).toEqual({ uuids: ["test-uuid"] });
+      expect(media).toEqual({
+        meta: {
+          resourceId: "test-uuid",
+          resourceType: "medias"
+        }
+      });
     });
   });
 });

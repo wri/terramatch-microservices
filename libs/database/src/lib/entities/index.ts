@@ -15,6 +15,7 @@ export * from "./form-question.entity";
 export * from "./form-question-option.entity";
 export * from "./form-section.entity";
 export * from "./form-submission.entity";
+export * from "./form-table-header.entity";
 export * from "./form-option-list.entity";
 export * from "./form-option-list-option.entity";
 export * from "./framework.entity";

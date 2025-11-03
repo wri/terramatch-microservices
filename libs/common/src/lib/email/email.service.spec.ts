@@ -100,7 +100,7 @@ describe("EmailService", () => {
   });
 
   it("throws if the template subject key is not provided", async () => {
-    await expect(service.sendI18nTemplateEmail("", "en-GB", {})).rejects.toThrow("Email subject is required");
+    await expect(service.sendI18nTemplateEmail("", "en-US", {})).rejects.toThrow("Email subject is required");
   });
 
   it("translates and renders template, then sends email", async () => {

@@ -11,6 +11,7 @@ export type LinkedFieldConfiguration = {
 export const FIELD_INPUT_TYPES = [
   "boolean",
   "conditional",
+  "tableInput",
   "date",
   "long-text",
   "mapInput",

@@ -7,6 +7,7 @@ import { LocalizationService } from "../localization/localization.service";
 import { User } from "@terramatch-microservices/database/entities";
 import { TemplateService } from "../templates/template.service";
 import { JwtService } from "@nestjs/jwt";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 type I18nEmailOptions = {
   i18nReplacements?: Dictionary<string>;
@@ -46,7 +47,7 @@ export class EmailService {
 
   async sendI18nTemplateEmail(
     to: string | string[],
-    locale: string,
+    locale: ValidLocale,
     i18nKeys: Dictionary<string>,
     { i18nReplacements, additionalValues }: I18nEmailOptions = {}
   ) {
@@ -80,7 +81,7 @@ export class EmailService {
   }
 
   private async renderI18nTemplateEmail(
-    locale: string,
+    locale: ValidLocale,
     i18nKeys: Dictionary<string>,
     { i18nReplacements, additionalValues }: I18nEmailOptions = {}
   ) {

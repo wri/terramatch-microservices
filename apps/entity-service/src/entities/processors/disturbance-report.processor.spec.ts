@@ -293,7 +293,7 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
 
       // Create multiple entries
-      DisturbanceReportEntryFactory.create({
+      await DisturbanceReportEntryFactory.create({
         disturbanceReportId: disturbanceReport.id,
         name: "intensity",
         value: "low",
@@ -307,12 +307,12 @@ describe("DisturbanceReportProcessor", () => {
       });
 
       const entries = await processor.getDisturbanceReportEntries(disturbanceReport);
-
       expect(entries).toHaveLength(2);
-      expect(entries[0].name).toBe("intensity");
-      expect(entries[0].value).toBe("low");
-      expect(entries[1].name).toBe("date-of-disturbance");
-      expect(entries[1].value).toBe("2023-10-01");
+
+      const intensity = entries.find(({ name }) => name === "intensity");
+      expect(intensity?.value).toBe("low");
+      const date = entries.find(({ name }) => name === "date-of-disturbance");
+      expect(date?.value).toBe("2023-10-01");
     });
 
     it("should return empty array when no entries exist", async () => {

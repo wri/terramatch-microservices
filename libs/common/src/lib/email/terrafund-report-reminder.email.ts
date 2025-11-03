@@ -3,6 +3,7 @@ import { Notification, Project, User } from "@terramatch-microservices/database/
 import { TMLogger } from "../util/tm-logger";
 import { groupBy } from "lodash";
 import { ProjectEmailSender } from "./project-email-sender";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 export class TerrafundReportReminderEmail extends ProjectEmailSender {
   override logger = new TMLogger(TerrafundReportReminderEmail.name);
@@ -32,7 +33,7 @@ export class TerrafundReportReminderEmail extends ProjectEmailSender {
       Object.entries(groupBy(users, "locale")).map(([locale, localeGroup]) =>
         emailService.sendI18nTemplateEmail(
           localeGroup.map(({ emailAddress }) => emailAddress),
-          locale,
+          locale as ValidLocale,
           {
             title: "terrafund-report-reminder.title",
             subject: "terrafund-report-reminder.subject",

@@ -76,6 +76,7 @@ export class DisturbanceReportUpdateData extends JsonApiDataDto(
   { type: "disturbanceReports" },
   ReportUpdateAttributes
 ) {}
+export class SrpReportUpdateData extends JsonApiDataDto({ type: "srpReports" }, ReportUpdateAttributes) {}
 
 export type EntityUpdateData =
   | ProjectUpdateAttributes
@@ -90,5 +91,6 @@ export class EntityUpdateBody extends JsonApiMultiBodyDto([
   SiteReportUpdateData,
   NurseryReportUpdateData,
   FinancialReportUpdateData,
-  DisturbanceReportUpdateData
+  DisturbanceReportUpdateData,
+  SrpReportUpdateData
 ] as const) {}

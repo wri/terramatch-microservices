@@ -9,6 +9,7 @@ import { NurseryConfiguration } from "./nursery.configuration";
 import { NurseryReportConfiguration } from "./nursery-report.configuration";
 import { LinkedFieldConfiguration } from "../types";
 import { DisturbanceReportConfiguration } from "./disturbance-report.configuration";
+import { SrpReportConfiguration } from "./srp-report.entity.configuration";
 
 export const FORM_TYPES = [
   "organisation",
@@ -19,12 +20,14 @@ export const FORM_TYPES = [
   "project",
   "projectPitch",
   "projectReport",
+  "srpReport",
   "site",
   "siteReport"
 ] as const;
 export type FormType = (typeof FORM_TYPES)[number];
 
 export const LinkedFieldsConfiguration: Record<FormType, LinkedFieldConfiguration> = {
+  srpReport: SrpReportConfiguration,
   organisation: OrganisationConfiguration,
   financialReport: FinancialReportConfiguration,
   disturbanceReport: DisturbanceReportConfiguration,

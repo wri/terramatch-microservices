@@ -1,4 +1,5 @@
 export * from "./application.factory";
+export * from "./srp-report.factory";
 export * from "./delayed-job.factory";
 export * from "./demographic.factory";
 export * from "./demographic-entry.factory";

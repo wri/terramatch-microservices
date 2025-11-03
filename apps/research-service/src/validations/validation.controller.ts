@@ -65,7 +65,7 @@ export class ValidationController {
 
     const criteriaId = query.criteriaId != null ? (Number(query.criteriaId) as CriteriaId) : undefined;
 
-    if (criteriaId != null && (criteriaId < 1 || Number.isInteger(criteriaId) === false)) {
+    if (criteriaId != null && (criteriaId < 1 || !Number.isInteger(criteriaId))) {
       throw new BadRequestException("criteriaId must be a valid integer greater than or equal to 1");
     }
 

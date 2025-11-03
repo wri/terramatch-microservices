@@ -1,7 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, mockPermissions, mockUserId } from "./policy.service.spec";
-import { Media } from "@terramatch-microservices/database/entities";
 import { MediaFactory } from "@terramatch-microservices/database/factories";
 import { UnauthorizedException } from "@nestjs/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";

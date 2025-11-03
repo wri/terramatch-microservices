@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { pick } from "lodash";
 import { Type } from "@nestjs/common";

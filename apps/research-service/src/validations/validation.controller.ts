@@ -166,12 +166,7 @@ export class ValidationController {
       totalContent: polygonUuids.length,
       processedContent: 0,
       progressMessage: "Starting validation...",
-      createdBy: authenticatedUserId,
-      metadata: {
-        entity_id: site.id,
-        entity_type: "App\\Models\\V2\\Sites\\Site",
-        entity_name: site.name
-      }
+      createdBy: authenticatedUserId
     } as DelayedJob);
 
     await this.validationQueue.add("siteValidation", {

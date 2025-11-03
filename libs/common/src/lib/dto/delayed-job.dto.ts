@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
 

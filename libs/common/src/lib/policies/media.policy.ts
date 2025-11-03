@@ -1,4 +1,4 @@
-import { Media, User } from "@terramatch-microservices/database/entities";
+import { Media } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class MediaPolicy extends UserPermissionsPolicy {
@@ -9,14 +9,5 @@ export class MediaPolicy extends UserPermissionsPolicy {
     }
 
     this.builder.can("bulkDelete", Media, { createdBy: this.userId });
-  }
-
-  protected _user?: User | null;
-  protected async getUser() {
-    if (this._user != null) return this._user;
-
-    return (this._user = await User.findOne({
-      where: { id: this.userId }
-    }));
   }
 }

@@ -94,4 +94,14 @@ describe("SitePolicy", () => {
       cannot: [[["read", "delete", "update", "deleteFiles"], s2]]
     });
   });
+
+  it("allows uploading files to sites", async () => {
+    mockPermissions("media-manage");
+    const user = await UserFactory.create();
+    const project = await ProjectFactory.create();
+    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
+    const site = await SiteFactory.create({ projectId: project.id });
+    mockUserId(user.id);
+    await expectCan(service, "uploadFiles", site);
+  });
 });

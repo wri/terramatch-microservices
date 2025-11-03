@@ -3,8 +3,6 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { MediasController } from "./medias.controller";
-import { UnauthorizedException } from "@nestjs/common";
-import { MediaFactory } from "@terramatch-microservices/database/factories";
 import { Media } from "@terramatch-microservices/database/entities";
 
 describe("MediasController", () => {

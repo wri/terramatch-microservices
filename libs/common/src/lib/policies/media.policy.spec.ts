@@ -24,6 +24,7 @@ describe("MediaPolicy", () => {
     it("should allow bulk delete if the user has the media-manage permission and the media is created by the user", async () => {
       mockUserId(123);
       mockPermissions("media-manage");
+      service.authorize.mockResolvedValue();
       await expectCan(service, "bulkDelete", await MediaFactory.forProject.create({ createdBy: 123 }));
     });
 

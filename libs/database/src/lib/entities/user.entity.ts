@@ -24,6 +24,7 @@ import { Organisation } from "./organisation.entity";
 import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
+import { isNotNull } from "../types/array";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
@@ -261,7 +262,7 @@ export class User extends Model<User> {
 
       await this.loadFrameworks();
 
-      let frameworkSlugs: string[] = this.frameworks.map(({ slug }) => slug);
+      let frameworkSlugs = this.frameworks.map(({ slug }) => slug).filter(isNotNull);
       if (isAdmin) {
         // Admins have access to all frameworks their permissions say they do
         const permissions = await Permission.getUserPermissionNames(this.id);

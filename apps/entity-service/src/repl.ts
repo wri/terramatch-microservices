@@ -1,7 +1,7 @@
 import { AppModule } from "./app.module";
 import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
-import { Form, FormQuestion, FundingProgramme } from "@terramatch-microservices/database/entities";
+import { Form, FormQuestion, Framework, FundingProgramme } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
@@ -59,6 +59,11 @@ bootstrapRepl("Entity Service", AppModule, {
         console.log("Updating Forms...");
         await Form.update({ frameworkKey: "terrafund-landscapes" }, { where: { frameworkKey: "landscapes" } });
         await Form.update({ frameworkKey: null }, { where: { frameworkKey: { [Op.in]: ["test", "tfBusiness"] } } });
+
+        console.log("Updating Reporting Frameworks...");
+        for (const framework of await Framework.findAll()) {
+          if (framework.slug !== framework.accessCode) await framework.update({ accessCode: framework.slug });
+        }
       });
     }
   }

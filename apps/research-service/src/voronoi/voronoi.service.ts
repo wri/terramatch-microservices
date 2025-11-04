@@ -17,10 +17,13 @@ export class VoronoiService {
 
   private async getDelaunayModule(): Promise<typeof import("d3-delaunay")> {
     if (this.delaunayModulePromise == null) {
-      this.delaunayModulePromise = import("d3-delaunay");
+      const moduleName = "d3-delaunay";
+      const importFn = new Function("moduleName", "return import(moduleName)");
+      this.delaunayModulePromise = importFn(moduleName) as Promise<typeof import("d3-delaunay")>;
     }
     return this.delaunayModulePromise;
   }
+
   private calculateCircleRadius(hectaresArea: number, additionalRadius: number = ADDITIONAL_RADIUS): number {
     try {
       const squareMeters = hectaresArea * 10000;

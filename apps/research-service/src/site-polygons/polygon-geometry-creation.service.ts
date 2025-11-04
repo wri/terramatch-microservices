@@ -3,6 +3,7 @@ import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { Geometry } from "@terramatch-microservices/database/constants";
 import { QueryTypes, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
+import { Polygon } from "geojson";
 
 export interface GeometryWithArea {
   uuid: string;
@@ -55,32 +56,25 @@ export class PolygonGeometryCreationService {
     }
 
     try {
-      const valueSets = geometriesWithAreas
-        .map((_, index) => `(:uuid${index}, ST_GeomFromGeoJSON(:geomJson${index}), :createdBy${index})`)
-        .join(", ");
-
-      const replacements: Record<string, string | number | Date | null> = {};
-      geometriesWithAreas.forEach((item, index) => {
-        replacements[`uuid${index}`] = item.uuid;
-        replacements[`geomJson${index}`] = item.geomJson;
-        replacements[`createdBy${index}`] = createdBy;
+      const polygonGeometries = geometriesWithAreas.map(item => {
+        const polygon = JSON.parse(item.geomJson) as Polygon;
+        return {
+          uuid: item.uuid,
+          polygon,
+          createdBy
+        };
       });
 
-      const query = `
-        INSERT INTO polygon_geometry (uuid, geom, created_by)
-        VALUES ${valueSets}
-      `;
-
-      await PolygonGeometry.sequelize.query(query, {
-        replacements,
-        type: QueryTypes.INSERT,
+      const created = await PolygonGeometry.bulkCreate(polygonGeometries as PolygonGeometry[], {
         transaction
       });
 
-      return geometriesWithAreas.map(item => item.uuid);
+      return created.map(item => item.uuid);
     } catch (error) {
       this.logger.error("Error bulk inserting geometries", error);
-      throw new InternalServerErrorException("Failed to insert geometries");
+      throw new InternalServerErrorException(
+        `Failed to insert geometries: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

@@ -94,9 +94,7 @@ export class SitePolygonsController {
       createRequest as unknown as { geometries?: CreateSitePolygonBatchRequestDto["geometries"] }
     )?.geometries;
 
-    const geometries =
-      (jsonApiGeometries != null ? jsonApiGeometries : undefined) ??
-      (plainGeometries != null ? plainGeometries : undefined);
+    const geometries = jsonApiGeometries ?? plainGeometries;
 
     if (geometries == null) {
       throw new BadRequestException(

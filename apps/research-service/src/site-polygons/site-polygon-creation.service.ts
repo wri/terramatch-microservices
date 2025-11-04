@@ -238,11 +238,10 @@ export class SitePolygonCreationService {
       point.properties._pointUuid = pointUuids[i];
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points as unknown as any[]);
+    const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points);
 
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
-    return [...nonPoints, ...(voronoiPolys as unknown as Feature[])];
+    return [...nonPoints, ...voronoiPolys];
   }
 
   private groupGeometriesBySiteId(geometries: { features: Feature[] }[]): { [siteId: string]: Feature[] } {

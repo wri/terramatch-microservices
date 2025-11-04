@@ -1,5 +1,5 @@
 import { States, transitions } from "../util/model-column-state-machine";
-import { Nursery, Project, ProjectReport, Site, Task } from "../entities";
+import { DelayedJob, Nursery, Project, ProjectReport, Site, Task } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 import { ReportModel } from "./entities";
@@ -132,4 +132,14 @@ export const STATUS_DISPLAY_STRINGS: Record<AllStatuses, string> = {
   [REJECTED]: "Rejected",
   [NO_UPDATE]: "No update",
   [REQUIRES_MORE_INFORMATION]: "Requires more information"
+};
+
+export const FAILED = "failed";
+export const SUCCEEDED = "succeeded";
+export const DELAYED_JOB_STATUSES = [PENDING, FAILED, SUCCEEDED] as const;
+export type DelayedJobStatus = (typeof DELAYED_JOB_STATUSES)[number];
+
+export const DelayedJobStatusStates: States<DelayedJob, DelayedJobStatus> = {
+  default: PENDING,
+  transitions: transitions<DelayedJobStatus>().from(PENDING, () => [FAILED, SUCCEEDED]).transitions
 };

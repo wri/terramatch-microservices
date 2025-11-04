@@ -15,8 +15,8 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 @Controller("jobs/v3/delayedJobs")
 export class DelayedJobsController {
@@ -36,18 +36,12 @@ export class DelayedJobsController {
       order: [["createdAt", "DESC"]]
     });
 
-    const jobsWithEntityNames = await Promise.all(
-      runningJobs.map(async job => {
-        const entityName = job.metadata?.entity_name;
-        return { ...job.toJSON(), entityName };
-      })
-    );
-
-    const document = buildJsonApi(DelayedJobDto, { forceDataArray: true });
-    jobsWithEntityNames.forEach(job => {
-      document.addData(job.uuid, populateDto(new DelayedJobDto(), job));
-    });
-    return document.addIndex({ requestPath: "/jobs/v3/delayedJobs" });
+    return runningJobs
+      .reduce(
+        (document, job) => document.addData(job.uuid, new DelayedJobDto(job)).document,
+        buildJsonApi(DelayedJobDto, { forceDataArray: true })
+      )
+      .addIndex({ requestPath: "/jobs/v3/delayedJob" });
   }
 
   @Get(":uuid")
@@ -65,7 +59,7 @@ export class DelayedJobsController {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();
 
-    return buildJsonApi(DelayedJobDto).addData(pathUUID, populateDto(new DelayedJobDto(), job));
+    return buildJsonApi(DelayedJobDto).addData(job.uuid, new DelayedJobDto(job));
   }
 
   @Patch("bulk-update")
@@ -94,25 +88,20 @@ export class DelayedJobsController {
       throw new NotFoundException("Some jobs in the request could not be updated");
     }
 
-    const updatePromises = jobUpdates
-      .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
-      .map(async ({ uuid, attributes }) => {
-        const job = jobs.find(job => job.uuid === uuid) as DelayedJob;
-        job.isAcknowledged = attributes.isAcknowledged;
-        await job.save();
+    const updatedJobs = (
+      await Promise.all(
+        jobUpdates
+          .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
+          .map(async ({ uuid, attributes }) => {
+            const job = jobs.find(job => job.uuid === uuid);
+            return await job?.update({ isAcknowledged: attributes.isAcknowledged });
+          })
+      )
+    ).filter(isNotNull);
 
-        const entityName = job.metadata?.entity_name;
-
-        return { ...job.toJSON(), entityName };
-      });
-
-    const updatedJobs = await Promise.all(updatePromises);
-
-    const jsonApiBuilder = buildJsonApi(DelayedJobDto);
-    updatedJobs.forEach(job => {
-      jsonApiBuilder.addData(job.uuid, populateDto(new DelayedJobDto(), job));
-    });
-
-    return jsonApiBuilder;
+    return updatedJobs.reduce(
+      (document, job) => document.addData(job.uuid, new DelayedJobDto(job)).document,
+      buildJsonApi(DelayedJobDto)
+    );
   }
 }

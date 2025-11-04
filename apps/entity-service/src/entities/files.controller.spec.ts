@@ -21,8 +21,17 @@ describe("FilesController", () => {
 
   beforeEach(async () => {
     fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;
-    policyService = { authorize: jest.fn() } as unknown as jest.Mocked<PolicyService>;
-    mediaService = { getUrl: jest.fn() } as unknown as jest.Mocked<MediaService>;
+    policyService = {
+      authorize: jest.fn(),
+      getPermissions: jest.fn()
+    } as unknown as jest.Mocked<PolicyService>;
+    mediaService = {
+      getUrl: jest.fn(),
+      getMedia: jest.fn(),
+      deleteMediaByUuid: jest.fn(),
+      deleteMedia: jest.fn(),
+      getMedias: jest.fn()
+    } as unknown as jest.Mocked<MediaService>;
     mockMediaOwnerProcessor = { getBaseEntity: jest.fn() };
     entitiesService = {
       createMediaOwnerProcessor: jest.fn().mockReturnValue(mockMediaOwnerProcessor),
@@ -131,6 +140,8 @@ describe("FilesController", () => {
     });
 
     it("should return the deleted media", async () => {
+      policyService.getPermissions.mockResolvedValue(["media-manage"]);
+      mediaService.getMedias.mockResolvedValue([{ uuid: "test-uuid" } as Media]);
       const media = await controller.mediaBulkDelete({ uuids: ["test-uuid"] });
       expect(media).toEqual({
         meta: {

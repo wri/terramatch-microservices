@@ -74,9 +74,6 @@ export class MediaService {
   async deleteMedia(media: Media) {
     const key = `${media.id}/${media.fileName}`;
 
-    console.log(key);
-    console.log(this.configService.get<string>("AWS_BUCKET") ?? "");
-
     const command = new DeleteObjectCommand({
       Bucket: this.configService.get<string>("AWS_BUCKET") ?? "",
       Key: key

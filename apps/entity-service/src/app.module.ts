@@ -8,7 +8,7 @@ import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
-import { FileUploadController } from "./entities/file-upload.controller";
+import { FilesController } from "./entities/files.controller";
 import { FileUploadService } from "./file/file-upload.service";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
@@ -22,7 +22,6 @@ import { DisturbancesController } from "./entities/disturbances.controller";
 import { DisturbanceService } from "./entities/disturbance.service";
 import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
-import { MediasController } from "./entities/medias.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -30,11 +29,10 @@ import { MediasController } from "./entities/medias.controller";
   // needs to be provided in this list before EntitiesController, or it will be superseded by the
   // wildcard route on EntitiesController.
   controllers: [
-    MediasController,
     ProjectPitchesController,
     ImpactStoriesController,
     TasksController,
-    FileUploadController,
+    FilesController,
     TreesController,
     DemographicsController,
     DisturbancesController,

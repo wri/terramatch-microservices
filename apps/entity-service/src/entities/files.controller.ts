@@ -1,9 +1,12 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   NotFoundException,
   Param,
   Post,
+  Query,
   UnauthorizedException,
   UploadedFile,
   UseInterceptors
@@ -15,16 +18,19 @@ import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApiOperation } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
+import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import "multer";
 import { MediaRequestBody } from "./dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 @Controller("entities/v3/files")
-export class FileUploadController {
+export class FilesController {
+  private logger = new TMLogger(FilesController.name);
+
   constructor(
     private readonly fileUploadService: FileUploadService,
     private readonly policyService: PolicyService,
@@ -63,5 +69,45 @@ export class FileUploadController {
         entityUuid: model.uuid
       })
     );
+  }
+
+  @Delete("bulkDelete")
+  @ApiOperation({
+    operationId: "mediaBulkDelete",
+    summary: "Delete multiple media"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
+    this.logger.debug("Bulk deleting media with uuids: " + uuids);
+    const permissions = await this.policyService.getPermissions();
+    if (!permissions.includes("media-manage")) {
+      throw new UnauthorizedException();
+    }
+    const medias = await this.mediaService.getMedias(uuids);
+    medias.forEach(async media => {
+      await this.policyService.authorize("bulkDelete", media);
+      await this.mediaService.deleteMedia(media);
+    });
+    return buildDeletedResponse("medias", uuids.join(","));
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({
+    operationId: "mediaDelete",
+    summary: "Delete a media by uuid"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async mediaDelete(@Param() { uuid }: { uuid: string }) {
+    this.logger.debug(`Deleting media ${uuid}`);
+    const media = await this.mediaService.getMedia(uuid);
+    await this.policyService.authorize("deleteFiles", media);
+    await this.mediaService.deleteMediaByUuid(uuid);
+    return buildDeletedResponse("medias", uuid);
   }
 }

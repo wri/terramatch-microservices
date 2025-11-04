@@ -79,11 +79,10 @@ export class FilesController {
   @JsonApiResponse({ data: MediaDto })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
-  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
     this.logger.debug("Bulk deleting media with uuids: " + uuids);
     const medias = await this.mediaService.getMedias(uuids);
-    this.policyService.authorize("bulkDelete", medias);
+    await this.policyService.authorize("bulkDelete", medias);
     medias.forEach(async media => {
       await this.mediaService.deleteMedia(media);
     });

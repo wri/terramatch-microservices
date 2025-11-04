@@ -13,17 +13,6 @@ interface OverlapInfo {
   intersectionArea: number;
 }
 
-interface OverlapAnalysis {
-  polygonUuid: string;
-  hasOverlap: boolean;
-  overlappingWith: Array<{
-    polyUuid: string;
-    percentage: number;
-    intersectionArea: number;
-    isFixable: boolean;
-  }>;
-}
-
 interface ClippedPolygonResult {
   polyUuid: string;
   polyName: string;

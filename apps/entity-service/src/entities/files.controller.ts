@@ -82,13 +82,9 @@ export class FilesController {
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   async mediaBulkDelete(@Query() { uuids }: { uuids: string[] }) {
     this.logger.debug("Bulk deleting media with uuids: " + uuids);
-    const permissions = await this.policyService.getPermissions();
-    if (!permissions.includes("media-manage")) {
-      throw new UnauthorizedException();
-    }
     const medias = await this.mediaService.getMedias(uuids);
+    this.policyService.authorize("bulkDelete", medias);
     medias.forEach(async media => {
-      await this.policyService.authorize("bulkDelete", media);
       await this.mediaService.deleteMedia(media);
     });
     return buildDeletedResponse("medias", uuids.join(","));

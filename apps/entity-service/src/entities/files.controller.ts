@@ -84,9 +84,7 @@ export class FilesController {
     this.logger.debug("Bulk deleting media with uuids: " + uuids);
     const medias = await this.mediaService.getMedias(uuids);
     await this.policyService.authorize("bulkDelete", medias);
-    medias.forEach(async media => {
-      await this.mediaService.deleteMedia(media);
-    });
+    await Promise.all(medias.map(media => this.mediaService.deleteMedia(media)));
     return buildDeletedResponse("medias", uuids.join(","));
   }
 

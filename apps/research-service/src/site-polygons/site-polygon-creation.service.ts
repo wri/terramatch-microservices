@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
-import { Transaction } from "sequelize";
+import { Transaction, Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
@@ -95,7 +95,56 @@ export class SitePolygonCreationService {
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries, siteId, userId, transaction);
+        const { features: mergedFeatures, duplicatePointUuids } = await this.transformPointFeaturesToPolygons(
+          siteGeometries,
+          siteId,
+          userId,
+          transaction
+        );
+
+        if (duplicatePointUuids.length > 0) {
+          const existingPointSitePolygons = await SitePolygon.findAll({
+            where: { pointUuid: { [Op.in]: duplicatePointUuids }, isActive: true, siteUuid: siteId },
+            transaction
+          });
+
+          if (existingPointSitePolygons.length > 0) {
+            allDuplicatePolygons.push(...existingPointSitePolygons);
+            const duplicatePointValidationMap = new Map<string, ValidationIncludedData>();
+
+            for (const duplicateSitePolygon of existingPointSitePolygons) {
+              if (duplicateSitePolygon.polygonUuid != null) {
+                const existingUuid = duplicateSitePolygon.polygonUuid;
+
+                if (!duplicatePointValidationMap.has(existingUuid)) {
+                  duplicatePointValidationMap.set(existingUuid, {
+                    type: "validation",
+                    id: existingUuid,
+                    attributes: {
+                      polygonUuid: existingUuid,
+                      criteriaList: [
+                        {
+                          criteriaId: VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY,
+                          valid: false,
+                          createdAt: new Date(),
+                          extraInfo: {
+                            polygonUuid: existingUuid,
+                            message: "This geometry already exists in the project",
+                            sitePolygonUuid: duplicateSitePolygon.uuid,
+                            sitePolygonName: duplicateSitePolygon.polyName ?? undefined
+                          }
+                        }
+                      ]
+                    }
+                  });
+                }
+              }
+            }
+
+            duplicateValidations.push(...duplicatePointValidationMap.values());
+          }
+        }
+
         const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
@@ -213,10 +262,10 @@ export class SitePolygonCreationService {
     siteId: string,
     userId: number,
     transaction: Transaction
-  ): Promise<Feature[]> {
+  ): Promise<{ features: Feature[]; duplicatePointUuids: string[] }> {
     const points = features.filter(f => f.geometry.type === "Point");
     if (points.length === 0) {
-      return features;
+      return { features, duplicatePointUuids: [] };
     }
 
     for (const p of points) {
@@ -229,30 +278,27 @@ export class SitePolygonCreationService {
       }
     }
 
-    // Check for duplicate points before creating new ones
     const { duplicateIndexToUuid: pointDuplicateMap } = await this.duplicateGeometryValidator.checkNewPointsDuplicates(
       points,
       siteId
     );
 
-    // Separate points into duplicates and new ones
     const newPoints: Feature[] = [];
+    const duplicatePointUuids: string[] = [];
     const newPointIndices: number[] = [];
     const pointIndexToUuidMap = new Map<number, string>();
 
     for (let i = 0; i < points.length; i++) {
       const existingUuid = pointDuplicateMap.get(i);
       if (existingUuid != null) {
-        // Point already exists, reuse existing UUID
         pointIndexToUuidMap.set(i, existingUuid);
+        duplicatePointUuids.push(existingUuid);
       } else {
-        // New point, will be created
         newPoints.push(points[i]);
         newPointIndices.push(i);
       }
     }
 
-    // Create point geometries only for new (non-duplicate) points
     const newPointUuids: string[] = [];
     if (newPoints.length > 0) {
       const createdUuids = await this.pointGeometryService.createPointGeometriesFromFeatures(
@@ -262,13 +308,11 @@ export class SitePolygonCreationService {
       );
       newPointUuids.push(...createdUuids);
 
-      // Map newly created UUIDs to their original indices
       for (let j = 0; j < newPointUuids.length && j < newPointIndices.length; j++) {
         pointIndexToUuidMap.set(newPointIndices[j], newPointUuids[j]);
       }
     }
 
-    // Assign point UUIDs to all point features
     for (let i = 0; i < points.length; i++) {
       const point = points[i];
       const pointUuid = pointIndexToUuidMap.get(i);
@@ -280,10 +324,10 @@ export class SitePolygonCreationService {
       }
     }
 
-    const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points);
+    const voronoiPolys = newPoints.length > 0 ? await this.voronoiService.transformPointsToPolygons(newPoints) : [];
 
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
-    return [...nonPoints, ...voronoiPolys];
+    return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids };
   }
 
   private groupGeometriesBySiteId(geometries: { features: Feature[] }[]): { [siteId: string]: Feature[] } {

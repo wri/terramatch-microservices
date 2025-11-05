@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   NotFoundException,
   Param,
   Patch,
@@ -63,6 +64,8 @@ export class SitePolygonsController {
     private readonly policyService: PolicyService
   ) {}
 
+  private readonly logger = new Logger(SitePolygonsController.name);
+
   @Post()
   @ApiOperation({
     operationId: "createSitePolygons",
@@ -86,10 +89,20 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
 
-    // Extract the geometries from the JSON:API format
-    const batchRequest: CreateSitePolygonBatchRequestDto = {
-      geometries: createRequest.data.attributes.geometries
-    };
+    const jsonApiGeometries = createRequest?.data?.attributes?.geometries;
+    const plainGeometries = (
+      createRequest as unknown as { geometries?: CreateSitePolygonBatchRequestDto["geometries"] }
+    )?.geometries;
+
+    const geometries = jsonApiGeometries ?? plainGeometries;
+
+    if (geometries == null) {
+      throw new BadRequestException(
+        "Invalid payload. Provide data.attributes.geometries (JSON:API) or a top-level geometries array."
+      );
+    }
+
+    const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
     const { data: createdSitePolygons, included: validations } =
       await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);

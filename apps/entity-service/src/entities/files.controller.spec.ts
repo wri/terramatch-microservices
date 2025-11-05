@@ -133,7 +133,7 @@ describe("FilesController", () => {
     it("should return the deleted media response", async () => {
       mediaService.getMedia.mockResolvedValue({ modelType: Project.LARAVEL_TYPE, modelId: 1 } as Media);
       const media = await controller.mediaDelete({ uuid: "test-uuid" });
-      expect(media).toEqual({ meta: { resourceType: "medias", resourceId: "test-uuid" } });
+      expect(media).toEqual({ meta: { resourceType: "medias", resourceIds: ["test-uuid"] } });
     });
   });
 
@@ -155,7 +155,7 @@ describe("FilesController", () => {
       const media = await controller.mediaBulkDelete({ uuids: ["test-uuid"] });
       expect(media).toEqual({
         meta: {
-          resourceId: "test-uuid",
+          resourceIds: ["test-uuid"],
           resourceType: "medias"
         }
       });

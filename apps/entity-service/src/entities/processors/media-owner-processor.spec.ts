@@ -29,21 +29,6 @@ describe("MediaOwnerProcessor", () => {
     MEDIA_OWNER_MODELS[MODEL_KEY] = originalModel;
   });
 
-  describe("baseModelAttributes", () => {
-    it("should return the expected attribute keys", () => {
-      const processor = new MediaOwnerProcessor(MODEL_KEY as MediaOwnerType, FAKE_UUID, FakeModel);
-      expect(processor.baseModelAttributes).toEqual([
-        "id",
-        "frameworkKey",
-        "projectId",
-        "siteId",
-        "nurseryId",
-        "organisationId",
-        "createdBy"
-      ]);
-    });
-  });
-
   describe("getBaseEntity", () => {
     it("should find and return the base entity with intersected attributes", async () => {
       FakeModel.getAttributes.mockReturnValue({

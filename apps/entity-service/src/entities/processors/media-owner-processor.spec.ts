@@ -100,7 +100,6 @@ describe("MediaOwnerProcessor", () => {
 });
 
 describe("getBaseEntityByLaravelTypeAndId", () => {
-  const FAKE_UUID = "fake-uuid";
   const LARAVEL_TYPE = Project.LARAVEL_TYPE;
   let FakeModel: jest.Mocked<EntityMediaOwnerClass<MediaOwnerModel>>;
   let originalModel: EntityMediaOwnerClass<MediaOwnerModel>;

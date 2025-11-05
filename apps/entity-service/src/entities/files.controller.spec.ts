@@ -24,7 +24,6 @@ describe("FilesController", () => {
   let mediaService: jest.Mocked<MediaService>;
   let entitiesService: jest.Mocked<EntitiesService>;
   let mockMediaOwnerProcessor: { getBaseEntity: jest.Mock };
-  let mockGetBaseEntityByLaravelTypeAndId: jest.Mock;
 
   beforeEach(async () => {
     fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;

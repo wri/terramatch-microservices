@@ -75,14 +75,6 @@ export abstract class EntityProcessor<
 
   abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
 
-  async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
-    const results: DtoResult<FullDto>[] = [];
-    for (const model of models) {
-      results.push(await this.getFullDto(model));
-    }
-    return results;
-  }
-
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
 

@@ -69,16 +69,4 @@ describe("DashboardEntityProcessor", () => {
     expect(result[1].id).toBe("uuid-2");
     expect(result[1].dto).toBeInstanceOf(MockLightDto);
   });
-
-  it("should process multiple models into full DTOs", async () => {
-    const models: TestModel[] = [{ uuid: "uuid-1" }, { uuid: "uuid-2" }];
-
-    const result = await processor.getFullDtos(models);
-
-    expect(result).toHaveLength(2);
-    expect(result[0].id).toBe("uuid-1");
-    expect(result[0].dto).toBeInstanceOf(MockFullDto);
-    expect(result[1].id).toBe("uuid-2");
-    expect(result[1].dto).toBeInstanceOf(MockFullDto);
-  });
 });

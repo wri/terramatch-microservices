@@ -209,6 +209,9 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   updatedAt: Date;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
   file: MediaDto[];
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

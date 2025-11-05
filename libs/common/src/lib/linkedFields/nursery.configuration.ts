@@ -24,6 +24,7 @@ export const NurseryConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
+    "nur-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
     "nur-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
     "nur-col-other-additional-documents": {
       property: "other_additional_documents",

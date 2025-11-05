@@ -53,7 +53,6 @@ export class Form extends Model<Form> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
-  // TODO: type correctly model when forms are implemented on v3
   @AllowNull
   @Column(STRING)
   model: string | null;

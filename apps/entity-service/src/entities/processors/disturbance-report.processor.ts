@@ -5,7 +5,8 @@ import {
   ProjectUser,
   SitePolygon,
   Disturbance,
-  Media
+  Media,
+  Form
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -427,5 +428,12 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
       })
     };
+  }
+
+  async getForm() {
+    if (this._form == null) {
+      this._form = await Form.findOne({ where: { type: "disturbance-report" } });
+    }
+    return this._form;
   }
 }

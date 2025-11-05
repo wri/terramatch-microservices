@@ -36,6 +36,7 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { MediaDto } from "../entities/dto/media.dto";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -254,7 +255,7 @@ export class FormsService {
     return await this.localizationService.translateIds(
       filter(
         uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds, optionI18nIds])),
-        id => id != null
+        isNotNull
       ),
       await this.getUserLocale()
     );

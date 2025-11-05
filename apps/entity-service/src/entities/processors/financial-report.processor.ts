@@ -3,7 +3,8 @@ import {
   FundingType,
   FinancialIndicator,
   Media,
-  Organisation
+  Organisation,
+  Form
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -195,6 +196,13 @@ export class FinancialReportProcessor extends ReportProcessor<
 
   async getLightDto(financialReport: FinancialReport) {
     return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
+  }
+
+  async getForm() {
+    if (this._form == null) {
+      this._form = await Form.findOne({ where: { type: "financial-report" } });
+    }
+    return this._form;
   }
 
   protected async getFundingTypes(financialReport: FinancialReport) {

@@ -43,7 +43,6 @@ describe("FilesController", () => {
       createMediaOwnerProcessor: jest.fn().mockReturnValue(mockMediaOwnerProcessor),
       userId: "user-uuid"
     } as unknown as jest.Mocked<EntitiesService>;
-    mockGetBaseEntityByLaravelTypeAndId = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilesController],

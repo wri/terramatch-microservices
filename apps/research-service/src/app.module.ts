@@ -18,6 +18,8 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
 import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { VoronoiService } from "./voronoi/voronoi.service";
+import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
+import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 
 @Module({
   imports: [
@@ -38,7 +40,7 @@ import { VoronoiService } from "./voronoi/voronoi.service";
     }),
     BullModule.registerQueue({ name: "validation" })
   ],
-  controllers: [SitePolygonsController, BoundingBoxController, ValidationController],
+  controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
   providers: [
     {
       provide: APP_FILTER,
@@ -52,7 +54,8 @@ import { VoronoiService } from "./voronoi/voronoi.service";
     ValidationService,
     ValidationProcessor,
     DuplicateGeometryValidator,
-    VoronoiService
+    VoronoiService,
+    PolygonClippingService
   ]
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { Attributes, Model, Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { ITranslateParams, normalizeLocale, tx, t } from "@transifex/native";
 import { Dictionary } from "lodash";
@@ -74,6 +74,16 @@ export class LocalizationService {
         [i18nItemId]: shortValue ?? longValue
       }),
       {} as Translations
+    );
+  }
+
+  translateFields<M extends Model, K extends (keyof Attributes<M>)[]>(translations: Translations, model: M, fields: K) {
+    return fields.reduce(
+      (translated, field) => ({
+        ...translated,
+        [field]: translations[model[`${String(field)}Id` as Attributes<M>[number]] ?? -1] ?? model[field]
+      }),
+      {} as Record<(typeof fields)[number], string>
     );
   }
 

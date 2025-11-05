@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Scope } from "@nestjs/common";
-import { LocalizationService, Translations } from "@terramatch-microservices/common/localization/localization.service";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { RequestContext } from "nestjs-request-context";
@@ -26,7 +26,7 @@ import {
   StoreFormQuestionOptionAttributes
 } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { Attributes, Model, Op } from "sequelize";
+import { Attributes, Op } from "sequelize";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import {
@@ -155,11 +155,13 @@ export class FormsService {
         name: question.uuid,
         model: config?.model ?? null,
         collection,
-        ...this.translateFields(translations, question, ["label", "description", "placeholder"]),
+        ...this.localizationService.translateFields(translations, question, ["label", "description", "placeholder"]),
         tableHeaders:
           tableHeaders == null
             ? null
-            : sortBy(tableHeaders, "order").map(header => this.translateFields(translations, header, ["label"]).label),
+            : sortBy(tableHeaders, "order").map(
+                header => this.localizationService.translateFields(translations, header, ["label"]).label
+              ),
         options:
           options == null
             ? null
@@ -169,7 +171,7 @@ export class FormsService {
                   slug: option.slug ?? "",
                   imageUrl: optionMediaByOptionId[option.id]?.url ?? option.imageUrl,
                   thumbUrl: optionMediaByOptionId[option.id]?.thumbUrl ?? null,
-                  ...this.translateFields(translations, option, ["label"]),
+                  ...this.localizationService.translateFields(translations, option, ["label"]),
                   altValue: null
                 })
               ),
@@ -185,7 +187,7 @@ export class FormsService {
 
       return new FormSectionDto(section, {
         id: section.uuid,
-        ...this.translateFields(translations, section, ["title", "description"]),
+        ...this.localizationService.translateFields(translations, section, ["title", "description"]),
         questions: sectionQuestions
           .filter(({ parentId }) => parentId == null)
           .map(question => questionToDto(question, sectionQuestions))
@@ -200,7 +202,12 @@ export class FormsService {
       form.uuid,
       new FormFullDto(form, {
         translated,
-        ...this.translateFields(translations, form, ["title", "subtitle", "description", "submissionMessage"]),
+        ...this.localizationService.translateFields(translations, form, [
+          "title",
+          "subtitle",
+          "description",
+          "submissionMessage"
+        ]),
         fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
         banner:
           bannerMedia == null
@@ -258,20 +265,6 @@ export class FormsService {
         isNotNull
       ),
       await this.getUserLocale()
-    );
-  }
-
-  private translateFields<M extends Model, K extends (keyof Attributes<M>)[]>(
-    translations: Translations,
-    model: M,
-    fields: K
-  ) {
-    return fields.reduce(
-      (translated, field) => ({
-        ...translated,
-        [field]: translations[model[`${String(field)}Id`] ?? -1] ?? model[field]
-      }),
-      {} as Record<(typeof fields)[number], string>
     );
   }
 

@@ -18,7 +18,7 @@ export const statusUpdateSequelizeHook = (model: Model) => {
 
 const emitStatusUpdateHook = (from: string, model: Model) => statusUpdateSequelizeHook(model);
 
-export const EntityStatusStates: States<Project | Nursery, EntityStatus> = {
+export const EntityStatusStates: States<Project | Site | Nursery, EntityStatus> = {
   default: STARTED,
 
   transitions: transitions()
@@ -32,15 +32,6 @@ export const EntityStatusStates: States<Project | Nursery, EntityStatus> = {
     [AWAITING_APPROVAL]: emitStatusUpdateHook,
     [NEEDS_MORE_INFORMATION]: emitStatusUpdateHook
   }
-};
-
-export const SITE_STATUSES = [...ENTITY_STATUSES] as const;
-export type SiteStatus = (typeof SITE_STATUSES)[number];
-
-export const SiteStatusStates: States<Site, SiteStatus> = {
-  ...(EntityStatusStates as unknown as States<Site, SiteStatus>),
-
-  transitions: transitions<SiteStatus>(EntityStatusStates.transitions).from(APPROVED, to => [...to]).transitions
 };
 
 export const DUE = "due";
@@ -103,13 +94,7 @@ export const PENDING = "pending";
 export const ORGANISATION_STATUSES = [APPROVED, PENDING, REJECTED, DRAFT] as const;
 export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];
 
-type AllStatuses =
-  | EntityStatus
-  | SiteStatus
-  | ReportStatus
-  | UpdateRequestStatus
-  | FormSubmissionStatus
-  | OrganisationStatus;
+type AllStatuses = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
 
 /**
  * A mapping of all statuses to an English language display string for that status.

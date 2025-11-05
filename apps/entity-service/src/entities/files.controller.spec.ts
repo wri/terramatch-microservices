@@ -10,6 +10,12 @@ import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaRequestBody } from "./dto/media-request.dto";
+import { Project } from "@terramatch-microservices/database/entities";
+import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
+
+jest.mock("./processors/media-owner-processor", () => ({
+  getBaseEntityByLaravelTypeAndId: jest.fn()
+}));
 
 describe("FilesController", () => {
   let controller: FilesController;
@@ -18,6 +24,7 @@ describe("FilesController", () => {
   let mediaService: jest.Mocked<MediaService>;
   let entitiesService: jest.Mocked<EntitiesService>;
   let mockMediaOwnerProcessor: { getBaseEntity: jest.Mock };
+  let mockGetBaseEntityByLaravelTypeAndId: jest.Mock;
 
   beforeEach(async () => {
     fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;
@@ -37,6 +44,7 @@ describe("FilesController", () => {
       createMediaOwnerProcessor: jest.fn().mockReturnValue(mockMediaOwnerProcessor),
       userId: "user-uuid"
     } as unknown as jest.Mocked<EntitiesService>;
+    mockGetBaseEntityByLaravelTypeAndId = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilesController],
@@ -117,11 +125,15 @@ describe("FilesController", () => {
   describe("mediaDelete", () => {
     it("should call the media service to delete the media", async () => {
       mediaService.deleteMediaByUuid = jest.fn();
-      await controller.mediaDelete({ uuid: "test-uuid" });
-      expect(mediaService.deleteMediaByUuid).toHaveBeenCalledWith("test-uuid");
+      mediaService.getMedia.mockResolvedValue({ modelType: Project.LARAVEL_TYPE, modelId: 1 } as Media);
+      const model = { uuid: "model-uuid", id: 1 };
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      await controller.mediaDelete({ uuid: "model-uuid" });
+      expect(mediaService.deleteMediaByUuid).toHaveBeenCalledWith("model-uuid");
     });
 
     it("should return the deleted media response", async () => {
+      mediaService.getMedia.mockResolvedValue({ modelType: Project.LARAVEL_TYPE, modelId: 1 } as Media);
       const media = await controller.mediaDelete({ uuid: "test-uuid" });
       expect(media).toEqual({ meta: { resourceType: "medias", resourceId: "test-uuid" } });
     });

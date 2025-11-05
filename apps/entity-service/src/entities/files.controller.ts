@@ -26,6 +26,7 @@ import "multer";
 import { MediaRequestBody } from "./dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -101,7 +102,8 @@ export class FilesController {
   async mediaDelete(@Param() { uuid }: { uuid: string }) {
     this.logger.debug(`Deleting media ${uuid}`);
     const media = await this.mediaService.getMedia(uuid);
-    await this.policyService.authorize("deleteFiles", media);
+    const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+    await this.policyService.authorize("deleteFiles", model);
     await this.mediaService.deleteMediaByUuid(uuid);
     return buildDeletedResponse("medias", uuid);
   }

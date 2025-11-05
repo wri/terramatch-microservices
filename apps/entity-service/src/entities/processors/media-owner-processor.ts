@@ -1,11 +1,14 @@
 import {
   EntityMediaOwnerClass,
+  MEDIA_OWNER_MODEL_LARAVEL_TYPES,
   MEDIA_OWNER_MODELS,
   MediaOwnerModel,
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { intersection } from "lodash";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+
+const BASE_MODEL_ATTRIBUTES = ["id", "frameworkKey", "projectId", "siteId", "nurseryId", "organisationId", "createdBy"];
 
 export class MediaOwnerProcessor {
   constructor(
@@ -16,7 +19,7 @@ export class MediaOwnerProcessor {
 
   get baseModelAttributes() {
     // Only pull the attributes that are needed by the entity policies.
-    return ["id", "frameworkKey", "projectId", "siteId", "nurseryId", "organisationId", "createdBy"];
+    return BASE_MODEL_ATTRIBUTES;
   }
 
   private _baseEntity: MediaOwnerModel;
@@ -35,3 +38,16 @@ export class MediaOwnerProcessor {
     return (this._baseEntity = model);
   }
 }
+
+export const getBaseEntityByLaravelTypeAndId = async (laravelType: string, mediaOwnerId: number) => {
+  const mediaOwnerModel = MEDIA_OWNER_MODEL_LARAVEL_TYPES[laravelType];
+  if (mediaOwnerModel == null) {
+    throw new BadRequestException(`Media owner type invalid: ${laravelType}`);
+  }
+  const attributes = intersection(BASE_MODEL_ATTRIBUTES, Object.keys(mediaOwnerModel.getAttributes()));
+  const model = await mediaOwnerModel.findOne({ where: { id: mediaOwnerId }, attributes });
+  if (model == null) {
+    throw new NotFoundException(`Base entity not found: [${mediaOwnerModel.name}, ${mediaOwnerId}]`);
+  }
+  return model;
+};

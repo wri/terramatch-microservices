@@ -148,7 +148,23 @@ export class SitePolygonCreationService {
         const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
-          const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId);
+          const voronoiFeatures: Feature[] = [];
+          const regularFeatures: Feature[] = [];
+
+          for (const feature of typeFeatures) {
+            if (feature.properties?._fromVoronoi === true) {
+              voronoiFeatures.push(feature);
+            } else {
+              regularFeatures.push(feature);
+            }
+          }
+
+          let duplicateIndexToUuid = new Map<number, string>();
+          if (regularFeatures.length > 0) {
+            const duplicateResult = await this.checkDuplicates(regularFeatures, siteId);
+            duplicateIndexToUuid = duplicateResult.duplicateIndexToUuid;
+          }
+
           const existingDuplicateUuids: string[] = [];
           const duplicateValidationMap = new Map<string, ValidationIncludedData>();
 
@@ -204,13 +220,18 @@ export class SitePolygonCreationService {
             duplicateValidations.push(...duplicateValidationMap.values());
           }
 
-          const { filteredFeatures } = this.filterDuplicates(typeFeatures, duplicateIndexToUuid);
+          const { filteredFeatures: filteredRegularFeatures } = this.filterDuplicates(
+            regularFeatures,
+            duplicateIndexToUuid
+          );
+
+          const allFeaturesToCreate = [...filteredRegularFeatures, ...voronoiFeatures];
 
           let createdSitePolygons: SitePolygon[];
-          if (filteredFeatures.length > 0) {
-            if (filteredFeatures.length > LARGE_BATCH_THRESHOLD) {
+          if (allFeaturesToCreate.length > 0) {
+            if (allFeaturesToCreate.length > LARGE_BATCH_THRESHOLD) {
               createdSitePolygons = await this.processLargeGeometryBatch(
-                filteredFeatures,
+                allFeaturesToCreate,
                 siteId,
                 userId,
                 source,
@@ -218,7 +239,7 @@ export class SitePolygonCreationService {
               );
             } else {
               createdSitePolygons = await this.createPolygonsBatch(
-                filteredFeatures,
+                allFeaturesToCreate,
                 siteId,
                 userId,
                 source,
@@ -325,6 +346,12 @@ export class SitePolygonCreationService {
     }
 
     const voronoiPolys = newPoints.length > 0 ? await this.voronoiService.transformPointsToPolygons(newPoints) : [];
+
+    for (const voronoiPoly of voronoiPolys) {
+      if (voronoiPoly.properties != null) {
+        voronoiPoly.properties._fromVoronoi = true;
+      }
+    }
 
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
     return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids };

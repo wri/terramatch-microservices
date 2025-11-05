@@ -95,7 +95,7 @@ export class SitePolygonCreationService {
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries, userId, transaction);
+        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries, siteId, userId, transaction);
         const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
@@ -210,6 +210,7 @@ export class SitePolygonCreationService {
 
   private async transformPointFeaturesToPolygons(
     features: Feature[],
+    siteId: string,
     userId: number,
     transaction: Transaction
   ): Promise<Feature[]> {
@@ -228,14 +229,55 @@ export class SitePolygonCreationService {
       }
     }
 
-    const pointUuids = await this.pointGeometryService.createPointGeometriesFromFeatures(points, userId, transaction);
+    // Check for duplicate points before creating new ones
+    const { duplicateIndexToUuid: pointDuplicateMap } = await this.duplicateGeometryValidator.checkNewPointsDuplicates(
+      points,
+      siteId
+    );
 
-    for (let i = 0; i < points.length && i < pointUuids.length; i++) {
+    // Separate points into duplicates and new ones
+    const newPoints: Feature[] = [];
+    const newPointIndices: number[] = [];
+    const pointIndexToUuidMap = new Map<number, string>();
+
+    for (let i = 0; i < points.length; i++) {
+      const existingUuid = pointDuplicateMap.get(i);
+      if (existingUuid != null) {
+        // Point already exists, reuse existing UUID
+        pointIndexToUuidMap.set(i, existingUuid);
+      } else {
+        // New point, will be created
+        newPoints.push(points[i]);
+        newPointIndices.push(i);
+      }
+    }
+
+    // Create point geometries only for new (non-duplicate) points
+    const newPointUuids: string[] = [];
+    if (newPoints.length > 0) {
+      const createdUuids = await this.pointGeometryService.createPointGeometriesFromFeatures(
+        newPoints,
+        userId,
+        transaction
+      );
+      newPointUuids.push(...createdUuids);
+
+      // Map newly created UUIDs to their original indices
+      for (let j = 0; j < newPointUuids.length && j < newPointIndices.length; j++) {
+        pointIndexToUuidMap.set(newPointIndices[j], newPointUuids[j]);
+      }
+    }
+
+    // Assign point UUIDs to all point features
+    for (let i = 0; i < points.length; i++) {
       const point = points[i];
+      const pointUuid = pointIndexToUuidMap.get(i);
       if (point.properties == null) {
         throw new BadRequestException("Point feature properties cannot be null");
       }
-      point.properties._pointUuid = pointUuids[i];
+      if (pointUuid != null) {
+        point.properties._pointUuid = pointUuid;
+      }
     }
 
     const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points);

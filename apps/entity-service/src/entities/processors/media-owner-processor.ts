@@ -17,16 +17,11 @@ export class MediaOwnerProcessor {
     private readonly mediaOwnerModel: EntityMediaOwnerClass<MediaOwnerModel>
   ) {}
 
-  get baseModelAttributes() {
-    // Only pull the attributes that are needed by the entity policies.
-    return BASE_MODEL_ATTRIBUTES;
-  }
-
   private _baseEntity: MediaOwnerModel;
   async getBaseEntity(): Promise<MediaOwnerModel> {
     if (this._baseEntity != null) return this._baseEntity;
 
-    const attributes = intersection(this.baseModelAttributes, Object.keys(this.mediaOwnerModel.getAttributes()));
+    const attributes = intersection(BASE_MODEL_ATTRIBUTES, Object.keys(this.mediaOwnerModel.getAttributes()));
 
     const mediaOwnerClass = MEDIA_OWNER_MODELS[this.mediaOwnerType];
     const model = await mediaOwnerClass.findOne({ where: { uuid: this.mediaOwnerUuid }, attributes });

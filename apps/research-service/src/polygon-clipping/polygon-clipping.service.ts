@@ -5,6 +5,7 @@ import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/cons
 import { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import { simplify } from "@turf/simplify";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon } from "@turf/helpers";
+import { isNotNull } from "@terramatch-microservices/common/util/array";
 
 interface OverlapInfo {
   polyUuid: string;
@@ -22,14 +23,14 @@ interface ClippedPolygonResult {
   areaRemoved: number;
 }
 
+const MAX_OVERLAP_PERCENTAGE = 3.5;
+const MAX_OVERLAP_AREA_HECTARES = 0.118;
+const BUFFER_DISTANCE = 0.000001;
+const OVERLAPPING_CRITERIA_ID = VALIDATION_CRITERIA_IDS.OVERLAPPING;
+
 @Injectable()
 export class PolygonClippingService {
   private readonly logger = new Logger(PolygonClippingService.name);
-
-  private readonly MAX_OVERLAP_PERCENTAGE = 3.5;
-  private readonly MAX_OVERLAP_AREA_HECTARES = 0.118;
-  private readonly BUFFER_DISTANCE = 0.000001;
-  private readonly OVERLAPPING_CRITERIA_ID = VALIDATION_CRITERIA_IDS.OVERLAPPING;
 
   async getFixablePolygonsForSite(siteUuid: string): Promise<string[]> {
     const site = await Site.findOne({ where: { uuid: siteUuid } });
@@ -43,7 +44,7 @@ export class PolygonClippingService {
       attributes: ["polygonUuid"]
     });
 
-    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(uuid => uuid != null) as string[];
+    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
 
     if (polygonUuids.length === 0) {
       return [];
@@ -74,7 +75,7 @@ export class PolygonClippingService {
       attributes: ["polygonUuid"]
     });
 
-    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(uuid => uuid != null) as string[];
+    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
 
     if (polygonUuids.length === 0) {
       return [];
@@ -91,7 +92,7 @@ export class PolygonClippingService {
     const criteriaRecords = await CriteriaSite.findAll({
       where: {
         polygonId: polygonUuids,
-        criteriaId: this.OVERLAPPING_CRITERIA_ID,
+        criteriaId: OVERLAPPING_CRITERIA_ID,
         valid: false
       },
       attributes: ["polygonId", "extraInfo"]
@@ -108,8 +109,8 @@ export class PolygonClippingService {
 
       for (const overlap of overlaps) {
         const isFixable =
-          overlap.percentage <= this.MAX_OVERLAP_PERCENTAGE &&
-          overlap.intersectionArea <= this.MAX_OVERLAP_AREA_HECTARES &&
+          overlap.percentage <= MAX_OVERLAP_PERCENTAGE &&
+          overlap.intersectionArea <= MAX_OVERLAP_AREA_HECTARES &&
           overlap.polyUuid != null;
 
         if (isFixable) {
@@ -122,7 +123,7 @@ export class PolygonClippingService {
     return Array.from(fixablePolygonSet);
   }
 
-  async filterFixablePolygonsFromList(polygonUuids: string[]): Promise<string[]> {
+  filterFixablePolygonsFromList(polygonUuids: string[]): Promise<string[]> {
     return this.filterFixablePolygons(polygonUuids);
   }
 
@@ -180,7 +181,7 @@ export class PolygonClippingService {
     const criteriaRecords = await CriteriaSite.findAll({
       where: {
         polygonId: polygonUuids,
-        criteriaId: this.OVERLAPPING_CRITERIA_ID,
+        criteriaId: OVERLAPPING_CRITERIA_ID,
         valid: false
       },
       attributes: ["polygonId", "extraInfo"]
@@ -198,8 +199,8 @@ export class PolygonClippingService {
 
       for (const overlap of overlaps) {
         const isFixable =
-          overlap.percentage <= this.MAX_OVERLAP_PERCENTAGE &&
-          overlap.intersectionArea <= this.MAX_OVERLAP_AREA_HECTARES &&
+          overlap.percentage <= MAX_OVERLAP_PERCENTAGE &&
+          overlap.intersectionArea <= MAX_OVERLAP_AREA_HECTARES &&
           overlap.polyUuid != null;
 
         if (isFixable) {
@@ -381,7 +382,7 @@ export class PolygonClippingService {
           `;
 
         const replacements: Record<string, string> = {
-          bufferDistance: this.BUFFER_DISTANCE.toString(),
+          bufferDistance: BUFFER_DISTANCE.toString(),
           smallerUuid
         };
 

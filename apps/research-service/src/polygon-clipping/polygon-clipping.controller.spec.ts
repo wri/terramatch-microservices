@@ -5,11 +5,7 @@ import { PolygonClippingController } from "./polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import {
-  SitePolygonClippingRequestBody,
-  ProjectPolygonClippingRequestBody,
-  PolygonListClippingRequestBody
-} from "./dto/clip-polygon-request.dto";
+import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
 import { FeatureCollection, Polygon, MultiPolygon } from "geojson";
 
 describe("PolygonClippingController", () => {
@@ -92,19 +88,11 @@ describe("PolygonClippingController", () => {
 
   describe("createSitePolygonClipping", () => {
     const siteUuid = "550e8400-e29b-41d4-a716-446655440000";
-    const payload: SitePolygonClippingRequestBody = {
-      data: {
-        type: "polygon-clipping",
-        attributes: {
-          siteUuid
-        }
-      }
-    };
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.createSitePolygonClipping(payload)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.createSitePolygonClipping(siteUuid)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
       expect(clippingService.getFixablePolygonsForSite).not.toHaveBeenCalled();
     });
@@ -113,7 +101,7 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockResolvedValue([]);
 
-      await expect(controller.createSitePolygonClipping(payload)).rejects.toThrow(NotFoundException);
+      await expect(controller.createSitePolygonClipping(siteUuid)).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
     });
 
@@ -136,7 +124,7 @@ describe("PolygonClippingController", () => {
       clippingService.clipPolygons.mockResolvedValue(clippedResults);
       clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
 
-      const result = await controller.createSitePolygonClipping(payload);
+      const result = await controller.createSitePolygonClipping(siteUuid);
 
       expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
@@ -182,7 +170,7 @@ describe("PolygonClippingController", () => {
       clippingService.clipPolygons.mockResolvedValue(clippedResults);
       clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
 
-      const result = await controller.createSitePolygonClipping(payload);
+      const result = await controller.createSitePolygonClipping(siteUuid);
 
       expect(result.summary.totalPolygonsProcessed).toBe(3);
       expect(result.summary.polygonsClipped).toBe(2);
@@ -191,19 +179,11 @@ describe("PolygonClippingController", () => {
 
   describe("createProjectPolygonClipping", () => {
     const siteUuid = "550e8400-e29b-41d4-a716-446655440000";
-    const payload: ProjectPolygonClippingRequestBody = {
-      data: {
-        type: "polygon-clipping",
-        attributes: {
-          siteUuid
-        }
-      }
-    };
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.createProjectPolygonClipping(payload)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.createProjectPolygonClipping(siteUuid)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
       expect(clippingService.getFixablePolygonsForProjectBySite).not.toHaveBeenCalled();
     });
@@ -212,7 +192,7 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForProjectBySite.mockResolvedValue([]);
 
-      await expect(controller.createProjectPolygonClipping(payload)).rejects.toThrow(NotFoundException);
+      await expect(controller.createProjectPolygonClipping(siteUuid)).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForProjectBySite).toHaveBeenCalledWith(siteUuid);
     });
 
@@ -235,7 +215,7 @@ describe("PolygonClippingController", () => {
       clippingService.clipPolygons.mockResolvedValue(clippedResults);
       clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
 
-      const result = await controller.createProjectPolygonClipping(payload);
+      const result = await controller.createProjectPolygonClipping(siteUuid);
 
       expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
       expect(clippingService.getFixablePolygonsForProjectBySite).toHaveBeenCalledWith(siteUuid);

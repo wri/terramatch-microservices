@@ -1,17 +1,21 @@
-import { Body, Controller, NotFoundException, Post, UnauthorizedException, BadRequestException } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  NotFoundException,
+  Post,
+  UnauthorizedException,
+  BadRequestException,
+  Param
+} from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
 import { PolygonClippingService } from "./polygon-clipping.service";
-import {
-  SitePolygonClippingRequestBody,
-  ProjectPolygonClippingRequestBody,
-  PolygonListClippingRequestBody
-} from "./dto/clip-polygon-request.dto";
+import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 
 @ApiTags("Polygon Clipping")
-@Controller("polygon-clipping/v3")
+@Controller("polygonClipping/v3")
 export class PolygonClippingController {
   constructor(
     private readonly clippingService: PolygonClippingService,
@@ -20,7 +24,7 @@ export class PolygonClippingController {
 
   // These endpoints do NOT modify the database as we do not create new versions yet. It is here for testing clipping logic.
 
-  @Post("site/clipped-polygons")
+  @Post("sites/:siteUuid/clippedPolygons")
   @ApiOperation({
     operationId: "createSitePolygonClipping",
     summary: "Create polygon clipping for a site",
@@ -30,10 +34,8 @@ export class PolygonClippingController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site not found or no fixable overlapping polygons." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  async createSitePolygonClipping(@Body() payload: SitePolygonClippingRequestBody) {
+  async createSitePolygonClipping(@Param("siteUuid") siteUuid: string) {
     await this.policyService.authorize("readAll", SitePolygon);
-
-    const siteUuid = payload.data.attributes.siteUuid;
 
     const fixablePolygons = await this.clippingService.getFixablePolygonsForSite(siteUuid);
 
@@ -57,7 +59,7 @@ export class PolygonClippingController {
     };
   }
 
-  @Post("project/clipped-polygons")
+  @Post("projects/:siteUuid/clippedPolygons")
   @ApiOperation({
     operationId: "createProjectPolygonClipping",
     summary: "Create polygon clipping for a project",
@@ -67,10 +69,8 @@ export class PolygonClippingController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Project not found or no fixable overlapping polygons." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  async createProjectPolygonClipping(@Body() payload: ProjectPolygonClippingRequestBody) {
+  async createProjectPolygonClipping(@Param("siteUuid") siteUuid: string) {
     await this.policyService.authorize("readAll", SitePolygon);
-
-    const siteUuid = payload.data.attributes.siteUuid;
 
     const fixablePolygons = await this.clippingService.getFixablePolygonsForProjectBySite(siteUuid);
 

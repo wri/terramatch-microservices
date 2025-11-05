@@ -175,7 +175,7 @@ export class NurseryReportProcessor extends ReportProcessor<
   protected async getReportTitle(nurseryReport: NurseryReport) {
     return await this.getReportTitleBase(
       nurseryReport.dueAt,
-      nurseryReport.title ?? (await this.entitiesService.localizeText("Site Report"))
+      nurseryReport.title ?? (await this.entitiesService.localizeText("Nursery Report"))
     );
   }
 

@@ -3,17 +3,14 @@ import { Attributes, col, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { BadRequestException, NotFoundException, Type } from "@nestjs/common";
+import { BadRequestException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
-import { Form, ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
-import { laravelType } from "@terramatch-microservices/database/types/util";
-import { FormDataDto } from "../dto/form-data.dto";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export type Aggregate<M extends Model<M>> = {
   func: string;
@@ -169,31 +166,6 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
-  }
-
-  protected _form: Form | null;
-  async getForm(model: ModelType) {
-    if (this._form == null) {
-      this._form = await Form.findOne({ where: { model: laravelType(model), frameworkKey: model.frameworkKey } });
-    }
-    return this._form;
-  }
-
-  async getFormDataDto(model: ModelType): Promise<FormDataDto> {
-    const form = await this.getForm(model);
-    if (form == null) throw new NotFoundException("Form for entity not found");
-
-    const translations = form.titleId == null ? {} : await this.entitiesService.translateIds([form.titleId]);
-    const formTitle =
-      form.titleId == null || translations[form.titleId] == null ? form.title : (translations[form.titleId] as string);
-    return populateDto(new FormDataDto(), {
-      entityType: this.resource,
-      entityUuid: model.uuid,
-      formUuid: form.uuid,
-      formTitle,
-      feedback: model.feedback,
-      feedbackFields: model.feedbackFields
-    });
   }
 }
 

@@ -1,17 +1,16 @@
 import {
+  Disturbance,
   DisturbanceReport,
   DisturbanceReportEntry,
+  Media,
   Project,
   ProjectUser,
-  SitePolygon,
-  Disturbance,
-  Media,
-  Form
+  SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
-import { Op, Includeable, CreationAttributes } from "sequelize";
+import { CreationAttributes, Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
   DisturbanceReportFullDto,
@@ -428,12 +427,5 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
       })
     };
-  }
-
-  async getForm() {
-    if (this._form == null) {
-      this._form = await Form.findOne({ where: { type: "disturbance-report" } });
-    }
-    return this._form;
   }
 }

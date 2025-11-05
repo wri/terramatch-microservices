@@ -145,10 +145,6 @@ export class EntitiesService {
     return await this.localizationService.localizeText(text, await this.getUserLocale(), params);
   }
 
-  async translateIds(ids: number[]) {
-    return await this.localizationService.translateIds(ids, await this.getUserLocale());
-  }
-
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
     const processorClass = ENTITY_PROCESSORS[entity];
     if (processorClass == null) {

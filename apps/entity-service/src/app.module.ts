@@ -25,6 +25,7 @@ import { LinkedFieldsController } from "./forms/linked-fields.controller";
 import { FormsController } from "./forms/forms.controller";
 import { FormsService } from "./forms/forms.service";
 import { FormDataController } from "./entities/form-data.controller";
+import { FormDataService } from "./entities/form-data.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -59,7 +60,8 @@ import { FormDataController } from "./entities/form-data.controller";
     TasksService,
     DemographicService,
     DisturbanceService,
-    FormsService
+    FormsService,
+    FormDataService
   ]
 })
 export class AppModule {}

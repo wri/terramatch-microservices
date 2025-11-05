@@ -26,7 +26,7 @@ describe("FormPolicy", () => {
     await expectCan(service, ["uploadFiles"], form);
   });
 
-  it("should disallow uploading files for forms in a different framework", async () => {
+  it("should disallow uploading files for forms if you cannot forms manage", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("framework-terrafund");

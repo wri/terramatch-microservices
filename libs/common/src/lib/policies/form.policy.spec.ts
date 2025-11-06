@@ -31,7 +31,7 @@ describe("FormPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("framework-terrafund");
-    const form = await FormFactory.create({ frameworkKey: "framework-ppc" });
+    const form = await FormFactory.create({ frameworkKey: "ppc" });
     await expectCannot(service, ["uploadFiles"], form);
   });
 });

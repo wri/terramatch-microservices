@@ -1,17 +1,9 @@
-import {
-  AllowNull,
-  AutoIncrement,
-  Column,
-  Default,
-  ForeignKey,
-  Index,
-  Model,
-  PrimaryKey,
-  Table
-} from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { StateMachineColumn } from "../util/model-column-state-machine";
+import { DelayedJobStatus, DelayedJobStatusStates } from "../constants/status";
 
 // holds the definition for members that may exist in a job metadata that this codebase explicitly
 // references.
@@ -31,9 +23,8 @@ export class DelayedJob extends Model<DelayedJob> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
-  @Default("pending")
-  @Column(STRING)
-  status: string;
+  @StateMachineColumn(DelayedJobStatusStates)
+  status: DelayedJobStatus;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))

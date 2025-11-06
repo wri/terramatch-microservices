@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectCan, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
 import { FormFactory, UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("FormPolicy", () => {
@@ -18,12 +18,19 @@ describe("FormPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("should allow uploading files for forms in your framework", async () => {
+  it("should allow uploading files to forms if you can forms manage", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
-    const frameworkKey = "ppc";
-    mockPermissions(`framework-${frameworkKey}`);
-    const form = await FormFactory.create({ frameworkKey });
+    mockPermissions("custom-forms-manage");
+    const form = await FormFactory.create();
     await expectCan(service, ["uploadFiles"], form);
+  });
+
+  it("should disallow uploading files for forms if you cannot forms manage", async () => {
+    const user = await UserFactory.create();
+    mockUserId(user.id);
+    mockPermissions("framework-terrafund");
+    const form = await FormFactory.create();
+    await expectCannot(service, ["uploadFiles"], form);
   });
 });

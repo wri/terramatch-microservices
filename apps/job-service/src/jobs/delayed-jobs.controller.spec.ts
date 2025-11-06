@@ -8,6 +8,7 @@ import { NotFoundException } from "@nestjs/common";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { DelayedJobFactory } from "@terramatch-microservices/database/factories";
 
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;
@@ -28,18 +29,11 @@ describe("DelayedJobsController", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
+
   describe("getRunningJobs", () => {
     it("should return a job with null entity_name if metadata is null", async () => {
       const authenticatedUserId = 130999;
-
-      const job = await DelayedJob.create({
-        uuid: uuidv4(),
-        createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
-        metadata: null
-      } as DelayedJob);
-
+      const job = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId });
       const request = { authenticatedUserId };
       const result = serialize(await controller.getRunningJobs(request));
 
@@ -49,17 +43,13 @@ describe("DelayedJobsController", () => {
       expect(data[0]?.id).toBe(job.uuid);
       expect(data[0]?.attributes.entityName).toBeUndefined();
     });
+
     it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
-
-      const job = await DelayedJob.create({
-        uuid: uuidv4(),
+      const job = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
         metadata: { entity_name: "TestEntity" }
-      } as DelayedJob);
-
+      });
       const request = { authenticatedUserId };
       const result = serialize(await controller.getRunningJobs(request));
 
@@ -74,18 +64,9 @@ describe("DelayedJobsController", () => {
 
     it("should return a job with null entity_name if metadata does not have entity_name", async () => {
       const authenticatedUserId = 130999;
-
-      const job = await DelayedJob.create({
-        uuid: uuidv4(),
-        createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
-        metadata: {}
-      } as DelayedJob);
-
+      const job = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId, metadata: {} });
       const request = { authenticatedUserId };
       const result = serialize(await controller.getRunningJobs(request));
-
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
       expect(data).toHaveLength(1);
@@ -99,18 +80,15 @@ describe("DelayedJobsController", () => {
   describe("findOne", () => {
     it("should return a job by UUID with entity_name", async () => {
       const authenticatedUserId = 130999;
-      const job = await DelayedJob.create({
-        uuid: uuidv4(),
+      const job = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
-        metadata: { entity_name: "TestEntity" } // Adding entity_name
-      } as DelayedJob);
-
+        metadata: { entity_name: "TestEntity" }
+      });
       const result = serialize(await controller.findOne(job.uuid));
       const jobData = Array.isArray(result.data) ? result.data[0] : result.data;
       expect(jobData?.id).toBe(job.uuid);
     });
+
     it("should throw NotFoundException when the job does not exist", async () => {
       const nonExistentUuid = uuidv4();
 
@@ -121,32 +99,21 @@ describe("DelayedJobsController", () => {
   describe("bulkUdpateJobs", () => {
     it("should successfully update jobs with null metadata", async () => {
       const authenticatedUserId = 130999;
-      const job = await DelayedJob.create({
-        uuid: uuidv4(),
+      const job1 = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId });
+      const job2 = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
-        metadata: null
-      } as DelayedJob);
-
-      const job1 = await DelayedJob.create({
-        uuid: uuidv4(),
-        createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
         metadata: { entity_name: "TestEntity1" }
-      } as DelayedJob);
-
+      });
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [
           {
             type: "delayedJobs",
-            uuid: job.uuid,
+            uuid: job1.uuid,
             attributes: { isAcknowledged: true }
           },
           {
             type: "delayedJobs",
-            uuid: job1.uuid,
+            uuid: job2.uuid,
             attributes: { isAcknowledged: true }
           }
         ]
@@ -156,30 +123,25 @@ describe("DelayedJobsController", () => {
 
       const result = serialize(await controller.bulkUpdateJobs(payload, request));
       expect(result.data).toHaveLength(2);
-      expect(result.data![0].id).toBe(job.uuid);
+      expect(result.data![0].id).toBe(job1.uuid);
       expect(result.data![0].attributes.entityName).toBeUndefined();
-      expect(result.data![1].id).toBe(job1.uuid);
+      expect(result.data![1].id).toBe(job2.uuid);
       expect(result.data![1].attributes.entityName).toBe("TestEntity1");
 
-      const updatedJob = await DelayedJob.findOne({ where: { uuid: job.uuid } });
+      const updatedJob = await DelayedJob.findOne({ where: { uuid: job1.uuid } });
       expect(updatedJob?.isAcknowledged).toBe(true);
     });
+
     it("should successfully bulk update jobs to acknowledged with entity_name", async () => {
       const authenticatedUserId = 130999;
-      const job1 = await DelayedJob.create({
-        uuid: uuidv4(),
+      const job1 = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "completed",
         metadata: { entity_name: "TestEntity1" } // Adding entity_name
-      } as DelayedJob);
-      const job2 = await DelayedJob.create({
-        uuid: uuidv4(),
+      });
+      const job2 = await DelayedJobFactory.failed.create({
         createdBy: authenticatedUserId,
-        isAcknowledged: false,
-        status: "failed",
         metadata: { entity_name: "TestEntity2" } // Adding entity_name
-      } as DelayedJob);
+      });
 
       const payload: DelayedJobBulkUpdateBodyDto = {
         data: [

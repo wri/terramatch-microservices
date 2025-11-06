@@ -3,8 +3,8 @@ import { Form } from "@terramatch-microservices/database/entities";
 
 export class FormPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.frameworks?.length > 0) {
-      this.builder.can(["uploadFiles"], Form);
+    if (this.permissions.includes("custom-forms-manage")) {
+      this.builder.can(["uploadFiles", "delete", "create", "update"], Form);
     }
   }
 }

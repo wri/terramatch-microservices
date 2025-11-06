@@ -28,7 +28,6 @@ describe("TasksController", () => {
     }).compile();
 
     controller = module.get(TasksController);
-    service = module.get(TasksService);
 
     // Mock addFullTaskDto to add data to the document for each task
     service.addFullTaskDto.mockImplementation(async (document, task) => {

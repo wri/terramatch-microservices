@@ -1,13 +1,7 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectCan, mockPermissions, mockUserId } from "./policy.service.spec";
-import {
-  FormFactory,
-  FormQuestionFactory,
-  FormQuestionOptionFactory,
-  UserFactory,
-  FormSectionFactory
-} from "@terramatch-microservices/database/factories";
+import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { FormQuestionOptionFactory, UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("FormQuestionOptionPolicy", () => {
   let service: PolicyService;
@@ -24,15 +18,19 @@ describe("FormQuestionOptionPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("should allow uploading files for question options in forms updated by the user", async () => {
+  it("should allow uploading files for question options if you can forms manage", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
-    const frameworkKey = "ppc";
-    mockPermissions(`framework-${frameworkKey}`);
-    const form = await FormFactory.create({ frameworkKey });
-    const section = await FormSectionFactory.create({ formId: form.uuid });
-    const question = await FormQuestionFactory.create({ formSectionId: section.id });
-    const option = await FormQuestionOptionFactory.create({ formQuestionId: question.id });
+    mockPermissions("custom-forms-manage");
+    const option = await FormQuestionOptionFactory.create();
     await expectCan(service, ["uploadFiles"], option);
+  });
+
+  it("should disallow uploading files for question options if you cannot forms manage", async () => {
+    const user = await UserFactory.create();
+    mockUserId(user.id);
+    mockPermissions("framework-terrafund");
+    const option = await FormQuestionOptionFactory.create();
+    await expectCannot(service, ["uploadFiles"], option);
   });
 });

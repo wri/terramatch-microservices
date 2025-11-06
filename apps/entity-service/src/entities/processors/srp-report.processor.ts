@@ -41,9 +41,10 @@ export class SrpReportProcessor extends ReportProcessor<
       include: [
         {
           association: "project",
-          attributes: ["id", "uuid", "name", "country"],
+          attributes: ["id", "uuid", "name", "country", "status"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
-        }
+        },
+        { association: "task", attributes: ["uuid"] }
       ]
     });
   }
@@ -91,6 +92,10 @@ export class SrpReportProcessor extends ReportProcessor<
         const field = ASSOCIATION_FIELD_MAP[term] ?? term;
         builder.where({ [field]: query[term] });
       }
+    }
+
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
     }
 
     if (query.search != null) {

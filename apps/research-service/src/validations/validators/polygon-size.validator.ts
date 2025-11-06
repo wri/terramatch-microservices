@@ -1,6 +1,8 @@
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
-import { NotFoundException } from "@nestjs/common";
+import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
+import { Geometry, Polygon } from "geojson";
+import { QueryTypes } from "sequelize";
 
 interface PolygonSizeValidationResult extends ValidationResult {
   extraInfo: {
@@ -10,6 +12,7 @@ interface PolygonSizeValidationResult extends ValidationResult {
 
 export class PolygonSizeValidator implements Validator {
   private static readonly MAX_AREA_HECTARES = 1000;
+  private static readonly MAX_AREA_SQ_METERS = 1000000; // 1000 hectares = 1,000,000 square meters
 
   async validatePolygon(polygonUuid: string): Promise<PolygonSizeValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
@@ -55,5 +58,86 @@ export class PolygonSizeValidator implements Validator {
         }
       };
     });
+  }
+
+  async validateGeometry(
+    geometry: Geometry,
+    _properties?: Record<string, unknown>
+  ): Promise<PolygonSizeValidationResult> {
+    if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
+      return {
+        valid: true,
+        extraInfo: {
+          area_hectares: 0
+        }
+      };
+    }
+
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    let totalAreaSqMeters = 0;
+
+    if (geometry.type === "Polygon") {
+      const areaSqMeters = await this.calculateAreaFromGeoJSON(geometry);
+      totalAreaSqMeters = areaSqMeters;
+    } else if (geometry.type === "MultiPolygon") {
+      for (const polygonCoordinates of geometry.coordinates) {
+        const polygonGeometry: Polygon = {
+          type: "Polygon",
+          coordinates: polygonCoordinates
+        };
+        const areaSqMeters = await this.calculateAreaFromGeoJSON(polygonGeometry);
+        totalAreaSqMeters += areaSqMeters;
+      }
+    }
+
+    const areaHectares = totalAreaSqMeters / 10000;
+    const valid = totalAreaSqMeters <= PolygonSizeValidator.MAX_AREA_SQ_METERS;
+
+    return {
+      valid,
+      extraInfo: {
+        area_hectares: areaHectares
+      }
+    };
+  }
+
+  private async calculateAreaFromGeoJSON(geometry: Geometry): Promise<number> {
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    const geojson = JSON.stringify({
+      type: "Feature",
+      geometry,
+      crs: { type: "name", properties: { name: "EPSG:4326" } }
+    });
+
+    const result = (await PolygonGeometry.sequelize.query(
+      `
+        SELECT 
+          ST_Area(ST_GeomFromGeoJSON(:geojson)) AS area,
+          ST_Y(ST_Centroid(ST_GeomFromGeoJSON(:geojson))) AS latitude
+        FROM (SELECT 1) AS dummy
+      `,
+      {
+        replacements: { geojson },
+        type: QueryTypes.SELECT
+      }
+    )) as Array<{ area: number; latitude: number }>;
+
+    if (result.length === 0 || result[0] == null) {
+      return 0;
+    }
+
+    const areaSqDegrees = result[0].area;
+    const latitude = result[0].latitude;
+    const unitLatitude = 111320;
+    const latitudeRad = (latitude * Math.PI) / 180;
+    const areaSqMeters = areaSqDegrees * Math.pow(unitLatitude * Math.cos(latitudeRad), 2);
+
+    return areaSqMeters;
   }
 }

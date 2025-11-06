@@ -2,6 +2,7 @@ import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
+import { Geometry } from "geojson";
 
 interface DataCompletenessValidationResult extends ValidationResult {
   extraInfo: Array<{
@@ -179,5 +180,66 @@ export class DataCompletenessValidator implements Validator {
 
   private isValidInteger(value: unknown): boolean {
     return Number.isInteger(Number(value)) && Number(value) > 0;
+  }
+
+  async validateGeometry(
+    geometry: Geometry,
+    properties?: Record<string, unknown>
+  ): Promise<DataCompletenessValidationResult> {
+    if (properties == null) {
+      return {
+        valid: false,
+        extraInfo: [
+          {
+            field: "properties",
+            error: "Feature properties are required",
+            exists: false
+          }
+        ]
+      };
+    }
+
+    const validationErrors = this.validateProperties(properties);
+    const valid = validationErrors.length === 0;
+
+    return {
+      valid,
+      extraInfo: validationErrors.length > 0 ? validationErrors : null
+    };
+  }
+
+  private validateProperties(properties: Record<string, unknown>): Array<{
+    field: string;
+    error: string;
+    exists: boolean;
+  }> {
+    const validationErrors: Array<{
+      field: string;
+      error: string;
+      exists: boolean;
+    }> = [];
+
+    // Map property names from GeoJSON to SitePolygon field names
+    const propertyMap: Record<string, keyof typeof FIELD_NAME_MAP> = {
+      poly_name: "polyName",
+      practice: "practice",
+      target_sys: "targetSys",
+      distr: "distr",
+      num_trees: "numTrees",
+      plantstart: "plantStart"
+    };
+
+    for (const [propertyKey, fieldKey] of Object.entries(propertyMap)) {
+      const value = properties[propertyKey];
+      if (this.isInvalidField(fieldKey, value)) {
+        validationErrors.push({
+          field: FIELD_NAME_MAP[fieldKey] ?? propertyKey,
+          error: this.getFieldError(fieldKey, value),
+          exists: value != null && value !== ""
+        });
+      }
+    }
+
+    return validationErrors;
   }
 }

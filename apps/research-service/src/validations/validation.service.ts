@@ -21,6 +21,8 @@ import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
 import { OverlappingValidator } from "./validators/overlapping.validator";
 import { WithinCountryValidator } from "./validators/within-country.validator";
 import { DuplicateGeometryValidator } from "./validators/duplicate-geometry.validator";
+import { FeatureBoundsValidator } from "./validators/feature-bounds.validator";
+import { GeometryTypeValidator } from "./validators/geometry-type.validator";
 import { Validator } from "./validators/validator.interface";
 import {
   ValidationType,
@@ -54,7 +56,9 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
   PLANT_START_DATE: new PlantStartDateValidator(),
   OVERLAPPING: new OverlappingValidator(),
   DUPLICATE_GEOMETRY: new DuplicateGeometryValidator(),
-  WITHIN_COUNTRY: new WithinCountryValidator()
+  WITHIN_COUNTRY: new WithinCountryValidator(),
+  FEATURE_BOUNDS: new FeatureBoundsValidator(),
+  GEOMETRY_TYPE: new GeometryTypeValidator()
 };
 
 @Injectable()
@@ -77,7 +81,7 @@ export class ValidationService {
 
     const criteriaList: ValidationCriteriaDto[] = criteriaData.map(criteria => ({
       criteriaId: criteria.criteriaId,
-      valid: criteria.valid,
+      valid: Boolean(criteria.valid),
       createdAt: criteria.createdAt,
       extraInfo: criteria.extraInfo
     }));
@@ -154,7 +158,7 @@ export class ValidationService {
         polygonUuid: polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
           criteriaId: criteria.criteriaId,
-          valid: criteria.valid,
+          valid: Boolean(criteria.valid),
           createdAt: criteria.createdAt,
           extraInfo: criteria.extraInfo
         }))
@@ -188,7 +192,7 @@ export class ValidationService {
 
         results.push({
           criteriaId: criteriaId,
-          valid: validationResult.valid,
+          valid: Boolean(validationResult.valid),
           createdAt: new Date(),
           extraInfo: validationResult.extraInfo
         });
@@ -450,5 +454,147 @@ export class ValidationService {
         )
       );
     }
+  }
+
+  async validateGeometries(
+    geometries: Array<{
+      type: string;
+      features: Array<{ type: string; geometry: unknown; properties?: Record<string, unknown> | null }>;
+    }>,
+    validationTypes: ValidationType[]
+  ): Promise<
+    Array<{
+      type: "validation";
+      id: string;
+      attributes: {
+        polygonUuid: string;
+        criteriaList: Array<{
+          criteriaId: CriteriaId;
+          valid: boolean;
+          createdAt: Date;
+          extraInfo: object | null;
+        }>;
+      };
+    }>
+  > {
+    const allFeatures: Array<{ geometry: unknown; properties?: Record<string, unknown>; featureIndex: number }> = [];
+    let featureIndex = 0;
+
+    for (const featureCollection of geometries) {
+      if (featureCollection.features == null || !Array.isArray(featureCollection.features)) {
+        continue;
+      }
+
+      for (const feature of featureCollection.features) {
+        if (feature.geometry != null) {
+          allFeatures.push({
+            geometry: feature.geometry,
+            properties: feature.properties ?? undefined,
+            featureIndex
+          });
+          featureIndex++;
+        }
+      }
+    }
+
+    const validationResults: Array<{
+      featureIndex: number;
+      featureId?: string;
+      criteriaId: CriteriaId;
+      valid: boolean;
+      extraInfo: object | null;
+    }> = [];
+
+    for (const validationType of validationTypes) {
+      const validator = VALIDATORS[validationType];
+      if (validator == null) {
+        continue;
+      }
+
+      if (validator.validateGeometry == null) {
+        continue;
+      }
+
+      const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+      for (const feature of allFeatures) {
+        try {
+          const result = await validator.validateGeometry(feature.geometry as never, feature.properties);
+          validationResults.push({
+            featureIndex: feature.featureIndex,
+            featureId: feature.properties?.id as string | undefined,
+            criteriaId,
+            valid: Boolean(result.valid),
+            extraInfo: result.extraInfo
+          });
+        } catch (error) {
+          validationResults.push({
+            featureIndex: feature.featureIndex,
+            featureId: feature.properties?.id as string | undefined,
+            criteriaId,
+            valid: false,
+            extraInfo: {
+              error: error instanceof Error ? error.message : "Unknown error occurred"
+            }
+          });
+        }
+      }
+    }
+
+    const resultsByFeature = new Map<
+      number,
+      Array<{
+        criteriaId: CriteriaId;
+        valid: boolean;
+        extraInfo: object | null;
+      }>
+    >();
+
+    for (const result of validationResults) {
+      if (!resultsByFeature.has(result.featureIndex)) {
+        resultsByFeature.set(result.featureIndex, []);
+      }
+      const criteriaList = resultsByFeature.get(result.featureIndex);
+      if (criteriaList != null) {
+        criteriaList.push({
+          criteriaId: result.criteriaId,
+          valid: Boolean(result.valid),
+          extraInfo: result.extraInfo
+        });
+      }
+    }
+
+    const included: Array<{
+      type: "validation";
+      id: string;
+      attributes: {
+        polygonUuid: string;
+        criteriaList: Array<{
+          criteriaId: CriteriaId;
+          valid: boolean;
+          createdAt: Date;
+          extraInfo: object | null;
+        }>;
+      };
+    }> = [];
+
+    for (const [index, criteriaList] of resultsByFeature.entries()) {
+      const feature = allFeatures[index];
+      const polygonUuid = (feature?.properties?.id as string) ?? `feature-${index}`;
+
+      included.push({
+        type: "validation",
+        id: polygonUuid,
+        attributes: {
+          polygonUuid,
+          criteriaList: criteriaList.map(criteria => ({
+            ...criteria,
+            createdAt: new Date()
+          }))
+        }
+      });
+    }
+
+    return included;
   }
 }

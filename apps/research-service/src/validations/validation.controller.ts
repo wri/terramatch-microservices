@@ -15,11 +15,12 @@ import { ValidationDto } from "./dto/validation.dto";
 import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { ValidationSummaryDto } from "./dto/validation-summary.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
+import { GeometryValidationRequestBody } from "./dto/geometry-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
-import { CriteriaId, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import { CriteriaId, FLORITY_VALIDATION_TYPES, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
@@ -182,5 +183,39 @@ export class ValidationController {
 
     const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto);
+  }
+
+  @Post("geometries")
+  @ApiOperation({
+    operationId: "validateGeometries",
+    summary: "Validate raw GeoJSON geometries without persistence (Flority)",
+    description:
+      "Validates geometries in-memory without persisting results to database. Returns validation results in included array."
+  })
+  @JsonApiResponse(ValidationDto)
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid validation request or malformed GeoJSON"
+  })
+  async validateGeometries(@Body() payload: GeometryValidationRequestBody) {
+    const request = payload.data.attributes;
+
+    const validationTypes =
+      request.validationTypes == null || request.validationTypes.length === 0
+        ? [...FLORITY_VALIDATION_TYPES]
+        : request.validationTypes;
+
+    const validations = await this.validationService.validateGeometries(request.geometries, validationTypes);
+
+    const document = buildJsonApi(ValidationDto);
+
+    for (const validation of validations) {
+      const validationDto = populateDto(new ValidationDto(), {
+        polygonUuid: validation.attributes.polygonUuid,
+        criteriaList: validation.attributes.criteriaList
+      });
+      document.addData(validation.id, validationDto);
+    }
+
+    return document;
   }
 }

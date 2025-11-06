@@ -6,7 +6,8 @@ import {
   FinancialReport,
   Form,
   FormQuestion,
-  FormSection
+  FormSection,
+  ProjectPolygon
 } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
@@ -51,17 +52,23 @@ export class FormDataService {
       if (config == null) {
         answers[question.uuid] = modelAnswers?.[question.uuid];
       } else {
-        answers[question.uuid] = this.getAnswer(config, model);
+        answers[question.uuid] = await this.getAnswer(config, model);
       }
     }
 
     return answers;
   }
 
-  getAnswer({ model: modelType, field: spec }: LinkedFieldSpecification, model: EntityModel) {
+  async getAnswer({ model: modelType, field: spec }: LinkedFieldSpecification, model: EntityModel) {
     if (isField(spec)) {
       if (spec.inputType === "mapInput" || spec.property === "proj_boundary") {
-        // TODO
+        return (
+          await ProjectPolygon.findOne({
+            where: { entityType: laravelType(model), entityId: model.id },
+            order: [["createdAt", "DESC"]],
+            include: ["polygon"]
+          })
+        )?.polygon;
       } else {
         return model[spec.property];
       }

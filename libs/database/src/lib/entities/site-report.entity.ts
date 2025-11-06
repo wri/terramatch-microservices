@@ -15,7 +15,7 @@ import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
-import { FrameworkKey } from "../constants";
+import { FrameworkKey, PlantingStatus } from "../constants";
 import { Literal } from "sequelize/types/utils";
 import {
   AWAITING_APPROVAL,
@@ -32,7 +32,6 @@ import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
-import { PlantingStatus } from "../constants/planting-status";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -307,8 +306,8 @@ export class SiteReport extends Model<SiteReport> {
   oldId: number | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @AllowNull
   @Column(TEXT)

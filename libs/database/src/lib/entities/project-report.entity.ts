@@ -14,7 +14,7 @@ import {
 import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
-import { FrameworkKey } from "../constants";
+import { FrameworkKey, PlantingStatus } from "../constants";
 import {
   AWAITING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
@@ -32,7 +32,6 @@ import { User } from "./user.entity";
 import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { PlantingStatus } from "../constants/planting-status";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -493,8 +492,8 @@ export class ProjectReport extends Model<ProjectReport> {
   paidOtherActivityDescription: string;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @AllowNull
   @Column(STRING)

@@ -132,6 +132,10 @@ export class Nursery extends Model<Nursery> {
   @Column(STRING)
   oldModel: string | null;
 
+  @AllowNull
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
+
   @BelongsTo(() => Project)
   project: Project | null;
 

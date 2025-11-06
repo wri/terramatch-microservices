@@ -248,8 +248,8 @@ export class NurseryReport extends Model<NurseryReport> {
   oldId: number | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

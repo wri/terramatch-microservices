@@ -46,7 +46,8 @@ export class FormDataController {
         formUuid: form.uuid,
         formTitle,
         feedback: model.feedback,
-        feedbackFields: model.feedbackFields
+        feedbackFields: model.feedbackFields,
+        answers: await this.formDataService.getAnswers(form, model)
       })
     ).document;
   }

@@ -241,8 +241,8 @@ export class Site extends Model<Site> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

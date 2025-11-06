@@ -102,8 +102,8 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @AllowNull
   @Column(TEXT)

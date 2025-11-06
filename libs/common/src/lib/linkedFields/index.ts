@@ -42,7 +42,7 @@ export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfigu
   siteReports: SiteReportConfiguration
 } as const;
 
-type LinkedFieldSpecification = {
+export type LinkedFieldSpecification = {
   model: FormModelType;
   field: LinkedField | LinkedFile | LinkedRelation;
 };

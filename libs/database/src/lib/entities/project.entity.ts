@@ -226,8 +226,8 @@ export class Project extends Model<Project> {
   ppcExternalId: number | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @AllowNull
   @Column(TEXT)

@@ -32,4 +32,7 @@ export class FormDataDto {
 
   @ApiProperty({ nullable: true, isArray: true, type: String })
   feedbackFields: string[] | null;
+
+  @ApiProperty()
+  answers: object;
 }

@@ -18,9 +18,11 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
+import { Task } from "./task.entity";
 
 @Scopes(() => ({
-  project: (id: number) => ({ where: { projectId: id } })
+  project: (id: number) => ({ where: { projectId: id } }),
+  task: (taskId: number) => ({ where: { taskId } })
 }))
 @Table({
   tableName: "srp_reports",
@@ -36,6 +38,10 @@ export class SrpReport extends Model<SrpReport> {
 
   static project(id: number) {
     return chainScope(this, "project", id) as typeof SrpReport;
+  }
+
+  static task(taskId: number) {
+    return chainScope(this, "task", taskId) as typeof SrpReport;
   }
 
   @PrimaryKey
@@ -82,6 +88,14 @@ export class SrpReport extends Model<SrpReport> {
   @Column(DATE)
   submittedAt: Date | null;
 
+  @ForeignKey(() => Task)
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  taskId: number;
+
+  @BelongsTo(() => Task, { constraints: false })
+  task: Task | null;
+
   @AllowNull
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
@@ -126,8 +140,20 @@ export class SrpReport extends Model<SrpReport> {
     return this.project?.organisationName;
   }
 
+  get organisationUuid() {
+    return this.project?.organisation?.uuid;
+  }
+
   get projectUuid() {
     return this.project?.uuid;
+  }
+
+  get projectStatus() {
+    return this.project?.status;
+  }
+
+  get taskUuid() {
+    return this.task?.uuid;
   }
 
   get isCompletable() {

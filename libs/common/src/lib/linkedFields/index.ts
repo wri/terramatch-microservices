@@ -27,7 +27,7 @@ export const FORM_MODEL_TYPES = [
   "projectReports",
   "sites",
   "siteReports",
-  "srpReport"
+  "srpReports"
 ] as const;
 export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
 
@@ -42,7 +42,7 @@ export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfigu
   projectReports: ProjectReportConfiguration,
   sites: SiteConfiguration,
   siteReports: SiteReportConfiguration,
-  srpReport: SrpReportConfiguration
+  srpReports: SrpReportConfiguration
 } as const;
 
 type LinkedFieldSpecification = {

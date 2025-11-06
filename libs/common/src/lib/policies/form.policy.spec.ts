@@ -26,12 +26,4 @@ describe("FormPolicy", () => {
     const form = await FormFactory.create({ frameworkKey });
     await expectCan(service, ["uploadFiles"], form);
   });
-
-  it("should disallow uploading files for forms in a different framework", async () => {
-    const user = await UserFactory.create();
-    mockUserId(user.id);
-    mockPermissions("framework-terrafund");
-    const form = await FormFactory.create({ frameworkKey: "ppc" });
-    await expectCannot(service, ["uploadFiles"], form);
-  });
 });

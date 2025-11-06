@@ -7,6 +7,7 @@ export const FORM_TYPES = [
   "site",
   "site-report",
   "nursery",
-  "nursery-report"
+  "nursery-report",
+  "srp-report"
 ] as const;
 export type FormType = (typeof FORM_TYPES)[number];

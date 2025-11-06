@@ -263,6 +263,10 @@ export class Site extends Model<Site> {
   @JsonColumn()
   detailedInterventionTypes: string[] | null;
 
+  @AllowNull
+  @Column(TEXT("long"))
+  boundaryGeojson: string | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

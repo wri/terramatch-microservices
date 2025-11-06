@@ -136,6 +136,10 @@ export class Nursery extends Model<Nursery> {
   oldModel: string | null;
 
   @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  oldId: number | null;
+
+  @AllowNull
   @JsonColumn({ type: TEXT("long") })
   answers: object | null;
 

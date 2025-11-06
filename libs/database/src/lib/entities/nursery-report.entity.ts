@@ -31,6 +31,9 @@ import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type NurseryReportMedia = "media" | "file" | "otherAdditionalDocuments" | "treeSeedlingContributions" | "photos";
 
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
@@ -50,7 +53,7 @@ export class NurseryReport extends Model<NurseryReport> {
   static readonly PARENT_ID = "nurseryId";
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\NurseryReport";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<NurseryReportMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
     otherAdditionalDocuments: {
@@ -64,7 +67,7 @@ export class NurseryReport extends Model<NurseryReport> {
       validation: "general-documents"
     },
     photos: { dbCollection: "photos", multiple: true, validation: "photos" }
-  } as const;
+  };
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof NurseryReport;

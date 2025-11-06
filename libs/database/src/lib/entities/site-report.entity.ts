@@ -32,11 +32,26 @@ import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
   dueBefore?: string | Date;
 };
+
+type SiteReportMedia =
+  | "socioeconomicBenefits"
+  | "media"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "treeSpecies"
+  | "siteSubmission"
+  | "documentFiles"
+  | "treePlantingUpload"
+  | "anrPhotos"
+  | "soilWaterConservationUpload"
+  | "soilWaterConservationPhotos";
 
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
@@ -58,7 +73,7 @@ export class SiteReport extends Model<SiteReport> {
   static readonly UNSUBMITTED_STATUSES = ["due", "started"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<SiteReportMedia, MediaConfiguration> = {
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -83,7 +98,7 @@ export class SiteReport extends Model<SiteReport> {
       multiple: true,
       validation: "photos"
     }
-  } as const;
+  };
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof SiteReport;

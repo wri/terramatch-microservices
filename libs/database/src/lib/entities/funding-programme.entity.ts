@@ -4,14 +4,17 @@ import { FrameworkKey } from "../constants";
 import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { I18nItem } from "./i18n-item.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type FundingProgrammeMedia = "cover";
 
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
 export class FundingProgramme extends Model<FundingProgramme> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingProgramme";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<FundingProgrammeMedia, MediaConfiguration> = {
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement

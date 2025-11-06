@@ -10,7 +10,7 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, DATE, UUID, UUIDV4, BOOLEAN } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
@@ -18,6 +18,9 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type DisturbanceReportMedia = "media";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } })
@@ -30,9 +33,9 @@ import { Project } from "./project.entity";
 })
 export class DisturbanceReport extends Model<DisturbanceReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReport";
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<DisturbanceReportMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   static project(id: number) {
     return chainScope(this, "project", id) as typeof DisturbanceReport;

@@ -2,12 +2,20 @@ import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, 
 import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Organisation } from "./organisation.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type ProjectPitchMedia =
+  | "cover"
+  | "additional"
+  | "restorationPhotos"
+  | "detailedProjectBudget"
+  | "proofOfLandTenureMou";
 
 @Table({ tableName: "project_pitches", underscored: true, paranoid: true })
 export class ProjectPitch extends Model<ProjectPitch> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ProjectPitch";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<ProjectPitchMedia, MediaConfiguration> = {
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" },
     additional: { dbCollection: "additional", multiple: true, validation: "general-documents" },
     restorationPhotos: { dbCollection: "restoration_photos", multiple: true, validation: "photos" },
@@ -17,7 +25,7 @@ export class ProjectPitch extends Model<ProjectPitch> {
       validation: "spreadsheet"
     },
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement

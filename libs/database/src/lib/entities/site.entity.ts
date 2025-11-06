@@ -32,6 +32,17 @@ import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type SiteMedia =
+  | "media"
+  | "socioeconomicBenefits"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "treeSpecies"
+  | "documentFiles"
+  | "stratificationForHeterogeneity";
 
 @Scopes(() => ({
   approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
@@ -44,7 +55,7 @@ export class Site extends Model<Site> {
   static readonly APPROVED_STATUSES = [APPROVED] as EntityStatus[];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<SiteMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -61,7 +72,7 @@ export class Site extends Model<Site> {
       multiple: false,
       validation: "general-documents"
     }
-  } as const;
+  };
 
   static approved() {
     return chainScope(this, "approved") as typeof Site;

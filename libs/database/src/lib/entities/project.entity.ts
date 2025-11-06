@@ -24,6 +24,18 @@ import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type ProjectMedia =
+  | "media"
+  | "socioeconomicBenefits"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "documentFiles"
+  | "programmeSubmission"
+  | "detailedProjectBudget"
+  | "proofOfLandTenureMou";
 
 @Table({
   tableName: "v2_projects",
@@ -35,7 +47,7 @@ export class Project extends Model<Project> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<ProjectMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -53,7 +65,7 @@ export class Project extends Model<Project> {
       validation: "general-documents"
     },
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   static forOrganisation(organisationId: number) {
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;

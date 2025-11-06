@@ -13,6 +13,9 @@ import {
 import { BIGINT, DECIMAL, SMALLINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FinancialReport } from "./financial-report.entity";
 import { chainScope } from "../util/chain-scope";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type FinancialIndicatorMedia = "documentation";
 
 @Scopes(() => ({
   financialReport: (id: number) => ({ where: { financialReportId: id } }),
@@ -30,9 +33,9 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
     return chainScope(this, "organisation", id) as typeof FinancialIndicator;
   }
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<FinancialIndicatorMedia, MediaConfiguration> = {
     documentation: { dbCollection: "documentation", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement

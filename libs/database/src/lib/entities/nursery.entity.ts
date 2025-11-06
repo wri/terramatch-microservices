@@ -28,6 +28,9 @@ import { Subquery } from "../util/subquery.builder";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
@@ -45,7 +48,7 @@ export class Nursery extends Model<Nursery> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<NurseryMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
     otherAdditionalDocuments: {
@@ -54,7 +57,7 @@ export class Nursery extends Model<Nursery> {
       validation: "general-documents"
     },
     photos: { dbCollection: "photos", multiple: true, validation: "photos" }
-  } as const;
+  };
 
   static approved() {
     return chainScope(this, "approved") as typeof Nursery;

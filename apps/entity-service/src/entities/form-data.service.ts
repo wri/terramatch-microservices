@@ -7,6 +7,7 @@ import {
   Form,
   FormQuestion,
   FormSection,
+  Media,
   ProjectPolygon
 } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
@@ -16,12 +17,15 @@ import { Op } from "sequelize";
 import { getLinkedFieldConfig, LinkedFieldSpecification } from "@terramatch-microservices/common/linkedFields";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { isMediaOwner, mediaConfiguration } from "@terramatch-microservices/database/constants/media-owners";
+import { MediaDto } from "./dto/media.dto";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
 @Injectable()
 export class FormDataService {
   private logger = new TMLogger(FormDataService.name);
 
-  constructor(private readonly localizationService: LocalizationService) {}
+  constructor(private readonly localizationService: LocalizationService, private readonly mediaService: MediaService) {}
 
   async getForm(model: EntityModel) {
     if (model instanceof FinancialReport) {
@@ -59,9 +63,9 @@ export class FormDataService {
     return answers;
   }
 
-  async getAnswer({ model: modelType, field: spec }: LinkedFieldSpecification, model: EntityModel) {
-    if (isField(spec)) {
-      if (spec.inputType === "mapInput" || spec.property === "proj_boundary") {
+  async getAnswer({ model: modelType, field }: LinkedFieldSpecification, model: EntityModel) {
+    if (isField(field)) {
+      if (field.inputType === "mapInput" || field.property === "proj_boundary") {
         return (
           await ProjectPolygon.findOne({
             where: { entityType: laravelType(model), entityId: model.id },
@@ -70,14 +74,43 @@ export class FormDataService {
           })
         )?.polygon;
       } else {
-        return model[spec.property];
+        return model[field.property];
       }
-    } else if (isFile(spec)) {
+    } else if (isFile(field)) {
+      if (!isMediaOwner(modelType)) {
+        this.logger.error("Entity is not a media owner", { modelType });
+        return undefined;
+      }
+      const configuration = mediaConfiguration(modelType, field.property);
+      if (configuration == null) {
+        this.logger.error("Media configuration not found", { modelType, field });
+        return undefined;
+      }
+
+      const media = await Media.for(model).collection(configuration.dbCollection).findAll();
+      const createDto = (media: Media) =>
+        new MediaDto(media, {
+          url: this.mediaService.getUrl(media),
+          thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+          entityType: modelType,
+          entityUuid: model.uuid
+        });
+      if (configuration.multiple) {
+        return media.length == 0 ? undefined : media.map(createDto);
+      } else {
+        if (media.length > 1) {
+          this.logger.warn("Found multiple media for a singular media definition, returning first", {
+            modelType,
+            uuid: model.uuid,
+            collection: configuration.dbCollection
+          });
+        }
+        return media.length === 0 ? undefined : createDto(media[0]);
+      }
+    } else if (isRelation(field)) {
       // TODO
-    } else if (isRelation(spec)) {
-      // TODO
-    } else {
-      return undefined;
     }
+
+    return undefined;
   }
 }

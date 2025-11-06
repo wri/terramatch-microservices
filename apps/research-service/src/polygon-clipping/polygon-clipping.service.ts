@@ -5,7 +5,7 @@ import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/cons
 import { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import { simplify } from "@turf/simplify";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon } from "@turf/helpers";
-import { isNotNull } from "@terramatch-microservices/common/util/array";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 interface OverlapInfo {
   polyUuid: string;
@@ -236,7 +236,7 @@ export class PolygonClippingService {
     });
 
     const query = `
-      SELECT 
+      SELECT
         pg.uuid,
         COALESCE(sp.poly_name, 'Unnamed') as name,
         ST_Area(pg.geom) as area,
@@ -490,7 +490,7 @@ export class PolygonClippingService {
     });
 
     const query = `
-      SELECT 
+      SELECT
         pg.uuid,
         COALESCE(sp.poly_name, 'Unnamed') as name,
         ST_AsGeoJSON(pg.geom) as geojson

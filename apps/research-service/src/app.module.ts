@@ -4,6 +4,7 @@ import { SitePolygonsController } from "./site-polygons/site-polygons.controller
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
+import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { APP_FILTER } from "@nestjs/core";
 import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
@@ -16,6 +17,9 @@ import { DuplicateGeometryValidator } from "./validations/validators/duplicate-g
 import { DataApiModule } from "@terramatch-microservices/data-api";
 import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { VoronoiService } from "./voronoi/voronoi.service";
+import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
+import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 
 @Module({
   imports: [
@@ -36,7 +40,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     }),
     BullModule.registerQueue({ name: "validation" })
   ],
-  controllers: [SitePolygonsController, BoundingBoxController, ValidationController],
+  controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
   providers: [
     {
       provide: APP_FILTER,
@@ -45,10 +49,13 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     SitePolygonsService,
     SitePolygonCreationService,
     PolygonGeometryCreationService,
+    PointGeometryCreationService,
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,
-    DuplicateGeometryValidator
+    DuplicateGeometryValidator,
+    VoronoiService,
+    PolygonClippingService
   ]
 })
 export class AppModule {}

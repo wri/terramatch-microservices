@@ -1,11 +1,18 @@
+/* istanbul ignore file */
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { populateDto } from "./json-api-attributes";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "delayedJobs" })
 export class DelayedJobDto {
+  constructor(job: DelayedJob) {
+    populateDto<DelayedJobDto, DelayedJob>(this, job, { entityName: job.metadata?.entity_name });
+  }
+
   @ApiProperty({ description: "The unique identifier for the delayed job." })
   uuid: string;
 

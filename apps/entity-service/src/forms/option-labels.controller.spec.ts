@@ -11,6 +11,9 @@ import { ValidLocale } from "@terramatch-microservices/database/constants/locale
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { NotFoundException } from "@nestjs/common";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { createMock } from "@golevelup/ts-jest";
+import { ConfigService } from "@nestjs/config";
 
 const mockLocale = (locale: ValidLocale) => {
   jest.spyOn(User, "findOne").mockResolvedValue({ locale } as User);
@@ -21,7 +24,8 @@ describe("OptionsLabelsController", () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      controllers: [OptionLabelsController]
+      controllers: [OptionLabelsController],
+      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
     }).compile();
 
     controller = module.get(OptionLabelsController);

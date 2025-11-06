@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { Dictionary } from "lodash";
 

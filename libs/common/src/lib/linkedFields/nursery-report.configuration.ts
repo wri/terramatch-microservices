@@ -1,4 +1,4 @@
-import { LinkedFieldConfiguration } from "../types";
+import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
 import { NurseryReport } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
@@ -17,6 +17,7 @@ export const NurseryReportConfiguration: LinkedFieldConfiguration = {
     "nur-rep-shared-drive-link": { property: "shared_drive_link", label: "Shared drive link", inputType: "url" }
   },
   fileCollections: {
+    "nur-rep-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
     "nur-rep-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
     "nur-rep-col-other-additional-documents": {
       property: "other_additional_documents",

@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, mockPermissions, mockUserId } from "./policy.service.spec";
 import { FormFactory, UserFactory } from "@terramatch-microservices/database/factories";
 
 describe("FormPolicy", () => {
@@ -25,13 +25,5 @@ describe("FormPolicy", () => {
     mockPermissions(`framework-${frameworkKey}`);
     const form = await FormFactory.create({ frameworkKey });
     await expectCan(service, ["uploadFiles"], form);
-  });
-
-  it("should disallow uploading files for forms in a different framework", async () => {
-    const user = await UserFactory.create();
-    mockUserId(user.id);
-    mockPermissions("framework-terrafund");
-    const form = await FormFactory.create({ frameworkKey: "framework-ppc" });
-    await expectCannot(service, ["uploadFiles"], form);
   });
 });

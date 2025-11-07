@@ -59,12 +59,8 @@ export const FORM_MODELS: Record<FormModelType, FormClass<FormModel>> = {
   projectPitches: ProjectPitch
 };
 
-console.log("ENTITY_MODELS", ENTITY_MODELS);
 export const isEntity = (entity: Model): entity is EntityModel =>
-  Object.values(ENTITY_MODELS).find(model => {
-    console.log("checking model", model);
-    return entity instanceof model;
-  }) != null;
+  Object.values(ENTITY_MODELS).find(model => entity instanceof model) != null;
 export const isReport = (entity: Model): entity is ReportModel =>
   Object.values(REPORT_MODELS).find(model => entity instanceof model) != null;
 

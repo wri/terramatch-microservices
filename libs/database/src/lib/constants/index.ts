@@ -1,3 +1,5 @@
+// NOTE: In order to avoid a circular dependency, constant files that import models (like entities.ts)
+// MUST NOT be exported here.
 export * from "./polygon-indicators";
 export * from "./polygon-status";
 export * from "./landscapes";
@@ -7,5 +9,3 @@ export * from "./dashboard";
 export * from "./planting-status";
 export * from "./validation-types";
 export * from "./geometry-types";
-export { FormModelType } from "./entities";
-export { FORM_MODEL_TYPES } from "./entities";

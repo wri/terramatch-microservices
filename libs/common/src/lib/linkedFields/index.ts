@@ -15,7 +15,7 @@ import {
 } from "@terramatch-microservices/database/constants/linked-fields";
 import { DisturbanceReportConfiguration } from "./disturbance-report.configuration";
 import { SrpReportConfiguration } from "./srp-report.configuration";
-import { FormModelType } from "@terramatch-microservices/database/constants";
+import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 
 export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfiguration> = {
   organisations: OrganisationConfiguration,

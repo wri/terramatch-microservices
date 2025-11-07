@@ -14,7 +14,7 @@ import {
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { isEmpty } from "lodash";
 import { LinkedFieldQueryDto } from "./dto/linked-field-query.dto";
-import { FormModelType } from "@terramatch-microservices/database/constants";
+import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 
 const fieldAdder =
   (document: DocumentBuilder, formModelType: FormModelType, nameSuffix: string) =>

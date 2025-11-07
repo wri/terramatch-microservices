@@ -74,11 +74,11 @@ export const LINKED_FIELD_RESOURCES = [
   "demographics",
   "disturbances",
   "disturbanceReportEntries", // no differentiation
-  "financialIndicators", // in orgs, uses whereNull('financial_report_id'), in fin reports uses the report id.
-  "fundingTypes", // in orgs, uses whereNull('financial_report_id'), in fin reports uses the report id.
+  "financialIndicators",
+  "fundingTypes",
   "invasives",
-  "leaderships", // org only, uses core-team-leaders and leadership-team collections (kebab case of property)
-  "ownershipStake", // no differentiation
+  "leaderships",
+  "ownershipStake",
   "seedings",
   "stratas",
   "treeSpecies"

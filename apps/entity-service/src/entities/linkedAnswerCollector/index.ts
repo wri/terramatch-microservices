@@ -16,6 +16,10 @@ import { disturbancesCollector } from "./disturbances.collector";
 import { invasivesCollector } from "./invasives.collector";
 import { seedingsCollector } from "./seedings.collector";
 import { stratasCollector } from "./stratas.collector";
+import { ownershipStakeCollector } from "./ownership-stake.collector";
+import { leadershipsCollector } from "./leaderships.collector";
+import { fundingTypesCollector } from "./funding-types.collector";
+import { financialIndicatorsCollector } from "./financial-indicators.collector";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
@@ -57,6 +61,18 @@ export class LinkedAnswerCollector {
   }
   get stratas() {
     return this.getCollector("stratas", () => stratasCollector(this.logger));
+  }
+  get ownershipStake() {
+    return this.getCollector("ownershipStake", () => ownershipStakeCollector(this.logger));
+  }
+  get leaderships() {
+    return this.getCollector("leaderships", () => leadershipsCollector(this.logger));
+  }
+  get fundingTypes() {
+    return this.getCollector("fundingTypes", () => fundingTypesCollector(this.logger));
+  }
+  get financialIndicators() {
+    return this.getCollector("financialIndicators", () => financialIndicatorsCollector(this.logger));
   }
 
   async collect(answers: Dictionary<unknown>, models: FormModels) {

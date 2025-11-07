@@ -29,7 +29,7 @@ export const singlePropertyCollector = <T extends Model>(
     const questions: Dictionary<string> = {};
 
     return {
-      addField(field, modelType, questionUuid) {
+      addField(_, modelType, questionUuid) {
         if (questions[modelType] != null) {
           logger.warn(`Duplicate field for ${resource} with ${modelType}`);
         }

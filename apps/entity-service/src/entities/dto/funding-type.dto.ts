@@ -1,13 +1,13 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { AssociationDto } from "./association.dto";
 import { FundingType } from "@terramatch-microservices/database/entities";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "fundingTypes" })
 export class FundingTypeDto extends AssociationDto {
-  constructor(fundingType: FundingType, props?: HybridSupportProps<FundingTypeDto, FundingType>) {
+  constructor(fundingType?: FundingType, props?: HybridSupportProps<FundingTypeDto, FundingType>) {
     super();
     if (fundingType != null && props != null) {
       populateDto<FundingTypeDto, FundingType>(this, fundingType, props);
@@ -34,4 +34,14 @@ export class FundingTypeDto extends AssociationDto {
 
   @ApiProperty({ nullable: true, type: Number })
   financialReportId: string | null;
+}
+
+export class EmbeddedFundingTypeDto extends PickType(FundingTypeDto, ["year", "type", "source", "amount"]) {
+  constructor(fundingType: FundingType) {
+    super();
+    populateDto<EmbeddedFundingTypeDto>(this, fundingType);
+  }
+
+  @ApiProperty()
+  uuid: string;
 }

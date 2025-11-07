@@ -13,6 +13,9 @@ import { fileCollector } from "./file.collector";
 import { demographicsCollector } from "./demographics.collector";
 import { treeSpeciesCollector } from "./tree-species.collector";
 import { disturbancesCollector } from "./disturbances.collector";
+import { invasivesCollector } from "./invasives.collector";
+import { seedingsCollector } from "./seedings.collector";
+import { stratasCollector } from "./stratas.collector";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
@@ -45,6 +48,15 @@ export class LinkedAnswerCollector {
   }
   get disturbances() {
     return this.getCollector("disturbances", () => disturbancesCollector(this.logger));
+  }
+  get invasives() {
+    return this.getCollector("invasives", () => invasivesCollector(this.logger));
+  }
+  get seedings() {
+    return this.getCollector("seedings", () => seedingsCollector(this.logger));
+  }
+  get stratas() {
+    return this.getCollector("stratas", () => stratasCollector(this.logger));
   }
 
   async collect(answers: Dictionary<unknown>, models: FormModels) {

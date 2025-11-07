@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, ArrayMinSize, IsIn, IsOptional, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
-import { FLORITY_VALIDATION_TYPES, ValidationType } from "@terramatch-microservices/database/constants";
+import { NON_PERSISTENT_VALIDATION_TYPES, ValidationType } from "@terramatch-microservices/database/constants";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { FeatureCollection } from "geojson";
 
@@ -43,14 +43,15 @@ export class GeometryValidationRequestAttributes {
   geometries: FeatureCollection[];
 
   @ApiProperty({
-    enum: FLORITY_VALIDATION_TYPES,
+    enum: NON_PERSISTENT_VALIDATION_TYPES,
     isArray: true,
     required: false,
-    description: "Array of validation types to run. If not provided or empty, all Flority validation types will be run."
+    description:
+      "Array of validation types to run. If not provided or empty, all non persistent validation types will be run."
   })
   @IsOptional()
   @IsArray()
-  @IsIn(FLORITY_VALIDATION_TYPES, { each: true })
+  @IsIn(NON_PERSISTENT_VALIDATION_TYPES, { each: true })
   validationTypes?: ValidationType[];
 }
 

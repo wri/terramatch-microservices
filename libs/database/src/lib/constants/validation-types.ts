@@ -12,7 +12,7 @@ export const VALIDATION_TYPES = [
   "GEOMETRY_TYPE"
 ] as const;
 
-export const FLORITY_VALIDATION_TYPES: ValidationType[] = [
+export const NON_PERSISTENT_VALIDATION_TYPES: ValidationType[] = [
   "SELF_INTERSECTION",
   "POLYGON_SIZE",
   "SPIKES",

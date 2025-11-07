@@ -4,12 +4,14 @@ import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
 import { Geometry } from "geojson";
 
+type ValidationError = {
+  field: string;
+  error: string;
+  exists: boolean;
+};
+
 interface DataCompletenessValidationResult extends ValidationResult {
-  extraInfo: Array<{
-    field: string;
-    error: string;
-    exists: boolean;
-  }> | null;
+  extraInfo: ValidationError[] | null;
 }
 
 const VALIDATION_FIELDS: (keyof Attributes<SitePolygon>)[] = [
@@ -28,6 +30,16 @@ const FIELD_NAME_MAP: Record<string, string> = {
   distr: "distr",
   numTrees: "num_trees",
   plantStart: "plantstart"
+};
+
+// Reverse mapping: GeoJSON property name -> SitePolygon field name
+const PROPERTY_TO_FIELD_MAP: Record<string, keyof typeof FIELD_NAME_MAP> = {
+  poly_name: "polyName",
+  practice: "practice",
+  target_sys: "targetSys",
+  distr: "distr",
+  num_trees: "numTrees",
+  plantstart: "plantStart"
 };
 
 const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
@@ -57,13 +69,13 @@ export class DataCompletenessValidator implements Validator {
       throw new NotFoundException(`No site polygon found with polygon UUID ${polygonUuid}`);
     }
 
-    const validationErrors = this.validateSitePolygonData(sitePolygon);
-    const valid = validationErrors.length === 0;
+    const validationErrors = this.validateFields(
+      VALIDATION_FIELDS,
+      field => sitePolygon[field],
+      field => FIELD_NAME_MAP[field] ?? field
+    );
 
-    return {
-      valid,
-      extraInfo: validationErrors.length > 0 ? validationErrors : null
-    };
+    return this.buildValidationResult(validationErrors);
   }
 
   async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
@@ -84,40 +96,52 @@ export class DataCompletenessValidator implements Validator {
         };
       }
 
-      const validationErrors = this.validateSitePolygonData(sitePolygon);
-      const valid = validationErrors.length === 0;
+      const validationErrors = this.validateFields(
+        VALIDATION_FIELDS,
+        field => sitePolygon[field],
+        field => FIELD_NAME_MAP[field] ?? field
+      );
 
       return {
         polygonUuid,
-        valid,
+        valid: validationErrors.length === 0,
         extraInfo: validationErrors.length > 0 ? validationErrors : null
       };
     });
   }
 
-  private validateSitePolygonData(sitePolygon: SitePolygon): Array<{
-    field: string;
-    error: string;
-    exists: boolean;
-  }> {
-    const validationErrors: Array<{
-      field: string;
-      error: string;
-      exists: boolean;
-    }> = [];
+  private validateFields(
+    fields: string[],
+    getValue: (field: string) => unknown,
+    getFieldName: (field: string) => string,
+    getFieldKey?: (field: string) => string
+  ): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
 
-    for (const field of VALIDATION_FIELDS) {
-      const value = sitePolygon[field];
-      if (this.isInvalidField(field, value)) {
+    for (const field of fields) {
+      const value = getValue(field);
+      const fieldKey = getFieldKey != null ? getFieldKey(field) : field;
+      if (this.isInvalidField(fieldKey, value)) {
         validationErrors.push({
-          field: FIELD_NAME_MAP[field] ?? field,
-          error: this.getFieldError(field, value),
-          exists: value != null && value !== ""
+          field: getFieldName(field),
+          error: this.getFieldError(fieldKey, value),
+          exists: this.valueExists(value)
         });
       }
     }
 
     return validationErrors;
+  }
+
+  private valueExists(value: unknown): boolean {
+    return value != null && value !== "";
+  }
+
+  private buildValidationResult(validationErrors: ValidationError[]): DataCompletenessValidationResult {
+    return {
+      valid: validationErrors.length === 0,
+      extraInfo: validationErrors.length > 0 ? validationErrors : null
+    };
   }
 
   private isInvalidField(field: string, value: unknown): boolean {
@@ -199,47 +223,17 @@ export class DataCompletenessValidator implements Validator {
       };
     }
 
-    const validationErrors = this.validateProperties(properties);
-    const valid = validationErrors.length === 0;
+    const propertyKeys = Object.keys(PROPERTY_TO_FIELD_MAP);
+    const validationErrors = this.validateFields(
+      propertyKeys,
+      propertyKey => properties[propertyKey],
+      propertyKey => {
+        const fieldKey = PROPERTY_TO_FIELD_MAP[propertyKey];
+        return FIELD_NAME_MAP[fieldKey] ?? propertyKey;
+      },
+      propertyKey => PROPERTY_TO_FIELD_MAP[propertyKey]
+    );
 
-    return {
-      valid,
-      extraInfo: validationErrors.length > 0 ? validationErrors : null
-    };
-  }
-
-  private validateProperties(properties: Record<string, unknown>): Array<{
-    field: string;
-    error: string;
-    exists: boolean;
-  }> {
-    const validationErrors: Array<{
-      field: string;
-      error: string;
-      exists: boolean;
-    }> = [];
-
-    // Map property names from GeoJSON to SitePolygon field names
-    const propertyMap: Record<string, keyof typeof FIELD_NAME_MAP> = {
-      poly_name: "polyName",
-      practice: "practice",
-      target_sys: "targetSys",
-      distr: "distr",
-      num_trees: "numTrees",
-      plantstart: "plantStart"
-    };
-
-    for (const [propertyKey, fieldKey] of Object.entries(propertyMap)) {
-      const value = properties[propertyKey];
-      if (this.isInvalidField(fieldKey, value)) {
-        validationErrors.push({
-          field: FIELD_NAME_MAP[fieldKey] ?? propertyKey,
-          error: this.getFieldError(fieldKey, value),
-          exists: value != null && value !== ""
-        });
-      }
-    }
-
-    return validationErrors;
+    return this.buildValidationResult(validationErrors);
   }
 }

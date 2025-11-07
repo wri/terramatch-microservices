@@ -39,7 +39,6 @@ export class SelfIntersectionValidator implements Validator {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
     }
 
-    // Use PostGIS to check if geometry is simple by creating a temporary query
     const geomJson = JSON.stringify(geometry);
     const result = (await PolygonGeometry.sequelize.query(
       `SELECT ST_IsSimple(ST_GeomFromGeoJSON(:geomJson)) as isSimple`,

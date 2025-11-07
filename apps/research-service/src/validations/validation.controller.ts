@@ -21,7 +21,11 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
-import { CriteriaId, FLORITY_VALIDATION_TYPES, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import {
+  CriteriaId,
+  NON_PERSISTENT_VALIDATION_TYPES,
+  VALIDATION_TYPES
+} from "@terramatch-microservices/database/constants";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
@@ -187,7 +191,7 @@ export class ValidationController {
   @Post("geometries")
   @ApiOperation({
     operationId: "validateGeometries",
-    summary: "Validate raw GeoJSON geometries without persistence (Flority)",
+    summary: "Validate raw GeoJSON geometries without persistence",
     description:
       "Validates geometries in-memory without persisting results to database. Returns validation results in included array."
   })
@@ -200,7 +204,7 @@ export class ValidationController {
 
     const validationTypes =
       request.validationTypes == null || request.validationTypes.length === 0
-        ? [...FLORITY_VALIDATION_TYPES]
+        ? [...NON_PERSISTENT_VALIDATION_TYPES]
         : request.validationTypes;
 
     const validations = await this.validationService.validateGeometries(request.geometries, validationTypes);

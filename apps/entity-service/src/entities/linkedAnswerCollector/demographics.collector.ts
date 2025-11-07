@@ -8,6 +8,5 @@ export const demographicsCollector = collectionCollector(
   "demographicalType",
   "demographicalId",
   { attributes: ["uuid", "collection", "demographicalType"], include: [{ association: "entries" }] },
-  false,
   demographic => new EmbeddedDemographicDto(demographic)
 );

@@ -12,6 +12,7 @@ import { fieldCollector } from "./field.collector";
 import { fileCollector } from "./file.collector";
 import { demographicsCollector } from "./demographics.collector";
 import { treeSpeciesCollector } from "./tree-species.collector";
+import { disturbancesCollector } from "./disturbances.collector";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
@@ -41,6 +42,9 @@ export class LinkedAnswerCollector {
   }
   get treeSpecies() {
     return this.getCollector("treeSpecies", () => treeSpeciesCollector(this.logger));
+  }
+  get disturbances() {
+    return this.getCollector("disturbances", () => disturbancesCollector(this.logger));
   }
 
   async collect(answers: Dictionary<unknown>, models: FormModels) {

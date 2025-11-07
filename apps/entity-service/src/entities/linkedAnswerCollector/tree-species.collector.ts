@@ -8,6 +8,5 @@ export const treeSpeciesCollector = collectionCollector(
   "speciesableType",
   "speciesableId",
   { attributes: ["uuid", "name", "amount", "taxonId", "collection", "speciesableType"] },
-  true,
   treeSpecies => new EmbeddedTreeSpeciesDto(treeSpecies)
 );

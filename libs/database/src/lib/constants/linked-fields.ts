@@ -81,7 +81,7 @@ export const LINKED_FIELD_RESOURCES = [
   "ownershipStake", // no differentiation
   "seedings", // no differentiation
   "stratas", // no differentiation
-  "treeSpecies" // collection
+  "treeSpecies"
 ] as const;
 export type LinkedFieldResource = (typeof LINKED_FIELD_RESOURCES)[number];
 

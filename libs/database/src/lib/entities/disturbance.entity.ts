@@ -6,12 +6,12 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<Disturbance> {
-  static readonly LARAVEL_TYPE = "App\\Models\\SiteSubmissionDisturbance";
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Disturbance";
 
-  static idsSubquery(disturbanceIds: Literal | number[], disturbancelType: string) {
+  static idsSubquery(disturbanceableIds: Literal | number[], disturbanceableType: string) {
     return Subquery.select(Disturbance, "id")
-      .eq("disturbanceableType", disturbancelType)
-      .in("disturbanceableId", disturbanceIds)
+      .eq("disturbanceableType", disturbanceableType)
+      .in("disturbanceableId", disturbanceableIds)
       .eq("hidden", false).literal;
   }
 

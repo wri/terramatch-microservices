@@ -1,5 +1,5 @@
-import { LinkedFieldConfiguration } from "../types";
 import { SrpReport } from "@terramatch-microservices/database/entities";
+import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
 export const SrpReportConfiguration: LinkedFieldConfiguration = {

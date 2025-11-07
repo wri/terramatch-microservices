@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { applyDecorators, HttpException, Type } from "@nestjs/common";
 import { ApiResponse, ApiResponseOptions } from "@nestjs/swagger";
 import { Dictionary } from "lodash";

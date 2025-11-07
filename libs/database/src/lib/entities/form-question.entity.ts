@@ -7,14 +7,26 @@ import {
   Index,
   Model,
   PrimaryKey,
-  Table
+  Table,
+  Unique
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { I18nItem } from "./i18n-item.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormSection } from "./form-section.entity";
+import { InputType } from "../constants/linked-fields";
 
-@Table({ tableName: "form_questions", underscored: true, paranoid: true })
+@Table({
+  tableName: "form_questions",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async beforeDestroy(question: FormQuestion) {
+      // Child questions cannot themselves have children, so avoid N+1 query by forcing hooks off
+      await FormQuestion.destroy({ where: { parentId: question.id }, hooks: false });
+    }
+  }
+})
 export class FormQuestion extends Model<FormQuestion> {
   @PrimaryKey
   @AutoIncrement
@@ -22,27 +34,30 @@ export class FormQuestion extends Model<FormQuestion> {
   override id: number;
 
   @Index
+  @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
-
-  @BelongsTo(() => FormSection)
-  formSection: FormSection | null;
 
   @ForeignKey(() => FormSection)
   @Column(BIGINT.UNSIGNED)
   formSectionId: number;
 
-  // TODO: foreign key on Form UUID
+  @BelongsTo(() => FormSection)
+  formSection: FormSection | null;
+
   @AllowNull
   @Column(UUID)
-  parentId: string;
+  parentId: string | null;
+
+  @BelongsTo(() => FormQuestion, { foreignKey: "parentId", targetKey: "uuid", constraints: false })
+  parent: FormQuestion | null;
 
   @AllowNull
   @Column(STRING)
   linkedFieldKey: string | null;
 
   @Column(STRING)
-  inputType: string;
+  inputType: InputType;
 
   @AllowNull
   @Column(STRING)
@@ -131,4 +146,8 @@ export class FormQuestion extends Model<FormQuestion> {
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 90000 })
   maxCharacterLimit: number | null;
+
+  @AllowNull
+  @JsonColumn()
+  years: number[] | null;
 }

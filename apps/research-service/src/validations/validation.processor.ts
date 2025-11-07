@@ -1,9 +1,15 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Processor } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { ValidationService } from "./validation.service";
 import { ValidationType } from "@terramatch-microservices/database/constants";
+import {
+  DelayedJobException,
+  DelayedJobWorker
+} from "@terramatch-microservices/common/workers/delayed-job-worker.processor";
+import { ValidationSummaryDto } from "./dto/validation-summary.dto";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export interface SiteValidationJobData {
   siteUuid: string;
@@ -11,89 +17,61 @@ export interface SiteValidationJobData {
   delayedJobId: number;
 }
 
-@Processor("validation")
-export class ValidationProcessor extends WorkerHost {
-  private readonly logger = new TMLogger(ValidationProcessor.name);
+const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
+@Processor("validation", {
+  concurrency: 100,
+  removeOnComplete: { age: KEEP_JOBS_TIMEOUT },
+  removeOnFail: { age: KEEP_JOBS_TIMEOUT }
+})
+export class ValidationProcessor extends DelayedJobWorker<SiteValidationJobData> {
+  protected readonly logger = new TMLogger(ValidationProcessor.name);
 
   constructor(private readonly validationService: ValidationService) {
     super();
   }
 
-  async process(job: Job<SiteValidationJobData>) {
-    const { siteUuid, validationTypes, delayedJobId } = job.data;
+  async processDelayedJob(job: Job<SiteValidationJobData>) {
+    const { siteUuid, validationTypes } = job.data;
 
-    try {
-      const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
+    const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
+    if (polygonUuids.length === 0) {
+      throw new DelayedJobException(404, `No polygons found for site ${siteUuid}`);
+    }
 
-      if (polygonUuids.length === 0) {
-        await DelayedJob.update(
-          {
-            status: "failed",
-            statusCode: 404,
-            payload: { error: `No polygons found for site ${siteUuid}` }
-          },
-          { where: { id: delayedJobId } }
-        );
-        return;
-      }
+    await this.updateJobProgress(job, {
+      totalContent: polygonUuids.length,
+      processedContent: 0,
+      progressMessage: `Starting validation of ${polygonUuids.length} polygons...`
+    });
 
-      await DelayedJob.update(
-        {
-          totalContent: polygonUuids.length,
-          processedContent: 0,
-          progressMessage: `Starting validation of ${polygonUuids.length} polygons...`
-        },
-        { where: { id: delayedJobId } }
-      );
+    const batchSize = 50;
+    let processed = 0;
 
-      const batchSize = 50;
-      let processed = 0;
+    for (let i = 0; i < polygonUuids.length; i += batchSize) {
+      const batch = polygonUuids.slice(i, i + batchSize);
+      await this.validationService.validatePolygonsBatch(batch, validationTypes);
 
-      for (let i = 0; i < polygonUuids.length; i += batchSize) {
-        const batch = polygonUuids.slice(i, i + batchSize);
+      processed += batch.length;
+      const progressPercentage = Math.floor((processed / polygonUuids.length) * 100);
+      await this.updateJobProgress(job, {
+        processedContent: processed,
+        progressMessage: `Running ${processed} out of ${polygonUuids.length} polygons (${progressPercentage}%)`
+      });
+    }
 
-        await this.validationService.validatePolygonsBatch(batch, validationTypes);
-
-        processed += batch.length;
-
-        const progressPercentage = Math.floor((processed / polygonUuids.length) * 100);
-        await DelayedJob.update(
-          {
-            processedContent: processed,
-            progressMessage: `Running ${processed} out of ${polygonUuids.length} polygons (${progressPercentage}%)`
-          },
-          { where: { id: delayedJobId } }
-        );
-      }
-
-      const summary = {
-        siteUuid,
+    const document = buildJsonApi(ValidationSummaryDto).addData(
+      siteUuid,
+      populateDto(new ValidationSummaryDto(), {
+        siteUuid: siteUuid,
         totalPolygons: polygonUuids.length,
         validatedPolygons: polygonUuids.length,
-        validationTypes: validationTypes,
         completedAt: new Date()
-      };
-
-      await DelayedJob.update(
-        {
-          status: "succeeded",
-          statusCode: 200,
-          payload: summary,
-          progressMessage: `Completed validation of ${polygonUuids.length} polygons`
-        },
-        { where: { id: delayedJobId } }
-      );
-    } catch (error) {
-      this.logger.error(`Error processing site validation for site ${siteUuid}:`, error);
-
-      await DelayedJob.update(
-        {
-          status: "failed",
-          statusCode: 500,
-          payload: { error: error instanceof Error ? error.message : "Unknown error occurred" }
-        },
-        { where: { id: delayedJobId } }
-      );
-    }
+      })
+    );
+    return {
+      processedContent: polygonUuids.length,
+      progressMessage: `Completed validation of ${polygonUuids.length} polygons`,
+      payload: document
+    };
   }
 }

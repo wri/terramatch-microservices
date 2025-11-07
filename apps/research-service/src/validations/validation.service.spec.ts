@@ -10,7 +10,7 @@ import {
   Project
 } from "@terramatch-microservices/database/entities";
 import { Literal } from "sequelize/types/utils";
-import { ValidationType } from "@terramatch-microservices/database/constants";
+import { ValidationType, CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 
 interface MockCriteriaSite {
@@ -154,6 +154,7 @@ describe("ValidationService", () => {
       expect(result.criteriaList).toHaveLength(3);
       expect(result.criteriaList[0]).toEqual({
         criteriaId: 3,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[3],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -319,12 +320,14 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(2);
       expect(result.results[0]).toEqual({
         criteriaId: 4,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: null
       });
       expect(result.results[1]).toEqual({
         criteriaId: 4,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
         valid: false,
         createdAt: expect.any(Date),
         extraInfo: null
@@ -356,6 +359,7 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
         criteriaId: 8,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
         valid: false,
         createdAt: expect.any(Date),
         extraInfo: spikesResult.extraInfo
@@ -405,6 +409,7 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
         criteriaId: 14,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[14],
         valid: false,
         createdAt: expect.any(Date),
         extraInfo: expect.arrayContaining([
@@ -442,6 +447,7 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
         criteriaId: 15,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[15],
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: null
@@ -477,6 +483,7 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
         criteriaId: 6,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[6],
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: {
@@ -520,6 +527,7 @@ describe("ValidationService", () => {
       expect(result.results).toHaveLength(1);
       expect(result.results[0]).toEqual({
         criteriaId: 12,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[12],
         valid: true,
         createdAt: expect.any(Date),
         extraInfo: expect.objectContaining({

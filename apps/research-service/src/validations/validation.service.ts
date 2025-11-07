@@ -29,7 +29,8 @@ import {
   VALIDATION_CRITERIA_IDS,
   VALIDATION_TYPES,
   CriteriaId,
-  EXCLUDED_VALIDATION_CRITERIA
+  EXCLUDED_VALIDATION_CRITERIA,
+  CRITERIA_ID_TO_VALIDATION_TYPE
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 
@@ -81,6 +82,7 @@ export class ValidationService {
 
     const criteriaList: ValidationCriteriaDto[] = criteriaData.map(criteria => ({
       criteriaId: criteria.criteriaId,
+      validationType: CRITERIA_ID_TO_VALIDATION_TYPE[criteria.criteriaId],
       valid: Boolean(criteria.valid),
       createdAt: criteria.createdAt,
       extraInfo: criteria.extraInfo
@@ -158,6 +160,7 @@ export class ValidationService {
         polygonUuid: polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
           criteriaId: criteria.criteriaId,
+          validationType: CRITERIA_ID_TO_VALIDATION_TYPE[criteria.criteriaId],
           valid: Boolean(criteria.valid),
           createdAt: criteria.createdAt,
           extraInfo: criteria.extraInfo
@@ -192,6 +195,7 @@ export class ValidationService {
 
         results.push({
           criteriaId: criteriaId,
+          validationType: validationType,
           valid: Boolean(validationResult.valid),
           createdAt: new Date(),
           extraInfo: validationResult.extraInfo
@@ -470,6 +474,7 @@ export class ValidationService {
         polygonUuid: string;
         criteriaList: Array<{
           criteriaId: CriteriaId;
+          validationType: ValidationType;
           valid: boolean;
           createdAt: Date;
           extraInfo: object | null;
@@ -501,6 +506,7 @@ export class ValidationService {
       featureIndex: number;
       featureId?: string;
       criteriaId: CriteriaId;
+      validationType: ValidationType;
       valid: boolean;
       extraInfo: object | null;
     }> = [];
@@ -524,6 +530,7 @@ export class ValidationService {
             featureIndex: feature.featureIndex,
             featureId: feature.properties?.id as string | undefined,
             criteriaId,
+            validationType,
             valid: Boolean(result.valid),
             extraInfo: result.extraInfo
           });
@@ -532,6 +539,7 @@ export class ValidationService {
             featureIndex: feature.featureIndex,
             featureId: feature.properties?.id as string | undefined,
             criteriaId,
+            validationType,
             valid: false,
             extraInfo: {
               error: error instanceof Error ? error.message : "Unknown error occurred"
@@ -545,6 +553,7 @@ export class ValidationService {
       number,
       Array<{
         criteriaId: CriteriaId;
+        validationType: ValidationType;
         valid: boolean;
         extraInfo: object | null;
       }>
@@ -558,6 +567,7 @@ export class ValidationService {
       if (criteriaList != null) {
         criteriaList.push({
           criteriaId: result.criteriaId,
+          validationType: result.validationType,
           valid: Boolean(result.valid),
           extraInfo: result.extraInfo
         });
@@ -571,6 +581,7 @@ export class ValidationService {
         polygonUuid: string;
         criteriaList: Array<{
           criteriaId: CriteriaId;
+          validationType: ValidationType;
           valid: boolean;
           createdAt: Date;
           extraInfo: object | null;

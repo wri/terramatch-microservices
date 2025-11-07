@@ -12,6 +12,7 @@ import {
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
+import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { ValidationSummaryDto } from "./dto/validation-summary.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
@@ -212,9 +213,17 @@ export class ValidationController {
     const document = buildJsonApi(ValidationDto);
 
     for (const validation of validations) {
+      const criteriaList: ValidationCriteriaDto[] = validation.attributes.criteriaList.map(criteria => ({
+        criteriaId: criteria.criteriaId,
+        validationType: criteria.validationType,
+        valid: criteria.valid,
+        createdAt: criteria.createdAt,
+        extraInfo: criteria.extraInfo
+      }));
+
       const validationDto = populateDto(new ValidationDto(), {
         polygonUuid: validation.attributes.polygonUuid,
-        criteriaList: validation.attributes.criteriaList
+        criteriaList
       });
       document.addData(validation.id, validationDto);
     }

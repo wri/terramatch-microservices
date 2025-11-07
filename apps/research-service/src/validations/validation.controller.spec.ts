@@ -11,7 +11,7 @@ import { GeometryValidationRequestBody } from "./dto/geometry-validation-request
 import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
-import { ValidationType } from "@terramatch-microservices/database/constants";
+import { ValidationType, CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { Site } from "@terramatch-microservices/database/entities";
 
 describe("ValidationController", () => {
@@ -23,12 +23,14 @@ describe("ValidationController", () => {
     criteriaList: [
       {
         criteriaId: 4,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
       },
       {
         criteriaId: 8,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -42,6 +44,7 @@ describe("ValidationController", () => {
     criteriaList: [
       {
         criteriaId: 4,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -55,6 +58,7 @@ describe("ValidationController", () => {
     criteriaList: [
       {
         criteriaId: 8,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
         valid: false,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: { reason: "Test" }
@@ -79,6 +83,7 @@ describe("ValidationController", () => {
           criteriaList: [
             {
               criteriaId: 5,
+              validationType: CRITERIA_ID_TO_VALIDATION_TYPE[5],
               valid: true,
               createdAt: new Date("2025-01-08T22:15:15.000Z"),
               extraInfo: null
@@ -211,12 +216,14 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 4,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: null
           },
           {
             criteriaId: 8,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: { spikes: [], spikeCount: 0 }
@@ -230,6 +237,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 4,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: null
@@ -291,6 +299,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 4,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: null
@@ -331,6 +340,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 14,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[14],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -387,6 +397,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 15,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[15],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -444,6 +455,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 6,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[6],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -496,6 +508,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 12,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[12],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {

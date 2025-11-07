@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { ITranslateParams, normalizeLocale, tx, t } from "@transifex/native";
 import { Dictionary } from "lodash";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+
+// A mapping of I18nItem ID to a translated value, or null if no translation is available.
+export type Translations = Record<number, string | null>;
 
 @Injectable()
 export class LocalizationService {
@@ -13,29 +17,64 @@ export class LocalizationService {
     });
   }
 
-  async translateKeys(keyMap: Dictionary<string>, locale: string, replacements: Dictionary<string> = {}) {
+  async translateKeys(keyMap: Dictionary<string>, locale: ValidLocale, replacements: Dictionary<string> = {}) {
     const keyStrings = Object.values(keyMap);
     const keys = await this.getLocalizationKeys(keyStrings);
     const i18nItemIds = keys.map(({ valueId }) => valueId).filter(id => id != null);
-    const translations =
-      i18nItemIds.length === 0
-        ? []
-        : await I18nTranslation.findAll({
-            where: { i18nItemId: { [Op.in]: i18nItemIds }, language: locale }
-          });
+    const translations = await this.translateIds(i18nItemIds, locale);
 
     return Object.entries(keyMap).reduce((result, [prop, key]) => {
       const { value, valueId } = keys.find(record => record.key === key) ?? {};
       if (value == null) throw new NotFoundException(`Localization key not found [${key}]`);
 
-      const translation = translations.find(({ i18nItemId }) => i18nItemId === valueId);
       const translated = Object.entries(replacements).reduce(
         (translated, [replacementKey, replacementValue]) => translated.replaceAll(replacementKey, replacementValue),
-        translation?.longValue ?? translation?.shortValue ?? value
+        translations[valueId ?? -1] ?? value
       );
 
       return { ...result, [prop]: translated };
     }, {} as Dictionary<string>);
+  }
+
+  async generateI18nId(value?: string | null, currentId?: number | null) {
+    if (value == null) return currentId ?? null;
+
+    value = value.trim();
+    const current = currentId == null ? null : await I18nItem.findOne({ where: { id: currentId } });
+    if (current != null && (current.shortValue === value || current.longValue === value)) {
+      return current.id;
+    }
+
+    const short = value.length < 256;
+    const item = new I18nItem();
+    item.type = short ? "short" : "long";
+    item.status = "draft";
+    item.shortValue = short ? value : null;
+    item.longValue = short ? null : value;
+    await item.save();
+
+    return item.id;
+  }
+
+  /**
+   * Returns a mapping of the given I18nItem IDs to their translated values in the given locale
+   */
+  async translateIds(ids: number[], locale: ValidLocale) {
+    if (ids.length === 0) return {} as Translations;
+
+    return (
+      await I18nTranslation.findAll({
+        where: { language: locale, i18nItemId: ids },
+        // Note: it is expected that a given translation has either a short value or a long value; never both.
+        attributes: ["i18nItemId", "shortValue", "longValue"]
+      })
+    ).reduce(
+      (translations, { i18nItemId, shortValue, longValue }) => ({
+        ...translations,
+        [i18nItemId]: shortValue ?? longValue
+      }),
+      {} as Translations
+    );
   }
 
   async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
@@ -49,7 +88,7 @@ export class LocalizationService {
    * @param params The optional translation substitution params
    * @returns The translated text.
    */
-  async localizeText(text: string, locale: string, params?: ITranslateParams) {
+  async localizeText(text: string, locale: ValidLocale, params?: ITranslateParams) {
     // Set the locale for the SDK
     const txLocale = normalizeLocale(locale);
     await tx.setCurrentLocale(txLocale);

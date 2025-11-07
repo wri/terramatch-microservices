@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
-import { Transaction } from "sequelize";
+import { Transaction, Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
@@ -95,11 +95,76 @@ export class SitePolygonCreationService {
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const mergedFeatures = await this.transformPointFeaturesToPolygons(siteGeometries, userId, transaction);
+        const { features: mergedFeatures, duplicatePointUuids } = await this.transformPointFeaturesToPolygons(
+          siteGeometries,
+          siteId,
+          userId,
+          transaction
+        );
+
+        if (duplicatePointUuids.length > 0) {
+          const existingPointSitePolygons = await SitePolygon.findAll({
+            where: { pointUuid: { [Op.in]: duplicatePointUuids }, isActive: true, siteUuid: siteId },
+            transaction
+          });
+
+          if (existingPointSitePolygons.length > 0) {
+            allDuplicatePolygons.push(...existingPointSitePolygons);
+            const duplicatePointValidationMap = new Map<string, ValidationIncludedData>();
+
+            for (const duplicateSitePolygon of existingPointSitePolygons) {
+              if (duplicateSitePolygon.polygonUuid != null) {
+                const existingUuid = duplicateSitePolygon.polygonUuid;
+
+                if (!duplicatePointValidationMap.has(existingUuid)) {
+                  duplicatePointValidationMap.set(existingUuid, {
+                    type: "validation",
+                    id: existingUuid,
+                    attributes: {
+                      polygonUuid: existingUuid,
+                      criteriaList: [
+                        {
+                          criteriaId: VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY,
+                          valid: false,
+                          createdAt: new Date(),
+                          extraInfo: {
+                            polygonUuid: existingUuid,
+                            message: "This geometry already exists in the project",
+                            sitePolygonUuid: duplicateSitePolygon.uuid,
+                            sitePolygonName: duplicateSitePolygon.polyName ?? undefined
+                          }
+                        }
+                      ]
+                    }
+                  });
+                }
+              }
+            }
+
+            duplicateValidations.push(...duplicatePointValidationMap.values());
+          }
+        }
+
         const groupedByType = this.groupGeometriesByType(mergedFeatures);
 
         for (const [, typeFeatures] of Object.entries(groupedByType)) {
-          const { duplicateIndexToUuid } = await this.checkDuplicates(typeFeatures, siteId);
+          const voronoiFeatures: Feature[] = [];
+          const regularFeatures: Feature[] = [];
+
+          for (const feature of typeFeatures) {
+            if (feature.properties?._fromVoronoi === true) {
+              voronoiFeatures.push(feature);
+            } else {
+              regularFeatures.push(feature);
+            }
+          }
+
+          let duplicateIndexToUuid = new Map<number, string>();
+          if (regularFeatures.length > 0) {
+            const duplicateResult = await this.checkDuplicates(regularFeatures, siteId);
+            duplicateIndexToUuid = duplicateResult.duplicateIndexToUuid;
+          }
+
           const existingDuplicateUuids: string[] = [];
           const duplicateValidationMap = new Map<string, ValidationIncludedData>();
 
@@ -155,13 +220,18 @@ export class SitePolygonCreationService {
             duplicateValidations.push(...duplicateValidationMap.values());
           }
 
-          const { filteredFeatures } = this.filterDuplicates(typeFeatures, duplicateIndexToUuid);
+          const { filteredFeatures: filteredRegularFeatures } = this.filterDuplicates(
+            regularFeatures,
+            duplicateIndexToUuid
+          );
+
+          const allFeaturesToCreate = [...filteredRegularFeatures, ...voronoiFeatures];
 
           let createdSitePolygons: SitePolygon[];
-          if (filteredFeatures.length > 0) {
-            if (filteredFeatures.length > LARGE_BATCH_THRESHOLD) {
+          if (allFeaturesToCreate.length > 0) {
+            if (allFeaturesToCreate.length > LARGE_BATCH_THRESHOLD) {
               createdSitePolygons = await this.processLargeGeometryBatch(
-                filteredFeatures,
+                allFeaturesToCreate,
                 siteId,
                 userId,
                 source,
@@ -169,7 +239,7 @@ export class SitePolygonCreationService {
               );
             } else {
               createdSitePolygons = await this.createPolygonsBatch(
-                filteredFeatures,
+                allFeaturesToCreate,
                 siteId,
                 userId,
                 source,
@@ -210,12 +280,13 @@ export class SitePolygonCreationService {
 
   private async transformPointFeaturesToPolygons(
     features: Feature[],
+    siteId: string,
     userId: number,
     transaction: Transaction
-  ): Promise<Feature[]> {
+  ): Promise<{ features: Feature[]; duplicatePointUuids: string[] }> {
     const points = features.filter(f => f.geometry.type === "Point");
     if (points.length === 0) {
-      return features;
+      return { features, duplicatePointUuids: [] };
     }
 
     for (const p of points) {
@@ -228,20 +299,62 @@ export class SitePolygonCreationService {
       }
     }
 
-    const pointUuids = await this.pointGeometryService.createPointGeometriesFromFeatures(points, userId, transaction);
+    const { duplicateIndexToUuid: pointDuplicateMap } = await this.duplicateGeometryValidator.checkNewPointsDuplicates(
+      points,
+      siteId
+    );
 
-    for (let i = 0; i < points.length && i < pointUuids.length; i++) {
+    const newPoints: Feature[] = [];
+    const duplicatePointUuids: string[] = [];
+    const newPointIndices: number[] = [];
+    const pointIndexToUuidMap = new Map<number, string>();
+
+    for (let i = 0; i < points.length; i++) {
+      const existingUuid = pointDuplicateMap.get(i);
+      if (existingUuid != null) {
+        pointIndexToUuidMap.set(i, existingUuid);
+        duplicatePointUuids.push(existingUuid);
+      } else {
+        newPoints.push(points[i]);
+        newPointIndices.push(i);
+      }
+    }
+
+    const newPointUuids: string[] = [];
+    if (newPoints.length > 0) {
+      const createdUuids = await this.pointGeometryService.createPointGeometriesFromFeatures(
+        newPoints,
+        userId,
+        transaction
+      );
+      newPointUuids.push(...createdUuids);
+
+      for (let j = 0; j < newPointUuids.length && j < newPointIndices.length; j++) {
+        pointIndexToUuidMap.set(newPointIndices[j], newPointUuids[j]);
+      }
+    }
+
+    for (let i = 0; i < points.length; i++) {
       const point = points[i];
+      const pointUuid = pointIndexToUuidMap.get(i);
       if (point.properties == null) {
         throw new BadRequestException("Point feature properties cannot be null");
       }
-      point.properties._pointUuid = pointUuids[i];
+      if (pointUuid != null) {
+        point.properties._pointUuid = pointUuid;
+      }
     }
 
-    const voronoiPolys = await this.voronoiService.transformPointsToPolygons(points);
+    const voronoiPolys = newPoints.length > 0 ? await this.voronoiService.transformPointsToPolygons(newPoints) : [];
+
+    for (const voronoiPoly of voronoiPolys) {
+      if (voronoiPoly.properties != null) {
+        voronoiPoly.properties._fromVoronoi = true;
+      }
+    }
 
     const nonPoints = features.filter(f => f.geometry.type !== "Point");
-    return [...nonPoints, ...voronoiPolys];
+    return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids };
   }
 
   private groupGeometriesBySiteId(geometries: { features: Feature[] }[]): { [siteId: string]: Feature[] } {

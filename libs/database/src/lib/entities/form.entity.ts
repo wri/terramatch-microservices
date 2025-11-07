@@ -1,17 +1,43 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  Index,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
+import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
-import { MediaConfiguration } from "../constants/media-owners";
 import { Stage } from "./stage.entity";
+import { FormType } from "../constants/forms";
+import { FormSection } from "./form-section.entity";
+import { FormQuestion } from "./form-question.entity";
 
-@Table({ tableName: "forms", underscored: true, paranoid: true })
+@Table({
+  tableName: "forms",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async beforeDestroy(form: Form) {
+      // Handle deleting all questions and sections in 2 queries and avoid N+1 cascading by forcing
+      // hooks off.
+      await FormQuestion.destroy({
+        where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } },
+        hooks: false
+      });
+      await FormSection.destroy({ where: { formId: form.uuid }, hooks: false });
+    }
+  }
+})
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 
-  static readonly MEDIA: Record<string, MediaConfiguration> = {
-    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" },
-    document: { dbCollection: "document", multiple: false, validation: "general-documents" }
-  };
+  static readonly MEDIA = {
+    banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
+  } as const;
 
   @PrimaryKey
   @AutoIncrement
@@ -19,6 +45,7 @@ export class Form extends Model<Form> {
   override id: number;
 
   @Index
+  @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
@@ -37,11 +64,10 @@ export class Form extends Model<Form> {
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  type: FormType | null;
 
-  @AllowNull
   @Column(TEXT)
-  title: string | null;
+  title: string;
 
   @AllowNull
   @Column(INTEGER)
@@ -66,10 +92,6 @@ export class Form extends Model<Form> {
   @AllowNull
   @Column(TEXT)
   documentation: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  documentationId: number | null;
 
   @AllowNull
   @Column(TEXT)

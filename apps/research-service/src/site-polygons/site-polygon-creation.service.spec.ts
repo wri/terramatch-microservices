@@ -4,7 +4,7 @@ import { PolygonGeometryCreationService } from "./polygon-geometry-creation.serv
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { VoronoiService } from "../voronoi/voronoi.service";
-import { Site, SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { BadRequestException } from "@nestjs/common";
 
@@ -49,6 +49,9 @@ describe("SitePolygonCreationService", () => {
             checkNewFeaturesDuplicates: jest.fn().mockResolvedValue({
               valid: true,
               duplicates: []
+            }),
+            checkNewPointsDuplicates: jest.fn().mockResolvedValue({
+              duplicateIndexToUuid: new Map()
             })
           }
         },
@@ -398,6 +401,7 @@ describe("SitePolygonCreationService", () => {
       const request = createMockRequest([pointFeature]);
 
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
 
       jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue(["point-uuid-1"]);
 
@@ -434,6 +438,8 @@ describe("SitePolygonCreationService", () => {
           polyName: null
         } as SitePolygon
       ]);
+
+      jest.spyOn(SitePolygonData, "bulkCreate").mockResolvedValue([]);
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 
@@ -517,6 +523,7 @@ describe("SitePolygonCreationService", () => {
       const request = createMockRequest([pointFeature1, pointFeature2]);
 
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
 
       // Return fewer UUIDs than points to test the loop condition
       jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue(["point-uuid-1"]);
@@ -554,6 +561,8 @@ describe("SitePolygonCreationService", () => {
           polyName: null
         } as SitePolygon
       ]);
+
+      jest.spyOn(SitePolygonData, "bulkCreate").mockResolvedValue([]);
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 
@@ -600,6 +609,7 @@ describe("SitePolygonCreationService", () => {
       const request = createMockRequest([pointFeature, polygonFeature]);
 
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
 
       jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue(["point-uuid-1"]);
 
@@ -641,6 +651,8 @@ describe("SitePolygonCreationService", () => {
           polyName: null
         } as SitePolygon
       ]);
+
+      jest.spyOn(SitePolygonData, "bulkCreate").mockResolvedValue([]);
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
 

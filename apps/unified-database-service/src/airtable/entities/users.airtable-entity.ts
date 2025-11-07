@@ -4,6 +4,7 @@ import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColum
 import { User } from "@terramatch-microservices/database/entities";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 // There _are_ some columns with uuid null in the prod DB. However, they have all been deleted,
 // so for this processor, we can ignore them.
@@ -53,7 +54,7 @@ export class UserEntity extends AirtableEntity<UserWithUuid, UserAssociations> {
           monitoringOrganisationUuids: orgs
             .filter(({ OrganisationUser }) => OrganisationUser.status === "approved")
             .map(({ uuid }) => uuid),
-          frameworks: (await user.myFrameworks()).map(({ slug }) => slug),
+          frameworks: (await user.myFrameworks()).map(({ slug }) => slug).filter(isNotNull),
           projectUuids: (await user.$get("projects", { attributes: ["uuid"] })).map(({ uuid }) => uuid)
         };
       })

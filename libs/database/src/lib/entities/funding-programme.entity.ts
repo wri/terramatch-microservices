@@ -1,6 +1,6 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 import { BIGINT, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { I18nItem } from "./i18n-item.entity";

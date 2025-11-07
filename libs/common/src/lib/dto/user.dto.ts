@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
 import { populateDto } from "./json-api-attributes";
@@ -16,7 +17,9 @@ export class UserDto {
   constructor(user: User, frameworks: Framework[]) {
     populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
-      frameworks: frameworks.map(({ name, slug }) => ({ name, slug }))
+      frameworks: frameworks
+        .filter(({ slug }) => slug != null)
+        .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
     });
   }
 

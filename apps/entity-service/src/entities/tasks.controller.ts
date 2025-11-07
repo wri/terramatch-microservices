@@ -20,6 +20,7 @@ import { NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { TasksService } from "./tasks.service";
+import { SrpReportLightDto } from "./dto/srp-report.dto";
 
 @Controller("entities/v3/tasks")
 export class TasksController {
@@ -61,10 +62,11 @@ export class TasksController {
       relationships: [
         { name: "projectReport", type: ProjectReportLightDto },
         { name: "siteReports", type: SiteReportLightDto, multiple: true },
-        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true }
+        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true },
+        { name: "srpReports", type: SrpReportLightDto, multiple: true }
       ]
     },
-    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto]
+    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto, SrpReportLightDto]
   })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."

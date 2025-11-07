@@ -19,6 +19,7 @@ import { getStateMachine, StateMachineColumn } from "../util/model-column-state-
 import { ProjectReport } from "./project-report.entity";
 import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
+import { SrpReport } from "./srp-report.entity";
 
 @Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
 export class Task extends Model<Task> {
@@ -95,4 +96,7 @@ export class Task extends Model<Task> {
 
   @HasMany(() => NurseryReport)
   nurseryReports: NurseryReport[] | null;
+
+  @HasMany(() => SrpReport)
+  srpReports: SrpReport[] | null;
 }

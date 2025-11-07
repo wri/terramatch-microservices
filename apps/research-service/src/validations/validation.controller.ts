@@ -1,12 +1,12 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
-  Query,
   Post,
-  Body,
+  Query,
   Request
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -25,7 +25,6 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("validations/v3")
 @ApiTags("Validations")
@@ -67,7 +66,7 @@ export class ValidationController {
 
     const criteriaId = query.criteriaId != null ? (Number(query.criteriaId) as CriteriaId) : undefined;
 
-    if (criteriaId != null && (criteriaId < 1 || Number.isInteger(criteriaId) === false)) {
+    if (criteriaId != null && (criteriaId < 1 || !Number.isInteger(criteriaId))) {
       throw new BadRequestException("criteriaId must be a valid integer greater than or equal to 1");
     }
 
@@ -181,8 +180,7 @@ export class ValidationController {
       delayedJobId: delayedJob.id
     });
 
-    const delayedJobDto = populateDto(new DelayedJobDto(), delayedJob);
-    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, delayedJobDto);
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
   @Post("geometries")

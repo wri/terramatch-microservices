@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media } from "@terramatch-microservices/database/entities";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
 import "multer";
+import { Op } from "sequelize";
 
 @Injectable()
 export class MediaService {
@@ -60,5 +61,43 @@ export class MediaService {
       (conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex));
 
     return `${baseUrl}/conversions/${baseFileName}-${conversion}${extension}`;
+  }
+
+  async getMedia(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+    return media;
+  }
+
+  async deleteMedia(media: Media) {
+    const key = `${media.id}/${media.fileName}`;
+
+    const command = new DeleteObjectCommand({
+      Bucket: this.configService.get<string>("AWS_BUCKET") ?? "",
+      Key: key
+    });
+
+    this.logger.log(`Deleting media ${media.uuid} from S3`);
+    await this.s3.send(command);
+    await media.destroy();
+
+    return media;
+  }
+
+  async deleteMediaByUuid(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+
+    return this.deleteMedia(media);
+  }
+
+  async getMedias(uuids: string[]) {
+    return Media.findAll({
+      where: { uuid: { [Op.in]: uuids } }
+    });
   }
 }

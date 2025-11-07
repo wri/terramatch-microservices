@@ -31,19 +31,19 @@ describe("OrganisationPolicy", () => {
     await expectCannot(service, "create", Organisation);
   });
 
-  it("allows uploading files to the user's org", async () => {
+  it("allows uploading and deleting files to the user's org", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
     mockUserId(user.id);
     mockPermissions("manage-own");
-    await expectCan(service, "uploadFiles", org);
+    await expectCan(service, ["uploadFiles", "deleteFiles"], org);
   });
 
-  it("disallows uploading files to other orgs", async () => {
+  it("disallows uploading and deleting files to other orgs", async () => {
     const orgs = await OrganisationFactory.createMany(2);
     const user = await UserFactory.create({ organisationId: orgs[0].id });
     mockUserId(user.id);
     mockPermissions("manage-own");
-    await expectCannot(service, "uploadFiles", orgs[1]);
+    await expectCannot(service, ["uploadFiles", "deleteFiles"], orgs[1]);
   });
 });

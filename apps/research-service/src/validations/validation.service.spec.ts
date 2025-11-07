@@ -6,18 +6,10 @@ import {
   CriteriaSiteHistoric,
   PolygonGeometry,
   SitePolygon,
-  Site,
-  Project
+  Site
 } from "@terramatch-microservices/database/entities";
-import { Literal } from "sequelize/types/utils";
-import { ValidationType, CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
+import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
-
-interface MockCriteriaSite {
-  update: jest.MockedFunction<(data: { valid: boolean; extraInfo: object | null }) => Promise<void>>;
-  save: jest.MockedFunction<() => Promise<void>>;
-  destroy: jest.MockedFunction<() => Promise<void>>;
-}
 
 interface MockSelfIntersectionValidator {
   validatePolygon: jest.MockedFunction<(polygonUuid: string) => Promise<{ valid: boolean; extraInfo: object | null }>>;

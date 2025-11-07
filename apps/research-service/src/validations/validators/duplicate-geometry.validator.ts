@@ -338,7 +338,6 @@ export class DuplicateGeometryValidator implements Validator {
       };
     }
 
-    // Skip duplicate validation if site_id is missing (should be validated earlier)
     if (properties == null || properties.site_id == null) {
       return {
         valid: true,

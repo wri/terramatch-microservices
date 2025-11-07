@@ -18,6 +18,7 @@ import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
 import { GeometryValidationRequestBody } from "./dto/geometry-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { CriteriaId, FLORITY_VALIDATION_TYPES, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";

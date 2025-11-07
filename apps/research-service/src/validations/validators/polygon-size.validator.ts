@@ -1,5 +1,5 @@
 import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
 import { Geometry, Polygon } from "geojson";
 import { QueryTypes } from "sequelize";
@@ -10,7 +10,7 @@ interface PolygonSizeValidationResult extends ValidationResult {
   } | null;
 }
 
-export class PolygonSizeValidator implements Validator {
+export class PolygonSizeValidator implements PolygonValidator, GeometryValidator {
   private static readonly MAX_AREA_HECTARES = 1000;
   private static readonly MAX_AREA_SQ_METERS = 1000000; // 1000 hectares = 1,000,000 square meters
 
@@ -62,6 +62,7 @@ export class PolygonSizeValidator implements Validator {
 
   async validateGeometry(
     geometry: Geometry,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Required by GeometryValidator interface
     _properties?: Record<string, unknown>
   ): Promise<PolygonSizeValidationResult> {
     if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {

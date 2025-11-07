@@ -1,6 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { FeatureBoundsValidator } from "./feature-bounds.validator";
-import { NotFoundException } from "@nestjs/common";
 import { Point, Polygon, MultiPolygon, LineString } from "geojson";
 
 describe("FeatureBoundsValidator", () => {
@@ -12,12 +11,6 @@ describe("FeatureBoundsValidator", () => {
     }).compile();
 
     validator = module.get<FeatureBoundsValidator>(FeatureBoundsValidator);
-  });
-
-  describe("validatePolygon", () => {
-    it("should throw NotFoundException", async () => {
-      await expect(validator.validatePolygon("test-uuid")).rejects.toThrow(NotFoundException);
-    });
   });
 
   describe("validateGeometry", () => {

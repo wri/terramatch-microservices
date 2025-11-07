@@ -1,10 +1,10 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
 import { Geometry } from "geojson";
 import { QueryTypes } from "sequelize";
 
-export class SelfIntersectionValidator implements Validator {
+export class SelfIntersectionValidator implements PolygonValidator, GeometryValidator {
   async validatePolygon(polygonUuid: string): Promise<ValidationResult> {
     const isSimple = await PolygonGeometry.checkIsSimple(polygonUuid);
     if (isSimple == null) {

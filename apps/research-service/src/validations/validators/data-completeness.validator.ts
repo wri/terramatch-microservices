@@ -1,5 +1,5 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
 import { Geometry } from "geojson";
@@ -58,7 +58,7 @@ const VALID_SYSTEMS = [
 
 const VALID_DISTRIBUTIONS = ["single-line", "partial", "full"];
 
-export class DataCompletenessValidator implements Validator {
+export class DataCompletenessValidator implements PolygonValidator, GeometryValidator {
   async validatePolygon(polygonUuid: string): Promise<DataCompletenessValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid },

@@ -1,5 +1,5 @@
 import { PolygonGeometry, SitePolygon, Site, PointGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException, BadRequestException, Logger } from "@nestjs/common";
 import { Transaction, QueryTypes } from "sequelize";
 import { Feature } from "@terramatch-microservices/database/constants";
@@ -20,7 +20,7 @@ interface DuplicateCheckResult {
   existing_uuid: string;
 }
 
-export class DuplicateGeometryValidator implements Validator {
+export class DuplicateGeometryValidator implements PolygonValidator, GeometryValidator {
   private readonly logger = new Logger(DuplicateGeometryValidator.name);
   async validatePolygon(polygonUuid: string): Promise<DuplicateValidationResult> {
     const sitePolygon = await SitePolygon.findOne({

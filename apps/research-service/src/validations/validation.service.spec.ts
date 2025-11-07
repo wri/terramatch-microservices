@@ -294,359 +294,6 @@ describe("ValidationService", () => {
     });
   });
 
-  describe("validatePolygons", () => {
-    const mockCriteriaSite: MockCriteriaSite = {
-      update: jest.fn(),
-      save: jest.fn(),
-      destroy: jest.fn()
-    };
-
-    beforeEach(() => {
-      (CriteriaSite.findOne as jest.Mock).mockResolvedValue(mockCriteriaSite);
-    });
-
-    it("should validate polygons with SELF_INTERSECTION validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1", "uuid-2"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType]
-      };
-
-      mockSelfIntersectionValidator.validatePolygon
-        .mockResolvedValueOnce({ valid: true, extraInfo: null })
-        .mockResolvedValueOnce({ valid: false, extraInfo: null });
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(2);
-      expect(result.results[0]).toEqual({
-        criteriaId: 4,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
-        valid: true,
-        createdAt: expect.any(Date),
-        extraInfo: null
-      });
-      expect(result.results[1]).toEqual({
-        criteriaId: 4,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
-        valid: false,
-        createdAt: expect.any(Date),
-        extraInfo: null
-      });
-
-      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledTimes(2);
-      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledWith("uuid-1");
-      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledWith("uuid-2");
-    });
-
-    it("should validate polygons with SPIKES validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SPIKES" as ValidationType]
-      };
-
-      const spikesResult = {
-        valid: false,
-        extraInfo: {
-          spikes: [[33.0532174455731, -2.0235234982835237]],
-          spikeCount: 1
-        }
-      };
-
-      mockSpikesValidator.validatePolygon.mockResolvedValue(spikesResult);
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0]).toEqual({
-        criteriaId: 8,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
-        valid: false,
-        createdAt: expect.any(Date),
-        extraInfo: spikesResult.extraInfo
-      });
-
-      expect(mockSpikesValidator.validatePolygon).toHaveBeenCalledWith("uuid-1");
-    });
-
-    it("should validate polygons with both validation types", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType, "SPIKES" as ValidationType]
-      };
-
-      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
-      mockSpikesValidator.validatePolygon.mockResolvedValue({
-        valid: false,
-        extraInfo: { spikes: [], spikeCount: 0 }
-      });
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(2);
-      expect(result.results[0].criteriaId).toBe(4);
-      expect(result.results[1].criteriaId).toBe(8);
-    });
-
-    it("should validate polygons with DATA_COMPLETENESS validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["DATA_COMPLETENESS" as ValidationType]
-      };
-
-      const mockSitePolygon = {
-        polyName: null,
-        practice: null,
-        targetSys: "agroforest",
-        distr: "single-line",
-        numTrees: 100,
-        plantStart: new Date("2023-01-01")
-      };
-
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0]).toEqual({
-        criteriaId: 14,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[14],
-        valid: false,
-        createdAt: expect.any(Date),
-        extraInfo: expect.arrayContaining([
-          expect.objectContaining({ field: "poly_name", exists: false }),
-          expect.objectContaining({ field: "practice", exists: false })
-        ])
-      });
-
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: { polygonUuid: "uuid-1" },
-        attributes: ["polyName", "practice", "targetSys", "distr", "numTrees", "plantStart"]
-      });
-    });
-
-    it("should validate polygons with PLANT_START_DATE validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["PLANT_START_DATE" as ValidationType]
-      };
-
-      const mockSitePolygon = {
-        polyName: "Test Polygon",
-        plantStart: "2020-06-15",
-        siteUuid: "site-uuid-1",
-        site: {
-          name: "Test Site",
-          startDate: new Date("2019-01-01")
-        }
-      };
-
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0]).toEqual({
-        criteriaId: 15,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[15],
-        valid: true,
-        createdAt: expect.any(Date),
-        extraInfo: null
-      });
-
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: { polygonUuid: "uuid-1" },
-        attributes: ["polyName", "plantStart", "siteUuid"],
-        include: [
-          {
-            model: expect.anything(),
-            as: "site",
-            attributes: ["name", "startDate"]
-          }
-        ]
-      });
-    });
-
-    it("should validate polygons with POLYGON_SIZE validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["POLYGON_SIZE" as ValidationType]
-      };
-
-      const mockSitePolygon = {
-        calcArea: 500
-      };
-
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0]).toEqual({
-        criteriaId: 6,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[6],
-        valid: true,
-        createdAt: expect.any(Date),
-        extraInfo: {
-          area_hectares: 500
-        }
-      });
-
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: { polygonUuid: "uuid-1", isActive: true },
-        attributes: ["calcArea"]
-      });
-    });
-
-    it("should validate polygons with ESTIMATED_AREA validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["ESTIMATED_AREA" as ValidationType]
-      };
-
-      const mockSitePolygon = {
-        polygonUuid: "uuid-1",
-        loadSite: jest.fn().mockResolvedValue({
-          uuid: "site-uuid-1",
-          projectId: 1,
-          hectaresToRestoreGoal: 1000
-        })
-      };
-
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
-      (Project.findByPk as jest.Mock).mockResolvedValue({
-        id: 1,
-        totalHectaresRestoredGoal: 5000
-      });
-      (Site.uuidsSubquery as jest.Mock).mockReturnValue("subquery-literal" as unknown as Literal);
-      (SitePolygon.sum as jest.Mock)
-        .mockResolvedValueOnce(800) // Site area sum
-        .mockResolvedValueOnce(4000); // Project area sum
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0]).toEqual({
-        criteriaId: 12,
-        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[12],
-        valid: true,
-        createdAt: expect.any(Date),
-        extraInfo: expect.objectContaining({
-          sum_area_site: 800,
-          sum_area_project: 4000,
-          percentage_site: 80,
-          percentage_project: 80,
-          total_area_site: 1000,
-          total_area_project: 5000
-        })
-      });
-
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({
-        where: { polygonUuid: "uuid-1", isActive: true },
-        include: [
-          {
-            model: expect.anything(),
-            as: "site",
-            attributes: ["hectaresToRestoreGoal", "projectId"]
-          }
-        ]
-      });
-    });
-
-    it("should validate polygon with SELF_INTERSECTION when specified", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType]
-      };
-
-      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
-
-      const result = await service.validatePolygons(request);
-
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].criteriaId).toBe(4);
-      expect(mockSelfIntersectionValidator.validatePolygon).toHaveBeenCalledWith("uuid-1");
-    });
-
-    it("should save validation results to database", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType]
-      };
-
-      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
-
-      await service.validatePolygons(request);
-
-      expect(CriteriaSite.findOne).toHaveBeenCalledWith({
-        where: {
-          polygonId: "uuid-1",
-          criteriaId: 4
-        }
-      });
-    });
-
-    it("should create new criteria record when none exists", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType]
-      };
-
-      (CriteriaSite.findOne as jest.Mock).mockResolvedValue(null);
-      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
-
-      await service.validatePolygons(request);
-
-      expect(CriteriaSite.create).toHaveBeenCalled();
-    });
-
-    it("should update existing criteria record and create historic record", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType]
-      };
-
-      const existingCriteria: MockCriteriaSite & { valid: boolean; extraInfo: object } = {
-        valid: false,
-        extraInfo: { old: "data" },
-        update: jest.fn(),
-        save: jest.fn(),
-        destroy: jest.fn()
-      };
-
-      (CriteriaSite.findOne as jest.Mock).mockResolvedValue(existingCriteria);
-      mockSelfIntersectionValidator.validatePolygon.mockResolvedValue({ valid: true, extraInfo: null });
-
-      await service.validatePolygons(request);
-
-      expect(CriteriaSiteHistoric).toHaveBeenCalledWith();
-      expect(existingCriteria.destroy).toHaveBeenCalled();
-      expect(CriteriaSite.create).toHaveBeenCalledTimes(1); // Once for new record
-    });
-
-    it("should handle validator errors gracefully", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["SELF_INTERSECTION" as ValidationType]
-      };
-
-      const validatorError = new Error("PolygonGeometry model is missing sequelize connection");
-      mockSelfIntersectionValidator.validatePolygon.mockRejectedValue(validatorError);
-
-      await expect(service.validatePolygons(request)).rejects.toThrow(validatorError);
-    });
-
-    it("should throw BadRequestException for unknown validation type", async () => {
-      const request = {
-        polygonUuids: ["uuid-1"],
-        validationTypes: ["UNKNOWN_TYPE" as ValidationType]
-      };
-
-      await expect(service.validatePolygons(request)).rejects.toThrow(
-        new BadRequestException("Unknown validation type: UNKNOWN_TYPE")
-      );
-    });
-  });
-
   describe("getSiteValidations - edge cases", () => {
     it("should throw BadRequestException for invalid page size (too large)", async () => {
       await expect(service.getSiteValidations("site-uuid", 1001, 1)).rejects.toThrow(
@@ -1013,13 +660,41 @@ describe("ValidationService", () => {
   });
 
   describe("validateGeometries", () => {
-    let mockFeatureBoundsValidator: { validateGeometry: jest.MockedFunction<any> };
-    let mockGeometryTypeValidator: { validateGeometry: jest.MockedFunction<any> };
-    let mockPolygonSizeValidator: { validateGeometry: jest.MockedFunction<any> };
-    let mockSelfIntersectionValidatorGeometry: { validateGeometry: jest.MockedFunction<any> };
-    let mockSpikesValidatorGeometry: { validateGeometry: jest.MockedFunction<any> };
-    let mockDataCompletenessValidator: { validateGeometry: jest.MockedFunction<any> };
-    let mockDuplicateGeometryValidator: { validateGeometry: jest.MockedFunction<any> };
+    let mockFeatureBoundsValidator: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
+    let mockGeometryTypeValidator: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
+    let mockPolygonSizeValidator: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
+    let mockSelfIntersectionValidatorGeometry: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
+    let mockSpikesValidatorGeometry: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
+    let mockDataCompletenessValidator: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
+    let mockDuplicateGeometryValidator: {
+      validateGeometry: jest.MockedFunction<
+        (geometry: unknown, properties?: Record<string, unknown>) => Promise<{ valid: boolean; extraInfo: unknown }>
+      >;
+    };
 
     beforeEach(() => {
       mockFeatureBoundsValidator = {
@@ -1550,11 +1225,11 @@ describe("ValidationService", () => {
 
       // Mock validators to return different truthy/falsy values
       mockFeatureBoundsValidator.validateGeometry.mockResolvedValue({
-        valid: 1 as any, // Simulate database returning 1
+        valid: Boolean(1), // Simulate database returning 1, normalized to boolean
         extraInfo: null
       });
       mockGeometryTypeValidator.validateGeometry.mockResolvedValue({
-        valid: 0 as any, // Simulate database returning 0
+        valid: Boolean(0), // Simulate database returning 0, normalized to boolean
         extraInfo: null
       });
 

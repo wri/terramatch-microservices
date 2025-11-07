@@ -7,8 +7,7 @@ import {
   Site
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationRequestAttributes } from "./dto/validation-request.dto";
-import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";
@@ -23,11 +22,10 @@ import { WithinCountryValidator } from "./validators/within-country.validator";
 import { DuplicateGeometryValidator } from "./validators/duplicate-geometry.validator";
 import { FeatureBoundsValidator } from "./validators/feature-bounds.validator";
 import { GeometryTypeValidator } from "./validators/geometry-type.validator";
-import { Validator } from "./validators/validator.interface";
+import { Validator, isPolygonValidator, isGeometryValidator } from "./validators/validator.interface";
 import {
   ValidationType,
   VALIDATION_CRITERIA_IDS,
-  VALIDATION_TYPES,
   CriteriaId,
   EXCLUDED_VALIDATION_CRITERIA,
   CRITERIA_ID_TO_VALIDATION_TYPE
@@ -174,38 +172,6 @@ export class ValidationService {
     };
   }
 
-  /**
-   * @deprecated Use validatePolygonsBatch instead to avoid duplicate results with batch validators
-   */
-  async validatePolygons(request: ValidationRequestAttributes): Promise<ValidationResponseDto> {
-    const results: ValidationCriteriaDto[] = [];
-    const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
-
-    for (const polygonUuid of request.polygonUuids) {
-      for (const validationType of validationTypes) {
-        const validator = VALIDATORS[validationType];
-        if (validator == null) {
-          throw new BadRequestException(`Unknown validation type: ${validationType}`);
-        }
-
-        const validationResult = await validator.validatePolygon(polygonUuid);
-        const criteriaId = this.getCriteriaIdForValidationType(validationType);
-
-        await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
-
-        results.push({
-          criteriaId: criteriaId,
-          validationType: validationType,
-          valid: Boolean(validationResult.valid),
-          createdAt: new Date(),
-          extraInfo: validationResult.extraInfo
-        });
-      }
-    }
-
-    return { results };
-  }
-
   private getCriteriaIdForValidationType(validationType: ValidationType): CriteriaId {
     return VALIDATION_CRITERIA_IDS[validationType];
   }
@@ -275,7 +241,7 @@ export class ValidationService {
 
       const criteriaId = this.getCriteriaIdForValidationType(validationType);
 
-      if (validator.validatePolygons != null) {
+      if (validator != null && isPolygonValidator(validator) && validator.validatePolygons != null) {
         const batchResults = await validator.validatePolygons(polygonUuids);
 
         const seenPolygons = new Set<string>();
@@ -295,6 +261,9 @@ export class ValidationService {
           });
         }
       } else {
+        if (validator == null || !isPolygonValidator(validator)) {
+          throw new BadRequestException(`Validation type ${validationType} does not support polygon UUID validation.`);
+        }
         for (const polygonUuid of polygonUuids) {
           const validationResult = await validator.validatePolygon(polygonUuid);
           validationResults.push({
@@ -517,7 +486,7 @@ export class ValidationService {
         continue;
       }
 
-      if (validator.validateGeometry == null) {
+      if (!isGeometryValidator(validator)) {
         continue;
       }
 

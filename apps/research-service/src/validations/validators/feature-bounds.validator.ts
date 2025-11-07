@@ -1,5 +1,4 @@
-import { Validator, ValidationResult } from "./validator.interface";
-import { NotFoundException } from "@nestjs/common";
+import { GeometryValidator, ValidationResult } from "./validator.interface";
 import { Geometry, Polygon, MultiPolygon, Point } from "geojson";
 
 interface FeatureBoundsValidationResult extends ValidationResult {
@@ -12,16 +11,11 @@ interface FeatureBoundsValidationResult extends ValidationResult {
   } | null;
 }
 
-export class FeatureBoundsValidator implements Validator {
-  async validatePolygon(polygonUuid: string): Promise<ValidationResult> {
-    throw new NotFoundException(
-      "FeatureBoundsValidator does not support polygon UUID validation. Use validateGeometry instead."
-    );
-  }
-
+export class FeatureBoundsValidator implements GeometryValidator {
   async validateGeometry(
     geometry: Geometry,
-    properties?: Record<string, unknown>
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Required by GeometryValidator interface
+    _properties?: Record<string, unknown>
   ): Promise<FeatureBoundsValidationResult> {
     const invalidCoordinates: Array<{ longitude: number; latitude: number; reason: string }> = [];
 

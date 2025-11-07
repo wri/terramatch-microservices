@@ -1,5 +1,4 @@
-import { Validator, ValidationResult } from "./validator.interface";
-import { NotFoundException } from "@nestjs/common";
+import { GeometryValidator, ValidationResult } from "./validator.interface";
 import { Geometry } from "geojson";
 
 interface GeometryTypeValidationResult extends ValidationResult {
@@ -11,16 +10,11 @@ interface GeometryTypeValidationResult extends ValidationResult {
 
 const VALID_GEOMETRY_TYPES = ["Polygon", "MultiPolygon", "Point"] as const;
 
-export class GeometryTypeValidator implements Validator {
-  async validatePolygon(polygonUuid: string): Promise<ValidationResult> {
-    throw new NotFoundException(
-      "GeometryTypeValidator does not support polygon UUID validation. Use validateGeometry instead."
-    );
-  }
-
+export class GeometryTypeValidator implements GeometryValidator {
   async validateGeometry(
     geometry: Geometry,
-    properties?: Record<string, unknown>
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Required by GeometryValidator interface
+    _properties?: Record<string, unknown>
   ): Promise<GeometryTypeValidationResult> {
     const actualType = geometry.type;
     const valid = VALID_GEOMETRY_TYPES.includes(actualType as (typeof VALID_GEOMETRY_TYPES)[number]);

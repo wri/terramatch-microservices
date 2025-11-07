@@ -1,8 +1,8 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
-import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { LinkedFieldDto } from "./dto/linked-field.dto";
-import { FormType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields/configuration";
+import { FormModelType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import {
   isField,
@@ -10,20 +10,19 @@ import {
   LinkedField,
   LinkedFile,
   LinkedRelation
-} from "@terramatch-microservices/common/linkedFields/types";
+} from "@terramatch-microservices/database/constants/linked-fields";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { isEmpty } from "lodash";
-import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { LinkedFieldQueryDto } from "./dto/linked-field-query.dto";
 
 const fieldAdder =
-  (document: DocumentBuilder, formType: FormType, nameSuffix: string) =>
+  (document: DocumentBuilder, formModelType: FormModelType, nameSuffix: string) =>
   ([id, field]: [string, LinkedField | LinkedFile | LinkedRelation]) => {
     document.addData(
       id,
       populateDto<LinkedFieldDto>(new LinkedFieldDto(), {
         id,
-        formType,
+        formModelType,
         label: field.label,
         name: `${field.label}${nameSuffix}`,
         inputType: field.inputType,
@@ -39,22 +38,21 @@ export class LinkedFieldsController {
   @Get()
   @ApiOperation({ operationId: "linkedFieldsIndex" })
   @JsonApiResponse({ data: LinkedFieldDto, hasMany: true })
-  @ExceptionResponse(BadRequestException, { description: "None of the requested formTypes were found." })
-  async linkedFieldsIndex(@Query() { formTypes }: LinkedFieldQueryDto) {
+  async linkedFieldsIndex(@Query() { formModelTypes }: LinkedFieldQueryDto) {
     const document = buildJsonApi(LinkedFieldDto, { forceDataArray: true });
-    for (const formType of formTypes ?? (Object.keys(LinkedFieldsConfiguration) as FormType[])) {
-      const configuration = LinkedFieldsConfiguration[formType];
+    for (const modelType of formModelTypes ?? (Object.keys(LinkedFieldsConfiguration) as FormModelType[])) {
+      const configuration = LinkedFieldsConfiguration[modelType];
       if (configuration == null) continue;
 
       const nameSuffix = ` (${configuration.label})`;
-      const addFields = fieldAdder(document, formType, nameSuffix);
+      const addFields = fieldAdder(document, modelType, nameSuffix);
       Object.entries(configuration.fields).forEach(addFields);
       Object.entries(configuration.fileCollections).forEach(addFields);
       Object.entries(configuration.relations).forEach(addFields);
     }
 
     let requestPath = "/forms/v3/linkedFields";
-    if (!isEmpty(formTypes)) requestPath += getStableRequestQuery({ formTypes });
+    if (!isEmpty(formModelTypes)) requestPath += getStableRequestQuery({ formModelTypes });
     return document.addIndex({ requestPath });
   }
 }

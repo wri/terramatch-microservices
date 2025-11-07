@@ -2,7 +2,7 @@
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
 import { isDate, isString, uniq } from "lodash";
-import { isNotNull } from "@terramatch-microservices/common/util/array";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type SitePolygonAssociations = {
   disturbanceUuid?: string;

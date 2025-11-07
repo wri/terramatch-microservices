@@ -1,5 +1,5 @@
-import { LinkedFieldConfiguration } from "../types";
 import { DisturbanceReport } from "@terramatch-microservices/database/entities";
+import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
 export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {

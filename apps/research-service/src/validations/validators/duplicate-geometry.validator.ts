@@ -1,4 +1,4 @@
-import { PolygonGeometry, SitePolygon, Site } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, SitePolygon, Site, PointGeometry } from "@terramatch-microservices/database/entities";
 import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
 import { Transaction, QueryTypes } from "sequelize";
@@ -127,6 +127,40 @@ export class DuplicateGeometryValidator implements Validator {
     }
 
     return this.checkNewPolygonsDuplicates(features, existingPolygonUuids);
+  }
+
+  async checkNewPointsDuplicates(
+    pointFeatures: Feature[],
+    siteId: string
+  ): Promise<{ duplicateIndexToUuid: Map<number, string> }> {
+    if (!Array.isArray(pointFeatures) || pointFeatures.length === 0) {
+      return { duplicateIndexToUuid: new Map() };
+    }
+
+    const sitePolygon = await SitePolygon.findOne({
+      where: { siteUuid: siteId, isActive: true },
+      include: [
+        {
+          model: Site,
+          as: "site",
+          required: true,
+          attributes: ["projectId"]
+        }
+      ]
+    });
+
+    if (sitePolygon?.site == null) {
+      return { duplicateIndexToUuid: new Map() };
+    }
+
+    const projectId = sitePolygon.site.projectId;
+    const existingPointUuids = await this.getProjectPointUuids(projectId);
+
+    if (existingPointUuids.length === 0) {
+      return { duplicateIndexToUuid: new Map() };
+    }
+
+    return this.checkNewPointsDuplicatesInternal(pointFeatures, existingPointUuids);
   }
 
   private async getProjectPolygonUuids(projectId: number, excludeUuid?: string): Promise<string[]> {
@@ -284,6 +318,89 @@ export class DuplicateGeometryValidator implements Validator {
       };
     } catch {
       return { valid: true, duplicates: [] };
+    }
+  }
+
+  private async getProjectPointUuids(projectId: number): Promise<string[]> {
+    const sitePolygons = await SitePolygon.findAll({
+      where: { isActive: true },
+      include: [
+        {
+          model: Site,
+          as: "site",
+          required: true,
+          where: { projectId },
+          attributes: ["projectId"]
+        }
+      ],
+      attributes: ["pointUuid"]
+    });
+
+    return sitePolygons.map(sp => sp.pointUuid).filter(uuid => uuid != null) as string[];
+  }
+
+  private async checkNewPointsDuplicatesInternal(
+    pointFeatures: Feature[],
+    existingPointUuids: string[]
+  ): Promise<{ duplicateIndexToUuid: Map<number, string> }> {
+    if (pointFeatures.length === 0 || existingPointUuids.length === 0) {
+      return { duplicateIndexToUuid: new Map() };
+    }
+
+    const geometryParams: string[] = [];
+    const indexMap: number[] = [];
+
+    for (let i = 0; i < pointFeatures.length; i++) {
+      const feature = pointFeatures[i];
+      if (feature?.geometry != null && feature.geometry.type === "Point") {
+        const geomJson = JSON.stringify(feature.geometry);
+        geometryParams.push(geomJson);
+        indexMap.push(i);
+      }
+    }
+
+    if (geometryParams.length === 0) {
+      return { duplicateIndexToUuid: new Map() };
+    }
+
+    const unionParts: string[] = [];
+    const allParams: string[] = [];
+
+    for (let i = 0; i < geometryParams.length; i++) {
+      unionParts.push(`SELECT ${indexMap[i]} as idx, ST_GeomFromGeoJSON(?) as geom`);
+      allParams.push(geometryParams[i]);
+    }
+
+    const existingPlaceholders = existingPointUuids.map(() => "?").join(",");
+    allParams.push(...existingPointUuids);
+
+    const sql = `
+      SELECT DISTINCT ng.idx, pg.uuid as existing_uuid
+      FROM (
+        ${unionParts.join(" UNION ALL ")}
+      ) ng
+      INNER JOIN point_geometry pg ON pg.uuid IN (${existingPlaceholders})
+      WHERE ST_Equals(ng.geom, pg.geom)
+    `;
+
+    try {
+      if (PointGeometry.sequelize == null) {
+        throw new InternalServerErrorException("PointGeometry model is missing sequelize connection");
+      }
+
+      const results = (await PointGeometry.sequelize.query(sql, {
+        replacements: allParams,
+        type: QueryTypes.SELECT
+      })) as { idx: number; existing_uuid: string }[];
+
+      const duplicateMap = new Map<number, string>();
+      for (const row of results) {
+        duplicateMap.set(row.idx, row.existing_uuid);
+      }
+
+      return { duplicateIndexToUuid: duplicateMap };
+    } catch {
+      return { duplicateIndexToUuid: new Map() };
     }
   }
 }

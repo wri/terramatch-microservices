@@ -376,15 +376,6 @@ describe("SitePolygonsController", () => {
       );
     });
 
-    it("should throw BadRequestException when geometries are missing", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const request = {};
-
-      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
-        BadRequestException
-      );
-    });
-
     it("should create site polygons with JSON:API format", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
@@ -413,29 +404,6 @@ describe("SitePolygonsController", () => {
         "terramatch",
         "Test User"
       );
-      expect(result.data).toBeDefined();
-    });
-
-    it("should create site polygons with plain format", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const user = await UserFactory.build({ firstName: null, lastName: null });
-      user.getSourceFromRoles = jest.fn().mockReturnValue("greenhouse");
-      jest.spyOn(User, "findByPk").mockResolvedValue(user);
-
-      const sitePolygon = await SitePolygonFactory.build();
-      sitePolygonCreationService.createSitePolygons.mockResolvedValue({
-        data: [sitePolygon],
-        included: []
-      });
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
-      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
-
-      const geometries = [{ type: "FeatureCollection", features: [] }];
-      const request = { geometries };
-
-      const result = await controller.create(request as unknown as CreateSitePolygonJsonApiRequestDto);
-
-      expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith({ geometries }, 1, "greenhouse", null);
       expect(result.data).toBeDefined();
     });
 

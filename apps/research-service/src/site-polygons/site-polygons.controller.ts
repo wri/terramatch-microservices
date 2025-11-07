@@ -89,19 +89,7 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
 
-    const jsonApiGeometries = createRequest?.data?.attributes?.geometries;
-    const plainGeometries = (
-      createRequest as unknown as { geometries?: CreateSitePolygonBatchRequestDto["geometries"] }
-    )?.geometries;
-
-    const geometries = jsonApiGeometries ?? plainGeometries;
-
-    if (geometries == null) {
-      throw new BadRequestException(
-        "Invalid payload. Provide data.attributes.geometries (JSON:API) or a top-level geometries array."
-      );
-    }
-
+    const geometries = createRequest.data.attributes.geometries;
     const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
     const { data: createdSitePolygons, included: validations } =

@@ -71,7 +71,7 @@ export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "
 };
 
 export const LINKED_FIELD_RESOURCES = [
-  "demographics", // collection
+  "demographics",
   "disturbances", // no differentiation
   "disturbanceReportEntries", // no differentiation
   "financialIndicators", // in orgs, uses whereNull('financial_report_id'), in fin reports uses the report id.

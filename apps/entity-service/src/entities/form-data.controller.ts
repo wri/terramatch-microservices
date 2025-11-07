@@ -47,7 +47,7 @@ export class FormDataController {
         formTitle,
         feedback: model.feedback,
         feedbackFields: model.feedbackFields,
-        answers: await this.formDataService.getAnswers(form, model)
+        answers: await this.formDataService.getAnswers(form, { [entityType]: model })
       })
     ).document;
   }

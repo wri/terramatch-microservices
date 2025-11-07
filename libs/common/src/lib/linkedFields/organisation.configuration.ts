@@ -658,96 +658,96 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
     "org-funding-types": {
       property: "fundingTypes",
       label: "Funding Type",
-      resource: "App\\Http\\Resources\\V2\\FundingTypeResource",
+      resource: "fundingTypes",
       inputType: "fundingType"
     },
     "org-tree-species": {
       property: "treeSpeciesHistorical",
       label: "Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
     },
     "org-tree-species-restored": {
       property: "treeSpeciesHistorical",
       label: "Tree species restored in landscape",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
     },
     "org-ownership-stake": {
       property: "ownershipStake",
       label: "Ownership Stake",
-      resource: "App\\Http\\Resources\\V2\\OwnershipStakeResource",
+      resource: "ownershipStake",
       inputType: "ownershipStake"
     },
     "org-beneficiaries-all": {
       property: "allBeneficiaries",
       label: "Community Members",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "org-employees-full-time": {
       property: "employeesFullTime",
       label: "Full Time Employees",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "employees",
       collection: "full-time"
     },
     "org-employees-full-time-clt": {
       property: "employeesFullTimeClt",
       label: "Full Time CLT Employees",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "employees",
       collection: "full-time-clt"
     },
     "org-leadership-team": {
       property: "leadershipTeam",
       label: "Leadership Team",
-      resource: "App\\Http\\Resources\\V2\\LeadershipsResource",
+      resource: "leaderships",
       inputType: "leaderships",
       collection: "leadership-team"
     },
     "org-core-team-leaders": {
       property: "coreTeamLeaders",
       label: "Core Team Leaders",
-      resource: "App\\Http\\Resources\\V2\\LeadershipsResource",
+      resource: "leaderships",
       inputType: "leaderships",
       collection: "core-team-leaders"
     },
     "org-employees-part-time": {
       property: "employeesPartTime",
       label: "Part Time Employees",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "employees",
       collection: "part-time"
     },
     "org-employees-part-time-clt": {
       property: "employeesPartTimeClt",
       label: "Part Time CLT Employees",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "employees",
       collection: "part-time-clt"
     },
     "org-employees-temp": {
       property: "employeesTemp",
       label: "Temp Employees",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "employees",
       collection: "temp"
     },
     "org-associates": {
       property: "associates",
       label: "Associates",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "associates",
       collection: "all"
     },
     "org-financial-indicators-financial-collection": {
       property: "financialCollection",
       label: "Financial collection",
-      resource: "App\\Http\\Resources\\V2\\FinancialIndicatorsResource",
+      resource: "financialIndicators",
       inputType: "financialIndicators"
     }
   }

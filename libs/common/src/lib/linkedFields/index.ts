@@ -14,22 +14,8 @@ import {
   LinkedRelation
 } from "@terramatch-microservices/database/constants/linked-fields";
 import { DisturbanceReportConfiguration } from "./disturbance-report.configuration";
-import { SrpReportConfiguration } from "./srp-report.entity.configuration";
-
-export const FORM_MODEL_TYPES = [
-  "organisations",
-  "financialReports",
-  "disturbanceReports",
-  "nurseries",
-  "nurseryReports",
-  "projects",
-  "projectPitches",
-  "projectReports",
-  "sites",
-  "siteReports",
-  "srpReports"
-] as const;
-export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
+import { SrpReportConfiguration } from "./srp-report.configuration";
+import { FormModelType } from "@terramatch-microservices/database/constants";
 
 export const LinkedFieldsConfiguration: Record<FormModelType, LinkedFieldConfiguration> = {
   organisations: OrganisationConfiguration,

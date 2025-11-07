@@ -160,118 +160,118 @@ export const SiteReportConfiguration: LinkedFieldConfiguration = {
     "site-rep-rel-replanting-tree-species": {
       property: "replantingTreeSpecies",
       label: "Replanting Species + Count",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "replanting"
     },
     "site-rep-rel-tree-species": {
       property: "treeSpecies",
       label: "Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "site-rep-rel-non-tree-species": {
       property: "nonTreeSpecies",
       label: "Non Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "non-tree"
     },
     "site-rep-rel-disturbances": {
       property: "disturbances",
       label: "Disturbances",
-      resource: "App\\Http\\Resources\\V2\\Disturbances\\DisturbanceResource",
+      resource: "disturbances",
       inputType: "disturbances",
       collection: "disturbance"
     },
     "site-rep-rel-seedings": {
       property: "seedings",
       label: "Seedings",
-      resource: "App\\Http\\Resources\\V2\\Seedings\\SeedingResource",
+      resource: "seedings",
       inputType: "seedings"
     },
     "site-rep-rel-paid-site-establishment": {
       property: "workdaysPaidSiteEstablishment",
       label: "Paid Site Establishment",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-establishment"
     },
     "site-rep-rel-paid-planting": {
       property: "workdaysPaidPlanting",
       label: "Paid Planting",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-planting"
     },
     "site-rep-rel-paid-site-maintenance": {
       property: "workdaysPaidSiteMaintenance",
       label: "Paid Site Maintenance",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-maintenance"
     },
     "site-rep-rel-paid-site-monitoring": {
       property: "workdaysPaidSiteMonitoring",
       label: "Paid Site Monitoring",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-monitoring"
     },
     "site-rep-rel-paid-other-activities": {
       property: "workdaysPaidOtherActivities",
       label: "Paid Other Activities",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-other-activities"
     },
     "site-rep-rel-volunteer-site-establishment": {
       property: "workdaysVolunteerSiteEstablishment",
       label: "Volunteer Site Establishment",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-establishment"
     },
     "site-rep-rel-volunteer-planting": {
       property: "workdaysVolunteerPlanting",
       label: "Volunteer Planting",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-planting"
     },
     "site-rep-rel-volunteer-site-maintenance": {
       property: "workdaysVolunteerSiteMaintenance",
       label: "volunteer Site Maintenance",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-maintenance"
     },
     "site-rep-rel-volunteer-site-monitoring": {
       property: "workdaysVolunteerSiteMonitoring",
       label: "Volunteer Site Monitoring",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-monitoring"
     },
     "site-rep-rel-volunteer-other-activities": {
       property: "workdaysVolunteerOtherActivities",
       label: "Volunteer Other Activities",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-other-activities"
     },
     "site-rep-direct-workdays": {
       property: "workdaysDirect",
       label: "Direct Workday",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "direct"
     },
     "site-rep-convergence-workdays": {
       property: "workdaysConvergence",
       label: "Convergence Workday",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "convergence"
     }

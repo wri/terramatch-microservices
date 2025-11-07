@@ -66,9 +66,24 @@ export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 
 export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice"> & {
   inputType: RelationInputType;
-  resource: string;
+  resource: LinkedFieldResource;
   collection?: string;
 };
+
+export const LINKED_FIELD_RESOURCES = [
+  "demographics", // collection
+  "disturbances", // no differentiation
+  "disturbanceReportEntries", // no differentiation
+  "financialIndicators", // in orgs, uses whereNull('financial_report_id'), in fin reports uses the report id.
+  "fundingTypes", // in orgs, uses whereNull('financial_report_id'), in fin reports uses the report id.
+  "invasives", // no differentiation
+  "leaderships", // org only, uses core-team-leaders and leadership-team collections (kebab case of property)
+  "ownershipStake", // no differentiation
+  "seedings", // no differentiation
+  "stratas", // no differentiation
+  "treeSpecies" // collection
+] as const;
+export type LinkedFieldResource = (typeof LINKED_FIELD_RESOURCES)[number];
 
 export const INPUT_TYPES = [...FIELD_INPUT_TYPES, ...FILE_INPUT_TYPES, ...RELATION_INPUT_TYPES] as const;
 export type InputType = (typeof INPUT_TYPES)[number];

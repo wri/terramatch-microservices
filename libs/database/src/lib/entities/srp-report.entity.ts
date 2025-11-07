@@ -19,6 +19,9 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { Task } from "./task.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type SrpReportMedia = "media";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
@@ -32,9 +35,9 @@ import { Task } from "./task.entity";
 })
 export class SrpReport extends Model<SrpReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\SrpReport";
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<SrpReportMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   static project(id: number) {
     return chainScope(this, "project", id) as typeof SrpReport;
@@ -116,8 +119,8 @@ export class SrpReport extends Model<SrpReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: object | null;
 
   @AllowNull
   @Column(TEXT)

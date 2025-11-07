@@ -27,7 +27,8 @@ export class SelfIntersectionValidator implements Validator {
     }));
   }
 
-  async validateGeometry(geometry: Geometry, properties?: Record<string, unknown>): Promise<ValidationResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async validateGeometry(geometry: Geometry, _properties?: Record<string, unknown>): Promise<ValidationResult> {
     if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
       return {
         valid: true,

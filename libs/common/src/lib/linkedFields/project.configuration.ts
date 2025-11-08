@@ -328,49 +328,42 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "pro-pit-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "pro-all-jobs": {
-      property: "jobsAll",
       label: "All Jobs",
       resource: "demographics",
       inputType: "jobs",
       collection: "all"
     },
     "pro-full-time-jobs": {
-      property: "jobsFullTime",
       label: "Full-time Jobs",
       resource: "demographics",
       inputType: "jobs",
       collection: "full-time"
     },
     "pro-part-time-jobs": {
-      property: "jobsPartTime",
       label: "Part-time Jobs",
       resource: "demographics",
       inputType: "jobs",
       collection: "part-time"
     },
     "pro-volunteers": {
-      property: "volunteers",
       label: "Volunteers",
       resource: "demographics",
       inputType: "volunteers",
       collection: "volunteer"
     },
     "pro-all-beneficiaries": {
-      property: "allBeneficiaries",
       label: "All Beneficiaries",
       resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "pro-indirect-beneficiaries": {
-      property: "indirectBeneficiaries",
       label: "Indirect Beneficiaries",
       resource: "demographics",
       inputType: "indirectBeneficiaries",

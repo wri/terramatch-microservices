@@ -65,7 +65,7 @@ export const RELATION_INPUT_TYPES = [
 ] as const;
 export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 
-export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice"> & {
+export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice" | "property"> & {
   inputType: RelationInputType;
   resource: LinkedFieldResource;
   collection?: string;

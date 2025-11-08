@@ -18,7 +18,6 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "dis-rep-entries": {
-      property: "entries",
       label: "Disturbance Entries",
       resource: "disturbanceReportEntries",
       inputType: "disturbanceReportEntries"

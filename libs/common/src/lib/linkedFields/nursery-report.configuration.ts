@@ -35,7 +35,6 @@ export const NurseryReportConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "nur-rep-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
       resource: "treeSpecies",
       inputType: "treeSpecies",

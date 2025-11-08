@@ -9,13 +9,11 @@ export const FinancialReportConfiguration: LinkedFieldConfiguration = {
   fileCollections: {},
   relations: {
     "fin-rep-financial-indicators-financial-collection": {
-      property: "financialCollection",
       label: "Financial collection",
       resource: "financialIndicators",
       inputType: "financialIndicators"
     },
     "fin-rep-funding-types": {
-      property: "fundingTypes",
       label: "Funding Type",
       resource: "fundingTypes",
       inputType: "fundingType"

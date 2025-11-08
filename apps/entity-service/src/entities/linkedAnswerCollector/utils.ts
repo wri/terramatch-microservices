@@ -79,9 +79,7 @@ export const collectionCollector = <T extends Model & { collection: string | nul
     return {
       addField(field, modelType, questionUuid) {
         if (field.collection == null) {
-          throw new InternalServerErrorException(
-            `Collection not found for ${resource} field [${modelType}, ${field.property}]`
-          );
+          throw new InternalServerErrorException(`Collection not found for ${resource} fo ${modelType}`);
         }
 
         const key = `${modelType}:${field.collection}`;

@@ -656,96 +656,82 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "org-funding-types": {
-      property: "fundingTypes",
       label: "Funding Type",
       resource: "fundingTypes",
       inputType: "fundingType"
     },
     "org-tree-species": {
-      property: "treeSpeciesHistorical",
       label: "Tree Species",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
     },
     "org-tree-species-restored": {
-      property: "treeSpeciesHistorical",
       label: "Tree species restored in landscape",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
     },
     "org-ownership-stake": {
-      property: "ownershipStake",
       label: "Ownership Stake",
       resource: "ownershipStake",
       inputType: "ownershipStake"
     },
     "org-beneficiaries-all": {
-      property: "allBeneficiaries",
       label: "Community Members",
       resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "org-employees-full-time": {
-      property: "employeesFullTime",
       label: "Full Time Employees",
       resource: "demographics",
       inputType: "employees",
       collection: "full-time"
     },
     "org-employees-full-time-clt": {
-      property: "employeesFullTimeClt",
       label: "Full Time CLT Employees",
       resource: "demographics",
       inputType: "employees",
       collection: "full-time-clt"
     },
     "org-leadership-team": {
-      property: "leadershipTeam",
       label: "Leadership Team",
       resource: "leaderships",
       inputType: "leaderships",
       collection: "leadership-team"
     },
     "org-core-team-leaders": {
-      property: "coreTeamLeaders",
       label: "Core Team Leaders",
       resource: "leaderships",
       inputType: "leaderships",
       collection: "core-team-leaders"
     },
     "org-employees-part-time": {
-      property: "employeesPartTime",
       label: "Part Time Employees",
       resource: "demographics",
       inputType: "employees",
       collection: "part-time"
     },
     "org-employees-part-time-clt": {
-      property: "employeesPartTimeClt",
       label: "Part Time CLT Employees",
       resource: "demographics",
       inputType: "employees",
       collection: "part-time-clt"
     },
     "org-employees-temp": {
-      property: "employeesTemp",
       label: "Temp Employees",
       resource: "demographics",
       inputType: "employees",
       collection: "temp"
     },
     "org-associates": {
-      property: "associates",
       label: "Associates",
       resource: "demographics",
       inputType: "associates",
       collection: "all"
     },
     "org-financial-indicators-financial-collection": {
-      property: "financialCollection",
       label: "Financial collection",
       resource: "financialIndicators",
       inputType: "financialIndicators"

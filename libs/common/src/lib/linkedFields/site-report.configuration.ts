@@ -158,118 +158,101 @@ export const SiteReportConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "site-rep-rel-replanting-tree-species": {
-      property: "replantingTreeSpecies",
       label: "Replanting Species + Count",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "replanting"
     },
     "site-rep-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "site-rep-rel-non-tree-species": {
-      property: "nonTreeSpecies",
       label: "Non Tree Species",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "non-tree"
     },
     "site-rep-rel-disturbances": {
-      property: "disturbances",
       label: "Disturbances",
       resource: "disturbances",
       inputType: "disturbances",
       collection: "disturbance"
     },
     "site-rep-rel-seedings": {
-      property: "seedings",
       label: "Seedings",
       resource: "seedings",
       inputType: "seedings"
     },
     "site-rep-rel-paid-site-establishment": {
-      property: "workdaysPaidSiteEstablishment",
       label: "Paid Site Establishment",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-establishment"
     },
     "site-rep-rel-paid-planting": {
-      property: "workdaysPaidPlanting",
       label: "Paid Planting",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-planting"
     },
     "site-rep-rel-paid-site-maintenance": {
-      property: "workdaysPaidSiteMaintenance",
       label: "Paid Site Maintenance",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-maintenance"
     },
     "site-rep-rel-paid-site-monitoring": {
-      property: "workdaysPaidSiteMonitoring",
       label: "Paid Site Monitoring",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-monitoring"
     },
     "site-rep-rel-paid-other-activities": {
-      property: "workdaysPaidOtherActivities",
       label: "Paid Other Activities",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-other-activities"
     },
     "site-rep-rel-volunteer-site-establishment": {
-      property: "workdaysVolunteerSiteEstablishment",
       label: "Volunteer Site Establishment",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-establishment"
     },
     "site-rep-rel-volunteer-planting": {
-      property: "workdaysVolunteerPlanting",
       label: "Volunteer Planting",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-planting"
     },
     "site-rep-rel-volunteer-site-maintenance": {
-      property: "workdaysVolunteerSiteMaintenance",
       label: "volunteer Site Maintenance",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-maintenance"
     },
     "site-rep-rel-volunteer-site-monitoring": {
-      property: "workdaysVolunteerSiteMonitoring",
       label: "Volunteer Site Monitoring",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-monitoring"
     },
     "site-rep-rel-volunteer-other-activities": {
-      property: "workdaysVolunteerOtherActivities",
       label: "Volunteer Other Activities",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-other-activities"
     },
     "site-rep-direct-workdays": {
-      property: "workdaysDirect",
       label: "Direct Workday",
       resource: "demographics",
       inputType: "workdays",
       collection: "direct"
     },
     "site-rep-convergence-workdays": {
-      property: "workdaysConvergence",
       label: "Convergence Workday",
       resource: "demographics",
       inputType: "workdays",

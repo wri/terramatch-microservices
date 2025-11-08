@@ -1,8 +1,8 @@
 import { Seeding } from "@terramatch-microservices/database/entities";
-import { singlePropertyCollector } from "./utils";
+import { singleAssociationCollection } from "./utils";
 import { EmbeddedSeedingDto } from "../dto/seeding.dto";
 
-export const seedingsCollector = singlePropertyCollector(
+export const seedingsCollector = singleAssociationCollection(
   "seedings",
   Seeding,
   "seedableType",

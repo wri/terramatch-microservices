@@ -17,7 +17,7 @@ export const mapLaravelTypes = (models: FormModels) =>
  * Creates a ResourceCollector factory for resources that do not distinguish via collection or another method
  * against a single base model.
  */
-export const singlePropertyCollector = <T extends Model>(
+export const singleAssociationCollection = <T extends Model>(
   resource: LinkedFieldResource,
   modelClass: ModelStatic<T>,
   typeAttribute: keyof Attributes<T>,

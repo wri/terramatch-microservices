@@ -1,8 +1,8 @@
 import { Strata } from "@terramatch-microservices/database/entities";
-import { singlePropertyCollector } from "./utils";
+import { singleAssociationCollection } from "./utils";
 import { EmbeddedStrataDto } from "../dto/strata.dto";
 
-export const stratasCollector = singlePropertyCollector(
+export const stratasCollector = singleAssociationCollection(
   "stratas",
   Strata,
   "stratasableType",

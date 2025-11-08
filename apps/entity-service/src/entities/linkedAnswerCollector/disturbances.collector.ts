@@ -1,8 +1,8 @@
 import { Disturbance } from "@terramatch-microservices/database/entities";
-import { singlePropertyCollector } from "./utils";
+import { singleAssociationCollection } from "./utils";
 import { EmbeddedDisturbanceDto } from "../dto/disturbance.dto";
 
-export const disturbancesCollector = singlePropertyCollector(
+export const disturbancesCollector = singleAssociationCollection(
   "disturbances",
   Disturbance,
   "disturbanceableType",

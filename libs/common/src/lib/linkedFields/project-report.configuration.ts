@@ -298,131 +298,131 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "pro-rep-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "pro-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "pro-rep-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "pro-rep-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "pro-rep-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "pro-rep-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "pro-rep-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "pro-rep-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "pro-rep-col-baseline-report-upload": {
-      property: "baseline_report_upload",
+      collection: "baseline_report_upload",
       label: "Baseline Report Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-local-governance-order-letter-upload": {
-      property: "local_governance_order_letter_upload",
+      collection: "local_governance_order_letter_upload",
       label: "Local Governance Order or Letter Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-events-meetings-photos": {
-      property: "events_meetings_photos",
+      collection: "events_meetings_photos",
       label: "Events or Meetings Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-local-governance-proof-of-partnership-upload": {
-      property: "local_governance_proof_of_partnership_upload",
+      collection: "local_governance_proof_of_partnership_upload",
       label: "Local Governance Proof of Partnership Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-top-three-successes-upload": {
-      property: "top_three_successes_upload",
+      collection: "top_three_successes_upload",
       label: "Top Three Successes Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-direct-jobs-upload": {
-      property: "direct_jobs_upload",
+      collection: "direct_jobs_upload",
       label: "Direct Jobs Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-convergence-jobs-upload": {
-      property: "convergence_jobs_upload",
+      collection: "convergence_jobs_upload",
       label: "Convergence Jobs Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-convergence-schemes-upload": {
-      property: "convergence_schemes_upload",
+      collection: "convergence_schemes_upload",
       label: "Convergence Schemes Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-livelihood-activities-upload": {
-      property: "livelihood_activities_upload",
+      collection: "livelihood_activities_upload",
       label: "Livelihood Report Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-direct-livelihood-impacts-upload": {
-      property: "direct_livelihood_impacts_upload",
+      collection: "direct_livelihood_impacts_upload",
       label: "Direct Livelihood Impacts Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-certified-database-upload": {
-      property: "certified_database_upload",
+      collection: "certified_database_upload",
       label: "Certified Database Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-physical-assets-photos": {
-      property: "physical_assets_photos",
+      collection: "physical_assets_photos",
       label: "Physical Assets Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-indirect-community-partners-upload": {
-      property: "indirect_community_partners_upload",
+      collection: "indirect_community_partners_upload",
       label: "Indirect Community Partners Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-training-capacity-building-upload": {
-      property: "training_capacity_building_upload",
+      collection: "training_capacity_building_upload",
       label: "Training or Capacity Building Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-training-capacity-building-photos": {
-      property: "training_capacity_building_photos",
+      collection: "training_capacity_building_photos",
       label: "Training or Capacity Building Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-financial-report-upload": {
-      property: "financial_report_upload",
+      collection: "financial_report_upload",
       label: "Financial Report Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-tree-planting-upload": {
-      property: "tree_planting_upload",
+      collection: "tree_planting_upload",
       label: "Tree Planting Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-soil-water-conservation-upload": {
-      property: "soil_water_conservation_upload",
+      collection: "soil_water_conservation_upload",
       label: "Soil or Water Conservation Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-soil-water-conservation-photos": {
-      property: "soil_water_conservation_photos",
+      collection: "soil_water_conservation_photos",
       label: "Soil or Water Conservation Photos",
       inputType: "file",
       multiChoice: true

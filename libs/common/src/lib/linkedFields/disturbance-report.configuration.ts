@@ -14,7 +14,7 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "dis-rep-media-assets": { property: "media", label: "Media Assets", inputType: "file", multiChoice: true }
+    "dis-rep-media-assets": { collection: "media", label: "Media Assets", inputType: "file", multiChoice: true }
   },
   relations: {
     "dis-rep-entries": {

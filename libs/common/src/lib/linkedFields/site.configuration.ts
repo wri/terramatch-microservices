@@ -99,35 +99,35 @@ export const SiteConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "site-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "site-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "site-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "site-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "site-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "site-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "site-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "site-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "site-col-document-files": {
-      property: "document_files",
+      collection: "document_files",
       label: "Document files",
       inputType: "file",
       multiChoice: true
     },
     "site-col-tree-species": {
-      property: "tree_species",
+      collection: "tree_species",
       label: "programme_submission",
       inputType: "file",
       multiChoice: true
     },
     "site-col-strat-for-heterogeneity": {
-      property: "stratification_for_heterogeneity",
+      collection: "stratification_for_heterogeneity",
       label: "Stratification for heterogeneity",
       inputType: "file",
       multiChoice: false

@@ -37,7 +37,8 @@ export type LinkedField = {
 export const FILE_INPUT_TYPES = ["file"] as const;
 export type FileInputType = (typeof FILE_INPUT_TYPES)[number];
 
-export type LinkedFile = Omit<LinkedField, "optionListKey" | "inputType"> & {
+export type LinkedFile = Omit<LinkedField, "optionListKey" | "inputType" | "property"> & {
+  collection: string;
   inputType: FileInputType;
 };
 

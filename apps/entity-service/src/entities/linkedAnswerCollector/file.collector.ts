@@ -15,8 +15,8 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
 
   return {
     addField(field, modelType, questionUuid) {
-      const key = `${modelType}:${field.property}`;
-      if (questions[key] != null) logger.warn(`Duplicate file field [${modelType}, ${field.property}]`);
+      const key = `${modelType}:${field.collection}`;
+      if (questions[key] != null) logger.warn(`Duplicate file field [${modelType}, ${field.collection}]`);
       questions[key] = questionUuid;
     },
 

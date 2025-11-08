@@ -286,41 +286,41 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
     "pro-associates-count": { property: "all_associates_aggregate", label: "Aggregate associates", inputType: "number" }
   },
   fileCollections: {
-    "pro-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "pro-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "pro-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "pro-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "pro-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "pro-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "pro-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "pro-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "pro-col-document-files": {
-      property: "document_files",
+      collection: "document_files",
       label: "Document Files",
       inputType: "file",
       multiChoice: true
     },
     "pro-col-programme-submission": {
-      property: "programme_submission",
+      collection: "programme_submission",
       label: "programme_submission",
       inputType: "file",
       multiChoice: true
     },
     "pro-col-detailed-project-budget": {
-      property: "detailed_project_budget",
+      collection: "detailed_project_budget",
       label: "Detailed project budget",
       inputType: "file",
       multiChoice: false
     },
     "pro-col-proof-of-land-tenure-mou": {
-      property: "proof_of_land_tenure_mou",
+      collection: "proof_of_land_tenure_mou",
       label: "Documentation on project area’s land tenure",
       inputType: "file",
       multiChoice: true

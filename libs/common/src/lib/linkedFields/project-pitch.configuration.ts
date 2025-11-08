@@ -552,22 +552,27 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "pro-pit-fcol-cover": { property: "cover", label: "Cover Image", inputType: "file", multiChoice: false },
-    "pro-pit-fcol-add": { property: "additional", label: "Additional documents", inputType: "file", multiChoice: true },
+    "pro-pit-fcol-cover": { collection: "cover", label: "Cover Image", inputType: "file", multiChoice: false },
+    "pro-pit-fcol-add": {
+      collection: "additional",
+      label: "Additional documents",
+      inputType: "file",
+      multiChoice: true
+    },
     "pro-pit-fcol-rest-photos": {
-      property: "restoration_photos",
+      collection: "restoration_photos",
       label: "Past Restoration Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-pit-fcol-detail-proj-bdgt": {
-      property: "detailed_project_budget",
+      collection: "detailed_project_budget",
       label: "Detailed project budget",
       inputType: "file",
       multiChoice: false
     },
     "pro-pit-proof-of-land-tenure-mou": {
-      property: "proof_of_land_tenure_mou",
+      collection: "proof_of_land_tenure_mou",
       label: "Proof of land tenure MOU",
       inputType: "file",
       multiChoice: true

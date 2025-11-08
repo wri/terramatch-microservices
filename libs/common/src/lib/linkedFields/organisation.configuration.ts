@@ -535,120 +535,120 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "org-fcol-cover": { property: "cover", label: "Cover image", inputType: "file", multiChoice: false },
+    "org-fcol-cover": { collection: "cover", label: "Cover image", inputType: "file", multiChoice: false },
     "org-fcol-lgl-reg": {
-      property: "legal_registration",
+      collection: "legal_registration",
       label: "Legal registration",
       inputType: "file",
       multiChoice: true
     },
-    "org-fcol-logo": { property: "logo", label: "Logo image", inputType: "file", multiChoice: false },
-    "org-fcol-ref": { property: "reference", label: "Reference documents", inputType: "file", multiChoice: true },
+    "org-fcol-logo": { collection: "logo", label: "Logo image", inputType: "file", multiChoice: false },
+    "org-fcol-ref": { collection: "reference", label: "Reference documents", inputType: "file", multiChoice: true },
     "org-fcol-op-bgt-1year": {
-      property: "op_budget_1year",
+      collection: "op_budget_1year",
       label: "Budget -1 year documents",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-op-bgt-2year": {
-      property: "op_budget_2year",
+      collection: "op_budget_2year",
       label: "Budget -2 year documents",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-op-bgt-3year": {
-      property: "op_budget_3year",
+      collection: "op_budget_3year",
       label: "Budget -3 year documents",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-op-this-year": {
-      property: "op_budget_this_year",
+      collection: "op_budget_this_year",
       label: "Organization Budget for this year",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-op-next-year": {
-      property: "op_budget_next_year",
+      collection: "op_budget_next_year",
       label: "Organization Budget for next year",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-hst-rest": {
-      property: "historic_restoration",
+      collection: "historic_restoration",
       label: "Historic restoration",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-additional": {
-      property: "additional",
+      collection: "additional",
       label: "Additional documents",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-bank-statments": {
-      property: "bank_statements",
+      collection: "bank_statements",
       label: "Bank statements",
       inputType: "file",
       multiChoice: true
     },
     "org-fcol-prev-annual-rpts": {
-      property: "previous_annual_reports",
+      collection: "previous_annual_reports",
       label: "Previous annual reports",
       inputType: "file",
       multiChoice: true
     },
     "org-avg-tree-surv-rate-proof": {
-      property: "avg_tree_survival_rate_proof",
+      collection: "avg_tree_survival_rate_proof",
       label: "Average tree survival rate proof",
       inputType: "file",
       multiChoice: true
     },
     "org-equ-ownership": {
-      property: "equity_ownership",
+      collection: "equity_ownership",
       label: "Equity Ownership",
       inputType: "file",
       multiChoice: false
     },
-    "org-loan-status": { property: "loan_status", label: "Loan Status", inputType: "file", multiChoice: true },
+    "org-loan-status": { collection: "loan_status", label: "Loan Status", inputType: "file", multiChoice: true },
     "org-past-rest-photos": {
-      property: "restoration_photos",
+      collection: "restoration_photos",
       label: "Past Restoration Photos",
       inputType: "file",
       multiChoice: true
     },
     "org-startup-recognition-cert": {
-      property: "startup_recognition_cert",
+      collection: "startup_recognition_cert",
       label: "Certificate of Startup Recognition",
       inputType: "file",
       multiChoice: true
     },
     "org-consortium-proof": {
-      property: "consortium_proof",
+      collection: "consortium_proof",
       label: "Proof of registration for other consortium applicants",
       inputType: "file",
       multiChoice: true
     },
     "org-consortium-partnership-agreements": {
-      property: "consortium_partnership_agreements",
+      collection: "consortium_partnership_agreements",
       label: "Signed partnership documents",
       inputType: "file",
       multiChoice: true
     },
     "org-organogram": {
-      property: "organogram",
+      collection: "organogram",
       label: "Organisation structure/diagram",
       inputType: "file",
       multiChoice: true
     },
     "org-ownership-documents": {
-      property: "ownership_documents",
+      collection: "ownership_documents",
       label: "Ownership documentation upload",
       inputType: "file",
       multiChoice: true
     },
     "org-carbon-credits-proofs": {
-      property: "carbon_credits_proof",
+      collection: "carbon_credits_proof",
       label: "Proof of carbon credit issuing in past",
       inputType: "file",
       multiChoice: true

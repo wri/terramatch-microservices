@@ -103,54 +103,54 @@ export const SiteReportConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "site-rep-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "site-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "site-rep-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "site-rep-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "site-rep-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "site-rep-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "site-rep-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "site-rep-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "site-rep-col-document-files": {
-      property: "document_files",
+      collection: "document_files",
       label: "Photos",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-tree-species": {
-      property: "tree_species",
+      collection: "tree_species",
       label: "programme_submission",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-site-submission": {
-      property: "site_submission",
+      collection: "site_submission",
       label: "Site submission",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-tree-planting-upload": {
-      property: "tree_planting_upload",
+      collection: "tree_planting_upload",
       label: "Tree Planting Upload",
       inputType: "file",
       multiChoice: true
     },
-    "site-rep-col-anr-photos": { property: "anr_photos", label: "ANR Photos", inputType: "file", multiChoice: true },
+    "site-rep-col-anr-photos": { collection: "anr_photos", label: "ANR Photos", inputType: "file", multiChoice: true },
     "site-rep-col-soil-water-conservation-upload": {
-      property: "soil_water_conservation_upload",
+      collection: "soil_water_conservation_upload",
       label: "Soil or Water Conservation Upload",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-soil-water-conservation-photos": {
-      property: "soil_water_conservation_photos",
+      collection: "soil_water_conservation_photos",
       label: "Soil or Water Conservation Photos",
       inputType: "file",
       multiChoice: true

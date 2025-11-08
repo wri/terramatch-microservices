@@ -20,6 +20,7 @@ import { ownershipStakeCollector } from "./ownership-stake.collector";
 import { leadershipsCollector } from "./leaderships.collector";
 import { fundingTypesCollector } from "./funding-types.collector";
 import { financialIndicatorsCollector } from "./financial-indicators.collector";
+import { disturbanceReportEntriesCollector } from "./disturbance-report-entries.collector";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
@@ -73,6 +74,9 @@ export class LinkedAnswerCollector {
   }
   get financialIndicators() {
     return this.getCollector("financialIndicators", () => financialIndicatorsCollector(this.logger));
+  }
+  get disturbanceReportEntries() {
+    return this.getCollector("disturbanceReportEntries", () => disturbanceReportEntriesCollector(this.logger));
   }
 
   async collect(answers: Dictionary<unknown>, models: FormModels) {

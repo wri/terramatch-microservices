@@ -68,8 +68,7 @@ export class FormDataService {
         if (isField(config.field)) collector.fields.addField(config.field, config.model, question.uuid);
         else if (isFile(config.field)) collector.files.addField(config.field, config.model, question.uuid);
         else if (isRelation(config.field)) {
-          // TODO when not partial, remove safe navigation
-          collector[config.field.resource]?.addField(config.field, config.model, question.uuid);
+          collector[config.field.resource].addField(config.field, config.model, question.uuid);
         }
       }
     }

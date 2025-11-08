@@ -1,5 +1,5 @@
 import { DisturbanceReportEntry } from "@terramatch-microservices/database/entities";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { AssociationDto } from "./association.dto";
@@ -8,7 +8,7 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 @JsonApiDto({ type: "disturbanceReportEntries" })
 export class DisturbanceReportEntryDto extends AssociationDto {
   constructor(
-    entry: DisturbanceReportEntry,
+    entry?: DisturbanceReportEntry,
     props?: HybridSupportProps<DisturbanceReportEntryDto, DisturbanceReportEntry>
   ) {
     super();
@@ -31,4 +31,17 @@ export class DisturbanceReportEntryDto extends AssociationDto {
 
   @ApiProperty({ nullable: true, type: String })
   value: string | null;
+}
+
+export class EmbeddedDisturbanceReportEntryDto extends OmitType(DisturbanceReportEntryDto, [
+  "entityType",
+  "entityUuid"
+]) {
+  constructor(entry: DisturbanceReportEntry) {
+    super();
+    populateDto<EmbeddedDisturbanceReportEntryDto>(this, entry);
+  }
+
+  @ApiProperty()
+  uuid: string;
 }

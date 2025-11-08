@@ -73,7 +73,7 @@ export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "
 export const LINKED_FIELD_RESOURCES = [
   "demographics",
   "disturbances",
-  "disturbanceReportEntries", // no differentiation
+  "disturbanceReportEntries",
   "financialIndicators",
   "fundingTypes",
   "invasives",

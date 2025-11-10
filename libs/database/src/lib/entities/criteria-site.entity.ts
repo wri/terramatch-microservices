@@ -54,7 +54,6 @@ export class CriteriaSite extends Model<CriteriaSite> {
   @Column(JSON)
   extraInfo: object | null;
 
-  w;
   /**
    * Transform camelCase to snake_case before saving to database
    */

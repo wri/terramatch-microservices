@@ -32,7 +32,6 @@ const FIELD_NAME_MAP: Record<string, string> = {
   plantStart: "plantstart"
 };
 
-// Reverse mapping: GeoJSON property name -> SitePolygon field name
 const PROPERTY_TO_FIELD_MAP: Record<string, keyof typeof FIELD_NAME_MAP> = {
   poly_name: "polyName",
   practice: "practice",

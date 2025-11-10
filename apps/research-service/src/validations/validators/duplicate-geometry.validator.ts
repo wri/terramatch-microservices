@@ -268,7 +268,6 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
     for (let i = 0; i < features.length; i++) {
       const feature = features[i];
       if (feature?.geometry != null) {
-        // Wrap geometry in Feature format with CRS for PostGIS compatibility
         const featureWithCrs = {
           type: "Feature",
           geometry: feature.geometry,
@@ -340,7 +339,6 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
 
     const siteId = properties.site_id as string;
 
-    // Handle Point geometries
     if (geometry.type === "Point") {
       const feature: Feature = {
         geometry: geometry as Feature["geometry"],

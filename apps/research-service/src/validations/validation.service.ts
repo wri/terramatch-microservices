@@ -445,7 +445,7 @@ export class ValidationService {
           criteriaId: CriteriaId;
           validationType: ValidationType;
           valid: boolean;
-          createdAt: Date;
+          createdAt: Date | null;
           extraInfo: object | null;
         }>;
       };
@@ -552,7 +552,7 @@ export class ValidationService {
           criteriaId: CriteriaId;
           validationType: ValidationType;
           valid: boolean;
-          createdAt: Date;
+          createdAt: Date | null;
           extraInfo: object | null;
         }>;
       };
@@ -569,7 +569,7 @@ export class ValidationService {
           polygonUuid,
           criteriaList: criteriaList.map(criteria => ({
             ...criteria,
-            createdAt: new Date()
+            createdAt: null
           }))
         }
       });

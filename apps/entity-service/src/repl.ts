@@ -9,6 +9,7 @@ import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sq
 import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -35,7 +36,7 @@ bootstrapRepl("Entity Service", AppModule, {
             if (config != null) {
               question.additionalProps = {
                 ...question.additionalProps,
-                accept: acceptMimeTypes(config.model as MediaOwnerType, config.field.property)
+                accept: acceptMimeTypes(config.model as MediaOwnerType, (config.field as LinkedFile).collection)
               };
               await question.save();
             }

@@ -37,6 +37,7 @@ import {
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { MediaDto } from "../entities/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -146,8 +147,10 @@ export class FormsService {
 
     const questionToDto = (question: FormQuestion, sectionQuestions: FormQuestion[] = []) => {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
-      // For file questions, the collection is the property of the field.
-      const collection = (question.inputType === "file" ? config?.field.property : question.collection) ?? null;
+      // For file questions, the collection is the collection of the field.
+      const collection =
+        (question.inputType === "file" ? (config?.field as LinkedFile | undefined)?.collection : question.collection) ??
+        null;
       const childQuestions = sectionQuestions.filter(({ parentId }) => parentId === question.uuid);
       const options = optionsByQuestionId[question.id];
       const tableHeaders = tableHeadersByQuestionId[question.id];
@@ -463,7 +466,7 @@ export class FormsService {
         return additionalProps;
       }
 
-      additionalProps.accept = acceptMimeTypes(config.model as MediaOwnerType, config.field.property);
+      additionalProps.accept = acceptMimeTypes(config.model as MediaOwnerType, (config.field as LinkedFile).collection);
     }
 
     return additionalProps;

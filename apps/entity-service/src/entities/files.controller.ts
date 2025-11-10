@@ -85,7 +85,7 @@ export class FilesController {
     const medias = await this.mediaService.getMedias(uuids);
     await this.policyService.authorize("bulkDelete", medias);
     await Promise.all(medias.map(media => this.mediaService.deleteMedia(media)));
-    return buildDeletedResponse("medias", uuids);
+    return buildDeletedResponse("media", uuids);
   }
 
   @Delete(":uuid")
@@ -103,6 +103,6 @@ export class FilesController {
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("deleteFiles", model);
     await this.mediaService.deleteMediaByUuid(uuid);
-    return buildDeletedResponse("medias", uuid);
+    return buildDeletedResponse("media", uuid);
   }
 }

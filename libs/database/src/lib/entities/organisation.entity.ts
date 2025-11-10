@@ -151,22 +151,6 @@ export class Organisation extends Model<Organisation> {
   finStartMonth: number | null;
 
   @AllowNull
-  @Column(DECIMAL(15, 2))
-  finBudgetCurrentYear: number | null;
-
-  @AllowNull
-  @Column({ type: DECIMAL(15, 2), field: "fin_budget_1year" })
-  finBudget1Year: number | null;
-
-  @AllowNull
-  @Column({ type: DECIMAL(15, 2), field: "fin_budget_2year" })
-  finBudget2Year: number | null;
-
-  @AllowNull
-  @Column({ type: DECIMAL(15, 2), field: "fin_budget_3year" })
-  finBudget3Year: number | null;
-
-  @AllowNull
   @Column(STRING)
   webUrl: string | null;
 
@@ -381,10 +365,6 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(TEXT)
   subtype: string | null;
-
-  @AllowNull
-  @Column(BIGINT({ length: 20 }))
-  organisationRevenueThisYear: number | null;
 
   @AllowNull
   @Column(TEXT)

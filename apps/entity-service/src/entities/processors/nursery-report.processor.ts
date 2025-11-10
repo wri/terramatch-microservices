@@ -135,7 +135,10 @@ export class NurseryReportProcessor extends ReportProcessor<
     const mediaCollection = await Media.for(nurseryReport).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
+
     const dto = new NurseryReportFullDto(nurseryReport, {
+      ...(await this.getFeedback(nurseryReport)),
+
       reportTitle,
       projectReportTitle,
       ...(this.entitiesService.mapMediaCollection(

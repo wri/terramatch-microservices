@@ -385,6 +385,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
     const mediaCollection = await Media.for(disturbanceReport).findAll();
     const dto = new DisturbanceReportFullDto(disturbanceReport, {
+      ...(await this.getFeedback(disturbanceReport)),
       reportId: disturbanceReport.id,
       entries,
       intensity,

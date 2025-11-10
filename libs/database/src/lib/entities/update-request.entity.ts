@@ -9,27 +9,36 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { User } from "./user.entity";
-import { FrameworkKey } from "../constants/framework";
+import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { EntityClass, EntityModel } from "../constants/entities";
+import { EntityModel } from "../constants/entities";
 import { chainScope } from "../util/chain-scope";
+import { laravelType } from "../types/util";
 
 @Scopes(() => ({
-  entity: <T extends EntityModel>(entity: T) => ({
+  entity: (entity: EntityModel) => ({
     where: {
-      updateRequestableType: (entity.constructor as EntityClass<T>).LARAVEL_TYPE,
+      updateRequestableType: laravelType(entity),
       updateRequestableId: entity.id
     }
+  }),
+  current: () => ({
+    where: { status: { [Op.ne]: "approved" } },
+    order: [["createdAt", "DESC"]]
   })
 }))
 @Table({ tableName: "v2_update_requests", underscored: true, paranoid: true })
 export class UpdateRequest extends Model<UpdateRequest> {
-  static for<T extends EntityModel>(entity: T) {
+  static for(entity: EntityModel) {
     return chainScope(this, "entity", entity) as typeof UpdateRequest;
+  }
+
+  static current() {
+    return chainScope(this, "current") as typeof UpdateRequest;
   }
 
   @PrimaryKey

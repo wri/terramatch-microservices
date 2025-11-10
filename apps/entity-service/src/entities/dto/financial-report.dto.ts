@@ -4,7 +4,13 @@ import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { OrganisationStatus } from "@terramatch-microservices/database/constants/status";
+import {
+  OrganisationStatus,
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 import { FinancialIndicatorDto } from "./financial-indicator.dto";
 import { FundingTypeDto } from "./funding-type.dto";
 
@@ -17,11 +23,18 @@ export class FinancialReportLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty()
-  status: string;
+  @ApiProperty({
+    description: "Report status for this financial report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
 
-  @ApiProperty()
-  updateRequestStatus: string;
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this financial report",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({
     nullable: true,
@@ -44,7 +57,10 @@ export class FinancialReportLightDto extends EntityDto {
 }
 
 export class FinancialReportFullDto extends FinancialReportLightDto {
-  constructor(financialReport: FinancialReport, props?: HybridSupportProps<FinancialReportFullDto, FinancialReport>) {
+  constructor(
+    financialReport: FinancialReport,
+    props?: HybridSupportProps<FinancialReportFullDto, Omit<FinancialReport, "feedback" | "feedbackFields">>
+  ) {
     super();
     if (financialReport != null && props != null) {
       populateDto<FinancialReportFullDto, FinancialReport>(this, financialReport, { lightResource: false, ...props });

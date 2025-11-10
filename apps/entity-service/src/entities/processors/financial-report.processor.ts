@@ -186,6 +186,7 @@ export class FinancialReportProcessor extends ReportProcessor<
     const financialIndicatorsWithMedia = await Promise.all(financialIndicators);
 
     const dto = new FinancialReportFullDto(financialReport, {
+      ...(await this.getFeedback(financialReport)),
       fundingTypes,
       financialCollection: financialIndicatorsWithMedia
     });

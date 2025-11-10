@@ -6,10 +6,11 @@ import {
   FinancialReport,
   Form,
   FormQuestion,
-  FormSection
+  FormSection,
+  UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { EntityModel, isEntity } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel, EntityType, isEntity } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -17,6 +18,8 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FormModels, LinkedAnswerCollector } from "./linkedAnswerCollector";
+import { FormDataDto } from "./dto/form-data.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Injectable()
 export class FormDataService {
@@ -39,6 +42,26 @@ export class FormDataService {
     const ids = form.titleId == null ? [] : [form.titleId];
     const translations = await this.localizationService.translateIds(ids, locale);
     return this.localizationService.translateFields(translations, form, ["title"]).title;
+  }
+
+  async getDtoForEntity(entityType: EntityType, entity: EntityModel, form: Form, locale: ValidLocale) {
+    const formTitle = await this.getFormTitle(form, locale);
+    const currentUpdateRequest = await UpdateRequest.for(entity)
+      .current()
+      .findOne({ attributes: ["content", "feedback", "feedbackFields"] });
+    const hasURFeedback = currentUpdateRequest?.feedback != null || currentUpdateRequest?.feedbackFields != null;
+    const { feedback, feedbackFields } = hasURFeedback ? currentUpdateRequest : entity;
+    const answers = currentUpdateRequest?.content ?? (await this.getAnswers(form, { [entityType]: entity }));
+    return populateDto(new FormDataDto(), {
+      entityType,
+      entityUuid: entity.uuid,
+      formUuid: form.uuid,
+      formTitle,
+      frameworkKey: entity.frameworkKey,
+      feedback,
+      feedbackFields,
+      answers
+    });
   }
 
   async getAnswers(form: Form, models: FormModels, answersModel?: { answers: object | null }) {

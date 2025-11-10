@@ -9,7 +9,6 @@ import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/
 import { FormDataService } from "./form-data.service";
 import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { Form } from "@terramatch-microservices/database/entities";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("entities/v3/:entity/:uuid/formData")
 export class FormDataController {
@@ -36,20 +35,13 @@ export class FormDataController {
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }
 
-  private async addFormData(document: DocumentBuilder, model: EntityModel, entityType: EntityType, form: Form) {
-    const formTitle = await this.formDataService.getFormTitle(form, await this.entitiesService.getUserLocale());
-    return document.addData(
-      `${entityType}:${model.uuid}`,
-      populateDto(new FormDataDto(), {
-        entityType,
-        entityUuid: model.uuid,
-        formUuid: form.uuid,
-        formTitle,
-        frameworkKey: model.frameworkKey,
-        feedback: model.feedback,
-        feedbackFields: model.feedbackFields,
-        answers: await this.formDataService.getAnswers(form, { [entityType]: model })
-      })
-    ).document;
+  private async addFormData(document: DocumentBuilder, entity: EntityModel, entityType: EntityType, form: Form) {
+    const dto = await this.formDataService.getDtoForEntity(
+      entityType,
+      entity,
+      form,
+      await this.entitiesService.getUserLocale()
+    );
+    return document.addData(`${entityType}:${entity.uuid}`, dto).document;
   }
 }

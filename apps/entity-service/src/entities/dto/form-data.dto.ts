@@ -28,6 +28,9 @@ export class FormDataDto {
   formTitle: string;
 
   @ApiProperty({ nullable: true, type: String })
+  frameworkKey: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
   @ApiProperty({ nullable: true, isArray: true, type: String })

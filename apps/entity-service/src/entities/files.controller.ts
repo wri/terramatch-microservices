@@ -103,6 +103,6 @@ export class FilesController {
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("deleteFiles", model);
     await this.mediaService.deleteMediaByUuid(uuid);
-    return buildDeletedResponse("medias", uuid);
+    return buildDeletedResponse("media", uuid);
   }
 }

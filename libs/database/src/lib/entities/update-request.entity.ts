@@ -18,6 +18,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { EntityModel } from "../constants/entities";
 import { chainScope } from "../util/chain-scope";
 import { laravelType } from "../types/util";
+import { UpdateRequestStatus, UpdateRequestStatusStates } from "../constants/status";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
 @Scopes(() => ({
   entity: (entity: EntityModel) => ({
@@ -69,9 +71,8 @@ export class UpdateRequest extends Model<UpdateRequest> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
-  @AllowNull
-  @Column(STRING)
-  status: string;
+  @StateMachineColumn(UpdateRequestStatusStates)
+  status: UpdateRequestStatus;
 
   @AllowNull
   @JsonColumn()

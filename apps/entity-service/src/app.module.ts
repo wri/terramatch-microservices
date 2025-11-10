@@ -26,6 +26,7 @@ import { FormsController } from "./forms/forms.controller";
 import { FormsService } from "./forms/forms.service";
 import { FormDataController } from "./entities/form-data.controller";
 import { FormDataService } from "./entities/form-data.service";
+import { UpdateRequestsController } from "./entities/update-requests.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -42,6 +43,7 @@ import { FormDataService } from "./entities/form-data.service";
     DisturbancesController,
     EntitiesController,
     FormDataController, // must be before entity association controller.
+    UpdateRequestsController, // must be before entity association controller.
     EntityAssociationsController,
     OptionLabelsController,
     LinkedFieldsController,

@@ -48,7 +48,7 @@ export class FormDataService {
     const formTitle = await this.getFormTitle(form, locale);
     const currentUpdateRequest = await UpdateRequest.for(entity)
       .current()
-      .findOne({ attributes: ["content", "feedback", "feedbackFields"] });
+      .findOne({ attributes: ["uuid", "content", "feedback", "feedbackFields"] });
     const hasURFeedback = currentUpdateRequest?.feedback != null || currentUpdateRequest?.feedbackFields != null;
     const { feedback, feedbackFields } = hasURFeedback ? currentUpdateRequest : entity;
     const answers = currentUpdateRequest?.content ?? (await this.getAnswers(form, { [entityType]: entity }));

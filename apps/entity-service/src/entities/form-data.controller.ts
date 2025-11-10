@@ -1,5 +1,5 @@
 import { Controller, Get, NotFoundException, Param, UnauthorizedException } from "@nestjs/common";
-import { FormDataDto, FormDataGetParamsDto } from "./dto/form-data.dto";
+import { FormDataDto } from "./dto/form-data.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -9,6 +9,7 @@ import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/
 import { FormDataService } from "./form-data.service";
 import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { Form } from "@terramatch-microservices/database/entities";
+import { SpecificEntityDto } from "./dto/specific-entity.dto";
 
 @Controller("entities/v3/:entity/:uuid/formData")
 export class FormDataController {
@@ -24,7 +25,7 @@ export class FormDataController {
   @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
   @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
-  async formDataGet(@Param() { entity, uuid }: FormDataGetParamsDto) {
+  async formDataGet(@Param() { entity, uuid }: SpecificEntityDto) {
     const model = await this.entitiesService.createEntityProcessor(entity).findOne(uuid);
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
     await this.policyService.authorize("read", model);

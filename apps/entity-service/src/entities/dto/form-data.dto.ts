@@ -1,17 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsIn, IsUUID } from "class-validator";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
-
-export class FormDataGetParamsDto {
-  @IsIn(ENTITY_TYPES)
-  @ApiProperty({ enum: ENTITY_TYPES, description: "Entity type for form data" })
-  entity: EntityType;
-
-  @IsUUID()
-  @ApiProperty({ description: "Entity UUID for form data" })
-  uuid: string;
-}
 
 @JsonApiDto({ type: "formData" })
 export class FormDataDto {

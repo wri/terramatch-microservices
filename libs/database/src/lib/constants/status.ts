@@ -1,5 +1,5 @@
 import { States, transitions } from "../util/model-column-state-machine";
-import { DelayedJob, Nursery, Project, ProjectReport, Site, Task } from "../entities";
+import { DelayedJob, Nursery, Project, ProjectReport, Site, Task, UpdateRequest } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 import { ReportModel } from "./entities";
@@ -78,6 +78,15 @@ export const DRAFT = "draft";
 export const NO_UPDATE = "no-update";
 export const UPDATE_REQUEST_STATUSES = [NO_UPDATE, DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
+
+export const UpdateRequestStatusStates: States<UpdateRequest, UpdateRequestStatus> = {
+  default: DRAFT,
+
+  transitions: transitions<UpdateRequestStatus>()
+    .from(DRAFT, () => [AWAITING_APPROVAL])
+    .from(AWAITING_APPROVAL, () => [APPROVED, NEEDS_MORE_INFORMATION])
+    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL]).transitions
+};
 
 export const REJECTED = "rejected";
 export const REQUIRES_MORE_INFORMATION = "requires-more-information";

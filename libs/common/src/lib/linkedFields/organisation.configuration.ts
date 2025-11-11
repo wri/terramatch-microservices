@@ -73,10 +73,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       multiChoice: false,
       optionListKey: "months"
     },
-    "org-fin-bgt-cur-year": { property: "fin_budget_current_year", label: "Budget current year", inputType: "number" },
-    "org-fin-bgt-1year": { property: "fin_budget_1year", label: "Budget -1 year", inputType: "number" },
-    "org-fin-bgt-2year": { property: "fin_budget_2year", label: "Budget -2 year", inputType: "number" },
-    "org-fin-bgt-3year": { property: "fin_budget_3year", label: "Budget -3 year", inputType: "number" },
     "org-eng-farmers": {
       property: "engagement_farmers",
       label: "Engagement farmers",
@@ -217,11 +213,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       property: "percent_engaged_smallholder_3yr",
       label: "Percent smallholder engaged (3yr)",
       inputType: "number-percentage"
-    },
-    "org-rev-this-year": {
-      property: "organisation_revenue_this_year",
-      label: "Organization revenue for this year",
-      inputType: "number"
     },
     "org-restoration-types-implemented": {
       property: "restoration_types_implemented",

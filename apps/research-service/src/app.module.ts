@@ -3,6 +3,7 @@ import { CommonModule } from "@terramatch-microservices/common";
 import { SitePolygonsController } from "./site-polygons/site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { APP_FILTER } from "@nestjs/core";
@@ -48,6 +49,7 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
     },
     SitePolygonsService,
     SitePolygonCreationService,
+    SitePolygonVersioningService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     BoundingBoxService,

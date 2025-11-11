@@ -146,6 +146,23 @@ export const MEDIA_OWNER_MODELS: { [E in MediaOwnerType]: EntityMediaOwnerClass<
   disturbanceReports: DisturbanceReport
 } as const;
 
+export const MEDIA_OWNER_MODEL_LARAVEL_TYPES: Record<string, EntityMediaOwnerClass<MediaOwnerModel>> = {
+  [Project.LARAVEL_TYPE]: Project,
+  [Site.LARAVEL_TYPE]: Site,
+  [Nursery.LARAVEL_TYPE]: Nursery,
+  [ProjectReport.LARAVEL_TYPE]: ProjectReport,
+  [SiteReport.LARAVEL_TYPE]: SiteReport,
+  [NurseryReport.LARAVEL_TYPE]: NurseryReport,
+  [Organisation.LARAVEL_TYPE]: Organisation,
+  [AuditStatus.LARAVEL_TYPE]: AuditStatus,
+  [Form.LARAVEL_TYPE]: Form,
+  [FormQuestionOption.LARAVEL_TYPE]: FormQuestionOption,
+  [FundingProgramme.LARAVEL_TYPE]: FundingProgramme,
+  [ImpactStory.LARAVEL_TYPE]: ImpactStory,
+  [FinancialIndicator.LARAVEL_TYPE]: FinancialIndicator,
+  [ProjectPitch.LARAVEL_TYPE]: ProjectPitch
+} as const;
+
 export const abbreviatedValidationMimeTypes = (validation: ValidationKey) => {
   const rules = FILE_VALIDATION.VALIDATION_RULES[validation];
   const mimeValidation = rules.split("|").find(rule => rule.startsWith("mimes:"));

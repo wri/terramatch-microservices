@@ -519,7 +519,7 @@ describe("SitePolygonsController", () => {
       expect(sitePolygonService.deleteSitePolygon).toHaveBeenCalledWith(sitePolygon.uuid);
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
-      expect(result.meta).toHaveProperty("resourceId", sitePolygon.uuid);
+      expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
     });
   });
 });

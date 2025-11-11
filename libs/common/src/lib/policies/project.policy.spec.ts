@@ -63,14 +63,14 @@ describe("ProjectPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
     await expectAuthority(service, {
       can: [
-        [["read", "update", "delete"], p1],
-        [["read", "update", "delete"], p3],
+        [["read", "update", "delete", "deleteFiles"], p1],
+        [["read", "update", "delete", "deleteFiles"], p3],
         [["read", "update"], p4]
       ],
       cannot: [
         // manage-own does not give permission to approve.
         ["approve", p1],
-        [["read", "update", "delete"], p2],
+        [["read", "update", "delete", "deleteFiles"], p2],
         // This project is not in the "started" state
         ["delete", p4]
       ]
@@ -85,8 +85,8 @@ describe("ProjectPolicy", () => {
     const p2 = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isMonitoring: false, isManaging: true });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], p1]],
-      cannot: [[["read", "delete", "update", "approve"], p2]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], p1]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], p2]]
     });
   });
 });

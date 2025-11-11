@@ -32,7 +32,7 @@ export type Resource = {
 type DocumentMeta = {
   resourceType: string;
   // Only supplied in the case of a delete
-  resourceId?: string;
+  resourceIds?: string[];
   indices?: IndexData[];
 };
 
@@ -122,7 +122,7 @@ type DocumentBuilderOptions = {
 };
 
 export type SerializeOptions = {
-  deletedResourceId?: string;
+  deletedResourceIds?: string[];
 };
 
 export type IndexData = {
@@ -173,14 +173,14 @@ export class DocumentBuilder {
     return this;
   }
 
-  serialize({ deletedResourceId }: SerializeOptions = {}): JsonApiDocument {
+  serialize({ deletedResourceIds }: SerializeOptions = {}): JsonApiDocument {
     const singular = this.data.length === 1 && this.indexData.length === 0 && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
       meta: { resourceType: this.resourceType }
     };
 
-    if (deletedResourceId != null) {
-      doc.meta.resourceId = deletedResourceId;
+    if (deletedResourceIds != null) {
+      doc.meta.resourceIds = deletedResourceIds;
     } else {
       // Data can either be a single object or an array
       doc.data = singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize());
@@ -204,8 +204,8 @@ export const getDtoType = <DTO>(dtoClass: Type<DTO>) => Reflect.getMetadata(DTO_
 export const buildJsonApi = <DTO>(dtoClass: Type<DTO>, options?: DocumentBuilderOptions) =>
   new DocumentBuilder(getDtoType(dtoClass), options);
 
-export const buildDeletedResponse = (resourceType: string, id: string) =>
-  new DocumentBuilder(resourceType).serialize({ deletedResourceId: id });
+export const buildDeletedResponse = (resourceType: string, ids: string | string[]) =>
+  new DocumentBuilder(resourceType).serialize({ deletedResourceIds: Array.isArray(ids) ? ids : [ids] });
 
 export const getStableRequestQuery = (originalQuery: object) => {
   const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };

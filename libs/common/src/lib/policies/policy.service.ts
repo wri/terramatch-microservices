@@ -24,7 +24,8 @@ import {
   Disturbance,
   Organisation,
   DisturbanceReport,
-  SrpReport
+  SrpReport,
+  Media
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -52,6 +53,7 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
+import { MediaPolicy } from "./media.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,7 +87,8 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
   [Task, TaskPolicy],
-  [User, UserPolicy]
+  [User, UserPolicy],
+  [Media, MediaPolicy]
 ];
 
 /**

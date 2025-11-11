@@ -6,12 +6,12 @@ export const SrpReportConfiguration: LinkedFieldConfiguration = {
   label: "Annual Socio Economic Restoration Report",
   laravelModelType: SrpReport.LARAVEL_TYPE,
   fields: {
-    "srp-other-partners-description": {
+    "srp-rep-other-partners-description": {
       property: "other_restoration_partners_description",
       label: "Other Restoration Partners Description",
       inputType: "long-text"
     },
-    "srp-total-unique-restoration-partners": {
+    "srp-rep-total-unique-restoration-partners": {
       property: "total_unique_restoration_partners",
       label: "Total Unique Restoration Partners",
       inputType: "number"

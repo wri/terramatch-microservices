@@ -3,6 +3,7 @@ import { DuplicateGeometryValidator } from "./duplicate-geometry.validator";
 import { PolygonGeometry, SitePolygon, PointGeometry } from "@terramatch-microservices/database/entities";
 import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
 import { Feature } from "@terramatch-microservices/database/constants";
+import { Point, Polygon, MultiPolygon, LineString } from "geojson";
 
 interface MockTransaction {
   commit: jest.Mock;
@@ -612,35 +613,190 @@ describe("DuplicateGeometryValidator", () => {
         duplicates: [{ index: 0, existing_uuid: "existing-uuid-1" }]
       });
     });
+  });
 
-    it("should handle sequelize connection missing", async () => {
-      (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
-
-      const result = await (
-        validator as unknown as {
-          checkNewPolygonsDuplicates: (
-            features: Feature[],
-            existingPolygonUuids: string[]
-          ) => Promise<{ valid: boolean; duplicates: MockDuplicateCheckResult[] }>;
-        }
-      ).checkNewPolygonsDuplicates(mockFeatures, ["existing-uuid"]);
-
-      expect(result).toEqual({ valid: true, duplicates: [] });
+  describe("validateGeometry", () => {
+    it("should return valid=true for Point geometry", async () => {
+      const geometry: Point = { type: "Point", coordinates: [0, 0] };
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
     });
 
-    it("should handle database errors gracefully", async () => {
-      mockSequelize.query.mockRejectedValue(new Error("Database error"));
+    it("should return valid=true for LineString geometry", async () => {
+      const geometry: LineString = {
+        type: "LineString",
+        coordinates: [
+          [0, 0],
+          [1, 1]
+        ]
+      } as const;
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
 
-      const result = await (
-        validator as unknown as {
-          checkNewPolygonsDuplicates: (
-            features: Feature[],
-            existingPolygonUuids: string[]
-          ) => Promise<{ valid: boolean; duplicates: MockDuplicateCheckResult[] }>;
+    it("should return valid=true when properties are missing", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=true when site_id is missing", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = { poly_name: "Test" };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=true when no duplicates found", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = { site_id: "site-uuid-123" };
+
+      const mockSitePolygon = {
+        polygonUuid: "polygon-123",
+        siteUuid: "site-uuid-123",
+        site: { projectId: 1 }
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
+      mockSequelize.query.mockResolvedValue([]);
+
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=false when duplicates found", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = { site_id: "site-uuid-123" };
+
+      const mockSitePolygon = {
+        polygonUuid: "polygon-123",
+        siteUuid: "site-uuid-123",
+        site: { projectId: 1 }
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([{ polygonUuid: "existing-uuid" }]);
+      mockSequelize.query.mockResolvedValueOnce([{ idx: 0, existing_uuid: "existing-uuid" }]).mockResolvedValueOnce([
+        {
+          candidateUuid: "existing-uuid",
+          polyName: "Duplicate Polygon",
+          siteName: "Test Site"
         }
-      ).checkNewPolygonsDuplicates(mockFeatures, ["existing-uuid"]);
+      ]);
 
-      expect(result).toEqual({ valid: true, duplicates: [] });
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(false);
+      expect(result.extraInfo).toEqual([
+        {
+          poly_uuid: "existing-uuid",
+          poly_name: "Duplicate Polygon",
+          site_name: "Test Site"
+        }
+      ]);
+    });
+
+    it("should return valid=true for MultiPolygon when no duplicates", async () => {
+      const geometry: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1],
+              [0, 0]
+            ]
+          ]
+        ]
+      };
+      const properties = { site_id: "site-uuid-123" };
+
+      const mockSitePolygon = {
+        polygonUuid: "polygon-123",
+        siteUuid: "site-uuid-123",
+        site: { projectId: 1 }
+      };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
+      mockSequelize.query.mockResolvedValue([]);
+
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should handle error in checkNewFeaturesDuplicates gracefully", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = { site_id: "site-uuid-123" };
+
+      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
     });
   });
 

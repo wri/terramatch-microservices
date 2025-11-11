@@ -1,6 +1,7 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
+import { Geometry } from "geojson";
 
 interface GeoJSONPolygon {
   type: "Polygon";
@@ -21,7 +22,7 @@ interface SpikeDetectionResult extends ValidationResult {
   } | null;
 }
 
-export class SpikesValidator implements Validator {
+export class SpikesValidator implements PolygonValidator, GeometryValidator {
   private readonly SPIKE_ANGLE_THRESHOLD = 10;
 
   private readonly SPIKE_RATIO_THRESHOLD = 5;
@@ -70,6 +71,26 @@ export class SpikesValidator implements Validator {
         }
       };
     });
+  }
+
+  async validateGeometry(geometry: Geometry): Promise<SpikeDetectionResult> {
+    if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
+      return {
+        valid: true,
+        extraInfo: null
+      };
+    }
+
+    const spikes = this.detectSpikes(geometry as GeoJSONGeometry);
+    const valid = spikes.length === 0;
+
+    return {
+      valid,
+      extraInfo: {
+        spikes,
+        spike_count: spikes.length
+      }
+    };
   }
 
   private detectSpikes(geometry: GeoJSONGeometry): number[][] {

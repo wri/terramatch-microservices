@@ -1,7 +1,4 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-
-const logger = new TMLogger("SitePolygonPropertyValidator");
 
 const CORE_PROPERTY_KEYS = [
   "poly_name",
@@ -26,13 +23,8 @@ const VALID_PRACTICE_VALUES = ["assisted-natural-regeneration", "direct-seeding"
 export function validateSitePolygonProperties(properties: Record<string, unknown>): Partial<SitePolygon> {
   let plantstart: Date | null = null;
   if (properties.plantstart != null && properties.plantstart !== "") {
-    try {
-      const parsedDate = new Date(properties.plantstart as string);
-      plantstart = !isNaN(parsedDate.getTime()) ? parsedDate : null;
-    } catch (error) {
-      logger.error("Error parsing plantstart date:", error);
-      plantstart = null;
-    }
+    const parsedDate = new Date(properties.plantstart as string);
+    plantstart = !isNaN(parsedDate.getTime()) ? parsedDate : null;
   }
   const numTrees =
     typeof properties.num_trees === "number" && Number.isInteger(properties.num_trees) ? properties.num_trees : null;

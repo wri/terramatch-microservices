@@ -242,7 +242,7 @@ export class ValidationService {
 
       const criteriaId = this.getCriteriaIdForValidationType(validationType);
 
-      if (validator != null && isPolygonValidator(validator) && validator.validatePolygons != null) {
+      if (isPolygonValidator(validator) && validator.validatePolygons != null) {
         const batchResults = await validator.validatePolygons(polygonUuids);
 
         const seenPolygons = new Set<string>();

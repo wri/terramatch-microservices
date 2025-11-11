@@ -22,9 +22,10 @@ interface DuplicateCheckResult {
 
 export class DuplicateGeometryValidator implements PolygonValidator, GeometryValidator {
   private readonly logger = new Logger(DuplicateGeometryValidator.name);
+
   async validatePolygon(polygonUuid: string): Promise<DuplicateValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
-      where: { polygonUuid, isActive: true, deletedAt: null },
+      where: { polygonUuid, isActive: true },
       include: [
         {
           model: Site,
@@ -106,7 +107,7 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
     }
 
     const sitePolygon = await SitePolygon.findOne({
-      where: { siteUuid: siteId, isActive: true, deletedAt: null },
+      where: { siteUuid: siteId, isActive: true },
       include: [
         {
           model: Site,
@@ -167,7 +168,7 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
 
   private async getProjectPolygonUuids(projectId: number, excludeUuid?: string): Promise<string[]> {
     const sitePolygons = await SitePolygon.findAll({
-      where: { isActive: true, deletedAt: null },
+      where: { isActive: true },
       include: [
         {
           model: Site,

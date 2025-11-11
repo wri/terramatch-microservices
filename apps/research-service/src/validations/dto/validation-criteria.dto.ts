@@ -28,6 +28,7 @@ export class ValidationCriteriaDto {
 
   @ApiProperty({
     description: "When this validation was last run (null for non-persistent validations)",
+    type: Date,
     nullable: true
   })
   createdAt: Date | null;

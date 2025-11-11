@@ -73,8 +73,7 @@ export class SpikesValidator implements PolygonValidator, GeometryValidator {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async validateGeometry(geometry: Geometry, _properties?: Record<string, unknown>): Promise<SpikeDetectionResult> {
+  async validateGeometry(geometry: Geometry): Promise<SpikeDetectionResult> {
     if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
       return {
         valid: true,

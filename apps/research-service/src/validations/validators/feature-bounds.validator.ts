@@ -12,11 +12,7 @@ interface FeatureBoundsValidationResult extends ValidationResult {
 }
 
 export class FeatureBoundsValidator implements GeometryValidator {
-  async validateGeometry(
-    geometry: Geometry,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Required by GeometryValidator interface
-    _properties?: Record<string, unknown>
-  ): Promise<FeatureBoundsValidationResult> {
+  async validateGeometry(geometry: Geometry): Promise<FeatureBoundsValidationResult> {
     const invalidCoordinates: Array<{ longitude: number; latitude: number; reason: string }> = [];
 
     this.checkCoordinates(geometry, invalidCoordinates);

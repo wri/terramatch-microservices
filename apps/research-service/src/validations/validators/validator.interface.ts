@@ -22,16 +22,8 @@ export interface GeometryValidator {
 
 export type Validator = PolygonValidator | GeometryValidator | (PolygonValidator & GeometryValidator);
 
-export function isPolygonValidator(validator: Validator): validator is PolygonValidator {
-  if (validator === null || validator === undefined) {
-    return false;
-  }
-  return "validatePolygon" in validator && typeof (validator as PolygonValidator).validatePolygon === "function";
-}
+export const isPolygonValidator = (validator: Validator | null | undefined): validator is PolygonValidator =>
+  validator != null && typeof (validator as PolygonValidator).validatePolygon === "function";
 
-export function isGeometryValidator(validator: Validator): validator is GeometryValidator {
-  if (validator === null || validator === undefined) {
-    return false;
-  }
-  return "validateGeometry" in validator && typeof (validator as GeometryValidator).validateGeometry === "function";
-}
+export const isGeometryValidator = (validator: Validator | null | undefined): validator is GeometryValidator =>
+  validator != null && typeof (validator as GeometryValidator).validateGeometry === "function";

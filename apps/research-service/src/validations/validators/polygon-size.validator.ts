@@ -10,10 +10,10 @@ interface PolygonSizeValidationResult extends ValidationResult {
   } | null;
 }
 
-export class PolygonSizeValidator implements PolygonValidator, GeometryValidator {
-  private static readonly MAX_AREA_HECTARES = 1000;
-  private static readonly MAX_AREA_SQ_METERS = 1000000; // 1000 hectares = 1,000,000 square meters
+const MAX_AREA_HECTARES = 1000;
+const MAX_AREA_SQ_METERS = 1000000; // 1000 hectares = 1,000,000 square meters
 
+export class PolygonSizeValidator implements PolygonValidator, GeometryValidator {
   async validatePolygon(polygonUuid: string): Promise<PolygonSizeValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid, isActive: true },
@@ -25,7 +25,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
     }
 
     const areaHectares = sitePolygon.calcArea ?? 0;
-    const valid = areaHectares <= PolygonSizeValidator.MAX_AREA_HECTARES;
+    const valid = areaHectares <= MAX_AREA_HECTARES;
 
     return {
       valid,
@@ -48,7 +48,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
 
     return polygonUuids.map(polygonUuid => {
       const areaHectares = resultMap.get(polygonUuid) ?? 0;
-      const valid = areaHectares <= PolygonSizeValidator.MAX_AREA_HECTARES;
+      const valid = areaHectares <= MAX_AREA_HECTARES;
 
       return {
         polygonUuid,
@@ -95,7 +95,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
     }
 
     const areaHectares = totalAreaSqMeters / 10000;
-    const valid = totalAreaSqMeters <= PolygonSizeValidator.MAX_AREA_SQ_METERS;
+    const valid = totalAreaSqMeters <= MAX_AREA_SQ_METERS;
 
     return {
       valid,

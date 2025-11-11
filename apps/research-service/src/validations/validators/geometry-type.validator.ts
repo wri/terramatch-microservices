@@ -11,11 +11,7 @@ interface GeometryTypeValidationResult extends ValidationResult {
 const VALID_GEOMETRY_TYPES = ["Polygon", "MultiPolygon", "Point"] as const;
 
 export class GeometryTypeValidator implements GeometryValidator {
-  async validateGeometry(
-    geometry: Geometry,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Required by GeometryValidator interface
-    _properties?: Record<string, unknown>
-  ): Promise<GeometryTypeValidationResult> {
+  async validateGeometry(geometry: Geometry): Promise<GeometryTypeValidationResult> {
     const actualType = geometry.type;
     const valid = VALID_GEOMETRY_TYPES.includes(actualType as (typeof VALID_GEOMETRY_TYPES)[number]);
 

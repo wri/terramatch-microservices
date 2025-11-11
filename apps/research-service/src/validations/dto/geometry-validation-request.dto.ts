@@ -1,9 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, ArrayMinSize, IsIn, IsOptional, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
+import { IsArray, ArrayMinSize, IsIn, IsOptional } from "class-validator";
 import { NON_PERSISTENT_VALIDATION_TYPES, ValidationType } from "@terramatch-microservices/database/constants";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { FeatureCollection } from "geojson";
+import { IsValidFeatureCollection } from "../decorators/is-valid-feature-collection.decorator";
 
 export class GeometryValidationRequestAttributes {
   @ApiProperty({
@@ -38,8 +38,7 @@ export class GeometryValidationRequestAttributes {
   })
   @IsArray()
   @ArrayMinSize(1)
-  @ValidateNested({ each: true })
-  @Type(() => Object)
+  @IsValidFeatureCollection({ each: true })
   geometries: FeatureCollection[];
 
   @ApiProperty({

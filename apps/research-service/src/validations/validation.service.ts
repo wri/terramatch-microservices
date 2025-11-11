@@ -31,6 +31,7 @@ import {
   CRITERIA_ID_TO_VALIDATION_TYPE
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
+import { validateFeatureCollectionStructure } from "./utils/geojson-structure-validator";
 
 type ValidationResult = {
   polygonUuid: string;
@@ -451,10 +452,20 @@ export class ValidationService {
       };
     }>
   > {
+    for (let i = 0; i < geometries.length; i++) {
+      const validationResult = validateFeatureCollectionStructure(geometries[i]);
+      if (!validationResult.valid) {
+        throw new BadRequestException(
+          `Invalid GeoJSON FeatureCollection at index ${i}: ${validationResult.error ?? "invalid structure"}`
+        );
+      }
+    }
+
     const allFeatures: Array<{ geometry: unknown; properties?: Record<string, unknown>; featureIndex: number }> = [];
     let featureIndex = 0;
 
     for (const featureCollection of geometries) {
+      // This check is now redundant due to validation above, but kept for safety
       if (featureCollection.features == null || !Array.isArray(featureCollection.features)) {
         continue;
       }

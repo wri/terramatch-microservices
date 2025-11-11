@@ -31,6 +31,8 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 
+const DATA_COMPLETENESS_CRITERIA_ID = VALIDATION_CRITERIA_IDS.DATA_COMPLETENESS;
+
 type ValidationResult = {
   polygonUuid: string;
   criteriaId: CriteriaId;
@@ -388,7 +390,8 @@ export class ValidationService {
       where: {
         polygonUuid: { [Op.in]: polygonUuids },
         isActive: true
-      }
+      },
+      attributes: ["id", "polygonUuid", "validationStatus"]
     });
 
     if (sitePolygons.length === 0) {
@@ -397,7 +400,7 @@ export class ValidationService {
 
     const allCriteria = await CriteriaSite.findAll({
       where: { polygonId: { [Op.in]: polygonUuids } },
-      attributes: ["polygonId", "criteriaId", "valid"]
+      attributes: ["polygonId", "criteriaId", "valid", "extraInfo"]
     });
 
     const criteriaByPolygon = new Map<string, CriteriaSite[]>();
@@ -411,13 +414,16 @@ export class ValidationService {
       }
     }
 
-    const excludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
+    const baseExcludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
     const updates: Array<{ id: number; validationStatus: string | null }> = [];
 
     for (const sitePolygon of sitePolygons) {
       if (sitePolygon.polygonUuid == null) continue;
 
       const polygonCriteria = criteriaByPolygon.get(sitePolygon.polygonUuid) ?? [];
+      const dynamicExcludedCriteria = this.getDynamicExcludedCriteria(polygonCriteria);
+      const excludedCriteriaSet = new Set([...baseExcludedCriteriaSet, ...dynamicExcludedCriteria]);
+
       let newValidationStatus: string | null;
 
       if (polygonCriteria.length === 0) {
@@ -450,5 +456,22 @@ export class ValidationService {
         )
       );
     }
+  }
+  private getDynamicExcludedCriteria(allCriteria: CriteriaSite[]): CriteriaId[] {
+    const dynamicExcludedCriteria: CriteriaId[] = [];
+
+    const dataCriteria = allCriteria.find(c => c.criteriaId === DATA_COMPLETENESS_CRITERIA_ID);
+
+    if (dataCriteria != null && dataCriteria.valid === false && dataCriteria.extraInfo != null) {
+      const validationErrors = Array.isArray(dataCriteria.extraInfo) ? dataCriteria.extraInfo : [];
+      const numTreesError = validationErrors.find((error: { field?: string }) => error.field === "num_trees");
+      const hasOnlyNumTreesError = validationErrors.length === 1 && numTreesError != null;
+
+      if (hasOnlyNumTreesError) {
+        dynamicExcludedCriteria.push(DATA_COMPLETENESS_CRITERIA_ID);
+      }
+    }
+
+    return dynamicExcludedCriteria;
   }
 }

@@ -854,7 +854,8 @@ describe("ValidationService", () => {
         where: {
           polygonUuid: { [Op.in]: ["polygon-1"] },
           isActive: true
-        }
+        },
+        attributes: ["id", "polygonUuid", "validationStatus"]
       });
       expect(CriteriaSite.findAll).not.toHaveBeenCalled();
     });

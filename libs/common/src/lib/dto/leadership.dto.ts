@@ -12,9 +12,6 @@ export class EmbeddedLeadershipDto {
   uuid: string;
 
   @ApiProperty()
-  organisationId: number;
-
-  @ApiProperty()
   collection: string;
 
   @ApiProperty({ nullable: true, type: String })

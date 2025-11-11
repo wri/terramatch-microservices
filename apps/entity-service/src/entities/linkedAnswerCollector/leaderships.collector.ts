@@ -12,7 +12,7 @@ export function leadershipsCollector(logger: LoggerService): ResourceCollector<L
   return {
     addField(field, modelType, questionUuid) {
       if (modelType !== "organisations") {
-        throw new InternalServerErrorException("ownership stake is only supported on org");
+        throw new InternalServerErrorException("leaderships is only supported on org");
       }
       if (field.collection == null) {
         throw new InternalServerErrorException("collection not found for leaderships");
@@ -26,7 +26,7 @@ export function leadershipsCollector(logger: LoggerService): ResourceCollector<L
 
     async collect(answers, models) {
       if (models.organisations == null) {
-        logger.warn("missing org for ownership stake");
+        logger.warn("missing org for leaderships");
         return;
       }
 

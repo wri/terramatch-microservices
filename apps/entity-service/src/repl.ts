@@ -1,15 +1,22 @@
 import { AppModule } from "./app.module";
 import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
-import { Form, FormQuestion, Framework, FundingProgramme } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import {
+  Form,
+  FormQuestion,
+  Framework,
+  FundingProgramme,
+  UpdateRequest
+} from "@terramatch-microservices/database/entities";
+import { col, fn, literal, Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
 import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
-import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
+import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
+import { cloneDeep, isEqual, isUndefined, omitBy } from "lodash";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -65,6 +72,155 @@ bootstrapRepl("Entity Service", AppModule, {
         for (const framework of await Framework.findAll()) {
           if (framework.slug !== framework.accessCode) await framework.update({ accessCode: framework.slug });
         }
+      });
+    },
+
+    updateCamelCaseAnswers: async () => {
+      // In moving the "view entity with schema" pattern to v3, the embedded answer DTOs in
+      // relation fields has become camel case. Update requests contain embedded data for these
+      // field types and need a migration to adapt.
+      await withoutSqlLogs(async () => {
+        const processInputs = async (
+          inputTypes: RelationInputType[],
+          label: string,
+          update: (questionUuids: string[], content: object) => void
+        ) => {
+          const uuids = (
+            await FormQuestion.findAll({
+              where: { inputType: { [Op.in]: inputTypes } },
+              attributes: ["uuid"]
+            })
+          ).map(({ uuid }) => uuid);
+
+          const builder = new PaginatedQueryBuilder(UpdateRequest, 100).where(
+            fn("JSON_CONTAINS_PATH", col("content"), literal("'one'"), ...uuids.map(uuid => literal(`'$.${uuid}'`)))
+          );
+          const bar = new ProgressBar(`Processing :total UpdateRequests for ${label} answers [:bar] :percent :etas`, {
+            width: 40,
+            total: await builder.paginationTotal()
+          });
+          let updated = 0;
+          for await (const page of batchFindAll(builder)) {
+            for (const updateRequest of page) {
+              const content = cloneDeep(updateRequest.content) ?? {};
+              update(uuids, content);
+              if (!isEqual(content, updateRequest.content)) {
+                updated++;
+                await updateRequest.update({ content }, { silent: true });
+              }
+
+              bar.tick();
+            }
+          }
+          console.log(`Updated ${updated} UpdateRequests for ${label} answers.\n`);
+        };
+
+        const demographicsInputTypes: RelationInputType[] = [
+          "workdays",
+          "restorationPartners",
+          "jobs",
+          "employees",
+          "volunteers",
+          "allBeneficiaries",
+          "trainingBeneficiaries",
+          "indirectBeneficiaries",
+          "associates"
+        ];
+        await processInputs(demographicsInputTypes, "demographics", (questionUuids, content) => {
+          for (const uuid of questionUuids) {
+            if (content[uuid]?.[0]?.demographics != null) {
+              // move the "demographics" member to "entries"
+              const { demographics, ...rest } = content[uuid][0];
+              content[uuid][0] = { entries: demographics, ...rest };
+            }
+          }
+        });
+
+        await processInputs(["disturbanceReportEntries"], "disturbance report entries", (questionUuids, content) => {
+          for (const uuid of questionUuids) {
+            if (content[uuid] != null) {
+              content[uuid] = content[uuid].map(
+                // remove the timestamps and camelCase input_type
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                ({ input_type: inputType, created_at, updated_at, ...rest }) =>
+                  // omitting undefined keys is important for the isEqual check above
+                  omitBy(
+                    {
+                      inputType,
+                      // On all of these, ...rest has to come last to keep the script idempotent.
+                      ...rest
+                    },
+                    isUndefined
+                  )
+              );
+            }
+          }
+        });
+
+        await processInputs(["financialIndicators"], "financial indicators", (questionUuids, content) => {
+          for (const uuid of questionUuids) {
+            if (content[uuid] != null) {
+              content[uuid] = content[uuid].map(
+                // remove org id and move financial_report_id, exchange_rate, start_month to the top level
+                ({
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                  organisation_id,
+                  financial_report_id: financialReportId,
+                  exchange_rate: exchangeRate,
+                  start_month: startMonth,
+                  ...rest
+                }) =>
+                  omitBy(
+                    {
+                      financialReportId,
+                      exchangeRate,
+                      startMonth,
+                      ...rest
+                    },
+                    isUndefined
+                  )
+              );
+            }
+          }
+        });
+
+        await processInputs(["seedings"], "seedings", (questionUuids, content) => {
+          for (const uuid of questionUuids) {
+            if (content[uuid] != null) {
+              // move weight of sample and seeds in sample to camel case
+              content[uuid] = content[uuid].map(
+                ({ weight_of_sample: weightOfSample, seeds_in_sample: seedsInSample, ...rest }) =>
+                  omitBy(
+                    {
+                      weightOfSample,
+                      seedsInSample,
+                      ...rest
+                    },
+                    isUndefined
+                  )
+              );
+            }
+          }
+        });
+
+        await processInputs(["treeSpecies"], "treeSpecies", (questionUuids, content) => {
+          for (const uuid of questionUuids) {
+            if (content[uuid] != null) {
+              content[uuid] = content[uuid].map(
+                ({ taxon_id: taxonId, report_amount: reportAmount, is_new_species: isNewSpecies, ...rest }) =>
+                  omitBy(
+                    {
+                      taxonId,
+                      reportAmount,
+                      isNewSpecies,
+                      ...rest
+                    },
+                    isUndefined
+                  )
+              );
+            }
+          }
+        });
       });
     }
   }

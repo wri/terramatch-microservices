@@ -1234,5 +1234,124 @@ describe("ValidationService", () => {
       expect(typeof result[0].attributes.criteriaList[0].valid).toBe("boolean");
       expect(typeof result[0].attributes.criteriaList[1].valid).toBe("boolean");
     });
+
+    it("should throw BadRequestException for invalid GeoJSON structure", async () => {
+      const invalidGeoJSON = { type: "FeatureCollection", features: "not an array" } as never;
+      await expect(service.validateGeometries([invalidGeoJSON], ["GEOMETRY_TYPE"])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should handle features with id in properties", async () => {
+      const featureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: { id: "custom-id-123" }
+          }
+        ]
+      };
+      mockGeometryTypeValidator.validateGeometry.mockResolvedValue({ valid: true, extraInfo: null });
+      const result = await service.validateGeometries([featureCollection], ["GEOMETRY_TYPE"]);
+      expect(result[0].attributes.polygonUuid).toBe("custom-id-123");
+    });
+
+    it("should handle features with null properties", async () => {
+      const featureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: null
+          }
+        ]
+      };
+      mockGeometryTypeValidator.validateGeometry.mockResolvedValue({ valid: true, extraInfo: null });
+      const result = await service.validateGeometries([featureCollection], ["GEOMETRY_TYPE"]);
+      expect(result[0].attributes.polygonUuid).toBe("feature-0");
+    });
+
+    it("should skip null validators in validateGeometries", async () => {
+      const featureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: {}
+          }
+        ]
+      };
+      const originalValidator = (VALIDATORS as Record<string, unknown>).GEOMETRY_TYPE;
+      (VALIDATORS as Record<string, unknown>).GEOMETRY_TYPE = null;
+      const result = await service.validateGeometries([featureCollection], ["GEOMETRY_TYPE"]);
+      (VALIDATORS as Record<string, unknown>).GEOMETRY_TYPE = originalValidator;
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("validatePolygonsBatch - edge cases", () => {
+    it("should throw BadRequestException for unknown validation type", async () => {
+      (VALIDATORS as Record<string, unknown>).UNKNOWN_TYPE = null;
+      await expect(service.validatePolygonsBatch(["uuid-1"], ["UNKNOWN_TYPE" as never])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
+  describe("updateSitePolygonValidityBatch - dynamic exclusion", () => {
+    it("should exclude DATA_COMPLETENESS when only num_trees error exists", async () => {
+      const mockSitePolygon = { id: 1, polygonUuid: "polygon-1", validationStatus: "failed" };
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        {
+          polygonId: "polygon-1",
+          criteriaId: 14, // DATA_COMPLETENESS
+          valid: false,
+          extraInfo: [{ field: "num_trees" }]
+        }
+      ]);
+      (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);
+      await (
+        service as unknown as { updateSitePolygonValidityBatch: (uuids: string[]) => Promise<void> }
+      ).updateSitePolygonValidityBatch(["polygon-1"]);
+      expect(SitePolygon.update).toHaveBeenCalledWith({ validationStatus: "partial" }, { where: { id: 1 } });
+    });
   });
 });

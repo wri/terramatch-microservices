@@ -10,7 +10,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 
-@Controller("entities/v3/:entity/:uuid/updateRequests")
+@Controller("entities/v3/:entity/:uuid/updateRequest")
 export class UpdateRequestsController {
   constructor(
     private readonly entitiesService: EntitiesService,

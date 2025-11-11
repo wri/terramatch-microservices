@@ -1,5 +1,6 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Project, SrpReport, User } from "@terramatch-microservices/database/entities";
+import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 
 export class SrpReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -9,7 +10,7 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "create"], SrpReport, {
+      this.builder.can(["read", "delete", "update", "approve", "create", "updateAnswers"], SrpReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -26,6 +27,15 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
         ];
         if (projectIds.length > 0) {
           this.builder.can(["read", "update", "create"], SrpReport, { projectId: { $in: projectIds } });
+          this.builder.can("updateAnswers", SrpReport, {
+            projectId: { $in: projectIds },
+            status: { $in: [STARTED, DUE] }
+          });
+          this.builder.can("updateAnswers", SrpReport, {
+            projectId: { $in: projectIds },
+            status: AWAITING_APPROVAL,
+            nothingToReport: true
+          });
         }
       }
     }
@@ -35,7 +45,7 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "create"], SrpReport, {
+          this.builder.can(["read", "delete", "update", "approve", "create", "updateAnswers"], SrpReport, {
             projectId: { $in: projectIds }
           });
         }

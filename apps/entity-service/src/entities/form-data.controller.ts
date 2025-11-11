@@ -1,5 +1,5 @@
-import { Controller, Get, NotFoundException, Param, UnauthorizedException } from "@nestjs/common";
-import { FormDataDto } from "./dto/form-data.dto";
+import { Body, Controller, Get, NotFoundException, Param, Put, UnauthorizedException } from "@nestjs/common";
+import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -33,6 +33,28 @@ export class FormDataController {
     const form = await this.formDataService.getForm(model);
     if (form == null) throw new NotFoundException("Form for entity not found");
 
+    return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
+  }
+
+  @Put()
+  @ApiOperation({ operationId: "formDataUpdate", summary: "Update form data for an entity." })
+  @JsonApiResponse(FormDataDto)
+  @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
+  @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
+  async formDataUpdate(@Param() { entity, uuid }: SpecificEntityDto, @Body() payload: UpdateFormDataBody) {
+    if (payload.data.id !== `${entity}:${uuid}`) {
+      throw new BadRequestException("Id in payload does not match entity and uuid from path");
+    }
+
+    const model = await this.entitiesService.createEntityProcessor(entity).findOne(uuid);
+    if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
+    await this.policyService.authorize("update", model);
+
+    const form = await this.formDataService.getForm(model);
+    if (form == null) throw new NotFoundException("Form for entity not found");
+
+    await this.formDataService.storeEntityAnswers(model, payload.data.attributes);
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }
 

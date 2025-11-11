@@ -10,7 +10,13 @@ import {
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { EntityModel, EntityType, isEntity } from "@terramatch-microservices/database/constants/entities";
+import {
+  EntityModel,
+  EntityType,
+  getOrganisationId,
+  getProjectId,
+  isEntity
+} from "@terramatch-microservices/database/constants/entities";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -18,14 +24,19 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FormModels, LinkedAnswerCollector } from "./linkedAnswerCollector";
-import { FormDataDto } from "./dto/form-data.dto";
+import { FormDataDto, StoreFormDataAttributes } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { PolicyService } from "@terramatch-microservices/common";
 
 @Injectable()
 export class FormDataService {
   private logger = new TMLogger(FormDataService.name);
 
-  constructor(private readonly localizationService: LocalizationService, private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly localizationService: LocalizationService,
+    private readonly mediaService: MediaService,
+    private readonly policyService: PolicyService
+  ) {}
 
   async getForm(model: EntityModel) {
     if (model instanceof FinancialReport) {
@@ -36,6 +47,26 @@ export class FormDataService {
     }
 
     return await Form.findOne({ where: { model: laravelType(model), frameworkKey: model.frameworkKey } });
+  }
+
+  async storeEntityAnswers(model: EntityModel, { answers }: StoreFormDataAttributes) {
+    const updateRequest = await UpdateRequest.for(model).current().findOne();
+    if (updateRequest != null) {
+      await updateRequest.update({ content: answers });
+      return;
+    }
+    if (!(await this.policyService.hasAccess("updateAnswers", model))) {
+      await UpdateRequest.create({
+        updateRequestableType: laravelType(model),
+        updateRequestableId: model.id,
+        createdById: this.policyService.userId,
+        frameworkKey: model.frameworkKey,
+        content: answers,
+        projectId: await getProjectId(model),
+        organisationId: await getOrganisationId(model)
+      } as UpdateRequest);
+      return;
+    }
   }
 
   async getFormTitle(form: Form, locale: ValidLocale) {

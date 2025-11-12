@@ -14,13 +14,24 @@ describe("geojson-structure-validator", () => {
     it("should return valid=false for null", () => {
       const result = validateFeatureCollectionStructure(null);
       expect(result.valid).toBe(false);
-      expect(result.error).toBe("FeatureCollection must be an object");
+      expect(result.error).toBe("Value cannot be null or undefined");
     });
 
-    it("should return valid=false for array", () => {
-      const result = validateFeatureCollectionStructure([]);
+    it("should return valid=true for array of FeatureCollections", () => {
+      const result = validateFeatureCollectionStructure([
+        { type: "FeatureCollection", features: [] },
+        { type: "FeatureCollection", features: [] }
+      ]);
+      expect(result.valid).toBe(true);
+    });
+
+    it("should return valid=false for invalid item in array", () => {
+      const result = validateFeatureCollectionStructure([
+        { type: "FeatureCollection", features: [] },
+        { type: "Feature", features: [] }
+      ]);
       expect(result.valid).toBe(false);
-      expect(result.error).toBe("FeatureCollection must be an object");
+      expect(result.error).toContain("index 1");
     });
 
     it("should return valid=false when type is not FeatureCollection", () => {

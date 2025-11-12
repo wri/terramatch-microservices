@@ -4,7 +4,6 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
-  Index,
   Model,
   PrimaryKey,
   Table
@@ -26,7 +25,13 @@ export type PolygonUpdateType = "update" | "status";
   tableName: "polygon_updates",
   underscored: true,
   paranoid: false, // No soft deletes for audit records
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    {
+      name: "polygon_updates_site_polygon_uuid",
+      fields: ["site_polygon_uuid"]
+    }
+  ]
 })
 export class PolygonUpdates extends Model<PolygonUpdates> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\PolygonUpdates";
@@ -40,7 +45,6 @@ export class PolygonUpdates extends Model<PolygonUpdates> {
    * References site_polygon.primary_uuid (NOT site_polygon.uuid!)
    * This allows tracking changes across all versions of a polygon.
    */
-  @Index
   @Column({ type: UUID, field: "site_polygon_uuid" })
   sitePolygonUuid: string;
 

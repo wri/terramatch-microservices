@@ -242,9 +242,13 @@ export class ValidationService {
         throw new BadRequestException(`Unknown validation type: ${validationType}`);
       }
 
+      if (!isPolygonValidator(validator)) {
+        continue;
+      }
+
       const criteriaId = this.getCriteriaIdForValidationType(validationType);
 
-      if (isPolygonValidator(validator) && validator.validatePolygons != null) {
+      if (validator.validatePolygons != null) {
         const batchResults = await validator.validatePolygons(polygonUuids);
 
         const seenPolygons = new Set<string>();
@@ -264,9 +268,6 @@ export class ValidationService {
           });
         }
       } else {
-        if (validator == null || !isPolygonValidator(validator)) {
-          throw new BadRequestException(`Validation type ${validationType} does not support polygon UUID validation.`);
-        }
         for (const polygonUuid of polygonUuids) {
           const validationResult = await validator.validatePolygon(polygonUuid);
           validationResults.push({

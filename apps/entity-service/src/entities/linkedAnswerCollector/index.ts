@@ -35,6 +35,16 @@ export type ResourceCollector<TField extends LinkedField | LinkedFile | LinkedRe
    * Execute as few queries as possible to satisfy all current answer data for this form.
    */
   collect(answers: Dictionary<unknown>, models: FormModels): Promise<void>;
+
+  /**
+   * Syncs the answers from a form for this relation type. May NOOP if this is not a relation collector.
+   */
+  syncRelation(
+    model: FormModel,
+    field: LinkedRelation,
+    answer: object[] | null | undefined,
+    hidden: boolean
+  ): Promise<void>;
 };
 
 export class LinkedAnswerCollector {

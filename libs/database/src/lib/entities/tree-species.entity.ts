@@ -17,6 +17,8 @@ import { SiteReport } from "./site-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { NurseryReport } from "./nursery-report.entity";
 import { ProjectReport } from "./project-report.entity";
+import { FormModel } from "../constants/entities";
+import { laravelType } from "../types/util";
 
 @Scopes(() => ({
   visible: { where: { hidden: false } },
@@ -38,7 +40,13 @@ import { ProjectReport } from "./project-report.entity";
       speciesableId: { [Op.in]: ids }
     }
   }),
-  collection: (collection: string) => ({ where: { collection } })
+  collection: (collection: string) => ({ where: { collection } }),
+  entity: (entity: FormModel) => ({
+    where: {
+      speciesableType: laravelType(entity),
+      speciesableId: entity.id
+    }
+  })
 }))
 @Table({
   tableName: "v2_tree_species",
@@ -69,6 +77,10 @@ export class TreeSpecies extends Model<TreeSpecies> {
 
   static projectReports(ids: number[] | Literal) {
     return chainScope(this, "projectReports", ids) as typeof TreeSpecies;
+  }
+
+  static for(entity: FormModel) {
+    return chainScope(this, "entity", entity) as typeof TreeSpecies;
   }
 
   @PrimaryKey

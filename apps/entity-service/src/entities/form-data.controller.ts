@@ -54,7 +54,7 @@ export class FormDataController {
     const form = await this.formDataService.getForm(model);
     if (form == null) throw new NotFoundException("Form for entity not found");
 
-    await this.formDataService.storeEntityAnswers(model, payload.data.attributes);
+    await this.formDataService.storeEntityAnswers(model, form, payload.data.attributes);
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }
 

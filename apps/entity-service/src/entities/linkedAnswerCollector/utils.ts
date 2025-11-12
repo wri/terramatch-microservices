@@ -23,7 +23,8 @@ export const singleAssociationCollection = <T extends Model>(
   typeAttribute: keyof Attributes<T>,
   idAttribute: keyof Attributes<T>,
   findOptions: Omit<FindOptions<Attributes<T>>, "where">,
-  createDto: (model: T) => unknown
+  createDto: (model: T) => unknown,
+  syncRelation: ResourceCollector<LinkedRelation>["syncRelation"]
 ) =>
   function (logger: LoggerService): ResourceCollector<LinkedRelation> {
     const questions: Dictionary<string> = {};
@@ -58,9 +59,13 @@ export const singleAssociationCollection = <T extends Model>(
             .filter(model => model[typeAttribute] === laravelTypes[key])
             .map(createDto);
         }
-      }
+      },
+
+      syncRelation
     };
   };
+
+type SyncArgs = [...Parameters<ResourceCollector<LinkedRelation>["syncRelation"]>, logger: LoggerService];
 
 /**
  * Creates a ResourceCollector factory for resources that distinguish based on a collection attribute.
@@ -71,7 +76,8 @@ export const collectionCollector = <T extends Model & { collection: string | nul
   typeAttribute: keyof Attributes<T>,
   idAttribute: keyof Attributes<T>,
   findOptions: Omit<FindOptions<Attributes<T>>, "where">,
-  createDto: (model: T) => unknown
+  createDto: (model: T) => unknown,
+  syncRelation: (...args: SyncArgs) => Promise<void>
 ) =>
   function (logger: LoggerService): ResourceCollector<LinkedRelation> {
     const questions: Dictionary<string> = {};
@@ -119,6 +125,8 @@ export const collectionCollector = <T extends Model & { collection: string | nul
             .filter(model => model.collection === collection && model[typeAttribute] === laravelTypes[modelType])
             .map(createDto);
         }
-      }
+      },
+
+      syncRelation: (...args) => syncRelation(...args, logger)
     };
   };

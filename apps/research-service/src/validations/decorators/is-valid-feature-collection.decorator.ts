@@ -15,7 +15,10 @@ export class IsValidFeatureCollectionConstraint implements ValidatorConstraintIn
 
   defaultMessage(args: ValidationArguments): string {
     const result = validateFeatureCollectionStructure(args.value);
-    return result.error ?? `${args.property} must be a valid FeatureCollection`;
+    if (result.error != null) {
+      return `${args.property}: ${result.error}`;
+    }
+    return `${args.property} must be a valid GeoJSON FeatureCollection`;
   }
 }
 

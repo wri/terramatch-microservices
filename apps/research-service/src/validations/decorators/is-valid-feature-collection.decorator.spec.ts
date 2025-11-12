@@ -31,7 +31,7 @@ describe("IsValidFeatureCollectionConstraint", () => {
   });
 
   describe("defaultMessage", () => {
-    it("should return error message from validator", () => {
+    it("should return error message for null", () => {
       const args = {
         value: null,
         property: "geometries",
@@ -40,7 +40,7 @@ describe("IsValidFeatureCollectionConstraint", () => {
         object: {}
       };
       const message = constraint.defaultMessage(args);
-      expect(message).toBe("FeatureCollection must be an object");
+      expect(message).toBe("geometries: Value cannot be null or undefined");
     });
 
     it("should return error when type is wrong", () => {
@@ -52,7 +52,7 @@ describe("IsValidFeatureCollectionConstraint", () => {
         object: {}
       };
       const message = constraint.defaultMessage(args);
-      expect(message).toBe('FeatureCollection must have type "FeatureCollection"');
+      expect(message).toBe('geometries: FeatureCollection must have type "FeatureCollection"');
     });
   });
 });

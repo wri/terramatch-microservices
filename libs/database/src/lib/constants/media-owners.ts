@@ -160,7 +160,8 @@ export const MEDIA_OWNER_MODEL_LARAVEL_TYPES: Record<string, EntityMediaOwnerCla
   [FundingProgramme.LARAVEL_TYPE]: FundingProgramme,
   [ImpactStory.LARAVEL_TYPE]: ImpactStory,
   [FinancialIndicator.LARAVEL_TYPE]: FinancialIndicator,
-  [ProjectPitch.LARAVEL_TYPE]: ProjectPitch
+  [ProjectPitch.LARAVEL_TYPE]: ProjectPitch,
+  [DisturbanceReport.LARAVEL_TYPE]: DisturbanceReport
 } as const;
 
 export const abbreviatedValidationMimeTypes = (validation: ValidationKey) => {

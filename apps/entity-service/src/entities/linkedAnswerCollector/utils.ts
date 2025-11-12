@@ -6,6 +6,8 @@ import { LinkedFieldResource, LinkedRelation } from "@terramatch-microservices/d
 import { Attributes, FindOptions, Model, ModelStatic, Op, WhereAttributeHash } from "sequelize";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 
+type SyncArgs = [...Parameters<NonNullable<ResourceCollector<LinkedRelation>["syncRelation"]>>, logger: LoggerService];
+
 export const mapLaravelTypes = (models: FormModels) =>
   Object.entries(models).reduce((laravelTypes, [modelType, model]) => {
     const type = laravelType(model);
@@ -24,7 +26,7 @@ export const singleAssociationCollection = <T extends Model>(
   idAttribute: keyof Attributes<T>,
   findOptions: Omit<FindOptions<Attributes<T>>, "where">,
   createDto: (model: T) => unknown,
-  syncRelation: ResourceCollector<LinkedRelation>["syncRelation"]
+  syncRelation: (...args: SyncArgs) => Promise<void>
 ) =>
   function (logger: LoggerService): ResourceCollector<LinkedRelation> {
     const questions: Dictionary<string> = {};
@@ -61,11 +63,9 @@ export const singleAssociationCollection = <T extends Model>(
         }
       },
 
-      syncRelation
+      syncRelation: (...args) => syncRelation(...args, logger)
     };
   };
-
-type SyncArgs = [...Parameters<ResourceCollector<LinkedRelation>["syncRelation"]>, logger: LoggerService];
 
 /**
  * Creates a ResourceCollector factory for resources that distinguish based on a collection attribute.

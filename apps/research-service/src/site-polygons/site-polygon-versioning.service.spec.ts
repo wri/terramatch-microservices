@@ -2,11 +2,14 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
+import { Transaction } from "sequelize";
 
 const mockTransaction = {
   commit: jest.fn(),
-  rollback: jest.fn()
-} as any;
+  rollback: jest.fn(),
+  afterCommit: jest.fn(),
+  LOCK: {}
+} as unknown as Transaction;
 
 describe("SitePolygonVersioningService", () => {
   let service: SitePolygonVersioningService;
@@ -29,7 +32,7 @@ describe("SitePolygonVersioningService", () => {
 
       expect(result).toContain("Test_Polygon");
       expect(result).toContain("John_Doe");
-      expect(result).toMatch(/_\d+_[A-Za-z]+_\d{4}_\d{2}_\d{2}_\d{2}/); // Contains date and time
+      expect(result).toMatch(/_\d+_[A-Za-z]+_\d{4}_\d{2}_\d{2}_\d{2}/);
     });
 
     it("should handle null polygon name", () => {
@@ -60,8 +63,8 @@ describe("SitePolygonVersioningService", () => {
 
   describe("buildChangeDescription", () => {
     it("should build description for single field change", () => {
-      const oldValues = { polyName: "Old Name" as any };
-      const newValues = { polyName: "New Name" as any };
+      const oldValues = { polyName: "Old Name" } as Partial<SitePolygon>;
+      const newValues = { polyName: "New Name" } as Partial<SitePolygon>;
 
       const result = service.buildChangeDescription(oldValues, newValues);
 
@@ -69,8 +72,8 @@ describe("SitePolygonVersioningService", () => {
     });
 
     it("should build description for multiple field changes", () => {
-      const oldValues = { polyName: "Old" as any, numTrees: 100 as any };
-      const newValues = { polyName: "New" as any, numTrees: 150 as any };
+      const oldValues = { polyName: "Old", numTrees: 100 } as Partial<SitePolygon>;
+      const newValues = { polyName: "New", numTrees: 150 } as Partial<SitePolygon>;
 
       const result = service.buildChangeDescription(oldValues, newValues);
 
@@ -79,8 +82,8 @@ describe("SitePolygonVersioningService", () => {
     });
 
     it("should handle null values", () => {
-      const oldValues = { numTrees: null as any };
-      const newValues = { numTrees: 50 as any };
+      const oldValues = { numTrees: null } as Partial<SitePolygon>;
+      const newValues = { numTrees: 50 } as Partial<SitePolygon>;
 
       const result = service.buildChangeDescription(oldValues, newValues);
 
@@ -88,8 +91,8 @@ describe("SitePolygonVersioningService", () => {
     });
 
     it("should return default message when no changes", () => {
-      const oldValues = { polyName: "Same" as any };
-      const newValues = { polyName: "Same" as any };
+      const oldValues = { polyName: "Same" } as Partial<SitePolygon>;
+      const newValues = { polyName: "Same" } as Partial<SitePolygon>;
 
       const result = service.buildChangeDescription(oldValues, newValues);
 
@@ -98,14 +101,6 @@ describe("SitePolygonVersioningService", () => {
   });
 
   describe("createVersion", () => {
-    it("should throw NotFoundException when base polygon does not exist", async () => {
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
-
-      await expect(
-        service.createVersion("non-existent-uuid", {}, null, 1, "Test change", "Test User", mockTransaction)
-      ).rejects.toThrow(NotFoundException);
-    });
-
     it("should create new version with correct attributes", async () => {
       const basePrimaryUuid = "base-primary-uuid";
       const basePolygon = {
@@ -125,15 +120,14 @@ describe("SitePolygonVersioningService", () => {
           siteUuid: "site-uuid",
           isActive: true
         })
-      } as any;
+      } as unknown as SitePolygon;
 
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
-      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-version-uuid" } as any);
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([1, []] as any);
-      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as any);
+      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-version-uuid" } as SitePolygon);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
 
       const result = await service.createVersion(
-        "base-uuid",
+        basePolygon,
         { polyName: "Updated Name" },
         "new-geometry-uuid",
         1,
@@ -160,14 +154,13 @@ describe("SitePolygonVersioningService", () => {
         uuid: "base-uuid",
         primaryUuid: basePrimaryUuid,
         get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: basePrimaryUuid })
-      } as any;
+      } as unknown as SitePolygon;
 
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
-      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-uuid" } as any);
-      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([2, []] as any);
-      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as any);
+      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-uuid" } as SitePolygon);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([2] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
 
-      await service.createVersion("base-uuid", {}, null, 1, "Test", null, mockTransaction);
+      await service.createVersion(basePolygon, {}, null, 1, "Test", null, mockTransaction);
 
       expect(updateSpy).toHaveBeenCalledWith(
         { isActive: false },
@@ -185,14 +178,13 @@ describe("SitePolygonVersioningService", () => {
         uuid: "base-uuid",
         primaryUuid: "primary-uuid",
         get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
-      } as any;
+      } as unknown as SitePolygon;
 
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
-      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-uuid" } as any);
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([1, []] as any);
-      const trackChangeSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as any);
+      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-uuid" } as SitePolygon);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      const trackChangeSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
 
-      await service.createVersion("base-uuid", {}, null, 123, "Geometry updated", "Test User", mockTransaction);
+      await service.createVersion(basePolygon, {}, null, 123, "Geometry updated", "Test User", mockTransaction);
 
       expect(trackChangeSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -208,7 +200,7 @@ describe("SitePolygonVersioningService", () => {
 
   describe("trackChange", () => {
     it("should create polygon update record with correct data", async () => {
-      const createSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as any);
+      const createSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
 
       await service.trackChange(
         "primary-uuid",
@@ -237,7 +229,7 @@ describe("SitePolygonVersioningService", () => {
     });
 
     it("should track status changes with old and new status", async () => {
-      const createSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as any);
+      const createSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
 
       await service.trackChange(
         "primary-uuid",
@@ -263,7 +255,7 @@ describe("SitePolygonVersioningService", () => {
 
   describe("deactivateOtherVersions", () => {
     it("should deactivate all versions except specified one", async () => {
-      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([3, []] as any);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([3] as [affectedCount: number]);
 
       await service.deactivateOtherVersions("primary-uuid", "keep-active-uuid", mockTransaction);
 
@@ -286,7 +278,7 @@ describe("SitePolygonVersioningService", () => {
         { uuid: "v3", createdAt: new Date("2025-11-10"), primaryUuid: "primary" },
         { uuid: "v2", createdAt: new Date("2025-11-09"), primaryUuid: "primary" },
         { uuid: "v1", createdAt: new Date("2025-11-08"), primaryUuid: "primary" }
-      ] as any[];
+      ] as SitePolygon[];
 
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue(mockVersions);
 
@@ -315,11 +307,11 @@ describe("SitePolygonVersioningService", () => {
         versionName: "Version_1",
         isActive: false,
         save: jest.fn().mockResolvedValue(undefined)
-      } as any;
+      } as unknown as SitePolygon;
 
       jest.spyOn(SitePolygon, "findOne").mockResolvedValue(targetVersion);
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([2, []] as any);
-      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as any);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([2] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
 
       const result = await service.activateVersion("target-uuid", 999, mockTransaction);
 
@@ -335,7 +327,7 @@ describe("SitePolygonVersioningService", () => {
         { id: 3, change: "Latest change", createdAt: new Date("2025-11-10") },
         { id: 2, change: "Middle change", createdAt: new Date("2025-11-09") },
         { id: 1, change: "First change", createdAt: new Date("2025-11-08") }
-      ] as any[];
+      ] as PolygonUpdates[];
 
       jest.spyOn(PolygonUpdates, "findAll").mockResolvedValue(mockChanges);
 
@@ -357,14 +349,14 @@ describe("SitePolygonVersioningService", () => {
     });
 
     it("should throw BadRequestException when primaryUuid is null", async () => {
-      const polygon = { uuid: "test-uuid", primaryUuid: null } as any;
+      const polygon = { uuid: "test-uuid", primaryUuid: null } as unknown as SitePolygon;
       jest.spyOn(SitePolygon, "findOne").mockResolvedValue(polygon);
 
       await expect(service.validateVersioningEligibility("test-uuid")).rejects.toThrow(BadRequestException);
     });
 
     it("should return polygon when valid", async () => {
-      const polygon = { uuid: "test-uuid", primaryUuid: "primary-uuid" } as any;
+      const polygon = { uuid: "test-uuid", primaryUuid: "primary-uuid" } as unknown as SitePolygon;
       jest.spyOn(SitePolygon, "findOne").mockResolvedValue(polygon);
 
       const result = await service.validateVersioningEligibility("test-uuid");

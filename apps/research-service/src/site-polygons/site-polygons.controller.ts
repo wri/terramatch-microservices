@@ -69,13 +69,17 @@ export class SitePolygonsController {
   @Post()
   @ApiOperation({
     operationId: "createSitePolygons",
-    summary: "Create site polygons from GeoJSON",
-    description: `Create site polygons. Supports multi-site batch creation.
-      Duplicate validation results are always included in the response when duplicates are found.`
+    summary: "Create site polygons from GeoJSON or create version from existing",
+    description: `Create site polygons OR create a new version of an existing polygon.
+    **Normal Creation**: Provide geometries array with site_id in properties.
+    **Version Creation**: Provide baseSitePolygonUuid + changeReason + (geometries and/or attributeChanges).
+    Duplicate validation results are always included in the response when duplicates are found.`
   })
   @JsonApiResponse([SitePolygonLightDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request data or site not found." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid request data, site not found, or versioning validation failed."
+  })
   async create(@Body() createRequest: CreateSitePolygonJsonApiRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
@@ -88,12 +92,35 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const userFullName = user?.fullName ?? null;
 
-    const geometries = createRequest.data.attributes.geometries;
+    const baseSitePolygonUuid = createRequest?.data?.attributes?.baseSitePolygonUuid;
+    const changeReason = createRequest?.data?.attributes?.changeReason;
+    const attributeChanges = createRequest?.data?.attributes?.attributeChanges;
+    const geometries = createRequest?.data?.attributes?.geometries;
+
+    if (baseSitePolygonUuid != null && baseSitePolygonUuid.length > 0) {
+      return this.createVersion(
+        baseSitePolygonUuid,
+        geometries,
+        attributeChanges,
+        changeReason ?? "Version created via API",
+        userId,
+        userFullName,
+        source
+      );
+    }
+
+    if (geometries == null || geometries.length === 0) {
+      throw new BadRequestException(
+        "geometries array is required for normal polygon creation. For versioning, provide baseSitePolygonUuid."
+      );
+    }
+
     const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
     const { data: createdSitePolygons, included: validations } =
-      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);
+      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, userFullName);
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
@@ -314,5 +341,53 @@ export class SitePolygonsController {
     await this.sitePolygonService.deleteSitePolygon(uuid);
 
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
+  private async createVersion(
+    baseSitePolygonUuid: string,
+    geometries: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["geometries"],
+    attributeChanges: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["attributeChanges"],
+    changeReason: string,
+    userId: number,
+    userFullName: string | null,
+    source: string
+  ) {
+    const hasGeometryChange = geometries != null && geometries.length > 0;
+    const hasAttributeChange = attributeChanges != null && Object.keys(attributeChanges).length > 0;
+
+    if (!hasGeometryChange && !hasAttributeChange) {
+      throw new BadRequestException(
+        "Version creation requires either geometry changes (geometries array) or attribute changes (attributeChanges object)"
+      );
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const newVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      return this.sitePolygonCreationService.createSitePolygonVersion(
+        baseSitePolygonUuid,
+        geometries,
+        attributeChanges,
+        changeReason,
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
+
+    document.addData(
+      newVersion.uuid,
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+    );
+
+    this.logger.log(`Created version ${newVersion.uuid} from base ${baseSitePolygonUuid} by user ${userId}`);
+
+    return document;
   }
 }

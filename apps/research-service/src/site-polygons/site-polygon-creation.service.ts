@@ -2,9 +2,15 @@ import { Injectable, BadRequestException } from "@nestjs/common";
 import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
 import { Transaction, Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
+import {
+  CreateSitePolygonBatchRequestDto,
+  Feature,
+  AttributeChangesDto,
+  CreateSitePolygonRequestDto
+} from "./dto/create-site-polygon-request.dto";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { CriteriaId, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
@@ -42,7 +48,8 @@ export class SitePolygonCreationService {
     private readonly polygonGeometryService: PolygonGeometryCreationService,
     private readonly pointGeometryService: PointGeometryCreationService,
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
-    private readonly voronoiService: VoronoiService
+    private readonly voronoiService: VoronoiService,
+    private readonly versioningService: SitePolygonVersioningService
   ) {}
 
   async createSitePolygons(
@@ -575,5 +582,112 @@ export class SitePolygonCreationService {
     for (const polygon of polygonsToUpdate) {
       await SitePolygon.update({ polyName: `${dateFormat}${suffix}` }, { where: { uuid: polygon.uuid }, transaction });
     }
+  }
+
+  async createSitePolygonVersion(
+    baseSitePolygonUuid: string,
+    newGeometry: CreateSitePolygonRequestDto[] | undefined,
+    attributeChanges: AttributeChangesDto | undefined,
+    changeReason: string,
+    userId: number,
+    userFullName: string | null,
+    source: string,
+    transaction: Transaction
+  ): Promise<SitePolygon> {
+    const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid);
+
+    let newPolygonGeometryUuid: string | null = null;
+    const sitePolygonAttributes: Partial<SitePolygon> = {};
+
+    if (newGeometry != null && newGeometry.length > 0) {
+      const features = newGeometry.flatMap(g => g.features);
+
+      if (features.length === 0) {
+        throw new BadRequestException("No features provided in geometry collection");
+      }
+
+      if (features.length > 1) {
+        throw new BadRequestException(
+          `Version creation only supports single polygon. Received ${features.length} features`
+        );
+      }
+
+      const { uuids, areas } = await this.polygonGeometryService.createGeometriesFromFeatures(
+        features.map(f => f.geometry),
+        userId,
+        transaction
+      );
+
+      newPolygonGeometryUuid = uuids[0];
+      sitePolygonAttributes.calcArea = areas[0];
+
+      await this.polygonGeometryService.bulkUpdateSitePolygonCentroids([newPolygonGeometryUuid], transaction);
+      await this.polygonGeometryService.bulkUpdateSitePolygonAreas([newPolygonGeometryUuid], transaction);
+      await this.polygonGeometryService.bulkUpdateProjectCentroids([newPolygonGeometryUuid], transaction);
+    }
+
+    if (attributeChanges != null) {
+      if (attributeChanges.polyName != null && attributeChanges.polyName.length > 0) {
+        sitePolygonAttributes.polyName = attributeChanges.polyName;
+      }
+      if (attributeChanges.plantStart != null && attributeChanges.plantStart.length > 0) {
+        sitePolygonAttributes.plantStart = new Date(attributeChanges.plantStart);
+      }
+      if (attributeChanges.practice != null && attributeChanges.practice.length > 0) {
+        sitePolygonAttributes.practice = attributeChanges.practice;
+      }
+      if (attributeChanges.targetSys != null && attributeChanges.targetSys.length > 0) {
+        sitePolygonAttributes.targetSys = attributeChanges.targetSys;
+      }
+      if (attributeChanges.distr != null && attributeChanges.distr.length > 0) {
+        sitePolygonAttributes.distr = attributeChanges.distr;
+      }
+      if (attributeChanges.numTrees != null) {
+        sitePolygonAttributes.numTrees = attributeChanges.numTrees;
+      }
+    }
+
+    sitePolygonAttributes.status = "draft";
+
+    const changeDescription = this.buildDetailedChangeDescription(
+      basePolygon,
+      sitePolygonAttributes,
+      newPolygonGeometryUuid != null
+    );
+
+    const newVersion = await this.versioningService.createVersion(
+      basePolygon,
+      sitePolygonAttributes,
+      newPolygonGeometryUuid,
+      userId,
+      `${changeReason} - ${changeDescription}`,
+      userFullName,
+      transaction
+    );
+
+    return newVersion;
+  }
+
+  private buildDetailedChangeDescription(
+    basePolygon: SitePolygon,
+    changes: Partial<SitePolygon>,
+    geometryChanged: boolean
+  ): string {
+    const parts: string[] = [];
+
+    if (geometryChanged) {
+      parts.push("Geometry updated");
+    }
+
+    for (const [key, newValue] of Object.entries(changes)) {
+      if (key === "status") continue;
+      const oldValue = basePolygon[key as keyof SitePolygon];
+      if (oldValue !== newValue && newValue != null) {
+        parts.push(`${key} => from ${oldValue ?? "null"} to ${newValue}`);
+      }
+    }
+
+    const description = parts.join(", ");
+    return description.length > 0 ? description : "Version created";
   }
 }

@@ -1,12 +1,19 @@
-import { laravelType } from "@terramatch-microservices/database/types/util";
+import {
+  CollectionModel,
+  laravelType,
+  polymorphicAttributes,
+  PolymorphicModel,
+  PolymorphicModelCtor
+} from "@terramatch-microservices/database/types/util";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { Dictionary } from "lodash";
-import { FormModels, FormTypeMap, ResourceCollector } from "./index";
-import { LinkedFieldResource, LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
-import { Attributes, FindOptions, Model, ModelStatic, Op, WhereAttributeHash } from "sequelize";
+import { Dictionary, intersection } from "lodash";
+import { FormModels, FormTypeMap, RelationResourceCollector } from "./index";
+import { Attributes, Includeable, Op, WhereAttributeHash } from "sequelize";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
+import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 
-type SyncArgs = [...Parameters<NonNullable<ResourceCollector<LinkedRelation>["syncRelation"]>>, logger: LoggerService];
+type SyncArgs = [...Parameters<NonNullable<RelationResourceCollector["syncRelation"]>>, logger: LoggerService];
+export type RelationSync = (...args: SyncArgs) => Promise<void>;
 
 export const mapLaravelTypes = (models: FormModels) =>
   Object.entries(models).reduce((laravelTypes, [modelType, model]) => {
@@ -19,22 +26,25 @@ export const mapLaravelTypes = (models: FormModels) =>
  * Creates a ResourceCollector factory for resources that do not distinguish via collection or another method
  * against a single base model.
  */
-export const singleAssociationCollection = <T extends Model>(
-  resource: LinkedFieldResource,
-  modelClass: ModelStatic<T>,
-  typeAttribute: keyof Attributes<T>,
-  idAttribute: keyof Attributes<T>,
-  findOptions: Omit<FindOptions<Attributes<T>>, "where">,
-  createDto: (model: T) => unknown,
-  syncRelation: (...args: SyncArgs) => Promise<void>
+export const singleAssociationCollection = <T extends PolymorphicModel>(
+  modelClass: PolymorphicModelCtor<T>,
+  dtoClass: new (model: T) => unknown,
+  syncRelation: RelationSync,
+  include?: Includeable | Includeable[]
 ) =>
-  function (logger: LoggerService): ResourceCollector<LinkedRelation> {
+  function (logger: LoggerService): RelationResourceCollector {
     const questions: Dictionary<string> = {};
+    const { typeAttribute, idAttribute } = polymorphicAttributes(modelClass);
+    const dtoAttributes = intersection(
+      apiAttributes(dtoClass),
+      Object.keys(modelClass.getAttributes())
+    ) as Attributes<T>[];
+    dtoAttributes.push(typeAttribute);
 
     return {
       addField(_, modelType, questionUuid) {
         if (questions[modelType] != null) {
-          logger.warn(`Duplicate field for ${resource} with ${modelType}`);
+          logger.warn(`Duplicate field for ${modelType}`);
         }
         questions[modelType] = questionUuid;
       },
@@ -53,13 +63,14 @@ export const singleAssociationCollection = <T extends Model>(
               } as WhereAttributeHash<Attributes<T>>;
             })
           },
-          ...findOptions
+          attributes: dtoAttributes,
+          include
         });
 
         for (const [key, questionUuid] of Object.entries(questions)) {
           answers[questionUuid] = modelInstances
             .filter(model => model[typeAttribute] === laravelTypes[key])
-            .map(createDto);
+            .map(model => new dtoClass(model));
         }
       },
 
@@ -70,27 +81,30 @@ export const singleAssociationCollection = <T extends Model>(
 /**
  * Creates a ResourceCollector factory for resources that distinguish based on a collection attribute.
  */
-export const collectionCollector = <T extends Model & { collection: string | null }>(
-  resource: LinkedFieldResource,
-  modelClass: ModelStatic<T>,
-  typeAttribute: keyof Attributes<T>,
-  idAttribute: keyof Attributes<T>,
-  findOptions: Omit<FindOptions<Attributes<T>>, "where">,
-  createDto: (model: T) => unknown,
-  syncRelation: (...args: SyncArgs) => Promise<void>
+export const collectionCollector = <T extends CollectionModel & PolymorphicModel>(
+  modelClass: PolymorphicModelCtor<T>,
+  dtoClass: new (model: T) => unknown,
+  syncRelation: (...args: SyncArgs) => Promise<void>,
+  include?: Includeable | Includeable[]
 ) =>
-  function (logger: LoggerService): ResourceCollector<LinkedRelation> {
+  function (logger: LoggerService): RelationResourceCollector {
     const questions: Dictionary<string> = {};
+    const { typeAttribute, idAttribute } = polymorphicAttributes(modelClass);
+    const dtoAttributes = intersection(
+      apiAttributes(dtoClass),
+      Object.keys(modelClass.getAttributes())
+    ) as Attributes<T>[];
+    dtoAttributes.push(typeAttribute);
 
     return {
       addField(field, modelType, questionUuid) {
         if (field.collection == null) {
-          throw new InternalServerErrorException(`Collection not found for ${resource} fo ${modelType}`);
+          throw new InternalServerErrorException(`Collection not found for ${modelType}`);
         }
 
         const key = `${modelType}:${field.collection}`;
         if (questions[key] != null) {
-          logger.warn(`Duplicate collection for ${resource} field ${key}`);
+          logger.warn(`Duplicate collection for field ${key}`);
         }
 
         questions[key] = questionUuid;
@@ -116,14 +130,15 @@ export const collectionCollector = <T extends Model & { collection: string | nul
               };
             })
           },
-          ...findOptions
+          attributes: dtoAttributes,
+          include
         });
 
         for (const [key, questionUuid] of Object.entries(questions)) {
           const [modelType, collection] = key.split(":") as [FormModelType, string];
           answers[questionUuid] = modelInstances
             .filter(model => model.collection === collection && model[typeAttribute] === laravelTypes[modelType])
-            .map(createDto);
+            .map(model => new dtoClass(model));
         }
       },
 

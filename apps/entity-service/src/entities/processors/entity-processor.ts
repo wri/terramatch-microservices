@@ -12,12 +12,12 @@ import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/data
 import { ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
-export type Aggregate<M extends Model<M>> = {
+export type Aggregate<M extends Model> = {
   func: string;
   attr: keyof Attributes<M>;
 };
 
-export async function aggregateColumns<M extends Model<M>>(
+export async function aggregateColumns<M extends Model>(
   model: ModelCtor<M>,
   aggregates: Aggregate<M>[],
   where?: WhereOptions<M>

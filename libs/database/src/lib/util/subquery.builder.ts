@@ -10,10 +10,10 @@ type SelectOptions = {
   distinct?: boolean;
 };
 
-export class Subquery<T extends Model<T>> {
+export class Subquery<T extends Model> {
   private constructor(public readonly modelStatic: ModelStatic<T>) {}
 
-  public static select<T extends Model<T>>(
+  public static select<T extends Model>(
     modelStatic: ModelStatic<T>,
     attribute: keyof Attributes<T>,
     options: SelectOptions = {}
@@ -46,7 +46,7 @@ export class Subquery<T extends Model<T>> {
   }
 }
 
-class SubqueryBuilder<T extends Model<T>> {
+class SubqueryBuilder<T extends Model> {
   private where: string[] = [];
 
   constructor(private readonly subquery: Subquery<T>, private readonly selectStatement: string) {

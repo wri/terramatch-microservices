@@ -73,10 +73,6 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
           answers[questionUuid] = media.length === 0 ? undefined : createDto(media[0]);
         }
       }
-    },
-
-    async syncRelation() {
-      // NOOP
     }
   };
 }

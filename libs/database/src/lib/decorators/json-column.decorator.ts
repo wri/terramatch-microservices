@@ -7,7 +7,7 @@ import { Attributes, JSON as JSON_TYPE, ModelAttributeColumnOptions } from "sequ
  * columns that should deserialize text to JSON instead of @Column(JSON)
  */
 export const JsonColumn =
-  <T extends Model<T>>(options: Partial<ModelAttributeColumnOptions> = {}) =>
+  <T extends Model>(options: Partial<ModelAttributeColumnOptions> = {}) =>
   (target: unknown, propertyName: string, propertyDescriptor?: PropertyDescriptor) =>
     Column({
       ...options,

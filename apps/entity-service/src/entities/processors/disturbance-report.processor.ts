@@ -133,7 +133,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     }
 
     // Upsert disturbance for this report (align with PHP logic)
-    const disturbanceUpsertData = {
+    const disturbanceUpsertData: CreationAttributes<Disturbance> = {
       disturbanceableType: DisturbanceReport.LARAVEL_TYPE,
       disturbanceableId: model.id,
       disturbanceDate: disturbanceData.disturbanceDate,
@@ -146,8 +146,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       propertyAffected: disturbanceData.propertyAffected,
       description: model.description,
       actionDescription: model.actionDescription,
-      hidden: 0
-    } as Disturbance;
+      hidden: false
+    };
 
     let disturbance = await Disturbance.findOne({
       where: { disturbanceableType: DisturbanceReport.LARAVEL_TYPE, disturbanceableId: model.id }

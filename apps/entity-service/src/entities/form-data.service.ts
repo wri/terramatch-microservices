@@ -114,7 +114,7 @@ export class FormDataService {
       where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
     });
 
-    const collector = new LinkedAnswerCollector(this.logger, this.mediaService);
+    const collector = new LinkedAnswerCollector(this.mediaService);
     for (const question of questions) {
       const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
       if (config == null) {
@@ -139,7 +139,7 @@ export class FormDataService {
     const questions = await FormQuestion.findAll({
       where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
     });
-    const collector = new LinkedAnswerCollector(this.logger, this.mediaService);
+    const collector = new LinkedAnswerCollector(this.mediaService);
     for (const question of questions) {
       if (question.inputType === "conditional") {
         model.answers[question.uuid] = answers[question.uuid];

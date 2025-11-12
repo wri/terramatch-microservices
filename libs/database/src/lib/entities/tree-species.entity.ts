@@ -10,7 +10,17 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, Op, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  Op,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
@@ -58,7 +68,10 @@ import { laravelType } from "../types/util";
     { name: "v2_tree_species_morph_index", fields: ["speciesable_id", "speciesable_type"] }
   ]
 })
-export class TreeSpecies extends Model<TreeSpecies> {
+export class TreeSpecies extends Model<InferAttributes<TreeSpecies>, InferCreationAttributes<TreeSpecies>> {
+  static readonly POLYMORPHIC_TYPE = "speciesableType";
+  static readonly POLYMORPHIC_ID = "speciesableId";
+
   static visible() {
     return chainScope(this, "visible") as typeof TreeSpecies;
   }
@@ -86,11 +99,11 @@ export class TreeSpecies extends Model<TreeSpecies> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -111,7 +124,7 @@ export class TreeSpecies extends Model<TreeSpecies> {
   collection: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: boolean;
+  hidden: CreationOptional<boolean>;
 
   @Column(STRING)
   speciesableType: string;

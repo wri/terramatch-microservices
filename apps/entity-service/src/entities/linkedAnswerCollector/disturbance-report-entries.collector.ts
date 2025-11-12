@@ -1,10 +1,9 @@
 import { DisturbanceReportEntry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { EmbeddedDisturbanceReportEntryDto } from "../dto/disturbance-report-entry.dto";
 
-export function disturbanceReportEntriesCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function disturbanceReportEntriesCollector(logger: LoggerService): RelationResourceCollector {
   let questionUuid: string;
 
   return {
@@ -28,6 +27,10 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Resour
         where: { disturbanceReport: models.disturbanceReports.id }
       });
       answers[questionUuid] = entries.map(entry => new EmbeddedDisturbanceReportEntryDto(entry));
+    },
+
+    async syncRelation() {
+      // TODO TM-2624
     }
   };
 }

@@ -50,10 +50,6 @@ export function fieldCollector(logger: LoggerService): ResourceCollector<LinkedF
           answers[questionUuid] = polygon.polygon;
         }
       }
-    },
-
-    async syncRelation() {
-      // NOOP
     }
   };
 }

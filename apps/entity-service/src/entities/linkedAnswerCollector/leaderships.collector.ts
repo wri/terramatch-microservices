@@ -1,12 +1,11 @@
 import { Leadership } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { EmbeddedLeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 
-export function leadershipsCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function leadershipsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
 
   return {
@@ -42,6 +41,10 @@ export function leadershipsCollector(logger: LoggerService): ResourceCollector<L
           .filter(leadership => leadership.collection === collection)
           .map(leadership => new EmbeddedLeadershipDto(leadership));
       }
+    },
+
+    async syncRelation() {
+      // TODO TM-2624
     }
   };
 }

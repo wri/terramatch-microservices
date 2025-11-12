@@ -1,12 +1,27 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4, DATE, DECIMAL } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Subquery } from "../util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
-export class Disturbance extends Model<Disturbance> {
+export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreationAttributes<Disturbance>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Disturbance";
+  static readonly POLYMORPHIC_TYPE = "disturbanceableType";
+  static readonly POLYMORPHIC_ID = "disturbanceableId";
 
   static idsSubquery(disturbanceableIds: Literal | number[], disturbanceableType: string) {
     return Subquery.select(Disturbance, "id")
@@ -18,11 +33,11 @@ export class Disturbance extends Model<Disturbance> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -81,7 +96,7 @@ export class Disturbance extends Model<Disturbance> {
    */
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number;
+  oldId: number | null;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.
@@ -90,6 +105,6 @@ export class Disturbance extends Model<Disturbance> {
   @Column(STRING)
   oldModel: string | null;
 
-  @Column(TINYINT)
-  hidden: number | null;
+  @Column({ type: BOOLEAN, defaultValue: false })
+  hidden: CreationOptional<boolean>;
 }

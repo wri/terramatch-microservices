@@ -1,11 +1,10 @@
 import { FundingType } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFundingTypeDto } from "../dto/funding-type.dto";
 
-export function fundingTypesCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function fundingTypesCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
 
   return {
@@ -31,6 +30,10 @@ export function fundingTypesCollector(logger: LoggerService): ResourceCollector<
       });
 
       answers[Object.values(questions)[0]] = fundingTypes.map(fundingType => new EmbeddedFundingTypeDto(fundingType));
+    },
+
+    async syncRelation() {
+      // TODO TM-2624
     }
   };
 }

@@ -1,5 +1,15 @@
 import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
@@ -14,7 +24,10 @@ import { DemographicType } from "../types/demographic";
     { name: "demographics_morph_index", fields: ["demographical_id", "demographical_type"] }
   ]
 })
-export class Demographic extends Model<Demographic> {
+export class Demographic extends Model<InferAttributes<Demographic>, InferCreationAttributes<Demographic>> {
+  static readonly POLYMORPHIC_TYPE = "demographicalType";
+  static readonly POLYMORPHIC_ID = "demographicalId";
+
   static readonly DEMOGRAPHIC_COUNT_CUTOFF = "2024-07-05";
 
   static readonly WORKDAYS_TYPE = "workdays";
@@ -54,11 +67,11 @@ export class Demographic extends Model<Demographic> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column(STRING)
   type: string;
@@ -78,7 +91,7 @@ export class Demographic extends Model<Demographic> {
   description: string;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: boolean;
+  hidden: CreationOptional<boolean>;
 
   @HasMany(() => DemographicEntry, { constraints: false })
   entries: DemographicEntry[] | null;

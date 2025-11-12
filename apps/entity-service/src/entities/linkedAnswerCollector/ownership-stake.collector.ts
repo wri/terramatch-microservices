@@ -1,10 +1,9 @@
 import { OwnershipStake } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { EmbeddedOwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 
-export function ownershipStakeCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function ownershipStakeCollector(logger: LoggerService): RelationResourceCollector {
   let questionUuid: string;
 
   return {
@@ -25,6 +24,10 @@ export function ownershipStakeCollector(logger: LoggerService): ResourceCollecto
 
       const stake = await OwnershipStake.findOne({ where: { organisationId: models.organisations.id } });
       answers[questionUuid] = stake == null ? [] : [new EmbeddedOwnershipStakeDto(stake)];
+    },
+
+    async syncRelation() {
+      // TODO TM-2624
     }
   };
 }

@@ -1,11 +1,10 @@
 import { FinancialIndicator } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../dto/financial-indicator.dto";
 
-export function financialIndicatorsCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
 
   return {
@@ -43,6 +42,10 @@ export function financialIndicatorsCollector(logger: LoggerService): ResourceCol
             currency: financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null
           })
       );
+    },
+
+    async syncRelation() {
+      // TODO TM-2624
     }
   };
 }

@@ -1,12 +1,9 @@
 import { Disturbance } from "@terramatch-microservices/database/entities";
-import { singleAssociationCollection } from "./utils";
+import { RelationSync, singleAssociationCollection } from "./utils";
 import { EmbeddedDisturbanceDto } from "../dto/disturbance.dto";
 
-export const disturbancesCollector = singleAssociationCollection(
-  "disturbances",
-  Disturbance,
-  "disturbanceableType",
-  "disturbanceableId",
-  { attributes: ["uuid", "disturbanceableType", "type", "intensity", "extent", "description"] },
-  disturbance => new EmbeddedDisturbanceDto(disturbance)
-);
+const syncDisturbances: RelationSync = async () => {
+  // TODO TM-2624
+};
+
+export const disturbancesCollector = singleAssociationCollection(Disturbance, EmbeddedDisturbanceDto, syncDisturbances);

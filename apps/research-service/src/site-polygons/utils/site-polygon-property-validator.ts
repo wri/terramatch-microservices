@@ -71,7 +71,7 @@ export function extractAdditionalData(properties: Record<string, unknown>): Reco
   return additionalData;
 }
 
-function orderCommaSeparatedPropertiesAlphabetically(value: string, validValues: readonly string[]): string | null {
+function orderCommaSeparatedPropertiesAlphabetically(value: string, validValues: readonly string[]): string[] | null {
   if (value == null || value.trim().length === 0) return null;
 
   const values = value
@@ -82,7 +82,7 @@ function orderCommaSeparatedPropertiesAlphabetically(value: string, validValues:
   const validValuesSet = new Set(validValues);
   const filteredValues = values.filter(v => validValuesSet.has(v));
 
-  return filteredValues.length > 0 ? filteredValues.sort().join(",") : null;
+  return filteredValues.length > 0 ? filteredValues.sort() : null;
 }
 
 function validateTargetSys(value: string): string | null {

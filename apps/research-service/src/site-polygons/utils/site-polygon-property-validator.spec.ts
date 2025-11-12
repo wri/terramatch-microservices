@@ -23,9 +23,9 @@ describe("SitePolygonPropertyValidator", () => {
         polyName: "Test Polygon",
         siteUuid: "site-uuid-123",
         plantStart: new Date("2023-01-15"),
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "full",
+        distr: ["full"],
         numTrees: 100,
         calcArea: 5.5,
         status: "draft",
@@ -183,7 +183,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.distr).toBe("full,partial,single-line");
+      expect(result.distr).toEqual(["full", "partial", "single-line"]);
     });
 
     it("should filter out invalid distribution values", () => {
@@ -193,7 +193,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.distr).toBe("full,partial");
+      expect(result.distr).toEqual(["full", "partial"]);
     });
 
     it("should return null for empty distribution values", () => {
@@ -213,7 +213,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.distr).toBe("full,partial,single-line");
+      expect(result.distr).toEqual(["full", "partial", "single-line"]);
     });
 
     it("should filter and sort valid practice values", () => {
@@ -223,7 +223,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.practice).toBe("assisted-natural-regeneration,direct-seeding,tree-planting");
+      expect(result.practice).toEqual(["assisted-natural-regeneration", "direct-seeding", "tree-planting"]);
     });
 
     it("should filter out invalid practice values", () => {
@@ -233,7 +233,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.practice).toBe("direct-seeding,tree-planting");
+      expect(result.practice).toEqual(["direct-seeding", "tree-planting"]);
     });
 
     it("should return null for empty practice values", () => {
@@ -253,7 +253,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.practice).toBe("assisted-natural-regeneration,tree-planting");
+      expect(result.practice).toEqual(["assisted-natural-regeneration", "tree-planting"]);
     });
 
     it("should handle empty target_sys", () => {

@@ -81,7 +81,7 @@ describe("OverlappingValidator - Integration Tests", () => {
         polygonUuid: polygonGeometry.uuid,
         siteUuid: testSite.uuid,
         polyName: polygonNames[i],
-        practice: i === 0 ? "tree-planting" : null,
+        practice: i === 0 ? ["tree-planting"] : null,
         plantStart: i === 0 ? new Date("2021-11-11") : null,
         numTrees: i === 0 ? null : 0,
         isActive: true

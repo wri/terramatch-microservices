@@ -6,6 +6,7 @@ import { NurseryFactory } from "./nursery.factory";
 import { ProjectReportFactory } from "./project-report.factory";
 import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
+import { UserFactory } from "./user.factory";
 import { FormFactory } from "./form.factory";
 import { FormQuestionOptionFactory } from "./form-question-option.factory";
 
@@ -20,7 +21,8 @@ const defaultAttributesFactory = async () => ({
   customProperties: {},
   disk: "s3",
   manipulation: [],
-  responsiveImages: []
+  responsiveImages: [],
+  createdBy: UserFactory.associate("id")
 });
 
 export const MediaFactory = {

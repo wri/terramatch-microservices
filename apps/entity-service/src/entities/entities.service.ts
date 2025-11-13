@@ -46,6 +46,7 @@ import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { EntityCreateData } from "./dto/entity-create.dto";
+import { SrpReportProcessor } from "./processors/srp-report.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -56,7 +57,8 @@ export const ENTITY_PROCESSORS = {
   nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor,
   financialReports: FinancialReportProcessor,
-  disturbanceReports: DisturbanceReportProcessor
+  disturbanceReports: DisturbanceReportProcessor,
+  srpReports: SrpReportProcessor
 } as const;
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;

@@ -6,7 +6,7 @@ export class FinancialIndicatorPolicy extends UserPermissionsPolicy {
   async addRules() {
     const user = await this.getUser();
     if (user?.organisationId != null) {
-      this.builder.can(["uploadFiles"], FinancialIndicator, {
+      this.builder.can(["uploadFiles", "deleteFiles"], FinancialIndicator, {
         organisationId: user.organisationId
       });
     }

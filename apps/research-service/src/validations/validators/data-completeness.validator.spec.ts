@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { DataCompletenessValidator } from "./data-completeness.validator";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
+import { Point, Polygon, MultiPolygon } from "geojson";
 
 describe("DataCompletenessValidator", () => {
   let validator: DataCompletenessValidator;
@@ -350,6 +351,207 @@ describe("DataCompletenessValidator", () => {
           valid: true
         });
       });
+    });
+  });
+
+  describe("validateGeometry", () => {
+    it("should return valid=false when properties are missing", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(false);
+      expect(result.extraInfo).toEqual([
+        {
+          field: "properties",
+          error: "Feature properties are required",
+          exists: false
+        }
+      ]);
+    });
+
+    it("should return valid=true when all properties are valid", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = {
+        poly_name: "Test Polygon",
+        practice: "tree-planting",
+        target_sys: "agroforest",
+        distr: "single-line",
+        num_trees: 100,
+        plantstart: "2023-01-01"
+      };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=false when required properties are missing", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = {};
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(false);
+      expect(result.extraInfo).toHaveLength(6);
+    });
+
+    it("should return valid=false when properties have invalid values", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = {
+        poly_name: "Test",
+        practice: "invalid-practice",
+        target_sys: "invalid-system",
+        distr: "invalid-distribution",
+        num_trees: -5,
+        plantstart: "invalid-date"
+      };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(false);
+      expect(result.extraInfo).toHaveLength(5);
+      expect(result.extraInfo).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: "practice", exists: true }),
+          expect.objectContaining({ field: "target_sys", exists: true }),
+          expect.objectContaining({ field: "distr", exists: true }),
+          expect.objectContaining({ field: "num_trees", exists: true }),
+          expect.objectContaining({ field: "plantstart", exists: true })
+        ])
+      );
+    });
+
+    it("should validate Point geometry with properties", async () => {
+      const geometry: Point = { type: "Point", coordinates: [0, 0] };
+      const properties = {
+        poly_name: "Test Point",
+        practice: "tree-planting",
+        target_sys: "agroforest",
+        distr: "single-line",
+        num_trees: 100,
+        plantstart: "2023-01-01"
+      };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should validate MultiPolygon geometry with properties", async () => {
+      const geometry: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1],
+              [0, 0]
+            ]
+          ]
+        ]
+      };
+      const properties = {
+        poly_name: "Test MultiPolygon",
+        practice: "direct-seeding",
+        target_sys: "natural-forest",
+        distr: "full",
+        num_trees: 200,
+        plantstart: "2023-06-01"
+      };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should handle multiple valid practices", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = {
+        poly_name: "Test",
+        practice: "tree-planting,direct-seeding",
+        target_sys: "agroforest",
+        distr: "single-line",
+        num_trees: 100,
+        plantstart: "2023-01-01"
+      };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should handle multiple valid target systems", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0]
+          ]
+        ]
+      };
+      const properties = {
+        poly_name: "Test",
+        practice: "tree-planting",
+        target_sys: "agroforest,grassland",
+        distr: "single-line",
+        num_trees: 100,
+        plantstart: "2023-01-01"
+      };
+      const result = await validator.validateGeometry(geometry, properties);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
     });
   });
 });

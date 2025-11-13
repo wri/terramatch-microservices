@@ -7,8 +7,7 @@ import {
   Site
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
-import { ValidationRequestAttributes } from "./dto/validation-request.dto";
-import { ValidationResponseDto, ValidationCriteriaDto } from "./dto/validation-criteria.dto";
+import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy } from "lodash";
@@ -21,15 +20,20 @@ import { EstimatedAreaValidator } from "./validators/estimated-area.validator";
 import { OverlappingValidator } from "./validators/overlapping.validator";
 import { WithinCountryValidator } from "./validators/within-country.validator";
 import { DuplicateGeometryValidator } from "./validators/duplicate-geometry.validator";
-import { Validator } from "./validators/validator.interface";
+import { FeatureBoundsValidator } from "./validators/feature-bounds.validator";
+import { GeometryTypeValidator } from "./validators/geometry-type.validator";
+import { Validator, isPolygonValidator, isGeometryValidator } from "./validators/validator.interface";
 import {
   ValidationType,
   VALIDATION_CRITERIA_IDS,
-  VALIDATION_TYPES,
   CriteriaId,
-  EXCLUDED_VALIDATION_CRITERIA
+  EXCLUDED_VALIDATION_CRITERIA,
+  CRITERIA_ID_TO_VALIDATION_TYPE
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
+import { validateFeatureCollectionStructure } from "./utils/geojson-structure-validator";
+
+const DATA_COMPLETENESS_CRITERIA_ID = VALIDATION_CRITERIA_IDS.DATA_COMPLETENESS;
 
 type ValidationResult = {
   polygonUuid: string;
@@ -54,7 +58,9 @@ export const VALIDATORS: Record<ValidationType, Validator> = {
   PLANT_START_DATE: new PlantStartDateValidator(),
   OVERLAPPING: new OverlappingValidator(),
   DUPLICATE_GEOMETRY: new DuplicateGeometryValidator(),
-  WITHIN_COUNTRY: new WithinCountryValidator()
+  WITHIN_COUNTRY: new WithinCountryValidator(),
+  FEATURE_BOUNDS: new FeatureBoundsValidator(),
+  GEOMETRY_TYPE: new GeometryTypeValidator()
 };
 
 @Injectable()
@@ -77,7 +83,8 @@ export class ValidationService {
 
     const criteriaList: ValidationCriteriaDto[] = criteriaData.map(criteria => ({
       criteriaId: criteria.criteriaId,
-      valid: criteria.valid,
+      validationType: CRITERIA_ID_TO_VALIDATION_TYPE[criteria.criteriaId],
+      valid: Boolean(criteria.valid),
       createdAt: criteria.createdAt,
       extraInfo: criteria.extraInfo
     }));
@@ -154,7 +161,8 @@ export class ValidationService {
         polygonUuid: polygonId,
         criteriaList: (criteriaByPolygon[polygonId] ?? []).map(criteria => ({
           criteriaId: criteria.criteriaId,
-          valid: criteria.valid,
+          validationType: CRITERIA_ID_TO_VALIDATION_TYPE[criteria.criteriaId],
+          valid: Boolean(criteria.valid),
           createdAt: criteria.createdAt,
           extraInfo: criteria.extraInfo
         }))
@@ -165,37 +173,6 @@ export class ValidationService {
       validations,
       total
     };
-  }
-
-  /**
-   * @deprecated Use validatePolygonsBatch instead to avoid duplicate results with batch validators
-   */
-  async validatePolygons(request: ValidationRequestAttributes): Promise<ValidationResponseDto> {
-    const results: ValidationCriteriaDto[] = [];
-    const validationTypes = request.validationTypes ?? [...VALIDATION_TYPES];
-
-    for (const polygonUuid of request.polygonUuids) {
-      for (const validationType of validationTypes) {
-        const validator = VALIDATORS[validationType];
-        if (validator == null) {
-          throw new BadRequestException(`Unknown validation type: ${validationType}`);
-        }
-
-        const validationResult = await validator.validatePolygon(polygonUuid);
-        const criteriaId = this.getCriteriaIdForValidationType(validationType);
-
-        await this.saveValidationResult(polygonUuid, criteriaId, validationResult.valid, validationResult.extraInfo);
-
-        results.push({
-          criteriaId: criteriaId,
-          valid: validationResult.valid,
-          createdAt: new Date(),
-          extraInfo: validationResult.extraInfo
-        });
-      }
-    }
-
-    return { results };
   }
 
   private getCriteriaIdForValidationType(validationType: ValidationType): CriteriaId {
@@ -263,6 +240,10 @@ export class ValidationService {
       const validator = VALIDATORS[validationType];
       if (validator == null) {
         throw new BadRequestException(`Unknown validation type: ${validationType}`);
+      }
+
+      if (!isPolygonValidator(validator)) {
+        continue;
       }
 
       const criteriaId = this.getCriteriaIdForValidationType(validationType);
@@ -388,7 +369,8 @@ export class ValidationService {
       where: {
         polygonUuid: { [Op.in]: polygonUuids },
         isActive: true
-      }
+      },
+      attributes: ["id", "polygonUuid", "validationStatus"]
     });
 
     if (sitePolygons.length === 0) {
@@ -397,7 +379,7 @@ export class ValidationService {
 
     const allCriteria = await CriteriaSite.findAll({
       where: { polygonId: { [Op.in]: polygonUuids } },
-      attributes: ["polygonId", "criteriaId", "valid"]
+      attributes: ["polygonId", "criteriaId", "valid", "extraInfo"]
     });
 
     const criteriaByPolygon = new Map<string, CriteriaSite[]>();
@@ -411,13 +393,16 @@ export class ValidationService {
       }
     }
 
-    const excludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
+    const baseExcludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
     const updates: Array<{ id: number; validationStatus: string | null }> = [];
 
     for (const sitePolygon of sitePolygons) {
       if (sitePolygon.polygonUuid == null) continue;
 
       const polygonCriteria = criteriaByPolygon.get(sitePolygon.polygonUuid) ?? [];
+      const dynamicExcludedCriteria = this.getDynamicExcludedCriteria(polygonCriteria);
+      const excludedCriteriaSet = new Set([...baseExcludedCriteriaSet, ...dynamicExcludedCriteria]);
+
       let newValidationStatus: string | null;
 
       if (polygonCriteria.length === 0) {
@@ -450,5 +435,182 @@ export class ValidationService {
         )
       );
     }
+  }
+
+  async validateGeometries(
+    geometries: Array<{
+      type: string;
+      features: Array<{ type: string; geometry: unknown; properties?: Record<string, unknown> | null }>;
+    }>,
+    validationTypes: ValidationType[]
+  ): Promise<
+    Array<{
+      type: "validation";
+      id: string;
+      attributes: {
+        polygonUuid: string;
+        criteriaList: Array<{
+          criteriaId: CriteriaId;
+          validationType: ValidationType;
+          valid: boolean;
+          createdAt: Date | null;
+          extraInfo: object | null;
+        }>;
+      };
+    }>
+  > {
+    for (let i = 0; i < geometries.length; i++) {
+      const validationResult = validateFeatureCollectionStructure(geometries[i]);
+      if (!validationResult.valid) {
+        throw new BadRequestException(
+          `Invalid GeoJSON FeatureCollection at index ${i}: ${validationResult.error ?? "invalid structure"}`
+        );
+      }
+    }
+
+    const allFeatures: Array<{ geometry: unknown; properties?: Record<string, unknown>; featureIndex: number }> = [];
+    let featureIndex = 0;
+
+    for (const featureCollection of geometries) {
+      // This check is now redundant due to validation above, but kept for safety
+      if (featureCollection.features == null || !Array.isArray(featureCollection.features)) {
+        continue;
+      }
+
+      for (const feature of featureCollection.features) {
+        if (feature.geometry != null) {
+          allFeatures.push({
+            geometry: feature.geometry,
+            properties: feature.properties ?? undefined,
+            featureIndex
+          });
+          featureIndex++;
+        }
+      }
+    }
+
+    const validationResults: Array<{
+      featureIndex: number;
+      featureId?: string;
+      criteriaId: CriteriaId;
+      validationType: ValidationType;
+      valid: boolean;
+      extraInfo: object | null;
+    }> = [];
+
+    for (const validationType of validationTypes) {
+      const validator = VALIDATORS[validationType];
+      if (validator == null) {
+        continue;
+      }
+
+      if (!isGeometryValidator(validator)) {
+        continue;
+      }
+
+      const criteriaId = this.getCriteriaIdForValidationType(validationType);
+
+      for (const feature of allFeatures) {
+        try {
+          const result = await validator.validateGeometry(feature.geometry as never, feature.properties);
+          validationResults.push({
+            featureIndex: feature.featureIndex,
+            featureId: feature.properties?.id as string | undefined,
+            criteriaId,
+            validationType,
+            valid: Boolean(result.valid),
+            extraInfo: result.extraInfo
+          });
+        } catch (error) {
+          validationResults.push({
+            featureIndex: feature.featureIndex,
+            featureId: feature.properties?.id as string | undefined,
+            criteriaId,
+            validationType,
+            valid: false,
+            extraInfo: {
+              error: error instanceof Error ? error.message : "Unknown error occurred"
+            }
+          });
+        }
+      }
+    }
+
+    const resultsByFeature = new Map<
+      number,
+      Array<{
+        criteriaId: CriteriaId;
+        validationType: ValidationType;
+        valid: boolean;
+        extraInfo: object | null;
+      }>
+    >();
+
+    for (const result of validationResults) {
+      if (!resultsByFeature.has(result.featureIndex)) {
+        resultsByFeature.set(result.featureIndex, []);
+      }
+      const criteriaList = resultsByFeature.get(result.featureIndex);
+      if (criteriaList != null) {
+        criteriaList.push({
+          criteriaId: result.criteriaId,
+          validationType: result.validationType,
+          valid: Boolean(result.valid),
+          extraInfo: result.extraInfo
+        });
+      }
+    }
+
+    const included: Array<{
+      type: "validation";
+      id: string;
+      attributes: {
+        polygonUuid: string;
+        criteriaList: Array<{
+          criteriaId: CriteriaId;
+          validationType: ValidationType;
+          valid: boolean;
+          createdAt: Date | null;
+          extraInfo: object | null;
+        }>;
+      };
+    }> = [];
+
+    for (const [index, criteriaList] of resultsByFeature.entries()) {
+      const feature = allFeatures[index];
+      const polygonUuid = (feature?.properties?.id as string) ?? `feature-${index}`;
+
+      included.push({
+        type: "validation",
+        id: polygonUuid,
+        attributes: {
+          polygonUuid,
+          criteriaList: criteriaList.map(criteria => ({
+            ...criteria,
+            createdAt: null
+          }))
+        }
+      });
+    }
+
+    return included;
+  }
+
+  private getDynamicExcludedCriteria(allCriteria: CriteriaSite[]): CriteriaId[] {
+    const dynamicExcludedCriteria: CriteriaId[] = [];
+
+    const dataCriteria = allCriteria.find(c => c.criteriaId === DATA_COMPLETENESS_CRITERIA_ID);
+
+    if (dataCriteria != null && dataCriteria.valid === false && dataCriteria.extraInfo != null) {
+      const validationErrors = Array.isArray(dataCriteria.extraInfo) ? dataCriteria.extraInfo : [];
+      const numTreesError = validationErrors.find((error: { field?: string }) => error.field === "num_trees");
+      const hasOnlyNumTreesError = validationErrors.length === 1 && numTreesError != null;
+
+      if (hasOnlyNumTreesError) {
+        dynamicExcludedCriteria.push(DATA_COMPLETENESS_CRITERIA_ID);
+      }
+    }
+
+    return dynamicExcludedCriteria;
   }
 }

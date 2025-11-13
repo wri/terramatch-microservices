@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   NotFoundException,
   Param,
   Patch,
@@ -63,6 +64,8 @@ export class SitePolygonsController {
     private readonly policyService: PolicyService
   ) {}
 
+  private readonly logger = new Logger(SitePolygonsController.name);
+
   @Post()
   @ApiOperation({
     operationId: "createSitePolygons",
@@ -86,10 +89,8 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
 
-    // Extract the geometries from the JSON:API format
-    const batchRequest: CreateSitePolygonBatchRequestDto = {
-      geometries: createRequest.data.attributes.geometries
-    };
+    const geometries = createRequest.data.attributes.geometries;
+    const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
     const { data: createdSitePolygons, included: validations } =
       await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);

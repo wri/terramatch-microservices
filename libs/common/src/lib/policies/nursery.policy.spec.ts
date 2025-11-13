@@ -44,8 +44,8 @@ describe("NurseryPolicy", () => {
     const ppc = await NurseryFactory.create({ frameworkKey: "ppc" });
     const tf = await NurseryFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], ppc]],
-      cannot: [[["read", "delete", "update", "approve"], tf]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], tf]]
     });
   });
 
@@ -71,9 +71,9 @@ describe("NurseryPolicy", () => {
 
     await expectAuthority(service, {
       can: [
-        [["read", "delete", "update"], s1],
-        [["read", "delete", "update"], s3],
-        [["read", "delete", "update"], s4]
+        [["read", "delete", "update", "deleteFiles"], s1],
+        [["read", "delete", "update", "deleteFiles"], s3],
+        [["read", "delete", "update", "deleteFiles"], s4]
       ],
       cannot: [
         ["approve", s1],
@@ -91,8 +91,8 @@ describe("NurseryPolicy", () => {
     const s1 = await NurseryFactory.create({ projectId: project.id });
     const s2 = await NurseryFactory.create();
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], s1]],
-      cannot: [[["read", "delete", "update", "approve"], s2]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], s1]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], s2]]
     });
   });
 });

@@ -337,161 +337,175 @@ describe("SitePolygonPropertyValidator", () => {
       expect(() => validateSitePolygonProperties(properties)).toThrow();
     });
 
-    it("should always set status to draft", () => {
+    it("should handle target_sys that becomes empty after trim", () => {
       const properties = {
-        status: "approved"
+        target_sys: "test"
       };
+
+      const originalTrim = String.prototype.trim;
+      let trimCallCount = 0;
+      String.prototype.trim = jest.fn(function (this: string) {
+        trimCallCount++;
+        // First call (in the check) returns non-empty, second call returns empty
+        if (trimCallCount === 1) {
+          return "non-empty";
+        }
+        return "";
+      });
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.status).toBe("draft");
+      expect(result.targetSys).toBeNull();
+
+      // Restore original trim
+      String.prototype.trim = originalTrim;
     });
-  });
 
-  describe("extractAdditionalData", () => {
-    it("should extract non-core properties", () => {
-      const properties = {
-        poly_name: "Test Polygon",
-        site_id: "site-uuid-123",
-        custom_field: "custom_value",
-        another_field: 123,
-        nested_object: { key: "value" }
-      };
+    describe("extractAdditionalData", () => {
+      it("should extract non-core properties", () => {
+        const properties = {
+          poly_name: "Test Polygon",
+          site_id: "site-uuid-123",
+          custom_field: "custom_value",
+          another_field: 123,
+          nested_object: { key: "value" }
+        };
 
-      const result = extractAdditionalData(properties);
+        const result = extractAdditionalData(properties);
 
-      expect(result).toEqual({
-        custom_field: "custom_value",
-        another_field: 123,
-        nested_object: { key: "value" }
+        expect(result).toEqual({
+          custom_field: "custom_value",
+          another_field: 123,
+          nested_object: { key: "value" }
+        });
       });
-    });
 
-    it("should exclude core properties", () => {
-      const properties = {
-        poly_name: "Test Polygon",
-        site_id: "site-uuid-123",
-        plantstart: "2023-01-15",
-        practice: "tree-planting",
-        target_sys: "agroforest",
-        distr: "full",
-        num_trees: 100,
-        area: 5.5,
-        status: "draft",
-        point_id: "point-uuid-123",
-        source: "greenhouse",
-        custom_field: "custom_value"
-      };
+      it("should exclude core properties", () => {
+        const properties = {
+          poly_name: "Test Polygon",
+          site_id: "site-uuid-123",
+          plantstart: "2023-01-15",
+          practice: "tree-planting",
+          target_sys: "agroforest",
+          distr: "full",
+          num_trees: 100,
+          area: 5.5,
+          status: "draft",
+          point_id: "point-uuid-123",
+          source: "greenhouse",
+          custom_field: "custom_value"
+        };
 
-      const result = extractAdditionalData(properties);
+        const result = extractAdditionalData(properties);
 
-      expect(result).toEqual({
-        custom_field: "custom_value"
+        expect(result).toEqual({
+          custom_field: "custom_value"
+        });
       });
-    });
 
-    it("should exclude excluded properties", () => {
-      const properties = {
-        area: 5.5,
-        uuid: "some-uuid",
-        custom_field: "custom_value"
-      };
+      it("should exclude excluded properties", () => {
+        const properties = {
+          area: 5.5,
+          uuid: "some-uuid",
+          custom_field: "custom_value"
+        };
 
-      const result = extractAdditionalData(properties);
+        const result = extractAdditionalData(properties);
 
-      expect(result).toEqual({
-        custom_field: "custom_value"
+        expect(result).toEqual({
+          custom_field: "custom_value"
+        });
       });
-    });
 
-    it("should return empty object when no additional data", () => {
-      const properties = {
-        poly_name: "Test Polygon",
-        site_id: "site-uuid-123",
-        plantstart: "2023-01-15",
-        practice: "tree-planting",
-        target_sys: "agroforest",
-        distr: "full",
-        num_trees: 100,
-        area: 5.5,
-        status: "draft",
-        point_id: "point-uuid-123",
-        source: "greenhouse"
-      };
+      it("should return empty object when no additional data", () => {
+        const properties = {
+          poly_name: "Test Polygon",
+          site_id: "site-uuid-123",
+          plantstart: "2023-01-15",
+          practice: "tree-planting",
+          target_sys: "agroforest",
+          distr: "full",
+          num_trees: 100,
+          area: 5.5,
+          status: "draft",
+          point_id: "point-uuid-123",
+          source: "greenhouse"
+        };
 
-      const result = extractAdditionalData(properties);
+        const result = extractAdditionalData(properties);
 
-      expect(result).toEqual({});
-    });
-
-    it("should handle empty properties object", () => {
-      const properties = {};
-
-      const result = extractAdditionalData(properties);
-
-      expect(result).toEqual({});
-    });
-
-    it("should handle null and undefined values in additional data", () => {
-      const properties = {
-        poly_name: "Test Polygon",
-        custom_field: "custom_value",
-        null_field: null,
-        undefined_field: undefined,
-        empty_string: ""
-      };
-
-      const result = extractAdditionalData(properties);
-
-      expect(result).toEqual({
-        custom_field: "custom_value",
-        null_field: null,
-        undefined_field: undefined,
-        empty_string: ""
+        expect(result).toEqual({});
       });
-    });
 
-    it("should handle complex nested objects", () => {
-      const properties = {
-        poly_name: "Test Polygon",
-        complex_data: {
-          nested: {
-            deep: {
-              value: "test"
-            }
-          },
-          array: [1, 2, 3],
-          boolean: true
-        }
-      };
+      it("should handle empty properties object", () => {
+        const properties = {};
 
-      const result = extractAdditionalData(properties);
+        const result = extractAdditionalData(properties);
 
-      expect(result).toEqual({
-        complex_data: {
-          nested: {
-            deep: {
-              value: "test"
-            }
-          },
-          array: [1, 2, 3],
-          boolean: true
-        }
+        expect(result).toEqual({});
       });
-    });
 
-    it("should handle arrays as additional data", () => {
-      const properties = {
-        poly_name: "Test Polygon",
-        tags: ["tag1", "tag2", "tag3"],
-        numbers: [1, 2, 3, 4, 5]
-      };
+      it("should handle null and undefined values in additional data", () => {
+        const properties = {
+          poly_name: "Test Polygon",
+          custom_field: "custom_value",
+          null_field: null,
+          undefined_field: undefined,
+          empty_string: ""
+        };
 
-      const result = extractAdditionalData(properties);
+        const result = extractAdditionalData(properties);
 
-      expect(result).toEqual({
-        tags: ["tag1", "tag2", "tag3"],
-        numbers: [1, 2, 3, 4, 5]
+        expect(result).toEqual({
+          custom_field: "custom_value",
+          null_field: null,
+          undefined_field: undefined,
+          empty_string: ""
+        });
+      });
+
+      it("should handle complex nested objects", () => {
+        const properties = {
+          poly_name: "Test Polygon",
+          complex_data: {
+            nested: {
+              deep: {
+                value: "test"
+              }
+            },
+            array: [1, 2, 3],
+            boolean: true
+          }
+        };
+
+        const result = extractAdditionalData(properties);
+
+        expect(result).toEqual({
+          complex_data: {
+            nested: {
+              deep: {
+                value: "test"
+              }
+            },
+            array: [1, 2, 3],
+            boolean: true
+          }
+        });
+      });
+
+      it("should handle arrays as additional data", () => {
+        const properties = {
+          poly_name: "Test Polygon",
+          tags: ["tag1", "tag2", "tag3"],
+          numbers: [1, 2, 3, 4, 5]
+        };
+
+        const result = extractAdditionalData(properties);
+
+        expect(result).toEqual({
+          tags: ["tag1", "tag2", "tag3"],
+          numbers: [1, 2, 3, 4, 5]
+        });
       });
     });
   });

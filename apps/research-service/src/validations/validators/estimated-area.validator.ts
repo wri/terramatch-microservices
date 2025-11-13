@@ -1,5 +1,5 @@
 import { SitePolygon, Site, Project } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 
@@ -14,7 +14,7 @@ interface EstimatedAreaResult extends ValidationResult {
   } | null;
 }
 
-export class EstimatedAreaValidator implements Validator {
+export class EstimatedAreaValidator implements PolygonValidator {
   private static readonly LOWER_BOUND_MULTIPLIER = 0.75;
   private static readonly UPPER_BOUND_MULTIPLIER = 1.25;
 

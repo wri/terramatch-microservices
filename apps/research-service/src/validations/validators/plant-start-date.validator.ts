@@ -1,5 +1,5 @@
 import { SitePolygon, Site } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 
@@ -23,7 +23,7 @@ interface PlantStartDateValidationResult extends ValidationResult {
 
 const MIN_DATE = "2018-01-01";
 
-export class PlantStartDateValidator implements Validator {
+export class PlantStartDateValidator implements PolygonValidator {
   async validatePolygon(polygonUuid: string): Promise<PlantStartDateValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid },

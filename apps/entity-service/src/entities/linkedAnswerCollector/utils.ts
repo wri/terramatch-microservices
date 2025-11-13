@@ -1,5 +1,5 @@
 import {
-  CollectionModel,
+  isCollectionModel,
   laravelType,
   polymorphicAttributes,
   PolymorphicModel,
@@ -22,66 +22,7 @@ export const mapLaravelTypes = (models: FormModels) =>
     return { ...laravelTypes, [modelType]: type };
   }, {} as Dictionary<string>);
 
-/**
- * Creates a ResourceCollector factory for resources that do not distinguish via collection or another method
- * against a single base model.
- */
-export const singleAssociationCollection = <T extends PolymorphicModel>(
-  modelClass: PolymorphicModelCtor<T>,
-  dtoClass: new (model: T) => unknown,
-  syncRelation: RelationSync,
-  include?: Includeable | Includeable[]
-) =>
-  function (logger: LoggerService): RelationResourceCollector {
-    const questions: Dictionary<string> = {};
-    const { typeAttribute, idAttribute } = polymorphicAttributes(modelClass);
-    const dtoAttributes = intersection(
-      apiAttributes(dtoClass),
-      Object.keys(modelClass.getAttributes())
-    ) as Attributes<T>[];
-    dtoAttributes.push(typeAttribute);
-
-    return {
-      addField(_, modelType, questionUuid) {
-        if (questions[modelType] != null) {
-          logger.warn(`Duplicate field for ${modelType}`);
-        }
-        questions[modelType] = questionUuid;
-      },
-
-      async collect(answers, models) {
-        const laravelTypes = mapLaravelTypes(models);
-        const modelInstances = await modelClass.findAll({
-          where: {
-            [Op.or]: Object.keys(questions).map((modelType: FormModelType) => {
-              if (models[modelType] == null) {
-                throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
-              }
-              return {
-                [typeAttribute]: laravelTypes[modelType],
-                [idAttribute]: models[modelType].id
-              } as WhereAttributeHash<Attributes<T>>;
-            })
-          },
-          attributes: dtoAttributes,
-          include
-        });
-
-        for (const [key, questionUuid] of Object.entries(questions)) {
-          answers[questionUuid] = modelInstances
-            .filter(model => model[typeAttribute] === laravelTypes[key])
-            .map(model => new dtoClass(model));
-        }
-      },
-
-      syncRelation: (...args) => syncRelation(...args, logger)
-    };
-  };
-
-/**
- * Creates a ResourceCollector factory for resources that distinguish based on a collection attribute.
- */
-export const collectionCollector = <T extends CollectionModel & PolymorphicModel>(
+export const polymorphicCollector = <T extends PolymorphicModel>(
   modelClass: PolymorphicModelCtor<T>,
   dtoClass: new (model: T) => unknown,
   syncRelation: (...args: SyncArgs) => Promise<void>,
@@ -95,14 +36,15 @@ export const collectionCollector = <T extends CollectionModel & PolymorphicModel
       Object.keys(modelClass.getAttributes())
     ) as Attributes<T>[];
     dtoAttributes.push(typeAttribute);
+    const hasCollection = dtoAttributes.includes("collection");
 
     return {
       addField(field, modelType, questionUuid) {
-        if (field.collection == null) {
+        if (hasCollection && field.collection == null) {
           throw new InternalServerErrorException(`Collection not found for ${modelType}`);
         }
 
-        const key = `${modelType}:${field.collection}`;
+        const key = `${modelType}:${hasCollection ? field.collection : ""}`;
         if (questions[key] != null) {
           logger.warn(`Duplicate collection for field ${key}`);
         }
@@ -123,11 +65,12 @@ export const collectionCollector = <T extends CollectionModel & PolymorphicModel
               if (models[modelType] == null) {
                 throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
               }
-              return {
+              const attributes = {
                 [typeAttribute]: laravelTypes[modelType],
-                [idAttribute]: models[modelType].id,
-                collection: { [Op.in]: collections }
-              };
+                [idAttribute]: models[modelType].id
+              } as Record<Attributes<T>, string | number>;
+              if (hasCollection) attributes["collection"] = { [Op.in]: collections };
+              return attributes as WhereAttributeHash<Attributes<T>>;
             })
           },
           attributes: dtoAttributes,
@@ -137,7 +80,11 @@ export const collectionCollector = <T extends CollectionModel & PolymorphicModel
         for (const [key, questionUuid] of Object.entries(questions)) {
           const [modelType, collection] = key.split(":") as [FormModelType, string];
           answers[questionUuid] = modelInstances
-            .filter(model => model.collection === collection && model[typeAttribute] === laravelTypes[modelType])
+            .filter(
+              model =>
+                model[typeAttribute] === laravelTypes[modelType] &&
+                (!hasCollection || (isCollectionModel(model) && model.collection === collection))
+            )
             .map(model => new dtoClass(model));
         }
       },

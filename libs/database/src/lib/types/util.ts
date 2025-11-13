@@ -2,10 +2,13 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes } from "sequelize";
 
 export type UuidModel = Model & { uuid: string };
-export type CollectionModel = Model & { collection: string | null };
 export type StatusModel = Model & { status: string };
 export type FeedbackModel = Model & { feedback?: string | null; feedbackFields?: string[] | null };
 export type StatusUpdateModel = UuidModel & LaravelModel & StatusModel & FeedbackModel;
+
+export type CollectionModel = Model & { collection: string | null };
+export const isCollectionModel = (model: Model): model is CollectionModel =>
+  Object.keys((model.constructor as ModelCtor).getAttributes()).includes("collection");
 
 export type LaravelModelCtor = ModelCtor & { LARAVEL_TYPE: string };
 export type LaravelModel = InstanceType<LaravelModelCtor>;

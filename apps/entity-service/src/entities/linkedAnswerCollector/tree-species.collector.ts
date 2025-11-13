@@ -1,4 +1,4 @@
-import { collectionCollector, RelationSync } from "./utils";
+import { polymorphicCollector, RelationSync } from "./utils";
 import { TreeSpecies } from "@terramatch-microservices/database/entities";
 import { EmbeddedTreeSpeciesDto } from "../dto/tree-species.dto";
 import { CreationAttributes } from "sequelize";
@@ -54,4 +54,4 @@ const syncTreeSpecies: RelationSync = async (model, field, answer, hidden, logge
   }
 };
 
-export const treeSpeciesCollector = collectionCollector(TreeSpecies, EmbeddedTreeSpeciesDto, syncTreeSpecies);
+export const treeSpeciesCollector = polymorphicCollector(TreeSpecies, EmbeddedTreeSpeciesDto, syncTreeSpecies);

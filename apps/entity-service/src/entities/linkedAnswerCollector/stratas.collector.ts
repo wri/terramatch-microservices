@@ -1,5 +1,5 @@
 import { Strata } from "@terramatch-microservices/database/entities";
-import { RelationSync, singleAssociationCollection } from "./utils";
+import { polymorphicCollector, RelationSync } from "./utils";
 import { EmbeddedStrataDto } from "../dto/strata.dto";
 import { CreationAttributes } from "sequelize";
 import { laravelType } from "@terramatch-microservices/database/types/util";
@@ -42,4 +42,4 @@ const syncStratas: RelationSync = async (model, _, answer, hidden) => {
   }
 };
 
-export const stratasCollector = singleAssociationCollection(Strata, EmbeddedStrataDto, syncStratas);
+export const stratasCollector = polymorphicCollector(Strata, EmbeddedStrataDto, syncStratas);

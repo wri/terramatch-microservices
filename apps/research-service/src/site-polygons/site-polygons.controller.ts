@@ -35,6 +35,7 @@ import {
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
@@ -44,6 +45,7 @@ import {
 } from "./dto/create-site-polygon-request.dto";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { VersionUpdateRequestDto } from "./dto/version-update.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -61,6 +63,7 @@ export class SitePolygonsController {
   constructor(
     private readonly sitePolygonService: SitePolygonsService,
     private readonly sitePolygonCreationService: SitePolygonCreationService,
+    private readonly versioningService: SitePolygonVersioningService,
     private readonly policyService: PolicyService
   ) {}
 
@@ -314,6 +317,128 @@ export class SitePolygonsController {
 
       await Promise.all(updates);
     });
+  }
+
+  @Get(":uuid/versions")
+  @ApiOperation({
+    operationId: "listSitePolygonVersions",
+    summary: "Get all versions of a site polygon",
+    description: "Returns all versions sharing the same primaryUuid, ordered by creation date (newest first)"
+  })
+  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  async getVersions(@Param("uuid") uuid: string) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const polygon = await SitePolygon.findOne({ where: { uuid } });
+    if (polygon == null) {
+      throw new NotFoundException(`Site polygon not found: ${uuid}`);
+    }
+
+    const versions = await this.versioningService.getVersionHistory(polygon.primaryUuid);
+
+    const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
+    const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
+
+    for (const version of versions) {
+      document.addData(
+        version.uuid,
+        await this.sitePolygonService.buildLightDto(version, associations[version.id] ?? {})
+      );
+    }
+
+    return document;
+  }
+
+  @Patch(":uuid/version")
+  @ApiOperation({
+    operationId: "updateSitePolygonVersion",
+    summary: "Update a site polygon version (e.g., activate/deactivate)",
+    description: `Update version properties. Setting isActive to true will activate this version and deactivate all others in the version group.
+      Both admins and project developers can manage versions.`
+  })
+  @JsonApiResponse(SitePolygonLightDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
+  async updateVersion(@Param("uuid") uuid: string, @Body() request: VersionUpdateRequestDto) {
+    await this.policyService.authorize("update", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    if (request.data.attributes.isActive !== true) {
+      throw new BadRequestException("Only isActive: true is supported. Use DELETE to remove a version.");
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const activatedVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      const version = await this.versioningService.activateVersion(uuid, userId, transaction);
+
+      if (request.data.attributes.comment != null && request.data.attributes.comment.length > 0) {
+        await this.versioningService.trackChange(
+          version.primaryUuid,
+          version.versionName ?? "Unknown",
+          `Comment: ${request.data.attributes.comment}`,
+          userId,
+          "update",
+          undefined,
+          undefined,
+          transaction
+        );
+      }
+
+      return version;
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([activatedVersion], false);
+
+    document.addData(
+      activatedVersion.uuid,
+      await this.sitePolygonService.buildLightDto(activatedVersion, associations[activatedVersion.id] ?? {})
+    );
+
+    this.logger.log(`Activated version ${activatedVersion.uuid} by user ${userId}`);
+
+    return document;
+  }
+
+  @Delete(":uuid/version")
+  @ApiOperation({
+    operationId: "deleteSitePolygonVersion",
+    summary: "Delete a single site polygon version",
+    description: `Deletes a specific version of a site polygon. Restrictions:
+       - Cannot delete the last version (use DELETE /:uuid to delete all versions)
+       - Cannot delete the active version (activate another version first)
+       - Only deletes polygon_geometry if not used by other versions
+       - Deletes all associations (indicators, criteria_site, audit_status) for this version`
+  })
+  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
+    description: "Site polygon version and its associations were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(BadRequestException, { description: "Cannot delete last version or active version." })
+  async deleteVersion(@Param("uuid") uuid: string) {
+    const sitePolygon = await SitePolygon.findOne({ where: { uuid } });
+    if (sitePolygon == null) {
+      throw new NotFoundException(`Site polygon not found for uuid: ${uuid}`);
+    }
+
+    await this.policyService.authorize("delete", sitePolygon);
+
+    await this.sitePolygonService.deleteSingleVersion(uuid);
+
+    this.logger.log(`Deleted version ${uuid}`);
+
+    return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
   }
 
   @Delete(":uuid")

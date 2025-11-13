@@ -1,5 +1,5 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING } from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
 import { Demographic } from "./demographic.entity";
 import { chainScope } from "../util/chain-scope";
 
@@ -11,7 +11,10 @@ import { chainScope } from "../util/chain-scope";
   underscored: true,
   paranoid: true
 })
-export class DemographicEntry extends Model<DemographicEntry> {
+export class DemographicEntry extends Model<
+  InferAttributes<DemographicEntry>,
+  InferCreationAttributes<DemographicEntry>
+> {
   static gender() {
     return chainScope(this, "gender") as typeof DemographicEntry;
   }
@@ -19,18 +22,18 @@ export class DemographicEntry extends Model<DemographicEntry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Column(STRING)
   type: string;
 
   @AllowNull
   @Column(STRING)
-  subtype: string;
+  subtype: string | null;
 
   @AllowNull
   @Column(STRING)
-  name: string;
+  name: string | null;
 
   @Column(INTEGER({ length: 10 }))
   amount: number;

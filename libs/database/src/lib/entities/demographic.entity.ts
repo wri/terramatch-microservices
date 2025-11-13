@@ -1,4 +1,14 @@
-import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  HasMany,
+  Model,
+  PrimaryKey,
+  Scopes,
+  Table,
+  Unique
+} from "sequelize-typescript";
 import {
   BIGINT,
   BOOLEAN,
@@ -14,7 +24,19 @@ import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
 import { DemographicType } from "../types/demographic";
+import { FormModel } from "../constants/entities";
+import { laravelType } from "../types/util";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  entity: (entity: FormModel) => ({
+    where: {
+      demographicalType: laravelType(entity),
+      demographicalId: entity.id
+    }
+  }),
+  collection: (collection: string) => ({ where: { collection } })
+}))
 @Table({
   tableName: "demographics",
   underscored: true,
@@ -50,6 +72,14 @@ export class Demographic extends Model<InferAttributes<Demographic>, InferCreati
     Demographic.INDIRECT_BENEFICIARIES_TYPE,
     Demographic.ASSOCIATES_TYPES
   ] as const;
+
+  static for(entity: FormModel) {
+    return chainScope(this, "entity", entity) as typeof Demographic;
+  }
+
+  static collection(collection: string) {
+    return chainScope(this, "collection", collection) as typeof Demographic;
+  }
 
   static idsSubquery(demographicalIds: Literal | number[], demographicalType: string, type?: DemographicType) {
     const query = Subquery.select(Demographic, "id")
@@ -88,7 +118,7 @@ export class Demographic extends Model<InferAttributes<Demographic>, InferCreati
 
   @AllowNull
   @Column(TEXT)
-  description: string;
+  description: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
   hidden: CreationOptional<boolean>;

@@ -13,7 +13,12 @@ import { PointGeometryCreationService } from "./point-geometry-creation.service"
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
-import { CriteriaId, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+import {
+  CriteriaId,
+  VALIDATION_CRITERIA_IDS,
+  CRITERIA_ID_TO_VALIDATION_TYPE,
+  ValidationType
+} from "@terramatch-microservices/database/constants";
 import { VoronoiService } from "../voronoi/voronoi.service";
 
 interface DuplicateCheckResult {
@@ -27,6 +32,7 @@ interface ValidationIncludedData {
     polygonUuid: string;
     criteriaList: Array<{
       criteriaId: CriteriaId;
+      validationType: ValidationType;
       valid: boolean;
       createdAt: Date;
       extraInfo: {
@@ -132,6 +138,7 @@ export class SitePolygonCreationService {
                       criteriaList: [
                         {
                           criteriaId: VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY,
+                          validationType: CRITERIA_ID_TO_VALIDATION_TYPE[VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY],
                           valid: false,
                           createdAt: new Date(),
                           extraInfo: {
@@ -193,6 +200,7 @@ export class SitePolygonCreationService {
             if (validation != null) {
               validation.attributes.criteriaList.push({
                 criteriaId: VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY,
+                validationType: CRITERIA_ID_TO_VALIDATION_TYPE[VALIDATION_CRITERIA_IDS.DUPLICATE_GEOMETRY],
                 valid: false,
                 createdAt: new Date(),
                 extraInfo: {

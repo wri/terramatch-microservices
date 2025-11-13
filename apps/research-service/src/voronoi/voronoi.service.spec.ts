@@ -192,6 +192,66 @@ describe("VoronoiService", () => {
 
       expect(result.length).toBeGreaterThanOrEqual(0);
     });
+    it("should lazily load and cache d3-delaunay module", async () => {
+      const freshService = new VoronoiService();
+
+      const getDelaunayModuleSpy = jest.spyOn(
+        freshService,
+        "getDelaunayModule" as keyof VoronoiService
+      ) as unknown as jest.SpyInstance<Promise<typeof import("d3-delaunay")>, []>;
+      getDelaunayModuleSpy.mockResolvedValue(mockDelaunayModule);
+
+      const result1 = await freshService.transformPointsToPolygons([createPointFeature(0, 0, 1.0)]);
+      expect(result1).toBeDefined();
+      expect(getDelaunayModuleSpy).toHaveBeenCalledTimes(1);
+
+      const result2 = await freshService.transformPointsToPolygons([createPointFeature(1, 1, 1.0)]);
+      expect(result2).toBeDefined();
+
+      expect(getDelaunayModuleSpy).toHaveBeenCalledTimes(2);
+
+      expect(Array.isArray(result1)).toBe(true);
+      expect(Array.isArray(result2)).toBe(true);
+
+      getDelaunayModuleSpy.mockRestore();
+    });
+
+    it("should execute getDelaunayModule implementation and cache the promise", async () => {
+      const freshService = new VoronoiService();
+
+      // Mock the Function constructor to intercept the dynamic import
+      const originalFunction = global.Function;
+      const mockImportFn = jest.fn(() => Promise.resolve(mockDelaunayModule));
+      global.Function = jest.fn(() => {
+        return mockImportFn;
+      }) as unknown as typeof Function;
+      const getDelaunayModule = (
+        freshService as unknown as Record<string, () => Promise<typeof import("d3-delaunay")>>
+      )["getDelaunayModule"] as () => Promise<typeof import("d3-delaunay")>;
+
+      const promise1 = getDelaunayModule.call(freshService);
+      expect(mockImportFn).toHaveBeenCalledTimes(1);
+      const module1 = await promise1;
+      expect(module1).toBe(mockDelaunayModule);
+
+      const cachedPromise = (freshService as unknown as Record<string, Promise<typeof import("d3-delaunay")> | null>)[
+        "delaunayModulePromise"
+      ];
+      expect(cachedPromise).not.toBeNull();
+      expect(cachedPromise).toBeDefined();
+
+      const promise2 = getDelaunayModule.call(freshService);
+      expect(mockImportFn).toHaveBeenCalledTimes(1); // Still 1, not 2
+      const module2 = await promise2;
+      expect(module2).toBe(mockDelaunayModule);
+
+      const cachedPromiseAfterSecondCall = (
+        freshService as unknown as Record<string, Promise<typeof import("d3-delaunay")> | null>
+      )["delaunayModulePromise"];
+      expect(cachedPromiseAfterSecondCall).toBe(cachedPromise);
+
+      global.Function = originalFunction;
+    });
   });
 
   describe("private method behavior through public API", () => {

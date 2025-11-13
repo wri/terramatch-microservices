@@ -1,8 +1,9 @@
 import { PolygonGeometry, SitePolygon, Site, PointGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
-import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { NotFoundException, InternalServerErrorException, BadRequestException, Logger } from "@nestjs/common";
 import { Transaction, QueryTypes } from "sequelize";
 import { Feature } from "@terramatch-microservices/database/constants";
+import { Geometry } from "geojson";
 
 interface DuplicateInfo {
   poly_uuid: string;
@@ -19,7 +20,9 @@ interface DuplicateCheckResult {
   existing_uuid: string;
 }
 
-export class DuplicateGeometryValidator implements Validator {
+export class DuplicateGeometryValidator implements PolygonValidator, GeometryValidator {
+  private readonly logger = new Logger(DuplicateGeometryValidator.name);
+
   async validatePolygon(polygonUuid: string): Promise<DuplicateValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid, isActive: true },
@@ -266,7 +269,12 @@ export class DuplicateGeometryValidator implements Validator {
     for (let i = 0; i < features.length; i++) {
       const feature = features[i];
       if (feature?.geometry != null) {
-        const geomJson = JSON.stringify(feature.geometry);
+        const featureWithCrs = {
+          type: "Feature",
+          geometry: feature.geometry,
+          crs: { type: "name", properties: { name: "EPSG:4326" } }
+        };
+        const geomJson = JSON.stringify(featureWithCrs);
         geometryParams.push(geomJson);
         indexMap.push(i);
       }
@@ -316,11 +324,139 @@ export class DuplicateGeometryValidator implements Validator {
         valid: duplicates.length === 0,
         duplicates
       };
-    } catch {
+    } catch (error) {
+      this.logger.error("Error checking for duplicate geometries:", error);
       return { valid: true, duplicates: [] };
     }
   }
 
+  async validateGeometry(geometry: Geometry, properties?: Record<string, unknown>): Promise<DuplicateValidationResult> {
+    if (properties == null || properties.site_id == null) {
+      return {
+        valid: true,
+        extraInfo: null
+      };
+    }
+
+    const siteId = properties.site_id as string;
+
+    if (geometry.type === "Point") {
+      const feature: Feature = {
+        geometry: geometry as Feature["geometry"],
+        properties
+      };
+      const { duplicateIndexToUuid } = await this.checkNewPointsDuplicates([feature], siteId);
+
+      if (duplicateIndexToUuid.size > 0) {
+        const duplicateUuids = Array.from(duplicateIndexToUuid.values());
+        const duplicateInfos = await this.getDuplicateInfosForPoints(duplicateUuids);
+
+        return {
+          valid: false,
+          extraInfo: duplicateInfos
+        };
+      }
+
+      return {
+        valid: true,
+        extraInfo: null
+      };
+    }
+
+    if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
+      return {
+        valid: true,
+        extraInfo: null
+      };
+    }
+
+    const feature: Feature = {
+      geometry: geometry as Feature["geometry"],
+      properties
+    };
+    const duplicateResult = await this.checkNewFeaturesDuplicates([feature], siteId);
+
+    if (!duplicateResult.valid && duplicateResult.duplicates.length > 0) {
+      const duplicateUuids = duplicateResult.duplicates.map(dup => dup.existing_uuid);
+      const duplicateInfos = await this.getDuplicateInfos(duplicateUuids);
+
+      return {
+        valid: false,
+        extraInfo: duplicateInfos
+      };
+    }
+
+    return {
+      valid: true,
+      extraInfo: null
+    };
+  }
+
+  private async getDuplicateInfos(polygonUuids: string[]): Promise<DuplicateInfo[]> {
+    if (polygonUuids.length === 0) {
+      return [];
+    }
+
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    const results = (await PolygonGeometry.sequelize.query(
+      `
+        SELECT 
+          pg.uuid as candidateUuid,
+          sp.poly_name as polyName,
+          s.name as siteName
+        FROM polygon_geometry pg
+        LEFT JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
+        LEFT JOIN v2_sites s ON s.uuid = sp.site_id
+        WHERE pg.uuid IN (:polygonUuids)
+      `,
+      {
+        replacements: { polygonUuids },
+        type: QueryTypes.SELECT
+      }
+    )) as { candidateUuid: string; polyName: string; siteName: string }[];
+
+    return results.map(result => ({
+      poly_uuid: result.candidateUuid,
+      poly_name: result.polyName ?? "",
+      site_name: result.siteName ?? ""
+    }));
+  }
+
+  private async getDuplicateInfosForPoints(pointUuids: string[]): Promise<DuplicateInfo[]> {
+    if (pointUuids.length === 0) {
+      return [];
+    }
+
+    if (PointGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PointGeometry model is missing sequelize connection");
+    }
+
+    const results = (await PointGeometry.sequelize.query(
+      `
+        SELECT 
+          pg.uuid as candidateUuid,
+          sp.poly_name as polyName,
+          s.name as siteName
+        FROM point_geometry pg
+        LEFT JOIN site_polygon sp ON sp.point_id = pg.uuid AND sp.is_active = 1
+        LEFT JOIN v2_sites s ON s.uuid = sp.site_id
+        WHERE pg.uuid IN (:pointUuids)
+      `,
+      {
+        replacements: { pointUuids },
+        type: QueryTypes.SELECT
+      }
+    )) as { candidateUuid: string; polyName: string; siteName: string }[];
+
+    return results.map(result => ({
+      poly_uuid: result.candidateUuid,
+      poly_name: result.polyName ?? "",
+      site_name: result.siteName ?? ""
+    }));
+  }
   private async getProjectPointUuids(projectId: number): Promise<string[]> {
     const sitePolygons = await SitePolygon.findAll({
       where: { isActive: true },

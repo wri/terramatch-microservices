@@ -1,5 +1,5 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
 import { Transaction } from "sequelize";
 
@@ -10,7 +10,7 @@ interface WithinCountryValidationResult extends ValidationResult {
   } | null;
 }
 
-export class WithinCountryValidator implements Validator {
+export class WithinCountryValidator implements PolygonValidator {
   private readonly THRESHOLD_PERCENTAGE = 75;
 
   async validatePolygon(polygonUuid: string): Promise<WithinCountryValidationResult> {

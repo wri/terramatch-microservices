@@ -1,14 +1,18 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SelfIntersectionValidator } from "./self-intersection.validator";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Point, Polygon, MultiPolygon } from "geojson";
 
-jest.mock("@terramatch-microservices/database/entities", () => ({
-  PolygonGeometry: {
-    sequelize: null,
-    checkIsSimple: jest.fn(),
-    checkIsSimpleBatch: jest.fn()
-  }
-}));
+jest.mock("@terramatch-microservices/database/entities", () => {
+  const mockQuery = jest.fn();
+  return {
+    PolygonGeometry: {
+      sequelize: { query: mockQuery },
+      checkIsSimple: jest.fn(),
+      checkIsSimpleBatch: jest.fn()
+    }
+  };
+});
 
 describe("SelfIntersectionValidator", () => {
   let validator: SelfIntersectionValidator;
@@ -16,6 +20,8 @@ describe("SelfIntersectionValidator", () => {
   let mockCheckIsSimpleBatch: jest.MockedFunction<typeof PolygonGeometry.checkIsSimpleBatch>;
 
   beforeEach(async () => {
+    jest.spyOn(PolygonGeometry, "checkIsSimple").mockImplementation(jest.fn());
+    jest.spyOn(PolygonGeometry, "checkIsSimpleBatch").mockImplementation(jest.fn());
     mockCheckIsSimple = PolygonGeometry.checkIsSimple as jest.MockedFunction<typeof PolygonGeometry.checkIsSimple>;
     mockCheckIsSimpleBatch = PolygonGeometry.checkIsSimpleBatch as jest.MockedFunction<
       typeof PolygonGeometry.checkIsSimpleBatch
@@ -159,6 +165,96 @@ describe("SelfIntersectionValidator", () => {
       mockCheckIsSimpleBatch.mockRejectedValue(dbError);
 
       await expect(validator.validatePolygons(polygonUuids)).rejects.toThrow(dbError);
+    });
+  });
+
+  describe("validateGeometry", () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should return valid=true for Point geometry", async () => {
+      const geometry: Point = { type: "Point", coordinates: [0, 0] };
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=true for simple Polygon", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      };
+      (
+        PolygonGeometry.sequelize?.query as unknown as jest.MockedFunction<
+          (...args: unknown[]) => Promise<Array<{ isSimple: boolean }>>
+        >
+      ).mockResolvedValue([{ isSimple: true }]);
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=false for self-intersecting Polygon", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [1, 1],
+            [0, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      };
+      (
+        PolygonGeometry.sequelize?.query as unknown as jest.MockedFunction<
+          (...args: unknown[]) => Promise<Array<{ isSimple: boolean }>>
+        >
+      ).mockResolvedValue([{ isSimple: false }]);
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(false);
+      expect(result.extraInfo).toBeNull();
+    });
+
+    it("should return valid=true for simple MultiPolygon", async () => {
+      const geometry: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        ]
+      };
+      (
+        PolygonGeometry.sequelize?.query as unknown as jest.MockedFunction<
+          (...args: unknown[]) => Promise<Array<{ isSimple: boolean }>>
+        >
+      ).mockResolvedValue([{ isSimple: true }]);
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+    });
+
+    it("should throw error when sequelize connection is missing", async () => {
+      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
+      const geometry: Polygon = { type: "Polygon", coordinates: [] };
+      const { InternalServerErrorException } = await import("@nestjs/common");
+      await expect(validator.validateGeometry(geometry)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

@@ -7,6 +7,7 @@ import { VoronoiService } from "../voronoi/voronoi.service";
 import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { BadRequestException } from "@nestjs/common";
+import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -377,7 +378,73 @@ describe("SitePolygonCreationService", () => {
         expect(result.included).toHaveLength(1);
         expect(result.included[0].attributes.polygonUuid).toBe("existing-polygon-uuid");
         expect(result.included[0].attributes.criteriaList[0].criteriaId).toBe(16);
+        expect(result.included[0].attributes.criteriaList[0].validationType).toBe(CRITERIA_ID_TO_VALIDATION_TYPE[16]);
         expect(result.included[0].attributes.criteriaList[0].valid).toBe(false);
+        expect(result.included[0].attributes.criteriaList[0].extraInfo).toMatchObject({
+          polygonUuid: "existing-polygon-uuid",
+          message: "This geometry already exists in the project",
+          sitePolygonUuid: "existing-site-polygon-uuid",
+          sitePolygonName: "Existing Polygon"
+        });
+      });
+
+      it("should include validation data when duplicate points are found", async () => {
+        const pointFeature: Feature = {
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: [-0.6307588331401348, 6.16730310022831]
+          },
+          properties: {
+            site_id: "site-uuid-1",
+            est_area: 10.5
+          }
+        };
+
+        const request = createMockRequest([pointFeature]);
+
+        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+
+        // Mock duplicate point detection
+        jest.spyOn(duplicateGeometryValidator, "checkNewPointsDuplicates").mockResolvedValue({
+          duplicateIndexToUuid: new Map([[0, "existing-point-uuid"]])
+        });
+
+        // Mock finding existing site polygon with the duplicate point
+        jest.spyOn(SitePolygon, "findAll").mockResolvedValueOnce([
+          {
+            uuid: "existing-site-polygon-uuid",
+            polygonUuid: "existing-polygon-uuid",
+            pointUuid: "existing-point-uuid",
+            polyName: "Existing Point Polygon",
+            siteUuid: "site-uuid-1",
+            isActive: true
+          } as SitePolygon
+        ]);
+
+        // Mock no new points to create (all are duplicates)
+        jest.spyOn(pointGeometryService, "createPointGeometriesFromFeatures").mockResolvedValue([]);
+        jest.spyOn(voronoiService, "transformPointsToPolygons").mockResolvedValue([]);
+        jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+          uuids: [],
+          areas: []
+        });
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([]);
+
+        const result = await service.createSitePolygons(request, mockUserId, "test", null);
+
+        expect(result.data).toHaveLength(1);
+        expect(result.included).toHaveLength(1);
+        expect(result.included[0].attributes.polygonUuid).toBe("existing-polygon-uuid");
+        expect(result.included[0].attributes.criteriaList[0].criteriaId).toBe(16);
+        expect(result.included[0].attributes.criteriaList[0].validationType).toBe(CRITERIA_ID_TO_VALIDATION_TYPE[16]);
+        expect(result.included[0].attributes.criteriaList[0].valid).toBe(false);
+        expect(result.included[0].attributes.criteriaList[0].extraInfo).toMatchObject({
+          polygonUuid: "existing-polygon-uuid",
+          message: "This geometry already exists in the project",
+          sitePolygonUuid: "existing-site-polygon-uuid",
+          sitePolygonName: "Existing Point Polygon"
+        });
       });
     });
   });

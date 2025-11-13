@@ -5,6 +5,12 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { MediaDto } from "./media.dto";
+import {
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "srpReports" })
 export class SrpReportLightDto extends EntityDto {
@@ -18,11 +24,18 @@ export class SrpReportLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty()
-  status: string;
+  @ApiProperty({
+    description: "Report status for this srp report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
 
-  @ApiProperty()
-  updateRequestStatus: string;
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this srp report",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
@@ -65,7 +78,10 @@ export class SrpReportLightDto extends EntityDto {
 export type SrpReportMedia = Pick<SrpReportFullDto, keyof typeof SrpReport.MEDIA>;
 
 export class SrpReportFullDto extends SrpReportLightDto {
-  constructor(srpReport: SrpReport, props?: HybridSupportProps<SrpReportFullDto, SrpReport>) {
+  constructor(
+    srpReport: SrpReport,
+    props?: HybridSupportProps<SrpReportFullDto, Omit<SrpReport, "feedback" | "feedbackFields">>
+  ) {
     super();
     if (srpReport != null && props != null) {
       populateDto<SrpReportFullDto, SrpReport>(this, srpReport, {

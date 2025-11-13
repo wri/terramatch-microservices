@@ -67,7 +67,7 @@ export class SiteLightDto extends EntityDto {
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
-  constructor(site: Site, props: HybridSupportProps<SiteFullDto, Site>) {
+  constructor(site: Site, props: HybridSupportProps<SiteFullDto, Omit<Site, "feedback" | "feedbackFields">>) {
     super();
     populateDto<SiteLightDto, Site>(this, site, { lightResource: false, ...props });
   }

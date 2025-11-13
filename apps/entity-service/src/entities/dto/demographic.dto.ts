@@ -1,6 +1,6 @@
 import { AssociationDto } from "./association.dto";
 import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
@@ -75,12 +75,14 @@ export class DemographicEntryDto {
 
 @JsonApiDto({ type: "demographics" })
 export class DemographicDto extends AssociationDto {
-  constructor(demographic: Demographic, additional: AdditionalProps<DemographicDto, Demographic>) {
+  constructor(demographic?: Demographic, additional?: AdditionalProps<DemographicDto, Demographic>) {
     super();
-    populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
-      ...additional,
-      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
-    });
+    if (demographic != null && additional != null) {
+      populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
+        ...additional,
+        entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+      });
+    }
   }
 
   @ApiProperty()
@@ -94,4 +96,13 @@ export class DemographicDto extends AssociationDto {
 
   @ApiProperty({ type: () => DemographicEntryDto, isArray: true })
   entries: DemographicEntryDto[];
+}
+
+export class EmbeddedDemographicDto extends OmitType(DemographicDto, ["entityType", "entityUuid", "type"]) {
+  constructor(demographic: Demographic) {
+    super();
+    populateDto<EmbeddedDemographicDto, Demographic>(this, demographic, {
+      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+    });
+  }
 }

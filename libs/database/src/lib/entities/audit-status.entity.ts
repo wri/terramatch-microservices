@@ -15,6 +15,8 @@ import { DisturbanceReport } from "./disturbance-report.entity";
 const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
 type AuditStatusType = (typeof TYPES)[number];
 
+type AuditStatusMedia = "attachments";
+
 @Scopes(() => ({
   auditable: (auditable: LaravelModel) => ({
     where: {
@@ -32,7 +34,7 @@ type AuditStatusType = (typeof TYPES)[number];
 })
 export class AuditStatus extends Model<AuditStatus> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus\\AuditStatus";
-  static readonly MEDIA: Record<string, MediaConfiguration> = {
+  static readonly MEDIA: Record<AuditStatusMedia, MediaConfiguration> = {
     attachments: { dbCollection: "attachments", multiple: true, validation: "general-documents" }
   };
 

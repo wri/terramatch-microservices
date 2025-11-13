@@ -1,16 +1,16 @@
 import {
+  Disturbance,
   DisturbanceReport,
   DisturbanceReportEntry,
+  Media,
   Project,
   ProjectUser,
-  SitePolygon,
-  Disturbance,
-  Media
+  SitePolygon
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
-import { Op, Includeable, CreationAttributes } from "sequelize";
+import { CreationAttributes, Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
   DisturbanceReportFullDto,
@@ -385,6 +385,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
     const mediaCollection = await Media.for(disturbanceReport).findAll();
     const dto = new DisturbanceReportFullDto(disturbanceReport, {
+      ...(await this.getFeedback(disturbanceReport)),
       reportId: disturbanceReport.id,
       entries,
       intensity,

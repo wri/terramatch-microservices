@@ -1,3 +1,5 @@
+// NOTE: In order to avoid a circular dependency, constant files that import models (like entities.ts)
+// MUST NOT be exported here.
 export * from "./polygon-indicators";
 export * from "./polygon-status";
 export * from "./landscapes";

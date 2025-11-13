@@ -74,7 +74,10 @@ export class NurseryLightDto extends EntityDto {
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
 
 export class NurseryFullDto extends NurseryLightDto {
-  constructor(nursery: Nursery, props: HybridSupportProps<NurseryFullDto, Nursery>) {
+  constructor(
+    nursery: Nursery,
+    props: HybridSupportProps<NurseryFullDto, Omit<Nursery, "feedback" | "feedbackFields">>
+  ) {
     super();
     populateDto<NurseryFullDto, Nursery>(this, nursery, { lightResource: false, ...props });
   }

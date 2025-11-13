@@ -2,12 +2,42 @@ import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Ta
 import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { OrganisationStatus } from "../constants/status";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type OrganisationMedia =
+  | "logo"
+  | "cover"
+  | "reference"
+  | "additional"
+  | "bankStatements"
+  | "previousAnnualReports"
+  | "historicRestoration"
+  | "opBudget1Year"
+  | "opBudget2Year"
+  | "opBudget3Year"
+  | "opBudgetLastYear"
+  | "opBudgetThisYear"
+  | "opBudgetNextYear"
+  | "legalRegistration"
+  | "avgTreeSurvivalRateProof"
+  | "equityOwnership"
+  | "loanStatus"
+  | "restorationPhotos"
+  | "organisationFile"
+  | "organisationPhoto"
+  | "startupRecognitionCert"
+  | "fundingTypeDocuments"
+  | "consortiumProof"
+  | "consortiumPartnershipAgreements"
+  | "organogram"
+  | "ownershipDocuments"
+  | "carbonCreditsProof";
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true })
 export class Organisation extends Model<Organisation> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<OrganisationMedia, MediaConfiguration> = {
     logo: { dbCollection: "logo", multiple: false, validation: "logo-image" },
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" },
     reference: { dbCollection: "reference", multiple: true, validation: "pdf" },
@@ -43,7 +73,7 @@ export class Organisation extends Model<Organisation> {
     organogram: { dbCollection: "organogram", multiple: true, validation: "general-documents" },
     ownershipDocuments: { dbCollection: "ownership_documents", multiple: true, validation: "general-documents" },
     carbonCreditsProof: { dbCollection: "carbon_credits_proof", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement

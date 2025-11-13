@@ -1,11 +1,10 @@
-import { Project, ProjectUser, Media, SrpReport } from "@terramatch-microservices/database/entities";
+import { Media, Project, ProjectUser, SrpReport } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
-import { Op, Includeable } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { SrpReportFullDto, SrpReportLightDto, SrpReportMedia } from "../dto/srp-report.dto";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
@@ -33,7 +32,6 @@ export class SrpReportProcessor extends ReportProcessor<
 > {
   readonly LIGHT_DTO = SrpReportLightDto;
   readonly FULL_DTO = SrpReportFullDto;
-  private logger = new TMLogger(SrpReportProcessor.name);
 
   async findOne(uuid: string) {
     return await SrpReport.findOne({
@@ -118,6 +116,7 @@ export class SrpReportProcessor extends ReportProcessor<
   async getFullDto(srpReport: SrpReport) {
     const mediaCollection = await Media.for(srpReport).findAll();
     const dto = new SrpReportFullDto(srpReport, {
+      ...(await this.getFeedback(srpReport)),
       ...(this.entitiesService.mapMediaCollection(
         mediaCollection,
         SrpReport.MEDIA,

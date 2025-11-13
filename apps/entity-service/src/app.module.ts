@@ -24,6 +24,9 @@ import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
 import { FormsController } from "./forms/forms.controller";
 import { FormsService } from "./forms/forms.service";
+import { FormDataController } from "./entities/form-data.controller";
+import { FormDataService } from "./entities/form-data.service";
+import { UpdateRequestsController } from "./entities/update-requests.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -39,6 +42,8 @@ import { FormsService } from "./forms/forms.service";
     DemographicsController,
     DisturbancesController,
     EntitiesController,
+    FormDataController, // must be before entity association controller.
+    UpdateRequestsController, // must be before entity association controller.
     EntityAssociationsController,
     OptionLabelsController,
     LinkedFieldsController,
@@ -57,7 +62,8 @@ import { FormsService } from "./forms/forms.service";
     TasksService,
     DemographicService,
     DisturbanceService,
-    FormsService
+    FormsService,
+    FormDataService
   ]
 })
 export class AppModule {}

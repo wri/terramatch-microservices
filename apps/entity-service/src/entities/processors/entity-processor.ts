@@ -9,7 +9,7 @@ import { EntityModel, ReportModel } from "@terramatch-microservices/database/con
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
-import { ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
 export type Aggregate<M extends Model<M>> = {
@@ -72,16 +72,7 @@ export abstract class EntityProcessor<
   abstract findMany(query: EntityQueryDto): Promise<PaginatedResult<ModelType>>;
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
-
   abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
-
-  async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
-    const results: DtoResult<FullDto>[] = [];
-    for (const model of models) {
-      results.push(await this.getFullDto(model));
-    }
-    return results;
-  }
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
@@ -175,6 +166,15 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
+  }
+
+  protected async getFeedback(entity: ModelType) {
+    const currentUpdateRequest = await UpdateRequest.for(entity)
+      .current()
+      .findOne({ attributes: ["feedback", "feedbackFields"] });
+    const hasURFeedback = currentUpdateRequest?.feedback != null || currentUpdateRequest?.feedbackFields != null;
+    const { feedback, feedbackFields } = hasURFeedback ? currentUpdateRequest : entity;
+    return { feedback, feedbackFields };
   }
 }
 

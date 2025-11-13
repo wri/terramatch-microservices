@@ -1,14 +1,15 @@
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { TreeSpecies } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 
 @JsonApiDto({ type: "treeSpecies" })
 export class TreeSpeciesDto extends AssociationDto {
-  constructor(treeSpecies: TreeSpecies, additional: AssociationDtoAdditionalProps) {
+  constructor(treeSpecies?: TreeSpecies, additional?: AssociationDtoAdditionalProps) {
     super();
-    populateDto<TreeSpeciesDto, TreeSpecies>(this, treeSpecies, additional);
+    if (treeSpecies != null && additional != null)
+      populateDto<TreeSpeciesDto, TreeSpecies>(this, treeSpecies, additional);
   }
 
   @ApiProperty()
@@ -25,4 +26,11 @@ export class TreeSpeciesDto extends AssociationDto {
 
   @ApiProperty({ nullable: true, type: String })
   collection: string | null;
+}
+
+export class EmbeddedTreeSpeciesDto extends OmitType(TreeSpeciesDto, ["entityType", "entityUuid"]) {
+  constructor(treeSpecies: TreeSpecies) {
+    super();
+    if (treeSpecies != null) populateDto<EmbeddedTreeSpeciesDto>(this, treeSpecies);
+  }
 }

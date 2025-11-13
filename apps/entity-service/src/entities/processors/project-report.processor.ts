@@ -147,6 +147,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     const reportTitle = await this.getReportTitle(projectReport);
 
     const dto = new ProjectReportFullDto(projectReport, {
+      ...(await this.getFeedback(projectReport)),
       ...(await this.getTaskDependentAggregates(projectReport.id, projectReport.taskId)),
       reportTitle,
       seedlingsGrown: await this.getSeedlingsGrown(projectReport),

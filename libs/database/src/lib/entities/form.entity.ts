@@ -15,6 +15,9 @@ import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
 import { FormSection } from "./form-section.entity";
 import { FormQuestion } from "./form-question.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type FormMedia = "banner";
 
 @Table({
   tableName: "forms",
@@ -35,9 +38,9 @@ import { FormQuestion } from "./form-question.entity";
 export class Form extends Model<Form> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\Form";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<FormMedia, MediaConfiguration> = {
     banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement
@@ -53,7 +56,6 @@ export class Form extends Model<Form> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
-  // TODO: type correctly model when forms are implemented on v3
   @AllowNull
   @Column(STRING)
   model: string | null;

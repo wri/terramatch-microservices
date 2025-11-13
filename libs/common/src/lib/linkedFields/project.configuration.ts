@@ -286,41 +286,41 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
     "pro-associates-count": { property: "all_associates_aggregate", label: "Aggregate associates", inputType: "number" }
   },
   fileCollections: {
-    "pro-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "pro-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "pro-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "pro-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "pro-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "pro-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "pro-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "pro-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "pro-col-document-files": {
-      property: "document_files",
+      collection: "document_files",
       label: "Document Files",
       inputType: "file",
       multiChoice: true
     },
     "pro-col-programme-submission": {
-      property: "programme_submission",
+      collection: "programme_submission",
       label: "programme_submission",
       inputType: "file",
       multiChoice: true
     },
     "pro-col-detailed-project-budget": {
-      property: "detailed_project_budget",
+      collection: "detailed_project_budget",
       label: "Detailed project budget",
       inputType: "file",
       multiChoice: false
     },
     "pro-col-proof-of-land-tenure-mou": {
-      property: "proof_of_land_tenure_mou",
+      collection: "proof_of_land_tenure_mou",
       label: "Documentation on project area’s land tenure",
       inputType: "file",
       multiChoice: true
@@ -328,51 +328,44 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "pro-pit-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "pro-all-jobs": {
-      property: "jobsAll",
       label: "All Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "all"
     },
     "pro-full-time-jobs": {
-      property: "jobsFullTime",
       label: "Full-time Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "full-time"
     },
     "pro-part-time-jobs": {
-      property: "jobsPartTime",
       label: "Part-time Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "part-time"
     },
     "pro-volunteers": {
-      property: "volunteers",
       label: "Volunteers",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "volunteers",
       collection: "volunteer"
     },
     "pro-all-beneficiaries": {
-      property: "allBeneficiaries",
       label: "All Beneficiaries",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "pro-indirect-beneficiaries": {
-      property: "indirectBeneficiaries",
       label: "Indirect Beneficiaries",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "indirectBeneficiaries",
       collection: "indirect"
     }

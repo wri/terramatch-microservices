@@ -17,17 +17,17 @@ export const NurseryReportConfiguration: LinkedFieldConfiguration = {
     "nur-rep-shared-drive-link": { property: "shared_drive_link", label: "Shared drive link", inputType: "url" }
   },
   fileCollections: {
-    "nur-rep-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
-    "nur-rep-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "nur-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
+    "nur-rep-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "nur-rep-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "nur-rep-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "nur-rep-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "nur-rep-col-tree-seedling-contributions": {
-      property: "tree_seedling_contributions",
+      collection: "tree_seedling_contributions",
       label: "Tree seedling contributions",
       inputType: "file",
       multiChoice: true
@@ -35,9 +35,8 @@ export const NurseryReportConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "nur-rep-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "nursery-seedling"
     }

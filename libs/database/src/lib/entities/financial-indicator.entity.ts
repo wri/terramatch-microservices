@@ -13,6 +13,10 @@ import {
 import { BIGINT, DECIMAL, SMALLINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FinancialReport } from "./financial-report.entity";
 import { chainScope } from "../util/chain-scope";
+import { MediaConfiguration } from "../constants/media-owners";
+import { Organisation } from "./organisation.entity";
+
+type FinancialIndicatorMedia = "documentation";
 
 @Scopes(() => ({
   financialReport: (id: number) => ({ where: { financialReportId: id } }),
@@ -30,9 +34,9 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
     return chainScope(this, "organisation", id) as typeof FinancialIndicator;
   }
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<FinancialIndicatorMedia, MediaConfiguration> = {
     documentation: { dbCollection: "documentation", multiple: true, validation: "general-documents" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement
@@ -43,12 +47,14 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: string;
 
+  @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
   organisationId: number;
 
   @ForeignKey(() => FinancialReport)
+  @AllowNull
   @Column(BIGINT.UNSIGNED)
-  financialReportId: number;
+  financialReportId: number | null;
 
   @Column(SMALLINT.UNSIGNED)
   year: number;
@@ -66,6 +72,9 @@ export class FinancialIndicator extends Model<FinancialIndicator> {
   @Column(DECIMAL(15, 2))
   exchangeRate: number | null;
 
+  @BelongsTo(() => Organisation)
+  organisation: Organisation | null;
+
   @BelongsTo(() => FinancialReport)
-  financialReport: FinancialReport;
+  financialReport: FinancialReport | null;
 }

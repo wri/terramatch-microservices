@@ -298,131 +298,131 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "pro-rep-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "pro-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "pro-rep-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "pro-rep-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "pro-rep-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "pro-rep-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "pro-rep-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "pro-rep-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "pro-rep-col-baseline-report-upload": {
-      property: "baseline_report_upload",
+      collection: "baseline_report_upload",
       label: "Baseline Report Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-local-governance-order-letter-upload": {
-      property: "local_governance_order_letter_upload",
+      collection: "local_governance_order_letter_upload",
       label: "Local Governance Order or Letter Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-events-meetings-photos": {
-      property: "events_meetings_photos",
+      collection: "events_meetings_photos",
       label: "Events or Meetings Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-local-governance-proof-of-partnership-upload": {
-      property: "local_governance_proof_of_partnership_upload",
+      collection: "local_governance_proof_of_partnership_upload",
       label: "Local Governance Proof of Partnership Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-top-three-successes-upload": {
-      property: "top_three_successes_upload",
+      collection: "top_three_successes_upload",
       label: "Top Three Successes Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-direct-jobs-upload": {
-      property: "direct_jobs_upload",
+      collection: "direct_jobs_upload",
       label: "Direct Jobs Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-convergence-jobs-upload": {
-      property: "convergence_jobs_upload",
+      collection: "convergence_jobs_upload",
       label: "Convergence Jobs Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-convergence-schemes-upload": {
-      property: "convergence_schemes_upload",
+      collection: "convergence_schemes_upload",
       label: "Convergence Schemes Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-livelihood-activities-upload": {
-      property: "livelihood_activities_upload",
+      collection: "livelihood_activities_upload",
       label: "Livelihood Report Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-direct-livelihood-impacts-upload": {
-      property: "direct_livelihood_impacts_upload",
+      collection: "direct_livelihood_impacts_upload",
       label: "Direct Livelihood Impacts Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-certified-database-upload": {
-      property: "certified_database_upload",
+      collection: "certified_database_upload",
       label: "Certified Database Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-physical-assets-photos": {
-      property: "physical_assets_photos",
+      collection: "physical_assets_photos",
       label: "Physical Assets Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-indirect-community-partners-upload": {
-      property: "indirect_community_partners_upload",
+      collection: "indirect_community_partners_upload",
       label: "Indirect Community Partners Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-training-capacity-building-upload": {
-      property: "training_capacity_building_upload",
+      collection: "training_capacity_building_upload",
       label: "Training or Capacity Building Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-training-capacity-building-photos": {
-      property: "training_capacity_building_photos",
+      collection: "training_capacity_building_photos",
       label: "Training or Capacity Building Photos",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-financial-report-upload": {
-      property: "financial_report_upload",
+      collection: "financial_report_upload",
       label: "Financial Report Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-tree-planting-upload": {
-      property: "tree_planting_upload",
+      collection: "tree_planting_upload",
       label: "Tree Planting Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-soil-water-conservation-upload": {
-      property: "soil_water_conservation_upload",
+      collection: "soil_water_conservation_upload",
       label: "Soil or Water Conservation Upload",
       inputType: "file",
       multiChoice: true
     },
     "pro-rep-col-soil-water-conservation-photos": {
-      property: "soil_water_conservation_photos",
+      collection: "soil_water_conservation_photos",
       label: "Soil or Water Conservation Photos",
       inputType: "file",
       multiChoice: true
@@ -430,269 +430,226 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "pro-rep-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species (Nursery Seedling)",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "nursery-seedling"
     },
     "pro-rep-rel-paid-nursery-operations": {
-      property: "workdaysPaidNurseryOperations",
       label: "Paid Nursery Operations",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-nursery-operations"
     },
     "pro-rep-rel-paid-project-management": {
-      property: "workdaysPaidProjectManagement",
       label: "Paid Project Management",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-project-management"
     },
     "pro-rep-rel-paid-other-activities": {
-      property: "workdaysPaidOtherActivities",
       label: "Paid Other Activities",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-other-activities"
     },
     "pro-rep-rel-volunteer-nursery-operations": {
-      property: "workdaysVolunteerNurseryOperations",
       label: "Volunteer Nursery Operations",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-nursery-operations"
     },
     "pro-rep-rel-volunteer-project-management": {
-      property: "workdaysVolunteerProjectManagement",
       label: "Volunteer Project Management",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-project-management"
     },
     "pro-rep-rel-volunteer-other-activities": {
-      property: "workdaysVolunteerOtherActivities",
       label: "Volunteer Other Activities",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-other-activities"
     },
     "pro-rep-direct-workdays": {
-      property: "workdaysDirect",
       label: "Direct Workday",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "direct"
     },
     "pro-rep-convergence-workdays": {
-      property: "workdaysConvergence",
       label: "Convergence Workday",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "convergence"
     },
     "pro-rep-direct-income-partners": {
-      property: "restorationPartnersDirectIncome",
       label: "Direct Income Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-income"
     },
     "pro-rep-indirect-income-partners": {
-      property: "restorationPartnersIndirectIncome",
       label: "Indirect Income Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-income"
     },
     "pro-rep-direct-benefits-partners": {
-      property: "restorationPartnersDirectBenefits",
       label: "Direct In-kind Benefits Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-benefits"
     },
     "pro-rep-indirect-benefits-partners": {
-      property: "restorationPartnersIndirectBenefits",
       label: "Indirect In-kind Benefits Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-benefits"
     },
     "pro-rep-direct-conservation-payments-partners": {
-      property: "restorationPartnersDirectConservationPayments",
       label: "Direct Conservation Agreement Payment Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-conservation-payments"
     },
     "pro-rep-indirect-conservation-payments-partners": {
-      property: "restorationPartnersIndirectConservationPayments",
       label: "Indirect Conservation Agreement Payment Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-conservation-payments"
     },
     "pro-rep-direct-market-access-partners": {
-      property: "restorationPartnersDirectMarketAccess",
       label: "Direct Increased Market Access Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-market-access"
     },
     "pro-rep-indirect-market-access-partners": {
-      property: "restorationPartnersIndirectMarketAccess",
       label: "Indirect Increased Market Access Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-market-access"
     },
     "pro-rep-direct-capacity-partners": {
-      property: "restorationPartnersDirectCapacity",
       label: "Direct Increased Capacity Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-capacity"
     },
     "pro-rep-indirect-capacity-partners": {
-      property: "restorationPartnersIndirectCapacity",
       label: "Indirect Capacity Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-capacity"
     },
     "pro-rep-direct-training-partners": {
-      property: "restorationPartnersDirectTraining",
       label: "Direct Training Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-training"
     },
     "pro-rep-indirect-training-partners": {
-      property: "restorationPartnersIndirectTraining",
       label: "Indirect Training Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-training"
     },
     "pro-rep-direct-land-title-partners": {
-      property: "restorationPartnersDirectLandTitle",
       label: "Direct Newly Secured Land Title Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-land-title"
     },
     "pro-rep-indirect-land-title-partners": {
-      property: "restorationPartnersIndirectLandTitle",
       label: "Indirect Newly Secured Land Title Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-land-title"
     },
     "pro-rep-direct-livelihoods-partners": {
-      property: "restorationPartnersDirectLivelihoods",
       label: "Direct Traditional Livelihoods or Customer Rights Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-livelihoods"
     },
     "pro-rep-indirect-livelihoods-partners": {
-      property: "restorationPartnersIndirectLivelihoods",
       label: "Indirect Traditional Livelihoods or Customer Rights Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-livelihoods"
     },
     "pro-rep-direct-productivity-partners": {
-      property: "restorationPartnersDirectProductivity",
       label: "Direct Increased Productivity Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-productivity"
     },
     "pro-rep-indirect-productivity-partners": {
-      property: "restorationPartnersIndirectProductivity",
       label: "Indirect Increased Productivity Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-productivity"
     },
     "pro-rep-direct-other-partners": {
-      property: "restorationPartnersDirectOther",
       label: "Direct Other Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-other"
     },
     "pro-rep-indirect-other-partners": {
-      property: "restorationPartnersIndirectOther",
       label: "Indirect Other Restoration Partners",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-other"
     },
     "pro-rep-full-time-jobs": {
-      property: "jobsFullTime",
       label: "Full-time Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "full-time"
     },
     "pro-rep-full-time-clt-jobs": {
-      property: "jobsFullTimeClt",
       label: "Full-time CLT Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "full-time-clt"
     },
     "pro-rep-part-time-jobs": {
-      property: "jobsPartTime",
       label: "Part-time Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "part-time"
     },
     "pro-rep-part-time-clt-jobs": {
-      property: "jobsPartTimeClt",
       label: "Part-time CLT Jobs",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "jobs",
       collection: "part-time-clt"
     },
     "pro-rep-volunteers": {
-      property: "volunteers",
       label: "Volunteers",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "volunteers",
       collection: "volunteer"
     },
     "pro-rep-beneficiaries-all": {
-      property: "allBeneficiaries",
       label: "All Beneficiaries",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "pro-rep-beneficiaries-training": {
-      property: "trainingBeneficiaries",
       label: "Training Beneficiaries",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "trainingBeneficiaries",
       collection: "training"
     },
     "pro-rep-associates": {
-      property: "associates",
       label: "Associates",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "associates",
       collection: "all"
-    },
-    "pro-rep-financial-indicators-financial-collection": {
-      property: "financialCollection",
-      label: "Financial collection",
-      resource: "App\\Http\\Resources\\V2\\FinancialIndicatorsResource",
-      inputType: "financialIndicators"
     }
   }
 };

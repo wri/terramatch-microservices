@@ -24,21 +24,20 @@ export const NurseryConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "nur-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
-    "nur-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "nur-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
+    "nur-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "nur-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "nur-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true }
+    "nur-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true }
   },
   relations: {
     "nur-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "nursery-seedling"
     }

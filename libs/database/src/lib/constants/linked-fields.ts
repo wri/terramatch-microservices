@@ -37,7 +37,8 @@ export type LinkedField = {
 export const FILE_INPUT_TYPES = ["file"] as const;
 export type FileInputType = (typeof FILE_INPUT_TYPES)[number];
 
-export type LinkedFile = Omit<LinkedField, "optionListKey" | "inputType"> & {
+export type LinkedFile = Omit<LinkedField, "optionListKey" | "inputType" | "property"> & {
+  collection: string;
   inputType: FileInputType;
 };
 
@@ -64,11 +65,26 @@ export const RELATION_INPUT_TYPES = [
 ] as const;
 export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 
-export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice"> & {
+export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice" | "property"> & {
   inputType: RelationInputType;
-  resource: string;
+  resource: LinkedFieldResource;
   collection?: string;
 };
+
+export const LINKED_FIELD_RESOURCES = [
+  "demographics",
+  "disturbances",
+  "disturbanceReportEntries",
+  "financialIndicators",
+  "fundingTypes",
+  "invasives",
+  "leaderships",
+  "ownershipStake",
+  "seedings",
+  "stratas",
+  "treeSpecies"
+] as const;
+export type LinkedFieldResource = (typeof LINKED_FIELD_RESOURCES)[number];
 
 export const INPUT_TYPES = [...FIELD_INPUT_TYPES, ...FILE_INPUT_TYPES, ...RELATION_INPUT_TYPES] as const;
 export type InputType = (typeof INPUT_TYPES)[number];

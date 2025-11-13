@@ -15,7 +15,7 @@ import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
-import { sumBy, groupBy } from "lodash";
+import { groupBy, sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { SiteUpdateAttributes } from "../dto/entity-update.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
@@ -212,6 +212,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
 
     const dto = new SiteFullDto(site, {
+      ...(await this.getFeedback(site)),
+
       totalHectaresRestoredSum,
       workdayCount: await this.getWorkdayCount(siteId),
       combinedWorkdayCount:

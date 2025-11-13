@@ -121,12 +121,12 @@ export const FILE_VALIDATION: {
 };
 
 export type MediaConfiguration = {
-  dbCollection?: string;
+  dbCollection: string;
   multiple: boolean;
   validation: ValidationKey;
 };
 export type EntityMediaOwnerClass<T extends MediaOwnerModel> = ModelCtor<T> &
-  ModelStatic<T> & { LARAVEL_TYPE: string } & { MEDIA: Record<string, MediaConfiguration> };
+  ModelStatic<T> & { LARAVEL_TYPE: string } & { MEDIA: Dictionary<MediaConfiguration> };
 
 export const MEDIA_OWNER_MODELS: { [E in MediaOwnerType]: EntityMediaOwnerClass<MediaOwnerModel> } = {
   projects: Project,
@@ -157,6 +157,9 @@ export const sizeValidation = (validation: ValidationKey) => {
   const sizeValidation = rules.split("|").find(rule => rule.startsWith("size:"));
   return sizeValidation?.split(":")[1];
 };
+
+export const isMediaOwner = (type: string): type is MediaOwnerType =>
+  MEDIA_OWNER_TYPES.includes(type as MediaOwnerType);
 
 export const mediaConfiguration = (mediaOwner: MediaOwnerType, collection: string) =>
   Object.values(MEDIA_OWNER_MODELS[mediaOwner]?.MEDIA ?? {}).find(({ dbCollection }) => dbCollection === collection);

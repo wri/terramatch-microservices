@@ -2,7 +2,7 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { LinkedFieldDto } from "./dto/linked-field.dto";
-import { FormModelType, LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
+import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import {
   isField,
@@ -14,6 +14,7 @@ import {
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { isEmpty } from "lodash";
 import { LinkedFieldQueryDto } from "./dto/linked-field-query.dto";
+import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 
 const fieldAdder =
   (document: DocumentBuilder, formModelType: FormModelType, nameSuffix: string) =>

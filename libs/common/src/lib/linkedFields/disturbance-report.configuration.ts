@@ -14,13 +14,12 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration = {
     }
   },
   fileCollections: {
-    "dis-rep-media-assets": { property: "media", label: "Media Assets", inputType: "file", multiChoice: true }
+    "dis-rep-media-assets": { collection: "media", label: "Media Assets", inputType: "file", multiChoice: true }
   },
   relations: {
     "dis-rep-entries": {
-      property: "entries",
       label: "Disturbance Entries",
-      resource: "App\\Http\\Resources\\V2\\DisturbanceReportEntryResource",
+      resource: "disturbanceReportEntries",
       inputType: "disturbanceReportEntries"
     }
   }

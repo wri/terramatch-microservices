@@ -646,7 +646,7 @@ export class SitePolygonCreationService {
         sitePolygonAttributes.numTrees = attributeChanges.numTrees;
       }
     }
-
+    sitePolygonAttributes.validationStatus = null;
     sitePolygonAttributes.status = "draft";
 
     const changeDescription = this.buildDetailedChangeDescription(

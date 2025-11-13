@@ -532,6 +532,61 @@ export class PolygonClippingService {
     };
   }
 
+  private async getRelatedPolygonUuids(polygonUuids: string[]): Promise<string[]> {
+    if (polygonUuids.length === 0) {
+      return [];
+    }
+
+    const criteriaRecords = await CriteriaSite.findAll({
+      where: {
+        polygonId: polygonUuids,
+        criteriaId: OVERLAPPING_CRITERIA_ID
+      },
+      attributes: ["polygonId", "extraInfo"]
+    });
+
+    const relatedUuids = new Set<string>();
+
+    for (const record of criteriaRecords) {
+      relatedUuids.add(record.polygonId);
+
+      if (record.extraInfo != null && Array.isArray(record.extraInfo)) {
+        const overlaps = record.extraInfo as OverlapInfo[];
+        for (const overlap of overlaps) {
+          if (overlap.polyUuid != null) {
+            relatedUuids.add(overlap.polyUuid);
+          }
+        }
+      }
+    }
+
+    return Array.from(relatedUuids);
+  }
+
+  private async clearValidationForPolygons(polygonUuids: string[], transaction: Transaction): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    await CriteriaSite.destroy({
+      where: {
+        polygonId: polygonUuids
+      },
+      transaction
+    });
+
+    await SitePolygon.update(
+      { validationStatus: null },
+      {
+        where: {
+          polygonUuid: polygonUuids,
+          isActive: true
+        },
+        transaction
+      }
+    );
+  }
+
   async clipAndCreateVersions(
     polygonUuids: string[],
     userId: number,
@@ -553,12 +608,12 @@ export class PolygonClippingService {
       this.logger.log("No fixable overlaps found for the provided polygons");
       return [];
     }
-
-    this.logger.log(`Creating versions for ${clippedResults.length} clipped polygons`);
+    const clippedPolygonUuids = clippedResults.map(r => r.polyUuid);
+    const relatedPolygonUuids = await this.getRelatedPolygonUuids(clippedPolygonUuids);
 
     const baseSitePolygons = await SitePolygon.findAll({
       where: {
-        polygonUuid: clippedResults.map(r => r.polyUuid),
+        polygonUuid: clippedPolygonUuids,
         isActive: true
       }
     });
@@ -629,6 +684,8 @@ export class PolygonClippingService {
             this.logger.error(`Failed to create version for polygon ${baseSitePolygon.uuid}`, error);
           }
         }
+
+        await this.clearValidationForPolygons(relatedPolygonUuids, transaction);
       });
     }
 

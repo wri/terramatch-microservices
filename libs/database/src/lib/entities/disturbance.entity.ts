@@ -1,4 +1,4 @@
-import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
 import {
   BIGINT,
   BOOLEAN,
@@ -16,12 +16,27 @@ import {
 import { Subquery } from "../util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { FormModel } from "../constants/entities";
+import { laravelType } from "../types/util";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  entity: (entity: FormModel) => ({
+    where: {
+      disturbanceableType: laravelType(entity),
+      disturbanceableId: entity.id
+    }
+  })
+}))
 @Table({ tableName: "v2_disturbances", underscored: true, paranoid: true })
 export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreationAttributes<Disturbance>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Disturbance";
   static readonly POLYMORPHIC_TYPE = "disturbanceableType";
   static readonly POLYMORPHIC_ID = "disturbanceableId";
+
+  static for(entity: FormModel) {
+    return chainScope(this, "entity", entity) as typeof Disturbance;
+  }
 
   static idsSubquery(disturbanceableIds: Literal | number[], disturbanceableType: string) {
     return Subquery.select(Disturbance, "id")

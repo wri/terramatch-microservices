@@ -1,16 +1,20 @@
 import {
   isCollectionModel,
+  isCollectionModelCtor,
   laravelType,
   polymorphicAttributes,
   PolymorphicModel,
-  PolymorphicModelCtor
+  PolymorphicModelCtor,
+  UuidModel
 } from "@terramatch-microservices/database/types/util";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { Dictionary, intersection } from "lodash";
+import { Dictionary, intersection, pick } from "lodash";
 import { FormModels, FormTypeMap, RelationResourceCollector } from "./index";
-import { Attributes, Includeable, Op, WhereAttributeHash } from "sequelize";
+import { Attributes, CreationAttributes, Includeable, Op, WhereAttributeHash } from "sequelize";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { CountOptions } from "sequelize/lib/model";
 
 type SyncArgs = [...Parameters<NonNullable<RelationResourceCollector["syncRelation"]>>, logger: LoggerService];
 export type RelationSync = (...args: SyncArgs) => Promise<void>;
@@ -22,21 +26,99 @@ export const mapLaravelTypes = (models: FormModels) =>
     return { ...laravelTypes, [modelType]: type };
   }, {} as Dictionary<string>);
 
-export const polymorphicCollector = <T extends PolymorphicModel>(
+export const polymorphicSync = <T extends PolymorphicModel & UuidModel>(
   modelClass: PolymorphicModelCtor<T>,
-  dtoClass: new (model: T) => unknown,
-  syncRelation: (...args: SyncArgs) => Promise<void>,
-  include?: Includeable | Includeable[]
+  dtoClass: new (model: T) => { uuid?: string | null; collection?: string | null }
+): RelationSync => {
+  const { typeAttribute, idAttribute } = polymorphicAttributes(modelClass);
+  const modelAttributes = Object.keys(modelClass.getAttributes());
+  const dtoAttributes = intersection(apiAttributes(dtoClass), modelAttributes);
+  const assignableAttributes = dtoAttributes.filter(attr => !["uuid", "collection"].includes(attr));
+  const hasCollection = modelAttributes.includes("collection");
+  if (hasCollection && !isCollectionModelCtor(modelClass)) {
+    throw new InternalServerErrorException("Collection not supported");
+  }
+
+  return async (model, field, answer, hidden, logger) => {
+    if (hasCollection && field.collection == null) {
+      throw new InternalServerErrorException(`Field missing collection ${field.inputType}`);
+    }
+
+    const answers = (answer ?? []) as InstanceType<typeof dtoClass>[];
+    const answerUuids = answers.map(({ uuid }) => uuid).filter(isNotNull);
+    const scope = modelClass.for(model);
+    // the field.collection and collection model checks should always return true if hasCollection is true due to checks
+    // above. They're only needed here to keep the TS compiler happy.
+    const models = (await (hasCollection && field.collection != null && isCollectionModelCtor(scope)
+      ? scope.collection(field.collection)
+      : scope
+    ).findAll()) as T[];
+    const toDestroy = models.map(({ uuid }) => uuid).filter(uuid => !answerUuids.includes(uuid));
+    if (toDestroy.length > 0) {
+      await modelClass.destroy({ where: { uuid: { [Op.in]: toDestroy } } as WhereAttributeHash<T> });
+    }
+
+    const toCreate: CreationAttributes<T>[] = [];
+    await Promise.all(
+      answers.map(async answer => {
+        if (hasCollection && answer.collection != null && answer.collection !== field.collection) {
+          logger.error("Answer has an invalid collection set, ignoring", { answer, field });
+        }
+
+        const current = models.find(({ uuid }) => uuid === answer.uuid);
+        if (current != null) {
+          await current.update({ ...pick(answer, assignableAttributes), hidden });
+        } else {
+          // count options requires a strong type to get the TS compiler to recognize the correct override
+          const countOptions: Omit<CountOptions<Attributes<T>>, "group"> = {
+            where: { uuid: answer.uuid },
+            paranoid: false
+          };
+          // Keep the UUID from the client if one was provided, but protect against collisions in the DB
+          const uuid = answer.uuid == null || (await modelClass.count(countOptions)) !== 0 ? undefined : answer.uuid;
+          const collection = hasCollection && field.collection != null ? field.collection : undefined;
+          toCreate.push({
+            [typeAttribute]: laravelType(model),
+            [idAttribute]: model.id,
+            ...pick(answer, assignableAttributes),
+            uuid,
+            collection,
+            hidden
+          } as unknown as CreationAttributes<T>);
+        }
+      })
+    );
+
+    if (toCreate.length > 0) {
+      await modelClass.bulkCreate(toCreate);
+    }
+  };
+};
+
+type PolymorphicCollectorOptions = {
+  // If model associations should be fetched when loading the model, include here.
+  include?: Includeable | Includeable[];
+  // Explicitly set if this collector should expect and use a collection field. The default is to use the collection
+  // field if it exists in the model attributes.
+  usesCollection?: boolean;
+  // Include if the default polymorphicSync method does not work for this association.
+  syncRelation?: RelationSync;
+};
+
+export const polymorphicCollector = <T extends PolymorphicModel & UuidModel>(
+  modelClass: PolymorphicModelCtor<T>,
+  dtoClass: new (model: T) => { uuid?: string | null; collection?: string | null },
+  options: PolymorphicCollectorOptions = {}
 ) =>
   function (logger: LoggerService): RelationResourceCollector {
     const questions: Dictionary<string> = {};
     const { typeAttribute, idAttribute } = polymorphicAttributes(modelClass);
-    const dtoAttributes = intersection(
-      apiAttributes(dtoClass),
-      Object.keys(modelClass.getAttributes())
-    ) as Attributes<T>[];
+    const modelAttributes = Object.keys(modelClass.getAttributes());
+    const dtoAttributes = intersection(apiAttributes(dtoClass), modelAttributes) as Attributes<T>[];
     dtoAttributes.push(typeAttribute);
-    const hasCollection = dtoAttributes.includes("collection");
+    const hasCollection =
+      options.usesCollection == null ? modelAttributes.includes("collection") : options.usesCollection;
+    const syncRelation = options.syncRelation ?? polymorphicSync(modelClass, dtoClass);
 
     return {
       addField(field, modelType, questionUuid) {
@@ -74,7 +156,7 @@ export const polymorphicCollector = <T extends PolymorphicModel>(
             })
           },
           attributes: dtoAttributes,
-          include
+          include: options.include
         });
 
         for (const [key, questionUuid] of Object.entries(questions)) {

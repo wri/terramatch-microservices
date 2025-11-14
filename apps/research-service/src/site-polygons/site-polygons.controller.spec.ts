@@ -17,6 +17,7 @@ import { LandscapeSlug } from "@terramatch-microservices/database/types/landscap
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -72,6 +73,10 @@ describe("SitePolygonsController", () => {
         {
           provide: DuplicateGeometryValidator,
           useValue: (duplicateGeometryValidator = createMock<DuplicateGeometryValidator>())
+        },
+        {
+          provide: SitePolygonVersioningService,
+          useValue: createMock<SitePolygonVersioningService>()
         }
       ]
     }).compile();

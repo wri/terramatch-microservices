@@ -99,7 +99,7 @@ export class SitePolygonVersioningService {
 
     const name = polyName ?? "Unnamed";
 
-    const user = userFullName != null && userFullName.length > 0 ? `_${userFullName}` : "";
+    const user = userFullName != null && userFullName.length > 0 ? `_${userFullName.replace(/\s+/g, "_")}` : "";
 
     return `${name}_${date}_${time}${user}`;
   }

@@ -5,6 +5,7 @@ import { PolygonGeometry, SitePolygon, CriteriaSite, Site } from "@terramatch-mi
 import { Transaction } from "sequelize";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { Polygon, MultiPolygon } from "geojson";
+import { SitePolygonCreationService } from "../site-polygons/site-polygon-creation.service";
 
 interface MockSequelize {
   query: jest.Mock;
@@ -87,7 +88,15 @@ describe("PolygonClippingService", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [PolygonClippingService]
+      providers: [
+        PolygonClippingService,
+        {
+          provide: SitePolygonCreationService,
+          useValue: {
+            createSitePolygons: jest.fn()
+          }
+        }
+      ]
     }).compile();
 
     service = module.get<PolygonClippingService>(PolygonClippingService);

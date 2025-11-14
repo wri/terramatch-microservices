@@ -4,187 +4,141 @@ import { BadRequestException, NotFoundException, UnauthorizedException } from "@
 import { PolygonClippingController } from "./polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SitePolygon, DelayedJob, Site, User } from "@terramatch-microservices/database/entities";
 import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
-import { FeatureCollection, Polygon, MultiPolygon } from "geojson";
+import { getQueueToken } from "@nestjs/bullmq";
+import { Queue, Job } from "bullmq";
 
 describe("PolygonClippingController", () => {
   let controller: PolygonClippingController;
   let clippingService: DeepMocked<PolygonClippingService>;
   let policyService: DeepMocked<PolicyService>;
-
-  const samplePolygon: Polygon = {
-    type: "Polygon",
-    coordinates: [
-      [
-        [104.14293058113105, 13.749724096039358],
-        [104.68941630988292, 13.586722290863463],
-        [104.40664352872176, 13.993692766531538],
-        [104.14293058113105, 13.749724096039358]
-      ]
-    ]
-  };
-
-  const sampleMultiPolygon: MultiPolygon = {
-    type: "MultiPolygon",
-    coordinates: [
-      [
-        [
-          [104.14293058113105, 13.749724096039358],
-          [104.68941630988292, 13.586722290863463],
-          [104.40664352872176, 13.993692766531538],
-          [104.14293058113105, 13.749724096039358]
-        ]
-      ]
-    ]
-  };
-
-  const sampleFeatureCollection: FeatureCollection<Polygon | MultiPolygon> = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {
-          poly_id: "polygon-uuid-1",
-          poly_name: "Test Polygon 1"
-        },
-        geometry: samplePolygon
-      }
-    ]
-  };
-
-  const sampleClippedFeatureCollection: FeatureCollection<Polygon | MultiPolygon> = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {
-          poly_id: "polygon-uuid-1",
-          poly_name: "Test Polygon 1",
-          original_area_ha: 10.5,
-          new_area_ha: 10.2,
-          area_removed_ha: 0.3
-        },
-        geometry: sampleMultiPolygon
-      }
-    ]
-  };
+  let mockQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
+    jest.spyOn(DelayedJob, "create").mockResolvedValue({
+      id: 1,
+      uuid: "job-uuid-123",
+      name: "Polygon Clipping",
+      totalContent: 0,
+      processedContent: 0,
+      progressMessage: "Starting clipping...",
+      metadata: {},
+      isAcknowledged: false,
+      createdBy: 1
+    } as unknown as DelayedJob);
+
+    jest.spyOn(Site, "findOne").mockResolvedValue({
+      id: 1,
+      uuid: "site-uuid",
+      name: "Test Site",
+      projectId: 1
+    } as unknown as Site);
+
+    jest.spyOn(User, "findByPk").mockResolvedValue({
+      id: 1,
+      fullName: "Test User",
+      getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
+    } as unknown as User);
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PolygonClippingController],
       providers: [
         { provide: PolygonClippingService, useValue: (clippingService = createMock<PolygonClippingService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        {
+          provide: getQueueToken("clipping"),
+          useValue: (mockQueue = createMock<Queue>())
+        }
       ]
     }).compile();
 
     controller = module.get<PolygonClippingController>(PolygonClippingController);
+    Object.defineProperty(policyService, "userId", {
+      value: 1,
+      writable: true,
+      configurable: true
+    });
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  describe("createSitePolygonClipping", () => {
+  describe("createSiteClippedVersions", () => {
     const siteUuid = "550e8400-e29b-41d4-a716-446655440000";
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.createSitePolygonClipping(siteUuid)).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
-      expect(clippingService.getFixablePolygonsForSite).not.toHaveBeenCalled();
+      await expect(controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
     });
 
     it("should throw NotFoundException when no fixable polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockResolvedValue([]);
 
-      await expect(controller.createSitePolygonClipping(siteUuid)).rejects.toThrow(NotFoundException);
+      await expect(controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        NotFoundException
+      );
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
     });
 
     it("should successfully create site polygon clipping", async () => {
       const polygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
-      const clippedResults = [
-        {
-          polyUuid: "polygon-uuid-1",
-          polyName: "Test Polygon 1",
-          geometry: sampleMultiPolygon,
-          originalArea: 10.5,
-          newArea: 10.2,
-          areaRemoved: 0.3
-        }
-      ];
 
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
-      clippingService.getOriginalGeometriesGeoJson.mockResolvedValue(sampleFeatureCollection);
-      clippingService.clipPolygons.mockResolvedValue(clippedResults);
-      clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
-      const result = await controller.createSitePolygonClipping(siteUuid);
+      const result = await controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
-      expect(clippingService.getOriginalGeometriesGeoJson).toHaveBeenCalledWith(polygonUuids);
-      expect(clippingService.clipPolygons).toHaveBeenCalledWith(polygonUuids);
-      expect(clippingService.buildGeoJsonResponse).toHaveBeenCalledWith(clippedResults);
-
-      expect(result).toEqual({
-        originalGeometries: sampleFeatureCollection,
-        clippedGeometries: sampleClippedFeatureCollection,
-        summary: {
-          totalPolygonsProcessed: 2,
-          polygonsClipped: 1,
-          message: "Successfully processed 2 polygons, clipped 1 polygons"
-        }
-      });
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          polygonUuids,
+          userId: 1
+        })
+      );
+      expect(result).toBeDefined();
+      expect(result.id).toBe("job-uuid-123");
     });
 
     it("should handle multiple polygons being clipped", async () => {
       const polygonUuids = ["polygon-uuid-1", "polygon-uuid-2", "polygon-uuid-3"];
-      const clippedResults = [
-        {
-          polyUuid: "polygon-uuid-1",
-          polyName: "Test Polygon 1",
-          geometry: sampleMultiPolygon,
-          originalArea: 10.5,
-          newArea: 10.2,
-          areaRemoved: 0.3
-        },
-        {
-          polyUuid: "polygon-uuid-2",
-          polyName: "Test Polygon 2",
-          geometry: samplePolygon,
-          originalArea: 5.2,
-          newArea: 5.0,
-          areaRemoved: 0.2
-        }
-      ];
 
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
-      clippingService.getOriginalGeometriesGeoJson.mockResolvedValue(sampleFeatureCollection);
-      clippingService.clipPolygons.mockResolvedValue(clippedResults);
-      clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
-      const result = await controller.createSitePolygonClipping(siteUuid);
+      const result = await controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 });
 
-      expect(result.summary.totalPolygonsProcessed).toBe(3);
-      expect(result.summary.polygonsClipped).toBe(2);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          polygonUuids
+        })
+      );
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
     });
   });
 
-  describe("createProjectPolygonClipping", () => {
+  describe("createProjectClippedVersions", () => {
     const siteUuid = "550e8400-e29b-41d4-a716-446655440000";
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.createProjectPolygonClipping(siteUuid)).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
+      await expect(controller.createProjectClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.getFixablePolygonsForProjectBySite).not.toHaveBeenCalled();
     });
 
@@ -192,50 +146,35 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForProjectBySite.mockResolvedValue([]);
 
-      await expect(controller.createProjectPolygonClipping(siteUuid)).rejects.toThrow(NotFoundException);
+      await expect(controller.createProjectClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        NotFoundException
+      );
       expect(clippingService.getFixablePolygonsForProjectBySite).toHaveBeenCalledWith(siteUuid);
     });
 
     it("should successfully create project polygon clipping", async () => {
       const polygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
-      const clippedResults = [
-        {
-          polyUuid: "polygon-uuid-1",
-          polyName: "Test Polygon 1",
-          geometry: sampleMultiPolygon,
-          originalArea: 10.5,
-          newArea: 10.2,
-          areaRemoved: 0.3
-        }
-      ];
 
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForProjectBySite.mockResolvedValue(polygonUuids);
-      clippingService.getOriginalGeometriesGeoJson.mockResolvedValue(sampleFeatureCollection);
-      clippingService.clipPolygons.mockResolvedValue(clippedResults);
-      clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
-      const result = await controller.createProjectPolygonClipping(siteUuid);
+      const result = await controller.createProjectClippedVersions(siteUuid, { authenticatedUserId: 1 });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.getFixablePolygonsForProjectBySite).toHaveBeenCalledWith(siteUuid);
-      expect(clippingService.getOriginalGeometriesGeoJson).toHaveBeenCalledWith(polygonUuids);
-      expect(clippingService.clipPolygons).toHaveBeenCalledWith(polygonUuids);
-      expect(clippingService.buildGeoJsonResponse).toHaveBeenCalledWith(clippedResults);
-
-      expect(result).toEqual({
-        originalGeometries: sampleFeatureCollection,
-        clippedGeometries: sampleClippedFeatureCollection,
-        summary: {
-          totalPolygonsProcessed: 2,
-          polygonsClipped: 1,
-          message: "Successfully processed 2 polygons, clipped 1 polygons"
-        }
-      });
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          polygonUuids
+        })
+      );
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
     });
   });
 
-  describe("createPolygonListClipping", () => {
+  describe("createPolygonListClippedVersions", () => {
     const polygonUuids = ["550e8400-e29b-41d4-a716-446655440000", "660e8400-e29b-41d4-a716-446655440001"];
     const payload: PolygonListClippingRequestBody = {
       data: {
@@ -249,8 +188,10 @@ describe("PolygonClippingController", () => {
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.createPolygonListClipping(payload)).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
+      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.filterFixablePolygonsFromList).not.toHaveBeenCalled();
     });
 
@@ -266,7 +207,9 @@ describe("PolygonClippingController", () => {
 
       policyService.authorize.mockResolvedValue(undefined);
 
-      await expect(controller.createPolygonListClipping(emptyPayload)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.createPolygonListClippedVersions(emptyPayload, { authenticatedUserId: 1 })
+      ).rejects.toThrow(BadRequestException);
       expect(clippingService.filterFixablePolygonsFromList).not.toHaveBeenCalled();
     });
 
@@ -274,17 +217,18 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue([]);
 
-      await expect(controller.createPolygonListClipping(payload)).rejects.toThrow(NotFoundException);
+      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
+        NotFoundException
+      );
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(polygonUuids);
     });
 
-    it("should successfully create polygon list clipping", async () => {
+    it("should return ClippedVersionDto for single polygon", async () => {
       const fixablePolygonUuids = ["polygon-uuid-1"];
-      const clippedResults = [
+      const createdVersions = [
         {
-          polyUuid: "polygon-uuid-1",
+          uuid: "version-uuid-1",
           polyName: "Test Polygon 1",
-          geometry: sampleMultiPolygon,
           originalArea: 10.5,
           newArea: 10.2,
           areaRemoved: 0.3
@@ -293,33 +237,20 @@ describe("PolygonClippingController", () => {
 
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
-      clippingService.getOriginalGeometriesGeoJson.mockResolvedValue(sampleFeatureCollection);
-      clippingService.clipPolygons.mockResolvedValue(clippedResults);
-      clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
+      clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
 
-      const result = await controller.createPolygonListClipping(payload);
+      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("readAll", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(polygonUuids);
-      expect(clippingService.getOriginalGeometriesGeoJson).toHaveBeenCalledWith(fixablePolygonUuids);
-      expect(clippingService.clipPolygons).toHaveBeenCalledWith(fixablePolygonUuids);
-      expect(clippingService.buildGeoJsonResponse).toHaveBeenCalledWith(clippedResults);
-
-      expect(result).toEqual({
-        originalGeometries: sampleFeatureCollection,
-        clippedGeometries: sampleClippedFeatureCollection,
-        summary: {
-          totalPolygonsProcessed: 1,
-          polygonsClipped: 1,
-          totalPolygonsRequested: 2,
-          message: "Successfully processed 1 fixable polygons from 2 requested, clipped 1 polygons"
-        }
-      });
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalled();
+      expect(result).toBeDefined();
+      expect(result.id).toBe("version-uuid-1");
     });
 
-    it("should handle case where some requested polygons are not fixable", async () => {
+    it("should return DelayedJobDto for multiple polygons", async () => {
       const requestedUuids = ["polygon-uuid-1", "polygon-uuid-2", "polygon-uuid-3"];
-      const fixablePolygonUuids = ["polygon-uuid-1"];
+      const fixablePolygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
       const payloadMultiple: PolygonListClippingRequestBody = {
         data: {
           type: "polygon-clipping",
@@ -328,28 +259,22 @@ describe("PolygonClippingController", () => {
           }
         }
       };
-      const clippedResults = [
-        {
-          polyUuid: "polygon-uuid-1",
-          polyName: "Test Polygon 1",
-          geometry: sampleMultiPolygon,
-          originalArea: 10.5,
-          newArea: 10.2,
-          areaRemoved: 0.3
-        }
-      ];
 
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
-      clippingService.getOriginalGeometriesGeoJson.mockResolvedValue(sampleFeatureCollection);
-      clippingService.clipPolygons.mockResolvedValue(clippedResults);
-      clippingService.buildGeoJsonResponse.mockReturnValue(sampleClippedFeatureCollection);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
-      const result = await controller.createPolygonListClipping(payloadMultiple);
+      const result = await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
 
-      expect(result.summary.totalPolygonsRequested).toBe(3);
-      expect(result.summary.totalPolygonsProcessed).toBe(1);
-      expect(result.summary.polygonsClipped).toBe(1);
+      expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(requestedUuids);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          polygonUuids: fixablePolygonUuids
+        })
+      );
+      expect(result).toBeDefined();
+      expect(result.id).toBe("job-uuid-123");
     });
   });
 });

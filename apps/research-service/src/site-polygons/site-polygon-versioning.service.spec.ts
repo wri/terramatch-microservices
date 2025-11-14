@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
-import { Transaction } from "sequelize";
+import { Transaction, Op } from "sequelize";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -264,7 +264,7 @@ describe("SitePolygonVersioningService", () => {
         {
           where: {
             primaryUuid: "primary-uuid",
-            uuid: { $ne: "keep-active-uuid" }
+            uuid: { [Op.ne]: "keep-active-uuid" }
           },
           transaction: mockTransaction
         }

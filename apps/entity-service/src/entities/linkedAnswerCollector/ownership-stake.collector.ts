@@ -1,7 +1,20 @@
-import { OwnershipStake } from "@terramatch-microservices/database/entities";
+import { Organisation, OwnershipStake } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { EmbeddedOwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
+import { scopedSync } from "./utils";
+
+const ownershipStakeSync = scopedSync(
+  OwnershipStake,
+  EmbeddedOwnershipStakeDto,
+  model => {
+    if (!(model instanceof Organisation)) {
+      throw new InternalServerErrorException("Only orgs are supported for ownershipStakes");
+    }
+    return OwnershipStake.organisation(model.uuid);
+  },
+  model => ({ organisationId: model.uuid })
+);
 
 export function ownershipStakeCollector(logger: LoggerService): RelationResourceCollector {
   let questionUuid: string;
@@ -26,8 +39,6 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
       answers[questionUuid] = stake == null ? [] : [new EmbeddedOwnershipStakeDto(stake)];
     },
 
-    async syncRelation() {
-      // TODO TM-2624
-    }
+    syncRelation: (...args) => ownershipStakeSync(...args, logger)
   };
 }

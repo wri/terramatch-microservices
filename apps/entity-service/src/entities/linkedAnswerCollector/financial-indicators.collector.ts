@@ -3,7 +3,7 @@ import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../dto/financial-indicator.dto";
-import { Op, WhereAttributeHash } from "sequelize";
+import { CreationAttributes } from "sequelize";
 
 export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
@@ -52,23 +52,34 @@ export function financialIndicatorsCollector(logger: LoggerService): RelationRes
       }
 
       const orgId = isOrg ? model.id : model.organisationId;
-      const indicatorWhere: WhereAttributeHash<FinancialIndicator> = isOrg
-        ? { organisationId: orgId, financialReportId: null }
-        : { financialReportId: model.id };
+      const scope = isOrg ? FinancialIndicator.organisation(orgId) : FinancialIndicator.financialReport(model.id);
       if (answer == null || answer.length === 0) {
-        await FinancialIndicator.destroy({ where: indicatorWhere });
+        await scope.destroy();
         return;
       }
 
-      const includedIds: number[] = [];
-      const indicators = await FinancialIndicator.findAll({ where: indicatorWhere });
+      const toCreate: CreationAttributes<FinancialIndicator>[] = [];
+      const indicators = await scope.findAll();
       const dtos = answer as EmbeddedFinancialIndicatorDto[];
       await Promise.all(
         dtos.map(async dto => {
-          let existing = indicators.find(({ uuid }) => uuid === dto.uuid);
+          const existing = indicators.find(({ uuid }) => uuid === dto.uuid);
 
-          if (existing == null) {
-            existing = await FinancialIndicator.create({
+          if (existing != null) {
+            await existing.update({
+              collection: dto.collection,
+              amount: dto.amount,
+              year: dto.year,
+              description: dto.description,
+              exchangeRate: dto.exchangeRate
+            });
+          } else {
+            const creationUuid =
+              dto.uuid == null || (await FinancialIndicator.count({ where: { uuid: dto.uuid }, paranoid: false })) !== 0
+                ? undefined
+                : dto.uuid;
+            toCreate.push({
+              uuid: creationUuid,
               organisationId: orgId,
               financialReportId: isOrg ? null : model.id,
               collection: dto.collection,
@@ -77,20 +88,11 @@ export function financialIndicatorsCollector(logger: LoggerService): RelationRes
               description: dto.description,
               exchangeRate: dto.exchangeRate
             });
-          } else {
-            await existing.update({
-              collection: dto.collection,
-              amount: dto.amount,
-              year: dto.year,
-              description: dto.description,
-              exchangeRate: dto.exchangeRate
-            });
           }
-          includedIds.push(existing.id);
         })
       );
 
-      await FinancialIndicator.destroy({ where: { ...indicatorWhere, id: { [Op.notIn]: includedIds } } });
+      if (toCreate.length > 0) await FinancialIndicator.bulkCreate(toCreate);
 
       const { startMonth, currency } = dtos[0];
       if (startMonth != null || currency != null) {

@@ -1,9 +1,25 @@
-import { Leadership } from "@terramatch-microservices/database/entities";
+import { Leadership, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { EmbeddedLeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
+import { scopedSync } from "./utils";
+
+const leadershipsSync = scopedSync(
+  Leadership,
+  EmbeddedLeadershipDto,
+  (model, field) => {
+    if (!(model instanceof Organisation)) {
+      throw new InternalServerErrorException("Only orgs are supported for leaderships");
+    }
+    if (field.collection == null) {
+      throw new InternalServerErrorException("No collection found for leaderships field");
+    }
+    return Leadership.organisation(model.id).collection(field.collection);
+  },
+  (model, field) => ({ organisationId: model.id, collection: field.collection })
+);
 
 export function leadershipsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
@@ -43,8 +59,6 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
       }
     },
 
-    async syncRelation() {
-      // TODO TM-2624
-    }
+    syncRelation: (...args) => leadershipsSync(...args, logger)
   };
 }

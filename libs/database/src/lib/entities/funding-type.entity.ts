@@ -10,7 +10,18 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, UUIDV4, UUID } from "sequelize";
+import {
+  BIGINT,
+  INTEGER,
+  STRING,
+  TEXT,
+  UUIDV4,
+  UUID,
+  InferCreationAttributes,
+  CreationOptional,
+  InferAttributes,
+  NonAttribute
+} from "sequelize";
 import { chainScope } from "../util/chain-scope";
 import { Organisation } from "./organisation.entity";
 import { FinancialReport } from "./financial-report.entity";
@@ -24,7 +35,7 @@ import { FinancialReport } from "./financial-report.entity";
   underscored: true,
   paranoid: true
 })
-export class FundingType extends Model<FundingType> {
+export class FundingType extends Model<InferAttributes<FundingType>, InferCreationAttributes<FundingType>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingType";
 
   static organisationByUuid(uuid: string) {
@@ -38,11 +49,11 @@ export class FundingType extends Model<FundingType> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column({ type: UUID, defaultValue: UUIDV4 })
   organisationId: string;
@@ -66,13 +77,13 @@ export class FundingType extends Model<FundingType> {
   financialReportId: number | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid" })
-  organisation: Organisation;
+  organisation: CreationOptional<Organisation>;
 
-  get organisationName() {
-    return this.organisation.name;
+  get organisationName(): NonAttribute<string | undefined> {
+    return this.organisation?.name ?? undefined;
   }
 
-  get organisationUuid() {
-    return this.organisation.uuid;
+  get organisationUuid(): NonAttribute<string> {
+    return this.organisationId;
   }
 }

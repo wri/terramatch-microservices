@@ -583,12 +583,25 @@ describe("SitePolygonsController", () => {
   });
 
   describe("updateVersion", () => {
+    let originalSequelize: typeof SitePolygon.sequelize;
+
     beforeEach(() => {
+      originalSequelize = SitePolygon.sequelize;
       Object.defineProperty(policyService, "userId", {
         value: 1,
         writable: true,
         configurable: true
       });
+    });
+
+    afterEach(() => {
+      if (SitePolygon.sequelize !== originalSequelize) {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize,
+          writable: true,
+          configurable: true
+        });
+      }
     });
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
@@ -640,7 +653,6 @@ describe("SitePolygonsController", () => {
 
     it("should throw BadRequestException when database connection is not available", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const originalSequelize = SitePolygon.sequelize;
       Object.defineProperty(SitePolygon, "sequelize", {
         value: null,
         writable: true,
@@ -656,32 +668,26 @@ describe("SitePolygonsController", () => {
       };
 
       await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(BadRequestException);
-
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: originalSequelize,
-        writable: true,
-        configurable: true
-      });
     });
 
     it("should successfully activate version without comment", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const mockTransaction = {} as Transaction;
-      const mockSequelize = {
-        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
-      };
-      const originalSequelize = SitePolygon.sequelize;
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
-      });
 
       const activatedVersion = await SitePolygonFactory.build({
         uuid: "version-uuid",
         primaryUuid: "primary-uuid",
         versionName: "Test Version",
         isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
       });
 
       versioningService.activateVersion.mockResolvedValue(activatedVersion);
@@ -705,32 +711,26 @@ describe("SitePolygonsController", () => {
       expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
       expect(versioningService.trackChange).not.toHaveBeenCalled();
       expect(result.data).toBeDefined();
-
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: originalSequelize,
-        writable: true,
-        configurable: true
-      });
     });
 
     it("should successfully activate version with comment", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const mockTransaction = {} as Transaction;
-      const mockSequelize = {
-        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
-      };
-      const originalSequelize = SitePolygon.sequelize;
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
-      });
 
       const activatedVersion = await SitePolygonFactory.build({
         uuid: "version-uuid",
         primaryUuid: "primary-uuid",
         versionName: "Test Version",
         isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
       });
 
       versioningService.activateVersion.mockResolvedValue(activatedVersion);
@@ -765,32 +765,26 @@ describe("SitePolygonsController", () => {
         mockTransaction
       );
       expect(result.data).toBeDefined();
-
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: originalSequelize,
-        writable: true,
-        configurable: true
-      });
     });
 
     it("should not track change when comment is empty string", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const mockTransaction = {} as Transaction;
-      const mockSequelize = {
-        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
-      };
-      const originalSequelize = SitePolygon.sequelize;
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
-      });
 
       const activatedVersion = await SitePolygonFactory.build({
         uuid: "version-uuid",
         primaryUuid: "primary-uuid",
         versionName: "Test Version",
         isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
       });
 
       versioningService.activateVersion.mockResolvedValue(activatedVersion);
@@ -812,32 +806,26 @@ describe("SitePolygonsController", () => {
       await controller.updateVersion("version-uuid", request);
 
       expect(versioningService.trackChange).not.toHaveBeenCalled();
-
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: originalSequelize,
-        writable: true,
-        configurable: true
-      });
     });
 
     it("should not track change when comment is null", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const mockTransaction = {} as Transaction;
-      const mockSequelize = {
-        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
-      };
-      const originalSequelize = SitePolygon.sequelize;
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
-      });
 
       const activatedVersion = await SitePolygonFactory.build({
         uuid: "version-uuid",
         primaryUuid: "primary-uuid",
         versionName: "Test Version",
         isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
       });
 
       versioningService.activateVersion.mockResolvedValue(activatedVersion);
@@ -858,12 +846,6 @@ describe("SitePolygonsController", () => {
       await controller.updateVersion("version-uuid", request);
 
       expect(versioningService.trackChange).not.toHaveBeenCalled();
-
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: originalSequelize,
-        writable: true,
-        configurable: true
-      });
     });
   });
 

@@ -77,7 +77,7 @@ export class FundingType extends Model<InferAttributes<FundingType>, InferCreati
   financialReportId: number | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid" })
-  organisation: CreationOptional<Organisation>;
+  organisation: NonAttribute<Organisation>;
 
   get organisationName(): NonAttribute<string | undefined> {
     return this.organisation?.name ?? undefined;

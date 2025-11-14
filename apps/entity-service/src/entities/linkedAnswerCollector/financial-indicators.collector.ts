@@ -1,8 +1,9 @@
-import { FinancialIndicator } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../dto/financial-indicator.dto";
+import { Op, WhereAttributeHash } from "sequelize";
 
 export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
@@ -44,8 +45,59 @@ export function financialIndicatorsCollector(logger: LoggerService): RelationRes
       );
     },
 
-    async syncRelation() {
-      // TODO TM-2624
+    async syncRelation(model, _, answer) {
+      const isOrg = model instanceof Organisation;
+      if (!isOrg && !(model instanceof FinancialReport)) {
+        throw new InternalServerErrorException("Only orgs and financialReports are supported for financialIndicators");
+      }
+
+      const orgId = isOrg ? model.id : model.organisationId;
+      const indicatorWhere: WhereAttributeHash<FinancialIndicator> = isOrg
+        ? { organisationId: orgId, financialReportId: null }
+        : { financialReportId: model.id };
+      if (answer == null || answer.length === 0) {
+        await FinancialIndicator.destroy({ where: indicatorWhere });
+        return;
+      }
+
+      const includedIds: number[] = [];
+      const indicators = await FinancialIndicator.findAll({ where: indicatorWhere });
+      const dtos = answer as EmbeddedFinancialIndicatorDto[];
+      await Promise.all(
+        dtos.map(async dto => {
+          let existing = indicators.find(({ uuid }) => uuid === dto.uuid);
+
+          if (existing == null) {
+            existing = await FinancialIndicator.create({
+              organisationId: orgId,
+              financialReportId: isOrg ? null : model.id,
+              collection: dto.collection,
+              amount: dto.amount,
+              year: dto.year,
+              description: dto.description,
+              exchangeRate: dto.exchangeRate
+            });
+          } else {
+            await existing.update({
+              collection: dto.collection,
+              amount: dto.amount,
+              year: dto.year,
+              description: dto.description,
+              exchangeRate: dto.exchangeRate
+            });
+          }
+          includedIds.push(existing.id);
+        })
+      );
+
+      await FinancialIndicator.destroy({ where: { ...indicatorWhere, id: { [Op.notIn]: includedIds } } });
+
+      const { startMonth, currency } = dtos[0];
+      if (startMonth != null || currency != null) {
+        model.finStartMonth = startMonth;
+        model.currency = currency ?? model.currency;
+        await model.save();
+      }
     }
   };
 }

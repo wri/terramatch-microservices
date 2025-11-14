@@ -85,6 +85,15 @@ describe("SitePolygonsController", () => {
   };
 
   beforeEach(async () => {
+    Object.defineProperty(SitePolygon, "sequelize", {
+      get: jest.fn(() => ({
+        dialect: {
+          name: "postgres"
+        }
+      })),
+      configurable: true
+    });
+
     const module = await Test.createTestingModule({
       controllers: [SitePolygonsController],
       providers: [

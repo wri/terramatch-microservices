@@ -443,6 +443,181 @@ describe("SitePolygonsController", () => {
 
       expect(result.data).toBeDefined();
     });
+
+    it("should throw BadRequestException when creating version with no changes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            geometries: [],
+            attributeChanges: {},
+            changeReason: "Test"
+          }
+        }
+      };
+
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException when database connection is not available for versioning", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      const geometries = [{ type: "FeatureCollection", features: [] }];
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            geometries,
+            changeReason: "Test"
+          }
+        }
+      };
+
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should successfully create a version with geometry changes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid" });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      sitePolygonCreationService.createSitePolygonVersion.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const geometries = [{ type: "FeatureCollection", features: [{ type: "Feature", geometry: {}, properties: {} }] }];
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            geometries,
+            changeReason: "Updated geometry"
+          }
+        }
+      };
+
+      const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
+
+      expect(result.data).toBeDefined();
+      expect(sitePolygonCreationService.createSitePolygonVersion).toHaveBeenCalledWith(
+        "base-uuid",
+        geometries,
+        undefined,
+        "Updated geometry",
+        1,
+        "Test User",
+        "terramatch",
+        mockTransaction
+      );
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should successfully create a version with attribute changes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid" });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      sitePolygonCreationService.createSitePolygonVersion.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const attributeChanges = { polyName: "Updated Name" };
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            attributeChanges,
+            changeReason: "Updated attributes"
+          }
+        }
+      };
+
+      const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
+
+      expect(result.data).toBeDefined();
+      expect(sitePolygonCreationService.createSitePolygonVersion).toHaveBeenCalledWith(
+        "base-uuid",
+        undefined,
+        attributeChanges,
+        "Updated attributes",
+        1,
+        "Test User",
+        "terramatch",
+        mockTransaction
+      );
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
   });
 
   describe("bulkUpdate", () => {

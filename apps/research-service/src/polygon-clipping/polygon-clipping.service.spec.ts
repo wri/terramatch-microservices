@@ -1124,6 +1124,45 @@ describe("PolygonClippingService", () => {
   });
 
   describe("getFixableOverlapPairs", () => {
+    it("should return empty array when no polygon UUIDs provided", async () => {
+      const mockCriteriaRecords: MockCriteriaSiteRecord[] = [];
+      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue(mockCriteriaRecords as unknown as CriteriaSite[]);
+
+      const result = await service["getFixableOverlapPairs"]([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should continue when extraInfo is null", async () => {
+      const polygonUuid1 = "polygon-uuid-1";
+
+      const mockCriteriaRecord: MockCriteriaSiteRecord = {
+        polygonId: polygonUuid1,
+        extraInfo: null
+      };
+
+      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
+
+      const result = await service["getFixableOverlapPairs"]([polygonUuid1]);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should continue when extraInfo is not an array", async () => {
+      const polygonUuid1 = "polygon-uuid-1";
+
+      const mockCriteriaRecord: MockCriteriaSiteRecord = {
+        polygonId: polygonUuid1,
+        extraInfo: "not an array"
+      };
+
+      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
+
+      const result = await service["getFixableOverlapPairs"]([polygonUuid1]);
+
+      expect(result).toEqual([]);
+    });
+
     it("should handle duplicate pairs", async () => {
       const polygonUuid1 = "polygon-uuid-1";
       const polygonUuid2 = "polygon-uuid-2";

@@ -77,9 +77,39 @@ describe("PolygonClippingController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
     });
 
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      await expect(controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
     it("should throw NotFoundException when no fixable polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockResolvedValue([]);
+
+      await expect(controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        NotFoundException
+      );
+      expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
+    });
+
+    it("should throw NotFoundException when site is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue(["polygon-uuid-1"]);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
 
       await expect(controller.createSiteClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
@@ -142,9 +172,39 @@ describe("PolygonClippingController", () => {
       expect(clippingService.getFixablePolygonsForProjectBySite).not.toHaveBeenCalled();
     });
 
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      await expect(controller.createProjectClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
     it("should throw NotFoundException when no fixable polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForProjectBySite.mockResolvedValue([]);
+
+      await expect(controller.createProjectClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
+        NotFoundException
+      );
+      expect(clippingService.getFixablePolygonsForProjectBySite).toHaveBeenCalledWith(siteUuid);
+    });
+
+    it("should throw NotFoundException when site is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForProjectBySite.mockResolvedValue(["polygon-uuid-1"]);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
 
       await expect(controller.createProjectClippedVersions(siteUuid, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
@@ -193,6 +253,25 @@ describe("PolygonClippingController", () => {
       );
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.filterFixablePolygonsFromList).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
+        UnauthorizedException
+      );
+
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
     });
 
     it("should throw BadRequestException when no polygon UUIDs are provided", async () => {
@@ -246,6 +325,19 @@ describe("PolygonClippingController", () => {
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalled();
       expect(result).toBeDefined();
       expect(result.id).toBe("version-uuid-1");
+    });
+
+    it("should throw NotFoundException when single polygon fails to clip", async () => {
+      const fixablePolygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      clippingService.clipAndCreateVersions.mockResolvedValue([]);
+
+      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
+        NotFoundException
+      );
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalled();
     });
 
     it("should return DelayedJobDto for multiple polygons", async () => {

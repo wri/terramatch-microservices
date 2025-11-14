@@ -357,11 +357,25 @@ describe("SitePolygonVersioningService", () => {
 
     it("should return polygon when valid", async () => {
       const polygon = { uuid: "test-uuid", primaryUuid: "primary-uuid" } as unknown as SitePolygon;
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(polygon);
+      const activePolygon = {
+        uuid: "active-uuid",
+        primaryUuid: "primary-uuid",
+        isActive: true
+      } as unknown as SitePolygon;
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValueOnce(polygon).mockResolvedValueOnce(activePolygon);
 
       const result = await service.validateVersioningEligibility("test-uuid");
 
-      expect(result).toBe(polygon);
+      expect(result).toBe(activePolygon);
+      expect(SitePolygon.findOne).toHaveBeenCalledTimes(2);
+    });
+
+    it("should throw NotFoundException when no active version found", async () => {
+      const polygon = { uuid: "test-uuid", primaryUuid: "primary-uuid" } as unknown as SitePolygon;
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValueOnce(polygon).mockResolvedValueOnce(null);
+
+      await expect(service.validateVersioningEligibility("test-uuid")).rejects.toThrow(NotFoundException);
+      expect(SitePolygon.findOne).toHaveBeenCalledTimes(2);
     });
   });
 });

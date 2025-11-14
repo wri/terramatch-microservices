@@ -5,7 +5,7 @@ import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
@@ -18,6 +18,7 @@ import { serialize } from "@terramatch-microservices/common/util/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { VersionUpdateRequestDto } from "./dto/version-update.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -28,10 +29,28 @@ describe("SitePolygonsController", () => {
   let polygonGeometryService: DeepMocked<PolygonGeometryCreationService>;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
+  let versioningService: DeepMocked<SitePolygonVersioningService>;
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {
+    interface MockBuilder {
+      execute: jest.Mock;
+      paginationTotal: jest.Mock;
+      hasStatuses: jest.Mock;
+      modifiedSince: jest.Mock;
+      isMissingIndicators: jest.Mock;
+      hasPresentIndicators: jest.Mock;
+      lightResource: jest.Mock;
+      order: jest.Mock;
+      filterProjectUuids: jest.Mock;
+      filterProjectAttributes: jest.Mock;
+      filterSiteUuids: jest.Mock;
+      excludeTestProjects: jest.Mock;
+      filterValidationStatus: jest.Mock;
+      filterProjectShortNames: jest.Mock;
+      filterPolygonUuids: jest.Mock;
+      addSearch?: jest.Mock;
+    }
+    const builder: MockBuilder = {
       execute: jest.fn(),
       paginationTotal: jest.fn(),
       hasStatuses: jest.fn().mockReturnThis(),
@@ -39,19 +58,28 @@ describe("SitePolygonsController", () => {
       isMissingIndicators: jest.fn().mockReturnThis(),
       hasPresentIndicators: jest.fn().mockReturnThis(),
       lightResource: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis()
+      order: jest.fn().mockReturnThis(),
+      filterProjectUuids: jest.fn(),
+      filterProjectAttributes: jest.fn(),
+      filterSiteUuids: jest.fn(),
+      excludeTestProjects: jest.fn(),
+      filterValidationStatus: jest.fn(),
+      filterProjectShortNames: jest.fn(),
+      filterPolygonUuids: jest.fn()
     };
-    builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
-    builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
-    builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
-    builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectShortNames = jest.fn().mockResolvedValue(builder);
-    builder.filterPolygonUuids = jest.fn().mockResolvedValue(builder);
+    builder.filterProjectUuids.mockResolvedValue(builder);
+    builder.filterProjectAttributes.mockResolvedValue(builder);
+    builder.filterSiteUuids.mockResolvedValue(builder);
+    builder.excludeTestProjects.mockResolvedValue(builder);
+    builder.filterValidationStatus.mockResolvedValue(builder);
+    builder.filterProjectShortNames.mockResolvedValue(builder);
+    builder.filterPolygonUuids.mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
     builder.paginationTotal.mockResolvedValue(totalResult);
-    sitePolygonService.buildQuery.mockResolvedValue(builder);
+    sitePolygonService.buildQuery.mockResolvedValue(
+      builder as unknown as ReturnType<typeof sitePolygonService.buildQuery>
+    );
 
     return builder;
   };
@@ -76,7 +104,7 @@ describe("SitePolygonsController", () => {
         },
         {
           provide: SitePolygonVersioningService,
-          useValue: createMock<SitePolygonVersioningService>()
+          useValue: (versioningService = createMock<SitePolygonVersioningService>())
         }
       ]
     }).compile();
@@ -522,6 +550,208 @@ describe("SitePolygonsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
       expect(sitePolygonService.deleteSitePolygon).toHaveBeenCalledWith(sitePolygon.uuid);
+      expect(result).toHaveProperty("meta");
+      expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
+      expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+  });
+
+  describe("getVersions", () => {
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.getVersions(sitePolygon.uuid)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+    });
+
+    it("should throw NotFoundException when polygon is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+
+      await expect(controller.getVersions("non-existent-uuid")).rejects.toThrow(NotFoundException);
+    });
+
+    it("should return all versions for a polygon", async () => {
+      const sitePolygon = await SitePolygonFactory.build({ primaryUuid: "primary-uuid-1" });
+      const version1 = await SitePolygonFactory.build({ primaryUuid: "primary-uuid-1", uuid: "version-1" });
+      const version2 = await SitePolygonFactory.build({ primaryUuid: "primary-uuid-1", uuid: "version-2" });
+
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+
+      versioningService.getVersionHistory.mockResolvedValue([version1, version2]);
+
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(version1, []));
+
+      const result = serialize(await controller.getVersions(sitePolygon.uuid));
+
+      expect(versioningService.getVersionHistory).toHaveBeenCalledWith("primary-uuid-1");
+      expect(result.data).toBeDefined();
+    });
+  });
+
+  describe("updateVersion", () => {
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      const request: VersionUpdateRequestDto = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("uuid", request)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      const request: VersionUpdateRequestDto = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("uuid", request)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw BadRequestException when isActive is not true", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const request: VersionUpdateRequestDto = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            isActive: false
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("uuid", request)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should successfully activate a version", async () => {
+      const sitePolygon = await SitePolygonFactory.build({ uuid: "version-uuid", primaryUuid: "primary-uuid" });
+      policyService.authorize.mockResolvedValue(undefined);
+
+      versioningService.activateVersion.mockResolvedValue(sitePolygon);
+      versioningService.trackChange.mockResolvedValue(undefined);
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        get: jest.fn(() => ({
+          transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback({})))
+        })),
+        configurable: true
+      });
+
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      const request: VersionUpdateRequestDto = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      const result = serialize(await controller.updateVersion("version-uuid", request));
+
+      expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, expect.anything());
+      expect(result.data).toBeDefined();
+    });
+
+    it("should track comment when provided", async () => {
+      const sitePolygon = await SitePolygonFactory.build({ uuid: "version-uuid", primaryUuid: "primary-uuid" });
+      policyService.authorize.mockResolvedValue(undefined);
+
+      versioningService.activateVersion.mockResolvedValue(sitePolygon);
+      versioningService.trackChange.mockResolvedValue(undefined);
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        get: jest.fn(() => ({
+          transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback({})))
+        })),
+        configurable: true
+      });
+
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      const request: VersionUpdateRequestDto = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            isActive: true,
+            comment: "Test comment"
+          }
+        }
+      };
+
+      await controller.updateVersion("version-uuid", request);
+
+      expect(versioningService.trackChange).toHaveBeenCalledWith(
+        "primary-uuid",
+        expect.any(String),
+        "Comment: Test comment",
+        1,
+        "update",
+        undefined,
+        undefined,
+        expect.anything()
+      );
+    });
+  });
+
+  describe("deleteVersion", () => {
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.deleteVersion(sitePolygon.uuid)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+    });
+
+    it("should throw NotFoundException when polygon is not found", async () => {
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+
+      await expect(controller.deleteVersion("non-existent-uuid")).rejects.toThrow(NotFoundException);
+    });
+
+    it("should successfully delete a version", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.deleteSingleVersion.mockResolvedValue(undefined);
+
+      const result = await controller.deleteVersion(sitePolygon.uuid);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(sitePolygonService.deleteSingleVersion).toHaveBeenCalledWith(sitePolygon.uuid);
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);

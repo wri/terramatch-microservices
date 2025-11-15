@@ -4,19 +4,21 @@ import { RelationResourceCollector } from "./index";
 import { EmbeddedOwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { scopedSync } from "./utils";
 
-const ownershipStakeSync = scopedSync(
-  OwnershipStake,
-  EmbeddedOwnershipStakeDto,
-  model => {
-    if (!(model instanceof Organisation)) {
-      throw new InternalServerErrorException("Only orgs are supported for ownershipStakes");
-    }
-    return OwnershipStake.organisation(model.uuid);
-  },
-  model => ({ organisationId: model.uuid })
-);
-
 export function ownershipStakeCollector(logger: LoggerService): RelationResourceCollector {
+  // This has to be created when the collector factory is created instead at module init because
+  // the model has to have been initialized with a Sequelize instance first.
+  const ownershipStakeSync = scopedSync(
+    OwnershipStake,
+    EmbeddedOwnershipStakeDto,
+    model => {
+      if (!(model instanceof Organisation)) {
+        throw new InternalServerErrorException("Only orgs are supported for ownershipStakes");
+      }
+      return OwnershipStake.organisation(model.uuid);
+    },
+    model => ({ organisationId: model.uuid })
+  );
+
   let questionUuid: string;
 
   return {

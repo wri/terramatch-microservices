@@ -6,22 +6,24 @@ import { Op } from "sequelize";
 import { EmbeddedLeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { scopedSync } from "./utils";
 
-const leadershipsSync = scopedSync(
-  Leadership,
-  EmbeddedLeadershipDto,
-  (model, field) => {
-    if (!(model instanceof Organisation)) {
-      throw new InternalServerErrorException("Only orgs are supported for leaderships");
-    }
-    if (field.collection == null) {
-      throw new InternalServerErrorException("No collection found for leaderships field");
-    }
-    return Leadership.organisation(model.id).collection(field.collection);
-  },
-  (model, field) => ({ organisationId: model.id, collection: field.collection })
-);
-
 export function leadershipsCollector(logger: LoggerService): RelationResourceCollector {
+  // This has to be created when the collector factory is created instead at module init because
+  // the model has to have been initialized with a Sequelize instance first.
+  const leadershipsSync = scopedSync(
+    Leadership,
+    EmbeddedLeadershipDto,
+    (model, field) => {
+      if (!(model instanceof Organisation)) {
+        throw new InternalServerErrorException("Only orgs are supported for leaderships");
+      }
+      if (field.collection == null) {
+        throw new InternalServerErrorException("No collection found for leaderships field");
+      }
+      return Leadership.organisation(model.id).collection(field.collection);
+    },
+    (model, field) => ({ organisationId: model.id, collection: field.collection })
+  );
+
   const questions: Dictionary<string> = {};
 
   return {

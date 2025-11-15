@@ -1,6 +1,12 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { LocalizationKey, ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
+import {
+  LocalizationKeyEntity,
+  ModelHasRole,
+  Role,
+  User,
+  Verification
+} from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
@@ -63,7 +69,7 @@ describe("UserCreationService", () => {
   }
 
   beforeAll(async () => {
-    await LocalizationKey.truncate();
+    await LocalizationKeyEntity.truncate();
   });
 
   beforeEach(async () => {

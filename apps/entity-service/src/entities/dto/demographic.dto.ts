@@ -63,11 +63,11 @@ export class DemographicEntryDto {
   @ApiProperty()
   type: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  subtype: string | null;
+  @ApiProperty({ required: false, nullable: true, type: String })
+  subtype?: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  name: string | null;
+  @ApiProperty({ required: false, nullable: true, type: String })
+  name?: string | null;
 
   @ApiProperty()
   amount: number;

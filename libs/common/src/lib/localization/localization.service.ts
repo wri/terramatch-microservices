@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { I18nItem, I18nTranslation, LocalizationKeyEntity } from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { Attributes, Model, Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { ITranslateParams, normalizeLocale, tx, t } from "@transifex/native";
@@ -87,8 +87,8 @@ export class LocalizationService {
     );
   }
 
-  async getLocalizationKeys(keys: string[]): Promise<LocalizationKeyEntity[]> {
-    return await LocalizationKeyEntity.findAll({ where: { key: { [Op.in]: keys } } });
+  async getLocalizationKeys(keys: string[]): Promise<LocalizationKey[]> {
+    return await LocalizationKey.findAll({ where: { key: { [Op.in]: keys } } });
   }
 
   /**

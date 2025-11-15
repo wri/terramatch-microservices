@@ -3,7 +3,7 @@ import { BIGINT, INTEGER, STRING, TEXT } from "sequelize";
 import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "localization_keys", underscored: true })
-export class LocalizationKeyEntity extends Model<LocalizationKeyEntity> {
+export class LocalizationKey extends Model<LocalizationKey> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

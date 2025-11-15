@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
-import { I18nItem, I18nTranslation, LocalizationKeyEntity } from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { ConfigService } from "@nestjs/config";
 import { normalizeLocale, t, tx } from "@transifex/native";
@@ -42,14 +42,14 @@ describe("LocalizationService", () => {
     });
 
     it("should return one localization key when a matching key is found", async () => {
-      const localization = [new LocalizationKeyEntity()];
-      jest.spyOn(LocalizationKeyEntity, "findAll").mockImplementation(() => Promise.resolve(localization));
+      const localization = [new LocalizationKey()];
+      jest.spyOn(LocalizationKey, "findAll").mockImplementation(() => Promise.resolve(localization));
       const result = await service.getLocalizationKeys(["foo"]);
       expect(result.length).toBe(1);
     });
 
     it("should return an empty array when none of the keys are found", async () => {
-      await LocalizationKeyEntity.truncate();
+      await LocalizationKey.truncate();
       expect(await service.getLocalizationKeys(["foo", "bar"])).toStrictEqual([]);
     });
   });
@@ -123,7 +123,7 @@ describe("LocalizationService", () => {
     });
 
     it("should throw if a localization key is missing", async () => {
-      await LocalizationKeyEntity.truncate();
+      await LocalizationKey.truncate();
       await expect(service.translateKeys({ foo: "bar" }, "es-MX")).rejects.toThrow(NotFoundException);
     });
 

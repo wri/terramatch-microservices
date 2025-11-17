@@ -327,52 +327,22 @@ export class SitePolygonsController {
   @Post("geometry/upload")
   @ApiOperation({
     operationId: "uploadGeometryFile",
-    summary: "Upload and process geometry file (KML, Shapefile, GeoJSON)",
-    description: `Uploads a geometry file (KML, Shapefile, or GeoJSON), parses it using pure JavaScript libraries,
-      and creates site polygons from the geometries. The file is processed in memory - no GDAL required.
+    summary: "Upload and parse geometry file (KML, Shapefile, GeoJSON)",
+    description: `Parses a geometry file (KML, Shapefile, or GeoJSON) and returns GeoJSON.
       Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
   })
   @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
-  @JsonApiResponse([SitePolygonLightDto])
+  @ApiOkResponse({ description: "File parsed successfully, returns GeoJSON FeatureCollection" })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, {
     description: "Invalid file format, file parsing failed, or no features found in file."
   })
-  async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() _payload: GeometryUploadRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
 
-    const user = await User.findByPk(userId, {
-      include: [{ association: "roles", attributes: ["name"] }]
-    });
-    const source = user?.getSourceFromRoles() ?? "terramatch";
-    const { data: createdSitePolygons, included: validations } =
-      await this.geometryFileProcessingService.processGeometryFile(file, userId, source, user?.fullName ?? null);
-
-    const document = buildJsonApi(SitePolygonLightDto);
-    const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
-
-    for (const sitePolygon of createdSitePolygons) {
-      document.addData(
-        sitePolygon.uuid,
-        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
-      );
-    }
-
-    if (validations.length > 0) {
-      for (const validation of validations) {
-        const validationDto = populateDto(new ValidationDto(), {
-          polygonUuid: validation.attributes.polygonUuid,
-          criteriaList: validation.attributes.criteriaList
-        });
-        document.addData(validation.id, validationDto);
-      }
-    }
-
-    return document;
+    return geojson;
   }
 }

@@ -1,91 +1,26 @@
-import { Injectable, BadRequestException, Logger } from "@nestjs/common";
-import { FeatureCollection } from "geojson";
-import { SitePolygonCreationService } from "./site-polygon-creation.service";
-import { CreateSitePolygonBatchRequestDto, CreateSitePolygonRequestDto } from "./dto/create-site-polygon-request.dto";
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { FeatureCollection, Feature } from "geojson";
+import * as shapefile from "shapefile";
+import AdmZip = require("adm-zip");
 import "multer";
 
-/**
- * Service for processing geometry files (KML, Shapefile, GeoJSON) and converting them to site polygons.
- */
 @Injectable()
 export class GeometryFileProcessingService {
-  private readonly logger = new Logger(GeometryFileProcessingService.name);
-
-  constructor(private readonly sitePolygonCreationService: SitePolygonCreationService) {}
-
-  /**
-   * Processes a geometry file and creates site polygons from it.
-   *
-   * Files are processed in memory only - NOT stored to S3 (they are temporary).
-   *
-   * Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)
-   *
-   * @param file The uploaded file from multer
-   * @param userId The user ID creating the polygons
-   * @param source The source of the polygons (e.g., "terramatch")
-   * @param userFullName The full name of the user
-   * @returns The created site polygons and validation results
-   */
-  async processGeometryFile(
-    file: Express.Multer.File,
-    userId: number,
-    source: string,
-    userFullName: string | null
-  ): Promise<{
-    data: Awaited<ReturnType<SitePolygonCreationService["createSitePolygons"]>>["data"];
-    included: Awaited<ReturnType<SitePolygonCreationService["createSitePolygons"]>>["included"];
-  }> {
+  async parseGeometryFile(file: Express.Multer.File): Promise<FeatureCollection> {
     if (file == null) {
       throw new BadRequestException("No file provided");
     }
 
-    this.logger.log(`🔵 Starting geometry file processing`);
-    this.logger.log(`📁 File: ${file.originalname}`);
-    this.logger.log(`📊 Size: ${(file.size / 1024).toFixed(2)} KB`);
-    this.logger.log(`📋 MIME type: ${file.mimetype}`);
-    this.logger.log(`👤 User: ${userId} (${userFullName ?? "no name"})`);
-
-    const geojson = await this.parseGeometryFile(file);
+    const geojson = await this.parseFile(file);
 
     if (geojson.features == null || geojson.features.length === 0) {
       throw new BadRequestException("No features found in the uploaded file");
     }
 
-    this.logger.log(`✅ Successfully parsed ${geojson.features.length} features from ${file.originalname}`);
-
-    const validFeatures = geojson.features.filter(feature => feature.properties != null);
-
-    if (validFeatures.length === 0) {
-      throw new BadRequestException("No features with valid properties found in the file");
-    }
-
-    if (validFeatures.length < geojson.features.length) {
-      this.logger.warn(
-        `⚠️  Filtered out ${geojson.features.length - validFeatures.length} features with null properties`
-      );
-    }
-
-    const batchRequest: CreateSitePolygonBatchRequestDto = {
-      geometries: [{ ...geojson, features: validFeatures } as CreateSitePolygonRequestDto]
-    };
-
-    this.logger.log(`🔄 Creating site polygons in database...`);
-
-    const result = await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, userFullName);
-
-    this.logger.log(`✅ Successfully created ${result.data.length} site polygons`);
-    this.logger.log(`ℹ️  Note: Original file was NOT stored (processed in memory only)`);
-
-    return result;
+    return geojson;
   }
 
-  /**
-   * Parses a geometry file based on its type and returns GeoJSON.
-   *
-   * @param file The uploaded file
-   * @returns A GeoJSON FeatureCollection
-   */
-  private async parseGeometryFile(file: Express.Multer.File): Promise<FeatureCollection> {
+  private async parseFile(file: Express.Multer.File): Promise<FeatureCollection> {
     const fileName = file.originalname.toLowerCase();
     const mimeType = file.mimetype.toLowerCase();
 
@@ -110,9 +45,6 @@ export class GeometryFileProcessingService {
     );
   }
 
-  /**
-   * Parses a GeoJSON file.
-   */
   private async parseGeoJSON(file: Express.Multer.File): Promise<FeatureCollection> {
     try {
       const content = file.buffer.toString("utf-8");
@@ -140,8 +72,58 @@ export class GeometryFileProcessingService {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private async parseShapefile(_: Express.Multer.File): Promise<FeatureCollection> {
-    throw new BadRequestException("Shapefile parsing not yet implemented. Please install shpjs package.");
+  private async parseShapefile(file: Express.Multer.File): Promise<FeatureCollection> {
+    try {
+      const zip = new AdmZip(file.buffer);
+      const zipEntries = zip.getEntries();
+
+      const shpEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith(".shp"));
+      const dbfEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith(".dbf"));
+
+      if (shpEntry == null) {
+        throw new BadRequestException("ZIP file must contain a .shp file");
+      }
+
+      if (dbfEntry == null) {
+        throw new BadRequestException("ZIP file must contain a .dbf file (required for attributes)");
+      }
+
+      const shpBuffer = shpEntry.getData();
+      const dbfBuffer = dbfEntry.getData();
+
+      const source = await shapefile.open(shpBuffer, dbfBuffer);
+      const features: Feature[] = [];
+
+      let result = await source.read();
+      while (result.done === false) {
+        if (result.value != null) {
+          features.push(result.value);
+        }
+        result = await source.read();
+      }
+
+      if (features.length === 0) {
+        throw new BadRequestException("Shapefile contains no features");
+      }
+
+      return {
+        type: "FeatureCollection",
+        features
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.toLowerCase().includes("invalid") || errorMessage.toLowerCase().includes("shp")) {
+        throw new BadRequestException(
+          `Invalid Shapefile format. Please ensure the ZIP contains .shp, .shx, and .dbf files. Error: ${errorMessage}`
+        );
+      }
+
+      throw new BadRequestException(`Failed to parse Shapefile: ${errorMessage}`);
+    }
   }
 }

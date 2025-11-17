@@ -36,6 +36,12 @@ export const REPORT_MODELS: Record<ReportType, ReportClass<ReportModel>> = {
   srpReports: SrpReport
 };
 
+export const NOTHING_TO_REPORT_MODELS = [SiteReport, NurseryReport, FinancialReport, DisturbanceReport, SrpReport];
+export type NothingToReportModel = SiteReport | NurseryReport | FinancialReport | DisturbanceReport | SrpReport;
+
+export const TASK_MODELS = [ProjectReport, SiteReport, NurseryReport, SrpReport];
+export type TaskModel = ProjectReport | SiteReport | NurseryReport | SrpReport;
+
 export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
@@ -63,6 +69,10 @@ export const isEntity = (entity: Model): entity is EntityModel =>
   Object.values(ENTITY_MODELS).find(model => entity instanceof model) != null;
 export const isReport = (entity: Model): entity is ReportModel =>
   Object.values(REPORT_MODELS).find(model => entity instanceof model) != null;
+export const hasNothingToReport = (entity: Model): entity is NothingToReportModel =>
+  NOTHING_TO_REPORT_MODELS.find(model => entity instanceof model) != null;
+export const hasTaskId = (entity: Model): entity is TaskModel =>
+  TASK_MODELS.find(model => entity instanceof model) != null;
 
 /**
  * Get the project ID associated with the given entity, which may be any one of EntityModels defined in this file.

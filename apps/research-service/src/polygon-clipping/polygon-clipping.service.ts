@@ -678,8 +678,6 @@ export class PolygonClippingService {
               newArea: clippedResult.newArea,
               areaRemoved: clippedResult.areaRemoved
             });
-
-            this.logger.log(`Created version ${newVersion.uuid} for polygon ${baseSitePolygon.uuid}`);
           } catch (error) {
             this.logger.error(`Failed to create version for polygon ${baseSitePolygon.uuid}`, error);
           }
@@ -689,7 +687,6 @@ export class PolygonClippingService {
       });
     }
 
-    this.logger.log(`Successfully created ${results.length} polygon versions`);
     return results;
   }
 }

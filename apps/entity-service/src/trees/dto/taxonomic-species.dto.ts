@@ -9,7 +9,8 @@ export class TaxonomicSpeciesDto {
 
   @ApiProperty({
     nullable: true,
-    type: [String],
+    type: String,
+    isArray: true,
     description: "Array of ISO 3166-1 alpha-3 country codes (GADM level 0) where this species is native",
     example: ["GHA", "KEN"]
   })
@@ -17,7 +18,8 @@ export class TaxonomicSpeciesDto {
 
   @ApiProperty({
     nullable: true,
-    type: [String],
+    type: String,
+    isArray: true,
     description: "Array of suitability tags (e.g., 'chimpanzee' for research collaborations)",
     example: ["chimpanzee"]
   })

@@ -5,6 +5,7 @@ import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
+import { GeometryFileProcessingService } from "./site-polygons/geometry-file-processing.service";
 import { APP_FILTER } from "@nestjs/core";
 import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
@@ -50,6 +51,7 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
     SitePolygonCreationService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
+    GeometryFileProcessingService,
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,

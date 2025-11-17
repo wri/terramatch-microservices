@@ -10,8 +10,11 @@ import {
   Patch,
   Post,
   Query,
-  UnauthorizedException
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -35,7 +38,11 @@ import {
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { PolicyService } from "@terramatch-microservices/common";
+import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
+import "multer";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
@@ -61,6 +68,7 @@ export class SitePolygonsController {
   constructor(
     private readonly sitePolygonService: SitePolygonsService,
     private readonly sitePolygonCreationService: SitePolygonCreationService,
+    private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly policyService: PolicyService
   ) {}
 
@@ -314,5 +322,57 @@ export class SitePolygonsController {
     await this.sitePolygonService.deleteSitePolygon(uuid);
 
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
+  @Post("geometry/upload")
+  @ApiOperation({
+    operationId: "uploadGeometryFile",
+    summary: "Upload and process geometry file (KML, Shapefile, GeoJSON)",
+    description: `Uploads a geometry file (KML, Shapefile, or GeoJSON), parses it using pure JavaScript libraries,
+      and creates site polygons from the geometries. The file is processed in memory - no GDAL required.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse([SitePolygonLightDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const user = await User.findByPk(userId, {
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+    const { data: createdSitePolygons, included: validations } =
+      await this.geometryFileProcessingService.processGeometryFile(file, userId, source, user?.fullName ?? null);
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
+
+    for (const sitePolygon of createdSitePolygons) {
+      document.addData(
+        sitePolygon.uuid,
+        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+      );
+    }
+
+    if (validations.length > 0) {
+      for (const validation of validations) {
+        const validationDto = populateDto(new ValidationDto(), {
+          polygonUuid: validation.attributes.polygonUuid,
+          criteriaList: validation.attributes.criteriaList
+        });
+        document.addData(validation.id, validationDto);
+      }
+    }
+
+    return document;
   }
 }

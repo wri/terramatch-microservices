@@ -5,10 +5,12 @@ import {
   Media,
   Project,
   ProjectUser,
+  ScheduledJob,
   Seeding,
   Site,
   SitePolygon,
   SiteReport,
+  Task,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
@@ -18,6 +20,8 @@ import { Includeable, Op } from "sequelize";
 import { groupBy, sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { SiteUpdateAttributes } from "../dto/entity-update.dto";
+import { EntityCreateAttributes } from "../dto/entity-create.dto";
+import { DateTime } from "luxon";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -317,5 +321,44 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
 
     await super.delete(site);
+  }
+
+  async create({ parentUuid }: EntityCreateAttributes) {
+    const project = await Project.findOne({ where: { uuid: parentUuid }, attributes: ["frameworkKey", "id"] });
+    if (project == null) {
+      throw new BadRequestException(`Project with uuid ${parentUuid} not found`);
+    }
+
+    const site = await this.authorizedCreation(Site, {
+      projectId: project.id,
+      frameworkKey: project.frameworkKey
+    });
+
+    const task = await Task.forProject(project.id).dueAtDesc().findOne();
+    if (task != null) {
+      // If we have a task due in the future, create a report
+      let createReport = DateTime.now() <= DateTime.fromJSDate(task.dueAt);
+
+      // Also, if we're more than 4 weeks before the next task will be generated, create a backdated
+      // report for the previous period.
+      if (!createReport) {
+        const nextTask =
+          project.frameworkKey == null ? undefined : await ScheduledJob.taskDue(project.frameworkKey).findOne();
+        createReport =
+          nextTask != null && DateTime.fromISO(nextTask.taskDefinition["dueAt"]) > DateTime.now().plus({ weeks: 4 });
+      }
+
+      if (createReport) {
+        await SiteReport.create({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          siteId: site.id,
+          dueAt: task.dueAt,
+          createdBy: this.entitiesService.userId
+        });
+      }
+    }
+
+    return site;
   }
 }

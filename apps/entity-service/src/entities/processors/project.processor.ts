@@ -184,7 +184,7 @@ export class ProjectProcessor extends EntityProcessor<
           );
 
     const assistedNaturalRegenerationList: ANRDto[] = approvedSites.map(({ id, name }) => ({
-      name,
+      name: name ?? "",
       treeCount: sumBy(approvedSiteReports[id], "numTreesRegenerating") ?? 0
     }));
     const regeneratedTreesCount = sumBy(assistedNaturalRegenerationList, "treeCount");

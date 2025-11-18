@@ -294,7 +294,10 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   async create(createPayload: EntityCreateAttributes) {
-    const project = await Project.findOne({ where: { uuid: createPayload.parentUuid } });
+    const project = await Project.findOne({
+      where: { uuid: createPayload.parentUuid },
+      attributes: ["frameworkKey", "id"]
+    });
     if (project == null) {
       throw new BadRequestException(`Project with UUID ${createPayload.parentUuid} not found`);
     }

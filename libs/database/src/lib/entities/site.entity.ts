@@ -11,7 +11,21 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -50,7 +64,7 @@ type SiteMedia =
   project: (id: number) => ({ where: { projectId: id } })
 }))
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true, hooks: { afterCreate: statusUpdateSequelizeHook } })
-export class Site extends Model<Site> {
+export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<Site>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = [APPROVED] as EntityStatus[];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
@@ -109,13 +123,14 @@ export class Site extends Model<Site> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
+  @AllowNull
   @Column(STRING)
-  name: string;
+  name: string | null;
 
   @StateMachineColumn(EntityStatusStates)
-  status: EntityStatus;
+  status: CreationOptional<EntityStatus>;
 
   @AllowNull
   @Column(STRING)
@@ -123,7 +138,7 @@ export class Site extends Model<Site> {
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)

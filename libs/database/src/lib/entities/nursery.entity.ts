@@ -11,7 +11,19 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -43,7 +55,7 @@ type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class Nursery extends Model<Nursery> {
+export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttributes<Nursery>> {
   static readonly APPROVED_STATUSES = [APPROVED];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
@@ -78,14 +90,14 @@ export class Nursery extends Model<Nursery> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @StateMachineColumn(EntityStatusStates)
-  status: EntityStatus;
+  status: CreationOptional<EntityStatus>;
 
   @AllowNull
   @Column(STRING)

@@ -11,7 +11,21 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  NonAttribute,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import {
@@ -47,7 +61,7 @@ type NurseryReportMedia = "media" | "file" | "otherAdditionalDocuments" | "treeS
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class NurseryReport extends Model<NurseryReport> {
+export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCreationAttributes<NurseryReport>> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly PARENT_ID = "nurseryId";
@@ -94,11 +108,11 @@ export class NurseryReport extends Model<NurseryReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -112,9 +126,10 @@ export class NurseryReport extends Model<NurseryReport> {
   @Column(BIGINT.UNSIGNED)
   createdBy: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  approvedBy: number | null;
 
   @BelongsTo(() => Nursery)
   nursery: Nursery | null;
@@ -181,9 +196,9 @@ export class NurseryReport extends Model<NurseryReport> {
   task: Task | null;
 
   @StateMachineColumn(ReportStatusStates)
-  status: ReportStatus;
+  status: CreationOptional<ReportStatus>;
 
-  get isComplete() {
+  get isComplete(): NonAttribute<boolean> {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
   }
 
@@ -191,8 +206,8 @@ export class NurseryReport extends Model<NurseryReport> {
    * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
    * transition to it.
    */
-  get isCompletable() {
-    return this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
+  get isCompletable(): NonAttribute<boolean> {
+    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL)) ?? false;
   }
 
   @AllowNull
@@ -209,7 +224,7 @@ export class NurseryReport extends Model<NurseryReport> {
 
   @AllowNull
   @Column(BOOLEAN)
-  nothingToReport: boolean;
+  nothingToReport: boolean | null;
 
   @AllowNull
   @Column(TEXT)
@@ -224,7 +239,7 @@ export class NurseryReport extends Model<NurseryReport> {
   submittedAt: Date | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: number;
+  completion: CreationOptional<number>;
 
   @AllowNull
   @Column(STRING)

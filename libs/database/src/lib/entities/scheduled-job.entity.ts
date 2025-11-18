@@ -1,4 +1,4 @@
-import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AutoIncrement, Column, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
 import { BIGINT, DATE, STRING } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import {
@@ -12,9 +12,20 @@ import {
   TaskDue
 } from "../constants/scheduled-jobs";
 import { FrameworkKey } from "../constants";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  taskDue: (framework: FrameworkKey) => ({
+    where: { "taskDefinition.frameworkKey": framework, type: TASK_DUE },
+    order: [["executionTime", "ASC"]]
+  })
+}))
 @Table({ tableName: "scheduled_jobs", underscored: true, paranoid: true })
 export class ScheduledJob extends Model<ScheduledJob> {
+  static taskDue(framework: FrameworkKey) {
+    return chainScope(this, "taskDue", framework) as typeof ScheduledJob;
+  }
+
   static async scheduleTaskDue(executionTime: Date, frameworkKey: FrameworkKey, dueAt: Date) {
     const taskDefinition: TaskDue = { frameworkKey, dueAt: dueAt.toISOString() };
     await ScheduledJob.create({ type: TASK_DUE, executionTime, taskDefinition } as ScheduledJob);

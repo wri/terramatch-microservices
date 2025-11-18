@@ -94,8 +94,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   DisturbanceReport,
   DisturbanceReportLightDto,
   DisturbanceReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = DisturbanceReportLightDto;
   readonly FULL_DTO = DisturbanceReportFullDto;

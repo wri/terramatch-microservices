@@ -2,6 +2,7 @@ import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor
 import {
   Demographic,
   DemographicEntry,
+  Form,
   Media,
   Nursery,
   NurseryReport,
@@ -12,20 +13,22 @@ import {
   Site,
   SitePolygon,
   SiteReport,
-  TreeSpecies
+  TreeSpecies,
+  User
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
+import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -46,7 +49,8 @@ export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
   ProjectFullDto,
-  ProjectUpdateAttributes
+  ProjectUpdateAttributes,
+  ProjectCreateAttributes
 > {
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;
@@ -382,5 +386,31 @@ export class ProjectProcessor extends EntityProcessor<
       attributes: ["id", "projectId"],
       raw: true
     });
+  }
+
+  async create({ applicationUuid, formUuid }: ProjectCreateAttributes) {
+    const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["frameworkKey", "model"] });
+    if (form?.frameworkKey == null || form?.model !== Project.LARAVEL_TYPE) {
+      throw new BadRequestException(`Invalid form for project creation: ${formUuid}`);
+    }
+
+    let project;
+    if (applicationUuid == null) {
+      const { organisationId } =
+        (await User.findOne({ where: { id: this.entitiesService.userId }, attributes: ["organisationId"] })) ?? {};
+      if (organisationId == null) {
+        throw new BadRequestException("Current user does not have an organisation associated");
+      }
+
+      project = await Project.create({ frameworkKey: form.frameworkKey, organisationId });
+    }
+
+    if (project == null) {
+      throw new InternalServerErrorException("No project created!");
+    }
+
+    await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
+
+    return project;
   }
 }

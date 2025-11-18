@@ -3,7 +3,6 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
-  Default,
   ForeignKey,
   HasMany,
   Index,
@@ -11,7 +10,22 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  ENUM,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  TEXT,
+  TINYINT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
@@ -44,7 +58,7 @@ type ProjectMedia =
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class Project extends Model<Project> {
+export class Project extends Model<InferAttributes<Project>, InferCreationAttributes<Project>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
@@ -94,11 +108,11 @@ export class Project extends Model<Project> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -115,9 +129,8 @@ export class Project extends Model<Project> {
   @JsonColumn()
   cohort: string[] | null;
 
-  @Default(false)
-  @Column(BOOLEAN)
-  isTest: boolean;
+  @Column({ type: BOOLEAN, defaultValue: false })
+  isTest: CreationOptional<boolean>;
 
   @AllowNull
   @Column(TEXT)
@@ -134,12 +147,12 @@ export class Project extends Model<Project> {
   applicationId: number | null;
 
   @StateMachineColumn(EntityStatusStates)
-  status: EntityStatus;
+  status: CreationOptional<EntityStatus>;
 
-  @AllowNull
-  @Default("no-update")
-  @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  // Note: this is marked as nullable in the current schema, but has a default value. The
+  // nullability should be removed when v3 is responsible for the DB schema.
+  @Column({ type: STRING, defaultValue: "no-update" })
+  updateRequestStatus: CreationOptional<UpdateRequestStatus>;
 
   @AllowNull
   @Column(TEXT)

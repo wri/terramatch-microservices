@@ -5,21 +5,23 @@ import {
   Post,
   UnauthorizedException,
   BadRequestException,
-  Param,
-  Request
+  Request,
+  Query
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolygonClippingService } from "./polygon-clipping.service";
 import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DelayedJob, Site, SitePolygon, User } from "@terramatch-microservices/database/entities";
+import { DelayedJob, Project, Site, SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ClippedVersionDto } from "./dto/clipped-version.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { ClippingQueryDto } from "./dto/clipping-query.dto";
+import { isEmpty } from "lodash";
 
 @ApiTags("Polygon Clipping")
 @Controller("polygonClipping/v3")
@@ -30,44 +32,94 @@ export class PolygonClippingController {
     @InjectQueue("clipping") private readonly clippingQueue: Queue
   ) {}
 
-  @Post("sites/:siteUuid/clippedVersions")
+  @Post("clippedVersions")
   @ApiOperation({
-    operationId: "createSiteClippedVersions",
-    summary: "Create new polygon versions with clipped geometries for a site",
-    description: `Finds and clips all fixable overlapping polygons in a site (overlap ≤3.5% AND ≤0.118 hectares).
-      Creates new versions asynchronously with clipped geometries. Returns a delayed job to track progress.`
+    operationId: "createClippedVersions",
+    summary: "Create new polygon versions with clipped geometries for a site or project",
+    description: `Finds and clips all fixable overlapping polygons (overlap ≤3.5% AND ≤0.118 hectares) for a site or project.
+      Creates new versions asynchronously with clipped geometries. Returns a delayed job to track progress.
+      Provide either siteUuid or projectUuid as a query parameter, but not both.`
   })
-  @JsonApiResponse(DelayedJobDto)
+  @JsonApiResponse([DelayedJobDto, ClippedVersionDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(NotFoundException, { description: "Site not found or no fixable overlapping polygons." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  async createSiteClippedVersions(@Param("siteUuid") siteUuid: string, @Request() { authenticatedUserId }) {
+  @ExceptionResponse(NotFoundException, { description: "Entity not found or no fixable overlapping polygons." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid request - must provide exactly one of siteUuid or projectUuid."
+  })
+  async createClippedVersions(@Query() query: ClippingQueryDto, @Request() { authenticatedUserId }) {
     await this.policyService.authorize("update", SitePolygon);
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
+    if (authenticatedUserId == null) {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    const user = await User.findByPk(userId, {
+    // Validate that exactly one parameter is provided
+    const hasSiteUuid = !isEmpty(query.siteUuid);
+    const hasProjectUuid = !isEmpty(query.projectUuid);
+
+    if (!hasSiteUuid && !hasProjectUuid) {
+      throw new BadRequestException("Must provide either siteUuid or projectUuid query parameter");
+    }
+
+    if (hasSiteUuid && hasProjectUuid) {
+      throw new BadRequestException("Cannot provide both siteUuid and projectUuid - please provide only one");
+    }
+
+    const user = await User.findByPk(authenticatedUserId, {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
 
-    const fixablePolygons = await this.clippingService.getFixablePolygonsForSite(siteUuid);
+    let fixablePolygons: string[];
+    let entityId: number;
+    let entityType: string;
+    let entityName: string;
 
-    if (fixablePolygons.length === 0) {
-      throw new NotFoundException(`No fixable overlapping polygons found for site ${siteUuid}`);
-    }
+    if (hasSiteUuid) {
+      if (query.siteUuid == null) {
+        throw new BadRequestException("Parameter siteUuid must be a string");
+      }
+      fixablePolygons = await this.clippingService.getFixablePolygonsForSite(query.siteUuid);
 
-    const site = await Site.findOne({
-      where: { uuid: siteUuid },
-      attributes: ["id", "name"]
-    });
+      if (fixablePolygons.length === 0) {
+        throw new NotFoundException(`No fixable overlapping polygons found for site ${query.siteUuid}`);
+      }
 
-    if (site == null) {
-      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+      const site = await Site.findOne({
+        where: { uuid: query.siteUuid },
+        attributes: ["id", "name"]
+      });
+
+      if (site == null) {
+        throw new NotFoundException(`Site with UUID ${query.siteUuid} not found`);
+      }
+
+      entityId = site.id;
+      entityType = Site.LARAVEL_TYPE;
+      entityName = site.name;
+    } else {
+      if (query.projectUuid == null) {
+        throw new BadRequestException("Parameter projectUuid must be a string");
+      }
+      fixablePolygons = await this.clippingService.getFixablePolygonsForProject(query.projectUuid);
+
+      if (fixablePolygons.length === 0) {
+        throw new NotFoundException(`No fixable overlapping polygons found for project ${query.projectUuid}`);
+      }
+
+      const project = await Project.findOne({
+        where: { uuid: query.projectUuid },
+        attributes: ["id", "name"]
+      });
+
+      if (project == null) {
+        throw new NotFoundException(`Project with UUID ${query.projectUuid} not found`);
+      }
+
+      entityId = project.id;
+      entityType = Project.LARAVEL_TYPE;
+      entityName = project.name ?? "Unknown Project";
     }
 
     const delayedJob = await DelayedJob.create({
@@ -78,80 +130,15 @@ export class PolygonClippingController {
       progressMessage: "Starting clipping...",
       createdBy: authenticatedUserId,
       metadata: {
-        entity_id: site.id,
-        entity_type: "App\\Models\\V2\\Sites\\Site",
-        entity_name: site.name
+        entity_id: entityId,
+        entity_type: entityType,
+        entity_name: entityName
       }
     } as DelayedJob);
 
     await this.clippingQueue.add("clipAndVersion", {
       polygonUuids: fixablePolygons,
-      userId,
-      userFullName,
-      source,
-      delayedJobId: delayedJob.id
-    });
-
-    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
-  }
-
-  @Post("projects/:siteUuid/clippedVersions")
-  @ApiOperation({
-    operationId: "createProjectClippedVersions",
-    summary: "Create new polygon versions with clipped geometries for a project",
-    description: `Finds all polygons in a project (via site UUID) and clips fixable overlaps (≤3.5% AND ≤0.118 hectares).
-      Creates new versions asynchronously with clipped geometries. Returns a delayed job to track progress.`
-  })
-  @JsonApiResponse(DelayedJobDto)
-  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(NotFoundException, { description: "Project not found or no fixable overlapping polygons." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  async createProjectClippedVersions(@Param("siteUuid") siteUuid: string, @Request() { authenticatedUserId }) {
-    await this.policyService.authorize("update", SitePolygon);
-
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
-
-    const user = await User.findByPk(userId, {
-      include: [{ association: "roles", attributes: ["name"] }]
-    });
-    const source = user?.getSourceFromRoles() ?? "terramatch";
-    const userFullName = user?.fullName ?? null;
-
-    const fixablePolygons = await this.clippingService.getFixablePolygonsForProjectBySite(siteUuid);
-
-    if (fixablePolygons.length === 0) {
-      throw new NotFoundException(`No fixable overlapping polygons found for project via site ${siteUuid}`);
-    }
-
-    const site = await Site.findOne({
-      where: { uuid: siteUuid },
-      attributes: ["id", "name", "projectId"]
-    });
-
-    if (site == null) {
-      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
-    }
-
-    const delayedJob = await DelayedJob.create({
-      isAcknowledged: false,
-      name: "Polygon Clipping",
-      totalContent: fixablePolygons.length,
-      processedContent: 0,
-      progressMessage: "Starting clipping...",
-      createdBy: authenticatedUserId,
-      metadata: {
-        entity_id: site.projectId,
-        entity_type: "App\\Models\\V2\\Projects\\Project",
-        entity_name: site.name
-      }
-    } as DelayedJob);
-
-    await this.clippingQueue.add("clipAndVersion", {
-      polygonUuids: fixablePolygons,
-      userId,
+      userId: authenticatedUserId,
       userFullName,
       source,
       delayedJobId: delayedJob.id
@@ -168,7 +155,7 @@ export class PolygonClippingController {
       Creates new versions with clipped geometries. For a single polygon, returns immediately.
       For multiple polygons, returns a delayed job to track progress.`
   })
-  @JsonApiResponse([ClippedVersionDto, DelayedJobDto])
+  @JsonApiResponse([DelayedJobDto, ClippedVersionDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "No fixable overlapping polygons found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
@@ -178,12 +165,11 @@ export class PolygonClippingController {
   ) {
     await this.policyService.authorize("update", SitePolygon);
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
+    if (authenticatedUserId == null) {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    const user = await User.findByPk(userId, {
+    const user = await User.findByPk(authenticatedUserId, {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
@@ -204,7 +190,7 @@ export class PolygonClippingController {
     if (fixablePolygons.length === 1) {
       const createdVersions = await this.clippingService.clipAndCreateVersions(
         fixablePolygons,
-        userId,
+        authenticatedUserId,
         userFullName,
         source
       );
@@ -241,7 +227,7 @@ export class PolygonClippingController {
 
     await this.clippingQueue.add("clipAndVersion", {
       polygonUuids: fixablePolygons,
-      userId,
+      userId: authenticatedUserId,
       userFullName,
       source,
       delayedJobId: delayedJob.id

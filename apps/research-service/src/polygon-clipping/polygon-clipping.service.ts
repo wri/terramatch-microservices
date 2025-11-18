@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
-import { PolygonGeometry, SitePolygon, CriteriaSite, Site } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, SitePolygon, CriteriaSite, Site, Project } from "@terramatch-microservices/database/entities";
 import { QueryTypes, Transaction } from "sequelize";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
@@ -65,25 +65,32 @@ export class PolygonClippingService {
     return this.filterFixablePolygons(polygonUuids);
   }
 
-  async getFixablePolygonsForProjectBySite(siteUuid: string): Promise<string[]> {
-    const site = await Site.findOne({
-      where: { uuid: siteUuid },
-      attributes: ["projectId"]
+  async getFixablePolygonsForProject(projectUuid: string): Promise<string[]> {
+    const project = await Project.findOne({
+      where: { uuid: projectUuid },
+      attributes: ["id"]
     });
 
-    if (site == null || site.projectId == null) {
-      throw new NotFoundException(`Project not found for site: ${siteUuid}`);
+    if (project == null) {
+      throw new NotFoundException(`Project not found: ${projectUuid}`);
     }
 
     const projectSites = await Site.findAll({
-      where: { projectId: site.projectId },
+      where: { projectId: project.id },
       attributes: ["uuid"]
     });
 
     const siteUuids = projectSites.map(s => s.uuid);
 
+    if (siteUuids.length === 0) {
+      return [];
+    }
+
     const sitePolygons = await SitePolygon.findAll({
-      where: { siteUuid: siteUuids, isActive: true },
+      where: {
+        siteUuid: siteUuids,
+        isActive: true
+      },
       attributes: ["polygonUuid"]
     });
 

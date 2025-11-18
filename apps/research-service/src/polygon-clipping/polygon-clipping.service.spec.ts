@@ -219,62 +219,6 @@ describe("PolygonClippingService", () => {
     });
   });
 
-  describe("getFixablePolygonsForProjectBySite", () => {
-    const siteUuid = "550e8400-e29b-41d4-a716-446655440000";
-    const projectId = 1;
-
-    it("should throw NotFoundException when site is not found", async () => {
-      jest.spyOn(Site, "findOne").mockResolvedValue(null);
-
-      await expect(service.getFixablePolygonsForProjectBySite(siteUuid)).rejects.toThrow(NotFoundException);
-    });
-
-    it("should throw NotFoundException when projectId is null", async () => {
-      const mockSite = { uuid: siteUuid, projectId: null } as unknown as Site;
-      jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
-
-      await expect(service.getFixablePolygonsForProjectBySite(siteUuid)).rejects.toThrow(NotFoundException);
-    });
-
-    it("should return fixable polygons for all sites in project", async () => {
-      const mockSite = { uuid: siteUuid, projectId } as Site;
-      const otherSiteUuid = "660e8400-e29b-41d4-a716-446655440001";
-      const polygonUuid1 = "polygon-uuid-1";
-      const polygonUuid2 = "polygon-uuid-2";
-
-      jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
-      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: siteUuid } as Site, { uuid: otherSiteUuid } as Site]);
-      jest
-        .spyOn(SitePolygon, "findAll")
-        .mockResolvedValue([
-          { polygonUuid: polygonUuid1 } as SitePolygon,
-          { polygonUuid: polygonUuid2 } as SitePolygon
-        ]);
-
-      const mockCriteriaRecord: MockCriteriaSiteRecord = {
-        polygonId: polygonUuid1,
-        extraInfo: [
-          {
-            polyUuid: polygonUuid2,
-            percentage: 2.5,
-            intersectionArea: 0.05
-          }
-        ]
-      };
-
-      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
-
-      const result = await service.getFixablePolygonsForProjectBySite(siteUuid);
-
-      expect(result).toContain(polygonUuid1);
-      expect(result).toContain(polygonUuid2);
-      expect(Site.findAll).toHaveBeenCalledWith({
-        where: { projectId },
-        attributes: ["uuid"]
-      });
-    });
-  });
-
   describe("filterFixablePolygonsFromList", () => {
     it("should return empty array when no polygon UUIDs provided", async () => {
       const result = await service.filterFixablePolygonsFromList([]);

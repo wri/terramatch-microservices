@@ -2,6 +2,8 @@ import { Injectable, BadRequestException } from "@nestjs/common";
 import { FeatureCollection, Feature } from "geojson";
 import * as shapefile from "shapefile";
 import AdmZip = require("adm-zip");
+import * as toGeoJSON from "@tmcw/togeojson";
+import { DOMParser } from "@xmldom/xmldom";
 import "multer";
 
 @Injectable()
@@ -65,11 +67,25 @@ export class GeometryFileProcessingService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private async parseKML(_: Express.Multer.File): Promise<FeatureCollection> {
-    throw new BadRequestException(
-      "KML parsing not yet implemented. Please install @mapbox/togeojson and @xmldom/xmldom packages."
-    );
+  private async parseKML(file: Express.Multer.File): Promise<FeatureCollection> {
+    try {
+      const kmlString = file.buffer.toString("utf-8");
+      const kmlDoc = new DOMParser().parseFromString(kmlString, "text/xml");
+      const geojson = toGeoJSON.kml(kmlDoc) as FeatureCollection;
+
+      if (geojson.type !== "FeatureCollection") {
+        throw new BadRequestException("KML file must contain valid features");
+      }
+
+      return geojson;
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to parse KML file: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   private async parseShapefile(file: Express.Multer.File): Promise<FeatureCollection> {

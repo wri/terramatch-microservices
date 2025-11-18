@@ -14,8 +14,9 @@ import {
 import { DemographicAssociationType } from "../types/demographic";
 import { Dictionary } from "lodash";
 import { ModelCtor } from "sequelize-typescript";
+import { LaravelModel, UuidModel } from "../types/util";
 
-export const LARAVEL_MODELS: Dictionary<ModelCtor> = {
+export const LARAVEL_MODELS: Dictionary<ModelCtor<UuidModel & LaravelModel>> = {
   [DisturbanceReport.LARAVEL_TYPE]: DisturbanceReport,
   [FinancialReport.LARAVEL_TYPE]: FinancialReport,
   [Nursery.LARAVEL_TYPE]: Nursery,

@@ -8,7 +8,11 @@ import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import {
+  APPROVED,
+  AWAITING_APPROVAL,
+  NEEDS_MORE_INFORMATION
+} from "@terramatch-microservices/database/constants/status";
 import { ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
@@ -54,6 +58,8 @@ const getIndexData = (
   return { resource, requestPath, total, pageNumber };
 };
 
+const APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
+
 export abstract class EntityProcessor<
   ModelType extends EntityModel,
   LightDto extends EntityDto,
@@ -63,8 +69,6 @@ export abstract class EntityProcessor<
 > {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
-
-  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
 
   constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
 
@@ -137,7 +141,7 @@ export abstract class EntityProcessor<
    */
   async update(model: ModelType, update: UpdateDto) {
     if (update.status != null) {
-      if (this.APPROVAL_STATUSES.includes(update.status)) {
+      if (APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);
 
         // If an admin is doing an update, set the feedback / feedbackFields to whatever is in the
@@ -145,9 +149,18 @@ export abstract class EntityProcessor<
         // also being updated.
         model.feedback = update.feedback ?? null;
         model.feedbackFields = update.feedbackFields ?? null;
+        model.status = update.status as ModelType["status"];
+      } else if (update.status === AWAITING_APPROVAL) {
+        // If we're submitting for approval, check for an update request and submit that instead if there is one
+        const updateRequest = await UpdateRequest.for(model).current().findOne();
+        if (updateRequest == null) {
+          model.status = AWAITING_APPROVAL;
+        } else {
+          await updateRequest.update({ status: AWAITING_APPROVAL });
+        }
+      } else {
+        model.status = update.status as ModelType["status"];
       }
-
-      model.status = update.status as ModelType["status"];
     }
 
     await model.save();

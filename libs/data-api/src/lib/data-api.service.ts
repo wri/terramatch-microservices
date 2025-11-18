@@ -81,6 +81,36 @@ export class DataApiService {
     );
   }
 
+  async getIndicatorsDataset(indicatorDataset: any, sql: any, geometry: any) {
+    const url = `${DATA_API_DATASET}/${indicatorDataset}/latest/query`;
+
+    const appFrontend = this.configService.get("APP_FRONT_END");
+    const dataApiKey = this.configService.get("DATA_API_KEY");
+    if (appFrontend == null || dataApiKey == null) {
+      throw new InternalServerErrorException("APP_FRONT_END and DATA_API_KEY are required");
+    }
+
+    this.logger.debug(`body: ${JSON.stringify({ sql, geometry })}`);
+    const response = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ sql, geometry }),
+      headers: {
+        Origin: new URL(appFrontend).hostname,
+        "Content-Type": "application/json",
+        "x-api-key": dataApiKey
+      }
+    });
+
+    this.logger.debug(`Response: ${JSON.stringify(response)}`);
+    if (response.status !== 200) {
+      throw new InternalServerErrorException(response.statusText);
+    }
+
+    const json = (await response.json()) as { data: never };
+
+    return json.data;
+  }
+
   private async getDataset(key: string, queryPath: string, query: string, cacheDuration: number) {
     const current = await this.redis.get(`${KEY_NAMESPACE}${key}`);
     if (current != null) return JSON.parse(current);

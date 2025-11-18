@@ -20,6 +20,9 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
+import { IndicatorsController } from "./indicators/indicators.controller";
+import { IndicatorsService } from "./indicators/indicators.service";
+import { IndicatorsProcessor } from "./indicators/indicators.processor";
 
 @Module({
   imports: [
@@ -38,14 +41,22 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
         }
       })
     }),
-    BullModule.registerQueue({ name: "validation" })
+    BullModule.registerQueue({ name: "validation" }),
+    BullModule.registerQueue({ name: "indicators" })
   ],
-  controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
+  controllers: [
+    SitePolygonsController,
+    BoundingBoxController,
+    ValidationController,
+    PolygonClippingController,
+    IndicatorsController
+  ],
   providers: [
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter
     },
+    IndicatorsService,
     SitePolygonsService,
     SitePolygonCreationService,
     PolygonGeometryCreationService,
@@ -53,6 +64,7 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,
+    IndicatorsProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
     PolygonClippingService

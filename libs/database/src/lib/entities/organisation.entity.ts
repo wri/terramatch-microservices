@@ -320,7 +320,7 @@ export class Organisation extends Model<Organisation> {
   @JsonColumn()
   engagementYouth: string[] | null;
 
-  @Default("usd")
+  @Default("USD")
   @Column(STRING)
   currency: string;
 

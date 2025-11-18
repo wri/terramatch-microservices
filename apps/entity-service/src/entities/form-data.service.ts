@@ -10,7 +10,13 @@ import {
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { EntityModel, EntityType, isEntity } from "@terramatch-microservices/database/constants/entities";
+import {
+  EntityModel,
+  EntityType,
+  getOrganisationId,
+  getProjectId,
+  isEntity
+} from "@terramatch-microservices/database/constants/entities";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -18,14 +24,19 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FormModels, LinkedAnswerCollector } from "./linkedAnswerCollector";
-import { FormDataDto } from "./dto/form-data.dto";
+import { FormDataDto, StoreFormDataAttributes } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { PolicyService } from "@terramatch-microservices/common";
 
 @Injectable()
 export class FormDataService {
   private logger = new TMLogger(FormDataService.name);
 
-  constructor(private readonly localizationService: LocalizationService, private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly localizationService: LocalizationService,
+    private readonly mediaService: MediaService,
+    private readonly policyService: PolicyService
+  ) {}
 
   async getForm(model: EntityModel) {
     if (model instanceof FinancialReport) {
@@ -36,6 +47,27 @@ export class FormDataService {
     }
 
     return await Form.findOne({ where: { model: laravelType(model), frameworkKey: model.frameworkKey } });
+  }
+
+  async storeEntityAnswers(model: EntityModel, form: Form, { answers }: StoreFormDataAttributes) {
+    const updateRequest = await UpdateRequest.for(model).current().findOne();
+    if (updateRequest != null) {
+      await updateRequest.update({ content: answers });
+    } else if (!(await this.policyService.hasAccess("updateAnswers", model))) {
+      const newUpdateRequest = await UpdateRequest.create({
+        updateRequestableType: laravelType(model),
+        updateRequestableId: model.id,
+        createdById: this.policyService.userId,
+        frameworkKey: model.frameworkKey,
+        content: answers,
+        projectId: await getProjectId(model),
+        organisationId: await getOrganisationId(model)
+      } as UpdateRequest);
+      model.updateRequestStatus = newUpdateRequest.status;
+      await model.save();
+    } else {
+      await this.updateEntityFromForm(model, form, answers);
+    }
   }
 
   async getFormTitle(form: Form, locale: ValidLocale) {
@@ -82,7 +114,7 @@ export class FormDataService {
       where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
     });
 
-    const collector = new LinkedAnswerCollector(this.logger, this.mediaService);
+    const collector = new LinkedAnswerCollector(this.mediaService);
     for (const question of questions) {
       const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
       if (config == null) {
@@ -99,5 +131,51 @@ export class FormDataService {
     await collector.collect(answers, models);
 
     return answers;
+  }
+
+  private async updateEntityFromForm<T extends EntityModel>(model: T, form: Form, answers: object) {
+    model.answers = {};
+
+    const questions = await FormQuestion.findAll({
+      where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
+    });
+    const collector = new LinkedAnswerCollector(this.mediaService);
+    for (const question of questions) {
+      if (question.inputType === "conditional") {
+        model.answers[question.uuid] = answers[question.uuid];
+      } else {
+        const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
+        if (config == null) {
+          this.logger.warn("Entity question with no linked field config", { questionUuid: question.uuid });
+          continue;
+        }
+
+        // Note: file questions are currently handled with directly file upload in the entity form on the FE
+        const { field } = config;
+        if (isField(field)) {
+          const value = answers[question.uuid];
+          const isDate = question.inputType === "date" && question.validation?.["required"] !== true;
+          if (value != null || isDate) {
+            if (
+              // TODO: Look for a better way to handle this case.
+              // Special case added in the v2 BE in TM-2042
+              question.linkedFieldKey === "pro-rep-landscape-com-con" &&
+              question.parentId != null &&
+              answers[question.parentId] === true
+            ) {
+              model[field.property] = "";
+            } else {
+              model[field.property] = value;
+            }
+          }
+        } else if (isRelation(field)) {
+          const hidden =
+            question.parentId != null &&
+            question.showOnParentCondition === true &&
+            answers[question.parentId] === false;
+          await collector[field.resource].syncRelation(model, field, answers[question.uuid], hidden);
+        }
+      }
+    }
   }
 }

@@ -189,7 +189,7 @@ export class EntitiesService {
     return new MediaOwnerProcessor(mediaOwnerType, mediaOwnerUuid, mediaOwnerModelClass);
   }
 
-  async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
+  async buildQuery<T extends Model>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
     if (query.taskId != null) {
       // special case for internal sideloading.
       return new PaginatedQueryBuilder(modelClass, undefined, include);

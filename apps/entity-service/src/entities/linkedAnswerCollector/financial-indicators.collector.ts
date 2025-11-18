@@ -1,11 +1,11 @@
-import { FinancialIndicator } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../dto/financial-indicator.dto";
+import { CreationAttributes } from "sequelize";
 
-export function financialIndicatorsCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
 
   return {
@@ -43,6 +43,63 @@ export function financialIndicatorsCollector(logger: LoggerService): ResourceCol
             currency: financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null
           })
       );
+    },
+
+    async syncRelation(model, _, answer) {
+      const isOrg = model instanceof Organisation;
+      if (!isOrg && !(model instanceof FinancialReport)) {
+        throw new InternalServerErrorException("Only orgs and financialReports are supported for financialIndicators");
+      }
+
+      const orgId = isOrg ? model.id : model.organisationId;
+      const scope = isOrg ? FinancialIndicator.organisation(orgId) : FinancialIndicator.financialReport(model.id);
+      if (answer == null || answer.length === 0) {
+        await scope.destroy();
+        return;
+      }
+
+      const toCreate: CreationAttributes<FinancialIndicator>[] = [];
+      const indicators = await scope.findAll();
+      const dtos = answer as EmbeddedFinancialIndicatorDto[];
+      await Promise.all(
+        dtos.map(async dto => {
+          const existing = indicators.find(({ uuid }) => uuid === dto.uuid);
+
+          if (existing != null) {
+            await existing.update({
+              collection: dto.collection,
+              amount: dto.amount,
+              year: dto.year,
+              description: dto.description,
+              exchangeRate: dto.exchangeRate
+            });
+          } else {
+            const creationUuid =
+              dto.uuid == null || (await FinancialIndicator.count({ where: { uuid: dto.uuid }, paranoid: false })) !== 0
+                ? undefined
+                : dto.uuid;
+            toCreate.push({
+              uuid: creationUuid,
+              organisationId: orgId,
+              financialReportId: isOrg ? null : model.id,
+              collection: dto.collection,
+              amount: dto.amount,
+              year: dto.year,
+              description: dto.description,
+              exchangeRate: dto.exchangeRate
+            });
+          }
+        })
+      );
+
+      if (toCreate.length > 0) await FinancialIndicator.bulkCreate(toCreate);
+
+      const { startMonth, currency } = dtos[0];
+      if (startMonth != null || currency != null) {
+        model.finStartMonth = startMonth;
+        model.currency = currency ?? model.currency;
+        await model.save();
+      }
     }
   };
 }

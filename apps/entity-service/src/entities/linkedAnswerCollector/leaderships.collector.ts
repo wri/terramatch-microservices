@@ -1,12 +1,29 @@
-import { Leadership } from "@terramatch-microservices/database/entities";
+import { Leadership, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
-import { ResourceCollector } from "./index";
-import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { EmbeddedLeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
+import { scopedSync } from "./utils";
 
-export function leadershipsCollector(logger: LoggerService): ResourceCollector<LinkedRelation> {
+export function leadershipsCollector(logger: LoggerService): RelationResourceCollector {
+  // This has to be created when the collector factory is created instead at module init because
+  // the model has to have been initialized with a Sequelize instance first.
+  const leadershipsSync = scopedSync(
+    Leadership,
+    EmbeddedLeadershipDto,
+    (model, field) => {
+      if (!(model instanceof Organisation)) {
+        throw new InternalServerErrorException("Only orgs are supported for leaderships");
+      }
+      if (field.collection == null) {
+        throw new InternalServerErrorException("No collection found for leaderships field");
+      }
+      return Leadership.organisation(model.id).collection(field.collection);
+    },
+    (model, field) => ({ organisationId: model.id, collection: field.collection })
+  );
+
   const questions: Dictionary<string> = {};
 
   return {
@@ -42,6 +59,8 @@ export function leadershipsCollector(logger: LoggerService): ResourceCollector<L
           .filter(leadership => leadership.collection === collection)
           .map(leadership => new EmbeddedLeadershipDto(leadership));
       }
-    }
+    },
+
+    syncRelation: (...args) => leadershipsSync(...args, logger)
   };
 }

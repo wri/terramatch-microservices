@@ -1,6 +1,7 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Nursery, NurseryReport, Project, User } from "@terramatch-microservices/database/entities";
 import { Op, WhereAttributeHash } from "sequelize";
+import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 
 export class NurseryReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -10,7 +11,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], NurseryReport, {
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], NurseryReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -30,6 +31,15 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
         ).map(({ id }) => id);
         if (nurseryIds.length > 0) {
           this.builder.can(["read", "update", "uploadFiles"], NurseryReport, { nurseryId: { $in: nurseryIds } });
+          this.builder.can("updateAnswers", NurseryReport, {
+            nurseryId: { $in: nurseryIds },
+            status: { $in: [STARTED, DUE] }
+          });
+          this.builder.can("updateAnswers", NurseryReport, {
+            nurseryId: { $in: nurseryIds },
+            status: AWAITING_APPROVAL,
+            nothingToReport: true
+          });
         }
       }
     }
@@ -43,7 +53,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
             await Nursery.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })
           ).map(({ id }) => id);
           if (nurseryIds.length > 0) {
-            this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], NurseryReport, {
+            this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], NurseryReport, {
               nurseryId: { $in: nurseryIds }
             });
           }

@@ -425,7 +425,7 @@ describe("DisturbanceReportProcessor", () => {
       const preExistingDisturbance = await Disturbance.create({
         disturbanceableType: DisturbanceReport.LARAVEL_TYPE,
         disturbanceableId: disturbanceReport.id,
-        hidden: 0
+        hidden: false
       } as Disturbance);
 
       const polyWithDist = await SitePolygonFactory.create();

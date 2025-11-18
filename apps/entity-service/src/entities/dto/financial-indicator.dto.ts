@@ -18,8 +18,8 @@ export class FinancialIndicatorDto extends AssociationDto {
     }
   }
 
-  @ApiProperty({ nullable: true, type: String })
-  collection: string | null;
+  @ApiProperty()
+  collection: string;
 
   @ApiProperty({ nullable: true, type: String })
   description: string | null;
@@ -30,8 +30,8 @@ export class FinancialIndicatorDto extends AssociationDto {
   @ApiProperty({ nullable: true, type: Number })
   exchangeRate: number | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  year: number | null;
+  @ApiProperty()
+  year: number;
 
   @ApiProperty({ type: () => MediaDto, isArray: true, nullable: true })
   documentation: MediaDto[] | null;
@@ -51,6 +51,9 @@ export class EmbeddedFinancialIndicatorDto extends OmitType(FinancialIndicatorDt
     super();
     populateDto<EmbeddedFinancialIndicatorDto, FinancialIndicator>(this, financialIndicator, additionalProps);
   }
+
+  @ApiProperty()
+  uuid: string;
 
   @ApiProperty({ nullable: true, type: Number })
   startMonth: number | null;

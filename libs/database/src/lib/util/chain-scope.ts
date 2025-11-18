@@ -2,7 +2,7 @@ import { ScopeOptions } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
 
 type Scope = string | ScopeOptions;
-type ModelWithScopes<T extends Model<T>> = ModelCtor<T> & { _chainedScopes?: Scope[] };
+type ModelWithScopes<T extends Model> = ModelCtor<T> & { _chainedScopes?: Scope[] };
 
 /**
  * Sequelize doesn't support scope method chaining out of the box. If you want to apply the "visible"
@@ -45,7 +45,7 @@ type ModelWithScopes<T extends Model<T>> = ModelCtor<T> & { _chainedScopes?: Sco
  * like this will isolate the `sum()` to both scopes:
  * await TreeSpecies.visible().collection("treesPlanted").sum("amount")
  */
-export function chainScope<T extends Model<T>>(model: ModelCtor<T>, scopeName: string, ...args: unknown[]) {
+export function chainScope<T extends Model>(model: ModelCtor<T>, scopeName: string, ...args: unknown[]) {
   let ScopedModel = model as ModelWithScopes<T>;
 
   const scope: Scope = args.length === 0 ? scopeName : { method: [scopeName, ...args] };

@@ -9,7 +9,7 @@ export class ProjectPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], Project, {
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], Project, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -18,11 +18,14 @@ export class ProjectPolicy extends UserPermissionsPolicy {
       const user = await this.getUser();
       if (user != null) {
         this.builder.can(["read", "update", "uploadFiles"], Project, { organisationId: user.organisationId });
-        this.builder.can("delete", Project, { organisationId: user.organisationId, status: STARTED });
+        this.builder.can(["delete", "updateAnswers"], Project, {
+          organisationId: user.organisationId,
+          status: STARTED
+        });
         const projectIds = user.projects.map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(["read", "update", "uploadFiles"], Project, { id: { $in: projectIds } });
-          this.builder.can("delete", Project, { id: { $in: projectIds }, status: STARTED });
+          this.builder.can(["delete", "updateAnswers"], Project, { id: { $in: projectIds }, status: STARTED });
         }
       }
     }
@@ -32,7 +35,7 @@ export class ProjectPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], Project, {
+          this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], Project, {
             id: { $in: projectIds }
           });
         }

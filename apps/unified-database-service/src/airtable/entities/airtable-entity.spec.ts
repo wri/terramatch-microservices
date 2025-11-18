@@ -99,7 +99,7 @@ export class StubEntity extends AirtableEntity<Site> {
   protected mapEntityColumns = mapEntityColumns;
 }
 
-async function testAirtableUpdates<M extends Model<M>, A>(
+async function testAirtableUpdates<M extends Model, A>(
   entity: AirtableEntity<M, A>,
   records: M[],
   spotCheckFields: (record: M) => { fields: object }

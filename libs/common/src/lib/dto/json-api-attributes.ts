@@ -53,11 +53,13 @@ export type Common<T> = Pick<T, CommonKeys<T>>;
  *   we would fail to include properties that are accessed via getters (which turns out to include all
  *   data values on Sequelize objects), and would include anything extra is defined on sitePolygon.
  */
-export function pickApiProperties<Source, DTO>(source: Source, dtoClass: Type<DTO>) {
+export const pickApiProperties = <Source, DTO>(source: Source, dtoClass: Type<DTO>) =>
+  pick(source, apiAttributes(dtoClass)) as Common<Source | DTO>;
+
+export const apiAttributes = (dtoClass: Type) => {
   const accessor = new ModelPropertiesAccessor();
-  const fields = accessor.getModelProperties(dtoClass.prototype);
-  return pick(source, fields) as Common<Source | DTO>;
-}
+  return accessor.getModelProperties(dtoClass.prototype);
+};
 
 // Require all props in the DTO that are not in the base model
 export type AdditionalProps<DTO, BaseType> = Pick<DTO, keyof Omit<DTO, keyof BaseType>>;

@@ -25,6 +25,7 @@ import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequ
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
+import { InternalServerErrorException } from "@nestjs/common";
 
 type ProjectMedia =
   | "media"
@@ -66,6 +67,13 @@ export class Project extends Model<Project> {
     },
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
   };
+
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("Project model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
 
   static forOrganisation(organisationId: number) {
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;

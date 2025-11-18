@@ -13,7 +13,7 @@ import {
   isReport,
   ReportModel
 } from "@terramatch-microservices/database/constants/entities";
-import { StatusUpdateData } from "../email/email.processor";
+import { SpecificEntityData } from "../email/email.processor";
 import { EventService } from "./event.service";
 import { Action, AuditStatus, FormQuestion, Task, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
@@ -68,6 +68,10 @@ export class EntityStatusUpdate extends EventProcessor {
     if (entityType != null) {
       await this.sendStatusUpdateEmail(entityType);
       await this.updateActions();
+
+      if (this.model.status === AWAITING_APPROVAL) {
+        await this.sendProjectManagerEmail(entityType);
+      }
     }
 
     await this.createAuditStatus();
@@ -143,12 +147,19 @@ export class EntityStatusUpdate extends EventProcessor {
         })
         .filter(isNotNull);
       await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
+      const entityType = getEntityType(baseModel);
+      if (entityType != null) await this.sendProjectManagerEmail(entityType, baseModel);
     }
   }
 
   private async sendStatusUpdateEmail(type: EntityType, model: StatusUpdateModel = this.model) {
     this.logger.log(`Sending status update to email queue [${JSON.stringify({ type, id: model.id })}]`);
-    await this.eventService.emailQueue.add("statusUpdate", { type, id: model.id } as StatusUpdateData);
+    await this.eventService.emailQueue.add("statusUpdate", { type, id: model.id } as SpecificEntityData);
+  }
+
+  private async sendProjectManagerEmail(type: EntityType, model: StatusUpdateModel = this.model) {
+    this.logger.log(`Sending project manager email queue [${JSON.stringify({ type, id: model.id })}]`);
+    await this.eventService.emailQueue.add("projectManager", { type, id: model.id } as SpecificEntityData);
   }
 
   private async updateActions() {

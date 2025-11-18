@@ -43,7 +43,11 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import "multer";
-import { SitePolygon, User } from "@terramatch-microservices/database/entities";
+import { SitePolygon, User, DelayedJob, Site } from "@terramatch-microservices/database/entities";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { GeometryUploadJobData } from "./geometry-upload.processor";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
   CreateSitePolygonBatchRequestDto,
@@ -69,7 +73,8 @@ export class SitePolygonsController {
     private readonly sitePolygonService: SitePolygonsService,
     private readonly sitePolygonCreationService: SitePolygonCreationService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
-    private readonly policyService: PolicyService
+    private readonly policyService: PolicyService,
+    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
   private readonly logger = new Logger(SitePolygonsController.name);
@@ -328,21 +333,67 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "uploadGeometryFile",
     summary: "Upload and parse geometry file (KML, Shapefile, GeoJSON)",
-    description: `Parses a geometry file (KML, Shapefile, or GeoJSON) and returns GeoJSON.
+    description: `Parses a geometry file (KML, Shapefile, or GeoJSON) and creates site polygons asynchronously.
       Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
   })
   @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
-  @ApiOkResponse({ description: "File parsed successfully, returns GeoJSON FeatureCollection" })
+  @JsonApiResponse([SitePolygonLightDto, DelayedJobDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, {
     description: "Invalid file format, file parsing failed, or no features found in file."
   })
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() _payload: GeometryUploadRequestDto) {
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const user = await User.findByPk(userId, {
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
 
     const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
 
-    return geojson;
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Geometry Upload",
+      totalContent: geojson.features.length,
+      processedContent: 0,
+      progressMessage: "Parsing geometry file...",
+      createdBy: userId,
+      metadata: {
+        entity_id: site.id,
+        entity_type: "App\\Models\\V2\\Sites\\Site",
+        entity_name: site.name
+      }
+    } as DelayedJob);
+
+    const jobData: GeometryUploadJobData = {
+      delayedJobId: delayedJob.id,
+      siteId,
+      geojson,
+      userId,
+      source,
+      userFullName: user?.fullName ?? null
+    };
+
+    await this.geometryUploadQueue.add("geometryUpload", jobData);
+
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 }

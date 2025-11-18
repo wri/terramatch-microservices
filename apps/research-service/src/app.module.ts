@@ -21,6 +21,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
+import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
         }
       })
     }),
-    BullModule.registerQueue({ name: "validation" })
+    BullModule.registerQueue({ name: "validation" }),
+    BullModule.registerQueue({ name: "geometry-upload" })
   ],
   controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
   providers: [
@@ -55,6 +57,7 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,
+    GeometryUploadProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
     PolygonClippingService

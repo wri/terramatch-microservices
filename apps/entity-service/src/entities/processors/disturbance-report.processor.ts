@@ -304,8 +304,9 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       projectId: project.id,
       status: "due",
       updateRequestStatus: "no-update",
-      title: "Disturbance Report"
-    } as DisturbanceReport);
+      title: "Disturbance Report",
+      createdBy: this.entitiesService.userId
+    });
 
     await DisturbanceReportEntry.bulkCreate(
       REPORT_ENTRIES.map(entry => ({

@@ -10,7 +10,20 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  NonAttribute,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { User } from "./user.entity";
 import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
@@ -31,7 +44,10 @@ type DisturbanceReportMedia = "media";
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class DisturbanceReport extends Model<DisturbanceReport> {
+export class DisturbanceReport extends Model<
+  InferAttributes<DisturbanceReport>,
+  InferCreationAttributes<DisturbanceReport>
+> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReport";
   static readonly MEDIA: Record<DisturbanceReportMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" }
@@ -44,11 +60,11 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @StateMachineColumn(ReportStatusStates)
   status: ReportStatus;
@@ -73,9 +89,10 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @Column(DATE)
   approvedAt: Date | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  approvedBy: number | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
@@ -94,7 +111,7 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   dueAt: Date | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: number;
+  completion: CreationOptional<number>;
 
   @AllowNull
   @Column(TEXT)
@@ -119,23 +136,23 @@ export class DisturbanceReport extends Model<DisturbanceReport> {
   @BelongsTo(() => Project)
   project: Project | null;
 
-  get projectName() {
-    return this.project?.name;
+  get projectName(): NonAttribute<string | undefined> {
+    return this.project?.name ?? undefined;
   }
 
-  get organisationName() {
-    return this.project?.organisationName;
+  get organisationName(): NonAttribute<string | undefined> {
+    return this.project?.organisationName ?? undefined;
   }
 
-  get projectUuid() {
+  get projectUuid(): NonAttribute<string | undefined> {
     return this.project?.uuid;
   }
 
-  get isCompletable() {
+  get isCompletable(): NonAttribute<boolean> {
     return this.status !== "started";
   }
 
-  get isComplete() {
+  get isComplete(): NonAttribute<boolean> {
     return this.status === "approved";
   }
 }

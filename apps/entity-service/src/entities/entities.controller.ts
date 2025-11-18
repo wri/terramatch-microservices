@@ -177,11 +177,8 @@ export class EntitiesController {
     }
 
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-
     const model = await processor.create(createPayload.data.attributes);
-
     const { id, dto } = await processor.getFullDto(model);
-
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 }

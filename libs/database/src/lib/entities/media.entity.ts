@@ -11,7 +11,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, Op, STRING, UUID, UUIDV4 } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
@@ -20,7 +20,9 @@ import { Dictionary } from "factory-girl-ts";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
-  collection: (collectionName: string) => ({ where: { collectionName } }),
+  collection: (collectionName: string | string[]) => ({
+    where: { collectionName: { [Op.in]: Array.isArray(collectionName) ? collectionName : [collectionName] } }
+  }),
   associations: <T extends LaravelModel>(associations: T | T[]) => {
     const models = Array.isArray(associations) ? associations : [associations];
     return {
@@ -41,8 +43,8 @@ import { Dictionary } from "factory-girl-ts";
   ]
 })
 export class Media extends Model<Media> {
-  static collection(collectionName: string) {
-    return chainScope(this, "collection", collectionName) as typeof Media;
+  static collection(collections: string | string[]) {
+    return chainScope(this, "collection", collections) as typeof Media;
   }
 
   /**

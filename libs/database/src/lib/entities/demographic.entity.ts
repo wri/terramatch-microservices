@@ -24,15 +24,14 @@ import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
 import { DemographicType } from "../types/demographic";
-import { FormModel } from "../constants/entities";
-import { laravelType } from "../types/util";
+import { LaravelModel, laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
-  entity: (entity: FormModel) => ({
+  forModel: (model: LaravelModel) => ({
     where: {
-      demographicalType: laravelType(entity),
-      demographicalId: entity.id
+      demographicalType: laravelType(model),
+      demographicalId: model.id
     }
   }),
   collection: (collection: string) => ({ where: { collection } })
@@ -73,8 +72,8 @@ export class Demographic extends Model<InferAttributes<Demographic>, InferCreati
     Demographic.ASSOCIATES_TYPES
   ] as const;
 
-  static for(entity: FormModel) {
-    return chainScope(this, "entity", entity) as typeof Demographic;
+  static for(model: LaravelModel) {
+    return chainScope(this, "forModel", model) as typeof Demographic;
   }
 
   static collection(collection: string) {

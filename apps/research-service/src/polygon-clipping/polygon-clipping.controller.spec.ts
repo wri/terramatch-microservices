@@ -195,6 +195,123 @@ describe("PolygonClippingController", () => {
       expect(result).toBeDefined();
       expect(result.id).toBe("job-uuid-123");
     });
+
+    it("should throw BadRequestException when siteUuid is null after isEmpty check", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(controller.createClippedVersions({ siteUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow();
+    });
+
+    it("should throw BadRequestException when projectUuid is null after isEmpty check", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(controller.createClippedVersions({ projectUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow();
+    });
+
+    it("should handle project with null name", async () => {
+      const polygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForProject.mockResolvedValue(polygonUuids);
+      jest.spyOn(Project, "findOne").mockResolvedValue({
+        id: 1,
+        uuid: projectUuid,
+        name: null
+      } as unknown as Project);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      const result = await controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          polygonUuids
+        })
+      );
+    });
+
+    it("should handle user with null fullName", async () => {
+      const polygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: null,
+        getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
+      } as unknown as User);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          userFullName: null
+        })
+      );
+    });
+
+    it("should handle user with null getSourceFromRoles result", async () => {
+      const polygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: "Test User",
+        getSourceFromRoles: jest.fn().mockReturnValue(null)
+      } as unknown as User);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          source: "terramatch"
+        })
+      );
+    });
+
+    it("should handle user not found (null user)", async () => {
+      const polygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      jest.spyOn(User, "findByPk").mockResolvedValue(null);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          source: "terramatch",
+          userFullName: null
+        })
+      );
+    });
+
+    it("should handle site with null name", async () => {
+      const polygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      jest.spyOn(Site, "findOne").mockResolvedValue({
+        id: 1,
+        uuid: siteUuid,
+        name: null
+      } as unknown as Site);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(mockQueue.add).toHaveBeenCalled();
+    });
   });
 
   describe("createPolygonListClippedVersions", () => {
@@ -319,6 +436,88 @@ describe("PolygonClippingController", () => {
       );
       expect(result).toBeDefined();
       expect(result.id).toBe("job-uuid-123");
+    });
+
+    it("should handle user with null fullName in polygon list endpoint", async () => {
+      const fixablePolygonUuids = ["polygon-uuid-1"];
+      const createdVersions = [
+        {
+          uuid: "version-uuid-1",
+          polyName: "Test Polygon 1",
+          originalArea: 10.5,
+          newArea: 10.2,
+          areaRemoved: 0.3
+        }
+      ];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: null,
+        getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
+      } as unknown as User);
+
+      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(fixablePolygonUuids, 1, null, "terramatch");
+    });
+
+    it("should handle user not found (null user) in polygon list endpoint", async () => {
+      const fixablePolygonUuids = ["polygon-uuid-1"];
+      const createdVersions = [
+        {
+          uuid: "version-uuid-1",
+          polyName: "Test Polygon 1",
+          originalArea: 10.5,
+          newArea: 10.2,
+          areaRemoved: 0.3
+        }
+      ];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
+      jest.spyOn(User, "findByPk").mockResolvedValue(null);
+
+      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(fixablePolygonUuids, 1, null, "terramatch");
+    });
+
+    it("should handle user with null getSourceFromRoles in polygon list endpoint", async () => {
+      const fixablePolygonUuids = ["polygon-uuid-1"];
+      const createdVersions = [
+        {
+          uuid: "version-uuid-1",
+          polyName: "Test Polygon 1",
+          originalArea: 10.5,
+          newArea: 10.2,
+          areaRemoved: 0.3
+        }
+      ];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: "Test User",
+        getSourceFromRoles: jest.fn().mockReturnValue(null)
+      } as unknown as User);
+
+      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+
+      expect(result).toBeDefined();
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(
+        fixablePolygonUuids,
+        1,
+        "Test User",
+        "terramatch"
+      );
     });
   });
 });

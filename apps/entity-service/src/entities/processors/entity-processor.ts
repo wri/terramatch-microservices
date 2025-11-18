@@ -1,9 +1,9 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, col, fn, Op, WhereOptions } from "sequelize";
+import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { BadRequestException, Type } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
@@ -179,6 +179,22 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
+  }
+
+  protected async authorizedCreation(modelCtor: ModelCtor<ModelType>, attributes: CreationAttributes<ModelType>) {
+    if (modelCtor.sequelize == null) {
+      throw new InternalServerErrorException("Sequelize instance not found");
+    }
+    const transaction = await modelCtor.sequelize.transaction();
+    const model = (await modelCtor.create(attributes, { transaction })) as ModelType;
+    try {
+      await this.entitiesService.authorize("create", model);
+    } catch (e) {
+      await transaction.rollback();
+      throw e;
+    }
+    await transaction.commit();
+    return model;
   }
 
   protected async getFeedback(entity: ModelType) {

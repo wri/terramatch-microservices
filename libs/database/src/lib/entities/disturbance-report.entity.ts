@@ -32,7 +32,6 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { MediaConfiguration } from "../constants/media-owners";
-import { InternalServerErrorException } from "@nestjs/common";
 
 type DisturbanceReportMedia = "media";
 
@@ -53,13 +52,6 @@ export class DisturbanceReport extends Model<
   static readonly MEDIA: Record<DisturbanceReportMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" }
   };
-
-  static get sql() {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("DisturbanceReport model is missing sequelize connection");
-    }
-    return this.sequelize;
-  }
 
   static project(id: number) {
     return chainScope(this, "project", id) as typeof DisturbanceReport;

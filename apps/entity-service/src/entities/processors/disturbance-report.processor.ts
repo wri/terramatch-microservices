@@ -299,27 +299,14 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       throw new BadRequestException(`Project with UUID ${createPayload.parentUuid} not found`);
     }
 
-    const transaction = await DisturbanceReport.sql.transaction();
-    const disturbanceReport = await DisturbanceReport.create(
-      {
-        frameworkKey: project.frameworkKey,
-        projectId: project.id,
-        status: "due",
-        updateRequestStatus: "no-update",
-        title: "Disturbance Report",
-        createdBy: this.entitiesService.userId
-      },
-      { transaction }
-    );
-
-    try {
-      await this.entitiesService.authorize("create", disturbanceReport);
-    } catch (e) {
-      await transaction.rollback();
-      throw e;
-    }
-
-    await transaction.commit();
+    const disturbanceReport = await this.authorizedCreation(DisturbanceReport, {
+      frameworkKey: project.frameworkKey,
+      projectId: project.id,
+      status: "due",
+      updateRequestStatus: "no-update",
+      title: "Disturbance Report",
+      createdBy: this.entitiesService.userId
+    });
 
     await DisturbanceReportEntry.bulkCreate(
       REPORT_ENTRIES.map(entry => ({

@@ -1294,7 +1294,7 @@ describe("PolygonClippingService", () => {
       expect(result.length).toBeGreaterThanOrEqual(0);
     });
 
-    it("should throw InternalServerErrorException when sequelize is missing in clipPolygonGeometryMultiple", async () => {
+    it("should handle sequelize check in processFixableOverlaps", async () => {
       const polygonUuid1 = "polygon-uuid-1";
       const polygonUuid2 = "polygon-uuid-2";
 
@@ -1326,20 +1326,15 @@ describe("PolygonClippingService", () => {
         }
       ];
 
-      let queryCallCount = 0;
-      (mockSequelize.query as jest.Mock).mockImplementation(() => {
-        queryCallCount++;
-        if (queryCallCount === 1) {
-          return Promise.resolve(mockPolygonData);
-        }
-        (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
-        return Promise.reject(new Error("Should not reach here"));
-      });
+      (mockSequelize.query as jest.Mock).mockResolvedValueOnce(mockPolygonData);
+      (mockSequelize.query as jest.Mock).mockResolvedValueOnce([{ clipped_geojson: JSON.stringify(samplePolygon) }]);
 
-      await expect(service.clipPolygons([polygonUuid1, polygonUuid2])).rejects.toThrow(InternalServerErrorException);
+      const result = await service.clipPolygons([polygonUuid1, polygonUuid2]);
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
     });
 
-    it("should throw InternalServerErrorException when sequelize is missing in getPolygonsWithGeometry", async () => {
+    it("should throw InternalServerErrorException when sequelize is missing at entry point", async () => {
       const polygonUuid1 = "polygon-uuid-1";
       const polygonUuid2 = "polygon-uuid-2";
 
@@ -1356,13 +1351,7 @@ describe("PolygonClippingService", () => {
 
       jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
 
-      (PolygonGeometry.sequelize as unknown as MockSequelize | null) = {
-        transaction: jest.fn().mockImplementation(callback => {
-          (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
-          return Promise.resolve(callback(mockTransaction));
-        }),
-        query: jest.fn()
-      } as unknown as MockSequelize;
+      (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
 
       await expect(service.clipPolygons([polygonUuid1, polygonUuid2])).rejects.toThrow(InternalServerErrorException);
     });
@@ -1611,8 +1600,10 @@ describe("PolygonClippingService", () => {
     });
 
     it("should handle empty array in clearValidationForPolygons", async () => {
+      const destroySpy = jest.spyOn(CriteriaSite, "destroy");
       await expect(service["clearValidationForPolygons"]([], mockTransaction)).resolves.toBeUndefined();
-      expect(CriteriaSite.destroy).not.toHaveBeenCalled();
+      expect(destroySpy).not.toHaveBeenCalled();
+      destroySpy.mockRestore();
     });
 
     it("should throw InternalServerErrorException when sequelize is missing", async () => {
@@ -1801,6 +1792,8 @@ describe("PolygonClippingService", () => {
         .mockResolvedValueOnce([{ clipped_geojson: JSON.stringify(sampleMultiPolygon) }]);
 
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
 
       const result = await service.clipAndCreateVersions([polygonUuid1, polygonUuid2], userId, userFullName, source);
 

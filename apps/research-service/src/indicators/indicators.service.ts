@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import {
   IndicatorOutputHectares,
@@ -7,6 +7,21 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { CalculateIndicator } from "./calculate-indicator.interface";
+import { TreeCoverLossCalculator } from "./calculators/tree-cover-loss.calculator";
+import { TreeCoverLossFiresCalculator } from "./calculators/tree-cover-loss-fires.calculators";
+import { RestorationByEcoRegionCalculator } from "./calculators/restoration-by-eco-region.calculator";
+import { RestorationByStrategyCalculator } from "./calculators/restoration-by-strategy.calculator";
+import { RestorationByLandUseCalculator } from "./calculators/restoration-by-land-use.calculator";
+import { Polygon } from "geojson";
+
+export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
+  treeCoverLoss: new TreeCoverLossCalculator(),
+  treeCoverLossFires: new TreeCoverLossFiresCalculator(),
+  restorationByEcoRegion: new RestorationByEcoRegionCalculator(),
+  restorationByStrategy: new RestorationByStrategyCalculator(),
+  restorationByLandUse: new RestorationByLandUseCalculator()
+};
 
 const slugMappings = {
   treeCoverLoss: {
@@ -24,6 +39,7 @@ const slugMappings = {
     table_name: "indicator_output_tree_cover_loss"
   },
   restorationByEcoRegion: {
+    sql: "SELECT eco_name, realm FROM results",
     indicator: "wwf_terrestrial_ecoregions",
     model: IndicatorOutputHectares,
     table_name: "indicator_output_hectares"
@@ -53,27 +69,29 @@ export class IndicatorsService {
   }
 
   async processPolygon(slug: IndicatorSlug, polygonUuid: string) {
-    const geoJson = await PolygonGeometry.getGeoJSONParsed(polygonUuid);
-    if (geoJson == null) {
+    const calculator = CALCULATE_INDICATORS[slug];
+    if (calculator == null || calculator.calculate == null) {
+      throw new BadRequestException(`Unknown calculator: ${slug}`);
+    }
+
+    const geoJson: Polygon | undefined = await PolygonGeometry.getGeoJSONParsed(polygonUuid);
+    if (geoJson == undefined) {
       throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
     }
-    this.logger.debug(`GeoJSON: ${JSON.stringify(slugMappings)}`);
-    this.logger.debug(`Slug: ${slug}`);
-    const slugMappedValue = slugMappings[slug];
-    if (slugMappedValue == null) {
-      throw new NotFoundException(`Slug ${slug} not found`);
-    }
 
-    this.logger.debug(`Getting indicators dataset for slug ${slug} and polygon ${polygonUuid}`);
-    this.logger.debug(`GeoJSON: ${JSON.stringify(geoJson)}`);
-    const results = await this.dataApiService.getIndicatorsDataset(
-      slugMappedValue.indicator,
-      slugMappedValue.sql,
-      geoJson
-    );
-    this.logger.debug(`Results: ${JSON.stringify(results)}`);
+    const results = await calculator.calculate(polygonUuid, geoJson, this.dataApiService);
     return results;
+
+    // const results = await this.dataApiService.getIndicatorsDataset(
+    //   slugMappedValue.indicator,
+    //   slugMappedValue.sql,
+    //   geoJson
+    // );
+    // this.logger.debug(`Results: ${JSON.stringify(results)}`);
+    // return results;
   }
 
-  saveResults(results: any[]) {}
+  saveResults(results: any[]) {
+    console.log(`Saving results: ${JSON.stringify(results)}`);
+  }
 }

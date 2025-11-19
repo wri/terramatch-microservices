@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import {
-  IndicatorOutputHectares,
-  IndicatorOutputTreeCoverLoss,
+  // IndicatorOutputHectares,
+  // IndicatorOutputTreeCoverLoss,
   PolygonGeometry
 } from "@terramatch-microservices/database/entities";
 import { DataApiService } from "@terramatch-microservices/data-api";
@@ -22,38 +22,38 @@ export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   restorationByLandUse: new RestorationByTypeCalculator("targetSystem")
 };
 
-const slugMappings = {
-  treeCoverLoss: {
-    sql: "SELECT umd_tree_cover_loss__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss__year",
-    query_url: "/dataset/umd_tree_cover_loss/latest/query",
-    indicator: "umd_tree_cover_loss",
-    model: IndicatorOutputTreeCoverLoss,
-    table_name: "indicator_output_tree_cover_loss"
-  },
-  treeCoverLossFires: {
-    sql: "SELECT umd_tree_cover_loss_from_fires__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss_from_fires__year",
-    query_url: "/dataset/umd_tree_cover_loss_from_fires/latest/query",
-    indicator: "umd_tree_cover_loss_from_fires",
-    model: IndicatorOutputTreeCoverLoss,
-    table_name: "indicator_output_tree_cover_loss"
-  },
-  restorationByEcoRegion: {
-    sql: "SELECT eco_name, realm FROM results",
-    indicator: "wwf_terrestrial_ecoregions",
-    model: IndicatorOutputHectares,
-    table_name: "indicator_output_hectares"
-  },
-  restorationByStrategy: {
-    indicator: "restoration_practice",
-    model: IndicatorOutputHectares,
-    table_name: "indicator_output_hectares"
-  },
-  restorationByLandUse: {
-    indicator: "target_system",
-    model: IndicatorOutputHectares,
-    table_name: "indicator_output_hectares"
-  }
-};
+// const slugMappings = {
+//   treeCoverLoss: {
+//     sql: "SELECT umd_tree_cover_loss__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss__year",
+//     query_url: "/dataset/umd_tree_cover_loss/latest/query",
+//     indicator: "umd_tree_cover_loss",
+//     model: IndicatorOutputTreeCoverLoss,
+//     table_name: "indicator_output_tree_cover_loss"
+//   },
+//   treeCoverLossFires: {
+//     sql: "SELECT umd_tree_cover_loss_from_fires__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss_from_fires__year",
+//     query_url: "/dataset/umd_tree_cover_loss_from_fires/latest/query",
+//     indicator: "umd_tree_cover_loss_from_fires",
+//     model: IndicatorOutputTreeCoverLoss,
+//     table_name: "indicator_output_tree_cover_loss"
+//   },
+//   restorationByEcoRegion: {
+//     sql: "SELECT eco_name, realm FROM results",
+//     indicator: "wwf_terrestrial_ecoregions",
+//     model: IndicatorOutputHectares,
+//     table_name: "indicator_output_hectares"
+//   },
+//   restorationByStrategy: {
+//     indicator: "restoration_practice",
+//     model: IndicatorOutputHectares,
+//     table_name: "indicator_output_hectares"
+//   },
+//   restorationByLandUse: {
+//     indicator: "target_system",
+//     model: IndicatorOutputHectares,
+//     table_name: "indicator_output_hectares"
+//   }
+// };
 @Injectable()
 export class IndicatorsService {
   private readonly logger = new TMLogger(IndicatorsService.name);
@@ -61,7 +61,7 @@ export class IndicatorsService {
   constructor(private readonly dataApiService: DataApiService) {}
 
   process(slug: IndicatorSlug, polygonUuids: string[]) {
-    const results: any[] = polygonUuids.map(polygonUuid => {
+    const results: unknown[] = polygonUuids.map(polygonUuid => {
       return this.processPolygon(slug, polygonUuid);
     });
     this.saveResults(results);
@@ -90,7 +90,7 @@ export class IndicatorsService {
     // return results;
   }
 
-  saveResults(results: any[]) {
+  saveResults(results: unknown[]) {
     console.log(`Saving results: ${JSON.stringify(results)}`);
   }
 }

@@ -12,7 +12,7 @@ export class TreeCoverLossFiresCalculator implements CalculateIndicator {
 
   async calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<number> {
     this.logger.debug(`Calculating tree cover loss fires for polygon ${polygonUuid}`);
-    const results: any[] = await dataApiService.getIndicatorsDataset(this.INDICATOR, this.SQL, geometry);
+    const results: unknown[] = await dataApiService.getIndicatorsDataset(this.INDICATOR, this.SQL, geometry);
     return Promise.resolve(results.length);
   }
 }

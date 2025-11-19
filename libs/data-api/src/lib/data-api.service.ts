@@ -3,6 +3,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import Redis from "ioredis";
 import { InjectRedis } from "@nestjs-modules/ioredis";
 import { ConfigService } from "@nestjs/config";
+import { Polygon } from "geojson";
 
 const KEY_NAMESPACE = "data-api:";
 
@@ -81,7 +82,7 @@ export class DataApiService {
     );
   }
 
-  async getIndicatorsDataset(indicatorDataset: any, sql: any, geometry: any) {
+  async getIndicatorsDataset(indicatorDataset: string, sql: string, geometry: Polygon) {
     const url = `${DATA_API_DATASET}/${indicatorDataset}/latest/query`;
 
     const appFrontend = this.configService.get("APP_FRONT_END");

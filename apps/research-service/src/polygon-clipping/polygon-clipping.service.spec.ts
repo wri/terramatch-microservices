@@ -257,7 +257,10 @@ describe("PolygonClippingService", () => {
       jest.spyOn(Site, "findOne").mockResolvedValue(null);
 
       await expect(service.getFixablePolygonsForSite(siteUuid)).rejects.toThrow(NotFoundException);
-      expect(Site.findOne).toHaveBeenCalledWith({ where: { uuid: siteUuid } });
+      expect(Site.findOne).toHaveBeenCalledWith({
+        where: { uuid: siteUuid },
+        attributes: ["id", "name"]
+      });
     });
 
     it("should return empty array when no polygons are found", async () => {

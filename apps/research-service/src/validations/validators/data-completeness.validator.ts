@@ -3,6 +3,7 @@ import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidatio
 import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
 import { Geometry } from "geojson";
+import { isArray } from "lodash";
 
 type ValidationError = {
   field: string;
@@ -152,11 +153,11 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
       case "plantStart":
         return !this.isValidDate(value);
       case "practice":
-        return typeof value === "string" ? !this.areValidItems(value, VALID_PRACTICES) : true;
+        return isArray(value) ? !this.areValidItems(value, VALID_PRACTICES) : true;
       case "targetSys":
         return typeof value === "string" ? !this.areValidItems(value, VALID_SYSTEMS) : true;
       case "distr":
-        return typeof value === "string" ? !this.areValidItems(value, VALID_DISTRIBUTIONS) : true;
+        return isArray(value) ? !this.areValidItems(value, VALID_DISTRIBUTIONS) : true;
       case "numTrees":
         return !this.isValidInteger(value);
       default:
@@ -185,8 +186,8 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
     }
   }
 
-  private areValidItems(value: string, validItems: string[]): boolean {
-    const items = value.split(",");
+  private areValidItems(value: string | string[], validItems: string[]): boolean {
+    const items = isArray(value) ? value : value.split(",");
     return items.every(item => validItems.includes(item.trim()));
   }
 

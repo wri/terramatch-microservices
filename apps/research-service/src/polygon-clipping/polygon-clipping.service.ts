@@ -45,7 +45,10 @@ export class PolygonClippingService {
   constructor(private readonly sitePolygonCreationService: SitePolygonCreationService) {}
 
   async getFixablePolygonsForSite(siteUuid: string): Promise<{ site: Site; polygonIds: string[] }> {
-    const site = await Site.findOne({ where: { uuid: siteUuid } });
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["id", "name"]
+    });
 
     if (site == null) {
       throw new NotFoundException(`Site not found: ${siteUuid}`);

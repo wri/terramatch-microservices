@@ -78,15 +78,6 @@ export class PolygonClippingController {
         throw new BadRequestException("Parameter siteUuid must be a string");
       }
 
-      const site = await Site.findOne({
-        where: { uuid: query.siteUuid },
-        attributes: ["id", "name"]
-      });
-
-      if (site == null) {
-        throw new NotFoundException(`Site with UUID ${query.siteUuid} not found`);
-      }
-
       const result = await this.clippingService.getFixablePolygonsForSite(query.siteUuid);
       fixablePolygons = result.polygonIds;
 
@@ -94,21 +85,12 @@ export class PolygonClippingController {
         throw new NotFoundException(`No fixable overlapping polygons found for site ${query.siteUuid}`);
       }
 
-      entityId = site.id;
+      entityId = result.site.id;
       entityType = Site.LARAVEL_TYPE;
-      entityName = site.name;
+      entityName = result.site.name;
     } else {
       if (query.projectUuid == null) {
         throw new BadRequestException("Parameter projectUuid must be a string");
-      }
-
-      const project = await Project.findOne({
-        where: { uuid: query.projectUuid },
-        attributes: ["id", "name"]
-      });
-
-      if (project == null) {
-        throw new NotFoundException(`Project with UUID ${query.projectUuid} not found`);
       }
 
       const result = await this.clippingService.getFixablePolygonsForProject(query.projectUuid);
@@ -118,9 +100,9 @@ export class PolygonClippingController {
         throw new NotFoundException(`No fixable overlapping polygons found for project ${query.projectUuid}`);
       }
 
-      entityId = project.id;
+      entityId = result.project.id;
       entityType = Project.LARAVEL_TYPE;
-      entityName = project.name ?? "Unknown Project";
+      entityName = result.project.name ?? "Unknown Project";
     }
 
     const delayedJob = await DelayedJob.create({

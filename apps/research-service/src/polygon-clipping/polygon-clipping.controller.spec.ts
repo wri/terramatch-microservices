@@ -125,11 +125,12 @@ describe("PolygonClippingController", () => {
 
     it("should throw NotFoundException when site is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      clippingService.getFixablePolygonsForSite.mockRejectedValue(new NotFoundException(`Site not found: ${siteUuid}`));
 
       await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
       );
+      expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
     });
 
     it("should successfully create site polygon clipping with siteUuid", async () => {
@@ -172,11 +173,14 @@ describe("PolygonClippingController", () => {
 
     it("should throw NotFoundException when project is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      jest.spyOn(Project, "findOne").mockResolvedValue(null);
+      clippingService.getFixablePolygonsForProject.mockRejectedValue(
+        new NotFoundException(`Project not found: ${projectUuid}`)
+      );
 
       await expect(controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
       );
+      expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
     });
 
     it("should successfully create project polygon clipping with projectUuid", async () => {

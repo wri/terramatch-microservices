@@ -35,6 +35,7 @@ import {
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
@@ -44,6 +45,7 @@ import {
 } from "./dto/create-site-polygon-request.dto";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { VersionUpdateBody } from "./dto/version-update.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -61,6 +63,7 @@ export class SitePolygonsController {
   constructor(
     private readonly sitePolygonService: SitePolygonsService,
     private readonly sitePolygonCreationService: SitePolygonCreationService,
+    private readonly versioningService: SitePolygonVersioningService,
     private readonly policyService: PolicyService
   ) {}
 
@@ -69,13 +72,17 @@ export class SitePolygonsController {
   @Post()
   @ApiOperation({
     operationId: "createSitePolygons",
-    summary: "Create site polygons from GeoJSON",
-    description: `Create site polygons. Supports multi-site batch creation.
-      Duplicate validation results are always included in the response when duplicates are found.`
+    summary: "Create site polygons from GeoJSON or create version from existing",
+    description: `Create site polygons OR create a new version of an existing polygon.
+    **Normal Creation**: Provide geometries array with site_id in properties.
+    **Version Creation**: Provide baseSitePolygonUuid + changeReason + (geometries and/or attributeChanges).
+    Duplicate validation results are always included in the response when duplicates are found.`
   })
   @JsonApiResponse([SitePolygonLightDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request data or site not found." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid request data, site not found, or versioning validation failed."
+  })
   async create(@Body() createRequest: CreateSitePolygonJsonApiRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
@@ -88,12 +95,35 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const userFullName = user?.fullName ?? null;
 
-    const geometries = createRequest.data.attributes.geometries;
+    const baseSitePolygonUuid = createRequest?.data?.attributes?.baseSitePolygonUuid;
+    const changeReason = createRequest?.data?.attributes?.changeReason;
+    const attributeChanges = createRequest?.data?.attributes?.attributeChanges;
+    const geometries = createRequest?.data?.attributes?.geometries;
+
+    if (baseSitePolygonUuid != null && baseSitePolygonUuid.length > 0) {
+      return this.createVersion(
+        baseSitePolygonUuid,
+        geometries,
+        attributeChanges,
+        changeReason ?? "Version created via API",
+        userId,
+        userFullName,
+        source
+      );
+    }
+
+    if (geometries == null || geometries.length === 0) {
+      throw new BadRequestException(
+        "geometries array is required for normal polygon creation. For versioning, provide baseSitePolygonUuid."
+      );
+    }
+
     const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
     const { data: createdSitePolygons, included: validations } =
-      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);
+      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, userFullName);
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
@@ -289,6 +319,132 @@ export class SitePolygonsController {
     });
   }
 
+  @Get(":uuid/versions")
+  @ApiOperation({
+    operationId: "listSitePolygonVersions",
+    summary: "Get all versions of a site polygon",
+    description: "Returns all versions sharing the same primaryUuid, ordered by creation date (newest first)"
+  })
+  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  async getVersions(@Param("uuid") uuid: string) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const polygon = await SitePolygon.findOne({ where: { uuid } });
+    if (polygon == null) {
+      throw new NotFoundException(`Site polygon not found: ${uuid}`);
+    }
+
+    const versions = await this.versioningService.getVersionHistory(polygon.primaryUuid);
+
+    const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
+    const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
+
+    for (const version of versions) {
+      document.addData(
+        version.uuid,
+        await this.sitePolygonService.buildLightDto(version, associations[version.id] ?? {})
+      );
+    }
+
+    return document;
+  }
+
+  @Patch(":uuid/version")
+  @ApiOperation({
+    operationId: "updateSitePolygonVersion",
+    summary: "Update a site polygon version (e.g., activate/deactivate)",
+    description: `Update version properties. Setting isActive to true will activate this version and deactivate all others in the version group.
+      Both admins and project developers can manage versions.`
+  })
+  @JsonApiResponse(SitePolygonLightDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
+  async updateVersion(@Param("uuid") uuid: string, @Body() request: VersionUpdateBody) {
+    if (uuid !== request.data.id) {
+      throw new BadRequestException("Entity id in path and payload do not match");
+    }
+
+    await this.policyService.authorize("update", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    if (request.data.attributes.isActive !== true) {
+      throw new BadRequestException("Only isActive: true is supported. Use DELETE to remove a version.");
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const activatedVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      const version = await this.versioningService.activateVersion(uuid, userId, transaction);
+
+      if (request.data.attributes.comment != null && request.data.attributes.comment.length > 0) {
+        await this.versioningService.trackChange(
+          version.primaryUuid,
+          version.versionName ?? "Unknown",
+          `Comment: ${request.data.attributes.comment}`,
+          userId,
+          "update",
+          undefined,
+          undefined,
+          transaction
+        );
+      }
+
+      return version;
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([activatedVersion], false);
+
+    document.addData(
+      activatedVersion.uuid,
+      await this.sitePolygonService.buildLightDto(activatedVersion, associations[activatedVersion.id] ?? {})
+    );
+
+    this.logger.log(`Activated version ${activatedVersion.uuid} by user ${userId}`);
+
+    return document;
+  }
+
+  @Delete(":uuid/version")
+  @ApiOperation({
+    operationId: "deleteSitePolygonVersion",
+    summary: "Delete a single site polygon version",
+    description: `Deletes a specific version of a site polygon. Restrictions:
+       - Cannot delete the last version (use DELETE /:uuid to delete all versions)
+       - Cannot delete the active version (activate another version first)
+       - Only deletes polygon_geometry if not used by other versions
+       - Deletes all associations (indicators, criteria_site, audit_status) for this version`
+  })
+  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
+    description: "Site polygon version and its associations were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(BadRequestException, { description: "Cannot delete last version or active version." })
+  async deleteVersion(@Param("uuid") uuid: string) {
+    const sitePolygon = await SitePolygon.findOne({ where: { uuid } });
+    if (sitePolygon == null) {
+      throw new NotFoundException(`Site polygon not found for uuid: ${uuid}`);
+    }
+
+    await this.policyService.authorize("delete", sitePolygon);
+
+    await this.sitePolygonService.deleteSingleVersion(uuid);
+
+    this.logger.log(`Deleted version ${uuid}`);
+
+    return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
   @Delete(":uuid")
   @ApiOperation({
     operationId: "deleteSitePolygon",
@@ -314,5 +470,53 @@ export class SitePolygonsController {
     await this.sitePolygonService.deleteSitePolygon(uuid);
 
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
+  private async createVersion(
+    baseSitePolygonUuid: string,
+    geometries: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["geometries"],
+    attributeChanges: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["attributeChanges"],
+    changeReason: string,
+    userId: number,
+    userFullName: string | null,
+    source: string
+  ) {
+    const hasGeometryChange = geometries != null && geometries.length > 0;
+    const hasAttributeChange = attributeChanges != null && Object.keys(attributeChanges).length > 0;
+
+    if (!hasGeometryChange && !hasAttributeChange) {
+      throw new BadRequestException(
+        "Version creation requires either geometry changes (geometries array) or attribute changes (attributeChanges object)"
+      );
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const newVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      return this.sitePolygonCreationService.createSitePolygonVersion(
+        baseSitePolygonUuid,
+        geometries,
+        attributeChanges,
+        changeReason,
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
+
+    document.addData(
+      newVersion.uuid,
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+    );
+
+    this.logger.log(`Created version ${newVersion.uuid} from base ${baseSitePolygonUuid} by user ${userId}`);
+
+    return document;
   }
 }

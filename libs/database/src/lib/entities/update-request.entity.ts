@@ -39,6 +39,9 @@ export class UpdateRequest extends Model<UpdateRequest> {
     return chainScope(this, "entity", entity) as typeof UpdateRequest;
   }
 
+  /**
+   * Sets up a scope to find the latest unapproved update request.
+   */
   static current() {
     return chainScope(this, "current") as typeof UpdateRequest;
   }

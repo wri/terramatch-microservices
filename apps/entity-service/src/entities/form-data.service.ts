@@ -24,7 +24,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FormModels, LinkedAnswerCollector } from "./linkedAnswerCollector";
-import { FormDataDto, StoreFormDataAttributes } from "./dto/form-data.dto";
+import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
 
@@ -49,7 +49,7 @@ export class FormDataService {
     return await Form.findOne({ where: { model: laravelType(model), frameworkKey: model.frameworkKey } });
   }
 
-  async storeEntityAnswers(model: EntityModel, form: Form, { answers }: StoreFormDataAttributes) {
+  async storeEntityAnswers(model: EntityModel, form: Form, answers: object) {
     const updateRequest = await UpdateRequest.for(model).current().findOne();
     if (updateRequest != null) {
       await updateRequest.update({ content: answers });

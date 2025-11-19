@@ -19,9 +19,9 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { Includeable, Op } from "sequelize";
 import { groupBy, sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { SiteUpdateAttributes } from "../dto/entity-update.dto";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
+import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -38,7 +38,7 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
-export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, SiteUpdateAttributes> {
+export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, EntityUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
 

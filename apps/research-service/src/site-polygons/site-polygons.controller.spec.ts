@@ -17,6 +17,15 @@ import { LandscapeSlug } from "@terramatch-microservices/database/types/landscap
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
+import { getQueueToken } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { Site, DelayedJob } from "@terramatch-microservices/database/entities";
+import { SiteFactory } from "@terramatch-microservices/database/factories";
+import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { NotFoundException } from "@nestjs/common";
+import { FeatureCollection } from "geojson";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -27,6 +36,8 @@ describe("SitePolygonsController", () => {
   let polygonGeometryService: DeepMocked<PolygonGeometryCreationService>;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
+  let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
+  let geometryUploadQueue: DeepMocked<Queue>;
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,6 +83,14 @@ describe("SitePolygonsController", () => {
         {
           provide: DuplicateGeometryValidator,
           useValue: (duplicateGeometryValidator = createMock<DuplicateGeometryValidator>())
+        },
+        {
+          provide: GeometryFileProcessingService,
+          useValue: (geometryFileProcessingService = createMock<GeometryFileProcessingService>())
+        },
+        {
+          provide: getQueueToken("geometry-upload"),
+          useValue: (geometryUploadQueue = createMock<Queue>())
         }
       ]
     }).compile();
@@ -520,6 +539,222 @@ describe("SitePolygonsController", () => {
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+
+    it("should throw NotFoundException when site polygon is not found", async () => {
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      await expect(controller.deleteOne("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(sitePolygonService.deleteSitePolygon).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("uploadGeometryFile", () => {
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should throw NotFoundException when site is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "geometryUpload", attributes: { siteId: "non-existent-uuid" } } };
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        NotFoundException
+      );
+      expect(geometryFileProcessingService.parseGeometryFile).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when file parsing fails", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build();
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+
+      geometryFileProcessingService.parseGeometryFile.mockRejectedValue(
+        new BadRequestException("Failed to parse file")
+      );
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should successfully upload geometry file and create delayed job", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const geojson: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: {}
+          }
+        ]
+      };
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
+
+      const delayedJob = {
+        id: 1,
+        uuid: "job-uuid",
+        isAcknowledged: false,
+        name: "Geometry Upload",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Parsing geometry file...",
+        createdBy: 1
+      } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+      geometryUploadQueue.add.mockResolvedValue({} as any);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+
+      const result = await controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto);
+
+      expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Geometry Upload",
+          totalContent: 1,
+          processedContent: 0,
+          progressMessage: "Parsing geometry file...",
+          createdBy: 1,
+          metadata: {
+            entity_id: site.id,
+            entity_type: "App\\Models\\V2\\Sites\\Site",
+            entity_name: "Test Site"
+          }
+        })
+      );
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUpload", {
+        delayedJobId: 1,
+        siteId: "site-uuid",
+        geojson,
+        userId: 1,
+        source: "terramatch",
+        userFullName: "Test User"
+      });
+      const serialized = serialize(result);
+      expect(serialized.data).toBeDefined();
+      if (Array.isArray(serialized.data)) {
+        expect(serialized.data[0].id).toBe("job-uuid");
+      } else if (serialized.data != null) {
+        expect(serialized.data.id).toBe("job-uuid");
+      }
+    });
+
+    it("should handle user with null fullName", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build({ firstName: null, lastName: null });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const geojson: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: {}
+          }
+        ]
+      };
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
+
+      const delayedJob = {
+        id: 1,
+        uuid: "job-uuid",
+        isAcknowledged: false,
+        name: "Geometry Upload",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Parsing geometry file...",
+        createdBy: 1
+      } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+      geometryUploadQueue.add.mockResolvedValue({} as any);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+
+      await controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto);
+
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUpload", {
+        delayedJobId: 1,
+        siteId: "site-uuid",
+        geojson,
+        userId: 1,
+        source: "terramatch",
+        userFullName: null
+      });
     });
   });
 });

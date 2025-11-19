@@ -177,5 +177,7 @@ export class FormDataService {
         }
       }
     }
+
+    await model.save();
   }
 }

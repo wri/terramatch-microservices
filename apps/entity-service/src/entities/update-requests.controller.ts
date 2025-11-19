@@ -56,7 +56,6 @@ export class UpdateRequestsController {
 
       if (updateRequest.status === "approved") {
         await this.formDataService.storeEntityAnswers(model, form, updateRequest.content ?? {});
-        await model.reload();
       }
     }
 

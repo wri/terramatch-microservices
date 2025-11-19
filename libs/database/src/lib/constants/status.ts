@@ -85,7 +85,13 @@ export const UpdateRequestStatusStates: States<UpdateRequest, UpdateRequestStatu
   transitions: transitions<UpdateRequestStatus>()
     .from(DRAFT, () => [AWAITING_APPROVAL])
     .from(AWAITING_APPROVAL, () => [APPROVED, NEEDS_MORE_INFORMATION])
-    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL]).transitions
+    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL]).transitions,
+
+  afterTransitionHooks: {
+    [APPROVED]: emitStatusUpdateHook,
+    [AWAITING_APPROVAL]: emitStatusUpdateHook,
+    [NEEDS_MORE_INFORMATION]: emitStatusUpdateHook
+  }
 };
 
 export const REJECTED = "rejected";

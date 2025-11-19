@@ -18,7 +18,6 @@ import { Includeable, Op } from "sequelize";
 import { groupBy, sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { SiteUpdateAttributes } from "../dto/entity-update.dto";
-import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -38,8 +37,6 @@ const ASSOCIATION_FIELD_MAP = {
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, SiteUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
-
-  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
 
   async findOne(uuid: string) {
     return await Site.findOne({

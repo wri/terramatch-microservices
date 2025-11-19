@@ -1,6 +1,6 @@
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
-import { StatusUpdateData } from "./email.processor";
+import { SpecificEntityData } from "./email.processor";
 import {
   ENTITY_MODELS,
   EntityModel,
@@ -33,7 +33,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
   private readonly type: EntityType;
   private readonly id: number;
 
-  constructor({ type, id }: StatusUpdateData) {
+  constructor({ type, id }: SpecificEntityData) {
     super();
     this.type = type;
     this.id = id;

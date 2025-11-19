@@ -7,13 +7,16 @@ import {
   EntityType,
   getOrganisationId,
   getProjectId,
+  hasNothingToReport,
+  hasTaskId,
+  isEntity,
   isReport,
   ReportModel
 } from "@terramatch-microservices/database/constants/entities";
-import { StatusUpdateData } from "../email/email.processor";
+import { SpecificEntityData } from "../email/email.processor";
 import { EventService } from "./event.service";
-import { Action, AuditStatus, FormQuestion, Task } from "@terramatch-microservices/database/entities";
-import { flatten, get, isEmpty, map, uniq } from "lodash";
+import { Action, AuditStatus, FormQuestion, Task, UpdateRequest } from "@terramatch-microservices/database/entities";
+import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
 import {
   APPROVED,
@@ -24,8 +27,16 @@ import {
   STATUS_DISPLAY_STRINGS
 } from "@terramatch-microservices/database/constants/status";
 import { InternalServerErrorException } from "@nestjs/common";
+import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
+import { Model } from "sequelize-typescript";
+import { getLinkedFieldConfig } from "../linkedFields";
+import { isField } from "@terramatch-microservices/database/constants/linked-fields";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
+
+const getEntityType = (model: Model) =>
+  Object.entries(ENTITY_MODELS).find(([, entityClass]) => model instanceof entityClass)?.[0] as EntityType | undefined;
 
 export class EntityStatusUpdate extends EventProcessor {
   private readonly logger = new TMLogger(EntityStatusUpdate.name);
@@ -45,14 +56,24 @@ export class EntityStatusUpdate extends EventProcessor {
 
     await this.eventService.sendStatusUpdateAnalytics(this.model.uuid, laravelType(this.model), this.model.status);
 
-    const entityType = Object.entries(ENTITY_MODELS).find(
-      ([, entityClass]) => this.model instanceof entityClass
-    )?.[0] as EntityType | undefined;
+    if (this.model instanceof UpdateRequest) {
+      await this.handleUpdateRequest(this.model);
+    } else {
+      await this.handleBaseModel();
+    }
+  }
 
+  private async handleBaseModel() {
+    const entityType = getEntityType(this.model);
     if (entityType != null) {
       await this.sendStatusUpdateEmail(entityType);
       await this.updateActions();
+
+      if (this.model.status === AWAITING_APPROVAL) {
+        await this.sendProjectManagerEmail(entityType);
+      }
     }
+
     await this.createAuditStatus();
 
     if (
@@ -64,9 +85,81 @@ export class EntityStatusUpdate extends EventProcessor {
     }
   }
 
-  private async sendStatusUpdateEmail(type: EntityType) {
-    this.logger.log(`Sending status update to email queue [${JSON.stringify({ type, id: this.model.id })}]`);
-    await this.eventService.emailQueue.add("statusUpdate", { type, id: this.model.id } as StatusUpdateData);
+  private async handleUpdateRequest(updateRequest: UpdateRequest) {
+    const baseModelClass = LARAVEL_MODELS[updateRequest.updateRequestableType];
+    const baseModel = await baseModelClass?.findOne({ where: { id: updateRequest.updateRequestableId } });
+    if (baseModel == null) {
+      this.logger.error("Cannot find base model for update request", {
+        id: updateRequest.id,
+        laravelType: updateRequest.updateRequestableType,
+        baseModelId: updateRequest.updateRequestableId
+      });
+      return;
+    }
+    if (!isEntity(baseModel)) {
+      this.logger.error("Got update request attached to invalid model type", {
+        id: updateRequest.id,
+        laravelType: updateRequest.updateRequestableType,
+        baseModelId: updateRequest.updateRequestableId
+      });
+      return;
+    }
+
+    baseModel.updateRequestStatus = updateRequest.status;
+    if (updateRequest.status === APPROVED) {
+      baseModel.status = APPROVED;
+      if (hasNothingToReport(baseModel)) {
+        baseModel.nothingToReport = false;
+      }
+    } else if (updateRequest.status === NEEDS_MORE_INFORMATION) {
+      const entityType = getEntityType(baseModel);
+      if (entityType != null) {
+        await this.sendStatusUpdateEmail(entityType);
+      }
+    }
+
+    await baseModel.save();
+
+    if (updateRequest.status !== APPROVED && isReport(baseModel) && hasTaskId(baseModel)) {
+      // if we didn't update the base model status, and it's a report, we need to run the task check
+      // explicitly.
+      await this.checkTaskStatus(baseModel);
+    }
+
+    await Action.for(updateRequest).destroy({ where: { type: "notification" } });
+
+    if (updateRequest.status === AWAITING_APPROVAL) {
+      // Gather linked field labels for the audit status.
+      const questionUuids = Object.keys(updateRequest.content ?? {});
+      const questions = await FormQuestion.findAll({
+        where: { uuid: { [Op.in]: questionUuids }, linkedFieldKey: { [Op.ne]: null } }
+      });
+      const labels = questions
+        .map(question => {
+          const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
+          if (config == null || !isField(config.field)) return undefined;
+
+          const updateRequestValue = updateRequest.content?.[question.uuid] as unknown;
+          const baseValue = baseModel[config.field.property] as unknown;
+          if (isEqual(updateRequestValue, baseValue)) return undefined;
+
+          return config.field.label;
+        })
+        .filter(isNotNull);
+      await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
+      const entityType = getEntityType(baseModel);
+      if (entityType != null) await this.sendProjectManagerEmail(entityType, baseModel);
+    }
+  }
+
+  private async sendStatusUpdateEmail(type: EntityType, model: StatusUpdateModel = this.model) {
+    this.logger.log(`Sending status update to email queue [${JSON.stringify({ type, id: model.id })}]`);
+    await this.eventService.emailQueue.add("statusUpdate", { type, id: model.id } as SpecificEntityData);
+  }
+
+  private async sendProjectManagerEmail(type: EntityType, model: StatusUpdateModel = this.model) {
+    this.logger.log(`Sending project manager email queue [${JSON.stringify({ type, id: model.id })}]`);
+    await this.eventService.emailQueue.add("projectManager", { type, id: model.id } as SpecificEntityData);
   }
 
   private async updateActions() {
@@ -74,7 +167,7 @@ export class EntityStatusUpdate extends EventProcessor {
     const entity = this.model as EntityModel;
     await Action.for(entity).destroy({ where: { type: "notification" } });
 
-    if (entity.status !== "awaiting-approval") {
+    if (entity.status !== AWAITING_APPROVAL) {
       const action = new Action();
       action.status = "pending";
       action.targetableType = laravelType(entity);
@@ -92,39 +185,40 @@ export class EntityStatusUpdate extends EventProcessor {
     }
   }
 
-  private async createAuditStatus() {
-    const auditableType = laravelType(this.model);
+  private async createAuditStatus(
+    model: StatusUpdateModel = this.model,
+    status = model.status,
+    comment: string | null = null
+  ) {
+    const auditableType = laravelType(model);
     if (!AuditStatus.AUDITABLE_LARAVEL_TYPES.includes(auditableType)) return;
 
-    this.logger.log(
-      `Creating auditStatus [${JSON.stringify({ model: this.model.constructor.name, id: this.model.id })}]`
-    );
+    this.logger.log(`Creating auditStatus [${JSON.stringify({ model: model.constructor.name, id: model.id })}]`);
 
     const user = await this.getAuthenticatedUser();
     const auditStatus = new AuditStatus();
     auditStatus.auditableType = auditableType;
-    auditStatus.auditableId = this.model.id;
+    auditStatus.auditableId = model.id;
     auditStatus.createdBy = user?.emailAddress ?? null;
     auditStatus.firstName = user?.firstName ?? null;
     auditStatus.lastName = user?.lastName ?? null;
 
-    // TODO: the update is different for UpdateRequest awaiting approval
-    if (this.model.status === "approved") {
-      auditStatus.comment = `Approved: ${this.model.feedback}`;
-    } else if (this.model.status === "needs-more-information") {
+    if (status === "approved") {
+      auditStatus.comment = comment ?? `Approved: ${model.feedback}`;
+    } else if (status === "needs-more-information") {
       auditStatus.type = "change-request";
-      auditStatus.comment = await this.getNeedsMoreInfoComment();
-    } else if (this.model.status === "awaiting-approval") {
-      // no additional properties to set, but avoid the short circuit warning below.
+      auditStatus.comment = comment ?? (await this.getNeedsMoreInfoComment());
+    } else if (status === "awaiting-approval") {
+      auditStatus.comment = comment;
     } else {
       // Getting this method called for started is expected on model creation, so no need to warn
       // in that case.
-      if (this.model.status !== "started") {
+      if (status !== "started") {
         this.logger.warn(
           `Skipping audit status for entity status [${JSON.stringify({
-            model: this.model.constructor.name,
-            id: this.model.id,
-            status: this.model.status
+            model: model.constructor.name,
+            id: model.id,
+            status: model.status
           })}]`
         );
       }
@@ -150,19 +244,17 @@ export class EntityStatusUpdate extends EventProcessor {
     }`;
   }
 
-  private async checkTaskStatus() {
-    if (!("taskId" in this.model)) {
-      this.logger.warn(
-        `Skipping task status check for model without taskId [${this.model.constructor.name}, ${this.model.id}]`
-      );
+  private async checkTaskStatus(model: StatusUpdateModel = this.model) {
+    if (!("taskId" in model)) {
+      this.logger.warn(`Skipping task status check for model without taskId [${model.constructor.name}, ${model.id}]`);
       return;
     }
     // Special case for financial report: it has no taskId
-    const modelWithTaskId = this.model as ReportModel & { taskId: number | null };
+    const modelWithTaskId = model as ReportModel & { taskId: number | null };
     const { taskId } = modelWithTaskId;
 
     if (taskId == null) {
-      this.logger.warn(`No task found for status changed report [${this.model.constructor.name}, ${this.model.id}]`);
+      this.logger.warn(`No task found for status changed report [${model.constructor.name}, ${model.id}]`);
       return;
     }
 

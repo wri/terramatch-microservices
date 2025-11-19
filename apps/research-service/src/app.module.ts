@@ -3,6 +3,7 @@ import { CommonModule } from "@terramatch-microservices/common";
 import { SitePolygonsController } from "./site-polygons/site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { GeometryFileProcessingService } from "./site-polygons/geometry-file-processing.service";
@@ -22,6 +23,7 @@ import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
+import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 
 @Module({
   imports: [
@@ -41,7 +43,8 @@ import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.process
       })
     }),
     BullModule.registerQueue({ name: "validation" }),
-    BullModule.registerQueue({ name: "geometry-upload" })
+    BullModule.registerQueue({ name: "geometry-upload" }),
+    BullModule.registerQueue({ name: "clipping" })
   ],
   controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
   providers: [
@@ -51,6 +54,7 @@ import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.process
     },
     SitePolygonsService,
     SitePolygonCreationService,
+    SitePolygonVersioningService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     GeometryFileProcessingService,
@@ -60,7 +64,8 @@ import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.process
     GeometryUploadProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
-    PolygonClippingService
+    PolygonClippingService,
+    ClippingProcessor
   ]
 })
 export class AppModule {}

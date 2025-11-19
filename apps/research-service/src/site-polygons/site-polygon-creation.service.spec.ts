@@ -4,6 +4,7 @@ import { PolygonGeometryCreationService } from "./polygon-geometry-creation.serv
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { VoronoiService } from "../voronoi/voronoi.service";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { BadRequestException } from "@nestjs/common";
@@ -60,6 +61,14 @@ describe("SitePolygonCreationService", () => {
           provide: VoronoiService,
           useValue: {
             transformPointsToPolygons: jest.fn().mockResolvedValue([])
+          }
+        },
+        {
+          provide: SitePolygonVersioningService,
+          useValue: {
+            validateVersioningEligibility: jest.fn(),
+            createVersion: jest.fn(),
+            generateVersionName: jest.fn()
           }
         }
       ]

@@ -58,8 +58,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       });
     }
 
-    await this.indicatorService.process(slug, polygonUuids);
-
     const document = buildJsonApi(IndicatorsSummaryDto).addData(
       polygonUuids.join(","),
       populateDto(new IndicatorsSummaryDto(), {

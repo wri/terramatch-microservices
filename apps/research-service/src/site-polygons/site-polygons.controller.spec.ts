@@ -415,6 +415,7 @@ describe("SitePolygonsController", () => {
       const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
 
       expect(User.findByPk).toHaveBeenCalledWith(1, {
+        attributes: ["firstName", "lastName"],
         include: [{ association: "roles", attributes: ["name"] }]
       });
       expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith(
@@ -676,7 +677,7 @@ describe("SitePolygonsController", () => {
           createdBy: 1,
           metadata: {
             entity_id: site.id,
-            entity_type: "App\\Models\\V2\\Sites\\Site",
+            entity_type: Site.LARAVEL_TYPE,
             entity_name: "Test Site"
           }
         })

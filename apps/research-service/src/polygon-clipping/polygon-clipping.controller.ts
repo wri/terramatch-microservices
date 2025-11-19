@@ -57,15 +57,12 @@ export class PolygonClippingController {
     const hasSiteUuid = !isEmpty(query.siteUuid);
     const hasProjectUuid = !isEmpty(query.projectUuid);
 
-    if (!hasSiteUuid && !hasProjectUuid) {
-      throw new BadRequestException("Must provide either siteUuid or projectUuid query parameter");
-    }
-
-    if (hasSiteUuid && hasProjectUuid) {
-      throw new BadRequestException("Cannot provide both siteUuid and projectUuid - please provide only one");
+    if (hasSiteUuid === hasProjectUuid) {
+      throw new BadRequestException("Exactly one of siteUuid or projectUuid must be provided");
     }
 
     const user = await User.findByPk(authenticatedUserId, {
+      attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
@@ -80,11 +77,6 @@ export class PolygonClippingController {
       if (query.siteUuid == null) {
         throw new BadRequestException("Parameter siteUuid must be a string");
       }
-      fixablePolygons = await this.clippingService.getFixablePolygonsForSite(query.siteUuid);
-
-      if (fixablePolygons.length === 0) {
-        throw new NotFoundException(`No fixable overlapping polygons found for site ${query.siteUuid}`);
-      }
 
       const site = await Site.findOne({
         where: { uuid: query.siteUuid },
@@ -95,17 +87,19 @@ export class PolygonClippingController {
         throw new NotFoundException(`Site with UUID ${query.siteUuid} not found`);
       }
 
+      const result = await this.clippingService.getFixablePolygonsForSite(query.siteUuid);
+      fixablePolygons = result.polygonIds;
+
+      if (fixablePolygons.length === 0) {
+        throw new NotFoundException(`No fixable overlapping polygons found for site ${query.siteUuid}`);
+      }
+
       entityId = site.id;
       entityType = Site.LARAVEL_TYPE;
       entityName = site.name;
     } else {
       if (query.projectUuid == null) {
         throw new BadRequestException("Parameter projectUuid must be a string");
-      }
-      fixablePolygons = await this.clippingService.getFixablePolygonsForProject(query.projectUuid);
-
-      if (fixablePolygons.length === 0) {
-        throw new NotFoundException(`No fixable overlapping polygons found for project ${query.projectUuid}`);
       }
 
       const project = await Project.findOne({
@@ -115,6 +109,13 @@ export class PolygonClippingController {
 
       if (project == null) {
         throw new NotFoundException(`Project with UUID ${query.projectUuid} not found`);
+      }
+
+      const result = await this.clippingService.getFixablePolygonsForProject(query.projectUuid);
+      fixablePolygons = result.polygonIds;
+
+      if (fixablePolygons.length === 0) {
+        throw new NotFoundException(`No fixable overlapping polygons found for project ${query.projectUuid}`);
       }
 
       entityId = project.id;
@@ -170,6 +171,7 @@ export class PolygonClippingController {
     }
 
     const user = await User.findByPk(authenticatedUserId, {
+      attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";

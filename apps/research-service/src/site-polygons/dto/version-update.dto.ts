@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Equals, IsBoolean, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
+import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
 export class VersionUpdateAttributes {
   @ApiProperty({
@@ -20,25 +20,6 @@ export class VersionUpdateAttributes {
   comment?: string;
 }
 
-export class VersionUpdateData {
-  @Equals("sitePolygons")
-  @ApiProperty({ enum: ["sitePolygons"] })
-  type: string;
-
-  @IsOptional()
-  @IsUUID()
-  @ApiProperty({ format: "uuid", required: false, description: "Optional - defaults to UUID from path parameter" })
-  id?: string;
-
-  @ValidateNested()
-  @Type(() => VersionUpdateAttributes)
-  @ApiProperty({ type: () => VersionUpdateAttributes })
-  attributes: VersionUpdateAttributes;
-}
-
-export class VersionUpdateRequestDto {
-  @ValidateNested()
-  @Type(() => VersionUpdateData)
-  @ApiProperty({ type: () => VersionUpdateData })
-  data: VersionUpdateData;
-}
+export class VersionUpdateBody extends JsonApiBodyDto(
+  class VersionUpdateData extends JsonApiDataDto({ type: "sitePolygons" }, VersionUpdateAttributes) {}
+) {}

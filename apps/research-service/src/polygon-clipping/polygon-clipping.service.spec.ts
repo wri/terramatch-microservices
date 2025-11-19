@@ -132,7 +132,7 @@ describe("PolygonClippingService", () => {
       await expect(service.getFixablePolygonsForProject(projectUuid)).rejects.toThrow(NotFoundException);
       expect(Project.findOne).toHaveBeenCalledWith({
         where: { uuid: projectUuid },
-        attributes: ["id"]
+        attributes: ["id", "name"]
       });
     });
 
@@ -143,7 +143,7 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForProject(projectUuid);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ project: mockProject, polygonIds: [] });
       expect(Site.findAll).toHaveBeenCalledWith({
         where: { projectId: mockProject.id },
         attributes: ["uuid"]
@@ -161,7 +161,7 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForProject(projectUuid);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ project: mockProject, polygonIds: [] });
       expect(SitePolygon.findAll).toHaveBeenCalledWith({
         where: {
           siteUuid: [siteUuid1, siteUuid2],
@@ -189,7 +189,7 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForProject(projectUuid);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ project: mockProject, polygonIds: [] });
     });
 
     it("should return fixable polygons when they exist in project", async () => {
@@ -223,8 +223,9 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForProject(projectUuid);
 
-      expect(result).toContain(polygonUuid1);
-      expect(result).toContain(polygonUuid2);
+      expect(result.project).toEqual(mockProject);
+      expect(result.polygonIds).toContain(polygonUuid1);
+      expect(result.polygonIds).toContain(polygonUuid2);
     });
 
     it("should filter out null polygonUuids", async () => {
@@ -244,8 +245,8 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForProject(projectUuid);
 
-      expect(result).toEqual([]);
-      expect(result).not.toContain(null);
+      expect(result).toEqual({ project: mockProject, polygonIds: [] });
+      expect(result.polygonIds).not.toContain(null);
     });
   });
 
@@ -266,7 +267,7 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForSite(siteUuid);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
       expect(SitePolygon.findAll).toHaveBeenCalledWith({
         where: { siteUuid, isActive: true },
         attributes: ["polygonUuid"]
@@ -301,8 +302,9 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForSite(siteUuid);
 
-      expect(result).toContain(polygonUuid1);
-      expect(result).toContain(polygonUuid2);
+      expect(result.site).toEqual(mockSite);
+      expect(result.polygonIds).toContain(polygonUuid1);
+      expect(result.polygonIds).toContain(polygonUuid2);
       expect(CriteriaSite.findAll).toHaveBeenCalledWith({
         where: {
           polygonId: [polygonUuid1, polygonUuid2],
@@ -341,7 +343,7 @@ describe("PolygonClippingService", () => {
 
       const result = await service.getFixablePolygonsForSite(siteUuid);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
     });
   });
 

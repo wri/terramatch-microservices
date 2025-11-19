@@ -44,7 +44,7 @@ export class PolygonClippingService {
 
   constructor(private readonly sitePolygonCreationService: SitePolygonCreationService) {}
 
-  async getFixablePolygonsForSite(siteUuid: string): Promise<string[]> {
+  async getFixablePolygonsForSite(siteUuid: string): Promise<{ site: Site; polygonIds: string[] }> {
     const site = await Site.findOne({ where: { uuid: siteUuid } });
 
     if (site == null) {
@@ -59,16 +59,17 @@ export class PolygonClippingService {
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
 
     if (polygonUuids.length === 0) {
-      return [];
+      return { site, polygonIds: [] };
     }
 
-    return this.filterFixablePolygons(polygonUuids);
+    const polygonIds = await this.filterFixablePolygons(polygonUuids);
+    return { site, polygonIds };
   }
 
-  async getFixablePolygonsForProject(projectUuid: string): Promise<string[]> {
+  async getFixablePolygonsForProject(projectUuid: string): Promise<{ project: Project; polygonIds: string[] }> {
     const project = await Project.findOne({
       where: { uuid: projectUuid },
-      attributes: ["id"]
+      attributes: ["id", "name"]
     });
 
     if (project == null) {
@@ -83,7 +84,7 @@ export class PolygonClippingService {
     const siteUuids = projectSites.map(s => s.uuid);
 
     if (siteUuids.length === 0) {
-      return [];
+      return { project, polygonIds: [] };
     }
 
     const sitePolygons = await SitePolygon.findAll({
@@ -97,10 +98,11 @@ export class PolygonClippingService {
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
 
     if (polygonUuids.length === 0) {
-      return [];
+      return { project, polygonIds: [] };
     }
 
-    return this.filterFixablePolygons(polygonUuids);
+    const polygonIds = await this.filterFixablePolygons(polygonUuids);
+    return { project, polygonIds };
   }
 
   private async filterFixablePolygons(polygonUuids: string[]): Promise<string[]> {

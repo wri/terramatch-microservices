@@ -45,7 +45,7 @@ import {
 } from "./dto/create-site-polygon-request.dto";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { VersionUpdateRequestDto } from "./dto/version-update.dto";
+import { VersionUpdateBody } from "./dto/version-update.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -362,7 +362,11 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  async updateVersion(@Param("uuid") uuid: string, @Body() request: VersionUpdateRequestDto) {
+  async updateVersion(@Param("uuid") uuid: string, @Body() request: VersionUpdateBody) {
+    if (uuid !== request.data.id) {
+      throw new BadRequestException("Entity id in path and payload do not match");
+    }
+
     await this.policyService.authorize("update", SitePolygon);
 
     const userId = this.policyService.userId;

@@ -18,7 +18,7 @@ import { LandscapeSlug } from "@terramatch-microservices/database/types/landscap
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
-import { VersionUpdateRequestDto } from "./dto/version-update.dto";
+import { VersionUpdateBody } from "./dto/version-update.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -31,9 +31,27 @@ describe("SitePolygonsController", () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
 
-  const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {
+  interface MockQueryBuilder {
+    execute: jest.Mock;
+    paginationTotal: jest.Mock;
+    hasStatuses: jest.Mock;
+    modifiedSince: jest.Mock;
+    isMissingIndicators: jest.Mock;
+    hasPresentIndicators: jest.Mock;
+    lightResource: jest.Mock;
+    order: jest.Mock;
+    filterProjectUuids: jest.Mock;
+    filterProjectAttributes: jest.Mock;
+    filterSiteUuids: jest.Mock;
+    excludeTestProjects: jest.Mock;
+    filterValidationStatus: jest.Mock;
+    filterProjectShortNames: jest.Mock;
+    filterPolygonUuids: jest.Mock;
+    addSearch: jest.Mock;
+  }
+
+  const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockQueryBuilder => {
+    const builder = {
       execute: jest.fn(),
       paginationTotal: jest.fn(),
       hasStatuses: jest.fn().mockReturnThis(),
@@ -41,19 +59,31 @@ describe("SitePolygonsController", () => {
       isMissingIndicators: jest.fn().mockReturnThis(),
       hasPresentIndicators: jest.fn().mockReturnThis(),
       lightResource: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis()
-    };
-    builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
-    builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
-    builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
-    builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectShortNames = jest.fn().mockResolvedValue(builder);
-    builder.filterPolygonUuids = jest.fn().mockResolvedValue(builder);
+      order: jest.fn().mockReturnThis(),
+      filterProjectUuids: jest.fn().mockResolvedValue(undefined),
+      filterProjectAttributes: jest.fn().mockResolvedValue(undefined),
+      filterSiteUuids: jest.fn().mockResolvedValue(undefined),
+      excludeTestProjects: jest.fn().mockResolvedValue(undefined),
+      filterValidationStatus: jest.fn().mockResolvedValue(undefined),
+      filterProjectShortNames: jest.fn().mockResolvedValue(undefined),
+      filterPolygonUuids: jest.fn().mockResolvedValue(undefined),
+      addSearch: jest.fn().mockResolvedValue(undefined)
+    } as unknown as MockQueryBuilder;
+
+    builder.filterProjectUuids.mockResolvedValue(builder);
+    builder.filterProjectAttributes.mockResolvedValue(builder);
+    builder.filterSiteUuids.mockResolvedValue(builder);
+    builder.excludeTestProjects.mockResolvedValue(builder);
+    builder.filterValidationStatus.mockResolvedValue(builder);
+    builder.filterProjectShortNames.mockResolvedValue(builder);
+    builder.filterPolygonUuids.mockResolvedValue(builder);
+    builder.addSearch.mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
     builder.paginationTotal.mockResolvedValue(totalResult);
-    sitePolygonService.buildQuery.mockResolvedValue(builder);
+    sitePolygonService.buildQuery.mockResolvedValue(
+      builder as unknown as Awaited<ReturnType<typeof sitePolygonService.buildQuery>>
+    );
 
     return builder;
   };
@@ -781,9 +811,10 @@ describe("SitePolygonsController", () => {
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "test-uuid",
           attributes: {
             isActive: true
           }
@@ -800,9 +831,10 @@ describe("SitePolygonsController", () => {
         writable: true,
         configurable: true
       });
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "test-uuid",
           attributes: {
             isActive: true
           }
@@ -812,11 +844,27 @@ describe("SitePolygonsController", () => {
       await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should throw BadRequestException when isActive is not true", async () => {
+    it("should throw BadRequestException when id in path and payload do not match", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "different-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when isActive is not true", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "test-uuid",
           attributes: {
             isActive: false
           }
@@ -833,9 +881,10 @@ describe("SitePolygonsController", () => {
         writable: true,
         configurable: true
       });
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "test-uuid",
           attributes: {
             isActive: true
           }
@@ -871,9 +920,10 @@ describe("SitePolygonsController", () => {
       });
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
 
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "test-uuid",
           attributes: {
             isActive: true
           }
@@ -915,9 +965,10 @@ describe("SitePolygonsController", () => {
       });
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
 
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "version-uuid",
           attributes: {
             isActive: true,
             comment: "Reverting to previous version"
@@ -968,9 +1019,10 @@ describe("SitePolygonsController", () => {
       });
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
 
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "version-uuid",
           attributes: {
             isActive: true,
             comment: ""
@@ -1009,9 +1061,10 @@ describe("SitePolygonsController", () => {
       });
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
 
-      const request: VersionUpdateRequestDto = {
+      const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
+          id: "version-uuid",
           attributes: {
             isActive: true
           }

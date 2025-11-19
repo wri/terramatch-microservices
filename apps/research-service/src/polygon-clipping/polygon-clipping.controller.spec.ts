@@ -112,7 +112,10 @@ describe("PolygonClippingController", () => {
 
     it("should throw NotFoundException when no fixable polygons are found for site", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue([]);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
+        polygonIds: []
+      });
 
       await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
@@ -122,20 +125,21 @@ describe("PolygonClippingController", () => {
 
     it("should throw NotFoundException when site is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue(["polygon-uuid-1"]);
       jest.spyOn(Site, "findOne").mockResolvedValue(null);
 
       await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
       );
-      expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
     });
 
     it("should successfully create site polygon clipping with siteUuid", async () => {
       const polygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
+        polygonIds: polygonUuids
+      });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
       const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
@@ -155,7 +159,10 @@ describe("PolygonClippingController", () => {
 
     it("should throw NotFoundException when no fixable polygons are found for project", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForProject.mockResolvedValue([]);
+      clippingService.getFixablePolygonsForProject.mockResolvedValue({
+        project: { id: 1, uuid: projectUuid, name: "Test Project" } as Project,
+        polygonIds: []
+      });
 
       await expect(controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
@@ -165,20 +172,21 @@ describe("PolygonClippingController", () => {
 
     it("should throw NotFoundException when project is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForProject.mockResolvedValue(["polygon-uuid-1"]);
       jest.spyOn(Project, "findOne").mockResolvedValue(null);
 
       await expect(controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
         NotFoundException
       );
-      expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
     });
 
     it("should successfully create project polygon clipping with projectUuid", async () => {
       const polygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForProject.mockResolvedValue(polygonUuids);
+      clippingService.getFixablePolygonsForProject.mockResolvedValue({
+        project: { id: 1, uuid: projectUuid, name: "Test Project" } as Project,
+        polygonIds: polygonUuids
+      });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
       const result = await controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 });
@@ -210,12 +218,10 @@ describe("PolygonClippingController", () => {
       const polygonUuids = ["polygon-uuid-1"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForProject.mockResolvedValue(polygonUuids);
-      jest.spyOn(Project, "findOne").mockResolvedValue({
-        id: 1,
-        uuid: projectUuid,
-        name: null
-      } as unknown as Project);
+      clippingService.getFixablePolygonsForProject.mockResolvedValue({
+        project: { id: 1, uuid: projectUuid, name: null } as Project,
+        polygonIds: polygonUuids
+      });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
       const result = await controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 });
@@ -233,7 +239,10 @@ describe("PolygonClippingController", () => {
       const polygonUuids = ["polygon-uuid-1"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
+        polygonIds: polygonUuids
+      });
       jest.spyOn(User, "findByPk").mockResolvedValue({
         id: 1,
         fullName: null,
@@ -256,7 +265,10 @@ describe("PolygonClippingController", () => {
       const polygonUuids = ["polygon-uuid-1"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
+        polygonIds: polygonUuids
+      });
       jest.spyOn(User, "findByPk").mockResolvedValue({
         id: 1,
         fullName: "Test User",
@@ -279,7 +291,10 @@ describe("PolygonClippingController", () => {
       const polygonUuids = ["polygon-uuid-1"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
+        polygonIds: polygonUuids
+      });
       jest.spyOn(User, "findByPk").mockResolvedValue(null);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
@@ -299,12 +314,10 @@ describe("PolygonClippingController", () => {
       const polygonUuids = ["polygon-uuid-1"];
 
       policyService.authorize.mockResolvedValue(undefined);
-      clippingService.getFixablePolygonsForSite.mockResolvedValue(polygonUuids);
-      jest.spyOn(Site, "findOne").mockResolvedValue({
-        id: 1,
-        uuid: siteUuid,
-        name: null
-      } as unknown as Site);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: null } as unknown as Site,
+        polygonIds: polygonUuids
+      });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
       const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });

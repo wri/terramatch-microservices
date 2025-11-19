@@ -11,16 +11,15 @@ import { CalculateIndicator } from "./calculate-indicator.interface";
 import { TreeCoverLossCalculator } from "./calculators/tree-cover-loss.calculator";
 import { TreeCoverLossFiresCalculator } from "./calculators/tree-cover-loss-fires.calculators";
 import { RestorationByEcoRegionCalculator } from "./calculators/restoration-by-eco-region.calculator";
-import { RestorationByStrategyCalculator } from "./calculators/restoration-by-strategy.calculator";
-import { RestorationByLandUseCalculator } from "./calculators/restoration-by-land-use.calculator";
+import { RestorationByTypeCalculator } from "./calculators/restoration-by-type.calculator";
 import { Polygon } from "geojson";
 
 export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   treeCoverLoss: new TreeCoverLossCalculator(),
   treeCoverLossFires: new TreeCoverLossFiresCalculator(),
   restorationByEcoRegion: new RestorationByEcoRegionCalculator(),
-  restorationByStrategy: new RestorationByStrategyCalculator(),
-  restorationByLandUse: new RestorationByLandUseCalculator()
+  restorationByStrategy: new RestorationByTypeCalculator("practice"),
+  restorationByLandUse: new RestorationByTypeCalculator("targetSystem")
 };
 
 const slugMappings = {

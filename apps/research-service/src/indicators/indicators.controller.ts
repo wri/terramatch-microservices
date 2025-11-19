@@ -12,7 +12,7 @@ import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { IndicatorsParamDto } from "./dto/indicators-param.dto";
 
-@Controller("indicators/v3")
+@Controller("research/v3/indicators")
 @ApiExtraModels(IndicatorTreeCoverLossDto)
 export class IndicatorsController {
   private readonly logger = new TMLogger(IndicatorsController.name);

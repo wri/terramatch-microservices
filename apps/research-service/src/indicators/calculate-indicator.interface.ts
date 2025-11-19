@@ -7,5 +7,5 @@ export interface IndicatorResult {
 }
 
 export interface CalculateIndicator {
-  calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<number>;
+  calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<number> | Promise<string>;
 }

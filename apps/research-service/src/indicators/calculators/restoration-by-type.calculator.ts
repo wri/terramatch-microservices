@@ -5,11 +5,12 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 
-export class RestorationByStrategyCalculator implements CalculateIndicator {
-  private logger = new TMLogger(RestorationByStrategyCalculator.name);
+export class RestorationByTypeCalculator implements CalculateIndicator {
+  constructor(private readonly type: string) {}
+  private logger = new TMLogger(RestorationByTypeCalculator.name);
 
   async calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<number> {
-    this.logger.debug(`Calculating restoration by strategy for polygon ${polygonUuid}`);
+    this.logger.debug(`Calculating restoration by ${this.type} for polygon ${polygonUuid}`);
     this.logger.debug(`Geometry: ${JSON.stringify(geometry)}`);
 
     // change this to a query later
@@ -19,7 +20,7 @@ export class RestorationByStrategyCalculator implements CalculateIndicator {
     }
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid: polygon.uuid },
-      attributes: ["practice", "calc_area"]
+      attributes: [this.type, "calcArea"]
     });
     this.logger.debug(`Site polygon: ${JSON.stringify(sitePolygon)}`);
     if (sitePolygon == null) {

@@ -923,7 +923,7 @@ describe("SitePolygonsController", () => {
       const request: VersionUpdateBody = {
         data: {
           type: "sitePolygons",
-          id: "test-uuid",
+          id: "version-uuid",
           attributes: {
             isActive: true
           }

@@ -812,9 +812,10 @@ describe("PolygonClippingService", () => {
 
       jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
 
+      const mockSite = { uuid: "site-uuid" } as Site;
       const result = await service.getFixablePolygonsForSite("site-uuid");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
     });
 
     it("should handle non-array extraInfo in criteria records", async () => {
@@ -830,9 +831,10 @@ describe("PolygonClippingService", () => {
 
       jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
 
+      const mockSite = { uuid: "site-uuid" } as Site;
       const result = await service.getFixablePolygonsForSite("site-uuid");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
     });
 
     it("should handle overlaps that exceed percentage threshold", async () => {
@@ -860,9 +862,10 @@ describe("PolygonClippingService", () => {
 
       jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
 
+      const mockSite = { uuid: "site-uuid" } as Site;
       const result = await service.getFixablePolygonsForSite("site-uuid");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
     });
 
     it("should handle overlaps that exceed area threshold", async () => {
@@ -890,9 +893,10 @@ describe("PolygonClippingService", () => {
 
       jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
 
+      const mockSite = { uuid: "site-uuid" } as Site;
       const result = await service.getFixablePolygonsForSite("site-uuid");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
     });
 
     it("should handle overlaps with null polyUuid", async () => {
@@ -914,9 +918,10 @@ describe("PolygonClippingService", () => {
 
       jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
 
+      const mockSite = { uuid: "site-uuid" } as Site;
       const result = await service.getFixablePolygonsForSite("site-uuid");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ site: mockSite, polygonIds: [] });
     });
   });
 

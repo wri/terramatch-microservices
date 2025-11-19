@@ -358,8 +358,8 @@ describe("SitePolygonCreationService - Versioning", () => {
         uuid: baseSitePolygonUuid,
         primaryUuid: "primary-uuid",
         polyName: "Original Name",
-        practice: "agroforestry"
-      } as SitePolygon;
+        practice: ["agroforestry"]
+      } as unknown as SitePolygon;
 
       const attributeChanges: AttributeChangesDto = {
         polyName: "Updated Name",

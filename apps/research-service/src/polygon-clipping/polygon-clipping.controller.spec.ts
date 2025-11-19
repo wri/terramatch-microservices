@@ -204,14 +204,34 @@ describe("PolygonClippingController", () => {
       expect(result.id).toBe("job-uuid-123");
     });
 
+    it("should throw BadRequestException when siteUuid is empty string", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(controller.createClippedVersions({ siteUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException when projectUuid is empty string", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(controller.createClippedVersions({ projectUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
     it("should throw BadRequestException when siteUuid is null after isEmpty check", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      await expect(controller.createClippedVersions({ siteUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow();
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      await expect(
+        controller.createClippedVersions({ siteUuid: null as unknown as string }, { authenticatedUserId: 1 })
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when projectUuid is null after isEmpty check", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      await expect(controller.createClippedVersions({ projectUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow();
+      jest.spyOn(Project, "findOne").mockResolvedValue(null);
+      await expect(
+        controller.createClippedVersions({ projectUuid: null as unknown as string }, { authenticatedUserId: 1 })
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should handle project with null name", async () => {

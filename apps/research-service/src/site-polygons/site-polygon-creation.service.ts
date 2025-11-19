@@ -11,7 +11,13 @@ import {
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
-import { validateSitePolygonProperties, extractAdditionalData } from "./utils/site-polygon-property-validator";
+import {
+  validateSitePolygonProperties,
+  extractAdditionalData,
+  orderCommaSeparatedPropertiesAlphabetically,
+  VALID_PRACTICE_VALUES,
+  VALID_DISTRIBUTION_VALUES
+} from "./utils/site-polygon-property-validator";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import {
   CriteriaId,
@@ -642,13 +648,19 @@ export class SitePolygonCreationService {
         sitePolygonAttributes.plantStart = new Date(attributeChanges.plantStart);
       }
       if (attributeChanges.practice != null && attributeChanges.practice.length > 0) {
-        sitePolygonAttributes.practice = attributeChanges.practice;
+        sitePolygonAttributes.practice = orderCommaSeparatedPropertiesAlphabetically(
+          attributeChanges.practice,
+          VALID_PRACTICE_VALUES
+        );
       }
       if (attributeChanges.targetSys != null && attributeChanges.targetSys.length > 0) {
         sitePolygonAttributes.targetSys = attributeChanges.targetSys;
       }
       if (attributeChanges.distr != null && attributeChanges.distr.length > 0) {
-        sitePolygonAttributes.distr = attributeChanges.distr;
+        sitePolygonAttributes.distr = orderCommaSeparatedPropertiesAlphabetically(
+          attributeChanges.distr,
+          VALID_DISTRIBUTION_VALUES
+        );
       }
       if (attributeChanges.numTrees != null) {
         sitePolygonAttributes.numTrees = attributeChanges.numTrees;

@@ -23,9 +23,9 @@ import { Queue } from "bullmq";
 import { Site, DelayedJob } from "@terramatch-microservices/database/entities";
 import { SiteFactory } from "@terramatch-microservices/database/factories";
 import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
-import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { NotFoundException } from "@nestjs/common";
 import { FeatureCollection } from "geojson";
+import { Job } from "bullmq";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -659,7 +659,7 @@ describe("SitePolygonsController", () => {
         createdBy: 1
       } as DelayedJob;
       jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
-      geometryUploadQueue.add.mockResolvedValue({} as any);
+      geometryUploadQueue.add.mockResolvedValue({} as Job);
 
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
       const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
@@ -740,7 +740,7 @@ describe("SitePolygonsController", () => {
         createdBy: 1
       } as DelayedJob;
       jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
-      geometryUploadQueue.add.mockResolvedValue({} as any);
+      geometryUploadQueue.add.mockResolvedValue({} as Job);
 
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
       const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };

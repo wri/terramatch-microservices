@@ -48,7 +48,7 @@ export class NurseryProcessor extends EntityProcessor<
         {
           association: "project",
           attributes: ["uuid", "name"],
-          include: [{ association: "organisation", attributes: ["name"] }]
+          include: [{ association: "organisation", attributes: ["name", "uuid"] }]
         }
       ]
     });

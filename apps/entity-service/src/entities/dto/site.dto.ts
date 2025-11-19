@@ -192,24 +192,34 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ type: () => MediaDto, isArray: true })
   documentFiles: MediaDto[];
 
-  @ApiProperty({ type: () => MediaDto, isArray: false })
+  @ApiProperty({ type: () => MediaDto })
   stratificationForHeterogeneity: MediaDto;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project uuid"
   })
-  projectUuid: string;
+  projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project country"
   })
-  projectCountry: string;
+  projectCountry: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project organisation name"
   })
-  organisationName: string;
+  organisationName: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation uuid"
+  })
+  organisationUuid: string | null;
 }

@@ -55,6 +55,13 @@ export class NurseryLightDto extends EntityDto {
   })
   organisationName: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation uuid"
+  })
+  organisationUuid: string | null;
+
   @ApiProperty({ nullable: true, type: Date })
   startDate: Date | null;
 

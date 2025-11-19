@@ -170,6 +170,10 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     return this.project?.organisationName;
   }
 
+  get organisationUuid() {
+    return this.project?.organisationUuid;
+  }
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

@@ -170,6 +170,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     return this.project?.country;
   }
 
+  get organisationUuid() {
+    return this.project?.organisationUuid;
+  }
+
   get organisationName() {
     return this.project?.organisationName;
   }

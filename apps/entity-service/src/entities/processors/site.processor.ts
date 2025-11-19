@@ -49,7 +49,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         {
           association: "project",
           attributes: ["uuid", "name", "country"],
-          include: [{ association: "organisation", attributes: ["name"] }]
+          include: [{ association: "organisation", attributes: ["name", "uuid"] }]
         }
       ]
     });

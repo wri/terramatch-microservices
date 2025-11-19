@@ -136,16 +136,20 @@ export class DisturbanceReport extends Model<
   @BelongsTo(() => Project)
   project: Project | null;
 
-  get projectName(): NonAttribute<string | undefined> {
+  get projectName() {
     return this.project?.name ?? undefined;
   }
 
-  get organisationName(): NonAttribute<string | undefined> {
+  get projectUuid() {
+    return this.project?.uuid;
+  }
+
+  get organisationName() {
     return this.project?.organisationName ?? undefined;
   }
 
-  get projectUuid(): NonAttribute<string | undefined> {
-    return this.project?.uuid;
+  get organisationUuid() {
+    return this.project?.organisationUuid ?? undefined;
   }
 
   get isCompletable(): NonAttribute<boolean> {

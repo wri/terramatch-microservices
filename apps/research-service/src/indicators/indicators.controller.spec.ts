@@ -76,6 +76,7 @@ describe("IndicatorsController", () => {
       const slug: IndicatorSlug = "treeCoverLoss";
       const result = serialize(await controller.startIndicatorCalculation({ slug }, request, mockRequest));
       expect(mockQueue.add).toHaveBeenCalledWith("indicatorCalculation", {
+        slug,
         ...request.data.attributes,
         delayedJobId: 1
       });

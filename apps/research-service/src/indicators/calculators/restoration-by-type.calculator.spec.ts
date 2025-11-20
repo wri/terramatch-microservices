@@ -7,6 +7,8 @@ describe("RestorationByTypeCalculator", () => {
   let calculator: RestorationByTypeCalculator;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     calculator = new RestorationByTypeCalculator("practice");
   });
 

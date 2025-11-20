@@ -4,8 +4,9 @@ import { DataApiService } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
-type EcoRegionResult = {
+export type EcoRegionResult = {
   [key: string]: string | number;
   realm: string;
 };
@@ -16,21 +17,22 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
   private SQL = "SELECT eco_name, realm FROM results";
   private INDICATOR = "wwf_terrestrial_ecoregions";
 
-  async calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<string> {
+  async calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<EcoRegionResult> {
     this.logger.debug(`Calculating restoration by eco region for polygon ${polygonUuid}`);
-    const results: EcoRegionResult[] = await dataApiService.getIndicatorsDataset(this.INDICATOR, this.SQL, geometry);
-    const polygon = await PolygonGeometry.findOne({ where: { uuid: polygonUuid }, attributes: ["uuid"] });
-    if (polygon == null) {
-      throw new NotFoundException(`Polygon not found for uuid ${polygonUuid}`);
-    }
     const sitePolygon = await SitePolygon.findOne({
-      where: { polygonUuid: polygon.uuid },
+      where: {
+        polygonUuid: {
+          [Op.eq]: PolygonGeometry.uuidSubquery(polygonUuid)
+        }
+      },
       attributes: ["calcArea"]
     });
     this.logger.debug(`Site polygon: ${JSON.stringify(sitePolygon)}`);
     if (sitePolygon == null) {
       throw new NotFoundException(`Site polygon not found for uuid ${polygonUuid}`);
     }
+    const results: EcoRegionResult[] = await dataApiService.getIndicatorsDataset(this.INDICATOR, this.SQL, geometry);
+
     const area = await this.calculateArea(sitePolygon, geometry);
 
     const ecoRegiondata = results.map(result => {
@@ -51,7 +53,7 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
     }, {} as Record<string, string | number>);
     this.logger.debug(`Eco region data: ${JSON.stringify(FormattedecoRegiondata)}`);
 
-    return Promise.resolve(JSON.stringify(FormattedecoRegiondata));
+    return FormattedecoRegiondata as EcoRegionResult;
   }
 
   private async calculateArea(sitePolygon: SitePolygon, geometry: Polygon): Promise<number> {

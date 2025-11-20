@@ -106,7 +106,7 @@ export class IndicatorsService {
         ignoreDuplicates: false
       });
       this.logger.debug(`Successfully saved/updated ${results.length} results for slug: ${slug}`);
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`Failed to save results for slug: ${slug}`, {
         error: error.message,
         stack: error.stack,

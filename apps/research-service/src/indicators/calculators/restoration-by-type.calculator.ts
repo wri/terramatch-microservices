@@ -3,6 +3,7 @@ import { Polygon } from "geojson";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 export class RestorationByTypeCalculator implements CalculateIndicator {
   constructor(private readonly type: string) {}
@@ -12,15 +13,15 @@ export class RestorationByTypeCalculator implements CalculateIndicator {
     this.logger.debug(`Calculating restoration by ${this.type} for polygon ${polygonUuid}`);
     this.logger.debug(`Geometry: ${JSON.stringify(geometry)}`);
 
-    // change this to a query later
-    const polygon = await PolygonGeometry.findOne({ where: { uuid: polygonUuid }, attributes: ["uuid"] });
-    if (polygon == null) {
-      throw new NotFoundException(`Polygon not found for uuid ${polygonUuid}`);
-    }
     const sitePolygon = await SitePolygon.findOne({
-      where: { polygonUuid: polygon.uuid },
+      where: {
+        polygonUuid: {
+          [Op.eq]: PolygonGeometry.uuidSubquery(polygonUuid)
+        }
+      },
       attributes: [this.type, "calcArea"]
     });
+
     this.logger.debug(`Site polygon: ${JSON.stringify(sitePolygon)}`);
     if (sitePolygon == null) {
       throw new NotFoundException(`Site polygon not found for uuid ${polygonUuid}`);

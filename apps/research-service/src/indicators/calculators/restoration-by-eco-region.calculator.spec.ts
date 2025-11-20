@@ -67,9 +67,13 @@ describe("RestorationByEcoRegionCalculator", () => {
     };
     const result = await calculator.calculate("uuid", geometry, dataApiServiceMock as unknown as DataApiService);
     expect(result).toMatchObject({
-      ecoRegion1: 100,
-      ecoRegion2: 100,
-      realm: "realm"
+      indicatorSlug: "restorationByEcoRegion",
+      yearOfAnalysis: 2025,
+      value: {
+        ecoRegion1: 100,
+        ecoRegion2: 100,
+        realm: "realm"
+      }
     });
   });
 
@@ -97,9 +101,13 @@ describe("RestorationByEcoRegionCalculator", () => {
       geometry
     );
     expect(result).toMatchObject({
-      ecoRegion1: 100,
-      ecoRegion2: 100,
-      realm: "realm"
+      indicatorSlug: "restorationByEcoRegion",
+      yearOfAnalysis: 2025,
+      value: {
+        ecoRegion1: 100,
+        ecoRegion2: 100,
+        realm: "realm"
+      }
     });
   });
 });

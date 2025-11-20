@@ -48,6 +48,6 @@ describe("TreeCoverLossFiresCalculator", () => {
       "SELECT umd_tree_cover_loss_from_fires__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss_from_fires__year",
       geometry
     );
-    expect(result).toBe(0);
+    expect(result).toBe("[]");
   });
 });

@@ -10,5 +10,5 @@ export class GeometryUploadAttributesDto {
 }
 
 export class GeometryUploadRequestDto extends JsonApiBodyDto(
-  class GeometryUploadData extends CreateDataDto("geometryUpload", GeometryUploadAttributesDto) {}
+  class GeometryUploadData extends CreateDataDto("sitePolygons", GeometryUploadAttributesDto) {}
 ) {}

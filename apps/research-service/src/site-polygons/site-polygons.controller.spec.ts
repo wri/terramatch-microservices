@@ -775,7 +775,7 @@ describe("SitePolygonsController", () => {
     it("should throw UnauthorizedException when authorization fails", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
 
       await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
         UnauthorizedException
@@ -790,7 +790,7 @@ describe("SitePolygonsController", () => {
         configurable: true
       });
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
 
       await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
         UnauthorizedException
@@ -801,7 +801,7 @@ describe("SitePolygonsController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Site, "findOne").mockResolvedValue(null);
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "geometryUpload", attributes: { siteId: "non-existent-uuid" } } };
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "non-existent-uuid" } } };
 
       await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
         NotFoundException
@@ -818,7 +818,7 @@ describe("SitePolygonsController", () => {
       jest.spyOn(User, "findByPk").mockResolvedValue(user);
 
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
 
       geometryFileProcessingService.parseGeometryFile.mockRejectedValue(
         new BadRequestException("Failed to parse file")
@@ -874,7 +874,7 @@ describe("SitePolygonsController", () => {
       geometryUploadQueue.add.mockResolvedValue({} as Job);
 
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
 
       const result = await controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto);
 
@@ -955,7 +955,7 @@ describe("SitePolygonsController", () => {
       geometryUploadQueue.add.mockResolvedValue({} as Job);
 
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "geometryUpload", attributes: { siteId: "site-uuid" } } };
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
 
       await controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto);
 

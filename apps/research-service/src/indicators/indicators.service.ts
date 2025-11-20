@@ -9,7 +9,7 @@ import { DataApiService } from "@terramatch-microservices/data-api";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { CalculateIndicator } from "./calculate-indicator.interface";
 import { TreeCoverLossCalculator } from "./calculators/tree-cover-loss.calculator";
-import { TreeCoverLossFiresCalculator } from "./calculators/tree-cover-loss-fires.calculators";
+import { TreeCoverLossFiresCalculator } from "./calculators/tree-cover-loss-fires.calculator";
 import { RestorationByEcoRegionCalculator } from "./calculators/restoration-by-eco-region.calculator";
 import { RestorationByTypeCalculator } from "./calculators/restoration-by-type.calculator";
 import { Polygon } from "geojson";

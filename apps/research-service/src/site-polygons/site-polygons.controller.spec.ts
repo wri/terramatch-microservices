@@ -777,13 +777,19 @@ describe("SitePolygonsController", () => {
         return Promise.resolve(new SitePolygonLightDto(sitePolygon, []));
       });
 
-      const result = await controller.getVersions("polygon-uuid");
+      const result = serialize(await controller.getVersions("polygon-uuid"));
 
       expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
       expect(SitePolygon.findOne).toHaveBeenCalledWith({ where: { uuid: "polygon-uuid" } });
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith(primaryUuid);
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, false);
       expect(result.data).toBeDefined();
+      expect(result.meta).toBeDefined();
+      expect(result.meta?.indices).toBeDefined();
+      expect(result.meta?.indices).toHaveLength(1);
+      expect(result.meta?.indices?.[0].requestPath).toBe("/research/v3/sitePolygons/polygon-uuid/versions");
+      expect(result.meta?.indices?.[0].ids).toEqual(["version-2-uuid", "version-1-uuid"]);
+      expect(result.meta?.indices?.[0].total).toBe(2);
     });
   });
 

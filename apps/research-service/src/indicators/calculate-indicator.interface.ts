@@ -1,6 +1,5 @@
 import { DataApiService } from "@terramatch-microservices/data-api";
-import { IndicatorOutputHectares } from "@terramatch-microservices/database/entities";
-import { EcoRegionResult } from "@terramatch-microservices/database/constants";
+import { IndicatorOutputHectares, IndicatorOutputTreeCoverLoss } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 
 export interface IndicatorResult {
@@ -13,5 +12,5 @@ export interface CalculateIndicator {
     polygonUuid: string,
     geometry: Polygon,
     dataApiService: DataApiService
-  ): Promise<number> | Promise<string> | Promise<EcoRegionResult> | Promise<IndicatorOutputHectares>;
+  ): Promise<number> | Promise<string> | Promise<IndicatorOutputHectares> | Promise<IndicatorOutputTreeCoverLoss>;
 }

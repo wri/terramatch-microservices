@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { IndicatorSlug } from "@terramatch-microservices/database/constants";
+import { INDICATORS, IndicatorSlug } from "@terramatch-microservices/database/constants";
 import {
   IndicatorOutputHectares,
   IndicatorOutputTreeCoverLoss,
@@ -18,8 +18,8 @@ export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   treeCoverLoss: new TreeCoverLossCalculator(),
   treeCoverLossFires: new TreeCoverLossFiresCalculator(),
   restorationByEcoRegion: new RestorationByEcoRegionCalculator(),
-  restorationByStrategy: new RestorationByTypeCalculator("practice"),
-  restorationByLandUse: new RestorationByTypeCalculator("targetSystem")
+  restorationByStrategy: new RestorationByTypeCalculator("practice", INDICATORS[5]),
+  restorationByLandUse: new RestorationByTypeCalculator("targetSys", INDICATORS[6])
 };
 
 const slugMappings = {
@@ -89,31 +89,15 @@ export class IndicatorsService {
   ) {
     const slugMappedValue = slugMappings[slug];
 
-    if (slugMappedValue == null) {
-      throw new BadRequestException(`Unknown slug: ${slug}`);
-    }
-
-    if (results.length === 0) {
-      this.logger.warn(`No results to save for slug: ${slug}`);
-      return;
-    }
-
-    this.logger.debug(`Results (${results.length} items): ${JSON.stringify(results, null, 2)}`);
-
     try {
       await slugMappedValue.model.bulkCreate(results, {
-        updateOnDuplicate: ["value", "updated_at"],
-        ignoreDuplicates: false
+        updateOnDuplicate: ["value", "updatedAt"],
+        ignoreDuplicates: false,
+        returning: true
       });
       this.logger.debug(`Successfully saved/updated ${results.length} results for slug: ${slug}`);
     } catch (error) {
-      this.logger.error(`Failed to save results for slug: ${slug}`, {
-        error: error.message,
-        stack: error.stack,
-        name: error.name,
-        original: error.original?.message,
-        sql: error.sql
-      });
+      this.logger.error(`Failed to save results for slug: ${slug}`, `${error}`);
       throw error;
     }
   }

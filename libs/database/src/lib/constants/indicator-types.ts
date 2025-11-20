@@ -13,8 +13,10 @@ export interface EcoRegionResult {
   realm: string;
 }
 
-export interface IndicatorsTypes {
-  treeCoverLoss: TreeCoverLossResult;
-  treeCoverLossFires: TreeCoverLossFiresResult;
-  ecoRegion: EcoRegionResult;
+export interface TreeCoverLossData {
+  [key: string]: number;
+}
+
+export interface RestorationByTypeData {
+  [key: string]: number;
 }

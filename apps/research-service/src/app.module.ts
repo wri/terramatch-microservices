@@ -3,6 +3,7 @@ import { CommonModule } from "@terramatch-microservices/common";
 import { SitePolygonsController } from "./site-polygons/site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { APP_FILTER } from "@nestjs/core";
@@ -23,6 +24,7 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
 import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
+import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 
 @Module({
   imports: [
@@ -42,7 +44,8 @@ import { IndicatorsProcessor } from "./indicators/indicators.processor";
       })
     }),
     BullModule.registerQueue({ name: "validation" }),
-    BullModule.registerQueue({ name: "indicators" })
+    BullModule.registerQueue({ name: "indicators" }),
+    BullModule.registerQueue({ name: "clipping" })
   ],
   controllers: [
     SitePolygonsController,
@@ -59,6 +62,7 @@ import { IndicatorsProcessor } from "./indicators/indicators.processor";
     IndicatorsService,
     SitePolygonsService,
     SitePolygonCreationService,
+    SitePolygonVersioningService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     BoundingBoxService,
@@ -67,7 +71,8 @@ import { IndicatorsProcessor } from "./indicators/indicators.processor";
     IndicatorsProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
-    PolygonClippingService
+    PolygonClippingService,
+    ClippingProcessor
   ]
 })
 export class AppModule {}

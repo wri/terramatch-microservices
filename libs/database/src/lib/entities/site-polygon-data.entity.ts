@@ -13,8 +13,7 @@ import { SitePolygon } from "./site-polygon.entity";
 
 @Table({
   tableName: "site_polygon_data",
-  underscored: true,
-  paranoid: true
+  underscored: true
 })
 export class SitePolygonData extends Model<SitePolygonData> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SitePolygonData";

@@ -19,9 +19,9 @@ describe("DataCompletenessValidator", () => {
     it("should return valid when all required fields are present and valid", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         numTrees: 100,
         plantStart: new Date("2023-01-01")
       } as unknown as SitePolygon;
@@ -82,9 +82,9 @@ describe("DataCompletenessValidator", () => {
     it("should handle multiple valid practices", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting,direct-seeding",
+        practice: ["tree-planting", "direct-seeding"],
         targetSys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         numTrees: 100,
         plantStart: new Date("2023-01-01")
       } as unknown as SitePolygon;
@@ -99,9 +99,9 @@ describe("DataCompletenessValidator", () => {
     it("should handle multiple valid target systems", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest,grassland",
-        distr: "single-line",
+        distr: ["single-line"],
         numTrees: 100,
         plantStart: new Date("2023-01-01")
       } as unknown as SitePolygon;
@@ -116,9 +116,9 @@ describe("DataCompletenessValidator", () => {
     it("should handle multiple valid distributions", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "single-line,partial",
+        distr: ["single-line", "partial"],
         numTrees: 100,
         plantStart: new Date("2023-01-01")
       } as unknown as SitePolygon;
@@ -133,9 +133,9 @@ describe("DataCompletenessValidator", () => {
     it("should handle string date format", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         numTrees: 100,
         plantStart: "2023-01-01"
       } as unknown as SitePolygon;
@@ -174,9 +174,9 @@ describe("DataCompletenessValidator", () => {
     it("should handle zero numTrees as invalid", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         numTrees: 0,
         plantStart: new Date("2023-01-01")
       } as unknown as SitePolygon;
@@ -197,9 +197,9 @@ describe("DataCompletenessValidator", () => {
     it("should handle negative numTrees as invalid", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         numTrees: -1,
         plantStart: new Date("2023-01-01")
       } as unknown as SitePolygon;
@@ -224,9 +224,9 @@ describe("DataCompletenessValidator", () => {
         {
           polygonUuid: "uuid-1",
           polyName: "Test Polygon 1",
-          practice: "tree-planting",
+          practice: ["tree-planting"],
           targetSys: "agroforest",
-          distr: "single-line",
+          distr: ["single-line"],
           numTrees: 100,
           plantStart: new Date("2023-01-01")
         },
@@ -280,28 +280,27 @@ describe("DataCompletenessValidator", () => {
   });
 
   describe("field validation", () => {
-    it("should validate all valid practices", () => {
+    it("should validate all valid practices", async () => {
       const validPractices = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
-
-      validPractices.forEach(practice => {
+      for (const practice of validPractices) {
         const mockSitePolygon = {
           polyName: "Test",
-          practice,
+          practice: [practice],
           targetSys: "agroforest",
-          distr: "single-line",
+          distr: ["single-line"],
           numTrees: 100,
           plantStart: new Date("2023-01-01")
         } as unknown as SitePolygon;
 
         jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon);
 
-        expect(validator.validatePolygon("test-uuid")).resolves.toMatchObject({
+        expect(await validator.validatePolygon("test-uuid")).toMatchObject({
           valid: true
         });
-      });
+      }
     });
 
-    it("should validate all valid target systems", () => {
+    it("should validate all valid target systems", async () => {
       const validSystems = [
         "agroforest",
         "grassland",
@@ -313,44 +312,42 @@ describe("DataCompletenessValidator", () => {
         "woodlot-or-plantation",
         "urban-forest"
       ];
-
-      validSystems.forEach(system => {
+      for (const system of validSystems) {
         const mockSitePolygon = {
           polyName: "Test",
-          practice: "tree-planting",
+          practice: ["tree-planting"],
           targetSys: system,
-          distr: "single-line",
+          distr: ["single-line"],
           numTrees: 100,
           plantStart: new Date("2023-01-01")
         } as unknown as SitePolygon;
 
         jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon);
 
-        expect(validator.validatePolygon("test-uuid")).resolves.toMatchObject({
+        expect(await validator.validatePolygon("test-uuid")).toMatchObject({
           valid: true
         });
-      });
+      }
     });
 
-    it("should validate all valid distributions", () => {
+    it("should validate all valid distributions", async () => {
       const validDistributions = ["single-line", "partial", "full"];
-
-      validDistributions.forEach(distr => {
+      for (const distr of validDistributions) {
         const mockSitePolygon = {
           polyName: "Test",
-          practice: "tree-planting",
+          practice: ["tree-planting"],
           targetSys: "agroforest",
-          distr,
+          distr: [distr],
           numTrees: 100,
           plantStart: new Date("2023-01-01")
         } as unknown as SitePolygon;
 
         jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon);
 
-        expect(validator.validatePolygon("test-uuid")).resolves.toMatchObject({
+        expect(await validator.validatePolygon("test-uuid")).toMatchObject({
           valid: true
         });
-      });
+      }
     });
   });
 
@@ -394,9 +391,9 @@ describe("DataCompletenessValidator", () => {
       };
       const properties = {
         poly_name: "Test Polygon",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         target_sys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         num_trees: 100,
         plantstart: "2023-01-01"
       };
@@ -439,9 +436,9 @@ describe("DataCompletenessValidator", () => {
       };
       const properties = {
         poly_name: "Test",
-        practice: "invalid-practice",
+        practice: ["invalid-practice"],
         target_sys: "invalid-system",
-        distr: "invalid-distribution",
+        distr: ["invalid-distribution"],
         num_trees: -5,
         plantstart: "invalid-date"
       };
@@ -463,9 +460,9 @@ describe("DataCompletenessValidator", () => {
       const geometry: Point = { type: "Point", coordinates: [0, 0] };
       const properties = {
         poly_name: "Test Point",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         target_sys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         num_trees: 100,
         plantstart: "2023-01-01"
       };
@@ -491,9 +488,9 @@ describe("DataCompletenessValidator", () => {
       };
       const properties = {
         poly_name: "Test MultiPolygon",
-        practice: "direct-seeding",
+        practice: ["direct-seeding"],
         target_sys: "natural-forest",
-        distr: "full",
+        distr: ["full"],
         num_trees: 200,
         plantstart: "2023-06-01"
       };
@@ -517,9 +514,9 @@ describe("DataCompletenessValidator", () => {
       };
       const properties = {
         poly_name: "Test",
-        practice: "tree-planting,direct-seeding",
+        practice: ["tree-planting", "direct-seeding"],
         target_sys: "agroforest",
-        distr: "single-line",
+        distr: ["single-line"],
         num_trees: 100,
         plantstart: "2023-01-01"
       };
@@ -543,9 +540,9 @@ describe("DataCompletenessValidator", () => {
       };
       const properties = {
         poly_name: "Test",
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         target_sys: "agroforest,grassland",
-        distr: "single-line",
+        distr: ["single-line"],
         num_trees: 100,
         plantstart: "2023-01-01"
       };

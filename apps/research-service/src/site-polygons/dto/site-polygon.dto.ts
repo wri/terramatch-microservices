@@ -131,14 +131,14 @@ export class SitePolygonLightDto extends HybridSupportDto {
   @ApiProperty({ nullable: true, type: String })
   versionName: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  practice: string | null;
+  @ApiProperty({ nullable: true, isArray: true, type: String })
+  practice: string[] | null;
 
   @ApiProperty({ nullable: true, type: String })
   targetSys: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  distr: string | null;
+  @ApiProperty({ nullable: true, isArray: true, type: String })
+  distr: string[] | null;
 
   @ApiProperty({ nullable: true, type: Number })
   numTrees: number | null;
@@ -206,33 +206,6 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
   @ApiProperty({ nullable: true })
   geometry?: Polygon;
 
-  @ApiProperty({ nullable: true, type: String })
-  practice: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  targetSys: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  distr: string | null;
-
-  @ApiProperty({ nullable: true, type: Number })
-  numTrees: number | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "Source of the site polygon"
-  })
-  source: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "Validation status of the site polygon",
-    maxLength: 255
-  })
-  validationStatus: string | null;
-
   @ApiProperty({
     type: () => TreeSpeciesDto,
     isArray: true,
@@ -246,17 +219,4 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     description: "Access to reported trees planted for each approved report on this site."
   })
   reportingPeriods: ReportingPeriodDto[];
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "Primary UUID of the site polygon"
-  })
-  primaryUuid: string;
-
-  @ApiProperty({
-    type: String,
-    description: "UUID of the site polygon"
-  })
-  uuid: string;
 }

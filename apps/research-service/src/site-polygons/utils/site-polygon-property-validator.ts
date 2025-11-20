@@ -16,9 +16,9 @@ const CORE_PROPERTY_KEYS = [
 
 const EXCLUDED_PROPERTY_KEYS = ["area", "uuid"] as const;
 
-const VALID_DISTRIBUTION_VALUES = ["full", "partial", "single-line"] as const;
+export const VALID_DISTRIBUTION_VALUES = ["full", "partial", "single-line"] as const;
 
-const VALID_PRACTICE_VALUES = ["assisted-natural-regeneration", "direct-seeding", "tree-planting"] as const;
+export const VALID_PRACTICE_VALUES = ["assisted-natural-regeneration", "direct-seeding", "tree-planting"] as const;
 
 export function validateSitePolygonProperties(properties: Record<string, unknown>): Partial<SitePolygon> {
   let plantstart: Date | null = null;
@@ -71,7 +71,10 @@ export function extractAdditionalData(properties: Record<string, unknown>): Reco
   return additionalData;
 }
 
-function orderCommaSeparatedPropertiesAlphabetically(value: string, validValues: readonly string[]): string | null {
+export function orderCommaSeparatedPropertiesAlphabetically(
+  value: string,
+  validValues: readonly string[]
+): string[] | null {
   if (value == null || value.trim().length === 0) return null;
 
   const values = value
@@ -82,7 +85,7 @@ function orderCommaSeparatedPropertiesAlphabetically(value: string, validValues:
   const validValuesSet = new Set(validValues);
   const filteredValues = values.filter(v => validValuesSet.has(v));
 
-  return filteredValues.length > 0 ? filteredValues.sort().join(",") : null;
+  return filteredValues.length > 0 ? filteredValues.sort() : null;
 }
 
 function validateTargetSys(value: string): string | null {

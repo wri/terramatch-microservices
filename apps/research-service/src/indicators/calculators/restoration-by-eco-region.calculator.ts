@@ -2,14 +2,11 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { CalculateIndicator } from "../calculate-indicator.interface";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
-import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
+import { IndicatorOutputHectares, PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
+import { EcoRegionResult } from "@terramatch-microservices/database/constants";
+import { INDICATORS } from "@terramatch-microservices/database/constants/polygon-indicators";
 import { Op } from "sequelize";
-
-export type EcoRegionResult = {
-  [key: string]: string | number;
-  realm: string;
-};
 
 export class RestorationByEcoRegionCalculator implements CalculateIndicator {
   private logger = new TMLogger(RestorationByEcoRegionCalculator.name);
@@ -17,7 +14,11 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
   private SQL = "SELECT eco_name, realm FROM results";
   private INDICATOR = "wwf_terrestrial_ecoregions";
 
-  async calculate(polygonUuid: string, geometry: Polygon, dataApiService: DataApiService): Promise<EcoRegionResult> {
+  async calculate(
+    polygonUuid: string,
+    geometry: Polygon,
+    dataApiService: DataApiService
+  ): Promise<IndicatorOutputHectares> {
     this.logger.debug(`Calculating restoration by eco region for polygon ${polygonUuid}`);
     const sitePolygon = await SitePolygon.findOne({
       where: {
@@ -25,7 +26,7 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
           [Op.eq]: PolygonGeometry.uuidSubquery(polygonUuid)
         }
       },
-      attributes: ["calcArea"]
+      attributes: ["id", "calcArea"]
     });
     this.logger.debug(`Site polygon: ${JSON.stringify(sitePolygon)}`);
     if (sitePolygon == null) {
@@ -51,9 +52,15 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
       acc.realm = item.realm;
       return acc;
     }, {} as Record<string, string | number>);
-    this.logger.debug(`Eco region data: ${JSON.stringify(FormattedecoRegiondata)}`);
 
-    return FormattedecoRegiondata as EcoRegionResult;
+    const ecoRegionData: Partial<IndicatorOutputHectares> = {
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: INDICATORS[4],
+      yearOfAnalysis: new Date().getFullYear(),
+      value: FormattedecoRegiondata
+    };
+
+    return ecoRegionData as IndicatorOutputHectares;
   }
 
   private async calculateArea(sitePolygon: SitePolygon, geometry: Polygon): Promise<number> {

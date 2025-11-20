@@ -1,6 +1,7 @@
-import { Polygon } from "geojson";
 import { DataApiService } from "@terramatch-microservices/data-api";
-import { EcoRegionResult } from "./calculators/restoration-by-eco-region.calculator";
+import { IndicatorOutputHectares } from "@terramatch-microservices/database/entities";
+import { EcoRegionResult } from "@terramatch-microservices/database/constants";
+import { Polygon } from "geojson";
 
 export interface IndicatorResult {
   valid: boolean;
@@ -12,5 +13,5 @@ export interface CalculateIndicator {
     polygonUuid: string,
     geometry: Polygon,
     dataApiService: DataApiService
-  ): Promise<number> | Promise<string> | Promise<EcoRegionResult>;
+  ): Promise<number> | Promise<string> | Promise<EcoRegionResult> | Promise<IndicatorOutputHectares>;
 }

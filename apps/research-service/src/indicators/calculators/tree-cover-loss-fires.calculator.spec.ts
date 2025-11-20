@@ -5,7 +5,7 @@ import { Polygon } from "geojson";
 
 describe("TreeCoverLossFiresCalculator", () => {
   let calculator: TreeCoverLossFiresCalculator;
-  let dataApiServiceMock = {
+  const dataApiServiceMock = {
     getIndicatorsDataset: jest.fn().mockResolvedValue([])
   };
 

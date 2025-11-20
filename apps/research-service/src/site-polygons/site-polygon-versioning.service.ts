@@ -89,13 +89,15 @@ export class SitePolygonVersioningService {
   generateVersionName(polyName: string | null, userFullName: string | null): string {
     const now = new Date();
 
-    const date = `${now.getDate()}_${now.toLocaleDateString("en-US", {
-      month: "long"
-    })}_${now.getFullYear()}`;
+    const date = `${now.getUTCDate()}_${now.toLocaleDateString("en-US", {
+      month: "long",
+      timeZone: "UTC"
+    })}_${now.getUTCFullYear()}`;
 
-    const time = `${String(now.getHours()).padStart(2, "0")}_${String(now.getMinutes()).padStart(2, "0")}_${String(
-      now.getSeconds()
-    ).padStart(2, "0")}`;
+    const time = `${String(now.getUTCHours()).padStart(2, "0")}_${String(now.getUTCMinutes()).padStart(
+      2,
+      "0"
+    )}_${String(now.getUTCSeconds()).padStart(2, "0")}`;
 
     const name = polyName ?? "Unnamed";
 

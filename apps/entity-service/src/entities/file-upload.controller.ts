@@ -8,7 +8,6 @@ import {
   UploadedFile,
   UseInterceptors
 } from "@nestjs/common";
-import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
@@ -26,7 +25,6 @@ import { TranslatableException } from "@terramatch-microservices/common/exceptio
 @Controller("entities/v3/files")
 export class FileUploadController {
   constructor(
-    private readonly fileUploadService: FileUploadService,
     private readonly policyService: PolicyService,
     private readonly mediaService: MediaService,
     private readonly entitiesService: EntitiesService
@@ -53,7 +51,14 @@ export class FileUploadController {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const media = await this.fileUploadService.uploadFile(model, entity, collection, file, payload.data.attributes);
+    const media = await this.mediaService.createMedia(
+      model,
+      entity,
+      this.entitiesService.userId,
+      collection,
+      file,
+      payload.data.attributes
+    );
     return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {

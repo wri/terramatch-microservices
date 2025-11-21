@@ -18,11 +18,6 @@ export class TreeCoverLossCalculator implements CalculateIndicator {
     dataApiService: DataApiService
   ): Promise<IndicatorOutputTreeCoverLoss> {
     this.logger.debug(`Calculating tree cover loss for polygon ${polygonUuid}`);
-    const results: TreeCoverLossResult[] = await dataApiService.getIndicatorsDataset(
-      this.INDICATOR,
-      this.SQL,
-      geometry
-    );
 
     const sitePolygon = await SitePolygon.findOne({
       where: {
@@ -34,6 +29,12 @@ export class TreeCoverLossCalculator implements CalculateIndicator {
     if (sitePolygon == null) {
       throw new NotFoundException(`Site polygon not found for uuid ${polygonUuid}`);
     }
+
+    const results: TreeCoverLossResult[] = await dataApiService.getIndicatorsDataset(
+      this.INDICATOR,
+      this.SQL,
+      geometry
+    );
 
     const treeCoverLossValue: TreeCoverLossData = results.reduce((acc, result) => {
       acc[result.umd_tree_cover_loss__year] = result.area__ha;

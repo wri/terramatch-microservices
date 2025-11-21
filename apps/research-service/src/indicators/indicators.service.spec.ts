@@ -3,7 +3,7 @@ import { IndicatorsService } from "./indicators.service";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 
 describe("IndicatorsService", () => {
@@ -47,6 +47,10 @@ describe("IndicatorsService", () => {
   });
 
   it("should process the indicators", async () => {
+    jest.spyOn(SitePolygon, "findOne").mockResolvedValue({
+      id: 1,
+      calcArea: 100
+    } as unknown as SitePolygon);
     jest.spyOn(PolygonGeometry, "getGeoJSONParsed").mockResolvedValue({
       type: "Polygon",
       coordinates: [

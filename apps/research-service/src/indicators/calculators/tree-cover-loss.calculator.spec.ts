@@ -2,11 +2,17 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { TreeCoverLossCalculator } from "./tree-cover-loss.calculator";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
+import { SitePolygon } from "@terramatch-microservices/database/entities";
 
 describe("TreeCoverLossCalculator", () => {
   let calculator: TreeCoverLossCalculator;
   const dataApiServiceMock = {
-    getIndicatorsDataset: jest.fn().mockResolvedValue([])
+    getIndicatorsDataset: jest.fn().mockResolvedValue([
+      {
+        umd_tree_cover_loss__year: 2025,
+        area__ha: 100
+      }
+    ])
   };
 
   beforeEach(async () => {
@@ -30,6 +36,10 @@ describe("TreeCoverLossCalculator", () => {
   });
 
   it("should calculate the tree cover loss", async () => {
+    jest.spyOn(SitePolygon, "findOne").mockResolvedValue({
+      id: 1,
+      calcArea: 100
+    } as unknown as SitePolygon);
     const geometry: Polygon = {
       type: "Polygon",
       coordinates: [
@@ -43,11 +53,11 @@ describe("TreeCoverLossCalculator", () => {
       ]
     };
     const result = await calculator.calculate("uuid", geometry, dataApiServiceMock as unknown as DataApiService);
-    expect(dataApiServiceMock.getIndicatorsDataset).toHaveBeenCalledWith(
-      "umd_tree_cover_loss",
-      "SELECT umd_tree_cover_loss__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss__year",
-      geometry
-    );
-    expect(result).toBe(0);
+    expect(result).toMatchObject({
+      indicatorSlug: "treeCoverLoss",
+      sitePolygonId: 1,
+      value: { 2025: 100 },
+      yearOfAnalysis: 2025
+    });
   });
 });

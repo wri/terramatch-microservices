@@ -9,7 +9,7 @@ describe("RestorationByTypeCalculator", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    calculator = new RestorationByTypeCalculator("practice");
+    calculator = new RestorationByTypeCalculator("practice", "restorationByStrategy");
   });
 
   it("should be defined", () => {
@@ -52,7 +52,12 @@ describe("RestorationByTypeCalculator", () => {
       ]
     };
     const result = await calculator.calculate("uuid", geometry);
-    expect(result).toBe(100);
+    expect(result).toMatchObject({
+      indicatorSlug: "restorationByStrategy",
+      sitePolygonId: 1,
+      value: { test: 100 },
+      yearOfAnalysis: 2025
+    });
   });
 
   it("should calculate the area if the site polygon does not have a calcArea", async () => {
@@ -75,7 +80,12 @@ describe("RestorationByTypeCalculator", () => {
       ]
     } as Polygon;
     const result = await calculator.calculate("uuid", geometry);
-    expect(result).toBe(100);
+    expect(result).toMatchObject({
+      indicatorSlug: "restorationByStrategy",
+      sitePolygonId: 1,
+      value: { test: 100 },
+      yearOfAnalysis: 2025
+    });
     expect(PolygonGeometry.calculateArea).toHaveBeenCalledWith(geometry);
   });
 });

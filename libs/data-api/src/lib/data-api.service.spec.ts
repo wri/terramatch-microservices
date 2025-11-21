@@ -132,4 +132,87 @@ describe("DataApiService", () => {
       60 * 60 * 3
     );
   });
+
+  it("should fetch the indicators dataset using the correct query", async () => {
+    fetchMock.mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ data: { foo: "mocked data" } })
+    } as Response);
+    const result = await service.getIndicatorsDataset("indicators", "SELECT * FROM indicators", {
+      type: "Polygon",
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+          [1, 1],
+          [1, 0],
+          [0, 0]
+        ]
+      ]
+    });
+    expect(result).toEqual({ foo: "mocked data" });
+  });
+
+  it("should throw an error if the indicators dataset is not found", async () => {
+    fetchMock.mockResolvedValue({
+      status: 404,
+      ok: false,
+      json: () => Promise.resolve({ error: "Not Found" })
+    } as Response);
+    await expect(
+      service.getIndicatorsDataset("indicators", "SELECT * FROM indicators", {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      })
+    ).rejects.toThrow(InternalServerErrorException);
+  });
+
+  it("should throw an error if the environment is not configured correctly", async () => {
+    config.get.mockReturnValue(null);
+    await expect(
+      service.getIndicatorsDataset("indicators", "SELECT * FROM indicators", {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      })
+    ).rejects.toThrow(InternalServerErrorException);
+  });
+
+  it("should throw an error if the indicators dataset is not found", async () => {
+    fetchMock.mockResolvedValue({
+      status: 404,
+      ok: false,
+      json: () => Promise.resolve({ error: "Not Found" })
+    } as Response);
+    await expect(
+      service.getIndicatorsDataset("indicators", "SELECT * FROM indicators", {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      })
+    ).rejects.toThrow(InternalServerErrorException);
+  });
 });

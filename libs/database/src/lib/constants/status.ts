@@ -11,9 +11,9 @@ export const NEEDS_MORE_INFORMATION = "needs-more-information";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 
-export const statusUpdateSequelizeHook = (model: Model) => {
+export const statusUpdateSequelizeHook = async (model: Model) => {
   // Processed in event.service.ts in the common lib
-  DatabaseModule.emitModelEvent("statusUpdated", model);
+  await DatabaseModule.emitModelEvent("statusUpdated", model);
 };
 
 const emitStatusUpdateHook = (from: string, model: Model) => statusUpdateSequelizeHook(model);

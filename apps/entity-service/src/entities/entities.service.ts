@@ -41,7 +41,11 @@ import { DisturbanceDto } from "./dto/disturbance.dto";
 import { InvasiveDto } from "./dto/invasive.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
 import { StrataDto } from "./dto/strata.dto";
-import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import {
+  MEDIA_OWNER_MODELS,
+  MediaOwnerModel,
+  MediaOwnerType
+} from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
@@ -199,6 +203,8 @@ export class EntitiesService {
 
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
+
+  duplicateMedia = (media: Media, newOwner: MediaOwnerModel) => this.mediaService.duplicateMedia(media, newOwner);
 
   mediaDto(media: Media, additional: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {

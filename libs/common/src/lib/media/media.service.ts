@@ -1,13 +1,12 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Media, User } from "@terramatch-microservices/database/entities";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
 import "multer";
 import {
   abbreviatedValidationMimeTypes,
   FILE_VALIDATION,
-  MEDIA_OWNER_MODELS,
   mediaConfiguration,
   MediaConfiguration,
   MediaOwnerModel,
@@ -18,6 +17,7 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TranslatableException } from "../exceptions/translatable.exception";
 import sharp from "sharp";
+import { laravelType } from "@terramatch-microservices/database/types/util";
 
 type MediaAttributes = {
   isPublic: boolean;
@@ -63,8 +63,6 @@ export class MediaService {
     file: Express.Multer.File,
     data: MediaAttributes = { isPublic: true }
   ) {
-    const mediaOwnerModel = MEDIA_OWNER_MODELS[entity];
-
     const configuration = mediaConfiguration(entity, collection);
     if (configuration == null) {
       throw new InternalServerErrorException(`Configuration for collection ${collection} not found`);
@@ -79,7 +77,7 @@ export class MediaService {
 
     const media = await Media.create({
       collectionName: collection,
-      modelType: mediaOwnerModel.LARAVEL_TYPE,
+      modelType: laravelType(model),
       modelId: model.id,
       name: file.originalname,
       fileName: file.originalname,
@@ -130,7 +128,69 @@ export class MediaService {
     }
   }
 
-  async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {
+  async duplicateMedia(media: Media, newOwner: MediaOwnerModel) {
+    const copy = await Media.create({
+      collectionName: media.collectionName,
+      modelType: laravelType(newOwner),
+      modelId: newOwner.id,
+      name: media.name,
+      fileName: media.fileName,
+      mimeType: media.mimeType,
+      fileType: media.fileType,
+      isPublic: media.isPublic,
+      customProperties: { custom_headers: { ACL: "public-read" } },
+      generatedConversions: media.generatedConversions,
+      lat: media.lat,
+      lng: media.lng,
+      size: media.size,
+      createdBy: media.createdBy,
+      photographer: media.photographer
+    });
+
+    await this.copyFile(`${media.id}/${media.fileName}`, `${copy.id}/${copy.fileName}`, copy.mimeType ?? undefined);
+    await Promise.all(
+      Object.entries(copy.generatedConversions).map(async ([conversion, generated]: [string, boolean]) => {
+        if (!generated) return;
+
+        const fromPath = this.conversionFilePath(media, conversion);
+        const toPath = this.conversionFilePath(copy, conversion);
+        if (fromPath != null && toPath != null) return this.copyFile(fromPath, toPath, copy.mimeType ?? undefined);
+      })
+    );
+  }
+
+  // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
+  // complexity by making some assumptions that hold true for our use of Spatie (like how
+  // we only use the "s3" drive type.
+  public getUrl(media: Media, conversion?: string) {
+    const endpoint = this.endpoint;
+    if (conversion == null) return `${endpoint}/${this.filePath(media)}`;
+    return media.generatedConversions[conversion] == null
+      ? null
+      : `${endpoint}/${this.conversionFilePath(media, conversion)}`;
+  }
+
+  private filePath(media: Media) {
+    return `/${this.bucket}/${media.id}/${media.fileName}`;
+  }
+
+  private conversionFilePath(media: Media, conversion: string) {
+    if (media.generatedConversions[conversion] == null) return null;
+
+    const lastIndex = media.fileName.lastIndexOf(".");
+    const baseFileName = media.fileName.slice(0, lastIndex);
+
+    // For thumbnails, Spatie Media Library in PHP always generates .jpg files regardless of
+    // original extension For images uploaded via the file upload service, we specify the extension
+    // in customProperties.
+    const extension =
+      (media.customProperties[`${conversion}Extension`] as string | undefined) ??
+      (conversion === "thumbnail" ? ".jpg" : media.fileName.slice(lastIndex));
+
+    return `${this.bucket}/${media.id}/${baseFileName}-${conversion}${extension}`;
+  }
+
+  private async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: path,
@@ -143,28 +203,18 @@ export class MediaService {
     this.logger.log(`Uploaded ${path} to S3`);
   }
 
-  // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
-  // complexity by making some assumptions that hold true for our use of Spatie (like how
-  // we only use the "s3" drive type.
-  public getUrl(media: Media, conversion?: string) {
-    const endpoint = this.endpoint;
+  private async copyFile(fromPath: string, toPath: string, mimeType?: string) {
     const bucket = this.bucket;
-    const baseUrl = `${endpoint}/${bucket}/${media.id}`;
-    const { fileName } = media;
-    if (conversion == null) return `${baseUrl}/${fileName}`;
-    if (media.generatedConversions[conversion] == null) return null;
+    const command = new CopyObjectCommand({
+      Bucket: this.bucket,
+      Key: toPath,
+      CopySource: `${bucket}/${fromPath}`,
+      ContentType: mimeType,
+      ACL: "public-read"
+    });
 
-    const lastIndex = fileName.lastIndexOf(".");
-    const baseFileName = fileName.slice(0, lastIndex);
-
-    // For thumbnails, Spatie Media Library in PHP always generates .jpg files regardless of
-    // original extension For images uploaded via the file upload service, we specify the extension
-    // in customProperties.
-    const extension =
-      (media.customProperties[`${conversion}Extension`] as string | undefined) ??
-      (conversion === "thumbnail" ? ".jpg" : fileName.slice(lastIndex));
-
-    return `${baseUrl}/conversions/${baseFileName}-${conversion}${extension}`;
+    await this.s3.send(command);
+    this.logger.log(`Copied ${fromPath} to ${toPath} in S3`);
   }
 
   private getMediaType(file: Express.Multer.File, configuration: MediaConfiguration) {

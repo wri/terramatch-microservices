@@ -529,20 +529,10 @@ export class ProjectProcessor extends EntityProcessor<
       }
       if (entriesToCreate.length > 0) await DemographicEntry.bulkCreate(entriesToCreate);
 
-      // For media, we reassign the media instance to the project. This is because in order
-      // to copy instead of move, we'd have to go into S3 and copy the media to the new
-      // media ID's path in the bucket because media download paths include the media id
-      const mediaIds = (
-        await Media.for(pitch)
-          .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])
-          .findAll({ attributes: ["id"] })
-      ).map(({ id }) => id);
-      if (mediaIds.length > 0) {
-        await Media.update(
-          { modelType: Project.LARAVEL_TYPE, modelId: project.id },
-          { where: { id: { [Op.in]: mediaIds } } }
-        );
-      }
+      const medias = await Media.for(pitch)
+        .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])
+        .findAll();
+      await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
     }
 
     await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });

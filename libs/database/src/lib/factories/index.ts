@@ -1,4 +1,5 @@
 export * from "./application.factory";
+export * from "./srp-report.factory";
 export * from "./delayed-job.factory";
 export * from "./demographic.factory";
 export * from "./demographic-entry.factory";
@@ -13,6 +14,7 @@ export * from "./form-submission.factory";
 export * from "./form.factory";
 export * from "./form-question-option.factory";
 export * from "./form-section.factory";
+export * from "./form-table-header.factory";
 export * from "./funding-programme.factory";
 export * from "./i18n-item.factory";
 export * from "./indicator-output-field-monitoring.factory";

@@ -24,10 +24,15 @@ import { Organisation } from "./organisation.entity";
 import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
+import { isNotNull } from "../types/array";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\User";
+
+  static async findLocale(userId: number) {
+    return (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -159,6 +164,24 @@ export class User extends Model<User> {
     return this.firstName == null || this.lastName == null ? null : `${this.firstName} ${this.lastName}`;
   }
 
+  getSourceFromRoles(): string {
+    if (this.roles == null) {
+      return "terramatch";
+    }
+
+    const roleNames = this.roles.map(role => role.name);
+
+    if (roleNames.includes("greenhouse-service-account")) {
+      return "greenhouse";
+    }
+
+    if (roleNames.includes("research-service-account")) {
+      return "research";
+    }
+
+    return "terramatch";
+  }
+
   @BelongsToMany(() => Project, () => ProjectUser)
   projects: Array<Project & { ProjectUser: ProjectUser }>;
 
@@ -239,7 +262,7 @@ export class User extends Model<User> {
 
       await this.loadFrameworks();
 
-      let frameworkSlugs: string[] = this.frameworks.map(({ slug }) => slug);
+      let frameworkSlugs = this.frameworks.map(({ slug }) => slug).filter(isNotNull);
       if (isAdmin) {
         // Admins have access to all frameworks their permissions say they do
         const permissions = await Permission.getUserPermissionNames(this.id);

@@ -44,7 +44,7 @@ describe("SitePolicy", () => {
     const ppc = await SiteFactory.create({ frameworkKey: "ppc" });
     const tf = await SiteFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], ppc]],
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
       cannot: [[["read", "delete", "update", "approve"], tf]]
     });
   });
@@ -70,13 +70,13 @@ describe("SitePolicy", () => {
     const s4 = await SiteFactory.create({ projectId: p4.id });
     await expectAuthority(service, {
       can: [
-        [["read", "delete", "update"], s1],
-        [["read", "delete", "update"], s3],
-        [["read", "delete", "update"], s4]
+        [["read", "delete", "update", "deleteFiles"], s1],
+        [["read", "delete", "update", "deleteFiles"], s3],
+        [["read", "delete", "update", "deleteFiles"], s4]
       ],
       cannot: [
         ["approve", s1],
-        [["read", "delete"], s2]
+        [["read", "delete", "deleteFiles"], s2]
       ]
     });
   });
@@ -90,8 +90,18 @@ describe("SitePolicy", () => {
     const s1 = await SiteFactory.create({ projectId: project.id });
     const s2 = await SiteFactory.create();
     await expectAuthority(service, {
-      can: [[["read", "delete", "update"], s1]],
-      cannot: [[["read", "delete", "update"], s2]]
+      can: [[["read", "delete", "update", "deleteFiles"], s1]],
+      cannot: [[["read", "delete", "update", "deleteFiles"], s2]]
     });
+  });
+
+  it("allows uploading files to sites", async () => {
+    mockPermissions("media-manage");
+    const user = await UserFactory.create();
+    const project = await ProjectFactory.create();
+    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
+    const site = await SiteFactory.create({ projectId: project.id });
+    mockUserId(user.id);
+    await expectCan(service, "uploadFiles", site);
   });
 });

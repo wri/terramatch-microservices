@@ -114,7 +114,7 @@ export class TasksService {
 
     const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
     await this.loadReports(task);
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as ProcessableEntity[]) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       if (entityType === "projectReports" && task.projectReport != null) {
         const { id, dto } = await processor.getLightDto(task.projectReport);
@@ -230,7 +230,7 @@ export class TasksService {
   private async loadReports(task: Task) {
     if (task.projectReport != null) return;
 
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports"] as ProcessableEntity[]) {
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as ProcessableEntity[]) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       const { models } = await processor.findMany({ taskId: task.id });
       if (entityType === "projectReports") {

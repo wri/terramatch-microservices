@@ -16,20 +16,25 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
+import { Dictionary } from "factory-girl-ts";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
   collection: (collectionName: string) => ({ where: { collectionName } }),
-  association: (association: LaravelModel) => ({
-    where: {
-      modelType: laravelType(association),
-      modelId: association.id
-    }
-  })
+  associations: <T extends LaravelModel>(associations: T | T[]) => {
+    const models = Array.isArray(associations) ? associations : [associations];
+    return {
+      where: {
+        modelType: laravelType(models[0]),
+        modelId: models.map(({ id }) => id)
+      }
+    };
+  }
 }))
 @Table({
   tableName: "media",
   underscored: true,
+  paranoid: true,
   // @Index doesn't work with underscored column names
   indexes: [
     { name: "media_model_type_model_id_index", fields: ["model_type", "model_id"] },
@@ -41,8 +46,12 @@ export class Media extends Model<Media> {
     return chainScope(this, "collection", collectionName) as typeof Media;
   }
 
-  static for(model: LaravelModel) {
-    return chainScope(this, "association", model) as typeof Media;
+  /**
+   * Note: this only works for an array of a _single model type_. The association scope only
+   * checks the first model in the array for the model type.
+   */
+  static for<T extends LaravelModel>(models: T | T[]) {
+    return chainScope(this, "associations", models) as typeof Media;
   }
 
   @PrimaryKey
@@ -95,10 +104,10 @@ export class Media extends Model<Media> {
   fileType: "media" | "documents" | null;
 
   @JsonColumn()
-  customProperties: object;
+  customProperties: Dictionary<object | string>;
 
   @JsonColumn()
-  generatedConversions: Record<string, boolean>;
+  generatedConversions: Dictionary<boolean>;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -136,25 +145,25 @@ export class Media extends Model<Media> {
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
-  @Column(STRING)
+  @Column({ type: STRING, defaultValue: "s3" })
   disk: string;
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
   @AllowNull
-  @Column(STRING)
+  @Column({ type: STRING, defaultValue: "s3" })
   conversionsDisk: string | null;
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
-  @JsonColumn()
+  @JsonColumn({ defaultValue: [] })
   manipulations: string[];
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
-  @JsonColumn()
+  @JsonColumn({ defaultValue: [] })
   responsiveImages: string[];
 }

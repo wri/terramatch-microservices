@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { OverlappingValidator } from "./overlapping.validator";
 import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
+import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
 
 interface MockTransaction {
   commit: jest.Mock;
@@ -172,18 +172,18 @@ describe("OverlappingValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toHaveLength(2);
       expect(result.extraInfo?.[0]).toMatchObject({
-        polyUuid: testUuids.polygon2,
-        polyName: "A",
-        siteName: "CAPULIN VMRL CAFE CAPITAN",
+        poly_uuid: testUuids.polygon2,
+        poly_name: "A",
+        site_name: "CAPULIN VMRL CAFE CAPITAN",
         percentage: 0.18,
-        intersectSmaller: true
+        intersect_smaller: true
       });
       expect(result.extraInfo?.[1]).toMatchObject({
-        polyUuid: testUuids.polygon3,
-        polyName: "B",
-        siteName: "CAPULIN VMRL CAFE CAPITAN",
+        poly_uuid: testUuids.polygon3,
+        poly_name: "B",
+        site_name: "CAPULIN VMRL CAFE CAPITAN",
         percentage: 0.09,
-        intersectSmaller: false
+        intersect_smaller: false
       });
     });
 
@@ -389,14 +389,14 @@ describe("OverlappingValidator", () => {
         throw new Error("Expected overlap info to be present");
       }
 
-      const polyUuids = overlapInfo.map(info => info.polyUuid);
+      const polyUuids = overlapInfo.map(info => info.poly_uuid);
       expect(polyUuids).toContain(testUuids.polygon2);
       expect(polyUuids).toContain(testUuids.polygon3);
 
       overlapInfo.forEach(info => {
         expect(info.percentage).toBeGreaterThan(0);
         expect(info.percentage).toBeLessThan(50);
-        expect(info.siteName).toBe("CAPULIN VMRL CAFE CAPITAN");
+        expect(info.site_name).toBe("CAPULIN VMRL CAFE CAPITAN");
       });
     });
   });
@@ -420,7 +420,7 @@ describe("OverlappingValidator", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].percentage).toBe(10);
-      expect(result[0].intersectSmaller).toBe(true);
+      expect(result[0].intersect_smaller).toBe(true);
     });
 
     it("should calculate percentage correctly for larger intersecting polygon", () => {
@@ -441,7 +441,7 @@ describe("OverlappingValidator", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].percentage).toBe(10);
-      expect(result[0].intersectSmaller).toBe(false);
+      expect(result[0].intersect_smaller).toBe(false);
     });
 
     it("should filter intersections by target UUID", () => {
@@ -471,7 +471,79 @@ describe("OverlappingValidator", () => {
       const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
 
       expect(result).toHaveLength(1);
-      expect(result[0].polyUuid).toBe(testUuids.polygon2);
+      expect(result[0].poly_uuid).toBe(testUuids.polygon2);
+    });
+  });
+
+  describe("validatePolygons", () => {
+    it("should return empty array for empty input", async () => {
+      const result = await validator.validatePolygons([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should validate multiple polygons in batch", async () => {
+      const mockSitePolygons = [
+        { polygonUuid: testUuids.polygon1, site: { projectId: testProjectId } },
+        { polygonUuid: testUuids.polygon2, site: { projectId: testProjectId } }
+      ];
+
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+
+      const mockTransactionInstance = { commit: jest.fn(), rollback: jest.fn() };
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce([]);
+
+      const result = await validator.validatePolygons([testUuids.polygon1, testUuids.polygon2]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].polygonUuid).toBe(testUuids.polygon1);
+      expect(result[1].polygonUuid).toBe(testUuids.polygon2);
+    });
+
+    it("should throw BadRequestException for duplicate polygon UUIDs", async () => {
+      await expect(validator.validatePolygons([testUuids.polygon1, testUuids.polygon1])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should handle polygon not found in batch", async () => {
+      mockSitePolygonFindAll.mockResolvedValueOnce([]);
+      const result = await validator.validatePolygons([testUuids.polygon1]);
+      expect(result[0].valid).toBe(false);
+    });
+
+    it("should filter self-intersections in batch", async () => {
+      const mockSitePolygons = [
+        { polygonUuid: testUuids.polygon1, site: { projectId: testProjectId } },
+        { polygonUuid: testUuids.polygon2, site: { projectId: testProjectId } }
+      ];
+
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+      mockSitePolygonFindAll.mockResolvedValueOnce(mockSitePolygons as unknown as SitePolygon[]);
+
+      const mockTransactionInstance = { commit: jest.fn(), rollback: jest.fn() };
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      mockCheckBoundingBoxIntersections.mockResolvedValueOnce([
+        { targetUuid: testUuids.polygon1, candidateUuid: testUuids.polygon1 }
+      ]);
+      mockCheckGeometryIntersections.mockResolvedValueOnce([
+        {
+          targetUuid: testUuids.polygon1,
+          candidateUuid: testUuids.polygon1,
+          candidateName: "A",
+          siteName: "Test",
+          targetArea: 1000,
+          candidateArea: 1000,
+          intersectionArea: 1000,
+          intersectionLatitude: 35.0
+        }
+      ]);
+
+      const result = await validator.validatePolygons([testUuids.polygon1, testUuids.polygon2]);
+
+      expect(result[0].valid).toBe(true);
+      expect(result[1].valid).toBe(true);
     });
   });
 });

@@ -1,14 +1,21 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolygonSizeValidator } from "./polygon-size.validator";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
+import { Point, Polygon, MultiPolygon } from "geojson";
 
-jest.mock("@terramatch-microservices/database/entities", () => ({
-  SitePolygon: {
-    findOne: jest.fn(),
-    findAll: jest.fn()
-  }
-}));
+jest.mock("@terramatch-microservices/database/entities", () => {
+  const mockQuery = jest.fn();
+  return {
+    SitePolygon: {
+      findOne: jest.fn(),
+      findAll: jest.fn()
+    },
+    PolygonGeometry: {
+      sequelize: { query: mockQuery }
+    }
+  };
+});
 
 describe("PolygonSizeValidator", () => {
   let validator: PolygonSizeValidator;
@@ -16,6 +23,8 @@ describe("PolygonSizeValidator", () => {
   let mockFindAll: jest.MockedFunction<typeof SitePolygon.findAll>;
 
   beforeEach(async () => {
+    jest.spyOn(SitePolygon, "findOne").mockImplementation(jest.fn());
+    jest.spyOn(SitePolygon, "findAll").mockImplementation(jest.fn());
     mockFindOne = SitePolygon.findOne as jest.MockedFunction<typeof SitePolygon.findOne>;
     mockFindAll = SitePolygon.findAll as jest.MockedFunction<typeof SitePolygon.findAll>;
 
@@ -41,8 +50,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          areaHectares: 500,
-          maxAllowedHectares: 1000
+          area_hectares: 500
         }
       });
       expect(mockFindOne).toHaveBeenCalledWith({
@@ -61,8 +69,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: false,
         extraInfo: {
-          areaHectares: 1500,
-          maxAllowedHectares: 1000
+          area_hectares: 1500
         }
       });
     });
@@ -77,8 +84,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          areaHectares: 1000,
-          maxAllowedHectares: 1000
+          area_hectares: 1000
         }
       });
     });
@@ -93,8 +99,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          areaHectares: 0,
-          maxAllowedHectares: 1000
+          area_hectares: 0
         }
       });
     });
@@ -134,24 +139,21 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            areaHectares: 500,
-            maxAllowedHectares: 1000
+            area_hectares: 500
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: false,
           extraInfo: {
-            areaHectares: 1500,
-            maxAllowedHectares: 1000
+            area_hectares: 1500
           }
         },
         {
           polygonUuid: "uuid-3",
           valid: true,
           extraInfo: {
-            areaHectares: 1000,
-            maxAllowedHectares: 1000
+            area_hectares: 1000
           }
         }
       ]);
@@ -179,24 +181,21 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            areaHectares: 500,
-            maxAllowedHectares: 1000
+            area_hectares: 500
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: true,
           extraInfo: {
-            areaHectares: 0,
-            maxAllowedHectares: 1000
+            area_hectares: 0
           }
         },
         {
           polygonUuid: "uuid-3",
           valid: false,
           extraInfo: {
-            areaHectares: 1500,
-            maxAllowedHectares: 1000
+            area_hectares: 1500
           }
         }
       ]);
@@ -233,16 +232,14 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            areaHectares: 0,
-            maxAllowedHectares: 1000
+            area_hectares: 0
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: true,
           extraInfo: {
-            areaHectares: 500,
-            maxAllowedHectares: 1000
+            area_hectares: 500
           }
         }
       ]);
@@ -254,6 +251,108 @@ describe("PolygonSizeValidator", () => {
       mockFindAll.mockRejectedValue(dbError);
 
       await expect(validator.validatePolygons(polygonUuids)).rejects.toThrow(dbError);
+    });
+  });
+
+  describe("validateGeometry", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should return valid=true for Point geometry", async () => {
+      const geometry: Point = { type: "Point", coordinates: [0, 0] };
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).not.toBeNull();
+      expect(result.extraInfo?.area_hectares).toBe(0);
+    });
+
+    it("should return valid=true for Polygon within size limit", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 0.01],
+            [0.01, 0.01],
+            [0.01, 0],
+            [0, 0]
+          ]
+        ]
+      };
+      // Mock area that results in < 1,000,000 sq meters
+      // Calculation: areaSqMeters = areaSqDegrees * (111320 * cos(latitudeRad))^2
+      // For areaSqDegrees = 0.00008 and latitude = 0.005:
+      // areaSqMeters ≈ 0.00008 * (111320 * cos(0.005 * π/180))^2 ≈ 991,371 sq meters (< 1,000,000)
+      (
+        PolygonGeometry.sequelize?.query as unknown as jest.MockedFunction<
+          (...args: unknown[]) => Promise<Array<{ area: number; latitude: number }>>
+        >
+      ).mockResolvedValue([{ area: 0.00008, latitude: 0.005 }]);
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).not.toBeNull();
+      expect(result.extraInfo?.area_hectares).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should return valid=false for Polygon exceeding size limit", async () => {
+      const geometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      };
+      // Mock large area (exceeding 1,000,000 sq meters)
+      // areaSqMeters = 1.0 * (111320 * cos(0.5 * π/180))^2 ≈ 12,392,142,400 sq meters (way over limit)
+      (
+        PolygonGeometry.sequelize?.query as unknown as jest.MockedFunction<
+          (...args: unknown[]) => Promise<Array<{ area: number; latitude: number }>>
+        >
+      ).mockResolvedValue([{ area: 1.0, latitude: 0.5 }]);
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(false);
+    });
+
+    it("should return valid=true for MultiPolygon within size limit", async () => {
+      const geometry: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [0, 0],
+              [0, 0.01],
+              [0.01, 0.01],
+              [0.01, 0],
+              [0, 0]
+            ]
+          ]
+        ]
+      };
+      // Mock area that results in < 1,000,000 sq meters (same as Polygon test)
+      (
+        PolygonGeometry.sequelize?.query as unknown as jest.MockedFunction<
+          (...args: unknown[]) => Promise<Array<{ area: number; latitude: number }>>
+        >
+      ).mockResolvedValue([{ area: 0.00008, latitude: 0.005 }]);
+      const result = await validator.validateGeometry(geometry);
+      expect(result.valid).toBe(true);
+    });
+
+    it("should throw error when sequelize connection is missing", async () => {
+      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
+      const geometry: Polygon = { type: "Polygon", coordinates: [] };
+      const { InternalServerErrorException } = await import("@nestjs/common");
+      await expect(validator.validateGeometry(geometry)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

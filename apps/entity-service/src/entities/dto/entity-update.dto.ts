@@ -1,5 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ENTITY_STATUSES, REPORT_STATUSES, SITE_STATUSES } from "@terramatch-microservices/database/constants/status";
+import {
+  ENTITY_STATUSES,
+  EntityStatus,
+  REPORT_STATUSES,
+  ReportStatus
+} from "@terramatch-microservices/database/constants/status";
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
 import { JsonApiDataDto, JsonApiMultiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Type } from "class-transformer";
@@ -40,13 +45,13 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
 
 export class SiteUpdateAttributes extends EntityUpdateAttributes {
   @IsOptional()
-  @IsIn(SITE_STATUSES)
+  @IsIn(ENTITY_STATUSES)
   @ApiProperty({
     description: "Request to change to the status of the given site",
     required: false,
-    enum: SITE_STATUSES
+    enum: ENTITY_STATUSES
   })
-  status?: string;
+  status?: EntityStatus;
 }
 
 export class ReportUpdateAttributes extends EntityUpdateAttributes {
@@ -57,7 +62,7 @@ export class ReportUpdateAttributes extends EntityUpdateAttributes {
     required: false,
     enum: REPORT_STATUSES
   })
-  status?: string;
+  status?: ReportStatus;
 
   @IsOptional()
   @IsBoolean()
@@ -76,6 +81,7 @@ export class DisturbanceReportUpdateData extends JsonApiDataDto(
   { type: "disturbanceReports" },
   ReportUpdateAttributes
 ) {}
+export class SrpReportUpdateData extends JsonApiDataDto({ type: "srpReports" }, ReportUpdateAttributes) {}
 
 export type EntityUpdateData =
   | ProjectUpdateAttributes
@@ -90,5 +96,6 @@ export class EntityUpdateBody extends JsonApiMultiBodyDto([
   SiteReportUpdateData,
   NurseryReportUpdateData,
   FinancialReportUpdateData,
-  DisturbanceReportUpdateData
+  DisturbanceReportUpdateData,
+  SrpReportUpdateData
 ] as const) {}

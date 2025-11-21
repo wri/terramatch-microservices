@@ -31,10 +31,18 @@ export class FinancialReportProcessor extends ReportProcessor<
   readonly FULL_DTO = FinancialReportFullDto;
   private logger = new TMLogger(FinancialReportProcessor.name);
 
+  async update(model: FinancialReport, update: ReportUpdateAttributes) {
+    await super.update(model, update);
+
+    if (update.status === "approved") {
+      await this.processReportSpecificLogic(model);
+    }
+  }
+
   /**
-   * Specific method for FinancialReport custom logic. This is called automatically when nothingToReport is updated
+   * Specific method for FinancialReport custom logic. This is called automatically when the report is approved
    */
-  protected async processFinancialReportSpecificLogic(model: FinancialReport): Promise<void> {
+  private async processReportSpecificLogic(model: FinancialReport): Promise<void> {
     const organisation = await Organisation.findByPk(model.organisationId);
     if (organisation == null) {
       this.logger.warn(`Organisation not found for FinancialReport ${model.uuid}`);
@@ -92,6 +100,29 @@ export class FinancialReportProcessor extends ReportProcessor<
 
     if (indicatorsToUpdate.length > 0) {
       await Promise.all(indicatorsToUpdate.map(({ id, data }) => FinancialIndicator.update(data, { where: { id } })));
+    }
+
+    // Delete existing FundingTypes for this organisation where financial_report_id is null
+    await FundingType.destroy({
+      where: {
+        organisationId: organisation.uuid,
+        financialReportId: null
+      }
+    });
+
+    // Get the funding types from the financial report
+    const fundingTypes = await FundingType.financialReport(model.id).findAll();
+
+    // Create new FundingTypes for the organisation based on the financial report data
+    for (const fundingType of fundingTypes) {
+      await FundingType.create({
+        organisationId: organisation.uuid,
+        source: fundingType.source,
+        year: fundingType.year,
+        type: fundingType.type,
+        amount: fundingType.amount,
+        financialReportId: null
+      } as FundingType);
     }
   }
 

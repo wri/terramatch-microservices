@@ -13,7 +13,9 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     sequelize: {
       transaction: jest.fn()
     },
-    checkWithinCountryIntersection: jest.fn()
+    checkWithinCountryIntersection: jest.fn(),
+    checkWithinCountryIntersectionBatch: jest.fn(),
+    getProjectCountriesBatch: jest.fn()
   }
 }));
 
@@ -63,8 +65,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        insidePercentage: 100,
-        countryName: "Cambodia"
+        inside_percentage: 100,
+        country_name: "Cambodia"
       });
       expect(mockTransactionInstance.commit).toHaveBeenCalled();
     });
@@ -88,8 +90,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        insidePercentage: 78,
-        countryName: "Cambodia"
+        inside_percentage: 78,
+        country_name: "Cambodia"
       });
     });
 
@@ -112,8 +114,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        insidePercentage: 50.84,
-        countryName: "Cambodia"
+        inside_percentage: 50.84,
+        country_name: "Cambodia"
       });
     });
 
@@ -178,7 +180,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.insidePercentage).toBe(83.12);
+      expect(result.extraInfo?.inside_percentage).toBe(83.12);
     });
 
     it("should handle exactly 75% threshold correctly", async () => {
@@ -199,7 +201,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.insidePercentage).toBe(75);
+      expect(result.extraInfo?.inside_percentage).toBe(75);
     });
 
     it("should handle different country names correctly", async () => {
@@ -220,7 +222,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.countryName).toBe("Australia");
+      expect(result.extraInfo?.country_name).toBe("Australia");
     });
   });
 
@@ -245,6 +247,90 @@ describe("WithinCountryValidator", () => {
       expect(mockTransaction).toHaveBeenCalledWith({
         isolationLevel: expect.any(String)
       });
+    });
+  });
+
+  describe("validatePolygons", () => {
+    it("should return empty array for empty input", async () => {
+      const result = await validator.validatePolygons([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should validate multiple polygons in batch", async () => {
+      const testPolygonUuid2 = "e3349d63-83ed-4df8-996c-2b79555385fa";
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      const mockResults = [
+        { polygonUuid: testPolygonUuid, polygonArea: 1000, intersectionArea: 800, country: "Cambodia" },
+        { polygonUuid: testPolygonUuid2, polygonArea: 1000, intersectionArea: 900, country: "Cambodia" }
+      ];
+
+      (
+        PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
+      ).checkWithinCountryIntersectionBatch = jest.fn();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockResolvedValueOnce(mockResults);
+
+      const result = await validator.validatePolygons([testPolygonUuid, testPolygonUuid2]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].polygonUuid).toBe(testPolygonUuid);
+      expect(result[0].valid).toBe(true);
+      expect(result[1].polygonUuid).toBe(testPolygonUuid2);
+      expect(result[1].valid).toBe(true);
+    });
+
+    it("should handle polygon not found in batch", async () => {
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      (
+        PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
+      ).checkWithinCountryIntersectionBatch = jest.fn();
+      (PolygonGeometry as unknown as { getProjectCountriesBatch: jest.Mock }).getProjectCountriesBatch = jest.fn();
+
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockResolvedValueOnce([]);
+      (PolygonGeometry.getProjectCountriesBatch as jest.Mock).mockResolvedValueOnce(
+        new Map([[testPolygonUuid, "Cambodia"]])
+      );
+
+      const result = await validator.validatePolygons([testPolygonUuid]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].valid).toBe(false);
+    });
+
+    it("should throw InternalServerErrorException when sequelize is not available in batch", async () => {
+      const originalSequelize = PolygonGeometry.sequelize;
+      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
+
+      await expect(validator.validatePolygons([testPolygonUuid])).rejects.toThrow(InternalServerErrorException);
+
+      (PolygonGeometry as unknown as { sequelize: typeof originalSequelize }).sequelize = originalSequelize;
+    });
+
+    it("should handle database errors gracefully in batch", async () => {
+      const mockTransactionInstance: MockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      (
+        PolygonGeometry as unknown as { checkWithinCountryIntersectionBatch: jest.Mock }
+      ).checkWithinCountryIntersectionBatch = jest.fn();
+      mockTransaction.mockResolvedValueOnce(mockTransactionInstance);
+      (PolygonGeometry.checkWithinCountryIntersectionBatch as jest.Mock).mockRejectedValueOnce(
+        new Error("Database error")
+      );
+
+      await expect(validator.validatePolygons([testPolygonUuid])).rejects.toThrow("Database error");
+      expect(mockTransactionInstance.rollback).toHaveBeenCalled();
     });
   });
 });

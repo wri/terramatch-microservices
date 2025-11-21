@@ -2,11 +2,13 @@ import { NotFoundException } from "@nestjs/common";
 import {
   MediaOwnerType,
   MEDIA_OWNER_MODELS,
+  MEDIA_OWNER_MODEL_LARAVEL_TYPES,
   EntityMediaOwnerClass,
   MediaOwnerModel
 } from "@terramatch-microservices/database/constants/media-owners";
-import { MediaOwnerProcessor } from "./media-owner-processor";
+import { getBaseEntityByLaravelTypeAndId, MediaOwnerProcessor } from "./media-owner-processor";
 import { DataTypes } from "sequelize";
+import { Project } from "@terramatch-microservices/database/entities";
 
 describe("MediaOwnerProcessor", () => {
   const FAKE_UUID = "fake-uuid";
@@ -25,13 +27,6 @@ describe("MediaOwnerProcessor", () => {
   afterEach(() => {
     jest.restoreAllMocks();
     MEDIA_OWNER_MODELS[MODEL_KEY] = originalModel;
-  });
-
-  describe("baseModelAttributes", () => {
-    it("should return the expected attribute keys", () => {
-      const processor = new MediaOwnerProcessor(MODEL_KEY as MediaOwnerType, FAKE_UUID, FakeModel);
-      expect(processor.baseModelAttributes).toEqual(["id", "frameworkKey", "projectId"]);
-    });
   });
 
   describe("getBaseEntity", () => {
@@ -86,5 +81,39 @@ describe("MediaOwnerProcessor", () => {
       expect(first).toBe(second);
       expect(FakeModel.findOne).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("getBaseEntityByLaravelTypeAndId", () => {
+  const LARAVEL_TYPE = Project.LARAVEL_TYPE;
+  let FakeModel: jest.Mocked<EntityMediaOwnerClass<MediaOwnerModel>>;
+  let originalModel: EntityMediaOwnerClass<MediaOwnerModel>;
+
+  beforeEach(() => {
+    FakeModel = class FakeModel {} as jest.Mocked<EntityMediaOwnerClass<MediaOwnerModel>>;
+    FakeModel.getAttributes = jest.fn();
+    FakeModel.findOne = jest.fn();
+    originalModel = MEDIA_OWNER_MODEL_LARAVEL_TYPES[LARAVEL_TYPE];
+    MEDIA_OWNER_MODEL_LARAVEL_TYPES[LARAVEL_TYPE] = FakeModel;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    MEDIA_OWNER_MODEL_LARAVEL_TYPES[LARAVEL_TYPE] = originalModel;
+  });
+
+  it("should find and return the base entity with intersected attributes", async () => {
+    FakeModel.getAttributes.mockReturnValue({
+      id: { type: DataTypes.INTEGER },
+      frameworkKey: { type: DataTypes.STRING },
+      projectId: { type: DataTypes.INTEGER }
+    });
+    FakeModel.findOne.mockResolvedValue({ id: 1, frameworkKey: "fk" } as unknown as Project);
+    const model = await getBaseEntityByLaravelTypeAndId(LARAVEL_TYPE, 1);
+    expect(FakeModel.findOne).toHaveBeenCalledWith({
+      where: { id: 1 },
+      attributes: ["id", "frameworkKey", "projectId"]
+    });
+    expect(model).toEqual({ id: 1, frameworkKey: "fk" });
   });
 });

@@ -8,7 +8,7 @@ import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
-import { FileUploadController } from "./entities/file-upload.controller";
+import { FilesController } from "./entities/files.controller";
 import { FileUploadService } from "./file/file-upload.service";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
@@ -23,6 +23,8 @@ import { DisturbanceService } from "./entities/disturbance.service";
 import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
 import { MediasController } from "./file/medias.controller";
+import { FormsController } from "./forms/forms.controller";
+import { FormsService } from "./forms/forms.service";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -34,14 +36,15 @@ import { MediasController } from "./file/medias.controller";
     ImpactStoriesController,
     MediasController,
     TasksController,
-    FileUploadController,
+    FilesController,
     TreesController,
     DemographicsController,
     DisturbancesController,
     EntitiesController,
     EntityAssociationsController,
     OptionLabelsController,
-    LinkedFieldsController
+    LinkedFieldsController,
+    FormsController
   ],
   providers: [
     {
@@ -55,7 +58,8 @@ import { MediasController } from "./file/medias.controller";
     ImpactStoryService,
     TasksService,
     DemographicService,
-    DisturbanceService
+    DisturbanceService,
+    FormsService
   ]
 })
 export class AppModule {}

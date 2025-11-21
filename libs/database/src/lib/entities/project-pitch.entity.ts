@@ -7,6 +7,18 @@ import { Organisation } from "./organisation.entity";
 export class ProjectPitch extends Model<ProjectPitch> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ProjectPitch";
 
+  static readonly MEDIA = {
+    cover: { dbCollection: "cover", multiple: false, validation: "cover-image" },
+    additional: { dbCollection: "additional", multiple: true, validation: "general-documents" },
+    restorationPhotos: { dbCollection: "restoration_photos", multiple: true, validation: "photos" },
+    detailedProjectBudget: {
+      dbCollection: "detailed_project_budget",
+      multiple: false,
+      validation: "spreadsheet"
+    },
+    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
+  } as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

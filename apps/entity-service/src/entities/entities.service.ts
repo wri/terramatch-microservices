@@ -44,6 +44,9 @@ import { StrataDto } from "./dto/strata.dto";
 import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { EntityCreateData } from "./dto/entity-create.dto";
+import { SrpReportProcessor } from "./processors/srp-report.processor";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -54,7 +57,8 @@ export const ENTITY_PROCESSORS = {
   nurseryReports: NurseryReportProcessor,
   siteReports: SiteReportProcessor,
   financialReports: FinancialReportProcessor,
-  disturbanceReports: DisturbanceReportProcessor
+  disturbanceReports: DisturbanceReportProcessor,
+  srpReports: SrpReportProcessor
 } as const;
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
@@ -131,11 +135,10 @@ export class EntitiesService {
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
   }
 
-  private _userLocale?: string;
+  private _userLocale?: ValidLocale;
   async getUserLocale() {
     if (this._userLocale == null) {
-      this._userLocale =
-        (await User.findOne({ where: { id: this.userId }, attributes: ["locale"] }))?.locale ?? "en-GB";
+      this._userLocale = (await User.findLocale(this.userId)) ?? "en-US";
     }
     return this._userLocale;
   }
@@ -150,7 +153,13 @@ export class EntitiesService {
       throw new BadRequestException(`Entity type invalid: ${entity}`);
     }
 
-    return new processorClass(this, entity) as unknown as EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData>;
+    return new processorClass(this, entity) as unknown as EntityProcessor<
+      T,
+      EntityDto,
+      EntityDto,
+      EntityUpdateData,
+      EntityCreateData
+    >;
   }
 
   createAssociationProcessor<T extends UuidModel, D extends AssociationDto>(

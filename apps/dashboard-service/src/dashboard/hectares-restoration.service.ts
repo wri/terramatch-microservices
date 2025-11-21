@@ -55,7 +55,7 @@ export class HectaresRestorationService {
           attributes: ["id"],
           where: {
             status: {
-              [Op.in]: ["approved", "restoration-in-progress"]
+              [Op.in]: ["approved"]
             }
           },
           include: [

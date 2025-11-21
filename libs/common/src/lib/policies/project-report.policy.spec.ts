@@ -38,8 +38,8 @@ describe("ProjectReportPolicy", () => {
     const ppc = await ProjectReportFactory.create({ frameworkKey: "ppc" });
     const tf = await ProjectReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], ppc]],
-      cannot: [[["read", "delete", "update", "approve"], tf]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], tf]]
     });
   });
 
@@ -63,9 +63,9 @@ describe("ProjectReportPolicy", () => {
 
     await expectAuthority(service, {
       can: [
-        [["read", "update"], pr1],
-        [["read", "update"], pr3],
-        [["read", "update"], pr4]
+        [["read", "update", "deleteFiles"], pr1],
+        [["read", "update", "deleteFiles"], pr3],
+        [["read", "update", "deleteFiles"], pr4]
       ],
       cannot: [
         [["delete", "approve"], pr1],
@@ -89,8 +89,8 @@ describe("ProjectReportPolicy", () => {
     const pr2 = await ProjectReportFactory.create({ projectId: p2.id });
 
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], pr1]],
-      cannot: [[["read", "delete", "update", "approve"], pr2]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], pr1]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], pr2]]
     });
   });
 });

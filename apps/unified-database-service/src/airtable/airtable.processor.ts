@@ -12,6 +12,7 @@ import {
   FinancialReportEntity,
   FundingProgrammeEntity,
   FundingTypeEntity,
+  InvasiveEntity,
   InvestmentEntity,
   InvestmentSplitEntity,
   LeadershipEntity,
@@ -21,8 +22,11 @@ import {
   ProjectEntity,
   ProjectPitchEntity,
   ProjectReportEntity,
+  SeedingEntity,
   SiteEntity,
+  SitePolygonEntity,
   SiteReportEntity,
+  StrataEntity,
   TreeSpeciesEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
@@ -40,6 +44,7 @@ export const AIRTABLE_ENTITIES = {
   financialReports: FinancialReportEntity,
   fundingProgrammes: FundingProgrammeEntity,
   fundingTypes: FundingTypeEntity,
+  invasives: InvasiveEntity,
   investments: InvestmentEntity,
   investmentSplits: InvestmentSplitEntity,
   leaderships: LeadershipEntity,
@@ -49,8 +54,11 @@ export const AIRTABLE_ENTITIES = {
   projects: ProjectEntity,
   projectPitches: ProjectPitchEntity,
   projectReports: ProjectReportEntity,
+  seedings: SeedingEntity,
   sites: SiteEntity,
+  sitePolygons: SitePolygonEntity,
   siteReports: SiteReportEntity,
+  stratas: StrataEntity,
   treeSpecies: TreeSpeciesEntity,
   users: UserEntity
 };

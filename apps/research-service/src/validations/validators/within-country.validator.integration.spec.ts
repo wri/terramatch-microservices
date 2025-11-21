@@ -178,8 +178,8 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.countryName).toBe("Cambodia");
+        expect(result.extraInfo.inside_percentage).toBeGreaterThanOrEqual(75);
+        expect(result.extraInfo.country_name).toBe("Cambodia");
       }
     });
 
@@ -190,9 +190,9 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.insidePercentage).toBeCloseTo(83.12, 1);
-        expect(result.extraInfo.countryName).toBe("Cambodia");
+        expect(result.extraInfo.inside_percentage).toBeGreaterThanOrEqual(75);
+        expect(result.extraInfo.inside_percentage).toBeCloseTo(83.12, 1);
+        expect(result.extraInfo.country_name).toBe("Cambodia");
       }
     });
 
@@ -203,9 +203,9 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.insidePercentage).toBeCloseTo(78, 1);
-        expect(result.extraInfo.countryName).toBe("Cambodia");
+        expect(result.extraInfo.inside_percentage).toBeGreaterThanOrEqual(75);
+        expect(result.extraInfo.inside_percentage).toBeCloseTo(78, 1);
+        expect(result.extraInfo.country_name).toBe("Cambodia");
       }
     });
 
@@ -216,8 +216,8 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.insidePercentage).toBeLessThan(75);
-        expect(result.extraInfo.countryName).toBe("Cambodia");
+        expect(result.extraInfo.inside_percentage).toBeLessThan(75);
+        expect(result.extraInfo.country_name).toBe("Cambodia");
       }
     });
 
@@ -274,14 +274,9 @@ describe("WithinCountryValidator - Integration Tests", () => {
       });
 
       try {
-        const result = await validator.validatePolygon(polygonGeometry.uuid);
-        expect(result.valid).toBe(false);
-        expect(result.extraInfo).not.toBeNull();
-
-        if (result.extraInfo != null) {
-          expect(result.extraInfo.insidePercentage).toBe(0);
-          expect(result.extraInfo.countryName).toBe("Cambodia");
-        }
+        await expect(validator.validatePolygon(polygonGeometry.uuid)).rejects.toThrow(
+          `Polygon with UUID ${polygonGeometry.uuid} not found or has no associated project`
+        );
       } finally {
         await SitePolygon.destroy({
           where: { polygonUuid: polygonGeometry.uuid }

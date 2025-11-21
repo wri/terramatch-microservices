@@ -10,7 +10,7 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], SiteReport, {
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles"], SiteReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -29,7 +29,7 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           })
         ).map(({ id }) => id);
         if (siteIds.length > 0) {
-          this.builder.can(["read", "update"], SiteReport, { siteId: { $in: siteIds } });
+          this.builder.can(["read", "update", "uploadFiles", "deleteFiles"], SiteReport, { siteId: { $in: siteIds } });
         }
       }
     }
@@ -43,7 +43,7 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
             await Site.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })
           ).map(({ id }) => id);
           if (siteIds.length > 0) {
-            this.builder.can(["read", "delete", "update", "approve", "uploadFiles"], SiteReport, {
+            this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles"], SiteReport, {
               siteId: { $in: siteIds }
             });
           }

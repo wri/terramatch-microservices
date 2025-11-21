@@ -1,14 +1,16 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
-import { I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { ConfigService } from "@nestjs/config";
 import { normalizeLocale, t, tx } from "@transifex/native";
 import { createMock } from "@golevelup/ts-jest";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
-import { Dictionary } from "lodash";
+import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
+import { I18nItemFactory } from "@terramatch-microservices/database/factories";
 
 jest.mock("@transifex/native", () => ({
   tx: {
@@ -62,8 +64,8 @@ describe("LocalizationService", () => {
       (tx.setCurrentLocale as jest.Mock).mockResolvedValue(undefined);
       (t as jest.Mock).mockReturnValue(translatedText);
 
-      const result = await service.localizeText(text, "es_ES");
-      expect(normalizeLocale).toHaveBeenCalledWith("es_ES");
+      const result = await service.localizeText(text, "es-MX");
+      expect(normalizeLocale).toHaveBeenCalledWith("es-MX");
       expect(tx.setCurrentLocale).toHaveBeenCalledWith(locale);
       expect(t).toHaveBeenCalledWith(text, undefined);
       expect(result).toBe(translatedText);
@@ -72,9 +74,11 @@ describe("LocalizationService", () => {
 
   describe("translateKeys", () => {
     it("should translate", async () => {
-      const enTranslations = await I18nTranslationFactory.createMany(5);
+      const enTranslations = await I18nTranslationFactory.createMany(5, { shortValue: null });
       const esTranslations = await Promise.all(
-        enTranslations.map(({ i18nItemId }) => I18nTranslationFactory.create({ i18nItemId, language: "es-MX" }))
+        enTranslations.map(({ i18nItemId }) =>
+          I18nTranslationFactory.create({ i18nItemId, language: "es-MX", shortValue: null })
+        )
       );
       const localizationKeys = await Promise.all(
         enTranslations.map(({ i18nItemId }) => LocalizationKeyFactory.create({ valueId: i18nItemId }))
@@ -126,6 +130,39 @@ describe("LocalizationService", () => {
     it("should use the value from LocalizationKey if there is no translation", async () => {
       const { key, value } = await LocalizationKeyFactory.create();
       expect((await service.translateKeys({ foo: key as string }, "es-MX"))["foo"]).toEqual(value);
+    });
+  });
+
+  describe("generateI18nId", () => {
+    it("returns the current id when the value is null", async () => {
+      const result = await service.generateI18nId(null, -2);
+      expect(result).toBe(-2);
+    });
+
+    it("does not create a new item when the value matches the current item", async () => {
+      const item = await I18nItemFactory.create();
+      const result = await service.generateI18nId(item.shortValue, item.id);
+      expect(result).toBe(item.id);
+    });
+
+    it("trims the value before checking against the current item", async () => {
+      const item = await I18nItemFactory.create();
+      const result = await service.generateI18nId(`  ${item.shortValue} `, item.id);
+      expect(result).toBe(item.id);
+    });
+
+    it("creates a new i18n item", async () => {
+      const shortValue = `  ${faker.lorem.slug()}`;
+      const longValue = faker.lorem.paragraphs(10);
+
+      const shortResult = await service.generateI18nId(shortValue);
+      const longResult = await service.generateI18nId(longValue);
+
+      const shortItem = await I18nItem.findOne({ where: { id: shortResult! } });
+      const longItem = await I18nItem.findOne({ where: { id: longResult! } });
+
+      expect(shortItem?.shortValue).toBe(trim(shortValue));
+      expect(longItem?.longValue).toBe(longValue);
     });
   });
 });

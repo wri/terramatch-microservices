@@ -113,6 +113,9 @@ export class NurseryFullDto extends NurseryLightDto {
   projectUuid: string | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
+  media: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
   file: MediaDto[];
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

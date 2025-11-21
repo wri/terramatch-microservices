@@ -26,6 +26,8 @@ describe("FilesController", () => {
   let mockMediaOwnerProcessor: { getBaseEntity: jest.Mock };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;
     policyService = {
       authorize: jest.fn(),
@@ -36,7 +38,8 @@ describe("FilesController", () => {
       getMedia: jest.fn(),
       deleteMediaByUuid: jest.fn(),
       deleteMedia: jest.fn(),
-      getMedias: jest.fn()
+      getMedias: jest.fn(),
+      updateMedia: jest.fn()
     } as unknown as jest.Mocked<MediaService>;
     mockMediaOwnerProcessor = { getBaseEntity: jest.fn() };
     entitiesService = {
@@ -117,6 +120,21 @@ describe("FilesController", () => {
       await expect(controller.uploadFile(params, file as Express.Multer.File, body)).rejects.toThrow(NotFoundException);
       expect(policyService.authorize).not.toHaveBeenCalled();
       expect(fileUploadService.uploadFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("mediaUpdate", () => {
+    it("should update the media successfully", async () => {
+      const mockedMedia = { uuid: "media-uuid" } as Media;
+      mediaService.getMedia.mockResolvedValue(mockedMedia);
+      policyService.authorize.mockResolvedValue();
+      const model = { uuid: "model-uuid", id: 1 };
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      await controller.mediaUpdate({ uuid: "media-uuid" }, { data: { type: "media", attributes: { isPublic: true } } });
+      expect(policyService.authorize).toHaveBeenCalledWith("updateFiles", { uuid: "model-uuid", id: 1 });
+      expect(mediaService.updateMedia).toHaveBeenCalledWith(mockedMedia, {
+        data: { type: "media", attributes: { isPublic: true } }
+      });
     });
   });
 

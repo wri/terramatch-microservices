@@ -5,6 +5,7 @@ import {
   Delete,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UnauthorizedException,
@@ -27,6 +28,8 @@ import { MediaRequestBody } from "./dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
+import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
+import { SingleMediaDto } from "./dto/media-query.dto";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -70,6 +73,22 @@ export class FilesController {
         entityUuid: model.uuid
       })
     );
+  }
+
+  @Patch(":uuid")
+  @ApiOperation({
+    operationId: "mediaUpdate",
+    summary: "Update a media by uuid"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  async mediaUpdate(@Param() { uuid }: SingleMediaDto, @Body() updatePayload: MediaUpdateBody) {
+    const media = await this.mediaService.getMedia(uuid);
+    const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+    await this.policyService.authorize("updateFiles", model);
+    return this.mediaService.updateMedia(media, updatePayload);
   }
 
   @Delete("bulkDelete")

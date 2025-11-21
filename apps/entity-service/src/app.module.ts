@@ -22,7 +22,6 @@ import { DisturbancesController } from "./entities/disturbances.controller";
 import { DisturbanceService } from "./entities/disturbance.service";
 import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
-import { MediasController } from "./file/medias.controller";
 import { FormsController } from "./forms/forms.controller";
 import { FormsService } from "./forms/forms.service";
 
@@ -34,7 +33,6 @@ import { FormsService } from "./forms/forms.service";
   controllers: [
     ProjectPitchesController,
     ImpactStoriesController,
-    MediasController,
     TasksController,
     FilesController,
     TreesController,

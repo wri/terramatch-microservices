@@ -140,7 +140,7 @@ export class DisturbanceReport extends Model<
     return this.project?.name ?? undefined;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 

@@ -20,6 +20,7 @@ import { chainScope } from "../util/chain-scope";
 import { laravelType } from "../types/util";
 import { UpdateRequestStatus, UpdateRequestStatusStates } from "../constants/status";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { Dictionary } from "lodash";
 
 @Scopes(() => ({
   entity: (entity: EntityModel) => ({
@@ -79,7 +80,7 @@ export class UpdateRequest extends Model<UpdateRequest> {
 
   @AllowNull
   @JsonColumn()
-  content: object | null;
+  content: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

@@ -16,9 +16,10 @@ import {
 import { SpecificEntityData } from "../email/email.processor";
 import { EventService } from "./event.service";
 import { Action, AuditStatus, FormQuestion, Task, UpdateRequest } from "@terramatch-microservices/database/entities";
-import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
+import { Dictionary, flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
 import {
+  AnyStatus,
   APPROVED,
   AWAITING_APPROVAL,
   DUE,
@@ -32,11 +33,16 @@ import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { isField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { FundingTypeApprovalProcessor } from "./processors/funding-type.approval-processor";
+import { EntityApprovalProcessor } from "./processors/types";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
 const getEntityType = (model: Model) =>
   Object.entries(ENTITY_MODELS).find(([, entityClass]) => model instanceof entityClass)?.[0] as EntityType | undefined;
+
+// A set of processors that should be run any time an EntityType model moves to approved status.
+const APPROVAL_PROCESSERS: EntityApprovalProcessor[] = [FundingTypeApprovalProcessor];
 
 export class EntityStatusUpdate extends EventProcessor {
   private readonly logger = new TMLogger(EntityStatusUpdate.name);
@@ -71,6 +77,12 @@ export class EntityStatusUpdate extends EventProcessor {
 
       if (this.model.status === AWAITING_APPROVAL) {
         await this.sendProjectManagerEmail(entityType);
+      } else if (this.model.status === APPROVED) {
+        await Promise.all(
+          APPROVAL_PROCESSERS.map(processor =>
+            processor.processEntityApproval(this.model as EntityModel, this.eventService.mediaService)
+          )
+        );
       }
     }
 
@@ -139,8 +151,8 @@ export class EntityStatusUpdate extends EventProcessor {
           const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
           if (config == null || !isField(config.field)) return undefined;
 
-          const updateRequestValue = updateRequest.content?.[question.uuid] as unknown;
-          const baseValue = baseModel[config.field.property] as unknown;
+          const updateRequestValue = updateRequest.content?.[question.uuid];
+          const baseValue = (baseModel as unknown as Dictionary<unknown>)[config.field.property];
           if (isEqual(updateRequestValue, baseValue)) return undefined;
 
           return config.field.label;
@@ -178,7 +190,7 @@ export class EntityStatusUpdate extends EventProcessor {
 
       if (!isReport(entity)) {
         action.title = get(entity, "name") ?? "";
-        action.text = STATUS_DISPLAY_STRINGS[entity.status];
+        action.text = STATUS_DISPLAY_STRINGS[entity.status as AnyStatus];
       }
 
       await action.save();

@@ -206,7 +206,7 @@ export class MediaService {
   private async copyFile(fromPath: string, toPath: string, mimeType?: string) {
     const bucket = this.bucket;
     const command = new CopyObjectCommand({
-      Bucket: this.bucket,
+      Bucket: bucket,
       Key: toPath,
       CopySource: `${bucket}/${fromPath}`,
       ContentType: mimeType,

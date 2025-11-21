@@ -9,7 +9,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles"], Nursery, {
+      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"], Nursery, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -25,7 +25,7 @@ export class NurseryPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "uploadFiles", "deleteFiles"], Nursery, {
+          this.builder.can(["read", "delete", "update", "uploadFiles", "deleteFiles", "updateFiles"], Nursery, {
             projectId: { $in: projectIds }
           });
         }
@@ -37,9 +37,13 @@ export class NurseryPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles"], Nursery, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"],
+            Nursery,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
         }
       }
     }

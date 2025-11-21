@@ -10,9 +10,13 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles"], NurseryReport, {
-        frameworkKey: { $in: this.frameworks }
-      });
+      this.builder.can(
+        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"],
+        NurseryReport,
+        {
+          frameworkKey: { $in: this.frameworks }
+        }
+      );
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -29,7 +33,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
           })
         ).map(({ id }) => id);
         if (nurseryIds.length > 0) {
-          this.builder.can(["read", "update", "uploadFiles", "deleteFiles"], NurseryReport, {
+          this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], NurseryReport, {
             nurseryId: { $in: nurseryIds }
           });
         }
@@ -45,9 +49,13 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
             await Nursery.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })
           ).map(({ id }) => id);
           if (nurseryIds.length > 0) {
-            this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles"], NurseryReport, {
-              nurseryId: { $in: nurseryIds }
-            });
+            this.builder.can(
+              ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"],
+              NurseryReport,
+              {
+                nurseryId: { $in: nurseryIds }
+              }
+            );
           }
         }
       }

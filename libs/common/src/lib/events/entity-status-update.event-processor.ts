@@ -37,6 +37,7 @@ import { FundingTypeApprovalProcessor } from "./processors/funding-type.approval
 import { EntityApprovalProcessor } from "./processors/types";
 import { FinancialIndicatorApprovalProcessor } from "./processors/financial-indicator.approval-processor";
 import { DisturbanceReportEntryApprovalProcessor } from "./processors/disturbance-report-entry.approval-processor";
+import { DemographicApprovalProcessor } from "./processors/demographic.approval-processor";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -47,7 +48,8 @@ const getEntityType = (model: Model) =>
 const APPROVAL_PROCESSERS: EntityApprovalProcessor[] = [
   FundingTypeApprovalProcessor,
   FinancialIndicatorApprovalProcessor,
-  DisturbanceReportEntryApprovalProcessor
+  DisturbanceReportEntryApprovalProcessor,
+  DemographicApprovalProcessor
 ];
 
 export class EntityStatusUpdate extends EventProcessor {

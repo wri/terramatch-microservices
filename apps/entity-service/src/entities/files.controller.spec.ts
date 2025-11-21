@@ -69,7 +69,7 @@ describe("FilesController", () => {
       mediaService.getMedia.mockResolvedValue(media);
       const model = { uuid: "model-uuid", id: 1 };
       (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
-      const result = await controller.getMedia({ uuid: "media-uuid" });
+      await controller.getMedia({ uuid: "media-uuid" });
       expect(entitiesService.mediaDto).toHaveBeenCalledWith(media, {
         entityType: media.modelType as EntityType,
         entityUuid: model.uuid

@@ -486,7 +486,7 @@ export class SitePolygonsController {
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
   }
 
-  @Post("geometry/upload")
+  @Post("upload")
   @ApiOperation({
     operationId: "uploadGeometryFile",
     summary: "Upload and parse geometry file (KML, Shapefile, GeoJSON)",

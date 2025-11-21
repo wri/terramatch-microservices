@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   NotFoundException,
   Param,
   Patch,
@@ -30,6 +31,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
 import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
 import { SingleMediaDto } from "./dto/media-query.dto";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -41,6 +43,21 @@ export class FilesController {
     private readonly mediaService: MediaService,
     private readonly entitiesService: EntitiesService
   ) {}
+
+  @Get(":uuid")
+  @ApiOperation({
+    operationId: "getMedia",
+    summary: "Get a media by uuid"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async getMedia(@Param() { uuid }: SingleMediaDto) {
+    const media = await this.mediaService.getMedia(uuid);
+    const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+    await this.policyService.authorize("read", media);
+    return this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid });
+  }
 
   @Post("/:entity/:uuid/:collection")
   @ApiOperation({
@@ -80,7 +97,9 @@ export class FilesController {
     operationId: "mediaUpdate",
     summary: "Update a media by uuid"
   })
-  @JsonApiResponse({ data: MediaDto })
+  @JsonApiResponse({
+    data: MediaDto
+  })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })

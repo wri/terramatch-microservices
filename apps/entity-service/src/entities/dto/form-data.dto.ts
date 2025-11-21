@@ -3,6 +3,7 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { IsNotEmptyObject } from "class-validator";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { Dictionary } from "lodash";
 
 @JsonApiDto({ type: "formData" })
 export class FormDataDto {
@@ -34,7 +35,7 @@ export class FormDataDto {
 export class StoreFormDataAttributes {
   @IsNotEmptyObject()
   @ApiProperty()
-  answers: object;
+  answers: Dictionary<unknown>;
 }
 
 export class UpdateFormDataBody extends JsonApiBodyDto(

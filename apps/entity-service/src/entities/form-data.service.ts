@@ -49,7 +49,7 @@ export class FormDataService {
     return await Form.findOne({ where: { model: laravelType(model), frameworkKey: model.frameworkKey } });
   }
 
-  async storeEntityAnswers(model: EntityModel, form: Form, answers: object) {
+  async storeEntityAnswers(model: EntityModel, form: Form, answers: Dictionary<unknown>) {
     const updateRequest = await UpdateRequest.for(model).current().findOne();
     if (updateRequest != null) {
       await updateRequest.update({ content: answers });

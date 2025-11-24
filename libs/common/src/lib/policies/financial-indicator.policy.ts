@@ -10,8 +10,14 @@ export class FinancialIndicatorPolicy extends UserPermissionsPolicy {
         organisationId: user.organisationId
       });
     }
-  }
 
+    if (this.frameworks.length > 0) {
+      this.builder.can(
+        ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles"],
+        FinancialIndicator
+      );
+    }
+  }
   private _user?: User | null;
   private async getUser() {
     if (this._user != null) return this._user;

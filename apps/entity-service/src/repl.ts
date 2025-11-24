@@ -1,7 +1,7 @@
 import { AppModule } from "./app.module";
 import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
-import { Form, FormQuestion, Framework, FundingProgramme } from "@terramatch-microservices/database/entities";
+import { Form, FormQuestion, Framework, FundingProgramme, I18nItem } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
@@ -9,6 +9,7 @@ import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sq
 import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import { generateHashedKey } from "@transifex/native";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -64,6 +65,28 @@ bootstrapRepl("Entity Service", AppModule, {
         for (const framework of await Framework.findAll()) {
           if (framework.slug !== framework.accessCode) await framework.update({ accessCode: framework.slug });
         }
+      });
+    },
+
+    updateHashOni18nItems: async () => {
+      await withoutSqlLogs(async () => {
+        const builder = new PaginatedQueryBuilder(I18nItem, 100).where({ hash: null });
+        const bar = new ProgressBar("Processing I18nItems [:bar] :percent :etas", {
+          width: 40,
+          total: await builder.paginationTotal()
+        });
+        for await (const page of batchFindAll(builder)) {
+          for (const i18nItem of page) {
+            if (i18nItem.shortValue == null && i18nItem.longValue == null) continue;
+            i18nItem.hash = generateHashedKey(i18nItem.shortValue ?? i18nItem.longValue ?? "");
+            i18nItem.status = "draft";
+            await i18nItem.save();
+            bar.tick();
+          }
+        }
+
+        console.log("Finished updating hashes on I18nItems.");
+        console.log(`Updated ${bar.total} I18nItems.`);
       });
     }
   }

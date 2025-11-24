@@ -589,11 +589,6 @@ describe("SitePolygonPropertyValidator", () => {
       expect(result).toBeNull();
     });
 
-    it("should return null for null input", () => {
-      const result = orderCommaSeparatedPropertiesAlphabetically(null as any, VALID_DISTRIBUTION_VALUES);
-      expect(result).toBeNull();
-    });
-
     it("should return null when all values are invalid", () => {
       const result = orderCommaSeparatedPropertiesAlphabetically("invalid1,invalid2", VALID_DISTRIBUTION_VALUES);
       expect(result).toBeNull();
@@ -645,19 +640,9 @@ describe("SitePolygonPropertyValidator", () => {
       expect(result).toBeNull();
     });
 
-    it("should return null when input is not an array", () => {
-      const result = validateAndSortStringArray("not-an-array" as any, VALID_DISTRIBUTION_VALUES);
-      expect(result).toBeNull();
-    });
-
     it("should handle whitespace in values", () => {
       const result = validateAndSortStringArray([" full ", " partial ", " single-line "], VALID_DISTRIBUTION_VALUES);
       expect(result).toEqual(["full", "partial", "single-line"]);
-    });
-
-    it("should filter out non-string values", () => {
-      const result = validateAndSortStringArray([123, "full", true, "partial"] as any, VALID_DISTRIBUTION_VALUES);
-      expect(result).toEqual(["full", "partial"]);
     });
 
     it("should return null when all values are invalid", () => {

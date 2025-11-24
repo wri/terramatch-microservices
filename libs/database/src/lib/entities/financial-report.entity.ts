@@ -75,9 +75,10 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column(BIGINT.UNSIGNED)
   approvedBy: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @Column(DATE)

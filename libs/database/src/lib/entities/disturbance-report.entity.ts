@@ -94,9 +94,10 @@ export class DisturbanceReport extends Model<
   @Column(BIGINT.UNSIGNED)
   approvedBy: number | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @Column(DATE)

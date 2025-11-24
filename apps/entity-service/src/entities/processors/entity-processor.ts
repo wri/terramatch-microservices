@@ -5,7 +5,7 @@ import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
-import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
@@ -149,6 +149,7 @@ export abstract class EntityProcessor<
         // also being updated.
         model.feedback = update.feedback ?? null;
         model.feedbackFields = update.feedbackFields ?? null;
+        if (isReport(model)) model.completion = 100;
         model.status = update.status as ModelType["status"];
       } else if (update.status === AWAITING_APPROVAL) {
         // If we're submitting for approval, check for an update request and submit that instead if there is one

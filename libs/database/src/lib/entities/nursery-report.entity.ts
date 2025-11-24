@@ -122,9 +122,10 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
   @Column(BIGINT.UNSIGNED)
   nurseryId: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
@@ -147,7 +148,7 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
     return this.nursery?.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.nursery?.project?.uuid;
   }
 
@@ -163,7 +164,7 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
     return this.nursery?.name;
   }
 
-  get nurseryUuid() {
+  get nurseryUuid(): string | undefined {
     return this.nursery?.uuid;
   }
 

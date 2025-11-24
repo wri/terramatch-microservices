@@ -83,9 +83,10 @@ export class SrpReport extends Model<SrpReport> {
   @Column(BIGINT.UNSIGNED)
   approvedBy: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @Column(DATE)
@@ -147,7 +148,7 @@ export class SrpReport extends Model<SrpReport> {
     return this.project?.organisation?.uuid;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 

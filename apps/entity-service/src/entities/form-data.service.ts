@@ -15,7 +15,9 @@ import {
   EntityType,
   getOrganisationId,
   getProjectId,
-  isEntity
+  hasNothingToReport,
+  isEntity,
+  isReport
 } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
@@ -27,6 +29,7 @@ import { FormModels, LinkedAnswerCollector } from "./linkedAnswerCollector";
 import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
+import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 
 @Injectable()
 export class FormDataService {
@@ -133,7 +136,7 @@ export class FormDataService {
     return answers;
   }
 
-  private async updateEntityFromForm<T extends EntityModel>(model: T, form: Form, answers: object) {
+  private async updateEntityFromForm<T extends EntityModel>(model: T, form: Form, answers: Dictionary<unknown>) {
     model.answers = {};
 
     const questions = await FormQuestion.findAll({
@@ -150,7 +153,7 @@ export class FormDataService {
           continue;
         }
 
-        // Note: file questions are currently handled with directly file upload in the entity form on the FE
+        // Note: file questions are currently handled with direct file upload in the entity form on the FE
         const { field } = config;
         if (isField(field)) {
           const value = answers[question.uuid];
@@ -169,15 +172,63 @@ export class FormDataService {
             }
           }
         } else if (isRelation(field)) {
-          const hidden =
-            question.parentId != null &&
-            question.showOnParentCondition === true &&
-            answers[question.parentId] === false;
-          await collector[field.resource].syncRelation(model, field, answers[question.uuid], hidden);
+          await collector[field.resource].syncRelation(
+            model,
+            field,
+            answers[question.uuid] as object[] | null | undefined,
+            this.isHidden(answers, questions, question)
+          );
         }
       }
     }
 
+    if (isReport(model)) {
+      model.completion = this.calculateProgress(answers, questions);
+
+      const isAdmin = (await this.policyService.getPermissions()).includes(`framework-${model.frameworkKey}`);
+      if (model.createdBy == null && !isAdmin) {
+        model.createdBy = this.policyService.userId ?? null;
+      }
+
+      // An admin should be able to directly update a report without a transition unless it's in `due`, in which case
+      // we want the transition to go ahead and take place.
+      if (model.status === DUE || !isAdmin) {
+        model.status = STARTED;
+      }
+
+      // This update has to happen after the status set above or moving to STARTED can fail if the
+      // record is currently in AWAITING_APPROVAL.
+      if (hasNothingToReport(model)) model.nothingToReport = false;
+    }
+
     await model.save();
+  }
+
+  private isHidden(
+    answers: Dictionary<unknown>,
+    questions: FormQuestion[],
+    { parentId, showOnParentCondition }: FormQuestion
+  ) {
+    const parent = parentId == null ? undefined : questions.find(({ uuid }) => uuid == parentId);
+    if (parent == null || parent.inputType !== "conditional" || showOnParentCondition == null) return false;
+
+    return (answers[parent.uuid] ?? false) !== showOnParentCondition;
+  }
+
+  private calculateProgress(answers: Dictionary<unknown>, questions: FormQuestion[]) {
+    let questionCount = 0;
+    let answeredCount = 0;
+
+    for (const question of questions) {
+      // Ignore if the question isn't required
+      if ((question.validation as Dictionary<unknown>)?.required !== true) continue;
+      // Ignore if the question is hidden
+      if (this.isHidden(answers, questions, question)) continue;
+
+      questionCount++;
+      if (answers[question.uuid] != null) answeredCount++;
+    }
+
+    return questionCount == 0 ? 100 : Math.round((answeredCount / questionCount) * 100);
   }
 }

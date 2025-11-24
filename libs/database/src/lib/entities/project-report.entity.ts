@@ -228,9 +228,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
   createdByUser: User | null;

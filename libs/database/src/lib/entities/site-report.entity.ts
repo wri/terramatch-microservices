@@ -174,9 +174,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
@@ -195,7 +196,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return this.site?.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.site?.project?.uuid;
   }
 
@@ -211,7 +212,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return this.site?.name;
   }
 
-  get siteUuid() {
+  get siteUuid(): string | undefined {
     return this.site?.uuid;
   }
 

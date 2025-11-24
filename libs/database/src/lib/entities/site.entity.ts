@@ -47,6 +47,7 @@ import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type SiteMedia =
   | "media"
@@ -162,7 +163,7 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     return this.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 
@@ -272,7 +273,7 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)

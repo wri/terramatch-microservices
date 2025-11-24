@@ -30,7 +30,7 @@ export class FormDataController {
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
     await this.policyService.authorize("read", model);
 
-    const form = await this.formDataService.getForm(model);
+    const form = await Form.for(model).findOne();
     if (form == null) throw new NotFoundException("Form for entity not found");
 
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
@@ -51,7 +51,7 @@ export class FormDataController {
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
     await this.policyService.authorize("update", model);
 
-    const form = await this.formDataService.getForm(model);
+    const form = await Form.for(model).findOne();
     if (form == null) throw new NotFoundException("Form for entity not found");
 
     await this.formDataService.storeEntityAnswers(model, form, payload.data.attributes.answers);

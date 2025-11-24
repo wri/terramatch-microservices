@@ -41,6 +41,7 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 
@@ -153,7 +154,7 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @BelongsTo(() => Project)
   project: Project | null;
@@ -162,7 +163,7 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     return this.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 

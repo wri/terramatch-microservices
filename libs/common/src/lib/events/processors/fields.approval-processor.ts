@@ -1,0 +1,33 @@
+import { EntityApprovalProcessor } from "./types";
+import { Form, FormQuestion, FormSection } from "@terramatch-microservices/database/entities";
+import { TMLogger } from "../../util/tm-logger";
+import { Op } from "sequelize";
+import { getLinkedFieldConfig } from "../../linkedFields";
+import { isField } from "@terramatch-microservices/database/constants/linked-fields";
+
+const logger = new TMLogger("FieldsApprovalProcessor");
+
+export const FieldsApprovalProcessor: EntityApprovalProcessor = {
+  async processEntityApproval(entity) {
+    const form = await Form.for(entity).findOne({ attributes: ["uuid"] });
+    if (form == null) {
+      logger.warn(`No form found for [${entity.constructor.name}, ${entity.id}`);
+      return;
+    }
+    const questions = await FormQuestion.findAll({
+      where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
+    });
+
+    // Null out the answers to any fields that are hidden by a parent condition.
+    for (const question of questions) {
+      if (question.linkedFieldKey == null || !question.isHidden(entity.answers ?? {}, questions)) continue;
+
+      const field = getLinkedFieldConfig(question.linkedFieldKey)?.field;
+      if (field == null || !isField(field)) continue;
+
+      entity[field.property] = null;
+    }
+
+    await entity.save();
+  }
+};

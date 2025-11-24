@@ -11,6 +11,7 @@ import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService, ProcessableEntity } from "./entities.service";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { getStateMachine } from "@terramatch-microservices/database/util/model-column-state-machine";
 
 @Controller("entities/v3/:entity/:uuid/updateRequest")
 export class UpdateRequestsController {
@@ -48,15 +49,20 @@ export class UpdateRequestsController {
 
     const attributes = updatePayload.data.attributes;
     if (attributes.status != null) {
+      // Calling update() below when the status is approved kicks off a series of updates and model
+      // changes through the entity status update event processor that require the entity data to be
+      // correct on the base entity. So in that case, validate the transition early and then stash
+      // the update data on the base entity before updating the UpdateRequest.
+      if (attributes.status === "approved") {
+        getStateMachine(updateRequest, "status")?.validateTransition("approved");
+        await this.formDataService.storeEntityAnswers(model, form, updateRequest.content ?? {});
+      }
+
       await updateRequest.update({
         status: attributes.status,
         feedback: attributes.feedback,
         feedbackFields: attributes.feedbackFields
       });
-
-      if (updateRequest.status === "approved") {
-        await this.formDataService.storeEntityAnswers(model, form, updateRequest.content ?? {});
-      }
     }
 
     return await this.addDto(buildJsonApi(UpdateRequestDto), form, updateRequest, entity, model);
@@ -70,7 +76,7 @@ export class UpdateRequestsController {
     const updateRequest = await UpdateRequest.for(model).current().findOne();
     if (updateRequest == null) throw new NotFoundException(`Update request not found for uuid: ${uuid}`);
 
-    const form = await this.formDataService.getForm(model);
+    const form = await Form.for(model).findOne();
     if (form == null) throw new NotFoundException(`Form not found for update request: ${uuid}`);
 
     return { updateRequest, model, form };

@@ -46,6 +46,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type NurseryReportMedia = "media" | "file" | "otherAdditionalDocuments" | "treeSeedlingContributions" | "photos";
 
@@ -268,7 +269,7 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

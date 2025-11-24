@@ -20,6 +20,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { Task } from "./task.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type SrpReportMedia = "media";
 
@@ -121,7 +122,7 @@ export class SrpReport extends Model<SrpReport> {
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

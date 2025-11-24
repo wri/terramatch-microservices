@@ -40,6 +40,7 @@ import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { InternalServerErrorException } from "@nestjs/common";
+import { Dictionary } from "lodash";
 
 type ProjectMedia =
   | "media"
@@ -260,7 +261,7 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

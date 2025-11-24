@@ -33,6 +33,7 @@ import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -624,7 +625,7 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(STRING)

@@ -6,6 +6,7 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
@@ -16,9 +17,22 @@ import { FormType } from "../constants/forms";
 import { FormSection } from "./form-section.entity";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { EntityModel } from "../constants/entities";
+import { FinancialReport } from "./financial-report.entity";
+import { DisturbanceReport } from "./disturbance-report.entity";
+import { laravelType } from "../types/util";
+import { chainScope } from "../util/chain-scope";
 
 type FormMedia = "banner";
 
+@Scopes(() => ({
+  entity: (entity: EntityModel) => {
+    if (entity instanceof FinancialReport) return { where: { type: "financial-report" } };
+    if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };
+
+    return { where: { model: laravelType(entity), frameworkKey: entity.frameworkKey } };
+  }
+}))
 @Table({
   tableName: "forms",
   underscored: true,
@@ -41,6 +55,10 @@ export class Form extends Model<Form> {
   static readonly MEDIA: Record<FormMedia, MediaConfiguration> = {
     banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
   };
+
+  static for(entity: EntityModel) {
+    return chainScope(this, "entity", entity) as typeof Form;
+  }
 
   @PrimaryKey
   @AutoIncrement

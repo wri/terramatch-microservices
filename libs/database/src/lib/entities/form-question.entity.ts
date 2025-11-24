@@ -15,6 +15,7 @@ import { I18nItem } from "./i18n-item.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormSection } from "./form-section.entity";
 import { InputType } from "../constants/linked-fields";
+import { Dictionary } from "lodash";
 
 @Table({
   tableName: "form_questions",
@@ -150,4 +151,14 @@ export class FormQuestion extends Model<FormQuestion> {
   @AllowNull
   @JsonColumn()
   years: number[] | null;
+
+  /**
+   * Returns true if this question is hidden based on the parent conditional's answer
+   */
+  isHidden(answers: Dictionary<unknown>, formQuestions: FormQuestion[]) {
+    const parent = this.parentId == null ? undefined : formQuestions.find(({ uuid }) => uuid == this.parentId);
+    if (parent == null || parent.inputType !== "conditional" || this.showOnParentCondition == null) return false;
+
+    return (answers[parent.uuid] ?? false) !== this.showOnParentCondition;
+  }
 }

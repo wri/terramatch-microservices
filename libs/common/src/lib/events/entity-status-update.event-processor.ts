@@ -33,24 +33,12 @@ import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { isField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { FundingTypeApprovalProcessor } from "./processors/funding-type.approval-processor";
-import { EntityApprovalProcessor } from "./processors/types";
-import { FinancialIndicatorApprovalProcessor } from "./processors/financial-indicator.approval-processor";
-import { DisturbanceReportEntryApprovalProcessor } from "./processors/disturbance-report-entry.approval-processor";
-import { DemographicApprovalProcessor } from "./processors/demographic.approval-processor";
+import { APPROVAL_PROCESSERS } from "./processors";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
 const getEntityType = (model: Model) =>
   Object.entries(ENTITY_MODELS).find(([, entityClass]) => model instanceof entityClass)?.[0] as EntityType | undefined;
-
-// A set of processors that should be run any time an EntityType model moves to approved status.
-const APPROVAL_PROCESSERS: EntityApprovalProcessor[] = [
-  FundingTypeApprovalProcessor,
-  FinancialIndicatorApprovalProcessor,
-  DisturbanceReportEntryApprovalProcessor,
-  DemographicApprovalProcessor
-];
 
 export class EntityStatusUpdate extends EventProcessor {
   private readonly logger = new TMLogger(EntityStatusUpdate.name);

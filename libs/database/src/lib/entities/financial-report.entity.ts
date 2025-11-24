@@ -20,6 +20,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
 import { FinancialIndicator } from "./financial-indicator.entity";
+import { Dictionary } from "lodash";
 
 @Scopes(() => ({
   organisation: (id: number) => ({ where: { organisationId: id } })
@@ -105,7 +106,7 @@ export class FinancialReport extends Model<FinancialReport> {
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(INTEGER)

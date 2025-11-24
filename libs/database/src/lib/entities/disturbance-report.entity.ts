@@ -32,6 +32,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type DisturbanceReportMedia = "media";
 
@@ -124,7 +125,7 @@ export class DisturbanceReport extends Model<
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

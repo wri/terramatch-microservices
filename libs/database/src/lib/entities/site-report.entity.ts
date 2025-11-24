@@ -47,6 +47,7 @@ import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -338,7 +339,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

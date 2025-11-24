@@ -1,14 +1,7 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import {
-  DisturbanceReport,
-  FinancialReport,
-  Form,
-  FormQuestion,
-  FormSection,
-  UpdateRequest
-} from "@terramatch-microservices/database/entities";
+import { Form, FormQuestion, FormSection, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import {
   EntityModel,
@@ -40,17 +33,6 @@ export class FormDataService {
     private readonly mediaService: MediaService,
     private readonly policyService: PolicyService
   ) {}
-
-  async getForm(model: EntityModel) {
-    if (model instanceof FinancialReport) {
-      return await Form.findOne({ where: { type: "financial-report" } });
-    }
-    if (model instanceof DisturbanceReport) {
-      return await Form.findOne({ where: { type: "disturbance-report" } });
-    }
-
-    return await Form.findOne({ where: { model: laravelType(model), frameworkKey: model.frameworkKey } });
-  }
 
   async storeEntityAnswers(model: EntityModel, form: Form, answers: Dictionary<unknown>) {
     const updateRequest = await UpdateRequest.for(model).current().findOne();
@@ -176,7 +158,7 @@ export class FormDataService {
             model,
             field,
             answers[question.uuid] as object[] | null | undefined,
-            this.isHidden(answers, questions, question)
+            question.isHidden(answers, questions)
           );
         }
       }
@@ -204,17 +186,6 @@ export class FormDataService {
     await model.save();
   }
 
-  private isHidden(
-    answers: Dictionary<unknown>,
-    questions: FormQuestion[],
-    { parentId, showOnParentCondition }: FormQuestion
-  ) {
-    const parent = parentId == null ? undefined : questions.find(({ uuid }) => uuid == parentId);
-    if (parent == null || parent.inputType !== "conditional" || showOnParentCondition == null) return false;
-
-    return (answers[parent.uuid] ?? false) !== showOnParentCondition;
-  }
-
   private calculateProgress(answers: Dictionary<unknown>, questions: FormQuestion[]) {
     let questionCount = 0;
     let answeredCount = 0;
@@ -223,7 +194,7 @@ export class FormDataService {
       // Ignore if the question isn't required
       if ((question.validation as Dictionary<unknown>)?.required !== true) continue;
       // Ignore if the question is hidden
-      if (this.isHidden(answers, questions, question)) continue;
+      if (question.isHidden(answers, questions)) continue;
 
       questionCount++;
       if (answers[question.uuid] != null) answeredCount++;

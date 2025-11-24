@@ -355,11 +355,22 @@ export class SitePolygonsController {
     const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
     const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
 
+    const versionIds: string[] = [];
     for (const version of versions) {
+      versionIds.push(version.uuid);
       document.addData(
         version.uuid,
         await this.sitePolygonService.buildLightDto(version, associations[version.id] ?? {})
       );
+    }
+
+    document.addIndex({
+      requestPath: `/research/v3/sitePolygons/${uuid}/versions`,
+      total: versions.length
+    });
+
+    if (document.indexData.length > 0) {
+      document.indexData[document.indexData.length - 1].ids = versionIds;
     }
 
     return document;

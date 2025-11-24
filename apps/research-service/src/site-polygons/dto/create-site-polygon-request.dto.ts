@@ -87,13 +87,15 @@ export class AttributeChangesDto {
   plantStart?: string;
 
   @ApiProperty({
-    description: "Updated practice type",
+    description: "Updated practice type(s) as array of strings",
     required: false,
-    example: "agroforestry"
+    example: ["tree-planting"],
+    type: [String]
   })
   @IsOptional()
-  @IsString()
-  practice?: string;
+  @IsArray()
+  @IsString({ each: true })
+  practice?: string[];
 
   @ApiProperty({
     description: "Updated target system",
@@ -105,13 +107,15 @@ export class AttributeChangesDto {
   targetSys?: string;
 
   @ApiProperty({
-    description: "Updated distribution method",
+    description: "Updated distribution method(s) as array of strings",
     required: false,
-    example: "direct seeding"
+    example: ["full", "single-line"],
+    type: [String]
   })
   @IsOptional()
-  @IsString()
-  distr?: string;
+  @IsArray()
+  @IsString({ each: true })
+  distr?: string[];
 
   @ApiProperty({
     description: "Updated number of trees",

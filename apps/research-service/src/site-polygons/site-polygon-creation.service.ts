@@ -14,7 +14,7 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import {
   validateSitePolygonProperties,
   extractAdditionalData,
-  validateArrayProperty,
+  validateAndSortStringArray,
   VALID_PRACTICE_VALUES,
   VALID_DISTRIBUTION_VALUES
 } from "./utils/site-polygon-property-validator";
@@ -648,13 +648,13 @@ export class SitePolygonCreationService {
         sitePolygonAttributes.plantStart = new Date(attributeChanges.plantStart);
       }
       if (attributeChanges.practice != null && attributeChanges.practice.length > 0) {
-        sitePolygonAttributes.practice = validateArrayProperty(attributeChanges.practice, VALID_PRACTICE_VALUES);
+        sitePolygonAttributes.practice = validateAndSortStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES);
       }
       if (attributeChanges.targetSys != null && attributeChanges.targetSys.length > 0) {
         sitePolygonAttributes.targetSys = attributeChanges.targetSys;
       }
       if (attributeChanges.distr != null && attributeChanges.distr.length > 0) {
-        sitePolygonAttributes.distr = validateArrayProperty(attributeChanges.distr, VALID_DISTRIBUTION_VALUES);
+        sitePolygonAttributes.distr = validateAndSortStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES);
       }
       if (attributeChanges.numTrees != null) {
         sitePolygonAttributes.numTrees = attributeChanges.numTrees;

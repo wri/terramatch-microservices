@@ -121,7 +121,7 @@ export class SrpReport extends Model<SrpReport> {
 
   @AllowNull
   @Column(TEXT)
-  otherRestorationPartnersDescription: string | null;
+  restorationPartnersDescription: string | null;
 
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
   totalUniqueRestorationPartners: number;

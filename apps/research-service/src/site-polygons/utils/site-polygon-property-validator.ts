@@ -102,6 +102,37 @@ export function extractAdditionalData(properties: Record<string, unknown>): Reco
   return additionalData;
 }
 
+export function orderCommaSeparatedPropertiesAlphabetically(
+  value: string,
+  validValues: readonly string[]
+): string[] | null {
+  if (value == null || value.trim().length === 0) return null;
+
+  const values = value
+    .split(",")
+    .map(v => v.trim())
+    .filter(v => v !== "");
+
+  const validValuesSet = new Set(validValues);
+  const filteredValues = values.filter(v => validValuesSet.has(v));
+
+  return filteredValues.length > 0 ? filteredValues.sort() : null;
+}
+
+export function validateAndSortStringArray(
+  value: string[] | null | undefined,
+  validValues: readonly string[]
+): string[] | null {
+  if (value == null || !Array.isArray(value) || value.length === 0) return null;
+
+  const validValuesSet = new Set(validValues);
+  const filteredValues = value
+    .map(v => (typeof v === "string" ? v.trim() : ""))
+    .filter(v => v !== "" && validValuesSet.has(v));
+
+  return filteredValues.length > 0 ? filteredValues.sort() : null;
+}
+
 function validateTargetSys(value: string): string | null {
   if (value == null || value.trim().length === 0) return null;
 

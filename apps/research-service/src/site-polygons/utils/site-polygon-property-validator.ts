@@ -88,6 +88,24 @@ export function orderCommaSeparatedPropertiesAlphabetically(
   return filteredValues.length > 0 ? filteredValues.sort() : null;
 }
 
+/**
+ * Validates and sorts an array of string values against valid values.
+ * Filters out invalid values and returns a sorted array, or null if no valid values.
+ */
+export function validateAndSortStringArray(
+  value: string[] | null | undefined,
+  validValues: readonly string[]
+): string[] | null {
+  if (value == null || !Array.isArray(value) || value.length === 0) return null;
+
+  const validValuesSet = new Set(validValues);
+  const filteredValues = value
+    .map(v => (typeof v === "string" ? v.trim() : ""))
+    .filter(v => v !== "" && validValuesSet.has(v));
+
+  return filteredValues.length > 0 ? filteredValues.sort() : null;
+}
+
 function validateTargetSys(value: string): string | null {
   if (value == null || value.trim().length === 0) return null;
 

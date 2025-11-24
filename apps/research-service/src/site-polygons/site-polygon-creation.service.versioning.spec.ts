@@ -363,7 +363,7 @@ describe("SitePolygonCreationService - Versioning", () => {
 
       const attributeChanges: AttributeChangesDto = {
         polyName: "Updated Name",
-        practice: "", // Empty string should be ignored
+        practice: [], // Empty array should be ignored
         numTrees: 0
       };
 
@@ -387,7 +387,7 @@ describe("SitePolygonCreationService - Versioning", () => {
       const appliedAttributes = createVersionCall[1];
 
       expect(appliedAttributes.polyName).toBe("Updated Name");
-      expect(appliedAttributes.practice).toBeUndefined(); // Empty string ignored
+      expect(appliedAttributes.practice).toBeUndefined(); // Empty array ignored
       expect(appliedAttributes.numTrees).toBe(0);
     });
 

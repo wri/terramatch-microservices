@@ -21,7 +21,8 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ClippedVersionDto } from "./dto/clipped-version.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ClippingQueryDto } from "./dto/clipping-query.dto";
-import { isEmpty } from "lodash";
+import { isEmpty, uniq } from "lodash";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 @ApiTags("Polygon Clipping")
 @Controller("polygonClipping/v3")
@@ -209,7 +210,7 @@ export class PolygonClippingController {
     let entityName: string;
 
     if (sitePolygons.length > 0) {
-      const uniqueSiteUuids = Array.from(new Set(sitePolygons.map(sp => sp.siteUuid).filter(uuid => uuid != null)));
+      const uniqueSiteUuids = uniq(sitePolygons.map(({ siteUuid }) => siteUuid).filter(isNotNull));
 
       if (uniqueSiteUuids.length > 0) {
         const sites = await Site.findAll({

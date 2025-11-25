@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Put, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Put, Request, UnauthorizedException } from "@nestjs/common";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -8,8 +8,9 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FormDataService } from "./form-data.service";
 import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
-import { Form } from "@terramatch-microservices/database/entities";
+import { AuditStatus, Form } from "@terramatch-microservices/database/entities";
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
+import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
 
 @Controller("entities/v3/:entity/:uuid/formData")
 export class FormDataController {
@@ -42,7 +43,11 @@ export class FormDataController {
   @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
   @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
-  async formDataUpdate(@Param() { entity, uuid }: SpecificEntityDto, @Body() payload: UpdateFormDataBody) {
+  async formDataUpdate(
+    @Param() { entity, uuid }: SpecificEntityDto,
+    @Body() payload: UpdateFormDataBody,
+    @Request() { authenticatedUserId }
+  ) {
     if (payload.data.id !== `${entity}:${uuid}`) {
       throw new BadRequestException("Id in payload does not match entity and uuid from path");
     }
@@ -55,6 +60,13 @@ export class FormDataController {
     if (form == null) throw new NotFoundException("Form for entity not found");
 
     await this.formDataService.storeEntityAnswers(model, form, payload.data.attributes.answers);
+
+    if (payload.data.attributes.isContinueLater) {
+      const type =
+        model.status === APPROVED || model.status === NEEDS_MORE_INFORMATION ? "change-request-updated" : null;
+      await AuditStatus.createAudit(model, authenticatedUserId as number, type, "Updated");
+    }
+
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }
 

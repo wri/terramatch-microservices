@@ -203,21 +203,17 @@ export class EntityStatusUpdate extends EventProcessor {
 
     this.logger.log(`Creating auditStatus [${JSON.stringify({ model: model.constructor.name, id: model.id })}]`);
 
-    const user = await this.getAuthenticatedUser();
-    const auditStatus = new AuditStatus();
-    auditStatus.auditableType = auditableType;
-    auditStatus.auditableId = model.id;
-    auditStatus.createdBy = user?.emailAddress ?? null;
-    auditStatus.firstName = user?.firstName ?? null;
-    auditStatus.lastName = user?.lastName ?? null;
-
     if (status === "approved") {
-      auditStatus.comment = comment ?? `Approved: ${model.feedback}`;
+      await AuditStatus.createAudit(model, this.authenticatedUserId, null, comment ?? `Approved: ${model.feedback}`);
     } else if (status === "needs-more-information") {
-      auditStatus.type = "change-request";
-      auditStatus.comment = comment ?? (await this.getNeedsMoreInfoComment());
+      await AuditStatus.createAudit(
+        model,
+        this.authenticatedUserId,
+        "change-request",
+        comment ?? (await this.getNeedsMoreInfoComment())
+      );
     } else if (status === "awaiting-approval") {
-      auditStatus.comment = comment;
+      await AuditStatus.createAudit(model, this.authenticatedUserId, null, comment);
     } else {
       // Getting this method called for started is expected on model creation, so no need to warn
       // in that case.
@@ -232,8 +228,6 @@ export class EntityStatusUpdate extends EventProcessor {
       }
       return;
     }
-
-    await auditStatus.save();
   }
 
   private async getNeedsMoreInfoComment() {

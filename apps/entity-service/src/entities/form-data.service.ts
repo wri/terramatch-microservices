@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { Form, FormQuestion, FormSection, UpdateRequest } from "@terramatch-microservices/database/entities";
+import { Form, FormQuestion, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import {
   EntityModel,
@@ -13,7 +13,6 @@ import {
   isReport
 } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary } from "lodash";
-import { Op } from "sequelize";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
@@ -95,9 +94,7 @@ export class FormDataService {
     }
     const modelAnswers = answersModel?.answers ?? {};
 
-    const questions = await FormQuestion.findAll({
-      where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
-    });
+    const questions = await FormQuestion.forForm(form.uuid).findAll();
 
     const collector = new LinkedAnswerCollector(this.mediaService);
     for (const question of questions) {
@@ -121,9 +118,7 @@ export class FormDataService {
   private async updateEntityFromForm<T extends EntityModel>(model: T, form: Form, answers: Dictionary<unknown>) {
     model.answers = {};
 
-    const questions = await FormQuestion.findAll({
-      where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } }
-    });
+    const questions = await FormQuestion.forForm(form.uuid).findAll();
     const collector = new LinkedAnswerCollector(this.mediaService);
     for (const question of questions) {
       if (question.inputType === "conditional") {

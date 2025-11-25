@@ -34,6 +34,7 @@ import { getLinkedFieldConfig } from "../linkedFields";
 import { isField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { APPROVAL_PROCESSERS } from "./processors";
+import { authenticatedUserId } from "../guards/auth.guard";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -204,16 +205,16 @@ export class EntityStatusUpdate extends EventProcessor {
     this.logger.log(`Creating auditStatus [${JSON.stringify({ model: model.constructor.name, id: model.id })}]`);
 
     if (status === "approved") {
-      await AuditStatus.createAudit(model, this.authenticatedUserId, null, comment ?? `Approved: ${model.feedback}`);
+      await AuditStatus.createAudit(model, authenticatedUserId(), null, comment ?? `Approved: ${model.feedback}`);
     } else if (status === "needs-more-information") {
       await AuditStatus.createAudit(
         model,
-        this.authenticatedUserId,
+        authenticatedUserId(),
         "change-request",
         comment ?? (await this.getNeedsMoreInfoComment())
       );
     } else if (status === "awaiting-approval") {
-      await AuditStatus.createAudit(model, this.authenticatedUserId, null, comment);
+      await AuditStatus.createAudit(model, authenticatedUserId(), null, comment);
     } else {
       // Getting this method called for started is expected on model creation, so no need to warn
       // in that case.

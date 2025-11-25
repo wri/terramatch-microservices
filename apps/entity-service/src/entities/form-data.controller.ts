@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Put, Request, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Put, UnauthorizedException } from "@nestjs/common";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -11,6 +11,7 @@ import { EntityModel, EntityType } from "@terramatch-microservices/database/cons
 import { AuditStatus, Form } from "@terramatch-microservices/database/entities";
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("entities/v3/:entity/:uuid/formData")
 export class FormDataController {
@@ -43,11 +44,7 @@ export class FormDataController {
   @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
   @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
-  async formDataUpdate(
-    @Param() { entity, uuid }: SpecificEntityDto,
-    @Body() payload: UpdateFormDataBody,
-    @Request() { authenticatedUserId }
-  ) {
+  async formDataUpdate(@Param() { entity, uuid }: SpecificEntityDto, @Body() payload: UpdateFormDataBody) {
     if (payload.data.id !== `${entity}:${uuid}`) {
       throw new BadRequestException("Id in payload does not match entity and uuid from path");
     }
@@ -64,7 +61,7 @@ export class FormDataController {
     if (payload.data.attributes.isContinueLater) {
       const type =
         model.status === APPROVED || model.status === NEEDS_MORE_INFORMATION ? "change-request-updated" : null;
-      await AuditStatus.createAudit(model, authenticatedUserId as number, type, "Updated");
+      await AuditStatus.createAudit(model, authenticatedUserId(), type, "Updated");
     }
 
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);

@@ -1,6 +1,6 @@
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Test, TestingModule } from "@nestjs/testing";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FilesController } from "./files.controller";
 import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
@@ -40,7 +40,9 @@ describe("FilesController", () => {
       deleteMediaByUuid: jest.fn(),
       deleteMedia: jest.fn(),
       getMedias: jest.fn(),
-      updateMedia: jest.fn()
+      updateMedia: jest.fn(),
+      getProjectForModel: jest.fn(),
+      updateCover: jest.fn()
     } as unknown as jest.Mocked<MediaService>;
     mockMediaOwnerProcessor = { getBaseEntity: jest.fn() };
     entitiesService = {
@@ -155,6 +157,20 @@ describe("FilesController", () => {
       expect(mediaService.updateMedia).toHaveBeenCalledWith(mockedMedia, {
         data: { type: "media", id: "media-uuid", attributes: { isPublic: true } }
       });
+    });
+
+    it("should throw and error when the media is not part of a project", async () => {
+      const mockedMedia = { uuid: "media-uuid" } as Media;
+      mediaService.getMedia.mockResolvedValue(mockedMedia);
+      policyService.authorize.mockResolvedValue();
+      const model = { uuid: "model-uuid", id: 1 };
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      expect(
+        await controller.mediaUpdate(
+          { uuid: "media-uuid" },
+          { data: { type: "media", id: "media-uuid", attributes: { isCover: true } } }
+        )
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

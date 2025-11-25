@@ -107,7 +107,12 @@ export class FilesController {
     const media = await this.mediaService.getMedia(uuid);
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("updateFiles", model);
-    return this.mediaService.updateMedia(media, updatePayload);
+    if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
+      const project = await this.mediaService.getProjectForModel(model);
+      await this.policyService.authorize("read", project);
+      await this.mediaService.updateCover(media, project);
+    }
+    return await this.mediaService.updateMedia(media, updatePayload);
   }
 
   @Delete("bulkDelete")

@@ -23,6 +23,7 @@ const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
   "controlSite",
   "landUseTypes",
   "restorationStrategy",
+  "anrPractices",
   "description",
   "history",
   "startDate",

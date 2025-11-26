@@ -233,6 +233,10 @@ export class Site extends Model<Site> {
   restorationStrategy: string[] | null;
 
   @AllowNull
+  @JsonColumn()
+  anrPractices: string[] | null;
+
+  @AllowNull
   @Column(TEXT)
   feedback: string | null;
 

@@ -23,6 +23,13 @@ export const SiteConfiguration: LinkedFieldConfiguration = {
       multiChoice: true,
       optionListKey: "restoration-practices"
     },
+    "site-anr-practices": {
+      property: "anr_practices",
+      label: "ANR practices",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "anr-practices-proposed-collection"
+    },
     "site-description": { property: "description", label: "Description", inputType: "long-text" },
     "site-history": { property: "history", label: "History", inputType: "long-text" },
     "site-land-tenures": {

@@ -21,7 +21,8 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ClippedVersionDto } from "./dto/clipped-version.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ClippingQueryDto } from "./dto/clipping-query.dto";
-import { isEmpty } from "lodash";
+import { isEmpty, uniq } from "lodash";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 @ApiTags("Polygon Clipping")
 @Controller("polygonClipping/v3")
@@ -196,6 +197,63 @@ export class PolygonClippingController {
       );
     }
 
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: fixablePolygons,
+        isActive: true
+      },
+      attributes: ["siteUuid"]
+    });
+
+    let entityId: number | undefined;
+    let entityType: string | undefined;
+    let entityName: string;
+
+    if (sitePolygons.length > 0) {
+      const uniqueSiteUuids = uniq(sitePolygons.map(({ siteUuid }) => siteUuid).filter(isNotNull));
+
+      if (uniqueSiteUuids.length > 0) {
+        const sites = await Site.findAll({
+          where: { uuid: uniqueSiteUuids },
+          attributes: ["id", "uuid", "name", "projectId"],
+          include: [
+            {
+              association: "project",
+              attributes: ["id", "uuid", "name"]
+            }
+          ]
+        });
+
+        if (sites.length > 0) {
+          const uniqueProjectIds = new Set(sites.map(s => s.projectId).filter(id => id != null));
+
+          if (uniqueSiteUuids.length === 1) {
+            const site = sites[0];
+            entityId = site.id;
+            entityType = Site.LARAVEL_TYPE;
+            entityName = site.name;
+          } else if (uniqueProjectIds.size === 1) {
+            const project = sites[0]?.project;
+            if (project != null) {
+              entityId = project.id;
+              entityType = Project.LARAVEL_TYPE;
+              entityName = project.name ?? "Unknown Project";
+            } else {
+              entityName = `${fixablePolygons.length} polygons`;
+            }
+          } else {
+            entityName = `${fixablePolygons.length} polygons`;
+          }
+        } else {
+          entityName = `${fixablePolygons.length} polygons`;
+        }
+      } else {
+        entityName = `${fixablePolygons.length} polygons`;
+      }
+    } else {
+      entityName = `${fixablePolygons.length} polygons`;
+    }
+
     const delayedJob = await DelayedJob.create({
       isAcknowledged: false,
       name: "Polygon Clipping",
@@ -204,8 +262,9 @@ export class PolygonClippingController {
       progressMessage: "Starting clipping...",
       createdBy: authenticatedUserId,
       metadata: {
-        entity_type: "Polygons",
-        entity_name: `${fixablePolygons.length} polygons`
+        ...(entityId != null && { entity_id: entityId }),
+        ...(entityType != null && { entity_type: entityType }),
+        entity_name: entityName
       }
     } as DelayedJob);
 

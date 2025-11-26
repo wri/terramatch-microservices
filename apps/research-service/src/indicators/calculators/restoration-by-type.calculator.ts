@@ -29,10 +29,8 @@ export class RestorationByTypeCalculator implements CalculateIndicator {
 
     const area = await this.calculateArea(sitePolygon, geometry);
 
-    this.logger.debug(`sitePolygon[this.type]: ${sitePolygon}`);
-
     const restorationByValue: RestorationByTypeData = {
-      [sitePolygon[this.type].join(",")]: area
+      [sitePolygon[this.type] ? sitePolygon[this.type].join(",") : ""]: area
     };
 
     const restorationByTypeData: Partial<IndicatorOutputHectares> = {

@@ -18,7 +18,7 @@ import { ValidationSummaryDto } from "./dto/validation-summary.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
 import { GeometryValidationRequestBody } from "./dto/geometry-validation-request.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import { buildJsonApi, buildDelayedJobResponse, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
@@ -186,7 +186,7 @@ export class ValidationController {
       delayedJobId: delayedJob.id
     });
 
-    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+    return buildDelayedJobResponse(delayedJob);
   }
 
   @Post("geometries")

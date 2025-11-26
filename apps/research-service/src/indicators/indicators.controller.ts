@@ -5,7 +5,7 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities/delayed-job.entity";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { IndicatorsSummaryDto } from "./dto/Indicators-summary.dto";
 import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
@@ -47,6 +47,6 @@ export class IndicatorsController {
       delayedJobId: delayedJob.id
     });
 
-    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+    return buildDelayedJobResponse(delayedJob);
   }
 }

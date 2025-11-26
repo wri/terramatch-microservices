@@ -3,7 +3,11 @@ import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
+import {
+  buildJsonApi,
+  buildDelayedJobResponse,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-section-header.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
@@ -26,7 +30,7 @@ export class TotalSectionHeaderController {
     if (cachedData == null) {
       const delayedJob = await DelayedJob.create();
       await this.cacheService.getTotalSectionHeader(cacheKey, query, delayedJob.id);
-      return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+      return buildDelayedJobResponse(delayedJob);
     }
 
     const {

@@ -7,6 +7,7 @@ import { NotFoundException } from "@nestjs/common";
 import { EcoRegionResult } from "@terramatch-microservices/database/constants";
 import { INDICATORS } from "@terramatch-microservices/database/constants/polygon-indicators";
 import { Op } from "sequelize";
+import { Dictionary } from "lodash";
 
 export class RestorationByEcoRegionCalculator implements CalculateIndicator {
   private logger = new TMLogger(RestorationByEcoRegionCalculator.name);
@@ -23,7 +24,7 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
     const sitePolygon = await SitePolygon.findOne({
       where: {
         polygonUuid: {
-          [Op.eq]: PolygonGeometry.uuidSubquery(polygonUuid)
+          [Op.eq]: polygonUuid
         }
       },
       attributes: ["id", "calcArea"]
@@ -36,28 +37,19 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
 
     const area = await this.calculateArea(sitePolygon, geometry);
 
-    const ecoRegiondata = results.map(result => {
-      return {
-        [result.eco_name]: area,
-        realm: result.realm
-      };
-    }) as EcoRegionResult[];
+    const ecoRegiondata = results.map(({ eco_name, realm }) => ({ [eco_name]: area, realm }));
 
-    const FormattedecoRegiondata = ecoRegiondata.reduce((acc, item) => {
-      Object.entries(item).forEach(([key]) => {
-        if (key !== "realm") {
-          acc[key] = area;
-        }
-      });
-      acc.realm = item.realm;
-      return acc;
-    }, {} as Record<string, string | number>);
+    const formattedEcoRegionData = ecoRegiondata.reduce(
+      (acc, item) =>
+        Object.keys(item).reduce((acc, key) => ({ ...acc, [key]: key === "realm" ? item.realm : area }), acc),
+      {} as Dictionary<string | number>
+    );
 
     const ecoRegionData: Partial<IndicatorOutputHectares> = {
       sitePolygonId: sitePolygon.id,
       indicatorSlug: INDICATORS[4],
       yearOfAnalysis: new Date().getFullYear(),
-      value: FormattedecoRegiondata
+      value: formattedEcoRegionData
     };
 
     return ecoRegionData as IndicatorOutputHectares;
@@ -67,7 +59,7 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
     if (sitePolygon.calcArea != null) {
       return sitePolygon.calcArea;
     }
-    const area = await PolygonGeometry.calculateArea(geometry);
-    return area ?? 0;
+
+    return (await PolygonGeometry.calculateArea(geometry)) ?? 0;
   }
 }

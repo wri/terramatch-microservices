@@ -388,10 +388,6 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     }
   }
 
-  static uuidSubquery(uuid: string) {
-    return Subquery.select(PolygonGeometry, "uuid").eq("uuid", uuid).literal;
-  }
-
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

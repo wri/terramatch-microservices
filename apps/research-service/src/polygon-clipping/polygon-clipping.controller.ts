@@ -17,7 +17,7 @@ import { DelayedJob, Project, Site, SitePolygon, User } from "@terramatch-micros
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { ClippedVersionDto } from "./dto/clipped-version.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ClippingQueryDto } from "./dto/clipping-query.dto";
@@ -127,7 +127,7 @@ export class PolygonClippingController {
       delayedJobId: delayedJob.id
     });
 
-    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+    return buildDelayedJobResponse(delayedJob);
   }
 
   @Post("polygons")
@@ -217,6 +217,6 @@ export class PolygonClippingController {
       delayedJobId: delayedJob.id
     });
 
-    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+    return buildDelayedJobResponse(delayedJob);
   }
 }

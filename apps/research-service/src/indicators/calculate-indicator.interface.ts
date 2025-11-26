@@ -12,5 +12,5 @@ export interface CalculateIndicator {
     polygonUuid: string,
     geometry: Polygon,
     dataApiService: DataApiService
-  ): Promise<number> | Promise<string> | Promise<IndicatorOutputHectares> | Promise<IndicatorOutputTreeCoverLoss>;
+  ): Promise<number | string | IndicatorOutputHectares | IndicatorOutputTreeCoverLoss>;
 }

@@ -17,7 +17,7 @@ export class RestorationByTypeCalculator implements CalculateIndicator {
     const sitePolygon = await SitePolygon.findOne({
       where: {
         polygonUuid: {
-          [Op.eq]: PolygonGeometry.uuidSubquery(polygonUuid)
+          [Op.eq]: polygonUuid
         }
       },
       attributes: ["id", this.type, "calcArea"]

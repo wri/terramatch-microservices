@@ -22,37 +22,12 @@ export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   restorationByLandUse: new RestorationByTypeCalculator("targetSys", INDICATORS[6])
 };
 
-const slugMappings = {
-  treeCoverLoss: {
-    sql: "SELECT umd_tree_cover_loss__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss__year",
-    query_url: "/dataset/umd_tree_cover_loss/latest/query",
-    indicator: "umd_tree_cover_loss",
-    model: IndicatorOutputTreeCoverLoss,
-    table_name: "indicator_output_tree_cover_loss"
-  },
-  treeCoverLossFires: {
-    sql: "SELECT umd_tree_cover_loss_from_fires__year, SUM(area__ha) FROM results GROUP BY umd_tree_cover_loss_from_fires__year",
-    query_url: "/dataset/umd_tree_cover_loss_from_fires/latest/query",
-    indicator: "umd_tree_cover_loss_from_fires",
-    model: IndicatorOutputTreeCoverLoss,
-    table_name: "indicator_output_tree_cover_loss"
-  },
-  restorationByEcoRegion: {
-    sql: "SELECT eco_name, realm FROM results",
-    indicator: "wwf_terrestrial_ecoregions",
-    model: IndicatorOutputHectares,
-    table_name: "indicator_output_hectares"
-  },
-  restorationByStrategy: {
-    indicator: "restoration_practice",
-    model: IndicatorOutputHectares,
-    table_name: "indicator_output_hectares"
-  },
-  restorationByLandUse: {
-    indicator: "target_system",
-    model: IndicatorOutputHectares,
-    table_name: "indicator_output_hectares"
-  }
+const SLUG_MAPPINGS = {
+  treeCoverLoss: IndicatorOutputTreeCoverLoss,
+  treeCoverLossFires: IndicatorOutputTreeCoverLoss,
+  restorationByEcoRegion: IndicatorOutputHectares,
+  restorationByStrategy: IndicatorOutputHectares,
+  restorationByLandUse: IndicatorOutputHectares
 };
 @Injectable()
 export class IndicatorsService {
@@ -62,7 +37,7 @@ export class IndicatorsService {
 
   async process(slug: IndicatorSlug, polygonUuids: string[]) {
     const results = await Promise.all(polygonUuids.map(polygonUuid => this.processPolygon(slug, polygonUuid)));
-    this.saveResults(results, slug);
+    await this.saveResults(results, slug);
   }
 
   async processPolygon(
@@ -70,12 +45,12 @@ export class IndicatorsService {
     polygonUuid: string
   ): Promise<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> {
     const calculator = CALCULATE_INDICATORS[slug];
-    if (calculator == null || calculator.calculate == null) {
+    if (calculator == null) {
       throw new BadRequestException(`Unknown calculator: ${slug}`);
     }
 
     const geoJson: Polygon | undefined = await PolygonGeometry.getGeoJSONParsed(polygonUuid);
-    if (geoJson == undefined) {
+    if (geoJson == null) {
       throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
     }
 
@@ -87,10 +62,8 @@ export class IndicatorsService {
     results: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>>,
     slug: IndicatorSlug
   ) {
-    const slugMappedValue = slugMappings[slug];
-
     try {
-      await slugMappedValue.model.bulkCreate(results, {
+      await SLUG_MAPPINGS[slug].bulkCreate(results, {
         updateOnDuplicate: ["value", "updatedAt"],
         ignoreDuplicates: false,
         returning: true

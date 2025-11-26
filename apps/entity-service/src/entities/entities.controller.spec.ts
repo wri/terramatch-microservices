@@ -12,15 +12,8 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
-import { EntityCreateAttributes } from "./dto/entity-create.dto";
 
-class StubProcessor extends EntityProcessor<
-  Project,
-  ProjectLightDto,
-  ProjectFullDto,
-  EntityUpdateData,
-  EntityCreateAttributes
-> {
+export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
   FULL_DTO = ProjectFullDto;
 

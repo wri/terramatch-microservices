@@ -41,14 +41,14 @@ export class UpdateRequestsController {
     @Param() { entity, uuid }: SpecificEntityDto,
     @Body() updatePayload: UpdateRequestUpdateBody
   ) {
-    if (updatePayload.data.type !== "updateRequests" || updatePayload.data.id !== uuid) {
+    if (updatePayload.data.type !== "updateRequests" || updatePayload.data.id !== `${entity}:${uuid}`) {
       throw new BadRequestException("Payload type and ID do not match the request path");
     }
 
     const { updateRequest, model, form } = await this.findUpdateRequest(entity, uuid);
 
     const attributes = updatePayload.data.attributes;
-    if (attributes.status != null) {
+    if (attributes.status != null && attributes.status !== updateRequest.status) {
       // Calling update() below when the status is approved kicks off a series of updates and model
       // changes through the entity status update event processor that require the entity data to be
       // correct on the base entity. So in that case, validate the transition early and then stash
@@ -90,7 +90,7 @@ export class UpdateRequestsController {
     model: EntityModel
   ) {
     return document.addData(
-      model.uuid,
+      `${entity}:${model.uuid}`,
       populateDto<UpdateRequestDto>(new UpdateRequestDto(), {
         formUuid: form.uuid,
         status: updateRequest.status,

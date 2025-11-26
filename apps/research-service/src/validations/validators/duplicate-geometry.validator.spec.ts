@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { DuplicateGeometryValidator } from "./duplicate-geometry.validator";
-import { PolygonGeometry, SitePolygon, PointGeometry } from "@terramatch-microservices/database/entities";
-import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
+import { PointGeometry, PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Feature } from "@terramatch-microservices/database/constants";
 
 interface MockTransaction {
@@ -55,7 +55,7 @@ const mockFeatures: Feature[] = [
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
-    sequelize: null,
+    sql: null,
     findAll: jest.fn(),
     findOne: jest.fn()
   },
@@ -67,7 +67,7 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findAll: jest.fn()
   },
   PointGeometry: {
-    sequelize: null
+    sql: null
   }
 }));
 
@@ -93,7 +93,7 @@ describe("DuplicateGeometryValidator", () => {
     };
 
     mockSequelize = getMockSequelize();
-    (PolygonGeometry.sequelize as unknown as MockSequelize) = mockSequelize;
+    (PolygonGeometry.sql as unknown as MockSequelize) = mockSequelize;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [DuplicateGeometryValidator]
@@ -107,7 +107,7 @@ describe("DuplicateGeometryValidator", () => {
     const sequelize = getMockSequelize();
     sequelize.query.mockClear();
     sequelize.transaction.mockClear();
-    (PolygonGeometry.sequelize as unknown as MockSequelize) = sequelize;
+    (PolygonGeometry.sql as unknown as MockSequelize) = sequelize;
   });
 
   describe("validatePolygon", () => {
@@ -213,23 +213,6 @@ describe("DuplicateGeometryValidator", () => {
 
       await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow("Database error");
       expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("should handle sequelize connection missing", async () => {
-      const polygonUuid = "test-uuid";
-      const mockSitePolygon: MockSitePolygon = {
-        polygonUuid,
-        siteUuid: "site-uuid",
-        site: { projectId: 1 }
-      };
-
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
-      (SitePolygon.findAll as jest.Mock).mockResolvedValue([{ polygonUuid: "related-uuid" }]);
-      (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
-
-      await expect(validator.validatePolygon(polygonUuid)).rejects.toThrow(
-        new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
-      );
     });
   });
 
@@ -614,7 +597,7 @@ describe("DuplicateGeometryValidator", () => {
     });
 
     it("should handle sequelize connection missing", async () => {
-      (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
+      (PolygonGeometry.sql as unknown as MockSequelize | null) = null;
 
       const result = await (
         validator as unknown as {
@@ -742,11 +725,10 @@ describe("DuplicateGeometryValidator", () => {
       (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
       (SitePolygon.findAll as jest.Mock).mockResolvedValue([{ pointUuid: "existing-point-uuid" }]);
 
-      const mockPointSequelize = {
+      (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockResolvedValue(mockDuplicateResults),
         transaction: jest.fn()
       };
-      (PointGeometry.sequelize as unknown as MockSequelize) = mockPointSequelize;
 
       const result = await validator.checkNewPointsDuplicates(mockPointFeatures, "site-uuid");
 
@@ -764,7 +746,7 @@ describe("DuplicateGeometryValidator", () => {
 
       (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
       (SitePolygon.findAll as jest.Mock).mockResolvedValue([{ pointUuid: "existing-point-uuid" }]);
-      (PointGeometry.sequelize as unknown as MockSequelize | null) = null;
+      (PointGeometry.sql as unknown as MockSequelize | null) = null;
 
       const result = await validator.checkNewPointsDuplicates(mockPointFeatures, "site-uuid");
       expect(result).toEqual({ duplicateIndexToUuid: new Map() });
@@ -780,11 +762,10 @@ describe("DuplicateGeometryValidator", () => {
       (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
       (SitePolygon.findAll as jest.Mock).mockResolvedValue([{ pointUuid: "existing-point-uuid" }]);
 
-      const mockPointSequelize = {
+      (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockRejectedValue(new Error("Database error")),
         transaction: jest.fn()
       };
-      (PointGeometry.sequelize as unknown as MockSequelize) = mockPointSequelize;
 
       const result = await validator.checkNewPointsDuplicates(mockPointFeatures, "site-uuid");
       expect(result).toEqual({ duplicateIndexToUuid: new Map() });
@@ -924,11 +905,10 @@ describe("DuplicateGeometryValidator", () => {
         { idx: 1, existing_uuid: "existing-point-uuid-2" }
       ];
 
-      const mockPointSequelize = {
+      (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockResolvedValue(mockDuplicateResults),
         transaction: jest.fn()
       };
-      (PointGeometry.sequelize as unknown as MockSequelize) = mockPointSequelize;
 
       const result = await (
         validator as unknown as {
@@ -946,7 +926,7 @@ describe("DuplicateGeometryValidator", () => {
     });
 
     it("should handle sequelize connection missing gracefully", async () => {
-      (PointGeometry.sequelize as unknown as MockSequelize | null) = null;
+      (PointGeometry.sql as unknown as MockSequelize | null) = null;
 
       const result = await (
         validator as unknown as {
@@ -961,11 +941,10 @@ describe("DuplicateGeometryValidator", () => {
     });
 
     it("should handle database errors gracefully", async () => {
-      const mockPointSequelize = {
+      (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockRejectedValue(new Error("Database error")),
         transaction: jest.fn()
       };
-      (PointGeometry.sequelize as unknown as MockSequelize) = mockPointSequelize;
 
       const result = await (
         validator as unknown as {

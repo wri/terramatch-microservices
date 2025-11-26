@@ -19,7 +19,7 @@ import { TranslatableException } from "../exceptions/translatable.exception";
 import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 
-type MediaAttributes = {
+export type MediaAttributes = {
   isPublic: boolean;
   lat?: number | null;
   lng?: number | null;

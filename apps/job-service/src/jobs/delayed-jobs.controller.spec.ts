@@ -9,6 +9,7 @@ import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJobFactory } from "@terramatch-microservices/database/factories";
+import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
 
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;
@@ -33,9 +34,9 @@ describe("DelayedJobsController", () => {
   describe("getRunningJobs", () => {
     it("should return a job with null entity_name if metadata is null", async () => {
       const authenticatedUserId = 130999;
+      mockUserId(authenticatedUserId);
       const job = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId });
-      const request = { authenticatedUserId };
-      const result = serialize(await controller.getRunningJobs(request));
+      const result = serialize(await controller.getRunningJobs());
 
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
@@ -46,12 +47,12 @@ describe("DelayedJobsController", () => {
 
     it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
+      mockUserId(authenticatedUserId);
       const job = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
         metadata: { entity_name: "TestEntity" }
       });
-      const request = { authenticatedUserId };
-      const result = serialize(await controller.getRunningJobs(request));
+      const result = serialize(await controller.getRunningJobs());
 
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
@@ -64,9 +65,9 @@ describe("DelayedJobsController", () => {
 
     it("should return a job with null entity_name if metadata does not have entity_name", async () => {
       const authenticatedUserId = 130999;
+      mockUserId(authenticatedUserId);
       const job = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId, metadata: {} });
-      const request = { authenticatedUserId };
-      const result = serialize(await controller.getRunningJobs(request));
+      const result = serialize(await controller.getRunningJobs());
       const data = Array.isArray(result.data) ? result.data : [result.data];
 
       expect(data).toHaveLength(1);
@@ -99,6 +100,7 @@ describe("DelayedJobsController", () => {
   describe("bulkUdpateJobs", () => {
     it("should successfully update jobs with null metadata", async () => {
       const authenticatedUserId = 130999;
+      mockUserId(authenticatedUserId);
       const job1 = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId });
       const job2 = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
@@ -119,9 +121,7 @@ describe("DelayedJobsController", () => {
         ]
       };
 
-      const request = { authenticatedUserId };
-
-      const result = serialize(await controller.bulkUpdateJobs(payload, request));
+      const result = serialize(await controller.bulkUpdateJobs(payload));
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe(job1.uuid);
       expect(result.data![0].attributes.entityName).toBeUndefined();
@@ -134,6 +134,7 @@ describe("DelayedJobsController", () => {
 
     it("should successfully bulk update jobs to acknowledged with entity_name", async () => {
       const authenticatedUserId = 130999;
+      mockUserId(authenticatedUserId);
       const job1 = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
         metadata: { entity_name: "TestEntity1" } // Adding entity_name
@@ -158,9 +159,7 @@ describe("DelayedJobsController", () => {
         ]
       };
 
-      const request = { authenticatedUserId };
-
-      const result = serialize(await controller.bulkUpdateJobs(payload, request));
+      const result = serialize(await controller.bulkUpdateJobs(payload));
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe(job1.uuid);
       expect(result.data![1].id).toBe(job2.uuid);
@@ -183,13 +182,14 @@ describe("DelayedJobsController", () => {
           }
         ]
       };
-      const request = { authenticatedUserId: 130999 };
+      mockUserId(130999);
 
-      await expect(controller.bulkUpdateJobs(payload, request)).rejects.toThrow(NotFoundException);
+      await expect(controller.bulkUpdateJobs(payload)).rejects.toThrow(NotFoundException);
     });
 
     it('should update jobs with status "pending"', async () => {
       const authenticatedUserId = 130999;
+      mockUserId(authenticatedUserId);
       const pendingJob = await DelayedJob.create({
         uuid: uuidv4(),
         createdBy: authenticatedUserId,
@@ -220,9 +220,8 @@ describe("DelayedJobsController", () => {
           }
         ]
       };
-      const request = { authenticatedUserId };
 
-      const result = serialize(await controller.bulkUpdateJobs(payload, request));
+      const result = serialize(await controller.bulkUpdateJobs(payload));
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe(pendingJob.uuid);
       expect(result.data![0].attributes.entityName).toBe("TestEntityPending");

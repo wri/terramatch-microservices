@@ -10,6 +10,7 @@ import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }
@@ -38,31 +39,36 @@ describe("UsersController", () => {
 
   describe("findOne", () => {
     it("should throw not found if the user is not found", async () => {
-      await expect(controller.findOne("0", { authenticatedUserId: 1 })).rejects.toThrow(NotFoundException);
+      mockUserId(1);
+      await expect(controller.findOne("0")).rejects.toThrow(NotFoundException);
     });
 
     it("should throw an error if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       const { uuid } = await UserFactory.create();
-      await expect(controller.findOne(uuid!, { authenticatedUserId: 1 })).rejects.toThrow(UnauthorizedException);
+      mockUserId(1);
+      await expect(controller.findOne(uuid!)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should return the currently logged in user if the id is "me"', async () => {
       const { id, uuid } = await UserFactory.create();
-      const result = serialize(await controller.findOne("me", { authenticatedUserId: id }));
+      mockUserId(id);
+      const result = serialize(await controller.findOne("me"));
       expect((result.data as Resource).id).toBe(uuid);
     });
 
     it("should return the indicated user if the logged in user is allowed to access", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const { id, uuid } = await UserFactory.create();
-      const result = serialize(await controller.findOne(uuid!, { authenticatedUserId: id + 1 }));
+      mockUserId(id + 1);
+      const result = serialize(await controller.findOne(uuid!));
       expect((result.data as Resource).id).toBe(uuid);
     });
 
     it("should return a document without includes if there is no org", async () => {
       const { id } = await UserFactory.create();
-      const result = serialize(await controller.findOne("me", { authenticatedUserId: id }));
+      mockUserId(id);
+      const result = serialize(await controller.findOne("me"));
       expect(result.included).not.toBeDefined();
     });
 
@@ -70,7 +76,8 @@ describe("UsersController", () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$add("organisationsConfirmed", org);
-      const result = serialize(await controller.findOne("me", { authenticatedUserId: user.id }));
+      mockUserId(user.id);
+      const result = serialize(await controller.findOne("me"));
       expect(result.included).toHaveLength(1);
       expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
       const data = result.data as Resource;
@@ -87,7 +94,8 @@ describe("UsersController", () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$set("organisation", org);
-      const result = serialize(await controller.findOne("me", { authenticatedUserId: user.id }));
+      mockUserId(user.id);
+      const result = serialize(await controller.findOne("me"));
       expect(result.included).toHaveLength(1);
       expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
       const data = result.data as Resource;

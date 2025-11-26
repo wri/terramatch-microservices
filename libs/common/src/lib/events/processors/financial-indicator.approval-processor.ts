@@ -23,8 +23,10 @@ export const FinancialIndicatorApprovalProcessor: EntityApprovalProcessor = {
 
     const reportIndicators = await FinancialIndicator.financialReport(entity.id).findAll();
     const orgIndicators = await FinancialIndicator.organisation(org.id).findAll();
-    const reportDocumentation = await Media.for(reportIndicators).collection("documentation").findAll();
-    const orgDocumentation = await Media.for(orgIndicators).collection("documentation").findAll();
+    const reportDocumentation =
+      reportIndicators.length === 0 ? [] : await Media.for(reportIndicators).collection("documentation").findAll();
+    const orgDocumentation =
+      orgIndicators.length === 0 ? [] : await Media.for(orgIndicators).collection("documentation").findAll();
     const orgIndicatorKeepIds: number[] = [];
     // Due to the media duplication need, this is awkward to do in bulk and doesn't happen
     // very often, so we just run through them sequentially.

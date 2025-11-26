@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { OverlappingValidator } from "./overlapping.validator";
-import { SitePolygon, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
+import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 
 interface MockTransaction {
   commit: jest.Mock;
@@ -17,7 +17,7 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findByPk: jest.fn()
   },
   PolygonGeometry: {
-    sequelize: {
+    sql: {
       query: jest.fn(),
       transaction: jest.fn()
     },
@@ -46,9 +46,7 @@ describe("OverlappingValidator", () => {
   beforeEach(async () => {
     mockSitePolygonFindOne = SitePolygon.findOne as jest.MockedFunction<typeof SitePolygon.findOne>;
     mockSitePolygonFindAll = SitePolygon.findAll as jest.MockedFunction<typeof SitePolygon.findAll>;
-    mockTransaction = PolygonGeometry.sequelize?.transaction as jest.MockedFunction<
-      (...args: unknown[]) => Promise<unknown>
-    >;
+    mockTransaction = PolygonGeometry.sql?.transaction as jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
     mockCheckBoundingBoxIntersections = PolygonGeometry.checkBoundingBoxIntersections as jest.MockedFunction<
       typeof PolygonGeometry.checkBoundingBoxIntersections
     >;
@@ -230,28 +228,6 @@ describe("OverlappingValidator", () => {
       await expect(validator.validatePolygon(testUuids.polygon1)).rejects.toThrow("Database error");
 
       expect(mockTransactionInstance.rollback).toHaveBeenCalled();
-    });
-
-    it("should throw InternalServerErrorException when sequelize is not available", async () => {
-      const originalSequelize = PolygonGeometry.sequelize;
-      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
-
-      const mockSitePolygon = {
-        polygonUuid: testUuids.polygon1,
-        siteUuid: testSiteUuid,
-        site: {
-          projectId: testProjectId
-        }
-      };
-
-      const mockRelatedSitePolygons = [{ polygonUuid: testUuids.polygon2 }];
-
-      mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
-      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
-
-      await expect(validator.validatePolygon(testUuids.polygon1)).rejects.toThrow(InternalServerErrorException);
-
-      (PolygonGeometry as unknown as { sequelize: typeof originalSequelize }).sequelize = originalSequelize;
     });
   });
 

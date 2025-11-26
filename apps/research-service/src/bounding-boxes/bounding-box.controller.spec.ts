@@ -31,18 +31,18 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
     findAll: jest.fn(),
     findOne: jest.fn()
   },
-  Site: {
-    findOne: jest.fn()
-  },
-  Project: {
-    findOne: jest.fn()
-  },
-  ProjectPitch: {
-    findOne: jest.fn()
-  },
-  SitePolygon: {
-    findOne: jest.fn()
-  }
+  Site: { findOne: jest.fn() },
+  Project: { findOne: jest.fn() },
+  ProjectPitch: { findOne: jest.fn() },
+  SitePolygon: { findOne: jest.fn() },
+  DisturbanceReport: { findOne: jest.fn() },
+  FinancialReport: { findOne: jest.fn() },
+  Nursery: { findOne: jest.fn() },
+  NurseryReport: { findOne: jest.fn() },
+  Organisation: { findOne: jest.fn() },
+  ProjectReport: { findOne: jest.fn() },
+  SiteReport: { findOne: jest.fn() },
+  SrpReport: { findOne: jest.fn() }
 }));
 
 describe("BoundingBoxController", () => {

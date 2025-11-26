@@ -40,7 +40,15 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   SitePolygon: {
     findAll: jest.fn(),
     findOne: jest.fn()
-  }
+  },
+  DisturbanceReport: { findOne: jest.fn() },
+  FinancialReport: { findOne: jest.fn() },
+  Nursery: { findOne: jest.fn() },
+  NurseryReport: { findOne: jest.fn() },
+  Organisation: { findOne: jest.fn() },
+  ProjectReport: { findOne: jest.fn() },
+  SiteReport: { findOne: jest.fn() },
+  SrpReport: { findOne: jest.fn() }
 }));
 
 /**

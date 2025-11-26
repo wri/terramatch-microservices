@@ -135,7 +135,7 @@ export class EntityStatusUpdate extends EventProcessor {
       await this.checkTaskStatus(baseModel);
     }
 
-    await Action.for(updateRequest).destroy({ where: { type: "notification" } });
+    await Action.for(baseModel).destroy({ where: { type: "notification" } });
 
     if (updateRequest.status === AWAITING_APPROVAL) {
       // Gather linked field labels for the audit status.

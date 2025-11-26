@@ -27,6 +27,12 @@ export type MediaAttributes = {
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
 
+const MIME_TYPES = {
+  documents: ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"],
+  images: ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"],
+  videos: ["video/mp4"]
+};
+
 @Injectable()
 export class MediaService {
   private logger = new TMLogger(MediaService.name);
@@ -53,6 +59,17 @@ export class MediaService {
 
   get bucket() {
     return this.configService.get<string>("AWS_BUCKET");
+  }
+
+  // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
+  // complexity by making some assumptions that hold true for our use of Spatie (like how
+  // we only use the "s3" drive type.
+  public getUrl(media: Media, conversion?: string) {
+    const endpoint = this.endpoint;
+    if (conversion == null) return `${endpoint}${this.filePath(media)}`;
+    return media.generatedConversions[conversion] == null
+      ? null
+      : `${endpoint}/${this.conversionFilePath(media, conversion)}`;
   }
 
   async createMedia(
@@ -93,7 +110,6 @@ export class MediaService {
       photographer: user?.fullName ?? null
     });
 
-    await media.save();
     try {
       const { buffer, originalname, mimetype } = file;
 
@@ -157,17 +173,8 @@ export class MediaService {
         if (fromPath != null && toPath != null) return this.copyFile(fromPath, toPath, copy.mimeType ?? undefined);
       })
     );
-  }
 
-  // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
-  // complexity by making some assumptions that hold true for our use of Spatie (like how
-  // we only use the "s3" drive type.
-  public getUrl(media: Media, conversion?: string) {
-    const endpoint = this.endpoint;
-    if (conversion == null) return `${endpoint}/${this.filePath(media)}`;
-    return media.generatedConversions[conversion] == null
-      ? null
-      : `${endpoint}/${this.conversionFilePath(media, conversion)}`;
+    return copy;
   }
 
   private filePath(media: Media) {
@@ -218,15 +225,11 @@ export class MediaService {
   }
 
   private getMediaType(file: Express.Multer.File, configuration: MediaConfiguration) {
-    const documents = ["application/pdf", "application/vnd.ms-excel", "text/plain", "application/msword"];
-    const images = ["image/png", "image/jpeg", "image/heif", "image/heic", "image/svg+xml"];
-    const videos = ["video/mp4"];
-
-    if (documents.includes(file.mimetype)) {
+    if (MIME_TYPES.documents.includes(file.mimetype)) {
       return "documents";
     }
 
-    if (images.includes(file.mimetype) || videos.includes(file.mimetype)) {
+    if (MIME_TYPES.images.includes(file.mimetype) || MIME_TYPES.videos.includes(file.mimetype)) {
       return "media";
     }
 

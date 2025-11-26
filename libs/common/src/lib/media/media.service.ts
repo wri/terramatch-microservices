@@ -92,8 +92,13 @@ export class MediaService {
     };
 
     const medias = await Media.findAll({ where: whereClause });
-    const updatedMedias = await Promise.all(medias.map(media => media.update({ isCover: false })));
-    return updatedMedias;
+    const mediaIds = medias.map(m => m.id);
+    await Media.update({ isCover: false }, { where: { id: mediaIds } });
+    for (const media of medias) {
+      // update the models in memory to match the bulk query above
+      media.isCover = false;
+    }
+    return medias;
   }
 
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {

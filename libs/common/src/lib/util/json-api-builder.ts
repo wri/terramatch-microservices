@@ -141,10 +141,22 @@ export class DocumentBuilder {
 
   constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
 
-  addData<DTO>(id: string, attributes: DTO): ResourceBuilder {
+  /**
+   * Adds data to the final JSON:API document. If the type of the resource does not match the declared
+   * type of the document builder, it will be included in the `included` array of the document.
+   *
+   * If the goal is to send the data to the `included` array even if it does match, use the forceIncluded
+   * parameter
+   *
+   * @param id String ID of the resource (usually the UUID)
+   * @param attributes The DTO attributes for the resource
+   * @param forceIncluded Set to true if you wish this data to go to the included array even if it
+   *   matches the declared type of the document builder. Defaults to false.
+   */
+  addData<DTO>(id: string, attributes: DTO, forceIncluded = false): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes as Attributes, this);
 
-    if (builder.type === this.resourceType) {
+    if (forceIncluded || builder.type === this.resourceType) {
       const collision = this.data.find(({ id: existingId }) => existingId === id);
       if (collision != null) {
         throw new ApiBuilderException(`This resource is already in data [${id}]`);

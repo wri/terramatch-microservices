@@ -31,8 +31,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
 import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
 import { SingleMediaDto } from "./dto/media-query.dto";
-import { EntityModel, EntityType, getProjectId } from "@terramatch-microservices/database/constants/entities";
-import { Project } from "@terramatch-microservices/database/entities";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -111,21 +110,8 @@ export class FilesController {
     await this.policyService.authorize("updateFiles", model);
     const updatedMedia = await this.mediaService.updateMedia(media, updatePayload);
 
-    if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
-      const project = await this.mediaService.getProjectForModel(model);
-      await this.policyService.authorize("read", project);
-      const updatedMedias = await this.mediaService.unsetMediaCoverForProject(updatedMedia, project);
-      updatedMedia["media"] = updatedMedias.map(
-        media =>
-          new MediaDto(media, {
-            url: this.mediaService.getUrl(media),
-            thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
-            entityType: media.modelType as EntityType,
-            entityUuid: model.uuid
-          })
-      );
-    }
-    const document = buildJsonApi(MediaDto).addData(
+    const document = buildJsonApi(MediaDto);
+    document.addData(
       updatedMedia.uuid,
       new MediaDto(updatedMedia, {
         url: this.mediaService.getUrl(updatedMedia),
@@ -134,6 +120,25 @@ export class FilesController {
         entityUuid: model.uuid
       })
     );
+
+    if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
+      const project = await this.mediaService.getProjectForModel(model);
+      await this.policyService.authorize("read", project);
+      const updatedMedias = await this.mediaService.unsetMediaCoverForProject(updatedMedia, project);
+      for (const media of updatedMedias) {
+        document.addData(
+          media.uuid,
+          new MediaDto(media, {
+            url: this.mediaService.getUrl(media),
+            thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+            entityType: media.modelType as EntityType,
+            entityUuid: model.uuid
+          }),
+          true
+        );
+      }
+    }
+
     return document;
   }
 

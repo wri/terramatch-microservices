@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectAuthority, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectAuthority } from "./policy.service.spec";
 import {
   OrganisationFactory,
   ProjectFactory,
@@ -8,6 +8,7 @@ import {
   TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
+import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("TaskPolicy", () => {
   let service: PolicyService;

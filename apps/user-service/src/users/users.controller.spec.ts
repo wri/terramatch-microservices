@@ -9,8 +9,7 @@ import { Relationship, Resource } from "@terramatch-microservices/common/util";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { serialize } from "@terramatch-microservices/common/util/testing";
-import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }

@@ -25,9 +25,8 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { pick } from "lodash";
-import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
 import { Attributes, Model } from "sequelize";
 
 describe("FormsService", () => {

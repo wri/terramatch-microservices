@@ -7,9 +7,8 @@ import { v4 as uuidv4 } from "uuid";
 import { NotFoundException } from "@nestjs/common";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJobFactory } from "@terramatch-microservices/database/factories";
-import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
 
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;

@@ -3,7 +3,7 @@ import { ValidationController } from "./validation.controller";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
@@ -11,7 +11,6 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
 import { ValidationType } from "@terramatch-microservices/database/constants";
-import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
 
 describe("ValidationController", () => {
   let controller: ValidationController;

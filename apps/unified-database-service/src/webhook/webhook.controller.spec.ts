@@ -4,7 +4,8 @@ import { AirtableService } from "../airtable/airtable.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
 import { Permission } from "@terramatch-microservices/database/entities";
-import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
+
+import { mockUserId } from "@terramatch-microservices/common/util/testing";
 
 describe("WebhookController", () => {
   let controller: WebhookController;

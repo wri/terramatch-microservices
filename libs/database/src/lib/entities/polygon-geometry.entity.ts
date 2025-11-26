@@ -3,7 +3,6 @@ import { BIGINT, GEOMETRY, UUID, UUIDV4, QueryTypes, Transaction } from "sequeli
 import { Polygon } from "geojson";
 import { User } from "./user.entity";
 import { InternalServerErrorException } from "@nestjs/common";
-import { Subquery } from "../util/subquery.builder";
 
 @Table({ tableName: "polygon_geometry", underscored: true, paranoid: true })
 export class PolygonGeometry extends Model<PolygonGeometry> {

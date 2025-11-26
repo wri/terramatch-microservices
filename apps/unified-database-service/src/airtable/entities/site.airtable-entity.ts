@@ -36,7 +36,8 @@ const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
   "landscapeCommunityContribution",
   "aimNumberOfMatureTrees",
   "soilCondition",
-  "plantingPattern"
+  "plantingPattern",
+  "ppcExternalId"
 ];
 
 export class SiteEntity extends AirtableEntity<Site, SiteAssociations> {

@@ -84,7 +84,8 @@ const COLUMNS: ColumnMapping<ProjectPitch, ProjectPitchAssociations>[] = [
   "barriersProjectActivity",
   "barriersProjectActivityDescription",
   "otherEngageWomenYouth",
-  "anrPracticesProposed"
+  "anrPracticesProposed",
+  "goalTreesRestoredAnr"
 ];
 
 export class ProjectPitchEntity extends AirtableEntity<ProjectPitch, ProjectPitchAssociations> {

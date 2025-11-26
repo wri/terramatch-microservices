@@ -15,6 +15,7 @@ import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
 import { Op } from "sequelize";
 import { MediaOwnerModel } from "@terramatch-microservices/database/constants/media-owners";
+import { EntityModel, getProjectId } from "@terramatch-microservices/database/constants/entities";
 
 @Injectable()
 export class MediaService {
@@ -37,74 +38,61 @@ export class MediaService {
   }
 
   async getProjectForModel(model: MediaOwnerModel) {
-    console.log("model", model);
-    let project: Project | null = null;
-    if (model instanceof Project) {
-      project = model;
-    } else if (model instanceof Site || model instanceof Nursery || model instanceof ProjectReport) {
-      project = await Project.findOne({ where: { id: model.projectId } });
-    } else if (model instanceof SiteReport) {
-      const site = await Site.findOne({ where: { id: model.siteId }, attributes: ["projectId"] });
-      project = await Project.findOne({ where: { id: site?.projectId } });
-    } else if (model instanceof NurseryReport) {
-      const nursery = await Nursery.findOne({ where: { id: model.nurseryId }, attributes: ["projectId"] });
-      project = await Project.findOne({ where: { id: nursery?.projectId } });
-    }
-    console.log("project");
+    const projectId = await getProjectId(model as EntityModel);
+    const project =
+      projectId == null
+        ? null
+        : await Project.findOne({ where: { id: projectId }, attributes: ["id", "frameworkKey"] });
     if (project == null) throw new BadRequestException(`Media is not part of a project.`);
     return project;
   }
 
-  async updateCover(media: Media, project: Project) {
-    await Media.update(
-      {
-        isCover: false
+  async unsetMediaCoverForProject(media: Media, project: Project) {
+    const whereClause = {
+      isCover: true,
+      id: {
+        [Op.ne]: media.id
       },
-      {
-        where: {
-          [Op.or]: [
-            {
-              modelType: Project.LARAVEL_TYPE,
-              modelId: project.id
-            },
-            {
-              modelType: Site.LARAVEL_TYPE,
-              modelId: {
-                [Op.in]: project.sites?.map(site => site.id) ?? []
-              }
-            },
-            {
-              modelType: Nursery.LARAVEL_TYPE,
-              modelId: {
-                [Op.in]: project.nurseries?.map(nursery => nursery.id) ?? []
-              }
-            },
-            {
-              modelType: ProjectReport.LARAVEL_TYPE,
-              modelId: {
-                [Op.in]: project.reports?.map(report => report.id) ?? []
-              }
-            },
-            {
-              modelType: SiteReport.LARAVEL_TYPE,
-              modelId: {
-                [Op.in]: project.sites?.flatMap(site => site.reports?.map(report => report.id) ?? []) ?? []
-              }
-            },
-            {
-              modelType: NurseryReport.LARAVEL_TYPE,
-              modelId: {
-                [Op.in]: project.nurseries?.flatMap(nursery => nursery.reports?.map(report => report.id) ?? []) ?? []
-              }
-            }
-          ]
+      [Op.or]: [
+        {
+          modelType: Project.LARAVEL_TYPE,
+          modelId: project.id
+        },
+        {
+          modelType: Site.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: Site.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: Nursery.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: Nursery.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: ProjectReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: ProjectReport.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: SiteReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: SiteReport.idsSubquery(Site.idsSubquery(project.id))
+          }
+        },
+        {
+          modelType: NurseryReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: NurseryReport.idsSubquery(Nursery.idsSubquery(project.id))
+          }
         }
-      }
-    );
+      ]
+    };
 
-    await media.update({
-      isCover: true
-    });
+    const [, updateMedias] = await Media.update({ isCover: false }, { where: whereClause, returning: true });
+    return updateMedias;
   }
 
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {

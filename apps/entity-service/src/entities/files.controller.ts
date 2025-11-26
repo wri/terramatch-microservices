@@ -31,7 +31,8 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
 import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
 import { SingleMediaDto } from "./dto/media-query.dto";
-import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel, EntityType, getProjectId } from "@terramatch-microservices/database/constants/entities";
+import { Project } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -98,7 +99,8 @@ export class FilesController {
     summary: "Update a media by uuid"
   })
   @JsonApiResponse({
-    data: MediaDto
+    data: MediaDto,
+    included: [MediaDto]
   })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
@@ -107,12 +109,24 @@ export class FilesController {
     const media = await this.mediaService.getMedia(uuid);
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("updateFiles", model);
+    const updatedMedia = await this.mediaService.updateMedia(media, updatePayload);
+
     if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
       const project = await this.mediaService.getProjectForModel(model);
       await this.policyService.authorize("read", project);
-      await this.mediaService.updateCover(media, project);
+      const updateMedias = await this.mediaService.updateCover(updatedMedia, project);
+      updatedMedia["media"] = updateMedias;
     }
-    return await this.mediaService.updateMedia(media, updatePayload);
+    const document = buildJsonApi(MediaDto).addData(
+      updatedMedia.uuid,
+      new MediaDto(updatedMedia, {
+        url: this.mediaService.getUrl(updatedMedia),
+        thumbUrl: this.mediaService.getUrl(updatedMedia, "thumbnail"),
+        entityType: updatedMedia.modelType as EntityType,
+        entityUuid: model.uuid
+      })
+    );
+    return document.serialize();
   }
 
   @Delete("bulkDelete")

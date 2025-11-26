@@ -6,8 +6,10 @@ import { SiteFactory } from "@terramatch-microservices/database/factories";
 import { getProjectId } from "@terramatch-microservices/database/constants/entities";
 import { Media } from "@terramatch-microservices/database/entities";
 import { MediaUpdateBody } from "../dto/media-update.dto";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 jest.mock("@terramatch-microservices/database/constants/entities", () => ({
   getProjectId: jest.fn()
@@ -17,7 +19,8 @@ jest.mock("@aws-sdk/client-s3", () => ({
   S3Client: jest.fn().mockImplementation(() => ({
     send: jest.fn()
   })),
-  PutObjectCommand: jest.fn()
+  PutObjectCommand: jest.fn(),
+  DeleteObjectCommand: jest.fn()
 }));
 
 describe("MediaService", () => {
@@ -66,8 +69,7 @@ describe("MediaService", () => {
       const project = await ProjectFactory.create();
       const newCover = await MediaFactory.forProject.create({ modelId: project.id });
       const previousCover = await MediaFactory.forProject.create({ modelId: project.id, isCover: true });
-      // @ts-expect-error - mockResolvedValue expects an array of [number, Media[]]
-      jest.spyOn(Media, "update").mockResolvedValue([1, [previousCover]]);
+      jest.spyOn(Media, "findAll").mockResolvedValue([previousCover]);
       const updateMedias = await service.unsetMediaCoverForProject(newCover, project);
       expect(updateMedias).toHaveLength(1);
       expect(updateMedias[0]).toBe(previousCover);
@@ -102,6 +104,86 @@ describe("MediaService", () => {
         ContentType: mimetype,
         ACL: "public-read"
       });
+    });
+  });
+
+  describe("getUrl", () => {
+    it("should return the url for the media", () => {
+      configService.get.mockImplementation((envName: string) => {
+        if (envName === "AWS_ENDPOINT") return "https://test-endpoint.com";
+        if (envName === "AWS_BUCKET") return "test-bucket";
+        return "";
+      });
+      const media = { id: 1, fileName: "media.png" } as Media;
+      const url = service.getUrl(media);
+      expect(url).toBe(`https://test-endpoint.com/test-bucket/1/media.png`);
+    });
+
+    it("should return the url for the media with a conversion", () => {
+      configService.get.mockImplementation((envName: string) => {
+        if (envName === "AWS_ENDPOINT") return "https://test-endpoint.com";
+        if (envName === "AWS_BUCKET") return "test-bucket";
+        return "";
+      });
+      const media = {
+        id: 1,
+        fileName: "media.png",
+        generatedConversions: { thumbnail: true },
+        customProperties: { thumbnailExtension: ".jpg" }
+      } as unknown as Media;
+      const url = service.getUrl(media, "thumbnail");
+      expect(url).toBe(`https://test-endpoint.com/test-bucket/1/conversions/media-thumbnail.jpg`);
+    });
+  });
+
+  describe("getMedia", () => {
+    it("should return the media successfully", async () => {
+      const media = await MediaFactory.forProject.create();
+      jest.spyOn(Media, "findOne").mockResolvedValue(media);
+      const returnedMedia = await service.getMedia(media.uuid);
+      expect(Media.findOne).toHaveBeenCalledWith({ where: { uuid: media.uuid } });
+      expect(returnedMedia).not.toBeNull();
+    });
+
+    it("should throw an error if the media is not found", async () => {
+      jest.spyOn(Media, "findOne").mockResolvedValue(null);
+      await expect(service.getMedia("media-uuid")).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("deleteMedia", () => {
+    it("should delete the media successfully", async () => {
+      const media = await MediaFactory.forProject.create();
+      media.destroy = jest.fn();
+      await service.deleteMedia(media);
+      expect(DeleteObjectCommand).toHaveBeenCalled();
+      expect(media.destroy).toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteMediaByUuid", () => {
+    it("should delete the media successfully", async () => {
+      const media = await MediaFactory.forProject.create();
+      jest.spyOn(Media, "findOne").mockResolvedValue(media);
+      jest.spyOn(service, "deleteMedia").mockResolvedValue(media);
+      await service.deleteMediaByUuid(media.uuid);
+      expect(Media.findOne).toHaveBeenCalledWith({ where: { uuid: media.uuid } });
+      expect(service.deleteMedia).toHaveBeenCalledWith(media);
+    });
+
+    it("should throw an error if the media is not found", async () => {
+      jest.spyOn(Media, "findOne").mockResolvedValue(null);
+      await expect(service.deleteMediaByUuid("media-uuid")).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("getMedias", () => {
+    it("should return the medias successfully", async () => {
+      const medias = await MediaFactory.forProject.createMany(3);
+      jest.spyOn(Media, "findAll").mockResolvedValue(medias);
+      const returnedMedias = await service.getMedias(medias.map(media => media.uuid));
+      expect(Media.findAll).toHaveBeenCalledWith({ where: { uuid: { [Op.in]: medias.map(media => media.uuid) } } });
+      expect(returnedMedias).toHaveLength(3);
     });
   });
 });

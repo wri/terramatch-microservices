@@ -1,6 +1,6 @@
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Test, TestingModule } from "@nestjs/testing";
-import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FilesController } from "./files.controller";
 import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
@@ -42,7 +42,7 @@ describe("FilesController", () => {
       getMedias: jest.fn(),
       updateMedia: jest.fn(),
       getProjectForModel: jest.fn(),
-      updateCover: jest.fn()
+      unsetMediaCoverForProject: jest.fn()
     } as unknown as jest.Mocked<MediaService>;
     mockMediaOwnerProcessor = { getBaseEntity: jest.fn() };
     entitiesService = {
@@ -147,6 +147,7 @@ describe("FilesController", () => {
       const mockedMedia = { uuid: "media-uuid" } as Media;
       mediaService.getMedia.mockResolvedValue(mockedMedia);
       policyService.authorize.mockResolvedValue();
+      mediaService.updateMedia.mockResolvedValue(mockedMedia);
       const model = { uuid: "model-uuid", id: 1 };
       (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
       await controller.mediaUpdate(
@@ -159,18 +160,19 @@ describe("FilesController", () => {
       });
     });
 
-    it("should throw and error when the media is not part of a project", async () => {
+    it("should unset the media cover for the project", async () => {
       const mockedMedia = { uuid: "media-uuid" } as Media;
+      const mockedMedia2 = { uuid: "media-uuid-2" } as Media;
       mediaService.getMedia.mockResolvedValue(mockedMedia);
       policyService.authorize.mockResolvedValue();
-      const model = { uuid: "model-uuid", id: 1 };
-      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
-      expect(
-        await controller.mediaUpdate(
-          { uuid: "media-uuid" },
-          { data: { type: "media", id: "media-uuid", attributes: { isCover: true } } }
-        )
-      ).rejects.toThrow(BadRequestException);
+      mediaService.updateMedia.mockResolvedValue(mockedMedia);
+      mediaService.getProjectForModel.mockResolvedValue({ id: 1 } as Project);
+      mediaService.unsetMediaCoverForProject.mockResolvedValue([mockedMedia2]);
+      await controller.mediaUpdate(
+        { uuid: "media-uuid" },
+        { data: { type: "media", id: "media-uuid", attributes: { isCover: true } } }
+      );
+      expect(mediaService.unsetMediaCoverForProject).toHaveBeenCalledWith(mockedMedia, { id: 1 } as Project);
     });
   });
 

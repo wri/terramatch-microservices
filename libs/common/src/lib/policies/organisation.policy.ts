@@ -5,13 +5,13 @@ import { Organisation, User } from "@terramatch-microservices/database/entities"
 export class OrganisationPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("users-manage")) {
-      this.builder.can(["create", "uploadFiles"], Organisation);
+      this.builder.can(["create", "uploadFiles", "deleteFiles", "updateFiles"], Organisation);
     }
 
     if (this.permissions.includes("manage-own")) {
       const primaryOrg = await this.getPrimaryOrganisation();
       if (primaryOrg != null) {
-        this.builder.can(["uploadFiles", "deleteFiles"], Organisation, { id: primaryOrg.id });
+        this.builder.can(["uploadFiles", "deleteFiles", "updateFiles"], Organisation, { id: primaryOrg.id });
       }
     }
   }

@@ -72,6 +72,10 @@ export class Nursery extends Model<Nursery> {
     return Subquery.select(Nursery, "id").eq("projectId", projectId).in("status", Nursery.APPROVED_STATUSES).literal;
   }
 
+  static idsSubquery(projectId: number) {
+    return Subquery.select(Nursery, "id").eq("projectId", projectId).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

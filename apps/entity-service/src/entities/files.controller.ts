@@ -3,8 +3,10 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UnauthorizedException,
@@ -27,6 +29,9 @@ import { MediaRequestBody } from "./dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
+import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
+import { SingleMediaDto } from "./dto/media-query.dto";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -38,6 +43,21 @@ export class FilesController {
     private readonly mediaService: MediaService,
     private readonly entitiesService: EntitiesService
   ) {}
+
+  @Get(":uuid")
+  @ApiOperation({
+    operationId: "getMedia",
+    summary: "Get a media by uuid"
+  })
+  @JsonApiResponse({ data: MediaDto })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async getMedia(@Param() { uuid }: SingleMediaDto) {
+    const media = await this.mediaService.getMedia(uuid);
+    const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+    await this.policyService.authorize("read", media);
+    return this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid });
+  }
 
   @Post("/:entity/:uuid/:collection")
   @ApiOperation({
@@ -70,6 +90,56 @@ export class FilesController {
         entityUuid: model.uuid
       })
     );
+  }
+
+  @Patch(":uuid")
+  @ApiOperation({
+    operationId: "mediaUpdate",
+    summary: "Update a media by uuid"
+  })
+  @JsonApiResponse({
+    data: MediaDto,
+    included: [MediaDto]
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  async mediaUpdate(@Param() { uuid }: SingleMediaDto, @Body() updatePayload: MediaUpdateBody) {
+    const media = await this.mediaService.getMedia(uuid);
+    const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+    await this.policyService.authorize("updateFiles", model);
+    const updatedMedia = await this.mediaService.updateMedia(media, updatePayload);
+
+    const document = buildJsonApi(MediaDto);
+    document.addData(
+      updatedMedia.uuid,
+      new MediaDto(updatedMedia, {
+        url: this.mediaService.getUrl(updatedMedia),
+        thumbUrl: this.mediaService.getUrl(updatedMedia, "thumbnail"),
+        entityType: updatedMedia.modelType as EntityType,
+        entityUuid: model.uuid
+      })
+    );
+
+    if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
+      const project = await this.mediaService.getProjectForModel(model);
+      await this.policyService.authorize("read", project);
+      const updatedMedias = await this.mediaService.unsetMediaCoverForProject(updatedMedia, project);
+      for (const media of updatedMedias) {
+        document.addData(
+          media.uuid,
+          new MediaDto(media, {
+            url: this.mediaService.getUrl(media),
+            thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+            entityType: media.modelType as EntityType,
+            entityUuid: model.uuid
+          }),
+          true
+        );
+      }
+    }
+
+    return document;
   }
 
   @Delete("bulkDelete")

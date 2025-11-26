@@ -1,10 +1,21 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Media } from "@terramatch-microservices/database/entities";
+import {
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "@terramatch-microservices/database/entities";
 import { PutObjectCommand, S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
+import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
 import { Op } from "sequelize";
+import { MediaOwnerModel } from "@terramatch-microservices/database/constants/media-owners";
+import { EntityModel, getProjectId } from "@terramatch-microservices/database/constants/entities";
 
 @Injectable()
 export class MediaService {
@@ -24,6 +35,74 @@ export class MediaService {
       // required for local dev when accessing the minio docker container
       forcePathStyle: (endpoint ?? "").includes("localhost") ? true : undefined
     });
+  }
+
+  async getProjectForModel(model: MediaOwnerModel) {
+    const projectId = await getProjectId(model as EntityModel);
+    const project =
+      projectId == null
+        ? null
+        : await Project.findOne({ where: { id: projectId }, attributes: ["id", "frameworkKey"] });
+    if (project == null) throw new BadRequestException(`Media is not part of a project.`);
+    return project;
+  }
+
+  async unsetMediaCoverForProject(media: Media, project: Project) {
+    const whereClause = {
+      isCover: true,
+      id: {
+        [Op.ne]: media.id
+      },
+      [Op.or]: [
+        {
+          modelType: Project.LARAVEL_TYPE,
+          modelId: project.id
+        },
+        {
+          modelType: Site.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: Site.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: Nursery.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: Nursery.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: ProjectReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: ProjectReport.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: SiteReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: SiteReport.idsSubquery(Site.idsSubquery(project.id))
+          }
+        },
+        {
+          modelType: NurseryReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: NurseryReport.idsSubquery(Nursery.idsSubquery(project.id))
+          }
+        }
+      ]
+    };
+
+    const medias = await Media.findAll({ where: whereClause });
+    const mediaIds = medias.map(m => m.id);
+    await Media.update({ isCover: false }, { where: { id: mediaIds } });
+    for (const media of medias) {
+      // update the models in memory to match the bulk query above
+      media.isCover = false;
+    }
+    return medias;
+  }
+
+  async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
+    return await media.update(updatePayload.data.attributes);
   }
 
   async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {

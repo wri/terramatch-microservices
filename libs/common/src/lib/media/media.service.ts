@@ -91,8 +91,9 @@ export class MediaService {
       ]
     };
 
-    const [, updateMedias] = await Media.update({ isCover: false }, { where: whereClause, returning: true });
-    return updateMedias;
+    const medias = await Media.findAll({ where: whereClause });
+    const updatedMedias = await Promise.all(medias.map(media => media.update({ isCover: false })));
+    return updatedMedias;
   }
 
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {

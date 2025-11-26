@@ -114,8 +114,16 @@ export class FilesController {
     if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
       const project = await this.mediaService.getProjectForModel(model);
       await this.policyService.authorize("read", project);
-      const updateMedias = await this.mediaService.updateCover(updatedMedia, project);
-      updatedMedia["media"] = updateMedias;
+      const updatedMedias = await this.mediaService.unsetMediaCoverForProject(updatedMedia, project);
+      updatedMedia["media"] = updatedMedias.map(
+        media =>
+          new MediaDto(media, {
+            url: this.mediaService.getUrl(media),
+            thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+            entityType: media.modelType as EntityType,
+            entityUuid: model.uuid
+          })
+      );
     }
     const document = buildJsonApi(MediaDto).addData(
       updatedMedia.uuid,
@@ -126,7 +134,7 @@ export class FilesController {
         entityUuid: model.uuid
       })
     );
-    return document.serialize();
+    return document;
   }
 
   @Delete("bulkDelete")

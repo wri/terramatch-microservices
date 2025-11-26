@@ -162,6 +162,9 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   restorationStrategy: string[] | null;
 
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  anrPractices: string[] | null;
+
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 

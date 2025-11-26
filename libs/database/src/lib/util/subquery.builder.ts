@@ -65,6 +65,11 @@ class SubqueryBuilder<T extends Model<T>> {
     return this;
   }
 
+  isNotNull(attribute: keyof Attributes<T>) {
+    this.where.push(`${this.subquery.field(attribute)} IS NOT NULL`);
+    return this;
+  }
+
   eq(attribute: keyof Attributes<T>, value: string | number | Date | boolean) {
     const escaped = isBoolean(value) ? value : this.subquery.sql.escape(value);
     this.where.push(`${this.subquery.field(attribute)} = ${escaped}`);

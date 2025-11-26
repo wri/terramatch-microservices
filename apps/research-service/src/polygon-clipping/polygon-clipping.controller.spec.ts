@@ -449,6 +449,7 @@ describe("PolygonClippingController", () => {
     it("should return DelayedJobDto for multiple polygons", async () => {
       const requestedUuids = ["polygon-uuid-1", "polygon-uuid-2", "polygon-uuid-3"];
       const fixablePolygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const siteUuid = "site-uuid-1";
       const payloadMultiple: PolygonListClippingRequestBody = {
         data: {
           type: "polygon-clipping",
@@ -460,11 +461,35 @@ describe("PolygonClippingController", () => {
 
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([{ siteUuid } as SitePolygon, { siteUuid } as SitePolygon]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([
+        {
+          id: 1,
+          uuid: siteUuid,
+          name: "Test Site",
+          projectId: 1,
+          project: {
+            id: 1,
+            uuid: "project-uuid-1",
+            name: "Test Project"
+          } as Project
+        } as Site
+      ]);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
 
       const result = await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
 
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(requestedUuids);
+      expect(SitePolygon.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            polygonUuid: fixablePolygonUuids,
+            isActive: true
+          },
+          attributes: ["siteUuid"]
+        })
+      );
+      expect(Site.findAll).toHaveBeenCalled();
       expect(mockQueue.add).toHaveBeenCalledWith(
         "clipAndVersion",
         expect.objectContaining({
@@ -473,6 +498,250 @@ describe("PolygonClippingController", () => {
       );
       expect(result).toBeDefined();
       expect(result.id).toBe("job-uuid-123");
+    });
+
+    it("should set entityName to site name when all polygons belong to same site", async () => {
+      const requestedUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const fixablePolygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const siteUuid = "site-uuid-1";
+      const siteName = "Test Site Name";
+      const payloadMultiple: PolygonListClippingRequestBody = {
+        data: {
+          type: "polygon-clipping",
+          attributes: {
+            polygonUuids: requestedUuids
+          }
+        }
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([{ siteUuid } as SitePolygon, { siteUuid } as SitePolygon]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([
+        {
+          id: 1,
+          uuid: siteUuid,
+          name: siteName,
+          projectId: 1,
+          project: {
+            id: 1,
+            uuid: "project-uuid-1",
+            name: "Test Project"
+          } as Project
+        } as Site
+      ]);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 1,
+        uuid: "job-uuid-123",
+        name: "Polygon Clipping",
+        totalContent: 2,
+        processedContent: 0,
+        progressMessage: "Starting clipping...",
+        metadata: {
+          entity_id: 1,
+          entity_type: Site.LARAVEL_TYPE,
+          entity_name: siteName
+        },
+        isAcknowledged: false,
+        createdBy: 1
+      } as unknown as DelayedJob);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_id: 1,
+            entity_type: Site.LARAVEL_TYPE,
+            entity_name: siteName
+          })
+        })
+      );
+    });
+
+    it("should set entityName to project name when polygons belong to same project but different sites", async () => {
+      const requestedUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const fixablePolygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const siteUuid1 = "site-uuid-1";
+      const siteUuid2 = "site-uuid-2";
+      const projectName = "Test Project Name";
+      const payloadMultiple: PolygonListClippingRequestBody = {
+        data: {
+          type: "polygon-clipping",
+          attributes: {
+            polygonUuids: requestedUuids
+          }
+        }
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([{ siteUuid: siteUuid1 } as SitePolygon, { siteUuid: siteUuid2 } as SitePolygon]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([
+        {
+          id: 1,
+          uuid: siteUuid1,
+          name: "Site 1",
+          projectId: 1,
+          project: {
+            id: 1,
+            uuid: "project-uuid-1",
+            name: projectName
+          } as Project
+        } as Site,
+        {
+          id: 2,
+          uuid: siteUuid2,
+          name: "Site 2",
+          projectId: 1,
+          project: {
+            id: 1,
+            uuid: "project-uuid-1",
+            name: projectName
+          } as Project
+        } as Site
+      ]);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 1,
+        uuid: "job-uuid-123",
+        name: "Polygon Clipping",
+        totalContent: 2,
+        processedContent: 0,
+        progressMessage: "Starting clipping...",
+        metadata: {
+          entity_id: 1,
+          entity_type: Project.LARAVEL_TYPE,
+          entity_name: projectName
+        },
+        isAcknowledged: false,
+        createdBy: 1
+      } as unknown as DelayedJob);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_id: 1,
+            entity_type: Project.LARAVEL_TYPE,
+            entity_name: projectName
+          })
+        })
+      );
+    });
+
+    it("should set entityName to polygon count when polygons belong to different projects", async () => {
+      const requestedUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const fixablePolygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const siteUuid1 = "site-uuid-1";
+      const siteUuid2 = "site-uuid-2";
+      const payloadMultiple: PolygonListClippingRequestBody = {
+        data: {
+          type: "polygon-clipping",
+          attributes: {
+            polygonUuids: requestedUuids
+          }
+        }
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([{ siteUuid: siteUuid1 } as SitePolygon, { siteUuid: siteUuid2 } as SitePolygon]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([
+        {
+          id: 1,
+          uuid: siteUuid1,
+          name: "Site 1",
+          projectId: 1,
+          project: {
+            id: 1,
+            uuid: "project-uuid-1",
+            name: "Project 1"
+          } as Project
+        } as Site,
+        {
+          id: 2,
+          uuid: siteUuid2,
+          name: "Site 2",
+          projectId: 2,
+          project: {
+            id: 2,
+            uuid: "project-uuid-2",
+            name: "Project 2"
+          } as Project
+        } as Site
+      ]);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 1,
+        uuid: "job-uuid-123",
+        name: "Polygon Clipping",
+        totalContent: 2,
+        processedContent: 0,
+        progressMessage: "Starting clipping...",
+        metadata: {
+          entity_name: "2 polygons"
+        },
+        isAcknowledged: false,
+        createdBy: 1
+      } as unknown as DelayedJob);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: "2 polygons"
+          })
+        })
+      );
+    });
+
+    it("should set entityName to polygon count when no site polygons found", async () => {
+      const requestedUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const fixablePolygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+      const payloadMultiple: PolygonListClippingRequestBody = {
+        data: {
+          type: "polygon-clipping",
+          attributes: {
+            polygonUuids: requestedUuids
+          }
+        }
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 1,
+        uuid: "job-uuid-123",
+        name: "Polygon Clipping",
+        totalContent: 2,
+        processedContent: 0,
+        progressMessage: "Starting clipping...",
+        metadata: {
+          entity_name: "2 polygons"
+        },
+        isAcknowledged: false,
+        createdBy: 1
+      } as unknown as DelayedJob);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+
+      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: "2 polygons"
+          })
+        })
+      );
     });
 
     it("should handle user with null fullName in polygon list endpoint", async () => {

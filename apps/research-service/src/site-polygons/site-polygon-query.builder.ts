@@ -1,4 +1,4 @@
-import { IncludeOptions, literal, Op, Sequelize } from "sequelize";
+import { IncludeOptions, literal, Op, Sequelize, WhereOptions } from "sequelize";
 import {
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,
@@ -90,23 +90,32 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   async filterProjectAttributes(cohort?: string[], slug?: LandscapeSlug) {
-    const subquery = Subquery.select(Project, "id");
+    let landscapeValue: string | null = null;
     if (slug != null) {
       const landscape = await LandscapeGeometry.findOne({ where: { slug }, attributes: ["landscape"] });
       if (landscape == null) {
         throw new BadRequestException(`Unrecognized landscape slug: ${slug}`);
       }
+      landscapeValue = landscape.landscape;
+    }
 
-      subquery.eq("landscape", landscape.landscape);
+    const subquery = Subquery.select(Project, "id");
+    if (slug != null && landscapeValue != null) {
+      subquery.isNotNull("landscape").eq("landscape", landscapeValue);
     }
 
     if (cohort != null && cohort.length > 0) {
       const cohortConditions = cohort.map(c => `JSON_CONTAINS(cohort, ${this.sql.escape(`"${c}"`)})`).join(" OR ");
 
+      const whereConditions: WhereOptions[] = [Sequelize.literal(`(${cohortConditions})`)];
+
+      if (slug != null && landscapeValue != null) {
+        whereConditions.push({ landscape: landscapeValue });
+      }
+
       const projects = await Project.findAll({
         where: {
-          ...(slug != null ? { landscape: (await LandscapeGeometry.findOne({ where: { slug } }))?.landscape } : {}),
-          [Op.and]: [Sequelize.literal(`(${cohortConditions})`)]
+          [Op.and]: whereConditions
         },
         attributes: ["id"]
       });

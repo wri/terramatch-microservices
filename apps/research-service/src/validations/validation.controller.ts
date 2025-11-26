@@ -175,7 +175,7 @@ export class ValidationController {
       createdBy: authenticatedUserId,
       metadata: {
         entity_id: site.id,
-        entity_type: "App\\Models\\V2\\Sites\\Site",
+        entity_type: Site.LARAVEL_TYPE,
         entity_name: site.name
       }
     } as DelayedJob);

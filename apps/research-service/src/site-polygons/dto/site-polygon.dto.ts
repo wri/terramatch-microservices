@@ -176,6 +176,12 @@ export class SitePolygonLightDto extends HybridSupportDto {
     nullable: true
   })
   disturbanceableId: number | null;
+
+  @ApiProperty({
+    type: Boolean,
+    description: "Whether the site polygon is active"
+  })
+  isActive: boolean;
 }
 
 @JsonApiDto({ type: "sitePolygons" })

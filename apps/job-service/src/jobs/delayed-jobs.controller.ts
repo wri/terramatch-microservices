@@ -12,7 +12,7 @@ import {
 import { ApiOperation } from "@nestjs/swagger";
 import { Op } from "sequelize";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
@@ -59,7 +59,7 @@ export class DelayedJobsController {
     const job = await DelayedJob.findOne({ where: { uuid: pathUUID } });
     if (job == null) throw new NotFoundException();
 
-    return buildJsonApi(DelayedJobDto).addData(job.uuid, new DelayedJobDto(job));
+    return buildDelayedJobResponse(job);
   }
 
   @Patch("bulk-update")

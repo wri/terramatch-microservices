@@ -5,6 +5,8 @@ import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
 import { cloneDeep } from "lodash";
 import * as qs from "qs";
+import { DelayedJobDto } from "../dto/delayed-job.dto";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 type AttributeValue = string | number | boolean;
 type Attributes = {
@@ -231,3 +233,6 @@ export const getStableRequestQuery = (originalQuery: object) => {
   const query = qs.stringify(normalizedQuery, { arrayFormat: "indices", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;
 };
+
+export const buildDelayedJobResponse = (delayedJob: DelayedJob): ResourceBuilder =>
+  buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));

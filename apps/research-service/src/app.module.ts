@@ -23,6 +23,9 @@ import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
+import { IndicatorsController } from "./indicators/indicators.controller";
+import { IndicatorsService } from "./indicators/indicators.service";
+import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 
 @Module({
@@ -44,14 +47,22 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     }),
     BullModule.registerQueue({ name: "validation" }),
     BullModule.registerQueue({ name: "geometry-upload" }),
+    BullModule.registerQueue({ name: "indicators" }),
     BullModule.registerQueue({ name: "clipping" })
   ],
-  controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
+  controllers: [
+    SitePolygonsController,
+    BoundingBoxController,
+    ValidationController,
+    PolygonClippingController,
+    IndicatorsController
+  ],
   providers: [
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter
     },
+    IndicatorsService,
     SitePolygonsService,
     SitePolygonCreationService,
     SitePolygonVersioningService,
@@ -62,6 +73,7 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     ValidationService,
     ValidationProcessor,
     GeometryUploadProcessor,
+    IndicatorsProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
     PolygonClippingService,

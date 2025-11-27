@@ -105,7 +105,7 @@ export class LinkedAnswerCollector {
     );
   }
 
-  private getCollector(resource: LinkedFieldResource, factory: () => RelationResourceCollector) {
+  protected getCollector(resource: LinkedFieldResource, factory: () => RelationResourceCollector) {
     return this.relationCollectors[resource] ?? (this.relationCollectors[resource] = factory());
   }
 }

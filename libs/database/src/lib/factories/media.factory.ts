@@ -57,6 +57,6 @@ export const MediaFactory = {
   forFormQuestionOption: FactoryGirl.define(Media, async () => ({
     ...(await defaultAttributesFactory()),
     modelType: FormQuestionOption.LARAVEL_TYPE,
-    modelId: FormQuestionOptionFactory.associate("id")
+    modelId: FormQuestionOptionFactory.forQuestion().associate("id")
   }))
 };

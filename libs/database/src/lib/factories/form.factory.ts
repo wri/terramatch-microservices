@@ -1,11 +1,11 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Form } from "../entities";
+import { Form, Project, Site, SiteReport } from "../entities";
 import { faker } from "@faker-js/faker";
 import { UserFactory } from "./user.factory";
 
-export const FormFactory = FactoryGirl.define(Form, async () => ({
+const defaultAttributesFactory = async () => ({
   frameworkKey: "ppc",
-  model: "project",
+  model: Project.LARAVEL_TYPE,
   version: 1,
   type: "application",
   title: faker.lorem.words(3),
@@ -17,4 +17,24 @@ export const FormFactory = FactoryGirl.define(Form, async () => ({
   published: true,
   deadlineAt: faker.date.future(),
   updatedBy: UserFactory.associate("id")
-}));
+});
+
+export const FormFactory = FactoryGirl.define(Form, async () => defaultAttributesFactory());
+
+export const EntityFormFactory = {
+  forSite: (site?: Site) =>
+    FactoryGirl.define(Form, async () => ({
+      ...(await defaultAttributesFactory()),
+      frameworkKey: site?.frameworkKey ?? "ppc",
+      model: Site.LARAVEL_TYPE,
+      type: "site"
+    })),
+
+  forSiteReport: (siteReport?: SiteReport) =>
+    FactoryGirl.define(Form, async () => ({
+      ...(await defaultAttributesFactory()),
+      frameworkKey: siteReport?.frameworkKey ?? "ppc",
+      model: SiteReport.LARAVEL_TYPE,
+      type: "site-report"
+    }))
+};

@@ -23,7 +23,7 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("custom-forms-manage");
-    const option = await FormQuestionOptionFactory.create();
+    const option = await FormQuestionOptionFactory.forQuestion().create();
     await expectCan(service, ["uploadFiles"], option);
   });
 
@@ -31,7 +31,7 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("framework-terrafund");
-    const option = await FormQuestionOptionFactory.create();
+    const option = await FormQuestionOptionFactory.forQuestion().create();
     await expectCannot(service, ["uploadFiles"], option);
   });
 });

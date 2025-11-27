@@ -71,7 +71,7 @@ describe("OptionsLabelsController", () => {
       const options = [(await FormOptionListOptionFactory.create()) as OptionLabelModel];
       options.push((await FormOptionListOptionFactory.create({ imageUrl: faker.internet.url() })) as OptionLabelModel);
       await FormOptionListOptionFactory.create();
-      options.push((await FormQuestionOptionFactory.create()) as OptionLabelModel);
+      options.push((await FormQuestionOptionFactory.forQuestion().create()) as OptionLabelModel);
 
       mockLocale("en-US");
       mockUserId(123);
@@ -96,7 +96,7 @@ describe("OptionsLabelsController", () => {
       const translation1 = await I18nTranslationFactory.create({ language: "es-MX", shortValue: null });
       const translation2 = await I18nTranslationFactory.create({ language: "es-MX" });
       const listOption = await FormOptionListOptionFactory.create({ labelId: translation1.i18nItemId });
-      const questionOption = await FormQuestionOptionFactory.create({ labelId: translation2.i18nItemId });
+      const questionOption = await FormQuestionOptionFactory.forQuestion().create({ labelId: translation2.i18nItemId });
       const options = [listOption, questionOption];
       const translations = [translation1, translation2];
 

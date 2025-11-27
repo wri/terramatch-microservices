@@ -58,7 +58,7 @@ describe("UpdateRequestsController", () => {
     it("throws if the form is not found", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      await UpdateRequestFactory.forProject.create({ updateRequestableId: project.id });
+      await UpdateRequestFactory.forProject(project).create();
       await expect(controller.updateRequestGet({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
         `Form not found for update request: ${project.uuid}`
       );
@@ -69,8 +69,7 @@ describe("UpdateRequestsController", () => {
     it("returns a populated DTO", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      const updateRequest = await UpdateRequestFactory.forProject.create({
-        updateRequestableId: project.id,
+      const updateRequest = await UpdateRequestFactory.forProject(project).create({
         content: { color: "red" }
       });
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
@@ -109,8 +108,7 @@ describe("UpdateRequestsController", () => {
     it("does not update if the status has not changed", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      const updateRequest = await UpdateRequestFactory.forProject.create({
-        updateRequestableId: project.id,
+      const updateRequest = await UpdateRequestFactory.forProject(project).create({
         content: { color: "red" }
       });
       await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
@@ -128,8 +126,7 @@ describe("UpdateRequestsController", () => {
     it("updates if the status has changed", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      const updateRequest = await UpdateRequestFactory.forProject.create({
-        updateRequestableId: project.id,
+      const updateRequest = await UpdateRequestFactory.forProject(project).create({
         status: "awaiting-approval",
         content: { color: "red" }
       });
@@ -154,8 +151,7 @@ describe("UpdateRequestsController", () => {
     it("stores the update request answers if the status is approved", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      await UpdateRequestFactory.forProject.create({
-        updateRequestableId: project.id,
+      await UpdateRequestFactory.forProject(project).create({
         status: "awaiting-approval",
         content: { color: "red" }
       });

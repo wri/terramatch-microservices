@@ -49,7 +49,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
   it("should avoid status email and actions for non-entities", async () => {
     mockUserId();
-    const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.forProject.create());
+    const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.forProject().create());
     const statusUpdateSpy = jest.spyOn(processor as any, "sendStatusUpdateEmail");
     const updateActionsSpy = jest.spyOn(processor as any, "updateActions");
     const createAuditStatusSpy = jest.spyOn(processor as any, "createAuditStatus");

@@ -22,6 +22,7 @@ import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
 import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Injectable()
 export class FormDataService {
@@ -41,7 +42,7 @@ export class FormDataService {
       const newUpdateRequest = await UpdateRequest.create({
         updateRequestableType: laravelType(model),
         updateRequestableId: model.id,
-        createdById: this.policyService.userId,
+        createdById: authenticatedUserId(),
         frameworkKey: model.frameworkKey,
         content: answers,
         projectId: await getProjectId(model),
@@ -163,8 +164,9 @@ export class FormDataService {
       model.completion = this.calculateProgress(answers, questions);
 
       const isAdmin = (await this.policyService.getPermissions()).includes(`framework-${model.frameworkKey}`);
+      console.log("isReport", { isAdmin, perm: await this.policyService.getPermissions() });
       if (model.createdBy == null && !isAdmin) {
-        model.createdBy = this.policyService.userId ?? null;
+        model.createdBy = authenticatedUserId() ?? null;
       }
 
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case

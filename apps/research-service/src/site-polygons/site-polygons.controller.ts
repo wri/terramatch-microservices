@@ -333,7 +333,7 @@ export class SitePolygonsController {
     });
   }
 
-  @Get(":uuid/versions")
+  @Get(":primaryUuid/versions")
   @ApiOperation({
     operationId: "listSitePolygonVersions",
     summary: "Get all versions of a site polygon",
@@ -342,15 +342,13 @@ export class SitePolygonsController {
   @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
-  async getVersions(@Param("uuid") uuid: string) {
+  async getVersions(@Param("primaryUuid") primaryUuid: string) {
     await this.policyService.authorize("read", SitePolygon);
 
-    const polygon = await SitePolygon.findOne({ where: { uuid } });
-    if (polygon == null) {
-      throw new NotFoundException(`Site polygon not found: ${uuid}`);
+    const versions = await this.versioningService.getVersionHistory(primaryUuid);
+    if (versions.length === 0) {
+      throw new NotFoundException(`Site polygon not found: ${primaryUuid}`);
     }
-
-    const versions = await this.versioningService.getVersionHistory(polygon.primaryUuid);
 
     const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
     const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
@@ -365,7 +363,7 @@ export class SitePolygonsController {
     }
 
     document.addIndex({
-      requestPath: `/research/v3/sitePolygons/${uuid}/versions`,
+      requestPath: `/research/v3/sitePolygons/${primaryUuid}/versions`,
       total: versions.length
     });
 

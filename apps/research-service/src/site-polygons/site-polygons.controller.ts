@@ -87,11 +87,26 @@ export class SitePolygonsController {
     operationId: "createSitePolygons",
     summary: "Create site polygons from GeoJSON or create version from existing",
     description: `Create site polygons OR create a new version of an existing polygon.
-    **Normal Creation**: Provide geometries array with site_id in properties.
-    **Version Creation**: Provide baseSitePolygonUuid + changeReason + (geometries and/or attributeChanges).
-    Duplicate validation results are always included in the response when duplicates are found.`
+
+    Normal Creation (new polygons):
+    - Provide \`geometries\` array with \`site_id\` in feature properties (required)
+    - Attributes (poly_name, plantstart, practice, etc.) come from feature \`properties\`
+    - Do NOT provide \`baseSitePolygonUuid\` or \`attributeChanges\`
+    
+    Version Creation (new version of existing polygon):
+    - Provide \`baseSitePolygonUuid\` (required) + \`changeReason\` (optional, defaults to "Version created via API")
+    - Then provide ONE of the following:
+      - Geometry only: Provide \`geometries\` array (geometry properties are ignored)
+      - Attributes only: Provide \`attributeChanges\` object
+      - Both: Provide both \`geometries\` and \`attributeChanges\`
+    - At least one of \`geometries\` or \`attributeChanges\` must be provided
+    
+    Important: When creating versions, \`attributeChanges\` is the ONLY way to update attributes. 
+    Geometry properties are ignored during version creation - use \`attributeChanges\` instead.
+    
+    Duplicate validation results are included in the \`included\` section of the JSON:API response when duplicates are found.`
   })
-  @JsonApiResponse([SitePolygonLightDto])
+  @JsonApiResponse({ data: SitePolygonLightDto, included: [ValidationDto] })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, {
     description: "Invalid request data, site not found, or versioning validation failed."

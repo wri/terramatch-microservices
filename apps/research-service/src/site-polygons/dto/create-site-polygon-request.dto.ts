@@ -140,12 +140,26 @@ export class CreateSitePolygonBatchRequestDto {
 /**
  * Extended attributes DTO supporting both normal creation and version creation.
  *
- * Normal Creation: Provide geometries array
- * Version Creation: Provide baseSitePolygonUuid + (geometries and/or attributeChanges)
+ * Normal Creation: Provide geometries array (required). Attributes come from feature properties.
+ * Version Creation: Provide baseSitePolygonUuid + changeReason + (geometries and/or attributeChanges).
+ *   - Geometry only: provide geometries (properties ignored)
+ *   - Attributes only: provide attributeChanges
+ *   - Both: provide both geometries and attributeChanges
  */
 export class CreateSitePolygonAttributesDto {
   @ApiProperty({
-    description: "Array of feature collections (optional when creating version with attribute-only changes)",
+    description: `Array of feature collections containing geometries to create or update.
+    
+    Normal Creation (required):
+    - Must provide \`geometries\` array
+    - Attributes come from \`properties\` within each feature
+    - Each feature must have \`site_id\` in properties
+    
+    Version Creation (optional):
+    - Provide \`geometries\` to update geometry only, or together with \`attributeChanges\` to update both
+    - When provided, only the geometry is used - feature properties are ignored
+    - For attribute-only updates, omit this field and use \`attributeChanges\` instead
+    - Must provide at least one of \`geometries\` or \`attributeChanges\` when creating a version`,
     type: CreateSitePolygonRequestDto,
     isArray: true,
     required: false,
@@ -192,18 +206,31 @@ export class CreateSitePolygonAttributesDto {
   baseSitePolygonUuid?: string;
 
   @ApiProperty({
-    description: "Reason for creating version (required when baseSitePolygonUuid is provided)",
+    description:
+      "Reason for creating version (optional when baseSitePolygonUuid is provided, defaults to 'Version created via API')",
     required: false,
     example: "Updated polygon boundary based on field survey data"
   })
   @IsOptional()
   @IsString()
   @ValidateIf(o => o.baseSitePolygonUuid != null && o.baseSitePolygonUuid.length > 0)
-  @IsNotEmpty({ message: "changeReason is required when creating a version (baseSitePolygonUuid provided)" })
   changeReason?: string;
 
   @ApiProperty({
-    description: "Attribute changes to apply when creating version (optional, for attribute-only or mixed updates)",
+    description: `Attribute changes to apply when creating a version. 
+    
+    Only used when \`baseSitePolygonUuid\` is provided (version creation mode).
+    
+    Version Creation Scenarios:
+    - Attributes only: Provide \`attributeChanges\` without \`geometries\`
+    - Both geometry and attributes: Provide both \`geometries\` and \`attributeChanges\`
+    - Geometry only: Provide \`geometries\` without \`attributeChanges\`
+    
+    Important: This is the ONLY way to update attributes during version creation.
+    For normal creation, attributes should be provided in feature \`properties\` within \`geometries\`.
+    Geometry properties are ignored during version creation - use this field instead.
+    
+    Must provide at least one of \`geometries\` or \`attributeChanges\` when creating a version.`,
     required: false,
     type: AttributeChangesDto
   })

@@ -71,6 +71,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "seedlingsSource",
   "landUseTypes",
   "restorationStrategy",
+  "incomeGeneratingActivities",
   "socioeconomicGoals",
   "communityIncentives",
   "landTenureProjectArea",

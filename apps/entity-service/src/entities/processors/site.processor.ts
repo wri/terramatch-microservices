@@ -18,7 +18,7 @@ import { Includeable, Op } from "sequelize";
 import { sumBy, groupBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { SiteUpdateAttributes } from "../dto/entity-update.dto";
-import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, NEEDS_MORE_INFORMATION, PlantingStatus } from "@terramatch-microservices/database/constants/status";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -125,6 +125,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         });
       }
     }
+
+    if (query.plantingStatus != null) {
+      builder.where({
+        uuid: { [Op.in]: SiteReport.siteUuidsForLatestApprovedPlantingStatus(query.plantingStatus) }
+      });
+    }
+
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
@@ -194,6 +201,32 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return result;
   }
 
+  private async getSitePlantingStatus(sites: Site[]): Promise<Record<string, PlantingStatus>> {
+    if (sites.length === 0) return {};
+
+    const siteIds = sites.map(site => site.id);
+    const approvedReports = await SiteReport.approved()
+      .sites(siteIds)
+      .findAll({
+        attributes: ["id", "siteId", "plantingStatus", "updatedAt"],
+        order: [["updatedAt", "DESC"]]
+      });
+
+    if (approvedReports.length === 0) {
+      return sites.reduce((acc, site) => ({ ...acc, [site.uuid]: undefined }), {});
+    }
+
+    const result: Record<string, PlantingStatus> = {};
+
+    for (const site of sites) {
+      const siteId = site.id;
+      const siteReport = approvedReports.find(report => report.siteId === siteId);
+      result[site.uuid] = siteReport?.plantingStatus as PlantingStatus;
+    }
+
+    return result;
+  }
+
   async getFullDto(site: Site) {
     const siteId = site.id;
 
@@ -210,6 +243,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
+    const lastReport = await this.getLastReport(site.id);
 
     const dto = new SiteFullDto(site, {
       totalHectaresRestoredSum,
@@ -222,7 +256,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
       regeneratedTreesCount,
       treesPlantedCount,
-
+      plantingStatus: lastReport?.plantingStatus as PlantingStatus,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(site).findAll(),
         Site.MEDIA,
@@ -242,8 +276,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const treesPlantedCount = treesPlantedData[site.uuid] ?? 0;
+    const lastReport = await this.getLastReport(site.id);
 
-    return { id: site.uuid, dto: new SiteLightDto(site, { treesPlantedCount, totalHectaresRestoredSum }) };
+    return {
+      id: site.uuid,
+      dto: new SiteLightDto(site, {
+        treesPlantedCount,
+        totalHectaresRestoredSum,
+        plantingStatus: lastReport?.plantingStatus as PlantingStatus
+      })
+    };
   }
 
   async getLightDtos(sites: Site[]): Promise<{ id: string; dto: SiteLightDto }[]> {
@@ -251,16 +293,18 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const siteUuids = sites.map(site => site.uuid);
 
-    const [hectaresData, treesPlantedData] = await Promise.all([
+    const [hectaresData, treesPlantedData, plantingStatus] = await Promise.all([
       this.getHectaresRestoredSum(siteUuids),
-      this.getTreesPlantedCount(sites)
+      this.getTreesPlantedCount(sites),
+      this.getSitePlantingStatus(sites)
     ]);
 
     return sites.map(site => ({
       id: site.uuid,
       dto: new SiteLightDto(site, {
         treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
-        totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0
+        totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
+        plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null
       })
     }));
   }
@@ -305,6 +349,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getTotalOverdueReports(siteId: number) {
     const countOpts = { where: { dueAt: { [Op.lt]: new Date() } } };
     return await SiteReport.incomplete().sites([siteId]).count(countOpts);
+  }
+
+  protected async getLastReport(siteId: number) {
+    return await SiteReport.approved()
+      .sites([siteId])
+      .lastReport()
+      .findOne({ attributes: ["plantingStatus"] });
   }
 
   async delete(site: Site) {

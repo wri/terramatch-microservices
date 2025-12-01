@@ -65,12 +65,8 @@ query=$(cat << QUERY
     repository(owner: "wri", name: \$repo) {
       pullRequest(number: \$pr) {
         commits(first: 100, after: \$endCursor) {
-          pageInfo{ hasNextPage, endCursor }
-          nodes {
-            commit {
-              messageHeadline
-            }
-          }
+          pageInfo { hasNextPage, endCursor }
+          nodes { commit { messageHeadline } }
         }
       }
     }

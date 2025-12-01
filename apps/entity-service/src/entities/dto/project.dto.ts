@@ -3,6 +3,8 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import {
   ENTITY_STATUSES,
   EntityStatus,
+  PLANTING_STATUSES,
+  PlantingStatus,
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
@@ -43,6 +45,13 @@ export class ProjectLightDto extends EntityDto {
     enum: ENTITY_STATUSES
   })
   status: EntityStatus;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Planting status for this project",
+    enum: PLANTING_STATUSES
+  })
+  plantingStatus: PlantingStatus | null;
 
   @ApiProperty({
     nullable: true,

@@ -11,11 +11,11 @@ fi
 echo "Enter release name:"
 read release
 
+jql=$(echo "fixVersion=\"$release\"" | jq -SRr @uri)
 jiraTicketsResponse=$(curl \
-  --get -s \
+  -s \
   -u "$JIRA_USER":"$JIRA_TOKEN" \
-  --data-urlencode "jql=fixVersion=\"$release\"" \
-  "https://gfw.atlassian.net/rest/api/3/search/jql")
+  "https://gfw.atlassian.net/rest/api/3/search/jql?jql=$jql&fields=key")
 error=$(echo "$jiraTicketsResponse" | jq ".errorMessages")
 if [[ $error != "null" ]]; then
   echo "Release not found in Jira: $release"
@@ -52,7 +52,7 @@ echo "  v3: $v3Title, $v3Branch"
 echo "  PHP: $phpTitle, $phpBranch"
 echo "  FE: $feTitle, $feBranch"
 
-jiraTickets=$(echo "$jiraTicketsResponse" | jq -r ".issues[].id" | sort)
+jiraTickets=$(echo "$jiraTicketsResponse" | jq -r ".issues[].key" | sort)
 echo -e "\nJira Tickets:\n$jiraTickets"
 
 v3Tickets=$(gh -R wri/terramatch-microservices pr view "$v3Branch" --json commits -q ".commits[] .messageHeadline" \

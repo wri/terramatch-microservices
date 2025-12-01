@@ -1,4 +1,4 @@
-import { Media, Project, Site, Nursery, ProjectReport, SiteReport, Form, FormQuestionOption } from "../entities";
+import { Form, FormQuestionOption, Media, Nursery, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { ProjectFactory } from "./project.factory";
 import { SiteFactory } from "./site.factory";
@@ -24,39 +24,46 @@ const defaultAttributesFactory = async () => ({
 });
 
 export const MediaFactory = {
-  forProject: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Project.LARAVEL_TYPE,
-    modelId: ProjectFactory.associate("id")
-  })),
-  forSite: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Site.LARAVEL_TYPE,
-    modelId: SiteFactory.associate("id")
-  })),
-  forNursery: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Nursery.LARAVEL_TYPE,
-    modelId: NurseryFactory.associate("id")
-  })),
-  forProjectReport: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: ProjectReport.LARAVEL_TYPE,
-    modelId: ProjectReportFactory.associate("id")
-  })),
-  forSiteReport: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: SiteReport.LARAVEL_TYPE,
-    modelId: SiteReportFactory.associate("id")
-  })),
-  forForm: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Form.LARAVEL_TYPE,
-    modelId: FormFactory.associate("id")
-  })),
-  forFormQuestionOption: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: FormQuestionOption.LARAVEL_TYPE,
-    modelId: FormQuestionOptionFactory.forQuestion().associate("id")
-  }))
+  forProject: (project?: Project) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Project.LARAVEL_TYPE,
+      modelId: (project?.id as number) ?? ProjectFactory.associate("id")
+    })),
+  forSite: (site?: Site) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Site.LARAVEL_TYPE,
+      modelId: (site?.id as number) ?? SiteFactory.associate("id")
+    })),
+  forNursery: (nursery?: Nursery) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Nursery.LARAVEL_TYPE,
+      modelId: (nursery?.id as number) ?? NurseryFactory.associate("id")
+    })),
+  forProjectReport: (report?: ProjectReport) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: ProjectReport.LARAVEL_TYPE,
+      modelId: (report?.id as number) ?? ProjectReportFactory.associate("id")
+    })),
+  forSiteReport: (report?: SiteReport) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: SiteReport.LARAVEL_TYPE,
+      modelId: (report?.id as number) ?? SiteReportFactory.associate("id")
+    })),
+  forForm: (form?: Form) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Form.LARAVEL_TYPE,
+      modelId: (form?.id as number) ?? FormFactory.associate("id")
+    })),
+  forFormQuestionOption: (question?: FormQuestionOption) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: FormQuestionOption.LARAVEL_TYPE,
+      modelId: (question?.id as number) ?? FormQuestionOptionFactory.forQuestion().associate("id")
+    }))
 };

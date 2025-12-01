@@ -55,12 +55,6 @@ export class FormDataService {
     }
   }
 
-  async getFormTitle(form: Form, locale: ValidLocale) {
-    const ids = form.titleId == null ? [] : [form.titleId];
-    const translations = await this.localizationService.translateIds(ids, locale);
-    return this.localizationService.translateFields(translations, form, ["title"]).title;
-  }
-
   async getDtoForEntity(entityType: EntityType, entity: EntityModel, form: Form, locale: ValidLocale) {
     const formTitle = await this.getFormTitle(form, locale);
     const currentUpdateRequest = await UpdateRequest.for(entity)
@@ -116,6 +110,13 @@ export class FormDataService {
     return answers;
   }
 
+  private async getFormTitle(form: Form, locale: ValidLocale) {
+    if (form.titleId == null) return form.title;
+
+    const translations = await this.localizationService.translateIds([form.titleId], locale);
+    return this.localizationService.translateFields(translations, form, ["title"]).title;
+  }
+
   private async updateEntityFromForm<T extends EntityModel>(model: T, form: Form, answers: Dictionary<unknown>) {
     model.answers = {};
 
@@ -164,7 +165,6 @@ export class FormDataService {
       model.completion = this.calculateProgress(answers, questions);
 
       const isAdmin = (await this.policyService.getPermissions()).includes(`framework-${model.frameworkKey}`);
-      console.log("isReport", { isAdmin, perm: await this.policyService.getPermissions() });
       if (model.createdBy == null && !isAdmin) {
         model.createdBy = authenticatedUserId() ?? null;
       }

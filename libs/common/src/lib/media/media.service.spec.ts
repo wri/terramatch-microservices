@@ -77,13 +77,13 @@ describe("MediaService", () => {
 
   describe("getUrl", () => {
     it("returns a download URL", async () => {
-      const media = await MediaFactory.forNursery.create();
+      const media = await MediaFactory.forNursery().create();
       const url = service.getUrl(media);
       expect(url).toBe(`https://aws.endpoint/test-bucket/${media.id}/${media.fileName}`);
     });
 
     it("returns a thumbnail download URL", async () => {
-      const media = await MediaFactory.forNursery.create({ generatedConversions: { thumbnail: true } });
+      const media = await MediaFactory.forNursery().create({ generatedConversions: { thumbnail: true } });
       let url = service.getUrl(media, "thumbnail");
       expect(url).toBe(`https://aws.endpoint/test-bucket/${media.id}/${media.fileName.split(".")[0]}-thumbnail.jpg`);
 

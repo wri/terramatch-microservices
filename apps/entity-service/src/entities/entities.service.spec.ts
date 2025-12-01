@@ -92,14 +92,12 @@ describe("EntitiesService", () => {
     it("maps a MediaCollection to a dto mapping", async () => {
       const project = await ProjectFactory.create();
       const media = [
-        await MediaFactory.forProject.create({
-          modelId: project.id,
+        await MediaFactory.forProject(project).create({
           collectionName: Project.MEDIA.otherAdditionalDocuments.dbCollection
         })
       ];
       media.push(
-        await MediaFactory.forProject.create({
-          modelId: project.id,
+        await MediaFactory.forProject(project).create({
           collectionName: Project.MEDIA.detailedProjectBudget.dbCollection
         })
       );

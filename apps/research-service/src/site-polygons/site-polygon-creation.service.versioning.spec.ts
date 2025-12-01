@@ -5,7 +5,7 @@ import { PointGeometryCreationService } from "./point-geometry-creation.service"
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { VoronoiService } from "../voronoi/voronoi.service";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SitePolygon, CriteriaSite } from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AttributeChangesDto } from "./dto/create-site-polygon-request.dto";
 import { Transaction } from "sequelize";
@@ -66,6 +66,8 @@ describe("SitePolygonCreationService - Versioning", () => {
     service = module.get<SitePolygonCreationService>(SitePolygonCreationService);
     polygonGeometryService = module.get<PolygonGeometryCreationService>(PolygonGeometryCreationService);
     versioningService = module.get<SitePolygonVersioningService>(SitePolygonVersioningService);
+
+    jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
   });
 
   afterEach(() => {

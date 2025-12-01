@@ -206,7 +206,7 @@ export class ValidationController {
     - SELF_INTERSECTION: Checks if polygon edges intersect with themselves
     - POLYGON_SIZE: Validates polygon area is within acceptable range ( 1000 ha )
     - SPIKES: Detects spikes in polygon boundaries
-    - DUPLICATE_GEOMETRY: Checks if geometry already exists (requires site_id in feature properties)
+    - DUPLICATE_GEOMETRY: Checks if geometry already exists (requires siteId or site_id in feature properties)
     - DATA_COMPLETENESS: Validates required properties are present
     - FEATURE_BOUNDS: Validates geometry coordinates are within valid bounds
     - GEOMETRY_TYPE: Validates geometry type is supported (multipolygon, polygon or point)
@@ -217,7 +217,10 @@ export class ValidationController {
     - Each result includes a \`criteriaList\` with validation details for each criteria checked
     - Results are not persisted to the database and are only returned in the response
     
-    Note: For duplicate geometry validation, features must include \`site_id\` in their properties.`
+    Note: For duplicate geometry validation, features must include \`siteId\` (camelCase, preferred) or \`site_id\` (snake_case, backward compatibility) in their properties.
+    
+    Property naming: GeoJSON properties support both camelCase (primary/preferred) and snake_case (backward compatibility).
+    camelCase takes precedence if both formats are present for the same property.`
   })
   @JsonApiResponse(ValidationDto)
   @ExceptionResponse(BadRequestException, {

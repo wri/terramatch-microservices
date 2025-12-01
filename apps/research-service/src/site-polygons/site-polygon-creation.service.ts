@@ -315,8 +315,11 @@ export class SitePolygonCreationService {
       if (props.est_area == null) {
         throw new BadRequestException("Point features must include properties.est_area");
       }
-      if (props.site_id == null) {
-        throw new BadRequestException("Point features must include properties.site_id");
+      const siteIdValue = (props.siteId as string) ?? (props.site_id as string);
+      if (siteIdValue == null) {
+        throw new BadRequestException(
+          "Point features must include properties.siteId (camelCase) or properties.site_id (snake_case)"
+        );
       }
     }
 
@@ -387,9 +390,12 @@ export class SitePolygonCreationService {
       }
 
       for (const feature of geometryCollection.features) {
-        const siteId = feature.properties.site_id;
+        // Support both camelCase (primary) and snake_case (backward compatibility)
+        const siteId = (feature.properties.siteId as string) ?? (feature.properties.site_id as string);
         if (siteId == null) {
-          throw new BadRequestException("All features must have site_id in properties");
+          throw new BadRequestException(
+            "All features must have siteId (camelCase) or site_id (snake_case) in properties"
+          );
         }
 
         if (grouped[siteId] == null) {
@@ -528,6 +534,8 @@ export class SitePolygonCreationService {
 
         const allProperties = { ...properties };
         if (siteId != null) {
+          // Set both formats for backward compatibility
+          allProperties.siteId = siteId;
           allProperties.site_id = siteId;
         }
 

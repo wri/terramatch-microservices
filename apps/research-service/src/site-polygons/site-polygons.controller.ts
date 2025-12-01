@@ -89,8 +89,9 @@ export class SitePolygonsController {
     description: `Create site polygons OR create a new version of an existing polygon.
 
     Normal Creation (new polygons):
-    - Provide \`geometries\` array with \`site_id\` in feature properties (required)
-    - Attributes (poly_name, plantstart, practice, etc.) come from feature \`properties\`
+    - Provide \`geometries\` array with \`siteId\` (camelCase, preferred) or \`site_id\` (snake_case, backward compatibility) in feature properties (required)
+    - Attributes (polyName/poly_name, plantStart/plantstart, practice, etc.) come from feature \`properties\`
+    - Properties support both camelCase (primary/preferred) and snake_case (backward compatibility)
     - Do NOT provide \`baseSitePolygonUuid\` or \`attributeChanges\`
     
     Version Creation (new version of existing polygon):

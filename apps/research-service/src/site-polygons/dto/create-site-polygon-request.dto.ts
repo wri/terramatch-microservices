@@ -13,13 +13,20 @@ import { Type } from "class-transformer";
 import { Feature as BaseFeature } from "@terramatch-microservices/database/constants";
 
 export interface FeatureProperties {
-  site_id: string;
+  siteId?: string;
+  polyName?: string;
+  plantStart?: string;
+  practice?: string;
+  targetSys?: string;
+  distr?: string;
+  numTrees?: number;
+  pointId?: string;
+  site_id?: string;
   poly_name?: string;
   plantstart?: string;
-  practice?: string;
   target_sys?: string;
-  distr?: string;
   num_trees?: number;
+  point_id?: string;
 }
 
 export interface Feature extends BaseFeature {
@@ -37,7 +44,8 @@ export class CreateSitePolygonRequestDto {
   type: "FeatureCollection";
 
   @ApiProperty({
-    description: "Array of features to create",
+    description: `Array of features to create. Properties support both camelCase (primary/preferred) and snake_case (backward compatibility).
+    camelCase takes precedence if both formats are present for the same property.`,
     example: [
       {
         type: "Feature",
@@ -54,9 +62,9 @@ export class CreateSitePolygonRequestDto {
           ]
         },
         properties: {
-          site_id: "550e8400-e29b-41d4-a716-446655440000",
-          poly_name: "North Field",
-          plantstart: "2023-01-15T00:00:00Z"
+          siteId: "550e8400-e29b-41d4-a716-446655440000",
+          polyName: "North Field",
+          plantStart: "2023-01-15T00:00:00Z"
         }
       }
     ],
@@ -153,7 +161,7 @@ export class CreateSitePolygonAttributesDto {
     Normal Creation (required):
     - Must provide \`geometries\` array
     - Attributes come from \`properties\` within each feature
-    - Each feature must have \`site_id\` in properties
+    - Each feature must have \`siteId\` (camelCase, preferred) or \`site_id\` (snake_case, backward compatibility) in properties
     
     Version Creation (optional):
     - Provide \`geometries\` to update geometry only, or together with \`attributeChanges\` to update both
@@ -182,7 +190,7 @@ export class CreateSitePolygonAttributesDto {
               ]
             },
             properties: {
-              site_id: "550e8400-e29b-41d4-a716-446655440000"
+              siteId: "550e8400-e29b-41d4-a716-446655440000"
             }
           }
         ]

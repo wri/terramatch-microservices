@@ -8,7 +8,9 @@ import { IsValidFeatureCollection } from "../decorators/is-valid-feature-collect
 
 export class GeometryValidationRequestAttributes {
   @ApiProperty({
-    description: "Array of GeoJSON FeatureCollections containing geometries to validate",
+    description: `Array of GeoJSON FeatureCollections containing geometries to validate.
+    Properties support both camelCase and snake_case.
+    camelCase takes precedence if both formats are present for the same property.`,
     type: "array",
     example: [
       {
@@ -29,8 +31,8 @@ export class GeometryValidationRequestAttributes {
               ]
             },
             properties: {
-              site_id: "550e8400-e29b-41d4-a716-446655440000",
-              poly_name: "Test Polygon"
+              siteId: "550e8400-e29b-41d4-a716-446655440000",
+              polyName: "Test Polygon"
             }
           }
         ]

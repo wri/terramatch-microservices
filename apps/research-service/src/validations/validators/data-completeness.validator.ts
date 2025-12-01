@@ -33,14 +33,10 @@ const FIELD_NAME_MAP: Record<string, string> = {
   plantStart: "plantstart"
 };
 
-const PROPERTY_TO_FIELD_MAP: Record<string, keyof typeof FIELD_NAME_MAP> = {
-  poly_name: "polyName",
-  practice: "practice",
-  target_sys: "targetSys",
-  distr: "distr",
-  num_trees: "numTrees",
-  plantstart: "plantStart"
-};
+function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: string, snakeCaseKey: string): unknown {
+  // Prefer camelCase if present, otherwise fall back to snake_case
+  return properties[camelCaseKey] != null ? properties[camelCaseKey] : properties[snakeCaseKey];
+}
 
 const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
 
@@ -223,15 +219,17 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
       };
     }
 
-    const propertyKeys = Object.keys(PROPERTY_TO_FIELD_MAP);
+    // Validate using camelCase field names, but check both camelCase and snake_case properties
     const validationErrors = this.validateFields(
-      propertyKeys,
-      propertyKey => properties[propertyKey],
-      propertyKey => {
-        const fieldKey = PROPERTY_TO_FIELD_MAP[propertyKey];
-        return FIELD_NAME_MAP[fieldKey] ?? propertyKey;
+      VALIDATION_FIELDS,
+      field => {
+        // Map model field to property names
+        const camelCaseKey = field;
+        const snakeCaseKey = FIELD_NAME_MAP[field];
+        return getPropertyValue(properties, camelCaseKey, snakeCaseKey ?? camelCaseKey);
       },
-      propertyKey => PROPERTY_TO_FIELD_MAP[propertyKey]
+      field => FIELD_NAME_MAP[field] ?? field,
+      field => field
     );
 
     return this.buildValidationResult(validationErrors);

@@ -146,6 +146,10 @@ export class Project extends Model<Project> {
   restorationStrategy: string[] | null;
 
   @AllowNull
+  @JsonColumn()
+  incomeGeneratingActivities: string[] | null;
+
+  @AllowNull
   @Column(TEXT)
   country: string | null;
 

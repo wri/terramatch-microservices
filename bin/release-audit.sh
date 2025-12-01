@@ -80,7 +80,7 @@ v3Tickets=$(gh api graphql \
   -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
   --paginate \
   -f query="$query" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-")
+  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nv3 Tickets:\n$v3Tickets"
 
 phpTickets=$(gh api graphql \
@@ -89,7 +89,7 @@ phpTickets=$(gh api graphql \
   -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
   --paginate \
   -f query="$query" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-")
+  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nPHP Tickets:\n$phpTickets"
 
 feTickets=$(gh api graphql \
@@ -98,7 +98,7 @@ feTickets=$(gh api graphql \
   -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
   --paginate \
   -f query="$query" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-")
+  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nFE Tickets:\n$feTickets"
 
 codeTickets=$(echo -e "$v3Tickets\n$phpTickets\n$feTickets" | sort | uniq)

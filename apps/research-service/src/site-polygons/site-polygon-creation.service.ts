@@ -312,8 +312,11 @@ export class SitePolygonCreationService {
 
     for (const p of points) {
       const props = p.properties ?? {};
-      if (props.est_area == null) {
-        throw new BadRequestException("Point features must include properties.est_area");
+      const estAreaValue = (props.estArea as number) ?? (props.est_area as number);
+      if (estAreaValue == null) {
+        throw new BadRequestException(
+          "Point features must include properties.estArea (camelCase) or properties.est_area (snake_case)"
+        );
       }
       const siteIdValue = (props.siteId as string) ?? (props.site_id as string);
       if (siteIdValue == null) {
@@ -649,23 +652,32 @@ export class SitePolygonCreationService {
     }
 
     if (attributeChanges != null) {
-      if (attributeChanges.polyName != null && attributeChanges.polyName.length > 0) {
-        sitePolygonAttributes.polyName = attributeChanges.polyName;
+      const polyName = attributeChanges.polyName ?? attributeChanges.poly_name;
+      if (polyName != null && polyName.length > 0) {
+        sitePolygonAttributes.polyName = polyName;
       }
-      if (attributeChanges.plantStart != null && attributeChanges.plantStart.length > 0) {
-        sitePolygonAttributes.plantStart = new Date(attributeChanges.plantStart);
+
+      const plantStart = attributeChanges.plantStart ?? attributeChanges.plantstart;
+      if (plantStart != null && plantStart.length > 0) {
+        sitePolygonAttributes.plantStart = new Date(plantStart);
       }
+
       if (attributeChanges.practice != null && attributeChanges.practice.length > 0) {
         sitePolygonAttributes.practice = validateAndSortStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES);
       }
-      if (attributeChanges.targetSys != null && attributeChanges.targetSys.length > 0) {
-        sitePolygonAttributes.targetSys = attributeChanges.targetSys;
+
+      const targetSys = attributeChanges.targetSys ?? attributeChanges.target_sys;
+      if (targetSys != null && targetSys.length > 0) {
+        sitePolygonAttributes.targetSys = targetSys;
       }
+
       if (attributeChanges.distr != null && attributeChanges.distr.length > 0) {
         sitePolygonAttributes.distr = validateAndSortStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES);
       }
-      if (attributeChanges.numTrees != null) {
-        sitePolygonAttributes.numTrees = attributeChanges.numTrees;
+
+      const numTrees = attributeChanges.numTrees ?? attributeChanges.num_trees;
+      if (numTrees != null) {
+        sitePolygonAttributes.numTrees = numTrees;
       }
     }
     sitePolygonAttributes.validationStatus = null;

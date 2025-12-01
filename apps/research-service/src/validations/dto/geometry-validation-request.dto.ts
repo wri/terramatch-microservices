@@ -50,7 +50,8 @@ export class GeometryValidationRequestAttributes {
     isArray: true,
     required: false,
     description:
-      "Array of validation types to run. If not provided or empty, all non persistent validation types will be run."
+      "Array of validation types to run. If not provided or empty, all non persistent validation types will be run.",
+    example: ["DUPLICATE_GEOMETRY"]
   })
   @IsOptional()
   @IsArray()

@@ -69,7 +69,7 @@ export class VoronoiService {
       const feature = features[i];
       const point = points[i];
       const properties = feature.properties ?? {};
-      const estArea = (properties.est_area as number) ?? 0;
+      const estArea = (properties.estArea as number) ?? (properties.est_area as number) ?? 0;
 
       const projectedPoint = toProjected.forward(point) as Point;
 

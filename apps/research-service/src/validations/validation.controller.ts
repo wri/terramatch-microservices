@@ -213,13 +213,14 @@ export class ValidationController {
     
     Response:
     - Returns a JSON:API document with validation results in the \`data\` array
-    - Each validation result contains the polygon UUID (from feature properties.id or auto-generated)
+    - Each validation result contains a \`polygonUuid\` identifier (from feature properties.id if provided, otherwise auto-generated as "feature-{index}")
+    - This identifier is NOT a database UUID - it's only used to match validation results back to the input features
     - Each result includes a \`criteriaList\` with validation details for each criteria checked
     - Results are not persisted to the database and are only returned in the response
     
-    Note: For duplicate geometry validation, features must include \`siteId\` (camelCase, preferred) or \`site_id\` (snake_case, backward compatibility) in their properties.
+    Note: For duplicate geometry validation, features must include \`siteId\`in their properties.
     
-    Property naming: GeoJSON properties support both camelCase (primary/preferred) and snake_case (backward compatibility).
+    Property naming: GeoJSON properties support both camelCase and snake_case.
     camelCase takes precedence if both formats are present for the same property.`
   })
   @JsonApiResponse(ValidationDto)

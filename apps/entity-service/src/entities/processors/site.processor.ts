@@ -201,7 +201,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return result;
   }
 
-  private async getSitePlantingStatus(sites: Site[]): Promise<Record<string, PlantingStatus>> {
+  private async getPlantingStatus(sites: Site[]): Promise<Record<string, PlantingStatus>> {
     if (sites.length === 0) return {};
 
     const siteIds = sites.map(site => site.id);
@@ -296,7 +296,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const [hectaresData, treesPlantedData, plantingStatus] = await Promise.all([
       this.getHectaresRestoredSum(siteUuids),
       this.getTreesPlantedCount(sites),
-      this.getSitePlantingStatus(sites)
+      this.getPlantingStatus(sites)
     ]);
 
     return sites.map(site => ({

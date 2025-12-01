@@ -1,5 +1,11 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
-import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
+import {
+  Site,
+  SitePolygon,
+  PolygonGeometry,
+  SitePolygonData,
+  CriteriaSite
+} from "@terramatch-microservices/database/entities";
 import { Transaction, Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -550,7 +556,8 @@ export class SitePolygonCreationService {
           source,
           createdBy: userId,
           isActive: true,
-          status: "draft"
+          status: "draft",
+          validationStatus: null
         });
 
         if (Object.keys(additionalData).length > 0) {
@@ -568,6 +575,13 @@ export class SitePolygonCreationService {
 
     if (additionalDataRecords.length > 0) {
       await SitePolygonData.bulkCreate(additionalDataRecords as SitePolygonData[], { transaction });
+    }
+
+    if (polygonUuids.length > 0) {
+      await CriteriaSite.destroy({
+        where: { polygonId: { [Op.in]: polygonUuids } },
+        transaction
+      });
     }
 
     return createdSitePolygons;
@@ -662,6 +676,15 @@ export class SitePolygonCreationService {
     }
     sitePolygonAttributes.validationStatus = null;
     sitePolygonAttributes.status = "draft";
+
+    const polygonUuidToClear = newPolygonGeometryUuid ?? basePolygon.polygonUuid;
+
+    if (polygonUuidToClear != null) {
+      await CriteriaSite.destroy({
+        where: { polygonId: polygonUuidToClear },
+        transaction
+      });
+    }
 
     const changeDescription = this.buildDetailedChangeDescription(
       basePolygon,

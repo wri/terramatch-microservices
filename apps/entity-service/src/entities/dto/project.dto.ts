@@ -177,6 +177,9 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   restorationStrategy: string[] | null;
 
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  incomeGeneratingActivities: string[] | null;
+
   @ApiProperty()
   treesPlantedCount: number;
 

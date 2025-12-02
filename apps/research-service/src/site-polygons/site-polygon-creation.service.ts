@@ -311,7 +311,28 @@ export class SitePolygonCreationService {
     userId: number,
     transaction: Transaction
   ): Promise<{ features: Feature[]; duplicatePointUuids: string[] }> {
-    const points = features.filter(f => f.geometry.type === "Point");
+    const points: Feature[] = [];
+    for (const feature of features) {
+      const geometry = feature.geometry;
+      const geometryType = geometry.type as string;
+
+      if (geometryType === "MultiPoint") {
+        const coordinates = geometry.coordinates as unknown as number[][];
+        for (const pointCoords of coordinates) {
+          points.push({
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: pointCoords
+            },
+            properties: { ...feature.properties }
+          });
+        }
+      } else if (geometry.type === "Point") {
+        points.push(feature);
+      }
+    }
+
     if (points.length === 0) {
       return { features, duplicatePointUuids: [] };
     }
@@ -386,7 +407,10 @@ export class SitePolygonCreationService {
       }
     }
 
-    const nonPoints = features.filter(f => f.geometry.type !== "Point");
+    const nonPoints = features.filter(f => {
+      const geomType = f.geometry.type as string;
+      return geomType !== "Point" && geomType !== "MultiPoint";
+    });
     return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids };
   }
 
@@ -399,7 +423,6 @@ export class SitePolygonCreationService {
       }
 
       for (const feature of geometryCollection.features) {
-        // Support both camelCase (primary) and snake_case (backward compatibility)
         const siteId = (feature.properties.siteId as string) ?? (feature.properties.site_id as string);
         if (siteId == null) {
           throw new BadRequestException(
@@ -508,6 +531,21 @@ export class SitePolygonCreationService {
     source: string,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
+    const unsupportedTypes = new Set<string>();
+    for (const feature of features) {
+      const geomType = feature.geometry.type as string;
+      if (geomType !== "Polygon" && geomType !== "MultiPolygon" && geomType !== "Point" && geomType !== "MultiPoint") {
+        unsupportedTypes.add(geomType);
+      }
+    }
+
+    if (unsupportedTypes.size > 0) {
+      throw new BadRequestException(
+        `Unsupported geometry types: ${Array.from(unsupportedTypes).join(", ")}. ` +
+          `Only Polygon, MultiPolygon, Point, and MultiPoint are supported.`
+      );
+    }
+
     const geometries = features.map(f => f.geometry);
 
     const { uuids: polygonUuids, areas } = await this.polygonGeometryService.createGeometriesFromFeatures(
@@ -543,7 +581,6 @@ export class SitePolygonCreationService {
 
         const allProperties = { ...properties };
         if (siteId != null) {
-          // Set both formats for backward compatibility
           allProperties.siteId = siteId;
           allProperties.site_id = siteId;
         }

@@ -16,7 +16,7 @@ export function fieldCollector(logger: LoggerService): ResourceCollector<LinkedF
         if (polygonQuestions[modelType] != null) {
           logger.warn(`Duplicate polygon field for model type ${modelType}`);
         }
-        this.polygonQuestions[modelType] = questionUuid;
+        polygonQuestions[modelType] = questionUuid;
       } else {
         const key = `${modelType}:${field.property}`;
         if (propertyQuestions[key] != null) {
@@ -46,9 +46,7 @@ export function fieldCollector(logger: LoggerService): ResourceCollector<LinkedF
           order: [["createdAt", "DESC"]],
           include: ["polygon"]
         });
-        if (polygon != null) {
-          answers[questionUuid] = polygon.polygon;
-        }
+        answers[questionUuid] = polygon?.polygon?.polygon; // drill down to the geojson field
       }
     }
   };

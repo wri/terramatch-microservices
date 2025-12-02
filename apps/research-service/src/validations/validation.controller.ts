@@ -193,8 +193,35 @@ export class ValidationController {
   @ApiOperation({
     operationId: "validateGeometries",
     summary: "Validate raw GeoJSON geometries without persistence",
-    description:
-      "Validates geometries in-memory without persisting results to database. Returns validation results in included array."
+    description: `Validates raw GeoJSON geometries in-memory without persisting results to the database.
+    
+    This endpoint is useful for validating geometries before creating site polygons, allowing you to check
+    for issues without saving the data.
+    
+    Input:
+    - Provide an array of GeoJSON FeatureCollections containing the geometries to validate
+    - Optionally specify which validation types to run (defaults to all non-persistent validation types)
+    
+    Supported validation types (non-persistent):
+    - SELF_INTERSECTION: Checks if polygon edges intersect with themselves
+    - POLYGON_SIZE: Validates polygon area is within acceptable range ( 1000 ha )
+    - SPIKES: Detects spikes in polygon boundaries
+    - DUPLICATE_GEOMETRY: Checks if geometry already exists (requires siteId or site_id in feature properties)
+    - DATA_COMPLETENESS: Validates required properties are present
+    - FEATURE_BOUNDS: Validates geometry coordinates are within valid bounds
+    - GEOMETRY_TYPE: Validates geometry type is supported (multipolygon, polygon or point)
+    
+    Response:
+    - Returns a JSON:API document with validation results in the \`data\` array
+    - Each validation result contains a \`polygonUuid\` identifier (from feature properties.id if provided, otherwise auto-generated as "feature-{index}")
+    - This identifier is NOT a database UUID - it's only used to match validation results back to the input features
+    - Each result includes a \`criteriaList\` with validation details for each criteria checked
+    - Results are not persisted to the database and are only returned in the response
+    
+    Note: For duplicate geometry validation, features must include \`siteId\`in their properties.
+    
+    Property naming: GeoJSON properties support both camelCase and snake_case.
+    camelCase takes precedence if both formats are present for the same property.`
   })
   @JsonApiResponse(ValidationDto)
   @ExceptionResponse(BadRequestException, {

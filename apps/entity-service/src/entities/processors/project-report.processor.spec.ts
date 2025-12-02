@@ -440,8 +440,8 @@ describe("ProjectReportProcessor", () => {
   describe("processSideload", () => {
     it("should include sideloaded demographics", async () => {
       const projectReport = await ProjectReportFactory.create();
-      await DemographicFactory.forProjectReportWorkday.create({ demographicalId: projectReport.id });
-      await DemographicFactory.forProjectReportJobs.create({ demographicalId: projectReport.id });
+      await DemographicFactory.projectReportWorkday(projectReport).create();
+      await DemographicFactory.projectReportJobs(projectReport).create();
 
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const document = buildJsonApi(ProjectReportLightDto);

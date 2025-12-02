@@ -93,8 +93,8 @@ describe("EntityAssociationsController", () => {
 
     it("should add all DTOs to the document", async () => {
       const pr = await ProjectReportFactory.create();
-      await DemographicFactory.forProjectReportWorkday.create({ demographicalId: pr.id });
-      await DemographicFactory.forProjectReportJobs.create({ demographicalId: pr.id });
+      await DemographicFactory.projectReportWorkday(pr).create();
+      await DemographicFactory.projectReportJobs(pr).create();
       const result = serialize(
         await controller.associationIndex(
           {

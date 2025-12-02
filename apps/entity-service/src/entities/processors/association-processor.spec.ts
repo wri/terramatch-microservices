@@ -42,8 +42,8 @@ describe("AssociationProcessor", () => {
 
   describe("addDtos", () => {
     it("should include demographic entries", async () => {
-      const { uuid: projectReportUuid, id: demographicalId } = await ProjectReportFactory.create();
-      const { id: demographicId, uuid } = await DemographicFactory.forProjectReportJobs.create({ demographicalId });
+      const projectReport = await ProjectReportFactory.create();
+      const { id: demographicId, uuid } = await DemographicFactory.projectReportJobs(projectReport).create();
       const female = pickApiProperties(
         await DemographicEntryFactory.create({ demographicId, type: "gender", subtype: "female" }),
         DemographicEntryDto
@@ -58,7 +58,7 @@ describe("AssociationProcessor", () => {
       );
 
       const document = buildJsonApi(DemographicDto, { forceDataArray: true });
-      await service.createAssociationProcessor("projectReports", projectReportUuid, "demographics").addDtos(document);
+      await service.createAssociationProcessor("projectReports", projectReport.uuid, "demographics").addDtos(document);
       const result = document.serialize();
       const data = result.data as Resource[];
       expect(data.length).toEqual(1);
@@ -75,7 +75,7 @@ describe("AssociationProcessor", () => {
       expect(result.meta.indices?.length).toBe(1);
       expect(result.meta.indices?.[0]).toMatchObject({
         resource: "demographics",
-        requestPath: `/entities/v3/projectReports/${projectReportUuid}/demographics`,
+        requestPath: `/entities/v3/projectReports/${projectReport.uuid}/demographics`,
         ids: undefined
       });
     });

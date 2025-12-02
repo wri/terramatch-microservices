@@ -420,18 +420,14 @@ describe("ProjectProcessor", () => {
       // Because of the "demographics cutoff" logic, we have to carefully construct a set of
       // workdays that are on site and project reports, with some that are from before the cutoff,
       // and some that are after.
-      const siteDemographicAfterCutoff = await DemographicFactory.forSiteReportWorkday.create({
-        demographicalId: approvedSiteReports[0].id
-      });
-      const siteDemographicBeforeCutoff = await DemographicFactory.forSiteReportWorkday.create({
-        demographicalId: approvedSiteReports[2].id
-      });
-      const projectDemographicAfterCutoff = await DemographicFactory.forProjectReportWorkday.create({
-        demographicalId: approvedProjectReports[0].id
-      });
-      const projectDemographicBeforeCutoff = await DemographicFactory.forProjectReportWorkday.create({
-        demographicalId: approvedProjectReports[1].id
-      });
+      const siteDemographicAfterCutoff = await DemographicFactory.siteReportWorkday(approvedSiteReports[0]).create();
+      const siteDemographicBeforeCutoff = await DemographicFactory.siteReportWorkday(approvedSiteReports[2]).create();
+      const projectDemographicAfterCutoff = await DemographicFactory.projectReportWorkday(
+        approvedProjectReports[0]
+      ).create();
+      const projectDemographicBeforeCutoff = await DemographicFactory.projectReportWorkday(
+        approvedProjectReports[1]
+      ).create();
       let workdayCountAfterCutoff = (
         await DemographicEntryFactory.create({ demographicId: siteDemographicAfterCutoff.id, type: "gender" })
       ).amount;
@@ -451,15 +447,9 @@ describe("ProjectProcessor", () => {
 
       const totalJobsCreated = sum(
         await Promise.all(
-          approvedProjectReports.map(async ({ id }) => {
-            const fullTime = await DemographicFactory.forProjectReportJobs.create({
-              demographicalId: id,
-              collection: FULL_TIME
-            });
-            const partTime = await DemographicFactory.forProjectReportJobs.create({
-              demographicalId: id,
-              collection: PART_TIME
-            });
+          approvedProjectReports.map(async report => {
+            const fullTime = await DemographicFactory.projectReportJobs(report).create({ collection: FULL_TIME });
+            const partTime = await DemographicFactory.projectReportJobs(report).create({ collection: PART_TIME });
             const { amount: fullTimeAmount } = await DemographicEntryFactory.create({
               demographicId: fullTime.id,
               type: "gender"

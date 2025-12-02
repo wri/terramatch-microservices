@@ -311,12 +311,12 @@ describe("AirtableEntity", () => {
       associationUuids[Project.LARAVEL_TYPE] = project.uuid;
 
       const factories = [
-        () => DemographicFactory.forProjectReportWorkday.create({ demographicalId: projectReport.id }),
-        () => DemographicFactory.forSiteReportWorkday.create({ demographicalId: siteReport.id }),
-        () => DemographicFactory.forProjectReportRestorationPartner.create({ demographicalId: projectReport.id }),
-        () => DemographicFactory.forOrganisationBeneficiaries.create({ demographicalId: organisation.id }),
-        () => DemographicFactory.forProjectPitchAllEmployees.create({ demographicalId: projectPitch.id }),
-        () => DemographicFactory.forProjectAllEmployees.create({ demographicalId: project.id })
+        () => DemographicFactory.projectReportWorkday(projectReport).create(),
+        () => DemographicFactory.siteReportWorkday(siteReport).create(),
+        () => DemographicFactory.projectReportRestorationPartner(projectReport).create(),
+        () => DemographicFactory.organisationBeneficiaries(organisation).create(),
+        () => DemographicFactory.projectPitchAllEmployees(projectPitch).create(),
+        () => DemographicFactory.projectAllEmployees(project).create()
       ];
 
       const allDemographics: Demographic[] = [];
@@ -341,9 +341,9 @@ describe("AirtableEntity", () => {
 
       // create one with a bogus association type for testing
       allDemographics.push(
-        await DemographicFactory.forProjectReportWorkday.create({ demographicalType: "foo", demographicalId: 1 })
+        await DemographicFactory.projectReportWorkday().create({ demographicalType: "foo", demographicalId: 1 })
       );
-      allDemographics.push(await DemographicFactory.forSiteReportWorkday.create({ demographicalId: 0 }));
+      allDemographics.push(await DemographicFactory.siteReportWorkday().create({ demographicalId: 0 }));
 
       demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && !workday.hidden);
     });
@@ -375,9 +375,9 @@ describe("AirtableEntity", () => {
     beforeAll(async () => {
       await DemographicEntry.truncate();
 
-      const projectWorkday = await DemographicFactory.forProjectReportWorkday.create();
-      const siteWorkday = await DemographicFactory.forSiteReportWorkday.create();
-      const projectPartner = await DemographicFactory.forProjectReportRestorationPartner.create();
+      const projectWorkday = await DemographicFactory.projectReportWorkday().create();
+      const siteWorkday = await DemographicFactory.siteReportWorkday().create();
+      const projectPartner = await DemographicFactory.projectReportRestorationPartner().create();
       demographicUuids = {
         [projectWorkday.id]: projectWorkday.uuid,
         [siteWorkday.id]: siteWorkday.uuid,

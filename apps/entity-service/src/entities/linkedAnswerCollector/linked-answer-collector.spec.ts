@@ -2,17 +2,23 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { FormModels, LinkedAnswerCollector } from "./index";
 import {
+  DemographicFactory,
   FinancialReportFactory,
   MediaFactory,
   NurseryFactory,
   POLYGON,
   ProjectPitchFactory,
   ProjectPolygonFactory,
-  SiteFactory
+  SiteFactory,
+  SiteReportFactory
 } from "@terramatch-microservices/database/factories";
 import { Dictionary } from "lodash";
 import { Media } from "@terramatch-microservices/database/entities";
 import { EmbeddedMediaDto } from "../dto/media.dto";
+import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
+import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+
+const getRelation = (key: string) => getLinkedFieldConfig(key)?.field as LinkedRelation;
 
 describe("LinkedAnswerCollector", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -122,6 +128,38 @@ describe("LinkedAnswerCollector", () => {
           six: createDto(heterogeneity[0])
         }
       );
+    });
+  });
+
+  describe("demographicsCollector", () => {
+    it("throws if no collection is defined", () => {
+      expect(() =>
+        collector.demographics.addField(
+          { resource: "demographics", inputType: "workdays", label: "" },
+          "siteReports",
+          "one"
+        )
+      ).toThrow("Collection not found for siteReports");
+    });
+
+    it("throws if an expected model is not found", async () => {
+      collector.demographics.addField(getRelation("site-rep-rel-paid-planting"), "siteReports", "one");
+      await expect(getAnswers({})).rejects.toThrow("Model for type not found: siteReports");
+    });
+
+    it("collects demographics", async () => {
+      collector.demographics.addField(getRelation("site-rep-rel-paid-planting"), "siteReports", "one");
+      collector.demographics.addField(getRelation("site-rep-rel-volunteer-other-activities"), "siteReports", "two");
+
+      const siteReport = await SiteReportFactory.create();
+      const paidPlanting = await DemographicFactory.siteReportWorkday(siteReport).create({
+        collection: "paid-planting"
+      });
+      const volunteerOther = await DemographicFactory.siteReportWorkday(siteReport).create({
+        collection: "volunteer-other-activities"
+      });
+
+      // TODO: putting a pin in this as I discovered some major shortfalls in the current field collector I need to address.
     });
   });
 });

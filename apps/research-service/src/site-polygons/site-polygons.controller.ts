@@ -359,7 +359,8 @@ export class SitePolygonsController {
     description: `Deletes multiple site polygons and all their associated records including indicators, 
        criteria site records, audit statuses, and geometry data. This operation soft deletes 
        ALL related site polygons by primaryUuid (version management) and deletes polygon 
-       geometry for all related site polygons.`
+       geometry for all related site polygons. The request body follows JSON:API format with 
+       an array of resource identifiers (type and id).`
   })
   @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
     description: "Site polygons and all associated records were deleted"
@@ -368,7 +369,11 @@ export class SitePolygonsController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
   @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
   async bulkDelete(@Body() deletePayload: SitePolygonBulkDeleteBodyDto) {
-    const { uuids } = deletePayload;
+    if (deletePayload.data == null || deletePayload.data.length === 0) {
+      throw new BadRequestException("At least one site polygon must be provided");
+    }
+
+    const uuids = deletePayload.data.map(item => item.id);
 
     const sitePolygons = await SitePolygon.findAll({
       where: { uuid: { [Op.in]: uuids } }

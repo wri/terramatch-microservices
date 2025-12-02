@@ -12,7 +12,7 @@ export function fieldCollector(logger: LoggerService): ResourceCollector<LinkedF
 
   return {
     addField(field, modelType, questionUuid) {
-      if (field.inputType === "mapInput" || field.property === "proj_boundary") {
+      if (field.inputType === "mapInput" || field.property === "projBoundary") {
         if (polygonQuestions[modelType] != null) {
           logger.warn(`Duplicate polygon field for model type ${modelType}`);
         }

@@ -1,16 +1,16 @@
 import { Dictionary } from "lodash";
+import { Attributes } from "sequelize";
+import { FormModel } from "./entities";
 
-export type LinkedFieldConfiguration = {
+export type LinkedFieldConfiguration<M extends FormModel> = {
   label: string;
-  laravelModelType: string;
-  fields: Dictionary<LinkedField>;
+  fields: Dictionary<LinkedField<M>>;
   fileCollections: Dictionary<LinkedFile>;
   relations: Dictionary<LinkedRelation>;
 };
 
 export const FIELD_INPUT_TYPES = [
   "boolean",
-  "conditional",
   "tableInput",
   "date",
   "long-text",
@@ -26,8 +26,8 @@ export const FIELD_INPUT_TYPES = [
 ] as const;
 export type FieldInputType = (typeof FIELD_INPUT_TYPES)[number];
 
-export type LinkedField = {
-  property: string;
+export type LinkedField<M extends FormModel = FormModel> = {
+  property: keyof Attributes<M>;
   label: string;
   inputType: FieldInputType;
   multiChoice?: boolean;

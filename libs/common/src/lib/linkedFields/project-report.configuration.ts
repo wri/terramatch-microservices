@@ -2,229 +2,218 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { ProjectReport } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const ProjectReportConfiguration: LinkedFieldConfiguration = {
+export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport> = {
   label: "Project Report",
-  laravelModelType: ProjectReport.LARAVEL_TYPE,
   fields: {
     "pro-rep-title": { property: "title", label: "Title", inputType: "text" },
-    "pro-rep-ind-1": { property: "ethnic_indigenous_1", label: "Indigenous 1", inputType: "number" },
-    "pro-rep-ind-2": { property: "ethnic_indigenous_2", label: "Indigenous 2", inputType: "number" },
-    "pro-rep-ind-3": { property: "ethnic_indigenous_3", label: "Indigenous 3", inputType: "number" },
-    "pro-rep-ind-4": { property: "ethnic_indigenous_4", label: "Indigenous 4", inputType: "number" },
-    "pro-rep-ind-5": { property: "ethnic_indigenous_5", label: "Indigenous 5", inputType: "number" },
-    "pro-rep-other-1": { property: "ethnic_other_1", label: "Other 1", inputType: "number" },
-    "pro-rep-other-2": { property: "ethnic_other_2", label: "Other 2", inputType: "number" },
-    "pro-rep-other-3": { property: "ethnic_other_3", label: "Other 3", inputType: "number" },
-    "pro-rep-other-4": { property: "ethnic_other_4", label: "Other 4", inputType: "number" },
-    "pro-rep-other-5": { property: "ethnic_other_5", label: "Other 5", inputType: "number" },
     "pro-rep-workdays-paid": { property: "workdays_paid", label: "Workdays Paid", inputType: "number" },
     "pro-rep-workdays-volunteer": { property: "workdays_volunteer", label: "Workdays Volunteer", inputType: "number" },
-    "pro-rep-tech-nar": { property: "technical_narrative", label: "Technical narrative", inputType: "long-text" },
-    "pro-rep-pub-nar": { property: "public_narrative", label: "Public narrative", inputType: "long-text" },
+    "pro-rep-tech-nar": { property: "technicalNarrative", label: "Technical narrative", inputType: "long-text" },
+    "pro-rep-pub-nar": { property: "publicNarrative", label: "Public narrative", inputType: "long-text" },
     "pro-rep-landscape-com-con": {
-      property: "landscape_community_contribution",
+      property: "landscapeCommunityContribution",
       label: "Landscape Progress",
       inputType: "long-text"
     },
     "pro-rep-top-three-successes": {
-      property: "top_three_successes",
+      property: "topThreeSuccesses",
       label: "Top Three Successes",
       inputType: "long-text"
     },
-    "pro-rep-chal-faced": { property: "challenges_faced", label: "Challenges Faced", inputType: "long-text" },
-    "pro-rep-lessons": { property: "lessons_learned", label: "Lessons Learned", inputType: "long-text" },
+    "pro-rep-chal-faced": { property: "challengesFaced", label: "Challenges Faced", inputType: "long-text" },
+    "pro-rep-lessons": { property: "lessonsLearned", label: "Lessons Learned", inputType: "long-text" },
     "pro-rep-maint-mon-act": {
-      property: "maintenance_and_monitoring_activities",
+      property: "maintenanceAndMonitoringActivities",
       label: "Maintenance and Monitoring Activities",
       inputType: "long-text"
     },
-    "pro-rep-sig-change": { property: "significant_change", label: "Significant Change", inputType: "long-text" },
+    "pro-rep-sig-change": { property: "significantChange", label: "Significant Change", inputType: "long-text" },
     "pro-rep-pct-surv": {
-      property: "pct_survival_to_date",
+      property: "pctSurvivalToDate",
       label: "Percentage Survival to Date",
       inputType: "number-percentage"
     },
-    "pro-rep-surv-calc": { property: "survival_calculation", label: "Survival Calculation", inputType: "long-text" },
-    "pro-rep-surv-comp": { property: "survival_comparison", label: "Survival Comparison", inputType: "long-text" },
-    "pro-rep-ft-women": { property: "ft_women", label: "FT Women", inputType: "number" },
-    "pro-rep-ft-men": { property: "ft_men", label: "FT Men", inputType: "number" },
-    "pro-rep-ft-youth": { property: "ft_youth", label: "FT Youth", inputType: "number" },
-    "pro-rep-ft-smallholder": { property: "ft_smallholder_farmers", label: "FT Smallholder", inputType: "number" },
-    "pro-rep-ft-total": { property: "ft_total", label: "FT Total", inputType: "number" },
-    "pro-rep-pt-women": { property: "pt_women", label: "PT Women", inputType: "number" },
-    "pro-rep-pt-men": { property: "pt_men", label: "PT Men", inputType: "number" },
-    "pro-rep-pt-youth": { property: "pt_youth", label: "PT Youth", inputType: "number" },
-    "pro-rep-pt-non-youth": { property: "pt_non_youth", label: "PT Non-Youth", inputType: "number" },
-    "pro-rep-pt-smallholder": { property: "pt_smallholder_farmers", label: "PT Smallholder", inputType: "number" },
-    "pro-rep-pt-total": { property: "pt_total", label: "PT Total", inputType: "number" },
-    "pro-rep-seasonal-women": { property: "seasonal_women", label: "Seasonal Women", inputType: "number" },
-    "pro-rep-seasonal-men": { property: "seasonal_men", label: "Seasonal Men", inputType: "number" },
-    "pro-rep-seasonal-youth": { property: "seasonal_youth", label: "Seasonal Youth", inputType: "number" },
+    "pro-rep-surv-calc": { property: "survivalCalculation", label: "Survival Calculation", inputType: "long-text" },
+    "pro-rep-surv-comp": { property: "survivalComparison", label: "Survival Comparison", inputType: "long-text" },
+    "pro-rep-ft-women": { property: "ftWomen", label: "FT Women", inputType: "number" },
+    "pro-rep-ft-men": { property: "ftMen", label: "FT Men", inputType: "number" },
+    "pro-rep-ft-youth": { property: "ftYouth", label: "FT Youth", inputType: "number" },
+    "pro-rep-ft-smallholder": { property: "ftSmallholderFarmers", label: "FT Smallholder", inputType: "number" },
+    "pro-rep-ft-total": { property: "ftTotal", label: "FT Total", inputType: "number" },
+    "pro-rep-pt-women": { property: "ptWomen", label: "PT Women", inputType: "number" },
+    "pro-rep-pt-men": { property: "ptMen", label: "PT Men", inputType: "number" },
+    "pro-rep-pt-youth": { property: "ptYouth", label: "PT Youth", inputType: "number" },
+    "pro-rep-pt-non-youth": { property: "ptNonYouth", label: "PT Non-Youth", inputType: "number" },
+    "pro-rep-pt-smallholder": { property: "ptSmallholderFarmers", label: "PT Smallholder", inputType: "number" },
+    "pro-rep-pt-total": { property: "ptTotal", label: "PT Total", inputType: "number" },
+    "pro-rep-seasonal-women": { property: "seasonalWomen", label: "Seasonal Women", inputType: "number" },
+    "pro-rep-seasonal-men": { property: "seasonalMen", label: "Seasonal Men", inputType: "number" },
+    "pro-rep-seasonal-youth": { property: "seasonalYouth", label: "Seasonal Youth", inputType: "number" },
     "pro-rep-seasonal-smallholder": {
-      property: "seasonal_smallholder_farmers",
+      property: "seasonalSmallholderFarmers",
       label: "Seasonal Smallholder",
       inputType: "number"
     },
-    "pro-rep-seasonal-total": { property: "seasonal_total", label: "Seasonal Total", inputType: "number" },
-    "pro-rep-volunteer-women": { property: "volunteer_women", label: "Volunteer Women", inputType: "number" },
-    "pro-rep-volunteer-men": { property: "volunteer_men", label: "Volunteer Men", inputType: "number" },
-    "pro-rep-volunteer-youth": { property: "volunteer_youth", label: "Volunteer Youth", inputType: "number" },
+    "pro-rep-seasonal-total": { property: "seasonalTotal", label: "Seasonal Total", inputType: "number" },
+    "pro-rep-volunteer-women": { property: "volunteerWomen", label: "Volunteer Women", inputType: "number" },
+    "pro-rep-volunteer-men": { property: "volunteerMen", label: "Volunteer Men", inputType: "number" },
+    "pro-rep-volunteer-youth": { property: "volunteerYouth", label: "Volunteer Youth", inputType: "number" },
     "pro-rep-volunteer-smallholder": {
-      property: "volunteer_smallholder_farmers",
+      property: "volunteerSmallholderFarmers",
       label: "Volunteer Smallholder",
       inputType: "number"
     },
-    "pro-rep-volunteer-total": { property: "volunteer_total", label: "Volunteer Total", inputType: "number" },
-    "pro-rep-shared-drive": { property: "shared_drive_link", label: "Shared Drive Link", inputType: "url" },
-    "pro-rep-planted-trees": { property: "planted_trees", label: "Planted Trees", inputType: "number" },
+    "pro-rep-volunteer-total": { property: "volunteerTotal", label: "Volunteer Total", inputType: "number" },
+    "pro-rep-shared-drive": { property: "sharedDriveLink", label: "Shared Drive Link", inputType: "url" },
+    "pro-rep-planted-trees": { property: "plantedTrees", label: "Planted Trees", inputType: "number" },
     "pro-rep-new-jobs-desc": {
-      property: "new_jobs_description",
+      property: "newJobsDescription",
       label: "New Jobs Description",
       inputType: "long-text"
     },
     "pro-rep-volunteer-desc": {
-      property: "volunteers_work_description",
+      property: "volunteersWorkDescription",
       label: "Volunteers Work Description",
       inputType: "long-text"
     },
-    "pro-rep-ft-non-youth": { property: "ft_jobs_non_youth", label: "FT Jobs Non-Youth", inputType: "number" },
+    "pro-rep-ft-non-youth": { property: "ftJobsNonYouth", label: "FT Jobs Non-Youth", inputType: "number" },
     "pro-rep-volunteer-non-youth": {
-      property: "volunteer_non_youth",
+      property: "volunteerNonYouth",
       label: "Volunteer Non-Youth",
       inputType: "number"
     },
     "pro-rep-beneficiaries": { property: "beneficiaries", label: "Beneficiaries", inputType: "number" },
     "pro-rep-beneficiaries-desc": {
-      property: "beneficiaries_description",
+      property: "beneficiariesDescription",
       label: "Beneficiaries Description",
       inputType: "long-text"
     },
     "pro-rep-beneficiaries-women": {
-      property: "beneficiaries_women",
+      property: "beneficiariesWomen",
       label: "Beneficiaries Women",
       inputType: "number"
     },
-    "pro-rep-beneficiaries-men": { property: "beneficiaries_men", label: "Beneficiaries Men", inputType: "number" },
+    "pro-rep-beneficiaries-men": { property: "beneficiariesMen", label: "Beneficiaries Men", inputType: "number" },
     "pro-rep-beneficiaries-non-youth": {
-      property: "beneficiaries_non_youth",
+      property: "beneficiariesNonYouth",
       label: "Beneficiaries Non-Youth",
       inputType: "number"
     },
     "pro-rep-beneficiaries-youth": {
-      property: "beneficiaries_youth",
+      property: "beneficiariesYouth",
       label: "Beneficiaries Youth",
       inputType: "number"
     },
     "pro-rep-beneficiaries-smallholder": {
-      property: "beneficiaries_smallholder",
+      property: "beneficiariesSmallholder",
       label: "Beneficiaries Smallholder",
       inputType: "number"
     },
     "pro-rep-beneficiaries-large-scl": {
-      property: "beneficiaries_large_scale",
+      property: "beneficiariesLargeScale",
       label: "Beneficiaries Large Scale",
       inputType: "number"
     },
     "pro-rep-beneficiaries-income-inc": {
-      property: "beneficiaries_income_increase",
+      property: "beneficiariesIncomeIncrease",
       label: "Beneficiaries Income Increase",
       inputType: "number"
     },
     "pro-rep-beneficiaries-income-desc": {
-      property: "beneficiaries_income_increase_description",
+      property: "beneficiariesIncomeIncreaseDescription",
       label: "Beneficiaries Income Increase Description",
       inputType: "long-text"
     },
     "pro-rep-beneficiaries-skill-inc": {
-      property: "beneficiaries_skills_knowledge_increase",
+      property: "beneficiariesSkillsKnowledgeIncrease",
       label: "Beneficiaries Skills Knowledge Increased",
       inputType: "number"
     },
     "pro-rep-beneficiaries-skill-inc-desc": {
-      property: "beneficiaries_skills_knowledge_increase_description",
+      property: "beneficiariesSkillsKnowledgeIncreaseDescription",
       label: "Beneficiaries Skills Knowledge Description",
       inputType: "long-text"
     },
     "pro-rep-people_knowledge-skills-increased": {
-      property: "people_knowledge_skills_increased",
+      property: "peopleKnowledgeSkillsIncreased",
       label: "People Knowledge Skills Increased",
       inputType: "number"
     },
     "pro-rep-community-progress": {
-      property: "community_progress",
+      property: "communityProgress",
       label: "Community Engagement Progress",
       inputType: "long-text"
     },
     "pro-rep-equitable-opportunities": {
-      property: "equitable_opportunities",
+      property: "equitableOpportunities",
       label: "Equitable Opportunities for Women + Youth",
       inputType: "long-text"
     },
     "pro-rep-local-engagement": {
-      property: "local_engagement",
+      property: "localEngagement",
       label: "Community Engagement Approach",
       inputType: "select",
       multiChoice: false,
       optionListKey: "local-engagement"
     },
     "pro-rep-planting-status": {
-      property: "planting_status",
+      property: "plantingStatus",
       label: "Planting status",
       inputType: "select",
       multiChoice: false,
       optionListKey: "planting-status"
     },
-    "pro-rep-site-addition": { property: "site_addition", label: "Site Addition", inputType: "boolean" },
+    "pro-rep-site-addition": { property: "siteAddition", label: "Site Addition", inputType: "boolean" },
     "pro-rep-resilience_progress": {
-      property: "resilience_progress",
+      property: "resilienceProgress",
       label: "Climate Resilience Progress",
       inputType: "long-text"
     },
-    "pro-rep-local_governance": { property: "local_governance", label: "Governance Progress", inputType: "long-text" },
+    "pro-rep-local_governance": { property: "localGovernance", label: "Governance Progress", inputType: "long-text" },
     "pro-rep-adaptive_management": {
-      property: "adaptive_management",
+      property: "adaptiveManagement",
       label: "Adaptative Management",
       inputType: "long-text"
     },
     "pro-rep-scalability_replicability": {
-      property: "scalability_replicability",
+      property: "scalabilityReplicability",
       label: "Scalability Progress",
       inputType: "long-text"
     },
     "pro-rep-convergence_jobs_description": {
-      property: "convergence_jobs_description",
+      property: "convergenceJobsDescription",
       label: "Description of Convergence Jobs",
       inputType: "long-text"
     },
     "pro-rep-convergence_schemes": {
-      property: "convergence_schemes",
+      property: "convergenceSchemes",
       label: "Convergence Schemes",
       inputType: "long-text"
     },
-    "pro-rep-convergence_amount": { property: "convergence_amount", label: "Convergence Raised", inputType: "number" },
+    "pro-rep-convergence_amount": { property: "convergenceAmount", label: "Convergence Raised", inputType: "number" },
     "pro-rep-community_partners_assets_description": {
-      property: "community_partners_assets_description",
+      property: "communityPartnersAssetsDescription",
       label: "Community Assests",
       inputType: "long-text"
     },
     "pro-rep-volunteer_scstobc": {
-      property: "volunteer_scstobc",
+      property: "volunteerScstobc",
       label: "Volunteers Marginalized",
       inputType: "number"
     },
     "pro-rep-beneficiaries_scstobc_farmers": {
-      property: "beneficiaries_scstobc_farmers",
+      property: "beneficiariesScstobcFarmers",
       label: "Community Partners Marginalized Farmers",
       inputType: "number"
     },
     "pro-rep-beneficiaries_scstobc": {
-      property: "beneficiaries_scstobc",
+      property: "beneficiariesScstobc",
       label: "Community Partners Marginalized",
       inputType: "number"
     },
     // TODO (TM-912) Deprecated, to be removed.
     "pro-rep-paid-other-activity-description": {
-      property: "paid_other_activity_description",
+      property: "paidOtherActivityDescription",
       label: "Paid Other Activities Description",
       inputType: "long-text"
     },
@@ -234,17 +223,17 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
       inputType: "long-text"
     },
     "pro-rep-local-engagement-description": {
-      property: "local_engagement_description",
+      property: "localEngagementDescription",
       label: "Response to Local Priorities",
       inputType: "long-text"
     },
     "pro-rep-indirect-beneficiaries": {
-      property: "indirect_beneficiaries",
+      property: "indirectBeneficiaries",
       label: "Number of Indirect Beneficiaries",
       inputType: "number"
     },
     "pro-rep-indirect-beneficiaries-description": {
-      property: "indirect_beneficiaries_description",
+      property: "indirectBeneficiariesDescription",
       label: "Indirect Beneficiaries Description",
       inputType: "long-text"
     },
@@ -254,45 +243,45 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration = {
       inputType: "long-text"
     },
     "pro-rep-total-unique-restoration-partners": {
-      property: "total_unique_restoration_partners",
+      property: "totalUniqueRestorationPartners",
       label: "Total Unique Restoration Partners",
       inputType: "number"
     },
     "pro-rep-business-milestones": {
-      property: "business_milestones",
+      property: "businessMilestones",
       label: "Business Milestones",
       inputType: "long-text"
     },
-    "pro-rep-ft-other": { property: "ft_other", label: "Full Time Other Gender", inputType: "number" },
-    "pro-rep-pt-other": { property: "pt_other", label: "Part Time Other Gender", inputType: "number" },
-    "pro-rep-volunteer_other": { property: "volunteer_other", label: "Volunteer Other Gender", inputType: "number" },
+    "pro-rep-ft-other": { property: "ftOther", label: "Full Time Other Gender", inputType: "number" },
+    "pro-rep-pt-other": { property: "ptOther", label: "Part Time Other Gender", inputType: "number" },
+    "pro-rep-volunteer_other": { property: "volunteerOther", label: "Volunteer Other Gender", inputType: "number" },
     "pro-rep-beneficiaries-other": {
-      property: "beneficiaries_other",
+      property: "beneficiariesOther",
       label: "Other Gender Beneficiary",
       inputType: "number"
     },
     "pro-rep-beneficiaries-training-women": {
-      property: "beneficiaries_training_women",
+      property: "beneficiariesTrainingWomen",
       label: "Women Trained",
       inputType: "number"
     },
     "pro-rep-beneficiaries-training-men": {
-      property: "beneficiaries_training_men",
+      property: "beneficiariesTrainingMen",
       label: "Men Trained",
       inputType: "number"
     },
     "pro-rep-beneficiaries-training-other": {
-      property: "beneficiaries_training_other",
+      property: "beneficiariesTrainingOther",
       label: "Other Gender Trained",
       inputType: "number"
     },
     "pro-rep-beneficiaries-training-youth": {
-      property: "beneficiaries_training_youth",
+      property: "beneficiariesTrainingYouth",
       label: "Youth Trained",
       inputType: "number"
     },
     "pro-rep-beneficiaries-training-non-youth": {
-      property: "beneficiaries_training_non_youth",
+      property: "beneficiariesTrainingNonYouth",
       label: "Non Youth Trained",
       inputType: "number"
     }

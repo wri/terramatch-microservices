@@ -2,9 +2,8 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { Nursery } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const NurseryConfiguration: LinkedFieldConfiguration = {
+export const NurseryConfiguration: LinkedFieldConfiguration<Nursery> = {
   label: "Nursery",
-  laravelModelType: Nursery.LARAVEL_TYPE,
   fields: {
     "nur-name": { property: "name", label: "Name", inputType: "text" },
     "nur-type": {
@@ -14,11 +13,11 @@ export const NurseryConfiguration: LinkedFieldConfiguration = {
       multiChoice: false,
       optionListKey: "nursery-type"
     },
-    "nur-start_date": { property: "start_date", label: "Start date", inputType: "date" },
-    "nur-end_date": { property: "end_date", label: "End date", inputType: "date" },
-    "nur-seedling_grown": { property: "seedling_grown", label: "Seedlings grown", inputType: "number" },
+    "nur-start_date": { property: "startDate", label: "Start date", inputType: "date" },
+    "nur-end_date": { property: "endDate", label: "End date", inputType: "date" },
+    "nur-seedling_grown": { property: "seedlingGrown", label: "Seedlings grown", inputType: "number" },
     "nur-planting_contribution": {
-      property: "planting_contribution",
+      property: "plantingContribution",
       label: "Planting contribution",
       inputType: "long-text"
     }

@@ -341,15 +341,11 @@ export class SitePolygonCreationService {
       const props = p.properties ?? {};
       const estAreaValue = (props.estArea as number) ?? (props.est_area as number);
       if (estAreaValue == null) {
-        throw new BadRequestException(
-          "Point features must include properties.estArea (camelCase) or properties.est_area (snake_case)"
-        );
+        throw new BadRequestException("Point features must include properties.estArea");
       }
       const siteIdValue = (props.siteId as string) ?? (props.site_id as string);
       if (siteIdValue == null) {
-        throw new BadRequestException(
-          "Point features must include properties.siteId (camelCase) or properties.site_id (snake_case)"
-        );
+        throw new BadRequestException("Point features must include properties.siteId");
       }
     }
 
@@ -425,9 +421,7 @@ export class SitePolygonCreationService {
       for (const feature of geometryCollection.features) {
         const siteId = (feature.properties.siteId as string) ?? (feature.properties.site_id as string);
         if (siteId == null) {
-          throw new BadRequestException(
-            "All features must have siteId (camelCase) or site_id (snake_case) in properties"
-          );
+          throw new BadRequestException("All features must have siteId in properties");
         }
 
         if (grouped[siteId] == null) {

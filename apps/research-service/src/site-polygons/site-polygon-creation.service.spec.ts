@@ -552,9 +552,7 @@ describe("SitePolygonCreationService", () => {
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
       await expect(service.createSitePolygons(request, mockUserId, "test", null)).rejects.toThrow(
-        new BadRequestException(
-          "Point features must include properties.estArea (camelCase) or properties.est_area (snake_case)"
-        )
+        new BadRequestException("Point features must include properties.estArea")
       );
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
@@ -576,7 +574,7 @@ describe("SitePolygonCreationService", () => {
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
       await expect(service.createSitePolygons(request, mockUserId, "test", null)).rejects.toThrow(
-        new BadRequestException("All features must have siteId (camelCase) or site_id (snake_case) in properties")
+        new BadRequestException("All features must have siteId in properties")
       );
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });

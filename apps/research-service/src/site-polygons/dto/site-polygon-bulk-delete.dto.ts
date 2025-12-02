@@ -1,28 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Equals, IsArray, IsUUID, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
-
-class SitePolygonDeleteResource {
-  @Equals("sitePolygons")
-  @ApiProperty({ enum: ["sitePolygons"], example: "sitePolygons" })
-  type: string;
-
-  @IsUUID()
-  @ApiProperty({ format: "uuid", description: "UUID of the site polygon to delete" })
-  id: string;
-}
+import { IsArray, IsUUID, ArrayMinSize } from "class-validator";
 
 export class SitePolygonBulkDeleteBodyDto {
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => SitePolygonDeleteResource)
+  @ArrayMinSize(1, { message: "At least one UUID must be provided" })
+  @IsUUID(undefined, { each: true, message: "Each UUID must be a valid UUID format" })
   @ApiProperty({
-    description: "Array of site polygon resources to delete",
-    type: [SitePolygonDeleteResource],
-    example: [
-      { type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" },
-      { type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174001" }
-    ]
+    description: "Array of site polygon UUIDs to delete",
+    type: [String],
+    example: ["123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174001"],
+    minItems: 1
   })
-  data: SitePolygonDeleteResource[];
+  uuids: string[];
 }

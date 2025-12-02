@@ -368,17 +368,20 @@ export class SitePolygonsController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
   @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
   async bulkDelete(@Body() deletePayload: SitePolygonBulkDeleteBodyDto) {
-    if (deletePayload.data == null || deletePayload.data.length === 0) {
-      throw new BadRequestException("At least one site polygon UUID must be provided");
-    }
+    const { uuids } = deletePayload;
 
-    const uuids = deletePayload.data.map(item => item.id);
     const sitePolygons = await SitePolygon.findAll({
       where: { uuid: { [Op.in]: uuids } }
     });
 
     if (sitePolygons.length === 0) {
       throw new NotFoundException(`No site polygons found for the provided UUIDs`);
+    }
+
+    const foundUuids = new Set(sitePolygons.map(sp => sp.uuid));
+    const missingUuids = uuids.filter(uuid => !foundUuids.has(uuid));
+    if (missingUuids.length > 0) {
+      throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
     }
 
     for (const sitePolygon of sitePolygons) {

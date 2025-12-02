@@ -1,19 +1,17 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { BoundingBoxService } from "./bounding-box.service";
 import { DataApiService } from "@terramatch-microservices/data-api";
-import { ConfigService } from "@nestjs/config";
 import { NotFoundException } from "@nestjs/common";
 import {
   LandscapeGeometry,
   PolygonGeometry,
   Project,
-  Site,
-  SitePolygon,
   ProjectPitch,
-  ProjectPolygon
+  ProjectPolygon,
+  Site,
+  SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { Model, Sequelize, Op } from "sequelize";
-import { PolicyService } from "@terramatch-microservices/common";
+import { Model, Op, Sequelize } from "sequelize";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   LandscapeGeometry: {
@@ -230,33 +228,11 @@ describe("BoundingBoxService", () => {
     getCountryEnvelope: jest.fn()
   };
 
-  const mockConfigService = {
-    get: jest.fn()
-  };
-
-  const mockPolicyService = {
-    authorize: jest.fn()
-  };
-
   beforeEach(async () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        BoundingBoxService,
-        {
-          provide: DataApiService,
-          useValue: mockDataApiService
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService
-        },
-        {
-          provide: PolicyService,
-          useValue: mockPolicyService
-        }
-      ]
+      providers: [BoundingBoxService, { provide: DataApiService, useValue: mockDataApiService }]
     }).compile();
 
     service = module.get<BoundingBoxService>(BoundingBoxService);
@@ -470,7 +446,7 @@ describe("BoundingBoxService", () => {
 
       expect(ProjectPolygon.findAll).toHaveBeenCalledWith({
         where: {
-          entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+          entityType: ProjectPitch.LARAVEL_TYPE,
           entityId: fixtures.projectPitch.id
         },
         attributes: ["polyUuid"]

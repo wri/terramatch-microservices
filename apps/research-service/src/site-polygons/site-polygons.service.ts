@@ -88,11 +88,124 @@ export class SitePolygonsService {
       throw e;
     }
   }
+  private async deleteSitePolygonRelatedRecords(
+    sitePolygonIds: number[],
+    sitePolygonUuids: string[],
+    polygonUuids: string[],
+    pointUuids: string[],
+    primaryUuids: string[],
+    transaction: Transaction
+  ): Promise<void> {
+    for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
+      await IndicatorClass.destroy({
+        where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
+        transaction
+      });
+    }
 
-  /**
-   * Deletes a site polygon and all its associated records.
-   * This method handles cascade deletion of all related entities.
-   */
+    if (polygonUuids.length > 0) {
+      await CriteriaSite.destroy({
+        where: { polygonId: { [Op.in]: polygonUuids } },
+        transaction
+      });
+      await CriteriaSiteHistoric.destroy({
+        where: { polygonId: { [Op.in]: polygonUuids } },
+        transaction
+      });
+    }
+
+    await SitePolygonData.destroy({
+      where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+      transaction
+    });
+
+    await AuditStatus.destroy({
+      where: {
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: { [Op.in]: sitePolygonIds }
+      },
+      transaction
+    });
+
+    if (polygonUuids.length > 0) {
+      await ProjectPolygon.destroy({
+        where: { polyUuid: { [Op.in]: polygonUuids } },
+        transaction
+      });
+    }
+
+    if (pointUuids.length > 0) {
+      await PointGeometry.destroy({
+        where: { uuid: { [Op.in]: pointUuids } },
+        transaction
+      });
+    }
+
+    if (polygonUuids.length > 0) {
+      await PolygonGeometry.destroy({
+        where: { uuid: { [Op.in]: polygonUuids } },
+        transaction
+      });
+    }
+
+    await SitePolygon.destroy({
+      where: { primaryUuid: { [Op.in]: primaryUuids } },
+      transaction
+    });
+  }
+  async bulkDeleteSitePolygons(uuids: string[]): Promise<string[]> {
+    if (uuids.length === 0) {
+      return [];
+    }
+
+    return await this.transaction(async transaction => {
+      const sitePolygons = await SitePolygon.findAll({
+        where: { uuid: { [Op.in]: uuids } },
+        attributes: ["id", "uuid", "primaryUuid"],
+        transaction
+      });
+
+      if (sitePolygons.length === 0) {
+        throw new NotFoundException(`No site polygons found for the provided UUIDs`);
+      }
+
+      const foundUuids = new Set(sitePolygons.map(sp => sp.uuid));
+      const missingUuids = uuids.filter(uuid => !foundUuids.has(uuid));
+      if (missingUuids.length > 0) {
+        throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
+      }
+
+      const uniquePrimaryUuids = uniq(
+        sitePolygons.map(sp => sp.primaryUuid).filter((uuid): uuid is string => uuid != null)
+      );
+
+      const allRelatedSitePolygons = await SitePolygon.findAll({
+        where: { primaryUuid: { [Op.in]: uniquePrimaryUuids } },
+        attributes: ["id", "uuid", "polygonUuid", "pointUuid"],
+        transaction
+      });
+
+      const allSitePolygonIds = allRelatedSitePolygons.map(sp => sp.id);
+      const allSitePolygonUuids = allRelatedSitePolygons.map(sp => sp.uuid);
+      const allPolygonUuids = allRelatedSitePolygons
+        .map(sp => sp.polygonUuid)
+        .filter((uuid): uuid is string => uuid != null);
+      const allPointUuids = allRelatedSitePolygons
+        .map(sp => sp.pointUuid)
+        .filter((uuid): uuid is string => uuid != null);
+
+      await this.deleteSitePolygonRelatedRecords(
+        allSitePolygonIds,
+        allSitePolygonUuids,
+        allPolygonUuids,
+        allPointUuids,
+        uniquePrimaryUuids,
+        transaction
+      );
+
+      return allSitePolygonUuids;
+    });
+  }
   async deleteSitePolygon(uuid: string): Promise<void> {
     await this.transaction(async transaction => {
       const sitePolygon = await SitePolygon.findOne({
@@ -119,63 +232,20 @@ export class SitePolygonsService {
       const sitePolygonUuids = relatedSitePolygons.map(sp => sp.uuid);
       const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
       const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
+      const primaryUuid = sitePolygon.primaryUuid;
 
-      for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
-        await IndicatorClass.destroy({
-          where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
-          transaction
-        });
+      if (primaryUuid == null) {
+        throw new BadRequestException(`SitePolygon ${uuid} has no primaryUuid`);
       }
 
-      if (polygonUuids.length > 0) {
-        await CriteriaSite.destroy({
-          where: { polygonId: { [Op.in]: polygonUuids } },
-          transaction
-        });
-        await CriteriaSiteHistoric.destroy({
-          where: { polygonId: { [Op.in]: polygonUuids } },
-          transaction
-        });
-      }
-
-      await SitePolygonData.destroy({
-        where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+      await this.deleteSitePolygonRelatedRecords(
+        sitePolygonIds,
+        sitePolygonUuids,
+        polygonUuids,
+        pointUuids,
+        [primaryUuid],
         transaction
-      });
-
-      await AuditStatus.destroy({
-        where: {
-          auditableType: SitePolygon.LARAVEL_TYPE,
-          auditableId: { [Op.in]: sitePolygonIds }
-        },
-        transaction
-      });
-
-      if (polygonUuids.length > 0) {
-        await ProjectPolygon.destroy({
-          where: { polyUuid: { [Op.in]: polygonUuids } },
-          transaction
-        });
-      }
-
-      if (pointUuids.length > 0) {
-        await PointGeometry.destroy({
-          where: { uuid: { [Op.in]: pointUuids } },
-          transaction
-        });
-      }
-
-      if (polygonUuids.length > 0) {
-        await PolygonGeometry.destroy({
-          where: { uuid: { [Op.in]: polygonUuids } },
-          transaction
-        });
-      }
-
-      await SitePolygon.destroy({
-        where: { primaryUuid: sitePolygon.primaryUuid },
-        transaction
-      });
+      );
     });
   }
 

@@ -34,7 +34,7 @@ import {
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { MediaDto } from "../entities/dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";

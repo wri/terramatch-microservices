@@ -1,7 +1,7 @@
 import { DisturbanceReport, DisturbanceReportEntry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
-import { EmbeddedDisturbanceReportEntryDto } from "../dto/disturbance-report-entry.dto";
+import { EmbeddedDisturbanceReportEntryDto } from "../../dto/disturbance-report-entry.dto";
 import { isEmpty } from "lodash";
 import { Op } from "sequelize";
 

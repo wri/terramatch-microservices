@@ -11,8 +11,8 @@ import {
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
-import { FinancialIndicatorDto } from "./financial-indicator.dto";
-import { FundingTypeDto } from "./funding-type.dto";
+import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 
 @JsonApiDto({ type: "financialReports" })
 export class FinancialReportLightDto extends EntityDto {

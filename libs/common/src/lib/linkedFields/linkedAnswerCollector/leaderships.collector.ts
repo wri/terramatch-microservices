@@ -3,7 +3,7 @@ import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
-import { EmbeddedLeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
+import { EmbeddedLeadershipDto } from "../../dto/leadership.dto";
 import { scopedSync } from "./utils";
 
 export function leadershipsCollector(logger: LoggerService): RelationResourceCollector {

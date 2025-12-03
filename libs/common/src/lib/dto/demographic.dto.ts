@@ -1,8 +1,8 @@
 import { AssociationDto } from "./association.dto";
 import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
-import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { AdditionalProps, populateDto } from "./json-api-attributes";
+import { JsonApiDto } from "../decorators";
 import {
   ALL_BENEFICIARIES_PROJECT_COLLECTIONS,
   CONVERGENCE,
@@ -16,7 +16,7 @@ import {
   WORKDAYS_PROJECT_COLLECTIONS,
   WORKDAYS_SITE_COLLECTIONS
 } from "@terramatch-microservices/database/constants/demographic-collections";
-import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
+import { JsonApiConstants } from "../decorators/json-api-constants.decorator";
 import { without } from "lodash";
 
 @JsonApiConstants

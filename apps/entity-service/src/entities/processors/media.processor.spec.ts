@@ -14,7 +14,7 @@ import {
   NurseryReportFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
-import { MediaDto } from "../dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaProcessor } from "./media.processor";
 import { Media } from "@terramatch-microservices/database/entities";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";

@@ -17,12 +17,17 @@ import {
 import { Form, Organisation, Project, Site, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
-import { LinkedAnswerCollector, RelationResourceCollector } from "./linkedAnswerCollector";
+import {
+  LinkedAnswerCollector,
+  RelationResourceCollector
+} from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
 import { LinkedFieldResource } from "@terramatch-microservices/database/constants/linked-fields";
 import { faker } from "@faker-js/faker/.";
 
-jest.mock("./linkedAnswerCollector", () => {
-  const { LinkedAnswerCollector } = jest.requireActual("./linkedAnswerCollector");
+jest.mock("@terramatch-microservices/common/linkedFields/linkedAnswerCollector", () => {
+  const { LinkedAnswerCollector } = jest.requireActual(
+    "@terramatch-microservices/common/linkedFields/linkedAnswerCollector"
+  );
   class StubbedLinkedAnswerCollector extends LinkedAnswerCollector {
     static singleton?: StubbedLinkedAnswerCollector;
 

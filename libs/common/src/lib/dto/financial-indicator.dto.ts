@@ -1,9 +1,9 @@
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiDto } from "../decorators";
+import { AdditionalProps, populateDto } from "./json-api-attributes";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { AssociationDto } from "./association.dto";
 import { FinancialIndicator } from "@terramatch-microservices/database/entities";
-import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { HybridSupportProps } from "./hybrid-support.dto";
 import { MediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "financialIndicators" })

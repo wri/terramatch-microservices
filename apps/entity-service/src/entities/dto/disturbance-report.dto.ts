@@ -4,8 +4,8 @@ import { DisturbanceReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { DisturbanceReportEntryDto } from "./disturbance-report-entry.dto";
-import { MediaDto } from "./media.dto";
+import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import {
   REPORT_STATUSES,
   ReportStatus,

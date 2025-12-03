@@ -23,7 +23,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { FinancialReportProcessor } from "./financial-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { FundingTypeDto } from "../dto/funding-type.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 
 describe("FinancialReportProcessor", () => {
   let processor: FinancialReportProcessor;

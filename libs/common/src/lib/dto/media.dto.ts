@@ -1,8 +1,8 @@
 import { ApiProperty, OmitType } from "@nestjs/swagger";
-import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { AdditionalProps, populateDto } from "./json-api-attributes";
 import { Media } from "@terramatch-microservices/database/entities";
 import { AssociationDto } from "./association.dto";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { JsonApiDto } from "../decorators";
 
 @JsonApiDto({ type: "media" })
 export class MediaDto extends AssociationDto {

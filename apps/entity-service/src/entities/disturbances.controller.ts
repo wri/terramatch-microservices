@@ -13,7 +13,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { DisturbanceQueryDto } from "./dto/disturbance-query.dto";
 import { DisturbanceService } from "./disturbance.service";
 import { LARAVEL_MODEL_TYPES, LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
-import { DisturbanceDto } from "./dto/disturbance.dto";
+import { DisturbanceDto } from "@terramatch-microservices/common/dto/disturbance.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 @Controller("entities/v3/disturbances")

@@ -1,4 +1,4 @@
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { MediaService } from "../../media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { FormModels, LinkedAnswerCollector } from "./index";
 import {
@@ -24,8 +24,8 @@ import {
   ProjectPitch,
   ProjectReport
 } from "@terramatch-microservices/database/entities";
-import { EmbeddedMediaDto } from "../dto/media.dto";
-import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
+import { EmbeddedMediaDto } from "../../dto/media.dto";
+import { getLinkedFieldConfig } from "../index";
 import {
   LinkedField,
   LinkedRelation,

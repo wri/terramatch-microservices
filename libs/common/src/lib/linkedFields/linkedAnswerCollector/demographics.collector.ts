@@ -1,5 +1,5 @@
 import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
-import { DemographicEntryDto, EmbeddedDemographicDto } from "../dto/demographic.dto";
+import { DemographicEntryDto, EmbeddedDemographicDto } from "../../dto/demographic.dto";
 import { polymorphicCollector, RelationSync } from "./utils";
 import { InternalServerErrorException } from "@nestjs/common";
 import { laravelType } from "@terramatch-microservices/database/types/util";

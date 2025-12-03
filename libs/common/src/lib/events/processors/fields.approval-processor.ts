@@ -2,7 +2,7 @@ import { EntityApprovalProcessor } from "./types";
 import { Form, FormQuestion } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../../util/tm-logger";
 import { getLinkedFieldConfig } from "../../linkedFields";
-import { isField } from "@terramatch-microservices/database/constants/linked-fields";
+import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 
 const logger = new TMLogger("FieldsApprovalProcessor");
 
@@ -20,7 +20,7 @@ export const FieldsApprovalProcessor: EntityApprovalProcessor = {
       if (question.linkedFieldKey == null || !question.isHidden(entity.answers ?? {}, questions)) continue;
 
       const field = getLinkedFieldConfig(question.linkedFieldKey)?.field;
-      if (field == null || !isField(field)) continue;
+      if (field == null || !isField(field) || !isPropertyField(field)) continue;
 
       entity[field.property] = null;
     }

@@ -1,9 +1,9 @@
 import { DisturbanceReportEntry } from "@terramatch-microservices/database/entities";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { populateDto } from "./json-api-attributes";
+import { HybridSupportProps } from "./hybrid-support.dto";
 import { AssociationDto } from "./association.dto";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { JsonApiDto } from "../decorators";
 
 @JsonApiDto({ type: "disturbanceReportEntries" })
 export class DisturbanceReportEntryDto extends AssociationDto {

@@ -1,5 +1,5 @@
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiDto } from "../decorators";
+import { populateDto } from "./json-api-attributes";
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";

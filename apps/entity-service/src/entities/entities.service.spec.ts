@@ -6,7 +6,7 @@ import { BadRequestException } from "@nestjs/common";
 import { Media, Project } from "@terramatch-microservices/database/entities";
 import { MediaFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { MediaDto } from "./dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";

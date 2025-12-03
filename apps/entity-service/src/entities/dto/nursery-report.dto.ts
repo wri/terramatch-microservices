@@ -3,7 +3,7 @@ import { EntityDto } from "./entity.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import {
   REPORT_STATUSES,

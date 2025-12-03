@@ -17,7 +17,7 @@ import {
   DisturbanceReportLightDto,
   DisturbanceReportMedia
 } from "../dto/disturbance-report.dto";
-import { DisturbanceReportEntryDto } from "../dto/disturbance-report-entry.dto";
+import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";

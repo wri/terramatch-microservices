@@ -1,6 +1,6 @@
 import { AssociationDto } from "./association.dto";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiDto } from "../decorators";
+import { AdditionalProps, populateDto } from "./json-api-attributes";
 import { Seeding } from "@terramatch-microservices/database/entities";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
 

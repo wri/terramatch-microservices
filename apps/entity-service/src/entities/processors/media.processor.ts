@@ -8,7 +8,7 @@ import {
   NurseryReport,
   FinancialReport
 } from "@terramatch-microservices/database/entities";
-import { MediaDto } from "../dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/database/constants/entities";
 import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";

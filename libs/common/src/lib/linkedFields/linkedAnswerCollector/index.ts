@@ -1,12 +1,15 @@
 import { FormModel, FormModelType } from "@terramatch-microservices/database/constants/entities";
 import {
+  isField,
+  isFile,
+  isRelation,
   LinkedField,
   LinkedFieldResource,
   LinkedFile,
   LinkedRelation
 } from "@terramatch-microservices/database/constants/linked-fields";
 import { Dictionary } from "lodash";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { MediaService } from "../../media/media.service";
 import { fieldCollector } from "./field.collector";
 import { fileCollector } from "./file.collector";
 import { demographicsCollector } from "./demographics.collector";
@@ -20,8 +23,9 @@ import { leadershipsCollector } from "./leaderships.collector";
 import { fundingTypesCollector } from "./funding-types.collector";
 import { financialIndicatorsCollector } from "./financial-indicators.collector";
 import { disturbanceReportEntriesCollector } from "./disturbance-report-entries.collector";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { TMLogger } from "../../util/tm-logger";
 import { FormQuestion } from "@terramatch-microservices/database/entities";
+import { getLinkedFieldConfig } from "../index";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
@@ -103,6 +107,25 @@ export class LinkedAnswerCollector {
     return this.getCollector("disturbanceReportEntries", () =>
       disturbanceReportEntriesCollector(new TMLogger("Disturbance Report Entries Collector"))
     );
+  }
+
+  async getAnswers(nonLinkedAnswers: Dictionary<unknown>, questions: FormQuestion[], models: FormModels) {
+    const answers: Dictionary<unknown> = {};
+    for (const question of questions) {
+      const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
+      if (config == null) {
+        answers[question.uuid] = nonLinkedAnswers?.[question.uuid];
+      } else {
+        if (isField(config.field)) this.fields.addField(config.field, config.model, question.uuid);
+        else if (isFile(config.field)) this.files.addField(config.field, config.model, question.uuid);
+        else if (isRelation(config.field)) {
+          this[config.field.resource].addField(config.field, config.model, question.uuid);
+        }
+      }
+    }
+
+    await this.collect(answers, models);
+    return answers;
   }
 
   async collect(answers: Dictionary<unknown>, models: FormModels) {

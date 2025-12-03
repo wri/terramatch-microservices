@@ -16,7 +16,7 @@ import {
 import { SpecificEntityData } from "../email/email.processor";
 import { EventService } from "./event.service";
 import { Action, AuditStatus, FormQuestion, Task, UpdateRequest } from "@terramatch-microservices/database/entities";
-import { Dictionary, flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
+import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
 import {
   AnyStatus,
@@ -31,10 +31,11 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
-import { isField } from "@terramatch-microservices/database/constants/linked-fields";
+import { isField, LinkedField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { APPROVAL_PROCESSERS } from "./processors";
 import { authenticatedUserId } from "../guards/auth.guard";
+import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -138,26 +139,34 @@ export class EntityStatusUpdate extends EventProcessor {
     await Action.for(baseModel).destroy({ where: { type: "notification" } });
 
     if (updateRequest.status === AWAITING_APPROVAL) {
-      // Gather linked field labels for the audit status.
-      const questionUuids = Object.keys(updateRequest.content ?? {});
-      const questions = await FormQuestion.findAll({
-        where: { uuid: { [Op.in]: questionUuids }, linkedFieldKey: { [Op.ne]: null } }
-      });
-      const labels = questions
-        .map(question => {
-          const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
-          if (config == null || !isField(config.field)) return undefined;
-
-          const updateRequestValue = updateRequest.content?.[question.uuid];
-          const baseValue = (baseModel as unknown as Dictionary<unknown>)[config.field.property];
-          if (isEqual(updateRequestValue, baseValue)) return undefined;
-
-          return config.field.label;
-        })
-        .filter(isNotNull);
-      await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
       const entityType = getEntityType(baseModel);
-      if (entityType != null) await this.sendProjectManagerEmail(entityType, baseModel);
+      if (entityType != null) {
+        // Gather linked field labels for the audit status.
+        const questionUuids = Object.keys(updateRequest.content ?? {});
+        const fieldQuestions = (
+          await FormQuestion.findAll({
+            where: { uuid: { [Op.in]: questionUuids }, linkedFieldKey: { [Op.ne]: null } }
+          })
+        ).filter(({ linkedFieldKey }) => {
+          const config = linkedFieldKey == null ? undefined : getLinkedFieldConfig(linkedFieldKey);
+          return config != null && isField(config.field);
+        });
+
+        const collector = new LinkedAnswerCollector(this.eventService.mediaService);
+        const modelAnswers = await collector.getAnswers({}, fieldQuestions, { [entityType]: baseModel });
+        const labels = fieldQuestions
+          .map(question => {
+            const updateRequestValue = updateRequest.content?.[question.uuid];
+            const baseValue = modelAnswers[question.uuid];
+            if (isEqual(updateRequestValue, baseValue)) return undefined;
+
+            // We've already filtered the questions to only those with Field configs, so this cast is safe.
+            return (getLinkedFieldConfig(question.linkedFieldKey ?? "")?.field as LinkedField).label;
+          })
+          .filter(isNotNull);
+        await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
+        await this.sendProjectManagerEmail(entityType, baseModel);
+      }
     }
   }
 

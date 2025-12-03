@@ -1,9 +1,9 @@
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiDto } from "../decorators";
+import { populateDto } from "./json-api-attributes";
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { AssociationDto } from "./association.dto";
 import { FundingType } from "@terramatch-microservices/database/entities";
-import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { HybridSupportProps } from "./hybrid-support.dto";
 
 @JsonApiDto({ type: "fundingTypes" })
 export class FundingTypeDto extends AssociationDto {

@@ -5,7 +5,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Test } from "@nestjs/testing";
 import { EntityAssociationsController } from "./entity-associations.controller";
 import { AssociationProcessor } from "./processors/association-processor";
-import { DemographicDto } from "./dto/demographic.dto";
+import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { serialize } from "@terramatch-microservices/common/util/testing";

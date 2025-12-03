@@ -1,7 +1,7 @@
 import { Organisation, OwnershipStake } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
-import { EmbeddedOwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
+import { EmbeddedOwnershipStakeDto } from "../../dto/ownership-stake.dto";
 import { scopedSync } from "./utils";
 
 export function ownershipStakeCollector(logger: LoggerService): RelationResourceCollector {

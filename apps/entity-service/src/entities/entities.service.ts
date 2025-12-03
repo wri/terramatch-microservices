@@ -13,13 +13,13 @@ import {
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
-import { MediaDto } from "./dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
-import { AssociationDto, AssociationDtoAdditionalProps } from "./dto/association.dto";
+import { AssociationDto, AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
@@ -27,9 +27,9 @@ import { NurseryReportProcessor } from "./processors/nursery-report.processor";
 import { SiteReportProcessor } from "./processors/site-report.processor";
 import { FinancialReportProcessor } from "./processors/financial-report.processor";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
-import { SeedingDto } from "./dto/seeding.dto";
-import { TreeSpeciesDto } from "./dto/tree-species.dto";
-import { DemographicDto } from "./dto/demographic.dto";
+import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
@@ -37,10 +37,10 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { ITranslateParams } from "@transifex/native";
 import { MediaQueryDto } from "./dto/media-query.dto";
 import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
-import { DisturbanceDto } from "./dto/disturbance.dto";
-import { InvasiveDto } from "./dto/invasive.dto";
+import { DisturbanceDto } from "@terramatch-microservices/common/dto/disturbance.dto";
+import { InvasiveDto } from "@terramatch-microservices/common/dto/invasive.dto";
 import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
-import { StrataDto } from "./dto/strata.dto";
+import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
 import {
   MEDIA_OWNER_MODELS,
   MediaOwnerModel,

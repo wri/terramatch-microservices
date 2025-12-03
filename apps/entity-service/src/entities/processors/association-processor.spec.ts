@@ -12,10 +12,10 @@ import {
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
-import { DemographicDto, DemographicEntryDto } from "../dto/demographic.dto";
+import { DemographicDto, DemographicEntryDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { TreeSpeciesDto } from "../dto/tree-species.dto";
-import { SeedingDto } from "../dto/seeding.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";

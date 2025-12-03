@@ -15,9 +15,9 @@ import {
 import { Dictionary } from "lodash";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { isField, isFile, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { isField, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { FormModels, LinkedAnswerCollector } from "./linkedAnswerCollector";
+import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
 import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -75,8 +75,7 @@ export class FormDataService {
     });
   }
 
-  async getAnswers(form: Form, models: FormModels, answersModel?: { answers: object | null }) {
-    const answers: Dictionary<unknown> = {};
+  async getAnswers(form: Form, models: FormModels, answersModel?: { answers: Dictionary<unknown> | null }) {
     if (answersModel == null) {
       const modelValues = Object.values(models);
       if (modelValues.length !== 1) {
@@ -87,27 +86,10 @@ export class FormDataService {
       }
       answersModel = modelValues[0];
     }
-    const modelAnswers = answersModel?.answers ?? {};
 
     const questions = await FormQuestion.forForm(form.uuid).findAll();
-
     const collector = new LinkedAnswerCollector(this.mediaService);
-    for (const question of questions) {
-      const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
-      if (config == null) {
-        answers[question.uuid] = modelAnswers?.[question.uuid];
-      } else {
-        if (isField(config.field)) collector.fields.addField(config.field, config.model, question.uuid);
-        else if (isFile(config.field)) collector.files.addField(config.field, config.model, question.uuid);
-        else if (isRelation(config.field)) {
-          collector[config.field.resource].addField(config.field, config.model, question.uuid);
-        }
-      }
-    }
-
-    await collector.collect(answers, models);
-
-    return answers;
+    return await collector.getAnswers(answersModel?.answers ?? {}, questions, models);
   }
 
   private async getFormTitle(form: Form, locale: ValidLocale) {

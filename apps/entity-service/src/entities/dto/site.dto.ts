@@ -9,7 +9,7 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "sites" })

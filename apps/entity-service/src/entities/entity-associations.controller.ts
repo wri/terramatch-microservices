@@ -4,15 +4,19 @@ import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
-import { DemographicCollections, DemographicDto, DemographicEntryDto } from "./dto/demographic.dto";
+import {
+  DemographicCollections,
+  DemographicDto,
+  DemographicEntryDto
+} from "@terramatch-microservices/common/dto/demographic.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { SeedingDto } from "./dto/seeding.dto";
-import { TreeSpeciesDto } from "./dto/tree-species.dto";
-import { MediaDto } from "./dto/media.dto";
+import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaQueryDto } from "./dto/media-query.dto";
-import { DisturbanceDto } from "./dto/disturbance.dto";
-import { InvasiveDto } from "./dto/invasive.dto";
-import { StrataDto } from "./dto/strata.dto";
+import { DisturbanceDto } from "@terramatch-microservices/common/dto/disturbance.dto";
+import { InvasiveDto } from "@terramatch-microservices/common/dto/invasive.dto";
+import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
 
 @Controller("entities/v3/:entity/:uuid")
 @ApiExtraModels(DemographicEntryDto, DemographicCollections)

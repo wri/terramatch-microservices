@@ -12,7 +12,7 @@ import { Dictionary, intersection, pick } from "lodash";
 import { FormModels, FormTypeMap, RelationResourceCollector } from "./index";
 import { Attributes, CreationAttributes, Includeable, Op, WhereAttributeHash } from "sequelize";
 import { FormModel, FormModelType } from "@terramatch-microservices/database/constants/entities";
-import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { apiAttributes } from "../../dto/json-api-attributes";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { CountOptions } from "sequelize/lib/model";
 import { Model, ModelCtor } from "sequelize-typescript";

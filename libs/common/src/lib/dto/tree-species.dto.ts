@@ -1,8 +1,8 @@
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
 import { TreeSpecies } from "@terramatch-microservices/database/entities";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "./json-api-attributes";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { JsonApiDto } from "../decorators";
 
 @JsonApiDto({ type: "treeSpecies" })
 export class TreeSpeciesDto extends AssociationDto {

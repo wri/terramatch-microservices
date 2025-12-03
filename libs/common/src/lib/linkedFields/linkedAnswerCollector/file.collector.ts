@@ -1,4 +1,4 @@
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { MediaService } from "../../media/media.service";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { Dictionary } from "lodash";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
@@ -6,7 +6,7 @@ import { Media } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { isMediaOwner, mediaConfiguration } from "@terramatch-microservices/database/constants/media-owners";
-import { EmbeddedMediaDto } from "../dto/media.dto";
+import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { FormTypeMap, ResourceCollector } from "./index";
 import { mapLaravelTypes } from "./utils";
 

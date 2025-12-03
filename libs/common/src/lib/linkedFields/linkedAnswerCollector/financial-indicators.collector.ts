@@ -2,7 +2,7 @@ import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-m
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
-import { EmbeddedFinancialIndicatorDto } from "../dto/financial-indicator.dto";
+import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { CreationAttributes } from "sequelize";
 
 export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {

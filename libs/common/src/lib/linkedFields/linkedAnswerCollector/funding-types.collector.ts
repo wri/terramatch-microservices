@@ -2,7 +2,7 @@ import { FinancialReport, FundingType, Organisation } from "@terramatch-microser
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
-import { EmbeddedFundingTypeDto } from "../dto/funding-type.dto";
+import { EmbeddedFundingTypeDto } from "../../dto/funding-type.dto";
 import { Op, WhereAttributeHash } from "sequelize";
 
 export function fundingTypesCollector(logger: LoggerService): RelationResourceCollector {

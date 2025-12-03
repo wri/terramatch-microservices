@@ -15,7 +15,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { ApiOperation } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
-import { MediaDto } from "./dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import "multer";

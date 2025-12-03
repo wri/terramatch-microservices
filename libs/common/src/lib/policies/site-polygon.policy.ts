@@ -8,7 +8,12 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
     const isGreenhouseUser = user?.roles?.some(role => role.name === "greenhouse-service-account") ?? false;
 
     if (this.permissions.includes("polygons-manage")) {
-      this.builder.can("manage", SitePolygon);
+      if (isGreenhouseUser) {
+        this.builder.can(["read", "create", "update"], SitePolygon);
+        this.builder.can("delete", SitePolygon, { createdBy: this.userId });
+      } else {
+        this.builder.can("manage", SitePolygon);
+      }
       return;
     }
 
@@ -18,7 +23,12 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
         attributes: ["uuid"]
       });
       const siteUuids = sites.map(site => site.uuid);
-      this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+      if (isGreenhouseUser) {
+        this.builder.can(["read", "create", "update"], SitePolygon, { siteUuid: { $in: siteUuids } });
+        this.builder.can("delete", SitePolygon, { createdBy: this.userId });
+      } else {
+        this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+      }
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -28,7 +38,13 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
       });
       const siteUuids = sites.map(site => site.uuid);
       if (siteUuids.length > 0) {
-        this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+        if (isGreenhouseUser) {
+          this.builder.can(["read", "create", "update"], SitePolygon, { siteUuid: { $in: siteUuids } });
+          // Greenhouse users can delete ANY polygon they created, regardless of project
+          this.builder.can("delete", SitePolygon, { createdBy: this.userId });
+        } else {
+          this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+        }
       }
     }
 
@@ -42,14 +58,20 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
           });
           const siteUuids = sites.map(site => site.uuid);
           if (siteUuids.length > 0) {
-            this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+            if (isGreenhouseUser) {
+              this.builder.can(["read", "create", "update"], SitePolygon, { siteUuid: { $in: siteUuids } });
+              // Greenhouse users can delete ANY polygon they created, regardless of project
+              this.builder.can("delete", SitePolygon, { createdBy: this.userId });
+            } else {
+              this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+            }
           }
         }
       }
     }
 
     if (isGreenhouseUser) {
-      this.builder.cannot("delete", SitePolygon);
+      this.builder.can("read", SitePolygon);
       this.builder.can("delete", SitePolygon, { createdBy: this.userId });
     }
   }

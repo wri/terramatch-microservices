@@ -1,5 +1,5 @@
 import { DisturbanceReport, DisturbanceReportEntry } from "@terramatch-microservices/database/entities";
-import { InternalServerErrorException, LoggerService } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { EmbeddedDisturbanceReportEntryDto } from "../../dto/disturbance-report-entry.dto";
 import { isEmpty } from "lodash";
@@ -25,20 +25,17 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Relati
         return;
       }
 
-      const entries = await DisturbanceReportEntry.findAll({
-        where: { disturbanceReport: models.disturbanceReports.id }
-      });
+      const entries = await DisturbanceReportEntry.report(models.disturbanceReports.id).findAll();
       answers[questionUuid] = entries.map(entry => new EmbeddedDisturbanceReportEntryDto(entry));
     },
 
-    async syncRelation(model, field, answer) {
+    async syncRelation(model, _, answer) {
       if (!(model instanceof DisturbanceReport)) {
-        logger.error("disturbanceReportEntries is only supported on disturbanceReports", { answer, field });
-        return;
+        throw new BadRequestException("disturbanceReportEntries is only supported on disturbanceReports");
       }
 
       const dtos = (answer ?? []) as EmbeddedDisturbanceReportEntryDto[];
-      const existing = await DisturbanceReportEntry.findAll({ where: { disturbanceReport: model.id } });
+      const existing = await DisturbanceReportEntry.report(model.id).findAll();
       const entryIds: number[] = [];
       await Promise.all(
         dtos.map(async dto => {

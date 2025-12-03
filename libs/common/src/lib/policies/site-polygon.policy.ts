@@ -4,6 +4,15 @@ import { Op } from "sequelize";
 
 export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
+    const user = await this.getUser();
+    const isGreenhouseUser = user?.roles?.some(role => role.name === "greenhouse-service-account") ?? false;
+
+    if (isGreenhouseUser) {
+      this.builder.can("read", SitePolygon);
+      this.builder.can("delete", SitePolygon, { createdBy: this.userId });
+      return;
+    }
+
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can("manage", SitePolygon);
       return;
@@ -29,7 +38,6 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("projects-manage")) {
-      const user = await this.getUser();
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
@@ -48,12 +56,15 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
 
   protected _user?: User | null;
   protected async getUser() {
-    if (this._user != null) return this._user;
+    if (this._user !== undefined) return this._user;
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
       attributes: ["organisationId"],
-      include: [{ association: "projects", attributes: ["id"] }]
+      include: [
+        { association: "projects", attributes: ["id"] },
+        { association: "roles", attributes: ["name"] }
+      ]
     }));
   }
 }

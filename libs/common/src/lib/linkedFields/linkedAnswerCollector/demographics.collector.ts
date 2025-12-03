@@ -29,7 +29,7 @@ const syncDemographics: RelationSync = async (model, field, answer, hidden, logg
   }
 
   if (dto.collection != null && dto.collection !== field.collection) {
-    logger.error("Answer has an invalid collection set, ignoring", { answer, field });
+    logger.error("Answer has an invalid collection set, ignoring answer collection", { answer, field });
   }
 
   let demographic = await Demographic.for(model).collection(field.collection).findOne();

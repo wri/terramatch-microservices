@@ -123,8 +123,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           }
         }
       } else if (field.virtual.type === "demographicsAggregate") {
-        const value = Number(answer);
-        if (!isInteger(value) || value < 0) {
+        const value = answer == null ? null : Number(answer);
+        if (value != null && (!isInteger(value) || value < 0)) {
           throw new BadRequestException(
             `Invalid demographics aggregate value: [${question.linkedFieldKey}, ${answer}]`
           );
@@ -134,6 +134,15 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           .type(field.virtual.demographicsType)
           .collection(field.virtual.collection)
           .findOne();
+        if (value == null) {
+          // We only get null as a value when the entity is being approved and the field was hidden.
+          if (demographic != null) {
+            await DemographicEntry.destroy({ where: { demographicId: demographic.id } });
+            await demographic.destroy();
+          }
+          return;
+        }
+
         if (demographic == null) {
           demographic = await Demographic.create({
             demographicalType: laravelType(model),
@@ -162,7 +171,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           await DemographicEntry.update({ amount: value }, { where: { id: entries.map(({ id }) => id) } });
         }
       } else if (field.virtual.type === "demographicsDescription") {
-        if (!isString(answer)) {
+        if (answer != null && !isString(answer)) {
           throw new BadRequestException(`Invalid demographics description: [${question.linkedFieldKey}, ${answer}]`);
         }
 

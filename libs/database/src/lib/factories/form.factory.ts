@@ -22,7 +22,7 @@ const defaultAttributesFactory = async () => ({
 export const FormFactory = FactoryGirl.define(Form, async () => defaultAttributesFactory());
 
 export const EntityFormFactory = {
-  forSite: (site?: Site) =>
+  site: (site?: Site) =>
     FactoryGirl.define(Form, async () => ({
       ...(await defaultAttributesFactory()),
       frameworkKey: site?.frameworkKey ?? "ppc",
@@ -30,7 +30,7 @@ export const EntityFormFactory = {
       type: "site"
     })),
 
-  forSiteReport: (siteReport?: SiteReport) =>
+  siteReport: (siteReport?: SiteReport) =>
     FactoryGirl.define(Form, async () => ({
       ...(await defaultAttributesFactory()),
       frameworkKey: siteReport?.frameworkKey ?? "ppc",

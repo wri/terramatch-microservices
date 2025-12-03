@@ -6,8 +6,10 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
   label: "Project Report",
   fields: {
     "pro-rep-title": { property: "title", label: "Title", inputType: "text" },
-    "pro-rep-workdays-paid": { property: "workdays_paid", label: "Workdays Paid", inputType: "number" },
-    "pro-rep-workdays-volunteer": { property: "workdays_volunteer", label: "Workdays Volunteer", inputType: "number" },
+    // @deprecated - this should not be used in new forms
+    "pro-rep-workdays-paid": { property: "workdaysPaid", label: "Workdays Paid", inputType: "number" },
+    // @deprecated - this should not be used in new forms
+    "pro-rep-workdays-volunteer": { property: "workdaysVolunteer", label: "Workdays Volunteer", inputType: "number" },
     "pro-rep-tech-nar": { property: "technicalNarrative", label: "Technical narrative", inputType: "long-text" },
     "pro-rep-pub-nar": { property: "publicNarrative", label: "Public narrative", inputType: "long-text" },
     "pro-rep-landscape-com-con": {
@@ -218,7 +220,11 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       inputType: "long-text"
     },
     "pro-rep-other-workdays-description": {
-      property: "other_workdays_description",
+      virtual: {
+        type: "demographicsDescription",
+        demographicsType: "workdays",
+        collections: ["paid-other-activities", "volunteer-other-activities"]
+      },
       label: "Other Activities Description",
       inputType: "long-text"
     },
@@ -238,7 +244,11 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       inputType: "long-text"
     },
     "pro-rep-other-restoration-partners-description": {
-      property: "other_restoration_partners_description",
+      virtual: {
+        type: "demographicsDescription",
+        demographicsType: "restoration-partners",
+        collections: ["direct-other", "indirect-other"]
+      },
       label: "Other Restoration Partners Description",
       inputType: "long-text"
     },

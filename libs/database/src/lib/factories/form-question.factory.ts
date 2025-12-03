@@ -4,9 +4,9 @@ import { faker } from "@faker-js/faker";
 import { FormSectionFactory } from "./form-section.factory";
 
 export const FormQuestionFactory = {
-  forSection: (formSection?: FormSection) =>
+  section: (formSection?: FormSection) =>
     FactoryGirl.define(FormQuestion, async () => ({
-      formSectionId: formSection?.id ?? FormSectionFactory.forForm().associate("id"),
+      formSectionId: formSection?.id ?? FormSectionFactory.form().associate("id"),
       inputType: "text",
       label: faker.lorem.sentence(),
       order: faker.number.int({ min: 1, max: 10 }),

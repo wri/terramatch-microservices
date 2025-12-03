@@ -499,42 +499,74 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       inputType: "boolean"
     },
     "pro-pit-full-time-jobs-count": {
-      property: "full_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time"
+      },
       label: "Aggregate full time jobs",
       inputType: "number"
     },
     "pro-pit-full-time-clt-jobs-count": {
-      property: "full_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time-clt"
+      },
       label: "Aggregate full time CLT jobs",
       inputType: "number"
     },
     "pro-pit-part-time-jobs-count": {
-      property: "part_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time"
+      },
       label: "Aggregate part time jobs",
       inputType: "number"
     },
     "pro-pit-part-time-clt-jobs-count": {
-      property: "part_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time-clt"
+      },
       label: "Aggregate part time CLT jobs",
       inputType: "number"
     },
     "pro-pit-volunteers-count": {
-      property: "volunteers_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "volunteers",
+        collection: "volunteer"
+      },
       label: "Aggregate volunteers",
       inputType: "number"
     },
     "pro-pit-beneficiaries-count": {
-      property: "all_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "all-beneficiaries",
+        collection: "all"
+      },
       label: "Aggregate beneficiaries",
       inputType: "number"
     },
     "pro-pit-indirect-beneficiaries-count": {
-      property: "indirect_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "indirect-beneficiaries",
+        collection: "indirect"
+      },
       label: "Aggregate indirect beneficiaries",
       inputType: "number"
     },
     "pro-pit-associates-count": {
-      property: "all_associates_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "associates",
+        collection: "all"
+      },
       label: "Aggregate associates",
       inputType: "number"
     },

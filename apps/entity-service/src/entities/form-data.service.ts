@@ -122,6 +122,7 @@ export class FormDataService {
 
     const questions = await FormQuestion.forForm(form.uuid).findAll();
     const collector = new LinkedAnswerCollector(this.mediaService);
+    const syncPromises: Promise<void>[] = [];
     for (const question of questions) {
       if (question.inputType === "conditional") {
         model.answers[question.uuid] = answers[question.uuid];
@@ -135,31 +136,20 @@ export class FormDataService {
         // Note: file questions are currently handled with direct file upload in the entity form on the FE
         const { field } = config;
         if (isField(field)) {
-          const value = answers[question.uuid];
-          const isDate = question.inputType === "date" && question.validation?.["required"] !== true;
-          if (value != null || isDate) {
-            if (
-              // TODO: Look for a better way to handle this case.
-              // Special case added in the v2 BE in TM-2042
-              question.linkedFieldKey === "pro-rep-landscape-com-con" &&
-              question.parentId != null &&
-              answers[question.parentId] === true
-            ) {
-              model[field.property] = "";
-            } else {
-              model[field.property] = value;
-            }
-          }
+          syncPromises.push(collector.fields.syncField(model, question, field, answers));
         } else if (isRelation(field)) {
-          await collector[field.resource].syncRelation(
-            model,
-            field,
-            answers[question.uuid] as object[] | null | undefined,
-            question.isHidden(answers, questions)
+          syncPromises.push(
+            collector[field.resource].syncRelation(
+              model,
+              field,
+              answers[question.uuid] as object[] | null | undefined,
+              question.isHidden(answers, questions)
+            )
           );
         }
       }
     }
+    await Promise.all(syncPromises);
 
     if (isReport(model)) {
       model.completion = this.calculateProgress(answers, questions);

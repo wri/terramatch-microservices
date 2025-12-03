@@ -5,6 +5,7 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { kebabCase } from "lodash";
 import { Op } from "sequelize";
+import { DemographicType } from "@terramatch-microservices/database/types/demographic";
 
 // For each of type, subtype and name, ensure predicate returns true if either they have an identical value,
 // or both are null / undefined.
@@ -36,7 +37,7 @@ const syncDemographics: RelationSync = async (model, field, answer, hidden, logg
     demographic = await Demographic.create({
       demographicalType: laravelType(model),
       demographicalId: model.id,
-      type: kebabCase(field.inputType),
+      type: kebabCase(field.inputType) as DemographicType,
       collection: field.collection,
       hidden
     });

@@ -84,7 +84,7 @@ describe("FormDataService", () => {
     it("updates the update request if there is one", async () => {
       const site = await SiteFactory.create();
       const updateRequest = await UpdateRequestFactory.forSite(site).create({ content: { color: "blue" } });
-      const form = await EntityFormFactory.forSite(site).create();
+      const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
       await updateRequest.reload();
       expect(updateRequest.content).toStrictEqual({ color: "red" });
@@ -94,7 +94,7 @@ describe("FormDataService", () => {
       const site = await SiteFactory.create();
       policyService.hasAccess.mockResolvedValue(false);
       mockUserId(123);
-      const form = await EntityFormFactory.forSite(site).create();
+      const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
 
       const updateRequest = await UpdateRequest.for(site).findOne();
@@ -111,16 +111,16 @@ describe("FormDataService", () => {
 
     it("updates the entity content", async () => {
       const site = await SiteFactory.create();
-      const form = await EntityFormFactory.forSite(site).create();
-      const section = await FormSectionFactory.forForm(form).create();
-      const conditional = await FormQuestionFactory.forSection(section).create({
+      const form = await EntityFormFactory.site(site).create();
+      const section = await FormSectionFactory.form(form).create();
+      const conditional = await FormQuestionFactory.section(section).create({
         inputType: "conditional"
       });
-      const name = await FormQuestionFactory.forSection(section).create({
+      const name = await FormQuestionFactory.section(section).create({
         inputType: "text",
         linkedFieldKey: "site-name"
       });
-      const trees = await FormQuestionFactory.forSection(section).create({
+      const trees = await FormQuestionFactory.section(section).create({
         inputType: "treeSpecies",
         linkedFieldKey: "site-rel-tree-species",
         collection: "tree-planted"
@@ -142,15 +142,15 @@ describe("FormDataService", () => {
       policyService.getPermissions.mockResolvedValue(["manage-own"]);
       policyService.hasAccess.mockResolvedValue(true);
       const siteReport = await SiteReportFactory.create({ submittedAt: null, nothingToReport: true });
-      const form = await EntityFormFactory.forSiteReport(siteReport).create();
-      const section = await FormSectionFactory.forForm(form).create();
-      const questions = await FormQuestionFactory.forSection(section).createMany(3, {
+      const form = await EntityFormFactory.siteReport(siteReport).create();
+      const section = await FormSectionFactory.form(form).create();
+      const questions = await FormQuestionFactory.section(section).createMany(3, {
         validation: { required: true }
       });
-      const nonRequired = await FormQuestionFactory.forSection(section).create();
-      const conditional = await FormQuestionFactory.forSection(section).create({ inputType: "conditional" });
+      const nonRequired = await FormQuestionFactory.section(section).create();
+      const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
       // hidden question that won't count for completion
-      await FormQuestionFactory.forSection(section).create({
+      await FormQuestionFactory.section(section).create({
         parentId: conditional.uuid,
         showOnParentCondition: true,
         validation: { required: true }
@@ -190,7 +190,7 @@ describe("FormDataService", () => {
         feedback: "please provide new color",
         feedbackFields: ["color"]
       });
-      const form = await EntityFormFactory.forSite(site).create();
+      const form = await EntityFormFactory.site(site).create();
       const dto = await service.getDtoForEntity("sites", site, form, "en-US");
       expect(dto.answers).toStrictEqual(updateRequest.content);
       expect(dto.feedback).toBe(updateRequest.feedback);
@@ -203,9 +203,9 @@ describe("FormDataService", () => {
         feedback: "New name please!",
         feedbackFields: ["name"]
       });
-      const form = await EntityFormFactory.forSite(site).create();
-      const section = await FormSectionFactory.forForm(form).create();
-      const question = await FormQuestionFactory.forSection(section).create({
+      const form = await EntityFormFactory.site(site).create();
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create({
         inputType: "text",
         linkedFieldKey: "site-name"
       });
@@ -234,25 +234,25 @@ describe("FormDataService", () => {
 
     it("collects answers from the entity model", async () => {
       const site = await SiteFactory.create({ history: faker.lorem.paragraphs(3) });
-      const form = await EntityFormFactory.forSite(site).create();
-      const section = await FormSectionFactory.forForm(form).create();
-      const historyQ = await FormQuestionFactory.forSection(section).create({
+      const form = await EntityFormFactory.site(site).create();
+      const section = await FormSectionFactory.form(form).create();
+      const historyQ = await FormQuestionFactory.section(section).create({
         inputType: "text",
         linkedFieldKey: "site-history"
       });
-      const conditional = await FormQuestionFactory.forSection(section).create({ inputType: "conditional" });
+      const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
       await site.update({ answers: { [conditional.uuid]: true } });
-      const fileQ = await FormQuestionFactory.forSection(section).create({
+      const fileQ = await FormQuestionFactory.section(section).create({
         inputType: "file",
         linkedFieldKey: "site-col-media"
       });
       const media = await MediaFactory.forSite(site).create({ collectionName: "media" });
-      const treesQ1 = await FormQuestionFactory.forSection(section).create({
+      const treesQ1 = await FormQuestionFactory.section(section).create({
         inputType: "treeSpecies",
         linkedFieldKey: "site-rel-tree-species",
         order: 0
       });
-      const treesQ2 = await FormQuestionFactory.forSection(section).create({
+      const treesQ2 = await FormQuestionFactory.section(section).create({
         inputType: "treeSpecies",
         linkedFieldKey: "site-rel-non-tree-species",
         order: 1

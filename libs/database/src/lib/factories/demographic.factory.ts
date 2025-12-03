@@ -21,6 +21,13 @@ const defaultAttributesFactory = async () => ({
 });
 
 export const DemographicFactory = {
+  projectReport: (report?: ProjectReport) =>
+    FactoryGirl.define(Demographic, async () => ({
+      ...(await defaultAttributesFactory()),
+      demographicalType: ProjectReport.LARAVEL_TYPE,
+      demographicalId: (report?.id as number) ?? ProjectReportFactory.associate("id")
+    })),
+
   projectReportWorkday: (report?: ProjectReport) =>
     FactoryGirl.define(Demographic, async () => ({
       ...(await defaultAttributesFactory()),
@@ -64,6 +71,13 @@ export const DemographicFactory = {
       demographicalId: (org?.id as number) ?? OrganisationFactory.associate("id"),
       type: Demographic.ALL_BENEFICIARIES_TYPE,
       collection: faker.helpers.arrayElement(ALL_BENEFICIARIES_ORGANISATION_COLLECTIONS)
+    })),
+
+  projectPitch: (pitch?: ProjectPitch) =>
+    FactoryGirl.define(Demographic, async () => ({
+      ...(await defaultAttributesFactory()),
+      demographicalType: ProjectPitch.LARAVEL_TYPE,
+      demographicalId: (pitch?.id as number) ?? ProjectPitchFactory.associate("id")
     })),
 
   projectPitchAllEmployees: (pitch?: ProjectPitch) =>

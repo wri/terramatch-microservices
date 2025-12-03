@@ -4,7 +4,7 @@ import { faker } from "@faker-js/faker";
 import { FormFactory } from "./form.factory";
 
 export const FormSectionFactory = {
-  forForm: (form?: Form) =>
+  form: (form?: Form) =>
     FactoryGirl.define(FormSection, async () => ({
       formId: form?.uuid ?? FormFactory.associate("uuid"),
       order: faker.number.int({ min: 1, max: 10 }),

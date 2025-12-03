@@ -4,7 +4,8 @@ import { Demographic } from "./demographic.entity";
 import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
-  gender: { where: { type: "gender" } }
+  gender: { where: { type: "gender" } },
+  demographic: (id: number) => ({ where: { demographicId: id } })
 }))
 @Table({
   tableName: "demographic_entries",
@@ -15,6 +16,10 @@ export class DemographicEntry extends Model<
   InferAttributes<DemographicEntry>,
   InferCreationAttributes<DemographicEntry>
 > {
+  static demographic(id: number) {
+    return chainScope(this, "demographic", id) as typeof DemographicEntry;
+  }
+
   static gender() {
     return chainScope(this, "gender") as typeof DemographicEntry;
   }

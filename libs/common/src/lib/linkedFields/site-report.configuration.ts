@@ -18,9 +18,11 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
       label: "Additional Disturbance Details",
       inputType: "long-text"
     },
-    "site-rep-workdays-paid": { property: "workdays_paid", label: "Workdays paid", inputType: "number" },
+    // @deprecated - this should not be used in new forms
+    "site-rep-workdays-paid": { property: "workdaysPaid", label: "Workdays paid", inputType: "number" },
     "site-rep-seeds-planted": { property: "seedsPlanted", label: "Seeds planted", inputType: "number" },
-    "site-rep-workdays-volunteer": { property: "workdays_volunteer", label: "Workdays volunteer", inputType: "number" },
+    // @deprecated - this should not be used in new forms
+    "site-rep-workdays-volunteer": { property: "workdaysVolunteer", label: "Workdays volunteer", inputType: "number" },
     "site-rep-polygon-status": { property: "polygonStatus", label: "Polygon status", inputType: "long-text" },
     "site-rep-planting-status": {
       property: "plantingStatus",
@@ -66,7 +68,11 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
       inputType: "long-text"
     },
     "site-rep-other-workdays-description": {
-      property: "other_workdays_description",
+      virtual: {
+        type: "demographicsDescription",
+        demographicsType: "workdays",
+        collections: ["paid-other-activities", "volunteer-other-activities"]
+      },
       label: "Other Activities Description",
       inputType: "long-text"
     },

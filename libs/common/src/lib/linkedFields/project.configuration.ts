@@ -4,7 +4,6 @@ import { Project } from "@terramatch-microservices/database/entities";
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
 export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
   label: "Project",
-  laravelModelType: Project.LARAVEL_TYPE,
   fields: {
     "pro-name": { property: "name", label: "Name", inputType: "text" },
     "pro-land-use-types": {
@@ -253,37 +252,77 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       inputType: "number-percentage"
     },
     "pro-full-time-jobs-count": {
-      property: "full_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time"
+      },
       label: "Aggregate full time jobs",
       inputType: "number"
     },
     "pro-full-clt-time-jobs-count": {
-      property: "full_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time-clt"
+      },
       label: "Aggregate full time CLT jobs",
       inputType: "number"
     },
     "pro-part-time-jobs-count": {
-      property: "part_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time"
+      },
       label: "Aggregate part time jobs",
       inputType: "number"
     },
     "pro-part-clt-time-jobs-count": {
-      property: "part_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time-clt"
+      },
       label: "Aggregate part time CLT jobs",
       inputType: "number"
     },
-    "pro-volunteers-count": { property: "volunteers_aggregate", label: "Aggregate volunteers", inputType: "number" },
+    "pro-volunteers-count": {
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "volunteers",
+        collection: "volunteer"
+      },
+      label: "Aggregate volunteers",
+      inputType: "number"
+    },
     "pro-beneficiaries-count": {
-      property: "all_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "all-beneficiaries",
+        collection: "all"
+      },
       label: "Aggregate beneficiaries",
       inputType: "number"
     },
     "pro-indirect-beneficiaries-count": {
-      property: "indirect_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "indirect-beneficiaries",
+        collection: "indirect"
+      },
       label: "Aggregate indirect beneficiaries",
       inputType: "number"
     },
-    "pro-associates-count": { property: "all_associates_aggregate", label: "Aggregate associates", inputType: "number" }
+    "pro-associates-count": {
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "associates",
+        collection: "all"
+      },
+      label: "Aggregate associates",
+      inputType: "number"
+    }
   },
   fileCollections: {
     "pro-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },

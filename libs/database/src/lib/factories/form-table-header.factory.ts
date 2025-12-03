@@ -6,7 +6,7 @@ import { FormQuestionFactory } from "./form-question.factory";
 export const FormTableHeaderFactory = {
   forQuestion: (formQuestion?: FormQuestion) =>
     FactoryGirl.define(FormTableHeader, async () => ({
-      formQuestionId: formQuestion?.id ?? FormQuestionFactory.forSection().associate("id"),
+      formQuestionId: formQuestion?.id ?? FormQuestionFactory.section().associate("id"),
       order: faker.number.int({ min: 1, max: 10 }),
       slug: faker.lorem.slug(),
       label: faker.lorem.word()

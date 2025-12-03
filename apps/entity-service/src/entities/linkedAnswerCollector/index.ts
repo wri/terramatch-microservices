@@ -21,6 +21,7 @@ import { fundingTypesCollector } from "./funding-types.collector";
 import { financialIndicatorsCollector } from "./financial-indicators.collector";
 import { disturbanceReportEntriesCollector } from "./disturbance-report-entries.collector";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { FormQuestion } from "@terramatch-microservices/database/entities";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
@@ -35,6 +36,13 @@ export interface ResourceCollector<TField extends LinkedField | LinkedFile | Lin
    * Execute as few queries as possible to satisfy all current answer data for this form.
    */
   collect(answers: Dictionary<unknown>, models: FormModels): Promise<void>;
+}
+
+export interface FieldResourceCollector extends ResourceCollector<LinkedField> {
+  /**
+   * Syncs the answers from a form for this field.
+   */
+  syncField(model: FormModel, question: FormQuestion, field: LinkedField, answers: Dictionary<unknown>): Promise<void>;
 }
 
 export interface RelationResourceCollector extends ResourceCollector<LinkedRelation> {

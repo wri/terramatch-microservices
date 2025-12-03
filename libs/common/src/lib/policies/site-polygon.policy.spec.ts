@@ -187,5 +187,30 @@ describe("SitePolygonPolicy", () => {
 
       await expectCan(service, "read", sitePolygon);
     });
+
+    it("allows greenhouse users with manage-own to manage but only delete their own", async () => {
+      const user = await UserFactory.create();
+      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
+      await user.$add("role", role);
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+
+      const ownPolygon = new SitePolygon();
+      ownPolygon.siteUuid = site.uuid;
+      ownPolygon.createdBy = user.id;
+
+      const otherPolygon = new SitePolygon();
+      otherPolygon.siteUuid = site.uuid;
+      otherPolygon.createdBy = 999;
+      await expectCan(service, "manage", ownPolygon);
+      await expectCan(service, "manage", otherPolygon);
+
+      await expectCan(service, "delete", ownPolygon);
+      await expectCannot(service, "delete", otherPolygon);
+    });
   });
 });

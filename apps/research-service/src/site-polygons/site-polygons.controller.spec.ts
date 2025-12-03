@@ -27,6 +27,7 @@ import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
 import { FeatureCollection } from "geojson";
 import { Job } from "bullmq";
 import { VersionUpdateBody } from "./dto/version-update.dto";
+import { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -1348,6 +1349,118 @@ describe("SitePolygonsController", () => {
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+  });
+
+  describe("bulkDelete", () => {
+    it("should throw BadRequestException when data is null", async () => {
+      const payload = { data: null } as unknown as SitePolygonBulkDeleteBodyDto;
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(BadRequestException);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when data is empty array", async () => {
+      const payload = { data: [] } as SitePolygonBulkDeleteBodyDto;
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(BadRequestException);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when no polygons are found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+
+      const payload: SitePolygonBulkDeleteBodyDto = {
+        data: [
+          { type: "sitePolygons", id: "uuid-1" },
+          { type: "sitePolygons", id: "uuid-2" }
+        ]
+      };
+
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(NotFoundException);
+      expect(SitePolygon.findAll).toHaveBeenCalled();
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when some polygons are missing", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const foundPolygon = await SitePolygonFactory.build({ uuid: "uuid-1" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([foundPolygon]);
+
+      const payload: SitePolygonBulkDeleteBodyDto = {
+        data: [
+          { type: "sitePolygons", id: "uuid-1" },
+          { type: "sitePolygons", id: "uuid-2" },
+          { type: "sitePolygons", id: "uuid-3" }
+        ]
+      };
+
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(NotFoundException);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when user is not authorized for a polygon", async () => {
+      const polygon1 = await SitePolygonFactory.build({ uuid: "uuid-1" });
+      const polygon2 = await SitePolygonFactory.build({ uuid: "uuid-2" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([polygon1, polygon2]);
+      policyService.authorize.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new UnauthorizedException());
+
+      const payload: SitePolygonBulkDeleteBodyDto = {
+        data: [
+          { type: "sitePolygons", id: "uuid-1" },
+          { type: "sitePolygons", id: "uuid-2" }
+        ]
+      };
+
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon1);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon2);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should successfully delete multiple polygons when authorized", async () => {
+      const polygon1 = await SitePolygonFactory.build({ uuid: "uuid-1" });
+      const polygon2 = await SitePolygonFactory.build({ uuid: "uuid-2" });
+      const polygon3 = await SitePolygonFactory.build({ uuid: "uuid-3" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([polygon1, polygon2, polygon3]);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(["uuid-1", "uuid-2", "uuid-3"]);
+
+      const payload: SitePolygonBulkDeleteBodyDto = {
+        data: [
+          { type: "sitePolygons", id: "uuid-1" },
+          { type: "sitePolygons", id: "uuid-2" },
+          { type: "sitePolygons", id: "uuid-3" }
+        ]
+      };
+
+      const result = await controller.bulkDelete(payload);
+
+      expect(SitePolygon.findAll).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledTimes(3);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon1);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon2);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon3);
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith(["uuid-1", "uuid-2", "uuid-3"]);
+      expect(result).toHaveProperty("meta");
+      expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
+      expect(result.meta).toHaveProperty("resourceIds", ["uuid-1", "uuid-2", "uuid-3"]);
+    });
+
+    it("should successfully delete a single polygon", async () => {
+      const polygon = await SitePolygonFactory.build({ uuid: "uuid-1" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([polygon]);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(["uuid-1"]);
+
+      const payload: SitePolygonBulkDeleteBodyDto = {
+        data: [{ type: "sitePolygons", id: "uuid-1" }]
+      };
+
+      const result = await controller.bulkDelete(payload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon);
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith(["uuid-1"]);
+      expect(result.meta).toHaveProperty("resourceIds", ["uuid-1"]);
     });
   });
 });

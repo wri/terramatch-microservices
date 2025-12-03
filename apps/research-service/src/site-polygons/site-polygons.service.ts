@@ -27,6 +27,7 @@ import { Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { INDICATOR_SLUGS } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -175,9 +176,7 @@ export class SitePolygonsService {
         throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
       }
 
-      const uniquePrimaryUuids = uniq(
-        sitePolygons.map(sp => sp.primaryUuid).filter((uuid): uuid is string => uuid != null)
-      );
+      const uniquePrimaryUuids = uniq(sitePolygons.map(sp => sp.primaryUuid).filter(isNotNull));
 
       const allRelatedSitePolygons = await SitePolygon.findAll({
         where: { primaryUuid: { [Op.in]: uniquePrimaryUuids } },
@@ -187,12 +186,8 @@ export class SitePolygonsService {
 
       const allSitePolygonIds = allRelatedSitePolygons.map(sp => sp.id);
       const allSitePolygonUuids = allRelatedSitePolygons.map(sp => sp.uuid);
-      const allPolygonUuids = allRelatedSitePolygons
-        .map(sp => sp.polygonUuid)
-        .filter((uuid): uuid is string => uuid != null);
-      const allPointUuids = allRelatedSitePolygons
-        .map(sp => sp.pointUuid)
-        .filter((uuid): uuid is string => uuid != null);
+      const allPolygonUuids = allRelatedSitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
+      const allPointUuids = allRelatedSitePolygons.map(sp => sp.pointUuid).filter(isNotNull);
 
       await this.deleteSitePolygonRelatedRecords(
         allSitePolygonIds,

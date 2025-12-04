@@ -224,4 +224,10 @@ export class SiteFullDto extends SiteLightDto {
     description: "The associated project organisation name"
   })
   organisationName: string;
+
+  @ApiProperty({ nullable: true, type: Number })
+  treesPlantedPolygonsCount: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  hectaresRestoredPolygonsCount: number | null;
 }

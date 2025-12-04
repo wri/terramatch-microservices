@@ -510,12 +510,13 @@ describe("AirtableEntity", () => {
     beforeAll(async () => {
       await FinancialIndicator.truncate();
 
-      const allIndicators = await FinancialIndicatorFactory.createMany(10);
+      const org = await OrganisationFactory.create();
+      const allIndicators = await FinancialIndicatorFactory.org(org).createMany(10);
       await allIndicators[2].destroy();
       await allIndicators[7].destroy();
       allIndicators.push(
-        await FinancialIndicatorFactory.create({ organisationId: allIndicators[0].organisationId }),
-        await FinancialIndicatorFactory.create({ organisationId: allIndicators[2].organisationId })
+        await FinancialIndicatorFactory.org(org).create(),
+        await FinancialIndicatorFactory.org(org).create()
       );
 
       indicators = allIndicators.filter(indicator => !indicator.isSoftDeleted());

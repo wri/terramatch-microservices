@@ -1,11 +1,6 @@
 import { CollectorTestHarness } from "./linked-answer-collector.spec";
-import {
-  FinancialReportFactory,
-  MediaFactory,
-  NurseryFactory,
-  SiteFactory
-} from "@terramatch-microservices/database/factories";
-import { Media } from "@terramatch-microservices/database/entities";
+import { MediaFactory, NurseryFactory, SiteFactory } from "@terramatch-microservices/database/factories";
+import { FinancialReport, Media } from "@terramatch-microservices/database/entities";
 import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { ResourceCollector } from "./index";
@@ -25,7 +20,7 @@ describe("FileCollector", () => {
 
   it("throws if a model is not a media owner", async () => {
     collector.addField({ collection: "media", label: "", inputType: "file" }, "financialReports", "one");
-    await expect(harness.getAnswers({ financialReports: await FinancialReportFactory.create() })).rejects.toThrow(
+    await expect(harness.getAnswers({ financialReports: new FinancialReport() })).rejects.toThrow(
       "Entity is not a media owner: financialReports"
     );
   });

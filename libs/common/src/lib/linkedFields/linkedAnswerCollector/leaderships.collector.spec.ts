@@ -5,7 +5,7 @@ import { EmbeddedLeadershipDto } from "../../dto/leadership.dto";
 import { orderBy } from "lodash";
 import { Leadership, Organisation, Project } from "@terramatch-microservices/database/entities";
 
-describe("DemographicsCollector", () => {
+describe("LeadershipsCollector", () => {
   let harness: CollectorTestHarness;
   let collector: RelationResourceCollector;
 

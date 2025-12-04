@@ -155,7 +155,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should skip task status check for FinancialReport (which has no taskId)", async () => {
-      const financialReport = await FinancialReportFactory.create({ status: AWAITING_APPROVAL });
+      const financialReport = await FinancialReportFactory.org().create({ status: AWAITING_APPROVAL });
       const handler = createHandler(financialReport);
       const logSpy = jest.spyOn((handler as any).logger, "warn");
       await handler.handle();
@@ -237,10 +237,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     it("should send status update email for FinancialReport to createdBy user", async () => {
       mockUserId();
       const user = await UserFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        status: APPROVED,
-        createdBy: user.id
-      });
+      const financialReport = await FinancialReportFactory.org().create({ status: APPROVED, createdBy: user.id });
 
       await new EntityStatusUpdate(eventService, financialReport).handle();
 

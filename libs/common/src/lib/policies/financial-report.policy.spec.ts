@@ -22,8 +22,8 @@ describe("FinancialReportPolicy", () => {
   it("allows managing financial reports in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
-    const ppc = await FinancialReportFactory.create({ frameworkKey: "ppc" });
-    const tf = await FinancialReportFactory.create({ frameworkKey: "terrafund" });
+    const ppc = await FinancialReportFactory.org().create({ frameworkKey: "ppc" });
+    const tf = await FinancialReportFactory.org().create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
       can: [[["read", "delete"], ppc]],
       cannot: [[["read", "delete"], tf]]
@@ -36,8 +36,8 @@ describe("FinancialReportPolicy", () => {
     const user = await UserFactory.create({ organisationId: org.id });
     mockUserId(user.id);
 
-    const fr1 = await FinancialReportFactory.create({ organisationId: org.id });
-    const fr2 = await FinancialReportFactory.create();
+    const fr1 = await FinancialReportFactory.org(org).create();
+    const fr2 = await FinancialReportFactory.org().create();
     await expectAuthority(service, {
       can: [[["read", "delete"], fr1]],
       cannot: [[["read", "delete"], fr2]]
@@ -47,8 +47,8 @@ describe("FinancialReportPolicy", () => {
   it("allows managing all financial reports with reports-manage permission", async () => {
     mockUserId(123);
     mockPermissions("reports-manage");
-    const fr1 = await FinancialReportFactory.create();
-    const fr2 = await FinancialReportFactory.create();
+    const fr1 = await FinancialReportFactory.org().create();
+    const fr2 = await FinancialReportFactory.org().create();
     await expectAuthority(service, {
       can: [
         [["read", "delete"], fr1],
@@ -63,7 +63,7 @@ describe("FinancialReportPolicy", () => {
     mockUserId(user.id);
     mockPermissions("other-permission");
 
-    const financialReport = await FinancialReportFactory.create({ organisationId: org.id });
+    const financialReport = await FinancialReportFactory.org(org).create();
     await expectCannot(service, "read", financialReport);
     await expectCannot(service, "delete", financialReport);
   });
@@ -73,7 +73,7 @@ describe("FinancialReportPolicy", () => {
     mockUserId(user.id);
     mockPermissions("manage-own");
 
-    const financialReport = await FinancialReportFactory.create();
+    const financialReport = await FinancialReportFactory.org().create();
     await expectCannot(service, "read", financialReport);
     await expectCannot(service, "delete", financialReport);
   });

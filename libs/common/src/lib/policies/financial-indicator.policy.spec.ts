@@ -25,7 +25,7 @@ describe("FinancialIndicatorPolicy", () => {
     const user = await UserFactory.create({ organisationId: org.id });
     mockUserId(user.id);
     mockPermissions();
-    const financialIndicator = await FinancialIndicatorFactory.create({ organisationId: org.id });
+    const financialIndicator = await FinancialIndicatorFactory.org(org).create();
     await expectCan(service, "uploadFiles", financialIndicator);
   });
 });

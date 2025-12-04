@@ -17,15 +17,17 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
     },
 
     async collect(answers, models) {
-      if (Object.keys(models).length > 1 || Object.keys(questions).length > 1) {
-        throw new InternalServerErrorException("Only one model type at a time is supported for fundingTypes");
+      if (models.organisations != null && models.financialReports != null) {
+        throw new InternalServerErrorException(
+          "Only one of financialReports or organisations can be set for fundingTypes."
+        );
       }
       const modelType = Object.keys(models)[0];
 
       const fundingTypes = await FundingType.findAll({
         where:
           modelType === "organisations"
-            ? { organisationId: models.organisations?.id, financialReportId: null }
+            ? { organisationId: models.organisations?.uuid, financialReportId: null }
             : { financialReportId: models.financialReports?.id },
         attributes: ["uuid", "year", "type", "source", "amount"]
       });

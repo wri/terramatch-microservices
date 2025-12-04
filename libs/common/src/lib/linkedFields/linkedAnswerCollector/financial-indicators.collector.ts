@@ -3,7 +3,8 @@ import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
-import { CreationAttributes } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
@@ -17,8 +18,10 @@ export function financialIndicatorsCollector(logger: LoggerService): RelationRes
     },
 
     async collect(answers, models) {
-      if (Object.keys(models).length > 1 || Object.keys(questions).length > 1) {
-        throw new InternalServerErrorException("Only one model type at a time is supported for fundingTypes");
+      if (models.organisations != null && models.financialReports != null) {
+        throw new InternalServerErrorException(
+          "Only one of financialReports or organisations can be set for financialIndicators."
+        );
       }
       const modelType = Object.keys(models)[0];
 
@@ -58,9 +61,16 @@ export function financialIndicatorsCollector(logger: LoggerService): RelationRes
         return;
       }
 
+      const dtos = answer as EmbeddedFinancialIndicatorDto[];
+      const dtoUuids = dtos.map(({ uuid }) => uuid).filter(isNotNull);
+      if (dtoUuids.length === 0) {
+        await scope.destroy();
+      } else {
+        await scope.destroy({ where: { uuid: { [Op.notIn]: dtoUuids } } });
+      }
+
       const toCreate: CreationAttributes<FinancialIndicator>[] = [];
       const indicators = await scope.findAll();
-      const dtos = answer as EmbeddedFinancialIndicatorDto[];
       await Promise.all(
         dtos.map(async dto => {
           const existing = indicators.find(({ uuid }) => uuid === dto.uuid);

@@ -973,23 +973,22 @@ describe("SitePolygonsController", () => {
   describe("getVersions", () => {
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      await expect(controller.getVersions("test-uuid")).rejects.toThrow(UnauthorizedException);
+      await expect(controller.getVersions("test-primary-uuid")).rejects.toThrow(UnauthorizedException);
     });
 
     it("should throw NotFoundException when polygon is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+      versioningService.getVersionHistory.mockResolvedValue([]);
 
-      await expect(controller.getVersions("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(controller.getVersions("non-existent-primary-uuid")).rejects.toThrow(NotFoundException);
       expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(versioningService.getVersionHistory).toHaveBeenCalledWith("non-existent-primary-uuid");
     });
 
     it("should return all versions ordered by creation date", async () => {
       policyService.authorize.mockResolvedValue(undefined);
 
       const primaryUuid = "primary-uuid-123";
-      const polygon = await SitePolygonFactory.build({ uuid: "polygon-uuid", primaryUuid });
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(polygon);
 
       const version1 = await SitePolygonFactory.build({
         uuid: "version-1-uuid",
@@ -1012,17 +1011,16 @@ describe("SitePolygonsController", () => {
         return Promise.resolve(new SitePolygonLightDto(sitePolygon, []));
       });
 
-      const result = serialize(await controller.getVersions("polygon-uuid"));
+      const result = serialize(await controller.getVersions(primaryUuid));
 
       expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({ where: { uuid: "polygon-uuid" } });
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith(primaryUuid);
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, false);
       expect(result.data).toBeDefined();
       expect(result.meta).toBeDefined();
       expect(result.meta?.indices).toBeDefined();
       expect(result.meta?.indices).toHaveLength(1);
-      expect(result.meta?.indices?.[0].requestPath).toBe("/research/v3/sitePolygons/polygon-uuid/versions");
+      expect(result.meta?.indices?.[0].requestPath).toBe("/research/v3/sitePolygons/primary-uuid-123/versions");
       expect(result.meta?.indices?.[0].ids).toEqual(["version-2-uuid", "version-1-uuid"]);
       expect(result.meta?.indices?.[0].total).toBe(2);
     });

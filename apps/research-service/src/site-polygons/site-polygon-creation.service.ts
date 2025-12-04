@@ -1,5 +1,11 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
-import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
+import {
+  Site,
+  SitePolygon,
+  PolygonGeometry,
+  SitePolygonData,
+  CriteriaSite
+} from "@terramatch-microservices/database/entities";
 import { Transaction, Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -305,18 +311,41 @@ export class SitePolygonCreationService {
     userId: number,
     transaction: Transaction
   ): Promise<{ features: Feature[]; duplicatePointUuids: string[] }> {
-    const points = features.filter(f => f.geometry.type === "Point");
+    const points: Feature[] = [];
+    for (const feature of features) {
+      const geometry = feature.geometry;
+      const geometryType = geometry.type as string;
+
+      if (geometryType === "MultiPoint") {
+        const coordinates = geometry.coordinates as unknown as number[][];
+        for (const pointCoords of coordinates) {
+          points.push({
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: pointCoords
+            },
+            properties: { ...feature.properties }
+          });
+        }
+      } else if (geometry.type === "Point") {
+        points.push(feature);
+      }
+    }
+
     if (points.length === 0) {
       return { features, duplicatePointUuids: [] };
     }
 
     for (const p of points) {
       const props = p.properties ?? {};
-      if (props.est_area == null) {
-        throw new BadRequestException("Point features must include properties.est_area");
+      const estAreaValue = (props.estArea as number) ?? (props.est_area as number);
+      if (estAreaValue == null) {
+        throw new BadRequestException("Point features must include properties.estArea");
       }
-      if (props.site_id == null) {
-        throw new BadRequestException("Point features must include properties.site_id");
+      const siteIdValue = (props.siteId as string) ?? (props.site_id as string);
+      if (siteIdValue == null) {
+        throw new BadRequestException("Point features must include properties.siteId");
       }
     }
 
@@ -374,7 +403,10 @@ export class SitePolygonCreationService {
       }
     }
 
-    const nonPoints = features.filter(f => f.geometry.type !== "Point");
+    const nonPoints = features.filter(f => {
+      const geomType = f.geometry.type as string;
+      return geomType !== "Point" && geomType !== "MultiPoint";
+    });
     return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids };
   }
 
@@ -387,9 +419,9 @@ export class SitePolygonCreationService {
       }
 
       for (const feature of geometryCollection.features) {
-        const siteId = feature.properties.site_id;
+        const siteId = (feature.properties.siteId as string) ?? (feature.properties.site_id as string);
         if (siteId == null) {
-          throw new BadRequestException("All features must have site_id in properties");
+          throw new BadRequestException("All features must have siteId in properties");
         }
 
         if (grouped[siteId] == null) {
@@ -493,6 +525,21 @@ export class SitePolygonCreationService {
     source: string,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
+    const unsupportedTypes = new Set<string>();
+    for (const feature of features) {
+      const geomType = feature.geometry.type as string;
+      if (geomType !== "Polygon" && geomType !== "MultiPolygon" && geomType !== "Point" && geomType !== "MultiPoint") {
+        unsupportedTypes.add(geomType);
+      }
+    }
+
+    if (unsupportedTypes.size > 0) {
+      throw new BadRequestException(
+        `Unsupported geometry types: ${Array.from(unsupportedTypes).join(", ")}. ` +
+          `Only Polygon, MultiPolygon, Point, and MultiPoint are supported.`
+      );
+    }
+
     const geometries = features.map(f => f.geometry);
 
     const { uuids: polygonUuids, areas } = await this.polygonGeometryService.createGeometriesFromFeatures(
@@ -528,6 +575,7 @@ export class SitePolygonCreationService {
 
         const allProperties = { ...properties };
         if (siteId != null) {
+          allProperties.siteId = siteId;
           allProperties.site_id = siteId;
         }
 
@@ -550,7 +598,8 @@ export class SitePolygonCreationService {
           source,
           createdBy: userId,
           isActive: true,
-          status: "draft"
+          status: "draft",
+          validationStatus: null
         });
 
         if (Object.keys(additionalData).length > 0) {
@@ -568,6 +617,13 @@ export class SitePolygonCreationService {
 
     if (additionalDataRecords.length > 0) {
       await SitePolygonData.bulkCreate(additionalDataRecords as SitePolygonData[], { transaction });
+    }
+
+    if (polygonUuids.length > 0) {
+      await CriteriaSite.destroy({
+        where: { polygonId: { [Op.in]: polygonUuids } },
+        transaction
+      });
     }
 
     return createdSitePolygons;
@@ -641,27 +697,45 @@ export class SitePolygonCreationService {
     }
 
     if (attributeChanges != null) {
-      if (attributeChanges.polyName != null && attributeChanges.polyName.length > 0) {
-        sitePolygonAttributes.polyName = attributeChanges.polyName;
+      const polyName = attributeChanges.polyName ?? attributeChanges.poly_name;
+      if (polyName != null && polyName.length > 0) {
+        sitePolygonAttributes.polyName = polyName;
       }
-      if (attributeChanges.plantStart != null && attributeChanges.plantStart.length > 0) {
-        sitePolygonAttributes.plantStart = new Date(attributeChanges.plantStart);
+
+      const plantStart = attributeChanges.plantStart ?? attributeChanges.plantstart;
+      if (plantStart != null && plantStart.length > 0) {
+        sitePolygonAttributes.plantStart = new Date(plantStart);
       }
+
       if (attributeChanges.practice != null && attributeChanges.practice.length > 0) {
         sitePolygonAttributes.practice = validateAndSortStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES);
       }
-      if (attributeChanges.targetSys != null && attributeChanges.targetSys.length > 0) {
-        sitePolygonAttributes.targetSys = attributeChanges.targetSys;
+
+      const targetSys = attributeChanges.targetSys ?? attributeChanges.target_sys;
+      if (targetSys != null && targetSys.length > 0) {
+        sitePolygonAttributes.targetSys = targetSys;
       }
+
       if (attributeChanges.distr != null && attributeChanges.distr.length > 0) {
         sitePolygonAttributes.distr = validateAndSortStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES);
       }
-      if (attributeChanges.numTrees != null) {
-        sitePolygonAttributes.numTrees = attributeChanges.numTrees;
+
+      const numTrees = attributeChanges.numTrees ?? attributeChanges.num_trees;
+      if (numTrees != null) {
+        sitePolygonAttributes.numTrees = numTrees;
       }
     }
     sitePolygonAttributes.validationStatus = null;
     sitePolygonAttributes.status = "draft";
+
+    const polygonUuidToClear = newPolygonGeometryUuid ?? basePolygon.polygonUuid;
+
+    if (polygonUuidToClear != null) {
+      await CriteriaSite.destroy({
+        where: { polygonId: polygonUuidToClear },
+        transaction
+      });
+    }
 
     const changeDescription = this.buildDetailedChangeDescription(
       basePolygon,

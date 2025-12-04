@@ -25,7 +25,7 @@ export class PointGeometryCreationService {
     const pointGeometries = pointFeatures.map(feature => {
       const point = feature.geometry as Point;
       const properties = feature.properties ?? {};
-      const estArea = (properties.est_area as number) ?? null;
+      const estArea = (properties.estArea as number) ?? (properties.est_area as number) ?? null;
 
       return {
         uuid: uuidv4(),

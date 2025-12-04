@@ -331,14 +331,13 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
   }
 
   async validateGeometry(geometry: Geometry, properties?: Record<string, unknown>): Promise<DuplicateValidationResult> {
-    if (properties == null || properties.site_id == null) {
+    const siteId = properties != null ? (properties.siteId as string) ?? (properties.site_id as string) : null;
+    if (properties == null || siteId == null) {
       return {
         valid: true,
         extraInfo: null
       };
     }
-
-    const siteId = properties.site_id as string;
 
     if (geometry.type === "Point") {
       const feature: Feature = {

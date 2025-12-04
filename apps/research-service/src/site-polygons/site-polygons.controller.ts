@@ -87,11 +87,28 @@ export class SitePolygonsController {
     operationId: "createSitePolygons",
     summary: "Create site polygons from GeoJSON or create version from existing",
     description: `Create site polygons OR create a new version of an existing polygon.
-    **Normal Creation**: Provide geometries array with site_id in properties.
-    **Version Creation**: Provide baseSitePolygonUuid + changeReason + (geometries and/or attributeChanges).
-    Duplicate validation results are always included in the response when duplicates are found.`
+
+    Normal Creation (new polygons):
+    - Provide \`geometries\` array with \`siteId\`in feature properties (required)
+    - Attributes (polyName, plantstart, practice, etc.) come from feature \`properties\`
+    - Properties support both camelCase and snake_case
+    - Do NOT provide \`baseSitePolygonUuid\` or \`attributeChanges\`
+    
+    Version Creation (new version of existing polygon):
+    - Provide \`baseSitePolygonUuid\` (required) + \`changeReason\` (optional, defaults to "Version created via API")
+    - Then provide ONE of the following:
+      - Geometry only: Provide \`geometries\` array (geometry properties are ignored)
+      - Attributes only: Provide \`attributeChanges\` object
+      - Both: Provide both \`geometries\` and \`attributeChanges\`
+    - At least one of \`geometries\` or \`attributeChanges\` must be provided
+    
+    Important: When creating versions, \`attributeChanges\` is the ONLY way to update attributes. 
+    Geometry properties are ignored during version creation - use \`attributeChanges\` instead.
+    
+    Duplicate validation results are included in the \`included\` section of the JSON:API response when duplicates are found.
+    Property naming: GeoJSON properties support both camelCase and snake_case.`
   })
-  @JsonApiResponse([SitePolygonLightDto])
+  @JsonApiResponse({ data: SitePolygonLightDto, included: [ValidationDto] })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, {
     description: "Invalid request data, site not found, or versioning validation failed."
@@ -333,7 +350,7 @@ export class SitePolygonsController {
     });
   }
 
-  @Get(":uuid/versions")
+  @Get(":primaryUuid/versions")
   @ApiOperation({
     operationId: "listSitePolygonVersions",
     summary: "Get all versions of a site polygon",
@@ -342,15 +359,13 @@ export class SitePolygonsController {
   @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
-  async getVersions(@Param("uuid") uuid: string) {
+  async getVersions(@Param("primaryUuid") primaryUuid: string) {
     await this.policyService.authorize("read", SitePolygon);
 
-    const polygon = await SitePolygon.findOne({ where: { uuid } });
-    if (polygon == null) {
-      throw new NotFoundException(`Site polygon not found: ${uuid}`);
+    const versions = await this.versioningService.getVersionHistory(primaryUuid);
+    if (versions.length === 0) {
+      throw new NotFoundException(`Site polygon not found: ${primaryUuid}`);
     }
-
-    const versions = await this.versioningService.getVersionHistory(polygon.primaryUuid);
 
     const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
     const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
@@ -365,7 +380,7 @@ export class SitePolygonsController {
     }
 
     document.addIndex({
-      requestPath: `/research/v3/sitePolygons/${uuid}/versions`,
+      requestPath: `/research/v3/sitePolygons/${primaryUuid}/versions`,
       total: versions.length
     });
 

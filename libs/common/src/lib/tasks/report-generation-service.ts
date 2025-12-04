@@ -95,7 +95,7 @@ export class ReportGenerationService {
     }
 
     // these reports are only available for the ppc framework
-    if (project.frameworkKey === "ppc") {
+    if (project.frameworkKey === "ppc" && dueDateTime.month === 1) {
       const srpReport = await SrpReport.create({
         taskId: task.id,
         frameworkKey: project.frameworkKey,

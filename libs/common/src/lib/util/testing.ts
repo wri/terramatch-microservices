@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { DocumentBuilder, JsonApiDocument, ResourceBuilder } from "./json-api-builder";
 import { RequestContext } from "nestjs-request-context";
 import { Permission } from "@terramatch-microservices/database/entities";

@@ -18,32 +18,37 @@ jest.mock("@terramatch-microservices/database/util/subquery.builder", () => ({
   }
 }));
 
-jest.mock("@terramatch-microservices/database/entities", () => ({
-  LandscapeGeometry: {
-    findAll: jest.fn(),
-    LANDSCAPE_SLUGS: [
-      "gcb", // Greater Cape Basin
-      "grv", // Greater Rift Valley of Kenya
-      "ikr" // Lake Kivu & Rusizi River Basin
-    ]
-  },
-  PolygonGeometry: {
-    findAll: jest.fn(),
-    findOne: jest.fn()
-  },
-  Site: { findOne: jest.fn() },
-  Project: { findOne: jest.fn() },
-  ProjectPitch: { findOne: jest.fn() },
-  SitePolygon: { findOne: jest.fn() },
-  DisturbanceReport: { findOne: jest.fn() },
-  FinancialReport: { findOne: jest.fn() },
-  Nursery: { findOne: jest.fn() },
-  NurseryReport: { findOne: jest.fn() },
-  Organisation: { findOne: jest.fn() },
-  ProjectReport: { findOne: jest.fn() },
-  SiteReport: { findOne: jest.fn() },
-  SrpReport: { findOne: jest.fn() }
-}));
+jest.mock("@terramatch-microservices/database/entities", () => {
+  const original = jest.requireActual("@terramatch-microservices/database/entities");
+
+  return {
+    ...original,
+    LandscapeGeometry: {
+      findAll: jest.fn(),
+      LANDSCAPE_SLUGS: [
+        "gcb", // Greater Cape Basin
+        "grv", // Greater Rift Valley of Kenya
+        "ikr" // Lake Kivu & Rusizi River Basin
+      ]
+    },
+    PolygonGeometry: {
+      findAll: jest.fn(),
+      findOne: jest.fn()
+    },
+    Site: { findOne: jest.fn() },
+    Project: { findOne: jest.fn() },
+    ProjectPitch: { findOne: jest.fn() },
+    SitePolygon: { findOne: jest.fn() },
+    DisturbanceReport: { findOne: jest.fn() },
+    FinancialReport: { findOne: jest.fn() },
+    Nursery: { findOne: jest.fn() },
+    NurseryReport: { findOne: jest.fn() },
+    Organisation: { findOne: jest.fn() },
+    ProjectReport: { findOne: jest.fn() },
+    SiteReport: { findOne: jest.fn() },
+    SrpReport: { findOne: jest.fn() }
+  };
+});
 
 describe("BoundingBoxController", () => {
   let controller: BoundingBoxController;

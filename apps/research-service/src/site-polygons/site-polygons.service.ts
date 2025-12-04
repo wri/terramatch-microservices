@@ -179,6 +179,108 @@ export class SitePolygonsService {
     });
   }
 
+  async deleteSingleVersion(uuid: string): Promise<void> {
+    await this.transaction(async transaction => {
+      const sitePolygon = await SitePolygon.findOne({
+        where: { uuid },
+        include: [
+          { model: Site, attributes: ["id", "uuid", "projectId"] },
+          { model: PolygonGeometry, attributes: ["id", "uuid"] },
+          { model: PointGeometry, attributes: ["id", "uuid"] }
+        ],
+        transaction
+      });
+
+      if (sitePolygon == null) {
+        throw new NotFoundException(`SitePolygon not found for uuid: ${uuid}`);
+      }
+
+      const allVersions = await SitePolygon.findAll({
+        where: { primaryUuid: sitePolygon.primaryUuid },
+        attributes: ["id", "uuid", "isActive", "polygonUuid", "pointUuid"],
+        transaction
+      });
+
+      if (allVersions.length === 1) {
+        throw new BadRequestException(
+          "Cannot delete the last version. Use DELETE without /version to delete all versions."
+        );
+      }
+
+      if (sitePolygon.isActive) {
+        throw new BadRequestException("Cannot delete the active version. Please activate another version first.");
+      }
+
+      const polygonUuid = sitePolygon.polygonUuid;
+      const pointUuid = sitePolygon.pointUuid;
+
+      for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
+        await IndicatorClass.destroy({
+          where: { sitePolygonId: sitePolygon.id },
+          transaction
+        });
+      }
+
+      if (polygonUuid != null) {
+        await CriteriaSite.destroy({
+          where: { polygonId: polygonUuid },
+          transaction
+        });
+        await CriteriaSiteHistoric.destroy({
+          where: { polygonId: polygonUuid },
+          transaction
+        });
+      }
+
+      await SitePolygonData.destroy({
+        where: { sitePolygonUuid: uuid },
+        transaction
+      });
+
+      await AuditStatus.destroy({
+        where: {
+          auditableType: SitePolygon.LARAVEL_TYPE,
+          auditableId: sitePolygon.id
+        },
+        transaction
+      });
+
+      if (polygonUuid != null) {
+        await ProjectPolygon.destroy({
+          where: { polyUuid: polygonUuid },
+          transaction
+        });
+      }
+
+      if (polygonUuid != null) {
+        const otherVersionsUsingGeometry = allVersions.filter(v => v.uuid !== uuid && v.polygonUuid === polygonUuid);
+
+        if (otherVersionsUsingGeometry.length === 0) {
+          await PolygonGeometry.destroy({
+            where: { uuid: polygonUuid },
+            transaction
+          });
+        }
+      }
+
+      if (pointUuid != null) {
+        const otherVersionsUsingPoint = allVersions.filter(v => v.uuid !== uuid && v.pointUuid === pointUuid);
+
+        if (otherVersionsUsingPoint.length === 0) {
+          await PointGeometry.destroy({
+            where: { uuid: pointUuid },
+            transaction
+          });
+        }
+      }
+
+      await SitePolygon.destroy({
+        where: { uuid },
+        transaction
+      });
+    });
+  }
+
   async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {
     const associationDtos: Record<number, AssociationDtos> = {};
     for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {

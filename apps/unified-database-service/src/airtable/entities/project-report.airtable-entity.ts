@@ -59,7 +59,8 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   "technicalNarrative",
   "publicNarrative",
   "totalUniqueRestorationPartners",
-  "businessMilestones"
+  "businessMilestones",
+  "plantingStatus"
 ];
 
 export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectReportAssociations> {

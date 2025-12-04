@@ -10,7 +10,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles"],
+        ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles", "updateFiles"],
         DisturbanceReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -29,9 +29,13 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "update", "create", "deleteFiles", "uploadFiles"], DisturbanceReport, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            ["read", "update", "create", "deleteFiles", "uploadFiles", "updateFiles"],
+            DisturbanceReport,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
         }
       }
     }
@@ -42,7 +46,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(
-            ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles"],
+            ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles", "updateFiles"],
             DisturbanceReport,
             {
               projectId: { $in: projectIds }

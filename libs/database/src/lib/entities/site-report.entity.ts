@@ -117,6 +117,10 @@ export class SiteReport extends Model<SiteReport> {
     return Subquery.select(SiteReport, "id").eq("taskId", taskId).in("status", SiteReport.APPROVED_STATUSES).literal;
   }
 
+  static idsSubquery(siteIds: number[] | Literal) {
+    return Subquery.select(SiteReport, "id").in("siteId", siteIds).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

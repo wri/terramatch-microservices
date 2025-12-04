@@ -3,6 +3,7 @@ import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidatio
 import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
 import { Geometry } from "geojson";
+import { isArray } from "lodash";
 
 type ValidationError = {
   field: string;
@@ -32,14 +33,10 @@ const FIELD_NAME_MAP: Record<string, string> = {
   plantStart: "plantstart"
 };
 
-const PROPERTY_TO_FIELD_MAP: Record<string, keyof typeof FIELD_NAME_MAP> = {
-  poly_name: "polyName",
-  practice: "practice",
-  target_sys: "targetSys",
-  distr: "distr",
-  num_trees: "numTrees",
-  plantstart: "plantStart"
-};
+function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: string, snakeCaseKey: string): unknown {
+  // Prefer camelCase if present, otherwise fall back to snake_case
+  return properties[camelCaseKey] != null ? properties[camelCaseKey] : properties[snakeCaseKey];
+}
 
 const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
 
@@ -152,11 +149,11 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
       case "plantStart":
         return !this.isValidDate(value);
       case "practice":
-        return typeof value === "string" ? !this.areValidItems(value, VALID_PRACTICES) : true;
+        return isArray(value) ? !this.areValidItems(value, VALID_PRACTICES) : true;
       case "targetSys":
         return typeof value === "string" ? !this.areValidItems(value, VALID_SYSTEMS) : true;
       case "distr":
-        return typeof value === "string" ? !this.areValidItems(value, VALID_DISTRIBUTIONS) : true;
+        return isArray(value) ? !this.areValidItems(value, VALID_DISTRIBUTIONS) : true;
       case "numTrees":
         return !this.isValidInteger(value);
       default:
@@ -185,8 +182,8 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
     }
   }
 
-  private areValidItems(value: string, validItems: string[]): boolean {
-    const items = value.split(",");
+  private areValidItems(value: string | string[], validItems: string[]): boolean {
+    const items = isArray(value) ? value : value.split(",");
     return items.every(item => validItems.includes(item.trim()));
   }
 
@@ -222,15 +219,17 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
       };
     }
 
-    const propertyKeys = Object.keys(PROPERTY_TO_FIELD_MAP);
+    // Validate using camelCase field names, but check both camelCase and snake_case properties
     const validationErrors = this.validateFields(
-      propertyKeys,
-      propertyKey => properties[propertyKey],
-      propertyKey => {
-        const fieldKey = PROPERTY_TO_FIELD_MAP[propertyKey];
-        return FIELD_NAME_MAP[fieldKey] ?? propertyKey;
+      VALIDATION_FIELDS,
+      field => {
+        // Map model field to property names
+        const camelCaseKey = field;
+        const snakeCaseKey = FIELD_NAME_MAP[field];
+        return getPropertyValue(properties, camelCaseKey, snakeCaseKey ?? camelCaseKey);
       },
-      propertyKey => PROPERTY_TO_FIELD_MAP[propertyKey]
+      field => FIELD_NAME_MAP[field] ?? field,
+      field => field
     );
 
     return this.buildValidationResult(validationErrors);

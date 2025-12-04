@@ -1,4 +1,12 @@
-import { validateSitePolygonProperties, extractAdditionalData } from "./site-polygon-property-validator";
+import {
+  validateSitePolygonProperties,
+  extractAdditionalData,
+  validateArrayProperty,
+  orderCommaSeparatedPropertiesAlphabetically,
+  validateAndSortStringArray,
+  VALID_DISTRIBUTION_VALUES,
+  VALID_PRACTICE_VALUES
+} from "./site-polygon-property-validator";
 
 describe("SitePolygonPropertyValidator", () => {
   describe("validateSitePolygonProperties", () => {
@@ -23,9 +31,9 @@ describe("SitePolygonPropertyValidator", () => {
         polyName: "Test Polygon",
         siteUuid: "site-uuid-123",
         plantStart: new Date("2023-01-15"),
-        practice: "tree-planting",
+        practice: ["tree-planting"],
         targetSys: "agroforest",
-        distr: "full",
+        distr: ["full"],
         numTrees: 100,
         calcArea: 5.5,
         status: "draft",
@@ -183,7 +191,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.distr).toBe("full,partial,single-line");
+      expect(result.distr).toEqual(["full", "partial", "single-line"]);
     });
 
     it("should filter out invalid distribution values", () => {
@@ -193,7 +201,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.distr).toBe("full,partial");
+      expect(result.distr).toEqual(["full", "partial"]);
     });
 
     it("should return null for empty distribution values", () => {
@@ -213,7 +221,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.distr).toBe("full,partial,single-line");
+      expect(result.distr).toEqual(["full", "partial", "single-line"]);
     });
 
     it("should filter and sort valid practice values", () => {
@@ -223,7 +231,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.practice).toBe("assisted-natural-regeneration,direct-seeding,tree-planting");
+      expect(result.practice).toEqual(["assisted-natural-regeneration", "direct-seeding", "tree-planting"]);
     });
 
     it("should filter out invalid practice values", () => {
@@ -233,7 +241,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.practice).toBe("direct-seeding,tree-planting");
+      expect(result.practice).toEqual(["direct-seeding", "tree-planting"]);
     });
 
     it("should return null for empty practice values", () => {
@@ -253,7 +261,7 @@ describe("SitePolygonPropertyValidator", () => {
 
       const result = validateSitePolygonProperties(properties);
 
-      expect(result.practice).toBe("assisted-natural-regeneration,tree-planting");
+      expect(result.practice).toEqual(["assisted-natural-regeneration", "tree-planting"]);
     });
 
     it("should handle empty target_sys", () => {
@@ -507,6 +515,147 @@ describe("SitePolygonPropertyValidator", () => {
           numbers: [1, 2, 3, 4, 5]
         });
       });
+    });
+  });
+
+  describe("validateArrayProperty", () => {
+    it("should handle array input", () => {
+      const result = validateArrayProperty(["full", "partial"], VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial"]);
+    });
+
+    it("should handle array input with whitespace", () => {
+      const result = validateArrayProperty([" full ", " partial "], VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial"]);
+    });
+
+    it("should handle array input with non-string values", () => {
+      const result = validateArrayProperty([123, "full", true], VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full"]);
+    });
+
+    it("should handle JSON string array input", () => {
+      const result = validateArrayProperty('["full", "partial", "single-line"]', VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial", "single-line"]);
+    });
+
+    it("should handle JSON string array input with whitespace", () => {
+      const result = validateArrayProperty('[" full ", " partial "]', VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial"]);
+    });
+
+    it("should handle invalid JSON string that falls back to comma-separated", () => {
+      const result = validateArrayProperty("[invalid json, full", VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full"]);
+    });
+
+    it("should handle JSON string that is not an array", () => {
+      const result = validateArrayProperty('{"key": "value"}', VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for empty array input", () => {
+      const result = validateArrayProperty([], VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for array with only invalid values", () => {
+      const result = validateArrayProperty(["invalid1", "invalid2"], VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("orderCommaSeparatedPropertiesAlphabetically", () => {
+    it("should return sorted valid values", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically("single-line,full,partial", VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial", "single-line"]);
+    });
+
+    it("should filter out invalid values", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically(
+        "invalid,full,also-invalid,partial",
+        VALID_DISTRIBUTION_VALUES
+      );
+      expect(result).toEqual(["full", "partial"]);
+    });
+
+    it("should return null for empty string", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically("", VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for whitespace-only string", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically("   ", VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should return null when all values are invalid", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically("invalid1,invalid2", VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should handle whitespace in values", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically(
+        " full , partial , single-line ",
+        VALID_DISTRIBUTION_VALUES
+      );
+      expect(result).toEqual(["full", "partial", "single-line"]);
+    });
+
+    it("should handle practice values", () => {
+      const result = orderCommaSeparatedPropertiesAlphabetically(
+        "tree-planting,assisted-natural-regeneration,direct-seeding",
+        VALID_PRACTICE_VALUES
+      );
+      expect(result).toEqual(["assisted-natural-regeneration", "direct-seeding", "tree-planting"]);
+    });
+  });
+
+  describe("validateAndSortStringArray", () => {
+    it("should return sorted valid values from array", () => {
+      const result = validateAndSortStringArray(["single-line", "full", "partial"], VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial", "single-line"]);
+    });
+
+    it("should filter out invalid values", () => {
+      const result = validateAndSortStringArray(
+        ["invalid", "full", "also-invalid", "partial"],
+        VALID_DISTRIBUTION_VALUES
+      );
+      expect(result).toEqual(["full", "partial"]);
+    });
+
+    it("should return null for null input", () => {
+      const result = validateAndSortStringArray(null, VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for undefined input", () => {
+      const result = validateAndSortStringArray(undefined, VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for empty array", () => {
+      const result = validateAndSortStringArray([], VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should handle whitespace in values", () => {
+      const result = validateAndSortStringArray([" full ", " partial ", " single-line "], VALID_DISTRIBUTION_VALUES);
+      expect(result).toEqual(["full", "partial", "single-line"]);
+    });
+
+    it("should return null when all values are invalid", () => {
+      const result = validateAndSortStringArray(["invalid1", "invalid2"], VALID_DISTRIBUTION_VALUES);
+      expect(result).toBeNull();
+    });
+
+    it("should handle practice values", () => {
+      const result = validateAndSortStringArray(
+        ["tree-planting", "assisted-natural-regeneration", "direct-seeding"],
+        VALID_PRACTICE_VALUES
+      );
+      expect(result).toEqual(["assisted-natural-regeneration", "direct-seeding", "tree-planting"]);
     });
   });
 });

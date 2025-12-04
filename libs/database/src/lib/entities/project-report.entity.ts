@@ -175,6 +175,10 @@ export class ProjectReport extends Model<ProjectReport> {
     return builder.literal;
   }
 
+  static idsSubquery(projectId: number) {
+    return Subquery.select(ProjectReport, "id").eq("projectId", projectId).literal;
+  }
+
   static task(taskId: number) {
     return chainScope(this, "task", taskId) as typeof ProjectReport;
   }

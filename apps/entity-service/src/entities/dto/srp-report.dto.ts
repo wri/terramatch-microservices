@@ -106,7 +106,7 @@ export class SrpReportFullDto extends SrpReportLightDto {
   answers: string | null;
 
   @ApiProperty({ nullable: true, type: String })
-  otherRestorationPartnersDescription: string | null;
+  restorationPartnersDescription: string | null;
 
   @ApiProperty({ type: Number })
   totalUniqueRestorationPartners: number;

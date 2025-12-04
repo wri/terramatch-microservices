@@ -3,8 +3,10 @@ import { CommonModule } from "@terramatch-microservices/common";
 import { SitePolygonsController } from "./site-polygons/site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
+import { GeometryFileProcessingService } from "./site-polygons/geometry-file-processing.service";
 import { APP_FILTER } from "@nestjs/core";
 import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
@@ -20,6 +22,11 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
+import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
+import { IndicatorsController } from "./indicators/indicators.controller";
+import { IndicatorsService } from "./indicators/indicators.service";
+import { IndicatorsProcessor } from "./indicators/indicators.processor";
+import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 
 @Module({
   imports: [
@@ -38,24 +45,39 @@ import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.serv
         }
       })
     }),
-    BullModule.registerQueue({ name: "validation" })
+    BullModule.registerQueue({ name: "validation" }),
+    BullModule.registerQueue({ name: "geometry-upload" }),
+    BullModule.registerQueue({ name: "indicators" }),
+    BullModule.registerQueue({ name: "clipping" })
   ],
-  controllers: [SitePolygonsController, BoundingBoxController, ValidationController, PolygonClippingController],
+  controllers: [
+    SitePolygonsController,
+    BoundingBoxController,
+    ValidationController,
+    PolygonClippingController,
+    IndicatorsController
+  ],
   providers: [
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter
     },
+    IndicatorsService,
     SitePolygonsService,
     SitePolygonCreationService,
+    SitePolygonVersioningService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
+    GeometryFileProcessingService,
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,
+    GeometryUploadProcessor,
+    IndicatorsProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
-    PolygonClippingService
+    PolygonClippingService,
+    ClippingProcessor
   ]
 })
 export class AppModule {}

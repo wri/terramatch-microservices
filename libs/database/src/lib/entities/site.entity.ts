@@ -95,6 +95,10 @@ export class Site extends Model<Site> {
     return Subquery.select(Site, "uuid").eq("projectId", projectId).literal;
   }
 
+  static idsSubquery(projectId: number) {
+    return Subquery.select(Site, "id").eq("projectId", projectId).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -231,6 +235,10 @@ export class Site extends Model<Site> {
   @AllowNull
   @JsonColumn()
   restorationStrategy: string[] | null;
+
+  @AllowNull
+  @JsonColumn()
+  anrPractices: string[] | null;
 
   @AllowNull
   @Column(TEXT)

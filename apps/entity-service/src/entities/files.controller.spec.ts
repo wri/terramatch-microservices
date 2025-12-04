@@ -12,6 +12,7 @@ import { Resource } from "@terramatch-microservices/common/util";
 import { MediaRequestBody } from "./dto/media-request.dto";
 import { Project } from "@terramatch-microservices/database/entities";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
+import { EntityType } from "@slack/web-api/dist/methods";
 
 jest.mock("./processors/media-owner-processor", () => ({
   getBaseEntityByLaravelTypeAndId: jest.fn()
@@ -26,6 +27,8 @@ describe("FilesController", () => {
   let mockMediaOwnerProcessor: { getBaseEntity: jest.Mock };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;
     policyService = {
       authorize: jest.fn(),
@@ -36,12 +39,16 @@ describe("FilesController", () => {
       getMedia: jest.fn(),
       deleteMediaByUuid: jest.fn(),
       deleteMedia: jest.fn(),
-      getMedias: jest.fn()
+      getMedias: jest.fn(),
+      updateMedia: jest.fn(),
+      getProjectForModel: jest.fn(),
+      unsetMediaCoverForProject: jest.fn()
     } as unknown as jest.Mocked<MediaService>;
     mockMediaOwnerProcessor = { getBaseEntity: jest.fn() };
     entitiesService = {
       createMediaOwnerProcessor: jest.fn().mockReturnValue(mockMediaOwnerProcessor),
-      userId: "user-uuid"
+      userId: "user-uuid",
+      mediaDto: jest.fn()
     } as unknown as jest.Mocked<EntitiesService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -55,6 +62,21 @@ describe("FilesController", () => {
     }).compile();
 
     controller = module.get<FilesController>(FilesController);
+  });
+
+  describe("getMedia", () => {
+    it("should get the media successfully", async () => {
+      const media = { uuid: "media-uuid" } as Media;
+      policyService.authorize.mockResolvedValue(undefined);
+      mediaService.getMedia.mockResolvedValue(media);
+      const model = { uuid: "model-uuid", id: 1 };
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      await controller.getMedia({ uuid: "media-uuid" });
+      expect(entitiesService.mediaDto).toHaveBeenCalledWith(media, {
+        entityType: media.modelType as EntityType,
+        entityUuid: model.uuid
+      });
+    });
   });
 
   describe("uploadFile", () => {
@@ -117,6 +139,40 @@ describe("FilesController", () => {
       await expect(controller.uploadFile(params, file as Express.Multer.File, body)).rejects.toThrow(NotFoundException);
       expect(policyService.authorize).not.toHaveBeenCalled();
       expect(fileUploadService.uploadFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("mediaUpdate", () => {
+    it("should update the media successfully", async () => {
+      const mockedMedia = { uuid: "media-uuid" } as Media;
+      mediaService.getMedia.mockResolvedValue(mockedMedia);
+      policyService.authorize.mockResolvedValue();
+      mediaService.updateMedia.mockResolvedValue(mockedMedia);
+      const model = { uuid: "model-uuid", id: 1 };
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      await controller.mediaUpdate(
+        { uuid: "media-uuid" },
+        { data: { type: "media", id: "media-uuid", attributes: { isPublic: true } } }
+      );
+      expect(policyService.authorize).toHaveBeenCalledWith("updateFiles", { uuid: "model-uuid", id: 1 });
+      expect(mediaService.updateMedia).toHaveBeenCalledWith(mockedMedia, {
+        data: { type: "media", id: "media-uuid", attributes: { isPublic: true } }
+      });
+    });
+
+    it("should unset the media cover for the project", async () => {
+      const mockedMedia = { uuid: "media-uuid" } as Media;
+      const mockedMedia2 = { uuid: "media-uuid-2" } as Media;
+      mediaService.getMedia.mockResolvedValue(mockedMedia);
+      policyService.authorize.mockResolvedValue();
+      mediaService.updateMedia.mockResolvedValue(mockedMedia);
+      mediaService.getProjectForModel.mockResolvedValue({ id: 1 } as Project);
+      mediaService.unsetMediaCoverForProject.mockResolvedValue([mockedMedia2]);
+      await controller.mediaUpdate(
+        { uuid: "media-uuid" },
+        { data: { type: "media", id: "media-uuid", attributes: { isCover: true } } }
+      );
+      expect(mediaService.unsetMediaCoverForProject).toHaveBeenCalledWith(mockedMedia, { id: 1 } as Project);
     });
   });
 

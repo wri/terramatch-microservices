@@ -27,7 +27,8 @@ const COLUMNS: ColumnMapping<SiteReport, SiteReportAssociations>[] = [
   "invasiveSpeciesManagement",
   "siteCommunityPartnersDescription",
   "siteCommunityPartnersIncomeIncreaseDescription",
-  "nothingToReport"
+  "nothingToReport",
+  "plantingStatus"
 ];
 
 export class SiteReportEntity extends AirtableEntity<SiteReport, SiteReportAssociations> {

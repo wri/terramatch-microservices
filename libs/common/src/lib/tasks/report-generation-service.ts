@@ -8,6 +8,7 @@ import {
   ProjectReport,
   Site,
   SiteReport,
+  SrpReport,
   Task
 } from "@terramatch-microservices/database/entities";
 import { DUE, PENDING } from "@terramatch-microservices/database/constants/status";
@@ -91,6 +92,29 @@ export class ReportGenerationService {
             } as NurseryReport)
         )
       );
+    }
+
+    // these reports are only available for the ppc framework
+    if (project.frameworkKey === "ppc" && dueDateTime.month === 1) {
+      const srpReport = await SrpReport.create({
+        taskId: task.id,
+        frameworkKey: project.frameworkKey,
+        projectId: project.id,
+        status: DUE,
+        dueAt
+      } as SrpReport);
+
+      await Action.create({
+        status: PENDING,
+        targetableType: SrpReport.LARAVEL_TYPE,
+        targetableId: srpReport.id,
+        type: "notification",
+        title: "Srp report",
+        subTitle: "",
+        text: "Annual Socioeconomic Restoration Partners Report available",
+        projectId: project.id,
+        organisationId: project.organisationId
+      } as Action);
     }
 
     await Action.create({

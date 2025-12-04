@@ -4,7 +4,14 @@ import { PolygonGeometryCreationService } from "./polygon-geometry-creation.serv
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { VoronoiService } from "../voronoi/voronoi.service";
-import { Site, SitePolygon, PolygonGeometry, SitePolygonData } from "@terramatch-microservices/database/entities";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import {
+  Site,
+  SitePolygon,
+  PolygonGeometry,
+  SitePolygonData,
+  CriteriaSite
+} from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
 import { BadRequestException } from "@nestjs/common";
 import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
@@ -61,6 +68,14 @@ describe("SitePolygonCreationService", () => {
           useValue: {
             transformPointsToPolygons: jest.fn().mockResolvedValue([])
           }
+        },
+        {
+          provide: SitePolygonVersioningService,
+          useValue: {
+            validateVersioningEligibility: jest.fn(),
+            createVersion: jest.fn(),
+            generateVersionName: jest.fn()
+          }
         }
       ]
     }).compile();
@@ -75,6 +90,8 @@ describe("SitePolygonCreationService", () => {
       get: jest.fn(() => mockSequelize),
       configurable: true
     });
+
+    jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -535,7 +552,7 @@ describe("SitePolygonCreationService", () => {
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
       await expect(service.createSitePolygons(request, mockUserId, "test", null)).rejects.toThrow(
-        new BadRequestException("Point features must include properties.est_area")
+        new BadRequestException("Point features must include properties.estArea")
       );
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
@@ -557,7 +574,7 @@ describe("SitePolygonCreationService", () => {
       jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
 
       await expect(service.createSitePolygons(request, mockUserId, "test", null)).rejects.toThrow(
-        new BadRequestException("All features must have site_id in properties")
+        new BadRequestException("All features must have siteId in properties")
       );
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });

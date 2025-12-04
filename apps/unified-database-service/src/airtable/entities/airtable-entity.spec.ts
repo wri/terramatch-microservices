@@ -734,11 +734,12 @@ describe("AirtableEntity", () => {
         frameworkKey: "ppc"
       });
       allReports.push(ppcReport);
-      const ppcSeedlings = (
-        await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, { speciesableId: ppcReport.id })
-      ).reduce((total, { amount }) => total + (amount ?? 0), 0);
+      const ppcSeedlings = (await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).createMany(3)).reduce(
+        (total, { amount }) => total + (amount ?? 0),
+        0
+      );
       // make sure hidden is ignored
-      await TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: ppcReport.id, hidden: true });
+      await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).create({ hidden: true });
       await TaskFactory.create();
 
       const terrafundReport = await ProjectReportFactory.create({
@@ -872,14 +873,14 @@ describe("AirtableEntity", () => {
       associationUuids[SiteReport.LARAVEL_TYPE] = siteReport.uuid;
 
       const factories = [
-        () => TreeSpeciesFactory.forNurserySeedling.create({ speciesableId: nursery.id }),
-        () => TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: nurseryReport.id }),
-        () => TreeSpeciesFactory.forProjectTreePlanted.create({ speciesableId: project.id }),
-        () => TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: projectReport.id }),
-        () => TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id }),
-        () => TreeSpeciesFactory.forSiteNonTree.create({ speciesableId: site.id }),
-        () => TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport.id }),
-        () => TreeSpeciesFactory.forSiteReportNonTree.create({ speciesableId: siteReport.id })
+        () => TreeSpeciesFactory.nurserySeedling(nursery).create(),
+        () => TreeSpeciesFactory.nurseryReportSeedling(nurseryReport).create(),
+        () => TreeSpeciesFactory.projectTreePlanted(project).create(),
+        () => TreeSpeciesFactory.projectReportNurserySeedling(projectReport).create(),
+        () => TreeSpeciesFactory.siteTreePlanted(site).create(),
+        () => TreeSpeciesFactory.siteNonTree(site).create(),
+        () => TreeSpeciesFactory.siteReportTreePlanted(siteReport).create(),
+        () => TreeSpeciesFactory.siteReportNonTree(siteReport).create()
       ];
 
       const allTrees: TreeSpecies[] = [];
@@ -903,9 +904,9 @@ describe("AirtableEntity", () => {
       }
 
       // create one with a bogus association type for testing
-      allTrees.push(await TreeSpeciesFactory.forNurserySeedling.create({ speciesableType: "foo", speciesableId: 3 }));
+      allTrees.push(await TreeSpeciesFactory.nurserySeedling().create({ speciesableType: "foo", speciesableId: 3 }));
       // create one with a bad association id for testing
-      allTrees.push(await TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: 0 }));
+      allTrees.push(await TreeSpeciesFactory.nurseryReportSeedling().create({ speciesableId: 0 }));
 
       trees = allTrees.filter(tree => !tree.isSoftDeleted() && !tree.hidden);
     });

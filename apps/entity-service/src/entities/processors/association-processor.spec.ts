@@ -81,12 +81,12 @@ describe("AssociationProcessor", () => {
     });
 
     it("should include tree species", async () => {
-      const { id: speciesableId, uuid: siteReportUuid } = await SiteReportFactory.create();
-      const species = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(5, { speciesableId });
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId, hidden: true });
+      const siteReport = await SiteReportFactory.create();
+      const species = await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(5);
+      await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({ hidden: true });
 
       const document = buildJsonApi(TreeSpeciesDto, { forceDataArray: true });
-      await service.createAssociationProcessor("siteReports", siteReportUuid, "treeSpecies").addDtos(document);
+      await service.createAssociationProcessor("siteReports", siteReport.uuid, "treeSpecies").addDtos(document);
       const data = document.serialize().data as Resource[];
       expect(data.length).toEqual(species.length);
 
@@ -100,12 +100,12 @@ describe("AssociationProcessor", () => {
     });
 
     it("should include seedings", async () => {
-      const { id: seedableId, uuid: siteReportUuid } = await SiteReportFactory.create();
-      const seedings = await SeedingFactory.forSiteReport.createMany(5, { seedableId });
-      await SeedingFactory.forSiteReport.create({ seedableId, hidden: true });
+      const report = await SiteReportFactory.create();
+      const seedings = await SeedingFactory.siteReport(report).createMany(5);
+      await SeedingFactory.siteReport(report).create({ hidden: true });
 
       const document = buildJsonApi(SeedingDto, { forceDataArray: true });
-      await service.createAssociationProcessor("siteReports", siteReportUuid, "seedings").addDtos(document);
+      await service.createAssociationProcessor("siteReports", report.uuid, "seedings").addDtos(document);
       const data = document.serialize().data as Resource[];
       expect(data.length).toEqual(seedings.length);
 

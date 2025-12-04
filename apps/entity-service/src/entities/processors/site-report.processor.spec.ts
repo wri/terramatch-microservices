@@ -466,7 +466,7 @@ describe("SiteReportProcessor", () => {
   describe("processSideload", () => {
     it("should include sideloaded tree species", async () => {
       const siteReport = await SiteReportFactory.create();
-      await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReport.id });
+      await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(3);
 
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const document = buildJsonApi(SiteReportLightDto);

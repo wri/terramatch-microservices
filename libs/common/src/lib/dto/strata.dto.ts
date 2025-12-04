@@ -1,7 +1,7 @@
 import { JsonApiDto } from "../decorators";
 import { populateDto } from "./json-api-attributes";
 import { AssociationDto, AssociationDtoAdditionalProps } from "./association.dto";
-import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
+import { Strata } from "@terramatch-microservices/database/entities";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
 
 @JsonApiDto({ type: "stratas" })

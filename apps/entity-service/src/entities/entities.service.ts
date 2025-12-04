@@ -8,6 +8,7 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import {
   Demographic,
   Disturbance,
+  Invasive,
   Media,
   Seeding,
   TreeSpecies,
@@ -36,10 +37,9 @@ import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 import { MediaQueryDto } from "./dto/media-query.dto";
-import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
 import { DisturbanceDto } from "@terramatch-microservices/common/dto/disturbance.dto";
 import { InvasiveDto } from "@terramatch-microservices/common/dto/invasive.dto";
-import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
+import { Strata } from "@terramatch-microservices/database/entities";
 import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
 import {
   MEDIA_OWNER_MODELS,

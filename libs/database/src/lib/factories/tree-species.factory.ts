@@ -17,59 +17,67 @@ const defaultAttributesFactory = async () => ({
 });
 
 export const TreeSpeciesFactory = {
-  forNurserySeedling: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: Nursery.LARAVEL_TYPE,
-    speciesableId: NurseryFactory.associate("id"),
-    collection: "nursery-seedling"
-  })),
+  nurserySeedling: (nursery?: Nursery) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: Nursery.LARAVEL_TYPE,
+      speciesableId: (nursery?.id as number) ?? NurseryFactory.associate("id"),
+      collection: "nursery-seedling"
+    })),
 
-  forNurseryReportSeedling: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: NurseryReport.LARAVEL_TYPE,
-    speciesableId: NurseryReportFactory.associate("id"),
-    collection: "nursery-seedling"
-  })),
+  nurseryReportSeedling: (report?: NurseryReport) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: NurseryReport.LARAVEL_TYPE,
+      speciesableId: (report?.id as number) ?? NurseryReportFactory.associate("id"),
+      collection: "nursery-seedling"
+    })),
 
-  forProjectTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: Project.LARAVEL_TYPE,
-    speciesableId: ProjectFactory.associate("id"),
-    collection: "tree-planted"
-  })),
+  projectTreePlanted: (project?: Project) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: Project.LARAVEL_TYPE,
+      speciesableId: (project?.id as number) ?? ProjectFactory.associate("id"),
+      collection: "tree-planted"
+    })),
 
-  forProjectReportNurserySeedling: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: ProjectReport.LARAVEL_TYPE,
-    speciesableId: ProjectReportFactory.associate("id"),
-    collection: "nursery-seedling"
-  })),
+  projectReportNurserySeedling: (report?: ProjectReport) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: ProjectReport.LARAVEL_TYPE,
+      speciesableId: (report?.id as number) ?? ProjectReportFactory.associate("id"),
+      collection: "nursery-seedling"
+    })),
 
-  forSiteTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: Site.LARAVEL_TYPE,
-    speciesableId: SiteFactory.associate("id"),
-    collection: "tree-planted"
-  })),
+  siteTreePlanted: (site?: Site) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: Site.LARAVEL_TYPE,
+      speciesableId: (site?.id as number) ?? SiteFactory.associate("id"),
+      collection: "tree-planted"
+    })),
 
-  forSiteNonTree: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: Site.LARAVEL_TYPE,
-    speciesableId: SiteFactory.associate("id"),
-    collection: "non-tree"
-  })),
+  siteNonTree: (site?: Site) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: Site.LARAVEL_TYPE,
+      speciesableId: (site?.id as number) ?? SiteFactory.associate("id"),
+      collection: "non-tree"
+    })),
 
-  forSiteReportTreePlanted: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: SiteReport.LARAVEL_TYPE,
-    speciesableId: SiteReportFactory.associate("id"),
-    collection: "tree-planted"
-  })),
+  siteReportTreePlanted: (report?: SiteReport) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: SiteReport.LARAVEL_TYPE,
+      speciesableId: (report?.id as number) ?? SiteReportFactory.associate("id"),
+      collection: "tree-planted"
+    })),
 
-  forSiteReportNonTree: FactoryGirl.define(TreeSpecies, async () => ({
-    ...(await defaultAttributesFactory()),
-    speciesableType: SiteReport.LARAVEL_TYPE,
-    speciesableId: SiteReportFactory.associate("id"),
-    collection: "non-tree"
-  }))
+  siteReportNonTree: (report?: SiteReport) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: SiteReport.LARAVEL_TYPE,
+      speciesableId: (report?.id as number) ?? SiteReportFactory.associate("id"),
+      collection: "non-tree"
+    }))
 };

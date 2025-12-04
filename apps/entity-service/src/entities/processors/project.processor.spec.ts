@@ -380,26 +380,21 @@ describe("ProjectProcessor", () => {
       const treeCounts = approvedSiteReports.map(({ numTreesRegenerating }) => numTreesRegenerating);
       const treeSpecies = flatten(
         await Promise.all(
-          approvedSiteReports.map(({ id }) =>
-            TreeSpeciesFactory.forSiteReportTreePlanted.createMany(faker.number.int({ min: 1, max: 10 }), {
-              speciesableId: id
-            })
+          approvedSiteReports.map(report =>
+            TreeSpeciesFactory.siteReportTreePlanted(report).createMany(faker.number.int({ min: 1, max: 10 }))
           )
         )
       );
-      await TreeSpeciesFactory.forSiteReportNonTree.createMany(5, { speciesableId: approvedSiteReports[0].id });
-      await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(2, {
-        speciesableId: approvedSiteReports[0].id,
-        hidden: true
-      });
+      await TreeSpeciesFactory.siteReportNonTree(approvedSiteReports[0]).createMany(5);
+      await TreeSpeciesFactory.siteReportTreePlanted(approvedSiteReports[0]).createMany(2, { hidden: true });
       const seedings = flatten(
         await Promise.all(
-          approvedSiteReports.map(({ id }) =>
-            SeedingFactory.forSiteReport.createMany(faker.number.int({ min: 1, max: 10 }), { seedableId: id })
+          approvedSiteReports.map(report =>
+            SeedingFactory.siteReport(report).createMany(faker.number.int({ min: 1, max: 10 }))
           )
         )
       );
-      await SeedingFactory.forSiteReport.createMany(2, { seedableId: approvedSiteReports[0].id, hidden: true });
+      await SeedingFactory.siteReport(approvedSiteReports[0]).createMany(2, { hidden: true });
       const regeneratedTreesCount = sum(treeCounts);
       const treesPlantedCount = sumBy(treeSpecies, "amount");
       const seedsPlantedCount = sumBy(seedings, "amount");

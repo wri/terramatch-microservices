@@ -1,23 +1,21 @@
-import { Leadership, Organisation } from "../entities";
+import { Organisation, OwnershipStake } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { OrganisationFactory } from "./organisation.factory";
 import { faker } from "@faker-js/faker";
 
-const COLLECTIONS = ["core-team-leaders", "leadership-team"];
-
 const defaultAttributesFactory = async () => ({
-  collection: faker.helpers.arrayElement(COLLECTIONS),
   firstName: faker.person.firstName(),
   lastName: faker.person.lastName(),
-  position: faker.person.jobTitle(),
+  title: faker.person.jobTitle(),
   gender: faker.helpers.arrayElement(["male", "female", "non-binary"]),
-  age: faker.number.int({ min: 18, max: 65 })
+  percentOwnership: faker.number.int({ min: 0, max: 100 }),
+  yearOfBirth: faker.number.int({ min: 1960, max: 2000 })
 });
 
-export const LeadershipFactory = {
+export const OwnershipStakeFactory = {
   org: (org?: Organisation) =>
-    FactoryGirl.define(Leadership, async () => ({
+    FactoryGirl.define(OwnershipStake, async () => ({
       ...(await defaultAttributesFactory()),
-      organisationId: (org?.id as number) ?? OrganisationFactory.associate("id")
+      organisationId: (org?.uuid as string) ?? OrganisationFactory.associate("id")
     }))
 };

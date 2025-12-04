@@ -31,6 +31,7 @@ export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";
 export * from "./organisation.factory";
+export * from "./ownership-stake.factory";
 export * from "./polygon-geometry.factory";
 export * from "./project.factory";
 export * from "./project-pitch.factory";

@@ -26,6 +26,7 @@ export * from "./indicator-output-tree-cover.factory";
 export * from "./indicator-output-tree-cover-loss.factory";
 export * from "./invasive.factory";
 export * from "./landscape-geometry.factory";
+export * from "./leadership.factory";
 export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";

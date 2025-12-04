@@ -43,8 +43,7 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
 
     async collect(answers, models) {
       if (models.organisations == null) {
-        logger.warn("missing org for leaderships");
-        return;
+        throw new InternalServerErrorException("missing org for leaderships");
       }
 
       const leaderships = await Leadership.findAll({

@@ -385,9 +385,9 @@ describe("AirtableEntity", () => {
       };
 
       const factories = [
-        () => DemographicEntryFactory.create({ demographicId: projectWorkday.id }),
-        () => DemographicEntryFactory.create({ demographicId: siteWorkday.id }),
-        () => DemographicEntryFactory.create({ demographicId: projectPartner.id })
+        () => DemographicEntryFactory.any(projectWorkday).create(),
+        () => DemographicEntryFactory.any(siteWorkday).create(),
+        () => DemographicEntryFactory.any(projectPartner).create()
       ];
 
       const allDemographics: DemographicEntry[] = [];

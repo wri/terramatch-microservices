@@ -423,20 +423,14 @@ describe("ProjectProcessor", () => {
       const projectDemographicBeforeCutoff = await DemographicFactory.projectReportWorkday(
         approvedProjectReports[1]
       ).create();
-      let workdayCountAfterCutoff = (
-        await DemographicEntryFactory.create({ demographicId: siteDemographicAfterCutoff.id, type: "gender" })
-      ).amount;
-      workdayCountAfterCutoff += (
-        await DemographicEntryFactory.create({ demographicId: projectDemographicAfterCutoff.id, type: "gender" })
-      ).amount;
-      let workdayCountBeforeCutoff = (
-        await DemographicEntryFactory.create({ demographicId: siteDemographicBeforeCutoff.id, type: "gender" })
-      ).amount;
-      workdayCountBeforeCutoff += (
-        await DemographicEntryFactory.create({ demographicId: projectDemographicBeforeCutoff.id, type: "gender" })
-      ).amount;
-      await DemographicEntryFactory.create({ demographicId: siteDemographicAfterCutoff.id, type: "age" });
-      await DemographicEntryFactory.create({ demographicId: projectDemographicBeforeCutoff.id, type: "age" });
+      let workdayCountAfterCutoff = (await DemographicEntryFactory.gender(siteDemographicAfterCutoff).create()).amount;
+      workdayCountAfterCutoff += (await DemographicEntryFactory.gender(projectDemographicAfterCutoff).create()).amount;
+      let workdayCountBeforeCutoff = (await DemographicEntryFactory.gender(siteDemographicBeforeCutoff).create())
+        .amount;
+      workdayCountBeforeCutoff += (await DemographicEntryFactory.gender(projectDemographicBeforeCutoff).create())
+        .amount;
+      await DemographicEntryFactory.age(siteDemographicAfterCutoff).create();
+      await DemographicEntryFactory.age(projectDemographicBeforeCutoff).create();
       const selfReportedWorkdayCount = (reports: (SiteReport | ProjectReport)[]) =>
         sumBy(reports, "workdaysPaid") + sumBy(reports, "workdaysVolunteer");
 
@@ -445,14 +439,8 @@ describe("ProjectProcessor", () => {
           approvedProjectReports.map(async report => {
             const fullTime = await DemographicFactory.projectReportJobs(report).create({ collection: FULL_TIME });
             const partTime = await DemographicFactory.projectReportJobs(report).create({ collection: PART_TIME });
-            const { amount: fullTimeAmount } = await DemographicEntryFactory.create({
-              demographicId: fullTime.id,
-              type: "gender"
-            });
-            const { amount: partTimeAmount } = await DemographicEntryFactory.create({
-              demographicId: partTime.id,
-              type: "gender"
-            });
+            const { amount: fullTimeAmount } = await DemographicEntryFactory.gender(fullTime).create();
+            const { amount: partTimeAmount } = await DemographicEntryFactory.gender(partTime).create();
             return fullTimeAmount + partTimeAmount;
           })
         )

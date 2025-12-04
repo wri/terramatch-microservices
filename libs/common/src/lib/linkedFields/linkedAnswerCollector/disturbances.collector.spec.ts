@@ -1,9 +1,10 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { DisturbanceFactory, SiteFactory, SiteReportFactory } from "@terramatch-microservices/database/factories";
 import { EmbeddedDisturbanceDto } from "../../dto/disturbance.dto";
 import { Disturbance } from "@terramatch-microservices/database/entities";
+import { orderBy } from "lodash";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("DisturbancesCollector", () => {
   let harness: CollectorTestHarness;
@@ -41,7 +42,7 @@ describe("DisturbancesCollector", () => {
       await harness.expectAnswers(
         { sites: site, siteReports: report },
         {
-          one: siteDisturbances.map(disturbance => new EmbeddedDisturbanceDto(disturbance)),
+          one: orderBy(siteDisturbances, "id").map(disturbance => new EmbeddedDisturbanceDto(disturbance)),
           two: [new EmbeddedDisturbanceDto(reportDisturbance)]
         }
       );

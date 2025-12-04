@@ -1,9 +1,9 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { DisturbanceReportEntryFactory, DisturbanceReportFactory } from "@terramatch-microservices/database/factories";
 import { EmbeddedDisturbanceReportEntryDto } from "../../dto/disturbance-report-entry.dto";
 import { DisturbanceReportEntry, SiteReport } from "@terramatch-microservices/database/entities";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("DisturbanceReportEntriesCollector", () => {
   let harness: CollectorTestHarness;

@@ -1,4 +1,3 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import {
   FinancialIndicator,
@@ -14,6 +13,7 @@ import {
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { orderBy } from "lodash";
 import { faker } from "@faker-js/faker";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("FinancialIndicatorCollector", () => {
   let harness: CollectorTestHarness;

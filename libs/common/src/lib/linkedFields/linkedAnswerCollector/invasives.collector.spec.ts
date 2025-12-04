@@ -1,9 +1,10 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { InvasiveFactory, SiteFactory } from "@terramatch-microservices/database/factories";
 import { Invasive } from "@terramatch-microservices/database/entities";
 import { EmbeddedInvasiveDto } from "../../dto/invasive.dto";
+import { orderBy } from "lodash";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("InvasivesCollector", () => {
   let harness: CollectorTestHarness;
@@ -36,7 +37,7 @@ describe("InvasivesCollector", () => {
       await harness.expectAnswers(
         { sites: site },
         {
-          one: siteInvasives.map(invasive => new EmbeddedInvasiveDto(invasive))
+          one: orderBy(siteInvasives, "id").map(invasive => new EmbeddedInvasiveDto(invasive))
         }
       );
     });

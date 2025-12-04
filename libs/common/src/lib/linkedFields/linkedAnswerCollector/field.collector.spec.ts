@@ -1,4 +1,3 @@
-import { CollectorTestHarness, getField } from "./linked-answer-collector.spec";
 import {
   DemographicEntryFactory,
   DemographicFactory,
@@ -20,6 +19,7 @@ import {
   ProjectReport
 } from "@terramatch-microservices/database/entities";
 import { FieldResourceCollector } from "./index";
+import { CollectorTestHarness, getField } from "../../util/testing";
 
 describe("FieldCollector", () => {
   let harness: CollectorTestHarness;
@@ -91,22 +91,12 @@ describe("FieldCollector", () => {
       collection: "volunteer"
     });
     // for collection, only gender counts
-    await DemographicEntryFactory.create({
-      demographicId: volDemo.id,
-      type: "gender",
-      subtype: "unknown",
-      amount: 10
-    });
+    await DemographicEntryFactory.gender(volDemo, "unknown").create({ amount: 10 });
     const beneDemo = await DemographicFactory.projectPitch(pitch).create({
       type: "indirect-beneficiaries",
       collection: "indirect"
     });
-    await DemographicEntryFactory.create({
-      demographicId: beneDemo.id,
-      type: "gender",
-      subtype: "unknown",
-      amount: 20
-    });
+    await DemographicEntryFactory.gender(beneDemo, "unknown").create({ amount: 20 });
 
     await harness.expectAnswers({ projectPitches: pitch }, { one: 10, two: 20 });
   });
@@ -167,9 +157,9 @@ describe("FieldCollector", () => {
         type: "volunteers",
         collection: "volunteer"
       });
-      await DemographicEntryFactory.create({ demographicId: demo.id, type: "gender", subtype: "male", amount: 10 });
-      await DemographicEntryFactory.create({ demographicId: demo.id, type: "gender", subtype: "female", amount: 10 });
-      await DemographicEntryFactory.create({ demographicId: demo.id, type: "age", subtype: "youth", amount: 5 });
+      await DemographicEntryFactory.gender(demo, "male").create({ amount: 10 });
+      await DemographicEntryFactory.gender(demo, "female").create({ amount: 10 });
+      await DemographicEntryFactory.age(demo, "youth").create({ amount: 5 });
       await expect(
         collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
           [question.uuid]: 15
@@ -185,18 +175,8 @@ describe("FieldCollector", () => {
         collection: "volunteer",
         hidden: true
       });
-      await DemographicEntryFactory.create({
-        demographicId: demo.id,
-        type: "gender",
-        subtype: "unknown",
-        amount: 10
-      });
-      await DemographicEntryFactory.create({
-        demographicId: demo.id,
-        type: "age",
-        subtype: "unknown",
-        amount: 10
-      });
+      await DemographicEntryFactory.gender(demo, "unknown").create({ amount: 10 });
+      await DemographicEntryFactory.age(demo, "unknown").create({ amount: 10 });
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: 15
       });
@@ -208,18 +188,8 @@ describe("FieldCollector", () => {
         type: "volunteers",
         collection: "volunteer"
       });
-      const gender = await DemographicEntryFactory.create({
-        demographicId: demo.id,
-        type: "gender",
-        subtype: "unknown",
-        amount: 10
-      });
-      const age = await DemographicEntryFactory.create({
-        demographicId: demo.id,
-        type: "age",
-        subtype: "unknown",
-        amount: 10
-      });
+      const gender = await DemographicEntryFactory.gender(demo, "unknown").create({ amount: 10 });
+      const age = await DemographicEntryFactory.age(demo, "unknown").create({ amount: 10 });
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: 15
       });
@@ -243,18 +213,8 @@ describe("FieldCollector", () => {
         type: "volunteers",
         collection: "volunteer"
       });
-      const gender = await DemographicEntryFactory.create({
-        demographicId: demo.id,
-        type: "gender",
-        subtype: "unknown",
-        amount: 10
-      });
-      const age = await DemographicEntryFactory.create({
-        demographicId: demo.id,
-        type: "age",
-        subtype: "unknown",
-        amount: 10
-      });
+      const gender = await DemographicEntryFactory.gender(demo, "unknown").create({ amount: 10 });
+      const age = await DemographicEntryFactory.age(demo, "unknown").create({ amount: 10 });
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: null
       });

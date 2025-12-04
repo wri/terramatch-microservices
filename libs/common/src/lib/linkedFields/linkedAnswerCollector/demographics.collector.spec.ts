@@ -1,4 +1,3 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import {
   DemographicEntryFactory,
   DemographicFactory,
@@ -6,6 +5,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { RelationResourceCollector } from "./index";
 import { Demographic, DemographicEntry, SiteReport } from "@terramatch-microservices/database/entities";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("DemographicsCollector", () => {
   let harness: CollectorTestHarness;
@@ -40,58 +40,16 @@ describe("DemographicsCollector", () => {
       const paidPlanting = await DemographicFactory.siteReportWorkday(siteReport).create({
         collection: "paid-planting"
       });
-      await DemographicEntryFactory.create({
-        demographicId: paidPlanting.id,
-        type: "gender",
-        subtype: "unknown",
-        name: null,
-        amount: 10
-      });
-      await DemographicEntryFactory.create({
-        demographicId: paidPlanting.id,
-        type: "age",
-        subtype: "unknown",
-        name: null,
-        amount: 10
-      });
+      await DemographicEntryFactory.gender(paidPlanting, "unknown").create({ amount: 10 });
+      await DemographicEntryFactory.age(paidPlanting, "unknown").create({ amount: 10 });
       const volunteerOther = await DemographicFactory.siteReportWorkday(siteReport).create({
         collection: "volunteer-other-activities"
       });
-      await DemographicEntryFactory.create({
-        demographicId: volunteerOther.id,
-        type: "gender",
-        subtype: "male",
-        name: null,
-        amount: 10
-      });
-      await DemographicEntryFactory.create({
-        demographicId: volunteerOther.id,
-        type: "gender",
-        subtype: "female",
-        name: null,
-        amount: 10
-      });
-      await DemographicEntryFactory.create({
-        demographicId: volunteerOther.id,
-        type: "age",
-        subtype: "youth",
-        name: null,
-        amount: 5
-      });
-      await DemographicEntryFactory.create({
-        demographicId: volunteerOther.id,
-        type: "age",
-        subtype: "elder",
-        name: null,
-        amount: 15
-      });
-      await DemographicEntryFactory.create({
-        demographicId: volunteerOther.id,
-        type: "ethnicity",
-        subtype: "indigenous",
-        name: "Apache",
-        amount: 20
-      });
+      await DemographicEntryFactory.gender(volunteerOther, "male").create({ amount: 10 });
+      await DemographicEntryFactory.gender(volunteerOther, "female").create({ amount: 10 });
+      await DemographicEntryFactory.age(volunteerOther, "youth").create({ amount: 5 });
+      await DemographicEntryFactory.age(volunteerOther, "elder").create({ amount: 15 });
+      await DemographicEntryFactory.ethnicity(volunteerOther, "indigenous", "Apache").create({ amount: 20 });
 
       await harness.expectAnswers(
         { siteReports: siteReport },
@@ -167,18 +125,8 @@ describe("DemographicsCollector", () => {
       const demographic = await DemographicFactory.siteReportWorkday(siteReport).create({
         collection: "paid-planting"
       });
-      const gender = await DemographicEntryFactory.create({
-        demographicId: demographic.id,
-        type: "gender",
-        subtype: "unknown",
-        amount: 10
-      });
-      const age = await DemographicEntryFactory.create({
-        demographicId: demographic.id,
-        type: "age",
-        subtype: "youth",
-        amount: 10
-      });
+      const gender = await DemographicEntryFactory.gender(demographic, "unknown").create({ amount: 10 });
+      const age = await DemographicEntryFactory.age(demographic, "youth").create({ amount: 10 });
 
       const answer = {
         // check to make sure an incorrect collection for the field is ignored
@@ -195,9 +143,7 @@ describe("DemographicsCollector", () => {
       };
       await collector.syncRelation(siteReport, getRelation("site-rep-rel-paid-planting"), [answer], false);
 
-      await demographic.reload();
-      await gender.reload({ paranoid: false });
-      await age.reload();
+      await Promise.all([demographic, gender, age].map(model => model.reload({ paranoid: false })));
       expect(demographic.collection).toBe("paid-planting");
       expect(gender.deletedAt).not.toBeNull();
       expect(age.amount).toBe(2);

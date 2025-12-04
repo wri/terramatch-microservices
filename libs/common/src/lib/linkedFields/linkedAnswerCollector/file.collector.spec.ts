@@ -1,9 +1,9 @@
-import { CollectorTestHarness } from "./linked-answer-collector.spec";
 import { MediaFactory, NurseryFactory, SiteFactory } from "@terramatch-microservices/database/factories";
 import { FinancialReport, Media } from "@terramatch-microservices/database/entities";
 import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { ResourceCollector } from "./index";
+import { CollectorTestHarness } from "../../util/testing";
 
 describe("FileCollector", () => {
   let harness: CollectorTestHarness;

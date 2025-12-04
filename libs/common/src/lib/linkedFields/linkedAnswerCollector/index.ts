@@ -109,6 +109,9 @@ export class LinkedAnswerCollector {
     );
   }
 
+  // This method gets tested in the form data service spec, which is in the entity-service app so
+  // the coverage isn't getting seen in the common lib test suite.
+  /* istanbul ignore next */
   async getAnswers(nonLinkedAnswers: Dictionary<unknown>, questions: FormQuestion[], models: FormModels) {
     const answers: Dictionary<unknown> = {};
     for (const question of questions) {

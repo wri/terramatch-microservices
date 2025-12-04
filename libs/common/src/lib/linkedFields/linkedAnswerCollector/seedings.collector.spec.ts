@@ -1,9 +1,10 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { SeedingFactory, SiteFactory, SiteReportFactory } from "@terramatch-microservices/database/factories";
 import { EmbeddedSeedingDto } from "../../dto/seeding.dto";
 import { Seeding } from "@terramatch-microservices/database/entities";
+import { orderBy } from "lodash";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("SeedingsCollector", () => {
   let harness: CollectorTestHarness;
@@ -41,7 +42,7 @@ describe("SeedingsCollector", () => {
       await harness.expectAnswers(
         { sites: site, siteReports: report },
         {
-          one: siteSeedings.map(seeding => new EmbeddedSeedingDto(seeding)),
+          one: orderBy(siteSeedings, "id").map(seeding => new EmbeddedSeedingDto(seeding)),
           two: [new EmbeddedSeedingDto(reportSeeding)]
         }
       );

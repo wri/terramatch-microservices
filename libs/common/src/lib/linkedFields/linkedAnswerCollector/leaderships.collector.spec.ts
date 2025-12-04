@@ -1,9 +1,9 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { LeadershipFactory, OrganisationFactory } from "@terramatch-microservices/database/factories";
 import { EmbeddedLeadershipDto } from "../../dto/leadership.dto";
 import { orderBy } from "lodash";
 import { Leadership, Organisation, Project } from "@terramatch-microservices/database/entities";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("LeadershipsCollector", () => {
   let harness: CollectorTestHarness;

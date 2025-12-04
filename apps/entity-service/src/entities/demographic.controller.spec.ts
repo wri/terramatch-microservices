@@ -1,4 +1,3 @@
-import { Demographic, Project } from "@terramatch-microservices/database/entities";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
@@ -7,7 +6,7 @@ import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 import { DemographicsController } from "./demographics.controller";
 import { DemographicService } from "./demographic.service";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
-import { ProjectFactory } from "@terramatch-microservices/database/factories";
+import { DemographicFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("DemographicsController", () => {
@@ -50,20 +49,7 @@ describe("DemographicsController", () => {
     it("should return an array of 3 demographics successfully", async () => {
       const project = await ProjectFactory.create();
       const mockResponse = {
-        data: [
-          new Demographic({
-            uuid: "1",
-            type: "type 1",
-            demographicalType: Project.LARAVEL_TYPE,
-            demographicalId: project.id
-          } as Demographic),
-          new Demographic({
-            uuid: "2",
-            type: "type 2",
-            demographicalType: Project.LARAVEL_TYPE,
-            demographicalId: project.id
-          } as Demographic)
-        ],
+        data: await DemographicFactory.projectAllEmployees(project).createMany(2),
         paginationTotal: 3,
         pageNumber: 1
       };

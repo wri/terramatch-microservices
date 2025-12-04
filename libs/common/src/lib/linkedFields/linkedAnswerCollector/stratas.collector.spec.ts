@@ -1,10 +1,10 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { SiteFactory, StratasFactory } from "@terramatch-microservices/database/factories";
 import { Strata } from "@terramatch-microservices/database/entities";
 import { EmbeddedStrataDto } from "../../dto/strata.dto";
 import { orderBy } from "lodash";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("StratasCollector", () => {
   let harness: CollectorTestHarness;

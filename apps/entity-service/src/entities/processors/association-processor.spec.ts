@@ -43,17 +43,17 @@ describe("AssociationProcessor", () => {
   describe("addDtos", () => {
     it("should include demographic entries", async () => {
       const projectReport = await ProjectReportFactory.create();
-      const { id: demographicId, uuid } = await DemographicFactory.projectReportJobs(projectReport).create();
+      const demographic = await DemographicFactory.projectReportJobs(projectReport).create();
       const female = pickApiProperties(
-        await DemographicEntryFactory.create({ demographicId, type: "gender", subtype: "female" }),
+        await DemographicEntryFactory.gender(demographic, "female").create(),
         DemographicEntryDto
       );
       const unknown = pickApiProperties(
-        await DemographicEntryFactory.create({ demographicId, type: "gender", subtype: "unknown" }),
+        await DemographicEntryFactory.gender(demographic, "unknown").create(),
         DemographicEntryDto
       );
       const youth = pickApiProperties(
-        await DemographicEntryFactory.create({ demographicId, type: "age", subtype: "youth" }),
+        await DemographicEntryFactory.age(demographic, "youth").create(),
         DemographicEntryDto
       );
 
@@ -63,7 +63,7 @@ describe("AssociationProcessor", () => {
       const data = result.data as Resource[];
       expect(data.length).toEqual(1);
 
-      const dto = data.find(({ id }) => id === uuid)?.attributes as unknown as DemographicDto;
+      const dto = data.find(({ id }) => id === demographic.uuid)?.attributes as unknown as DemographicDto;
       expect(dto).not.toBeNull();
       expect(dto.entries.length).toBe(3);
       expect(dto.entries.find(({ type, subtype }) => type === "gender" && subtype === "female")).toMatchObject(female);

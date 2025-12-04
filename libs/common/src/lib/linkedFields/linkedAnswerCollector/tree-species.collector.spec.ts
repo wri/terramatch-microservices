@@ -1,9 +1,10 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { SiteFactory, SiteReportFactory, TreeSpeciesFactory } from "@terramatch-microservices/database/factories";
 import { TreeSpecies } from "@terramatch-microservices/database/entities";
 import { EmbeddedTreeSpeciesDto } from "../../dto/tree-species.dto";
+import { orderBy } from "lodash";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("TreeSpeciesCollector", () => {
   let harness: CollectorTestHarness;
@@ -41,7 +42,7 @@ describe("TreeSpeciesCollector", () => {
       await harness.expectAnswers(
         { sites: site, siteReports: report },
         {
-          one: siteTrees.map(tree => new EmbeddedTreeSpeciesDto(tree)),
+          one: orderBy(siteTrees, "id").map(tree => new EmbeddedTreeSpeciesDto(tree)),
           two: [new EmbeddedTreeSpeciesDto(reportTree)]
         }
       );

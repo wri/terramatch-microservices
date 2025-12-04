@@ -1,4 +1,3 @@
-import { CollectorTestHarness, getRelation } from "./linked-answer-collector.spec";
 import { RelationResourceCollector } from "./index";
 import { FinancialReport, FundingType, Organisation, ProjectReport } from "@terramatch-microservices/database/entities";
 import {
@@ -8,6 +7,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { EmbeddedFundingTypeDto } from "../../dto/funding-type.dto";
 import { orderBy } from "lodash";
+import { CollectorTestHarness, getRelation } from "../../util/testing";
 
 describe("FundingTypeCollector", () => {
   let harness: CollectorTestHarness;

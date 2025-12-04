@@ -59,7 +59,7 @@ const syncDemographics: RelationSync = async (model, field, answer, hidden, logg
     return [...entries, entry];
   }, [] as DemographicEntryDto[]);
 
-  const currentEntries = await DemographicEntry.findAll({ where: { demographicId: demographic.id } });
+  const currentEntries = await DemographicEntry.demographic(demographic.id).findAll();
   const includedEntryIds: number[] = [];
   await Promise.all(
     entryDtos.map(async entryDto => {

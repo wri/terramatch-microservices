@@ -57,6 +57,8 @@ import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { VersionUpdateBody } from "./dto/version-update.dto";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
+import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -68,7 +70,8 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorTreeCoverDto,
   IndicatorFieldMonitoringDto,
   IndicatorMsuCarbonDto,
-  ValidationDto
+  ValidationDto,
+  GeometryUploadComparisonSummaryDto
 )
 export class SitePolygonsController {
   constructor(
@@ -77,6 +80,7 @@ export class SitePolygonsController {
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly policyService: PolicyService,
     private readonly versioningService: SitePolygonVersioningService,
+    private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
@@ -510,6 +514,60 @@ export class SitePolygonsController {
     await this.sitePolygonService.deleteSitePolygon(uuid);
 
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
+  @Post("upload/comparison")
+  @ApiOperation({
+    operationId: "compareGeometryFile",
+    summary: "Compare uploaded geometry file with existing polygons",
+    description: `Parses a geometry file and returns UUIDs of existing SitePolygons found in the database.`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse(GeometryUploadComparisonSummaryDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async compareGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const comparisonResult = await this.geometryUploadComparisonService.compareUploadedFeaturesWithExisting(
+      geojson,
+      siteId
+    );
+
+    const document = buildJsonApi(GeometryUploadComparisonSummaryDto);
+
+    document.addData(
+      "summary",
+      new GeometryUploadComparisonSummaryDto({
+        existingUuids: comparisonResult.existingUuids,
+        totalFeatures: comparisonResult.totalFeatures,
+        featuresForVersioning: comparisonResult.featuresForVersioning,
+        featuresForCreation: comparisonResult.featuresForCreation
+      })
+    );
+
+    document.addIndex({
+      requestPath: `/research/v3/sitePolygons/upload/comparison`,
+      total: comparisonResult.totalFeatures
+    });
+
+    return document;
   }
 
   @Post("upload")

@@ -23,6 +23,7 @@ import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
+import { GeometryUploadComparisonService } from "./site-polygons/geometry-upload-comparison.service";
 import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
@@ -69,6 +70,7 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     GeometryFileProcessingService,
+    GeometryUploadComparisonService,
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,

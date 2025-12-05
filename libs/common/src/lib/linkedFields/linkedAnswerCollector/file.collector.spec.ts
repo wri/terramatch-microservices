@@ -50,19 +50,19 @@ describe("FileCollector", () => {
 
     const site = await SiteFactory.create();
     const siteMedia = await Promise.all([
-      MediaFactory.forSite(site).create({ collectionName: "media", orderColumn: 1 }),
-      MediaFactory.forSite(site).create({ collectionName: "media", orderColumn: 2 })
+      MediaFactory.site(site).create({ collectionName: "media", orderColumn: 1 }),
+      MediaFactory.site(site).create({ collectionName: "media", orderColumn: 2 })
     ]);
     // ignored by collect()
-    await MediaFactory.forSite(site).create({ collectionName: "otherAdditionalDocuments" });
+    await MediaFactory.site(site).create({ collectionName: "otherAdditionalDocuments" });
     // only the first file is collected
     const heterogeneity = await Promise.all([
-      MediaFactory.forSite(site).create({ collectionName: "stratification_for_heterogeneity", orderColumn: 0 }),
-      MediaFactory.forSite(site).create({ collectionName: "stratification_for_heterogeneity", orderColumn: 1 })
+      MediaFactory.site(site).create({ collectionName: "stratification_for_heterogeneity", orderColumn: 0 }),
+      MediaFactory.site(site).create({ collectionName: "stratification_for_heterogeneity", orderColumn: 1 })
     ]);
     const nursery = await NurseryFactory.create();
-    const nurseryMedia = await MediaFactory.forNursery(nursery).create({ collectionName: "media" });
-    const nurseryFile = await MediaFactory.forNursery(nursery).create({ collectionName: "file" });
+    const nurseryMedia = await MediaFactory.nursery(nursery).create({ collectionName: "media" });
+    const nurseryFile = await MediaFactory.nursery(nursery).create({ collectionName: "file" });
     // reload all the media so the DTOs match
     await Promise.all([...siteMedia, ...heterogeneity, nurseryMedia, nurseryFile].map(media => media.reload()));
     await harness.expectAnswers(

@@ -22,6 +22,14 @@ const defaultAttributesFactory = async () => ({
 export const FormFactory = FactoryGirl.define(Form, async () => defaultAttributesFactory());
 
 export const EntityFormFactory = {
+  project: (project?: Project) =>
+    FactoryGirl.define(Form, async () => ({
+      ...(await defaultAttributesFactory()),
+      frameworkKey: project?.frameworkKey ?? "ppc",
+      model: Project.LARAVEL_TYPE,
+      type: "project"
+    })),
+
   site: (site?: Site) =>
     FactoryGirl.define(Form, async () => ({
       ...(await defaultAttributesFactory()),

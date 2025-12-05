@@ -69,7 +69,7 @@ describe("MediaProcessor", () => {
   describe("addDtos", () => {
     it("should include media entries for the project associated to the processor at creation", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject(project).create();
+      const media = await MediaFactory.project(project).create();
 
       processor = module
         .get(EntitiesService)
@@ -80,7 +80,7 @@ describe("MediaProcessor", () => {
 
     it("should include media entries for the site associated to the processor at creation", async () => {
       const site = await SiteFactory.create();
-      const media = await MediaFactory.forSite(site).create();
+      const media = await MediaFactory.site(site).create();
 
       processor = module
         .get(EntitiesService)
@@ -91,7 +91,7 @@ describe("MediaProcessor", () => {
 
     it("should include media entries for the nursery associated to the processor at creation", async () => {
       const nursery = await NurseryFactory.create();
-      const media = await MediaFactory.forNursery(nursery).create();
+      const media = await MediaFactory.nursery(nursery).create();
 
       processor = module
         .get(EntitiesService)
@@ -107,7 +107,7 @@ describe("MediaProcessor", () => {
       await SiteReportFactory.create({ siteId: site.id, dueAt: projectReport.dueAt });
       const nursery = await NurseryFactory.create({ projectId: project.id });
       await NurseryReportFactory.create({ nurseryId: nursery.id, dueAt: projectReport.dueAt });
-      const media = await MediaFactory.forProjectReport(projectReport).create();
+      const media = await MediaFactory.projectReport(projectReport).create();
 
       processor = module
         .get(EntitiesService)
@@ -118,7 +118,7 @@ describe("MediaProcessor", () => {
 
     it("should include media entries for the site report associated to the processor at creation", async () => {
       const siteReport = await SiteReportFactory.create();
-      const media = await MediaFactory.forSiteReport(siteReport).create();
+      const media = await MediaFactory.siteReport(siteReport).create();
 
       processor = module
         .get(EntitiesService)
@@ -131,8 +131,8 @@ describe("MediaProcessor", () => {
   describe("it filters", () => {
     it("should filter by isGeotagged", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject(project).create({ lat: 1, lng: 1 });
-      await MediaFactory.forProject(project).create();
+      const media = await MediaFactory.project(project).create({ lat: 1, lng: 1 });
+      await MediaFactory.project(project).create();
 
       const query: MediaQueryDto = { isGeotagged: true };
 
@@ -145,8 +145,8 @@ describe("MediaProcessor", () => {
 
     it("should filter by isGeotagged false", async () => {
       const project = await ProjectFactory.create();
-      await MediaFactory.forProject(project).create({ lat: 1, lng: 1 });
-      const media = await MediaFactory.forProject(project).create();
+      await MediaFactory.project(project).create({ lat: 1, lng: 1 });
+      const media = await MediaFactory.project(project).create();
 
       const query: MediaQueryDto = { isGeotagged: false };
 
@@ -159,8 +159,8 @@ describe("MediaProcessor", () => {
 
     it("should filter by isPublic", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject(project).create({ isPublic: true });
-      await MediaFactory.forProject(project).create({ isPublic: false });
+      const media = await MediaFactory.project(project).create({ isPublic: true });
+      await MediaFactory.project(project).create({ isPublic: false });
 
       const query: MediaQueryDto = { isPublic: true };
 
@@ -173,8 +173,8 @@ describe("MediaProcessor", () => {
 
     it("should filter by fileType", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject(project).create({ fileType: "documents" });
-      await MediaFactory.forProject(project).create();
+      const media = await MediaFactory.project(project).create({ fileType: "documents" });
+      await MediaFactory.project(project).create();
 
       const query: MediaQueryDto = { fileType: media.fileType ?? undefined };
 
@@ -189,8 +189,8 @@ describe("MediaProcessor", () => {
   describe("it sorts", () => {
     it("should sort by ascending", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject(project).create({ createdAt: new Date("2025-01-01") });
-      const media2 = await MediaFactory.forProject(project).create({ createdAt: new Date("2025-01-02") });
+      const media = await MediaFactory.project(project).create({ createdAt: new Date("2025-01-01") });
+      const media2 = await MediaFactory.project(project).create({ createdAt: new Date("2025-01-02") });
 
       const query: MediaQueryDto = { direction: "ASC" };
 
@@ -203,8 +203,8 @@ describe("MediaProcessor", () => {
 
     it("should sort by descending", async () => {
       const project = await ProjectFactory.create();
-      const media = await MediaFactory.forProject(project).create({ createdAt: new Date("2025-01-01") });
-      const media2 = await MediaFactory.forProject(project).create({ createdAt: new Date("2025-01-02") });
+      const media = await MediaFactory.project(project).create({ createdAt: new Date("2025-01-01") });
+      const media2 = await MediaFactory.project(project).create({ createdAt: new Date("2025-01-02") });
 
       const query: MediaQueryDto = { direction: "DESC" };
 
@@ -221,8 +221,8 @@ describe("MediaProcessor", () => {
       const project = await ProjectFactory.create();
 
       const search = "test";
-      const media = await MediaFactory.forProject(project).create({ fileName: search });
-      await MediaFactory.forProject(project).create();
+      const media = await MediaFactory.project(project).create({ fileName: search });
+      await MediaFactory.project(project).create();
 
       const query: MediaQueryDto = { search };
 

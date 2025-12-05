@@ -77,7 +77,9 @@ export const DemographicFactory = {
     FactoryGirl.define(Demographic, async () => ({
       ...(await defaultAttributesFactory()),
       demographicalType: ProjectPitch.LARAVEL_TYPE,
-      demographicalId: (pitch?.id as number) ?? ProjectPitchFactory.associate("id")
+      demographicalId: (pitch?.id as number) ?? ProjectPitchFactory.associate("id"),
+      type: Demographic.JOBS_TYPE,
+      collection: faker.helpers.arrayElement(JOBS_PROJECT_COLLECTIONS)
     })),
 
   projectPitchAllEmployees: (pitch?: ProjectPitch) =>

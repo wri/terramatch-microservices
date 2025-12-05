@@ -251,7 +251,7 @@ describe("FormDataService", () => {
         inputType: "file",
         linkedFieldKey: "site-col-media"
       });
-      const media = await MediaFactory.forSite(site).create({ collectionName: "media" });
+      const media = await MediaFactory.site(site).create({ collectionName: "media" });
       const treesQ1 = await FormQuestionFactory.section(section).create({
         inputType: "treeSpecies",
         linkedFieldKey: "site-rel-tree-species",

@@ -1,7 +1,16 @@
 import { faker } from "@faker-js/faker";
 import { SiteFactory } from "./site.factory";
 import { FactoryGirl } from "factory-girl-ts";
-import { Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport, TreeSpecies } from "../entities";
+import {
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectPitch,
+  ProjectReport,
+  Site,
+  SiteReport,
+  TreeSpecies
+} from "../entities";
 import { SiteReportFactory } from "./site-report.factory";
 import { ProjectFactory } from "./project.factory";
 import { NurseryReportFactory } from "./nursery-report.factory";
@@ -38,6 +47,14 @@ export const TreeSpeciesFactory = {
       ...(await defaultAttributesFactory()),
       speciesableType: Project.LARAVEL_TYPE,
       speciesableId: (project?.id as number) ?? ProjectFactory.associate("id"),
+      collection: "tree-planted"
+    })),
+
+  projectPitchTreePlanted: (pitch?: ProjectPitch) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: ProjectPitch.LARAVEL_TYPE,
+      speciesableId: (pitch?.id as number) ?? ProjectFactory.associate("id"),
       collection: "tree-planted"
     })),
 

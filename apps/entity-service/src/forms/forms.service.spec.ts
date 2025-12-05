@@ -110,7 +110,7 @@ describe("FormsService", () => {
     it("adds the light DTOs", async () => {
       mediaService.getUrl.mockReturnValue("fake-url");
       const forms = [...(await FormFactory.createMany(2)), await FormFactory.create({ published: false })];
-      await MediaFactory.forForm(forms[0]).create({ collectionName: "banner" });
+      await MediaFactory.form(forms[0]).create({ collectionName: "banner" });
       const document = serialize(await service.addIndex(buildJsonApi<FormLightDto>(FormLightDto), {}));
       const dtos = document.data as Resource[];
       expect(dtos.length).toBe(forms.length);
@@ -155,7 +155,7 @@ describe("FormsService", () => {
       );
 
       const form = await FormFactory.create({ titleId: 1 });
-      await MediaFactory.forForm(form).create({ collectionName: "banner" });
+      await MediaFactory.form(form).create({ collectionName: "banner" });
       const sections = [
         await FormSectionFactory.form(form).create({ order: 1, titleId: 2 }),
         await FormSectionFactory.form(form).create({ order: 0 })
@@ -188,7 +188,7 @@ describe("FormsService", () => {
         await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 1, labelId: 2 }),
         await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 0 })
       ];
-      await MediaFactory.forFormQuestionOption(options[1]).create({ collectionName: "image" });
+      await MediaFactory.formQuestionOption(options[1]).create({ collectionName: "image" });
       const selectQuestionMatch = {
         inputType: "select",
         label: selectQuestion.label ?? null,

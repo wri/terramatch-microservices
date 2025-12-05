@@ -138,7 +138,7 @@ describe("TasksService", () => {
     it("should sort", async () => {
       // sequelize doesn't support manually setting createdAt or updatedAt, so we have to mess with the
       // system clock for this test.
-      const clock = FakeTimers.install({ shouldAdvanceTime: true });
+      const clock = FakeTimers.install({ shouldAdvanceTime: true, shouldClearNativeTimers: true });
       try {
         const oldDate = faker.date.past({ years: 1 });
         let newDate = faker.date.recent();

@@ -631,7 +631,84 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null
+      userFullName: user?.fullName ?? null,
+      enableVersioning: false
+    };
+
+    await this.geometryUploadQueue.add("geometryUpload", jobData);
+
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+  }
+
+  @Post("upload/withVersioning")
+  @ApiOperation({
+    operationId: "uploadGeometryFileWithVersioning",
+    summary: "Upload geometry file with versioning support",
+    description: `Parses a geometry file and processes it with versioning enabled. 
+      Features with UUIDs in properties.uuid that match existing active SitePolygons will create new versions.
+      Features without matching UUIDs (or without UUIDs) will create new polygons.
+      Attributes are extracted from GeoJSON feature properties for both versions and new polygons.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse([SitePolygonLightDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async uploadGeometryFileWithVersioning(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: GeometryUploadRequestDto
+  ) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Geometry Upload with Versioning",
+      totalContent: geojson.features.length,
+      processedContent: 0,
+      progressMessage: "Parsing geometry file...",
+      createdBy: userId,
+      metadata: {
+        entity_id: site.id,
+        entity_type: Site.LARAVEL_TYPE,
+        entity_name: site.name
+      }
+    } as DelayedJob);
+
+    const jobData: GeometryUploadJobData = {
+      delayedJobId: delayedJob.id,
+      siteId,
+      geojson,
+      userId,
+      source,
+      userFullName: user?.fullName ?? null,
+      enableVersioning: true
     };
 
     await this.geometryUploadQueue.add("geometryUpload", jobData);

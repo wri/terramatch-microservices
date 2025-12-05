@@ -8,6 +8,7 @@ export const STARTED = "started";
 export const AWAITING_APPROVAL = "awaiting-approval";
 export const APPROVED = "approved";
 export const NEEDS_MORE_INFORMATION = "needs-more-information";
+export const MODIFIED = "modified";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export const PLANTING_STATUSES = [
   "no-restoration-expected",

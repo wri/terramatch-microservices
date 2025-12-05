@@ -14,15 +14,17 @@ const defaultAttributesFactory = async () => ({
 });
 
 export const SeedingFactory = {
-  forSite: FactoryGirl.define(Seeding, async () => ({
-    ...(await defaultAttributesFactory()),
-    seedableType: Site.LARAVEL_TYPE,
-    seedableId: SiteFactory.associate("id")
-  })),
+  site: (site?: Site) =>
+    FactoryGirl.define(Seeding, async () => ({
+      ...(await defaultAttributesFactory()),
+      seedableType: Site.LARAVEL_TYPE,
+      seedableId: (site?.id as number) ?? SiteFactory.associate("id")
+    })),
 
-  forSiteReport: FactoryGirl.define(Seeding, async () => ({
-    ...(await defaultAttributesFactory()),
-    seedableType: SiteReport.LARAVEL_TYPE,
-    seedableId: SiteReportFactory.associate("id")
-  }))
+  siteReport: (report?: SiteReport) =>
+    FactoryGirl.define(Seeding, async () => ({
+      ...(await defaultAttributesFactory()),
+      seedableType: SiteReport.LARAVEL_TYPE,
+      seedableId: (report?.id as number) ?? SiteReportFactory.associate("id")
+    }))
 };

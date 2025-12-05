@@ -1,6 +1,19 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, ENUM, NOW, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { LaravelModel, laravelType } from "../types/util";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  ENUM,
+  InferAttributes,
+  InferCreationAttributes,
+  NOW,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
+import { LaravelModel, laravelType, StatusModel } from "../types/util";
 import { MediaConfiguration } from "../constants/media-owners";
 import { chainScope } from "../util/chain-scope";
 import { Project } from "./project.entity";
@@ -11,6 +24,7 @@ import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { SitePolygon } from "./site-polygon.entity";
 import { DisturbanceReport } from "./disturbance-report.entity";
+import { User } from "./user.entity";
 
 const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
 type AuditStatusType = (typeof TYPES)[number];
@@ -32,7 +46,7 @@ type AuditStatusMedia = "attachments";
   // @Index doesn't work with underscored column names in all contexts
   indexes: [{ name: "audit_statuses_auditable_type_auditable_id_index", fields: ["auditable_type", "auditable_id"] }]
 })
-export class AuditStatus extends Model<AuditStatus> {
+export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreationAttributes<AuditStatus>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus\\AuditStatus";
   static readonly MEDIA: Record<AuditStatusMedia, MediaConfiguration> = {
     attachments: { dbCollection: "attachments", multiple: true, validation: "general-documents" }
@@ -53,14 +67,44 @@ export class AuditStatus extends Model<AuditStatus> {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;
   }
 
+  static async createAudit(
+    model: LaravelModel & StatusModel,
+    createdBy?: number | null,
+    type?: AuditStatusType | null,
+    comment?: string | null
+  ) {
+    const auditableType = laravelType(model);
+    if (!AuditStatus.AUDITABLE_LARAVEL_TYPES.includes(auditableType)) {
+      return;
+    }
+
+    const user =
+      createdBy == null
+        ? undefined
+        : await User.findOne({
+            where: { id: createdBy },
+            attributes: ["emailAddress", "firstName", "lastName"]
+          });
+    await AuditStatus.create({
+      auditableType,
+      auditableId: model.id,
+      status: model.status,
+      createdBy: user?.emailAddress,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      type,
+      comment
+    });
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)

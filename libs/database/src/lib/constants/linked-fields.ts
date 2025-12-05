@@ -1,17 +1,17 @@
 import { Dictionary } from "lodash";
+import { Attributes } from "sequelize";
+import { FormModel } from "./entities";
+import { DemographicType } from "../types/demographic";
 
-export type LinkedFieldConfiguration = {
+export type LinkedFieldConfiguration<M extends FormModel> = {
   label: string;
-  laravelModelType: string;
-  fields: Dictionary<LinkedField>;
+  fields: Dictionary<LinkedField<M>>;
   fileCollections: Dictionary<LinkedFile>;
   relations: Dictionary<LinkedRelation>;
 };
 
 export const FIELD_INPUT_TYPES = [
   "boolean",
-  "conditional",
-  "tableInput",
   "date",
   "long-text",
   "mapInput",
@@ -26,13 +26,29 @@ export const FIELD_INPUT_TYPES = [
 ] as const;
 export type FieldInputType = (typeof FIELD_INPUT_TYPES)[number];
 
-export type LinkedField = {
-  property: string;
+export type VirtualDemographicsAggregate = {
+  type: "demographicsAggregate";
+  demographicsType: DemographicType;
+  collection: string;
+};
+export type VirtualDemographicsDescription = {
+  type: "demographicsDescription";
+  demographicsType: DemographicType;
+  collections: string[];
+};
+export type VirtualLinkedFieldProps = VirtualDemographicsAggregate | VirtualDemographicsDescription;
+export type VirtualLinkedField = {
+  virtual: VirtualLinkedFieldProps;
   label: string;
   inputType: FieldInputType;
   multiChoice?: boolean;
   optionListKey?: string;
 };
+export type PropertyLinkedField<M extends FormModel> = Omit<VirtualLinkedField, "virtual"> & {
+  virtual?: never;
+  property: keyof Attributes<M>;
+};
+export type LinkedField<M extends FormModel = FormModel> = VirtualLinkedField | PropertyLinkedField<M>;
 
 export const FILE_INPUT_TYPES = ["file"] as const;
 export type FileInputType = (typeof FILE_INPUT_TYPES)[number];
@@ -86,11 +102,20 @@ export const LINKED_FIELD_RESOURCES = [
 ] as const;
 export type LinkedFieldResource = (typeof LINKED_FIELD_RESOURCES)[number];
 
-export const INPUT_TYPES = [...FIELD_INPUT_TYPES, ...FILE_INPUT_TYPES, ...RELATION_INPUT_TYPES] as const;
+// tableInput and conditional are not supported in linked fields, but are valid form question input types.
+export const INPUT_TYPES = [
+  ...FIELD_INPUT_TYPES,
+  ...FILE_INPUT_TYPES,
+  ...RELATION_INPUT_TYPES,
+  "conditional",
+  "tableInput"
+] as const;
 export type InputType = (typeof INPUT_TYPES)[number];
 
 export const isField = (field: LinkedField | LinkedFile | LinkedRelation): field is LinkedField =>
   FIELD_INPUT_TYPES.includes(field.inputType as FieldInputType);
+export const isPropertyField = (field: LinkedField): field is PropertyLinkedField<FormModel> =>
+  (field as PropertyLinkedField<FormModel>).property != null;
 export const isFile = (field: LinkedField | LinkedFile | LinkedRelation): field is LinkedFile =>
   FILE_INPUT_TYPES.includes(field.inputType as FileInputType);
 export const isRelation = (field: LinkedField | LinkedFile | LinkedRelation): field is LinkedRelation =>

@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  Request,
   UnauthorizedException
 } from "@nestjs/common";
 import { User } from "@terramatch-microservices/database/entities";
@@ -21,6 +20,7 @@ import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserCreateBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -53,8 +53,8 @@ export class UsersController {
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
   @ExceptionResponse(NotFoundException, { description: "User with that UUID not found" })
-  async findOne(@Param("uuid") pathId: string, @Request() { authenticatedUserId }) {
-    const userWhere = pathId === "me" ? { id: authenticatedUserId } : { uuid: pathId };
+  async findOne(@Param("uuid") pathId: string) {
+    const userWhere = pathId === "me" ? { id: authenticatedUserId() } : { uuid: pathId };
     const user = await User.findOne({
       include: ["roles", "organisation", "frameworks"],
       where: userWhere

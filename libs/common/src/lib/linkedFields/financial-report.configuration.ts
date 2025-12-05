@@ -2,9 +2,8 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { FinancialReport } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const FinancialReportConfiguration: LinkedFieldConfiguration = {
+export const FinancialReportConfiguration: LinkedFieldConfiguration<FinancialReport> = {
   label: "Financial Report",
-  laravelModelType: FinancialReport.LARAVEL_TYPE,
   fields: {},
   fileCollections: {},
   relations: {

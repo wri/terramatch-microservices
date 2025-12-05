@@ -2,27 +2,26 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { Project } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const ProjectConfiguration: LinkedFieldConfiguration = {
+export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
   label: "Project",
-  laravelModelType: Project.LARAVEL_TYPE,
   fields: {
     "pro-name": { property: "name", label: "Name", inputType: "text" },
     "pro-land-use-types": {
-      property: "land_use_types",
+      property: "landUseTypes",
       label: "Land use types",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "restoration-systems"
     },
     "pro-restoration_strategy": {
-      property: "restoration_strategy",
+      property: "restorationStrategy",
       label: "Restoration strategy",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "restoration-practices"
     },
     "pro-land-tenure-proj-area": {
-      property: "land_tenure_project_area",
+      property: "landTenureProjectArea",
       label: "Land tenure",
       inputType: "select-image",
       multiChoice: true,
@@ -42,177 +41,177 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
       multiChoice: false,
       optionListKey: "continents"
     },
-    "pro-plant_start_dte": { property: "planting_start_date", label: "planting start date", inputType: "date" },
-    "pro-plant_end_dte": { property: "planting_end_date", label: "Planting end date", inputType: "date" },
+    "pro-plant_start_dte": { property: "plantingStartDate", label: "planting start date", inputType: "date" },
+    "pro-plant_end_dte": { property: "plantingEndDate", label: "Planting end date", inputType: "date" },
     "pro-description": { property: "description", label: "Description", inputType: "long-text" },
     "pro-history": { property: "history", label: "History", inputType: "long-text" },
     "pro-objectives": { property: "objectives", label: "Objectives", inputType: "long-text" },
     "pro-environmental-goals": {
-      property: "environmental_goals",
+      property: "environmentalGoals",
       label: "Environmental goals",
       inputType: "long-text"
     },
     "pro-socioeconomic-goals": {
-      property: "socioeconomic_goals",
+      property: "socioeconomicGoals",
       label: "Socioeconomic goals",
       inputType: "long-text"
     },
     "pro-sdgs-impacted": {
-      property: "sdgs_impacted",
+      property: "sdgsImpacted",
       label: "SDGS impacted",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "sdgs-impacted-type"
     },
-    "pro-long-term-growth": { property: "long_term_growth", label: "Long term growth", inputType: "long-text" },
+    "pro-long-term-growth": { property: "longTermGrowth", label: "Long term growth", inputType: "long-text" },
     "pro-community-incentives": {
-      property: "community_incentives",
+      property: "communityIncentives",
       label: "Community incentives",
       inputType: "long-text"
     },
     "pro-budget": { property: "budget", label: "budget", inputType: "number" },
-    "pro-jobs-created-goal": { property: "jobs_created_goal", label: "Jobs created goal", inputType: "number" },
+    "pro-jobs-created-goal": { property: "jobsCreatedGoal", label: "Jobs created goal", inputType: "number" },
     "pro-total-hectares-restored-goal": {
-      property: "total_hectares_restored_goal",
+      property: "totalHectaresRestoredGoal",
       label: "Total hectares restored goal",
       inputType: "number"
     },
-    "pro-trees-grown-goal": { property: "trees_grown_goal", label: "Trees grown goal", inputType: "number" },
-    "pro-survival-rate": { property: "survival_rate", label: "Survival rate", inputType: "number" },
+    "pro-trees-grown-goal": { property: "treesGrownGoal", label: "Trees grown goal", inputType: "number" },
+    "pro-survival-rate": { property: "survivalRate", label: "Survival rate", inputType: "number" },
     "pro-year-five-crown-cover": {
-      property: "year_five_crown_cover",
+      property: "yearFiveCrownCover",
       label: "Year five crown cover",
       inputType: "number"
     },
     "pro-monitored-tree-cover": {
-      property: "monitored_tree_cover",
+      property: "monitoredTreeCover",
       label: "monitored tree cover",
       inputType: "number"
     },
-    "pro-organization-name": { property: "organization_name", label: "Organisation Name", inputType: "text" },
-    "pro-county-district": { property: "project_county_district", label: "Project District", inputType: "text" },
+    "pro-organization-name": { property: "organizationName", label: "Organisation Name", inputType: "text" },
+    "pro-county-district": { property: "projectCountyDistrict", label: "Project District", inputType: "text" },
     "pro-desc-of-proj-timeline": {
-      property: "description_of_project_timeline",
+      property: "descriptionOfProjectTimeline",
       label: "Key stages of this project’s implementation",
       inputType: "long-text"
     },
     "pro-siting-strategy-description": {
-      property: "siting_strategy_description",
+      property: "sitingStrategyDescription",
       label: "Siting Strategy Description",
       inputType: "long-text"
     },
     "pro-siting-strategy": {
-      property: "siting_strategy",
+      property: "sitingStrategy",
       label: "Siting Strategy",
       inputType: "select",
       multiChoice: false,
       optionListKey: "siting-strategy"
     },
     "pro-landholder-comm-engage": {
-      property: "landholder_comm_engage",
+      property: "landholderCommEngage",
       label: "Landholder & Community Engagement Strategy",
       inputType: "long-text"
     },
     "pro-proj-partner-info": {
-      property: "proj_partner_info",
+      property: "projPartnerInfo",
       label: "Proposed project partner information",
       inputType: "long-text"
     },
     "pro-proj-success-risks": {
-      property: "proj_success_risks",
+      property: "projSuccessRisks",
       label: "Risk + Mitigate strategy",
       inputType: "long-text"
     },
     "pro-monitor-eval-plan": {
-      property: "monitor_eval_plan",
+      property: "monitorEvalPlan",
       label: "Report, Monitor, Verification Strategy",
       inputType: "long-text"
     },
     "pro-seedlings-source": {
-      property: "seedlings_source",
+      property: "seedlingsSource",
       label: "Sources of tree seedlings for the project",
       inputType: "long-text"
     },
     "pro-pct-employees-men": {
-      property: "pct_employees_men",
+      property: "pctEmployeesMen",
       label: "% of total employees that would be men",
       inputType: "number-percentage"
     },
     "pro-pct-employees-women": {
-      property: "pct_employees_women",
+      property: "pctEmployeesWomen",
       label: "% of total employees that would be women",
       inputType: "number-percentage"
     },
     "pro-pct-employees-18to35": {
-      property: "pct_employees_18to35",
+      property: "pctEmployees18To35",
       label: "% of total employees that would be between the ages of 18 and 35",
       inputType: "number-percentage"
     },
     "pro-pct-employees-older35": {
-      property: "pct_employees_older35",
+      property: "pctEmployeesOlder35",
       label: "% of total employees that would be older than 35 years of age",
       inputType: "number-percentage"
     },
     "pro-pct-employees-marginalised": {
-      property: "pct_employees_marginalised",
+      property: "pctEmployeesMarginalised",
       label: "% of total employees that would be part of a marginalised community",
       inputType: "number-percentage"
     },
-    "pro-beneficiaries": { property: "proj_beneficiaries", label: "Project beneficiaries Total", inputType: "number" },
+    "pro-beneficiaries": { property: "projBeneficiaries", label: "Project beneficiaries Total", inputType: "number" },
     "pro-pct-beneficiaries-women": {
-      property: "pct_beneficiaries_women",
+      property: "pctBeneficiariesWomen",
       label: "% of female beneficiaries",
       inputType: "number-percentage"
     },
     "pro-pct-beneficiaries-men": {
-      property: "pct_beneficiaries_men",
+      property: "pctBeneficiariesMen",
       label: "% Beneficiaries men",
       inputType: "number-percentage"
     },
     "pro-pct-beneficiaries-small": {
-      property: "pct_beneficiaries_small",
+      property: "pctBeneficiariesSmall",
       label: "% of smallholder farmers beneficiaries",
       inputType: "number-percentage"
     },
     "pro-pct-beneficiaries-large": {
-      property: "pct_beneficiaries_large",
+      property: "pctBeneficiariesLarge",
       label: "% of large-scale farmers beneficiaries",
       inputType: "number-percentage"
     },
     "pro-pct-beneficiaries-35below": {
-      property: "pct_beneficiaries_youth",
+      property: "pctBeneficiariesYouth",
       label: "% of beneficiaries younger than 36",
       inputType: "number-percentage"
     },
     "pro-pct-beneficiaries-marginalised": {
-      property: "pct_beneficiaries_marginalised",
+      property: "pctBeneficiariesMarginalised",
       label: "% Beneficiaries Marginalised Communities",
       inputType: "number-percentage"
     },
     "pro-detailed-rst-inv-types": {
-      property: "detailed_intervention_types",
+      property: "detailedInterventionTypes",
       label: "Detailed intervention types",
       inputType: "select",
       multiChoice: true,
       optionListKey: "interventions"
     },
     "pro-proj-impact-foodsec": {
-      property: "proj_impact_foodsec",
+      property: "projImpactFoodsec",
       label: "Potential project impact: food security",
       inputType: "long-text"
     },
     // This is breaking convention for linked field keys because project pitch was already using pro-proposed-gov-partners.
     "project-proposed-gov-partners": {
-      property: "proposed_gov_partners",
+      property: "proposedGovPartners",
       label: "Proposed government partners",
       inputType: "long-text"
     },
     "pro-proposed-num-nurseries": {
-      property: "proposed_num_nurseries",
+      property: "proposedNumNurseries",
       label: "Proposed Number of Nurseries",
       inputType: "number"
     },
-    "pro-proj-boundary": { property: "proj_boundary", label: "Project Boundary", inputType: "mapInput" },
+    "pro-proj-boundary": { property: "projBoundary", label: "Project Boundary", inputType: "mapInput" },
     "pro-states": {
       property: "states",
       label: "States",
@@ -221,69 +220,109 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
       optionListKey: "gadm-level-1"
     },
     "pro-impact-biodiv": {
-      property: "proj_impact_biodiv",
+      property: "projImpactBiodiv",
       label: "Biodiversity Impact (project)",
       inputType: "long-text"
     },
     // This is breaking convention for linked field keys because project pitch was already using pro-water-source.
-    "project-water-source": { property: "water_source", label: "Water Source", inputType: "long-text" },
+    "project-water-source": { property: "waterSource", label: "Water Source", inputType: "long-text" },
     "pro-baseline-biodiversity": {
-      property: "baseline_biodiversity",
+      property: "baselineBiodiversity",
       label: "Baseline Biodiversity Conditions",
       inputType: "long-text"
     },
     "pro-goal-trees-restored-planting": {
-      property: "goal_trees_restored_planting",
+      property: "goalTreesRestoredPlanting",
       label: "Trees Restored Goal - Planting",
       inputType: "number"
     },
     "pro-goal-trees-restored-anr": {
-      property: "goal_trees_restored_anr",
+      property: "goalTreesRestoredAnr",
       label: "Trees Restored Goal - ANR",
       inputType: "number"
     },
     "pro-goal-trees-restored-direct-seeding": {
-      property: "goal_trees_restored_direct_seeding",
+      property: "goalTreesRestoredDirectSeeding",
       label: "Trees Restored Goal - Direct Seeding",
       inputType: "number"
     },
     "pro-direct-seeding-survival-rate": {
-      property: "direct_seeding_survival_rate",
+      property: "directSeedingSurvivalRate",
       label: "Direct Seeding Survival Rate",
       inputType: "number-percentage"
     },
     "pro-full-time-jobs-count": {
-      property: "full_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time"
+      },
       label: "Aggregate full time jobs",
       inputType: "number"
     },
     "pro-full-clt-time-jobs-count": {
-      property: "full_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time-clt"
+      },
       label: "Aggregate full time CLT jobs",
       inputType: "number"
     },
     "pro-part-time-jobs-count": {
-      property: "part_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time"
+      },
       label: "Aggregate part time jobs",
       inputType: "number"
     },
     "pro-part-clt-time-jobs-count": {
-      property: "part_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time-clt"
+      },
       label: "Aggregate part time CLT jobs",
       inputType: "number"
     },
-    "pro-volunteers-count": { property: "volunteers_aggregate", label: "Aggregate volunteers", inputType: "number" },
+    "pro-volunteers-count": {
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "volunteers",
+        collection: "volunteer"
+      },
+      label: "Aggregate volunteers",
+      inputType: "number"
+    },
     "pro-beneficiaries-count": {
-      property: "all_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "all-beneficiaries",
+        collection: "all"
+      },
       label: "Aggregate beneficiaries",
       inputType: "number"
     },
     "pro-indirect-beneficiaries-count": {
-      property: "indirect_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "indirect-beneficiaries",
+        collection: "indirect"
+      },
       label: "Aggregate indirect beneficiaries",
       inputType: "number"
     },
-    "pro-associates-count": { property: "all_associates_aggregate", label: "Aggregate associates", inputType: "number" }
+    "pro-associates-count": {
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "associates",
+        collection: "all"
+      },
+      label: "Aggregate associates",
+      inputType: "number"
+    }
   },
   fileCollections: {
     "pro-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },

@@ -6,7 +6,7 @@ import { BadRequestException } from "@nestjs/common";
 import { Media, Project } from "@terramatch-microservices/database/entities";
 import { MediaFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { MediaDto } from "./dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -92,14 +92,12 @@ describe("EntitiesService", () => {
     it("maps a MediaCollection to a dto mapping", async () => {
       const project = await ProjectFactory.create();
       const media = [
-        await MediaFactory.forProject.create({
-          modelId: project.id,
+        await MediaFactory.project(project).create({
           collectionName: Project.MEDIA.otherAdditionalDocuments.dbCollection
         })
       ];
       media.push(
-        await MediaFactory.forProject.create({
-          modelId: project.id,
+        await MediaFactory.project(project).create({
           collectionName: Project.MEDIA.detailedProjectBudget.dbCollection
         })
       );

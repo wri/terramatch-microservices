@@ -311,12 +311,12 @@ describe("AirtableEntity", () => {
       associationUuids[Project.LARAVEL_TYPE] = project.uuid;
 
       const factories = [
-        () => DemographicFactory.forProjectReportWorkday.create({ demographicalId: projectReport.id }),
-        () => DemographicFactory.forSiteReportWorkday.create({ demographicalId: siteReport.id }),
-        () => DemographicFactory.forProjectReportRestorationPartner.create({ demographicalId: projectReport.id }),
-        () => DemographicFactory.forOrganisationBeneficiaries.create({ demographicalId: organisation.id }),
-        () => DemographicFactory.forProjectPitchAllEmployees.create({ demographicalId: projectPitch.id }),
-        () => DemographicFactory.forProjectAllEmployees.create({ demographicalId: project.id })
+        () => DemographicFactory.projectReportWorkday(projectReport).create(),
+        () => DemographicFactory.siteReportWorkday(siteReport).create(),
+        () => DemographicFactory.projectReportRestorationPartner(projectReport).create(),
+        () => DemographicFactory.organisationBeneficiaries(organisation).create(),
+        () => DemographicFactory.projectPitchAllEmployees(projectPitch).create(),
+        () => DemographicFactory.projectAllEmployees(project).create()
       ];
 
       const allDemographics: Demographic[] = [];
@@ -341,9 +341,9 @@ describe("AirtableEntity", () => {
 
       // create one with a bogus association type for testing
       allDemographics.push(
-        await DemographicFactory.forProjectReportWorkday.create({ demographicalType: "foo", demographicalId: 1 })
+        await DemographicFactory.projectReportWorkday().create({ demographicalType: "foo", demographicalId: 1 })
       );
-      allDemographics.push(await DemographicFactory.forSiteReportWorkday.create({ demographicalId: 0 }));
+      allDemographics.push(await DemographicFactory.siteReportWorkday().create({ demographicalId: 0 }));
 
       demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && !workday.hidden);
     });
@@ -375,9 +375,9 @@ describe("AirtableEntity", () => {
     beforeAll(async () => {
       await DemographicEntry.truncate();
 
-      const projectWorkday = await DemographicFactory.forProjectReportWorkday.create();
-      const siteWorkday = await DemographicFactory.forSiteReportWorkday.create();
-      const projectPartner = await DemographicFactory.forProjectReportRestorationPartner.create();
+      const projectWorkday = await DemographicFactory.projectReportWorkday().create();
+      const siteWorkday = await DemographicFactory.siteReportWorkday().create();
+      const projectPartner = await DemographicFactory.projectReportRestorationPartner().create();
       demographicUuids = {
         [projectWorkday.id]: projectWorkday.uuid,
         [siteWorkday.id]: siteWorkday.uuid,
@@ -385,9 +385,9 @@ describe("AirtableEntity", () => {
       };
 
       const factories = [
-        () => DemographicEntryFactory.create({ demographicId: projectWorkday.id }),
-        () => DemographicEntryFactory.create({ demographicId: siteWorkday.id }),
-        () => DemographicEntryFactory.create({ demographicId: projectPartner.id })
+        () => DemographicEntryFactory.any(projectWorkday).create(),
+        () => DemographicEntryFactory.any(siteWorkday).create(),
+        () => DemographicEntryFactory.any(projectPartner).create()
       ];
 
       const allDemographics: DemographicEntry[] = [];
@@ -510,12 +510,13 @@ describe("AirtableEntity", () => {
     beforeAll(async () => {
       await FinancialIndicator.truncate();
 
-      const allIndicators = await FinancialIndicatorFactory.createMany(10);
+      const org = await OrganisationFactory.create();
+      const allIndicators = await FinancialIndicatorFactory.org(org).createMany(10);
       await allIndicators[2].destroy();
       await allIndicators[7].destroy();
       allIndicators.push(
-        await FinancialIndicatorFactory.create({ organisationId: allIndicators[0].organisationId }),
-        await FinancialIndicatorFactory.create({ organisationId: allIndicators[2].organisationId })
+        await FinancialIndicatorFactory.org(org).create(),
+        await FinancialIndicatorFactory.org(org).create()
       );
 
       indicators = allIndicators.filter(indicator => !indicator.isSoftDeleted());
@@ -734,11 +735,12 @@ describe("AirtableEntity", () => {
         frameworkKey: "ppc"
       });
       allReports.push(ppcReport);
-      const ppcSeedlings = (
-        await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, { speciesableId: ppcReport.id })
-      ).reduce((total, { amount }) => total + (amount ?? 0), 0);
+      const ppcSeedlings = (await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).createMany(3)).reduce(
+        (total, { amount }) => total + (amount ?? 0),
+        0
+      );
       // make sure hidden is ignored
-      await TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: ppcReport.id, hidden: true });
+      await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).create({ hidden: true });
       await TaskFactory.create();
 
       const terrafundReport = await ProjectReportFactory.create({
@@ -872,14 +874,14 @@ describe("AirtableEntity", () => {
       associationUuids[SiteReport.LARAVEL_TYPE] = siteReport.uuid;
 
       const factories = [
-        () => TreeSpeciesFactory.forNurserySeedling.create({ speciesableId: nursery.id }),
-        () => TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: nurseryReport.id }),
-        () => TreeSpeciesFactory.forProjectTreePlanted.create({ speciesableId: project.id }),
-        () => TreeSpeciesFactory.forProjectReportNurserySeedling.create({ speciesableId: projectReport.id }),
-        () => TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id }),
-        () => TreeSpeciesFactory.forSiteNonTree.create({ speciesableId: site.id }),
-        () => TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReport.id }),
-        () => TreeSpeciesFactory.forSiteReportNonTree.create({ speciesableId: siteReport.id })
+        () => TreeSpeciesFactory.nurserySeedling(nursery).create(),
+        () => TreeSpeciesFactory.nurseryReportSeedling(nurseryReport).create(),
+        () => TreeSpeciesFactory.projectTreePlanted(project).create(),
+        () => TreeSpeciesFactory.projectReportNurserySeedling(projectReport).create(),
+        () => TreeSpeciesFactory.siteTreePlanted(site).create(),
+        () => TreeSpeciesFactory.siteNonTree(site).create(),
+        () => TreeSpeciesFactory.siteReportTreePlanted(siteReport).create(),
+        () => TreeSpeciesFactory.siteReportNonTree(siteReport).create()
       ];
 
       const allTrees: TreeSpecies[] = [];
@@ -903,9 +905,9 @@ describe("AirtableEntity", () => {
       }
 
       // create one with a bogus association type for testing
-      allTrees.push(await TreeSpeciesFactory.forNurserySeedling.create({ speciesableType: "foo", speciesableId: 3 }));
+      allTrees.push(await TreeSpeciesFactory.nurserySeedling().create({ speciesableType: "foo", speciesableId: 3 }));
       // create one with a bad association id for testing
-      allTrees.push(await TreeSpeciesFactory.forNurseryReportSeedling.create({ speciesableId: 0 }));
+      allTrees.push(await TreeSpeciesFactory.nurseryReportSeedling().create({ speciesableId: 0 }));
 
       trees = allTrees.filter(tree => !tree.isSoftDeleted() && !tree.hidden);
     });

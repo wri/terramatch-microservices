@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, Scope } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { RequestContext } from "nestjs-request-context";
 import {
   Form,
   FormQuestion,
@@ -35,9 +34,10 @@ import {
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { MediaDto } from "../entities/dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -236,7 +236,7 @@ export class FormsService {
   private _userLocale?: ValidLocale;
   private async getUserLocale() {
     if (this._userLocale == null) {
-      const userId = RequestContext.currentContext.req.authenticatedUserId as number | undefined | null;
+      const userId = authenticatedUserId();
       this._userLocale = userId == null ? undefined : await User.findLocale(userId);
       if (this._userLocale == null) {
         throw new BadRequestException("Locale is required");
@@ -274,7 +274,7 @@ export class FormsService {
   private async storeForm(form: Form, attributes: StoreFormAttributes) {
     // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
     // rows are all numerical IDs.
-    form.updatedBy = `${RequestContext.currentContext.req.authenticatedUserId}`;
+    form.updatedBy = `${authenticatedUserId()}`;
     form.title = attributes.title;
     form.titleId = await this.localizationService.generateI18nId(attributes.title, form.titleId);
     form.subtitle = attributes.subtitle ?? null;

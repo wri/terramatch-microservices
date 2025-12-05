@@ -1,10 +1,19 @@
 import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
-import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
+  AuditStatus,
   Demographic,
+  Disturbance,
+  DisturbanceReport,
+  FinancialIndicator,
+  FinancialReport,
+  Form,
+  FormQuestionOption,
+  FundingProgramme,
+  ImpactStory,
   Nursery,
   NurseryReport,
+  Organisation,
   Permission,
   Project,
   ProjectPitch,
@@ -12,19 +21,9 @@ import {
   Site,
   SitePolygon,
   SiteReport,
+  SrpReport,
   Task,
-  User,
-  AuditStatus,
-  ImpactStory,
-  FinancialIndicator,
-  FinancialReport,
-  Form,
-  FormQuestionOption,
-  FundingProgramme,
-  Disturbance,
-  Organisation,
-  DisturbanceReport,
-  SrpReport
+  User
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -52,6 +51,7 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
+import { authenticatedUserId } from "../guards/auth.guard";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,8 +104,7 @@ export class PolicyService {
   private permissions?: string[];
 
   get userId() {
-    // Added by AuthGuard
-    return RequestContext.currentContext.req.authenticatedUserId as number | undefined | null;
+    return authenticatedUserId();
   }
 
   async getPermissions() {

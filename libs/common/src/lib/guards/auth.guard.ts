@@ -2,9 +2,12 @@ import { CanActivate, ExecutionContext, Injectable, SetMetadata, UnauthorizedExc
 import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
 import { User } from "@terramatch-microservices/database/entities";
+import { RequestContext } from "nestjs-request-context";
 
 const NO_BEARER_AUTH = "noBearerAuth";
 export const NoBearerAuth = SetMetadata(NO_BEARER_AUTH, true);
+
+export const authenticatedUserId = () => RequestContext.currentContext?.req?.authenticatedUserId as number | undefined;
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -24,7 +27,7 @@ export class AuthGuard implements CanActivate {
     const userId = this.isJwtToken(token) ? await this.getJwtUserId(token) : await this.getApiKeyUserId(token);
     if (userId == null) throw new UnauthorizedException();
 
-    // Most requests won't need the actual user object; instead the roles and permissions
+    // Most requests won't need the actual user object; instead, the roles and permissions
     // are fetched from other (smaller) tables, and only the user id is needed.
     request.authenticatedUserId = userId;
     return true;

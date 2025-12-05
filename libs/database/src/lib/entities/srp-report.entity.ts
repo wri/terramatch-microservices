@@ -20,6 +20,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { Task } from "./task.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type SrpReportMedia = "media";
 
@@ -83,9 +84,10 @@ export class SrpReport extends Model<SrpReport> {
   @Column(BIGINT.UNSIGNED)
   approvedBy: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @Column(DATE)
@@ -120,7 +122,7 @@ export class SrpReport extends Model<SrpReport> {
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
@@ -147,7 +149,7 @@ export class SrpReport extends Model<SrpReport> {
     return this.project?.organisation?.uuid;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 

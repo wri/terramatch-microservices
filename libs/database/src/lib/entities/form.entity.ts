@@ -6,19 +6,33 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
 import { FormSection } from "./form-section.entity";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { EntityModel } from "../constants/entities";
+import { FinancialReport } from "./financial-report.entity";
+import { DisturbanceReport } from "./disturbance-report.entity";
+import { laravelType } from "../types/util";
+import { chainScope } from "../util/chain-scope";
 
 type FormMedia = "banner";
 
+@Scopes(() => ({
+  entity: (entity: EntityModel) => {
+    if (entity instanceof FinancialReport) return { where: { type: "financial-report" } };
+    if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };
+
+    return { where: { model: laravelType(entity), frameworkKey: entity.frameworkKey } };
+  }
+}))
 @Table({
   tableName: "forms",
   underscored: true,
@@ -27,10 +41,7 @@ type FormMedia = "banner";
     async beforeDestroy(form: Form) {
       // Handle deleting all questions and sections in 2 queries and avoid N+1 cascading by forcing
       // hooks off.
-      await FormQuestion.destroy({
-        where: { formSectionId: { [Op.in]: FormSection.forForm(form.uuid) } },
-        hooks: false
-      });
+      await FormQuestion.forForm(form.uuid).destroy({ hooks: false });
       await FormSection.destroy({ where: { formId: form.uuid }, hooks: false });
     }
   }
@@ -41,6 +52,10 @@ export class Form extends Model<Form> {
   static readonly MEDIA: Record<FormMedia, MediaConfiguration> = {
     banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
   };
+
+  static for(entity: EntityModel) {
+    return chainScope(this, "entity", entity) as typeof Form;
+  }
 
   @PrimaryKey
   @AutoIncrement

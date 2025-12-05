@@ -222,6 +222,44 @@ bootstrapRepl("Entity Service", AppModule, {
           }
         });
       });
+    },
+
+    updateConditionalLinkedFields: async () => {
+      await withoutSqlLogs(async () => {
+        // There was one case of a conditional incorrectly used as a linked field in the configs.
+        // Due to a quirk in the PHP logic, it wasn't actually trying to save as a field on the model,
+        // but we explicitly disallow this in the FE code, so we need to remove the linked field key
+        // from those question rows in the DB.
+        console.log("Updating form questions for org-carbon-credits...");
+        const [updated] = await FormQuestion.update(
+          { linkedFieldKey: null },
+          { where: { linkedFieldKey: "org-carbon-credits" } }
+        );
+        console.log(`Updated rows: ${updated}`);
+
+        // There was a whole set of linked fields in project report that were attempting to write
+        // to properties that don't exist on the model. Thankfully, the only questions that hadn't
+        // already been deleted and were referencing these fields were children of parent questions
+        // that _have_ been deleted, so this is not an active problem in the production forms.
+        console.log("Updating form questions for ethnic project report fields...");
+        const deleted = await FormQuestion.destroy({
+          where: {
+            linkedFieldKey: [
+              "pro-rep-ind-1",
+              "pro-rep-ind-2",
+              "pro-rep-ind-3",
+              "pro-rep-ind-4",
+              "pro-rep-ind-5",
+              "pro-rep-other-1",
+              "pro-rep-other-2",
+              "pro-rep-other-3",
+              "pro-rep-other-4",
+              "pro-rep-other-5"
+            ]
+          }
+        });
+        console.log(`Deleted rows: ${deleted}`);
+      });
     }
   }
 });

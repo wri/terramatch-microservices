@@ -1,8 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
-import { IsNotEmptyObject } from "class-validator";
+import { IsBoolean, IsNotEmptyObject, IsOptional } from "class-validator";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { Dictionary } from "lodash";
 
 @JsonApiDto({ type: "formData" })
 export class FormDataDto {
@@ -34,9 +35,14 @@ export class FormDataDto {
 export class StoreFormDataAttributes {
   @IsNotEmptyObject()
   @ApiProperty()
-  answers: object;
+  answers: Dictionary<unknown>;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ required: false })
+  isContinueLater?: boolean;
 }
 
 export class UpdateFormDataBody extends JsonApiBodyDto(
-  class UpdateFormDataDAta extends JsonApiDataDto({ type: "formData" }, StoreFormDataAttributes) {}
+  class UpdateFormDataData extends JsonApiDataDto({ type: "formData" }, StoreFormDataAttributes) {}
 ) {}

@@ -1,14 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Post,
-  Query,
-  Request
-} from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
@@ -24,6 +14,7 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("validations/v3")
 @ApiTags("Validations")
@@ -132,11 +123,7 @@ export class ValidationController {
   @ExceptionResponse(BadRequestException, {
     description: "Invalid validation request"
   })
-  async createSiteValidation(
-    @Param("siteUuid") siteUuid: string,
-    @Body() payload: SiteValidationRequestBody,
-    @Request() { authenticatedUserId }
-  ) {
+  async createSiteValidation(@Param("siteUuid") siteUuid: string, @Body() payload: SiteValidationRequestBody) {
     const request = payload.data.attributes;
 
     const polygonUuids = await this.validationService.getSitePolygonUuids(siteUuid);
@@ -165,7 +152,7 @@ export class ValidationController {
       totalContent: polygonUuids.length,
       processedContent: 0,
       progressMessage: "Starting validation...",
-      createdBy: authenticatedUserId,
+      createdBy: authenticatedUserId(),
       metadata: {
         entity_id: site.id,
         entity_type: "App\\Models\\V2\\Sites\\Site",

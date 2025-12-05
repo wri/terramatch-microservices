@@ -9,8 +9,11 @@ import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
-import { FundingTypeDto } from "../dto/funding-type.dto";
-import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial-indicator.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
+import {
+  FinancialIndicatorDto,
+  FinancialIndicatorMedia
+} from "@terramatch-microservices/common/dto/financial-indicator.dto";
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";

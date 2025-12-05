@@ -1,7 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { WithinCountryValidator } from "./within-country.validator";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { InternalServerErrorException } from "@nestjs/common";
 
 interface MockTransaction {
   commit: jest.Mock;
@@ -10,7 +9,7 @@ interface MockTransaction {
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
-    sequelize: {
+    sql: {
       transaction: jest.fn()
     },
     checkWithinCountryIntersection: jest.fn(),
@@ -27,9 +26,7 @@ describe("WithinCountryValidator", () => {
   const testPolygonUuid = "d2239d63-83ed-4df8-996c-2b79555385f9";
 
   beforeEach(async () => {
-    mockTransaction = PolygonGeometry.sequelize?.transaction as jest.MockedFunction<
-      (...args: unknown[]) => Promise<unknown>
-    >;
+    mockTransaction = PolygonGeometry.sql?.transaction as jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
     mockCheckWithinCountryIntersection = PolygonGeometry.checkWithinCountryIntersection as jest.MockedFunction<
       typeof PolygonGeometry.checkWithinCountryIntersection
     >;
@@ -148,18 +145,6 @@ describe("WithinCountryValidator", () => {
       await expect(validator.validatePolygon(testPolygonUuid)).rejects.toThrow("Database error");
       expect(mockTransactionInstance.rollback).toHaveBeenCalled();
       expect(mockTransactionInstance.commit).not.toHaveBeenCalled();
-    });
-
-    it("should throw InternalServerErrorException when sequelize is not available", async () => {
-      const originalSequelize = PolygonGeometry.sequelize;
-      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
-
-      await expect(validator.validatePolygon(testPolygonUuid)).rejects.toThrow(InternalServerErrorException);
-      await expect(validator.validatePolygon(testPolygonUuid)).rejects.toThrow(
-        "PolygonGeometry model is missing sequelize connection"
-      );
-
-      (PolygonGeometry as unknown as { sequelize: typeof originalSequelize }).sequelize = originalSequelize;
     });
 
     it("should round percentage to 2 decimal places", async () => {
@@ -304,15 +289,6 @@ describe("WithinCountryValidator", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].valid).toBe(false);
-    });
-
-    it("should throw InternalServerErrorException when sequelize is not available in batch", async () => {
-      const originalSequelize = PolygonGeometry.sequelize;
-      (PolygonGeometry as unknown as { sequelize: null }).sequelize = null;
-
-      await expect(validator.validatePolygons([testPolygonUuid])).rejects.toThrow(InternalServerErrorException);
-
-      (PolygonGeometry as unknown as { sequelize: typeof originalSequelize }).sequelize = originalSequelize;
     });
 
     it("should handle database errors gracefully in batch", async () => {

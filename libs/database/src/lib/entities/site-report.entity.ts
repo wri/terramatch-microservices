@@ -11,7 +11,21 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  NonAttribute,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
@@ -33,6 +47,7 @@ import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -66,7 +81,7 @@ type SiteReportMedia =
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class SiteReport extends Model<SiteReport> {
+export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreationAttributes<SiteReport>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
@@ -134,11 +149,11 @@ export class SiteReport extends Model<SiteReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -160,13 +175,15 @@ export class SiteReport extends Model<SiteReport> {
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  approvedBy: number | null;
 
   @ForeignKey(() => Task)
   @AllowNull
@@ -180,7 +197,7 @@ export class SiteReport extends Model<SiteReport> {
     return this.site?.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.site?.project?.uuid;
   }
 
@@ -196,7 +213,7 @@ export class SiteReport extends Model<SiteReport> {
     return this.site?.name;
   }
 
-  get siteUuid() {
+  get siteUuid(): string | undefined {
     return this.site?.uuid;
   }
 
@@ -221,9 +238,9 @@ export class SiteReport extends Model<SiteReport> {
   }
 
   @StateMachineColumn(ReportStatusStates)
-  status: ReportStatus;
+  status: CreationOptional<ReportStatus>;
 
-  get isComplete() {
+  get isComplete(): NonAttribute<boolean> {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
   }
 
@@ -231,8 +248,8 @@ export class SiteReport extends Model<SiteReport> {
    * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
    * transition to it.
    */
-  get isCompletable() {
-    return this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
+  get isCompletable(): NonAttribute<boolean> {
+    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL)) ?? false;
   }
 
   @AllowNull
@@ -288,10 +305,10 @@ export class SiteReport extends Model<SiteReport> {
   numTreesRegenerating: number | null;
 
   @Column({ type: TEXT, defaultValue: "" })
-  soilWaterRestorationDescription: string;
+  soilWaterRestorationDescription: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  waterStructures: string;
+  waterStructures: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -302,7 +319,7 @@ export class SiteReport extends Model<SiteReport> {
   disturbanceDetails: string | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: number;
+  completion: CreationOptional<number>;
 
   @AllowNull
   @Column(DATE)
@@ -322,7 +339,7 @@ export class SiteReport extends Model<SiteReport> {
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: object | null;
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
@@ -337,16 +354,16 @@ export class SiteReport extends Model<SiteReport> {
   plantingStatus: PlantingStatus | null;
 
   @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesRemoved: string;
+  invasiveSpeciesRemoved: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesManagement: string;
+  invasiveSpeciesManagement: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersDescription: string;
+  siteCommunityPartnersDescription: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersIncomeIncreaseDescription: string;
+  siteCommunityPartnersIncomeIncreaseDescription: CreationOptional<string>;
 
   @AllowNull
   @Column(TEXT)

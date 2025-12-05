@@ -2,102 +2,107 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { SiteReport } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const SiteReportConfiguration: LinkedFieldConfiguration = {
+export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
   label: "Site Report",
-  laravelModelType: SiteReport.LARAVEL_TYPE,
   fields: {
     "site-rep-title": { property: "title", label: "Title", inputType: "text" },
-    "site-rep-shared-drive-link": { property: "shared_drive_link", label: "Shared drive link", inputType: "url" },
+    "site-rep-shared-drive-link": { property: "sharedDriveLink", label: "Shared drive link", inputType: "url" },
     "site-rep-technical-narrative": {
-      property: "technical_narrative",
+      property: "technicalNarrative",
       label: "Technical narrative",
       inputType: "long-text"
     },
-    "site-rep-public-narrative": { property: "public_narrative", label: "Public narrative", inputType: "long-text" },
+    "site-rep-public-narrative": { property: "publicNarrative", label: "Public narrative", inputType: "long-text" },
     "site-rep-disturbance-details": {
-      property: "disturbance_details",
+      property: "disturbanceDetails",
       label: "Additional Disturbance Details",
       inputType: "long-text"
     },
-    "site-rep-workdays-paid": { property: "workdays_paid", label: "Workdays paid", inputType: "number" },
-    "site-rep-seeds-planted": { property: "seeds_planted", label: "Seeds planted", inputType: "number" },
-    "site-rep-workdays-volunteer": { property: "workdays_volunteer", label: "Workdays volunteer", inputType: "number" },
-    "site-rep-polygon-status": { property: "polygon_status", label: "Polygon status", inputType: "long-text" },
+    // @deprecated - this should not be used in new forms
+    "site-rep-workdays-paid": { property: "workdaysPaid", label: "Workdays paid", inputType: "number" },
+    "site-rep-seeds-planted": { property: "seedsPlanted", label: "Seeds planted", inputType: "number" },
+    // @deprecated - this should not be used in new forms
+    "site-rep-workdays-volunteer": { property: "workdaysVolunteer", label: "Workdays volunteer", inputType: "number" },
+    "site-rep-polygon-status": { property: "polygonStatus", label: "Polygon status", inputType: "long-text" },
     "site-rep-planting-status": {
-      property: "planting_status",
+      property: "plantingStatus",
       label: "Planting status",
       inputType: "select",
       multiChoice: false,
       optionListKey: "planting-status"
     },
     "site-rep-invasive_species_removed": {
-      property: "invasive_species_removed",
+      property: "invasiveSpeciesRemoved",
       label: "Invasive Species Removed",
       inputType: "long-text"
     },
     "site-rep-invasive_species_management": {
-      property: "invasive_species_management",
+      property: "invasiveSpeciesManagement",
       label: "Invasive Species Management Plan",
       inputType: "long-text"
     },
     "site-rep-soil_water_restoration_description": {
-      property: "soil_water_restoration_description",
+      property: "soilWaterRestorationDescription",
       label: "Soil + Water Restoration Methods",
       inputType: "long-text"
     },
     "site-rep-water_structures": {
-      property: "water_structures",
+      property: "waterStructures",
       label: "Water Structures Created",
       inputType: "long-text"
     },
     "site-rep-site_community_partners_description": {
-      property: "site_community_partners_description",
+      property: "siteCommunityPartnersDescription",
       label: "Community Partners (Site)",
       inputType: "long-text"
     },
     "site-rep-site_community_partners_income_increase_description": {
-      property: "site_community_partners_income_increase_description",
+      property: "siteCommunityPartnersIncomeIncreaseDescription",
       label: "Community Partners Income Increase (Site)",
       inputType: "long-text"
     },
     // TODO (TM-912) Deprecated, to be removed.
     "site-rep-paid-other-activity-description": {
-      property: "paid_other_activity_description",
+      property: "paidOtherActivityDescription",
       label: "Paid Other Activities Description",
       inputType: "long-text"
     },
     "site-rep-other-workdays-description": {
-      property: "other_workdays_description",
+      virtual: {
+        type: "demographicsDescription",
+        demographicsType: "workdays",
+        collections: ["paid-other-activities", "volunteer-other-activities"]
+      },
       label: "Other Activities Description",
       inputType: "long-text"
     },
     "site-rep-num-trees-regenerating": {
-      property: "num_trees_regenerating",
+      property: "numTreesRegenerating",
       label: "Estimate Number of Trees Restored via ANR",
       inputType: "number"
     },
     "site-rep-regeneration-description": {
-      property: "regeneration_description",
+      property: "regenerationDescription",
       label: "Description of ANR Activities",
       inputType: "long-text"
     },
     "site-rep-pct-survival-to-date": {
-      property: "pct_survival_to_date",
+      property: "pctSurvivalToDate",
       label: "Survival Rate",
       inputType: "number-percentage"
     },
     "site-rep-survival-calculation": {
-      property: "survival_calculation",
+      property: "survivalCalculation",
       label: "Description of Survival Rate Calculation",
       inputType: "long-text"
     },
     "site-rep-survival-description": {
-      property: "survival_description",
+      property: "survivalDescription",
       label: "Explanation of Survival Rate",
       inputType: "long-text"
     },
     "site-rep-maintenance-activities": {
-      property: "maintenance_activities",
+      property: "maintenanceActivities",
       label: "Maintenance Activities",
       inputType: "long-text"
     }

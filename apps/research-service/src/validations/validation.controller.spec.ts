@@ -3,15 +3,14 @@ import { ValidationController } from "./validation.controller";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
 import { ValidationType } from "@terramatch-microservices/database/constants";
-import { Site } from "@terramatch-microservices/database/entities";
 
 describe("ValidationController", () => {
   let controller: ValidationController;
@@ -525,7 +524,6 @@ describe("ValidationController", () => {
 
   describe("createSiteValidation", () => {
     const siteUuid = "site-uuid-123";
-    const mockRequest = { authenticatedUserId: 1 };
 
     it("should create a site validation job", async () => {
       const request: SiteValidationRequestBody = {
@@ -536,7 +534,8 @@ describe("ValidationController", () => {
           }
         }
       };
-      const result = serialize(await controller.createSiteValidation(siteUuid, request, mockRequest));
+      mockUserId(1);
+      const result = serialize(await controller.createSiteValidation(siteUuid, request));
 
       expect(mockValidationService.getSitePolygonUuids).toHaveBeenCalledWith(siteUuid);
       expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", {
@@ -557,7 +556,8 @@ describe("ValidationController", () => {
           }
         }
       };
-      await expect(controller.createSiteValidation(siteUuid, request, mockRequest)).rejects.toThrow(NotFoundException);
+      mockUserId(1);
+      await expect(controller.createSiteValidation(siteUuid, request)).rejects.toThrow(NotFoundException);
     });
 
     it("should use all validation types when none provided", async () => {
@@ -567,7 +567,8 @@ describe("ValidationController", () => {
           attributes: {}
         }
       };
-      await controller.createSiteValidation(siteUuid, request, mockRequest);
+      mockUserId(1);
+      await controller.createSiteValidation(siteUuid, request);
       expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
     });
   });

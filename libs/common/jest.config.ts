@@ -8,5 +8,5 @@ export default {
   },
   moduleFileExtensions: ["ts", "js", "html"],
   coverageDirectory: "../../coverage/libs/common",
-  coveragePathIgnorePatterns: ["util/tm-log.service.ts"]
+  coveragePathIgnorePatterns: ["dto", "decorators"]
 };

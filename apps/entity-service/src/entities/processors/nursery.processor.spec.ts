@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Nursery } from "@terramatch-microservices/database/entities";
+import { Nursery, NurseryReport, ScheduledJob } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -12,6 +12,7 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
+  TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -20,6 +21,7 @@ import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
 import { NotAcceptableException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
@@ -371,6 +373,64 @@ describe("NurseryProcessor", () => {
       policyService.getPermissions.mockResolvedValue(["manage-own"]);
       await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
+    });
+  });
+
+  describe("create", () => {
+    beforeEach(async () => {
+      await ScheduledJob.truncate();
+    });
+
+    it("throws if the project is not found", async () => {
+      await expect(processor.create({ parentUuid: "fake-uuid" })).rejects.toThrow(
+        "Project with uuid fake-uuid not found"
+      );
+    });
+
+    it("creates a site with the given project", async () => {
+      const project = await ProjectFactory.create();
+      // previously due task should not cause report generation
+      await TaskFactory.create({
+        projectId: project.id,
+        dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
+      });
+      const nursery = await processor.create({ parentUuid: project.uuid });
+      expect(nursery.projectId).toBe(project.id);
+      expect(nursery.frameworkKey).toBe(project.frameworkKey);
+      const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
+      expect(report).toBeNull();
+    });
+
+    it("creates a report with a future due task", async () => {
+      const project = await ProjectFactory.create();
+      const task = await TaskFactory.create({
+        projectId: project.id,
+        dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
+      });
+      const nursery = await processor.create({ parentUuid: project.uuid });
+      const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
+      expect(report?.taskId).toBe(task.id);
+      expect(report?.dueAt).toEqual(task.dueAt);
+    });
+
+    it("creates a report with a recently due task", async () => {
+      const project = await ProjectFactory.create();
+      const task = await TaskFactory.create({
+        projectId: project.id,
+        dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
+      });
+      // if the next scheduled task generation is more than 4 weeks from now, a backdated report
+      // should be created for the previous task
+      await ScheduledJobFactory.forTaskDue.create({
+        taskDefinition: {
+          frameworkKey: project.frameworkKey ?? undefined,
+          dueAt: DateTime.now().plus({ weeks: 5 }).toISO()
+        }
+      });
+      const nursery = await processor.create({ parentUuid: project.uuid });
+      const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
+      expect(report?.taskId).toBe(task.id);
+      expect(report?.dueAt).toEqual(task.dueAt);
     });
   });
 });

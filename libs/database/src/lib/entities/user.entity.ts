@@ -30,8 +30,8 @@ import { isNotNull } from "../types/array";
 export class User extends Model<User> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\User";
 
-  static async findLocale(userId: number) {
-    return (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;
+  static async findLocale(userId?: number) {
+    return userId == null ? undefined : (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;
   }
 
   @PrimaryKey

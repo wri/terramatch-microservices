@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* istanbul ignore file */
 import { ConsoleLogger } from "@nestjs/common";
 
 const IS_PROD = process.env["NODE_ENV"] === "production";

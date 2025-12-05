@@ -19,6 +19,7 @@ import { Action, AuditStatus, FormQuestion, Task, UpdateRequest } from "@terrama
 import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
 import {
+  AnyStatus,
   APPROVED,
   AWAITING_APPROVAL,
   DUE,
@@ -30,8 +31,11 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
-import { isField } from "@terramatch-microservices/database/constants/linked-fields";
+import { isField, LinkedField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { APPROVAL_PROCESSERS } from "./processors";
+import { authenticatedUserId } from "../guards/auth.guard";
+import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -71,6 +75,12 @@ export class EntityStatusUpdate extends EventProcessor {
 
       if (this.model.status === AWAITING_APPROVAL) {
         await this.sendProjectManagerEmail(entityType);
+      } else if (this.model.status === APPROVED) {
+        await Promise.all(
+          APPROVAL_PROCESSERS.map(processor =>
+            processor.processEntityApproval(this.model as EntityModel, this.eventService.mediaService)
+          )
+        );
       }
     }
 
@@ -126,29 +136,37 @@ export class EntityStatusUpdate extends EventProcessor {
       await this.checkTaskStatus(baseModel);
     }
 
-    await Action.for(updateRequest).destroy({ where: { type: "notification" } });
+    await Action.for(baseModel).destroy({ where: { type: "notification" } });
 
     if (updateRequest.status === AWAITING_APPROVAL) {
-      // Gather linked field labels for the audit status.
-      const questionUuids = Object.keys(updateRequest.content ?? {});
-      const questions = await FormQuestion.findAll({
-        where: { uuid: { [Op.in]: questionUuids }, linkedFieldKey: { [Op.ne]: null } }
-      });
-      const labels = questions
-        .map(question => {
-          const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
-          if (config == null || !isField(config.field)) return undefined;
-
-          const updateRequestValue = updateRequest.content?.[question.uuid] as unknown;
-          const baseValue = baseModel[config.field.property] as unknown;
-          if (isEqual(updateRequestValue, baseValue)) return undefined;
-
-          return config.field.label;
-        })
-        .filter(isNotNull);
-      await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
       const entityType = getEntityType(baseModel);
-      if (entityType != null) await this.sendProjectManagerEmail(entityType, baseModel);
+      if (entityType != null) {
+        // Gather linked field labels for the audit status.
+        const questionUuids = Object.keys(updateRequest.content ?? {});
+        const fieldQuestions = (
+          await FormQuestion.findAll({
+            where: { uuid: { [Op.in]: questionUuids }, linkedFieldKey: { [Op.ne]: null } }
+          })
+        ).filter(({ linkedFieldKey }) => {
+          const config = linkedFieldKey == null ? undefined : getLinkedFieldConfig(linkedFieldKey);
+          return config != null && isField(config.field);
+        });
+
+        const collector = new LinkedAnswerCollector(this.eventService.mediaService);
+        const modelAnswers = await collector.getAnswers({}, fieldQuestions, { [entityType]: baseModel });
+        const labels = fieldQuestions
+          .map(question => {
+            const updateRequestValue = updateRequest.content?.[question.uuid];
+            const baseValue = modelAnswers[question.uuid];
+            if (isEqual(updateRequestValue, baseValue)) return undefined;
+
+            // We've already filtered the questions to only those with Field configs, so this cast is safe.
+            return (getLinkedFieldConfig(question.linkedFieldKey ?? "")?.field as LinkedField).label;
+          })
+          .filter(isNotNull);
+        await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
+        await this.sendProjectManagerEmail(entityType, baseModel);
+      }
     }
   }
 
@@ -178,7 +196,7 @@ export class EntityStatusUpdate extends EventProcessor {
 
       if (!isReport(entity)) {
         action.title = get(entity, "name") ?? "";
-        action.text = STATUS_DISPLAY_STRINGS[entity.status];
+        action.text = STATUS_DISPLAY_STRINGS[entity.status as AnyStatus];
       }
 
       await action.save();
@@ -195,21 +213,17 @@ export class EntityStatusUpdate extends EventProcessor {
 
     this.logger.log(`Creating auditStatus [${JSON.stringify({ model: model.constructor.name, id: model.id })}]`);
 
-    const user = await this.getAuthenticatedUser();
-    const auditStatus = new AuditStatus();
-    auditStatus.auditableType = auditableType;
-    auditStatus.auditableId = model.id;
-    auditStatus.createdBy = user?.emailAddress ?? null;
-    auditStatus.firstName = user?.firstName ?? null;
-    auditStatus.lastName = user?.lastName ?? null;
-
-    if (status === "approved") {
-      auditStatus.comment = comment ?? `Approved: ${model.feedback}`;
-    } else if (status === "needs-more-information") {
-      auditStatus.type = "change-request";
-      auditStatus.comment = comment ?? (await this.getNeedsMoreInfoComment());
-    } else if (status === "awaiting-approval") {
-      auditStatus.comment = comment;
+    if (status === APPROVED) {
+      await AuditStatus.createAudit(model, authenticatedUserId(), null, comment ?? `Approved: ${model.feedback}`);
+    } else if (status === NEEDS_MORE_INFORMATION) {
+      await AuditStatus.createAudit(
+        model,
+        authenticatedUserId(),
+        "change-request",
+        comment ?? (await this.getNeedsMoreInfoComment())
+      );
+    } else if (status === AWAITING_APPROVAL) {
+      await AuditStatus.createAudit(model, authenticatedUserId(), null, comment);
     } else {
       // Getting this method called for started is expected on model creation, so no need to warn
       // in that case.
@@ -224,8 +238,6 @@ export class EntityStatusUpdate extends EventProcessor {
       }
       return;
     }
-
-    await auditStatus.save();
   }
 
   private async getNeedsMoreInfoComment() {

@@ -1,6 +1,6 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
-import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
+import { PolygonValidationResult, ValidationResult, Validator } from "./validator.interface";
+import { NotFoundException } from "@nestjs/common";
 import { Transaction } from "sequelize";
 
 interface WithinCountryValidationResult extends ValidationResult {
@@ -80,11 +80,7 @@ export class WithinCountryValidator implements Validator {
     intersectionArea: number;
     country: string;
   } | null> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const transaction = await PolygonGeometry.sequelize.transaction({
+    const transaction = await PolygonGeometry.sql.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 
@@ -112,11 +108,7 @@ export class WithinCountryValidator implements Validator {
       country: string;
     }[]
   > {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const transaction = await PolygonGeometry.sequelize.transaction({
+    const transaction = await PolygonGeometry.sql.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 

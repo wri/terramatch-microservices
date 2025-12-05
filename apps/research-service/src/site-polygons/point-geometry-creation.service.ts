@@ -18,10 +18,6 @@ export class PointGeometryCreationService {
       return [];
     }
 
-    if (PointGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PointGeometry model is missing sequelize connection");
-    }
-
     const pointGeometries = pointFeatures.map(feature => {
       const point = feature.geometry as Point;
       const properties = feature.properties ?? {};

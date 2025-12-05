@@ -1,5 +1,5 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Demographic, Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
+import { Demographic, Organisation, Project, ProjectPitch, ProjectReport, Site, SiteReport } from "../entities";
 import { ProjectReportFactory } from "./project-report.factory";
 import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
@@ -14,6 +14,7 @@ import {
 import { OrganisationFactory } from "./organisation.factory";
 import { ProjectPitchFactory } from "./project-pitch.factory";
 import { ProjectFactory } from "./project.factory";
+import { SiteFactory } from "./site.factory";
 
 const defaultAttributesFactory = async () => ({
   description: null,
@@ -35,6 +36,15 @@ export const DemographicFactory = {
       demographicalId: (report?.id as number) ?? ProjectReportFactory.associate("id"),
       type: Demographic.WORKDAYS_TYPE,
       collection: faker.helpers.arrayElement(WORKDAYS_PROJECT_COLLECTIONS)
+    })),
+
+  siteWorkday: (site?: Site) =>
+    FactoryGirl.define(Demographic, async () => ({
+      ...(await defaultAttributesFactory()),
+      demographicalType: Site.LARAVEL_TYPE,
+      demographicalId: (site?.id as number) ?? SiteFactory.associate("id"),
+      type: Demographic.WORKDAYS_TYPE,
+      collection: faker.helpers.arrayElement(WORKDAYS_SITE_COLLECTIONS)
     })),
 
   siteReportWorkday: (report?: SiteReport) =>

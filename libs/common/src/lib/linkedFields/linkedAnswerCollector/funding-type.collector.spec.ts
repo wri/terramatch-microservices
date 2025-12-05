@@ -94,7 +94,7 @@ describe("FundingTypeCollector", () => {
         false
       );
       await Promise.all(fundingTypes.map(fundingType => fundingType.reload({ paranoid: false })));
-      const allFundingTypes = await FundingType.organisationByUuid(org.uuid).findAll();
+      const allFundingTypes = await FundingType.organisation(org.uuid).findAll();
 
       expect(fundingTypes[2].deletedAt).not.toBeNull();
       expect(fundingTypes[0]).toMatchObject({ year: 1952, type: "grant", source: "PPC", amount: 50000 });

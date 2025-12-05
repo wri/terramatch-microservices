@@ -108,20 +108,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
     async syncField(model: FormModel, question: FormQuestion, field: LinkedField, answers: Dictionary<unknown>) {
       const answer = answers[question.uuid];
       if (isPropertyField(field)) {
-        const isDate = question.inputType === "date" && question.validation?.["required"] !== true;
-        if (answer != null || isDate) {
-          if (
-            // TODO: Look for a better way to handle this case.
-            // Special case added in the v2 BE in TM-2042
-            question.linkedFieldKey === "pro-rep-landscape-com-con" &&
-            question.parentId != null &&
-            answers[question.parentId] === true
-          ) {
-            model[field.property] = "";
-          } else {
-            model[field.property] = answer;
-          }
-        }
+        model[field.property] = answer;
       } else if (field.virtual.type === "demographicsAggregate") {
         const value = answer == null ? null : Number(answer);
         if (value != null && (!isInteger(value) || value < 0)) {

@@ -1,8 +1,10 @@
 import {
+  FinancialIndicator,
   Form,
   FormQuestionOption,
   Media,
   Nursery,
+  Organisation,
   Project,
   ProjectPitch,
   ProjectReport,
@@ -18,6 +20,8 @@ import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
 import { FormFactory } from "./form.factory";
 import { FormQuestionOptionFactory } from "./form-question-option.factory";
+import { OrganisationFactory } from "./organisation.factory";
+import { FinancialIndicatorFactory } from "./financial-indicator.factory";
 
 const defaultAttributesFactory = async () => ({
   collectionName: faker.lorem.words(1),
@@ -81,5 +85,17 @@ export const MediaFactory = {
       ...(await defaultAttributesFactory()),
       modelType: FormQuestionOption.LARAVEL_TYPE,
       modelId: (question?.id as number) ?? FormQuestionOptionFactory.forQuestion().associate("id")
+    })),
+  org: (org?: Organisation) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Organisation.LARAVEL_TYPE,
+      modelId: (org?.id as number) ?? OrganisationFactory.associate("id")
+    })),
+  financialIndicator: (indicator?: FinancialIndicator) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: FinancialIndicator.LARAVEL_TYPE,
+      modelId: (indicator?.id as number) ?? FinancialIndicatorFactory.report().associate("id")
     }))
 };

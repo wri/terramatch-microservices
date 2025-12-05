@@ -37,12 +37,12 @@ describe("DisturbanceReportEntriesCollector", () => {
       collector.addField(field, "disturbanceReports", "two");
 
       const report = await DisturbanceReportFactory.create();
-      const intensity = await DisturbanceReportEntryFactory(report).create({
+      const intensity = await DisturbanceReportEntryFactory.report(report).create({
         name: "intensity",
         value: "high",
         inputType: "select"
       });
-      const date = await DisturbanceReportEntryFactory(report).create({
+      const date = await DisturbanceReportEntryFactory.report(report).create({
         name: "date-of-disturbance",
         value: "2023-12-01",
         inputType: "date"
@@ -64,12 +64,12 @@ describe("DisturbanceReportEntriesCollector", () => {
 
     it("updates and creates entries", async () => {
       const report = await DisturbanceReportFactory.create();
-      const intensity = await DisturbanceReportEntryFactory(report).create({
+      const intensity = await DisturbanceReportEntryFactory.report(report).create({
         name: "intensity",
         value: "high",
         inputType: "select"
       });
-      const date = await DisturbanceReportEntryFactory(report).create({
+      const date = await DisturbanceReportEntryFactory.report(report).create({
         name: "date-of-disturbance",
         value: "2023-12-01",
         inputType: "date"

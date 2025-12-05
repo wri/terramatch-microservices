@@ -16,12 +16,9 @@ export const FundingTypeApprovalProcessor: EntityApprovalProcessor = {
 
     // Replace the org funding types with the rows from the newly approved financial report
     await FundingType.destroy({ where: { organisationId: uuid, financialReportId: null } });
-    const rows = await FundingType.findAll({ where: { financialReportId: entity.id } });
+    const fundingTypes = await FundingType.findAll({ where: { financialReportId: entity.id } });
     await FundingType.bulkCreate(
-      rows.map(row => {
-        const { source, amount, year, type } = row;
-        return { organisationId: uuid, source, amount, year, type };
-      })
+      fundingTypes.map(({ source, amount, year, type }) => ({ organisationId: uuid, source, amount, year, type }))
     );
   }
 };

@@ -191,12 +191,12 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
 
       // Create entries
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "intensity",
         value: "high",
         inputType: "select"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "date-of-disturbance",
         value: "2023-12-01",
         inputType: "date"
@@ -218,7 +218,7 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
 
       // Create entry without intensity
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "other-field",
         value: "some-value",
         inputType: "text"
@@ -242,12 +242,12 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
 
       // Create entries
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "intensity",
         value: "medium",
         inputType: "select"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "date-of-disturbance",
         value: "2023-11-15",
         inputType: "date"
@@ -288,12 +288,12 @@ describe("DisturbanceReportProcessor", () => {
       const disturbanceReport = await DisturbanceReportFactory.create({ projectId: project.id });
 
       // Create multiple entries
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "intensity",
         value: "low",
         inputType: "select"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "date-of-disturbance",
         value: "2023-10-01",
         inputType: "date"
@@ -331,48 +331,48 @@ describe("DisturbanceReportProcessor", () => {
       const poly1 = await SitePolygonFactory.create();
       const poly2 = await SitePolygonFactory.create();
 
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "polygon-affected",
         value: JSON.stringify([{ polyUuid: poly1.uuid }, { polyUuid: poly2.uuid }]),
         inputType: "text"
       });
 
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "intensity",
         value: "high",
         inputType: "select"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "extent",
         value: "large",
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "disturbance-type",
         value: "fire",
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "disturbance-subtype",
         value: JSON.stringify({ code: "wild" }),
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "people-affected",
         value: "12",
         inputType: "number"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "monetary-damage",
         value: "345.6",
         inputType: "number"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "property-affected",
         value: JSON.stringify({ houses: 3 }),
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "date-of-disturbance",
         value: "2024-01-05",
         inputType: "date"
@@ -416,7 +416,7 @@ describe("DisturbanceReportProcessor", () => {
       await polyWithDist.update({ disturbanceId: preExistingDisturbance.id });
       const polyWithoutDist = await SitePolygonFactory.create();
 
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "polygon-affected",
         value: JSON.stringify([{ polyUuid: polyWithDist.uuid }, { polyUuid: polyWithoutDist.uuid }]),
         inputType: "text"
@@ -441,7 +441,7 @@ describe("DisturbanceReportProcessor", () => {
       const p1 = await SitePolygonFactory.create();
       const p2 = await SitePolygonFactory.create();
 
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "polygon-affected",
         value: `${p1.uuid}, ${p2.uuid}`,
         inputType: "text"
@@ -467,7 +467,7 @@ describe("DisturbanceReportProcessor", () => {
         status: "awaiting-approval"
       });
 
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "intensity",
         value: "low",
         inputType: "select"
@@ -492,7 +492,7 @@ describe("DisturbanceReportProcessor", () => {
       const p2 = await SitePolygonFactory.create();
 
       const nested = [[{ polyUuid: p1.uuid }], [{ polyUuid: p2.uuid }]];
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "polygon-affected",
         value: JSON.stringify(nested),
         inputType: "text"
@@ -519,22 +519,22 @@ describe("DisturbanceReportProcessor", () => {
       });
 
       const p = await SitePolygonFactory.create();
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "polygon-affected",
         value: JSON.stringify([{ polyUuid: p.uuid }]),
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "disturbance-subtype",
         value: "{invalid}",
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "property-affected",
         value: "{invalid}",
         inputType: "text"
       });
-      await DisturbanceReportEntryFactory(disturbanceReport).create({
+      await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "date-of-disturbance",
         value: "not-a-date",
         inputType: "date"

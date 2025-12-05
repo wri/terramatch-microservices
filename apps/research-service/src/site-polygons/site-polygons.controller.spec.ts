@@ -24,9 +24,11 @@ import { Queue } from "bullmq";
 import { Site, DelayedJob } from "@terramatch-microservices/database/entities";
 import { SiteFactory } from "@terramatch-microservices/database/factories";
 import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
-import { FeatureCollection } from "geojson";
+import { FeatureCollection, Polygon } from "geojson";
 import { Job } from "bullmq";
 import { VersionUpdateBody } from "./dto/version-update.dto";
+import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
+import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -40,6 +42,7 @@ describe("SitePolygonsController", () => {
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
   let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
   let geometryUploadQueue: DeepMocked<Queue>;
+  let geoJsonExportService: DeepMocked<GeoJsonExportService>;
 
   interface MockQueryBuilder {
     execute: jest.Mock;
@@ -127,6 +130,10 @@ describe("SitePolygonsController", () => {
         {
           provide: getQueueToken("geometry-upload"),
           useValue: (geometryUploadQueue = createMock<Queue>())
+        },
+        {
+          provide: GeoJsonExportService,
+          useValue: (geoJsonExportService = createMock<GeoJsonExportService>())
         }
       ]
     }).compile();
@@ -1348,6 +1355,211 @@ describe("SitePolygonsController", () => {
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+  });
+
+  describe("getGeoJson", () => {
+    const mockFeatureCollection: FeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [0, 0]
+              ]
+            ]
+          } as Polygon,
+          properties: {
+            uuid: "polygon-uuid-123",
+            polyName: "Test Polygon",
+            siteId: "site-uuid-123"
+          }
+        }
+      ]
+    };
+
+    it("should return GeoJSON FeatureCollection for single polygon", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result).toHaveProperty("data");
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("type", "geojsonExports");
+        expect(result.data).toHaveProperty("attributes");
+        expect(result.data.attributes).toHaveProperty("type", "FeatureCollection");
+        expect(result.data.attributes).toHaveProperty("features");
+        expect(Array.isArray(result.data.attributes.features)).toBe(true);
+      }
+    });
+
+    it("should return GeoJSON FeatureCollection for site polygons", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      const multiFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-1",
+              polyName: "Polygon 1",
+              siteId: "site-uuid-123"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [2, 2],
+                  [2, 3],
+                  [3, 3],
+                  [3, 2],
+                  [2, 2]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-2",
+              polyName: "Polygon 2",
+              siteId: "site-uuid-123"
+            }
+          }
+        ]
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(multiFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(2);
+      }
+    });
+
+    it("should use uuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "polygon-uuid-123");
+      }
+    });
+
+    it("should use siteUuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "site-uuid-123");
+      }
+    });
+
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(UnauthorizedException);
+      expect(geoJsonExportService.getGeoJson).not.toHaveBeenCalled();
+    });
+
+    it("should propagate BadRequestException from service", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123",
+        siteUuid: "site-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockRejectedValue(
+        new BadRequestException("Cannot provide both uuid and siteUuid")
+      );
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should propagate NotFoundException from service", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "non-existent-uuid"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockRejectedValue(new NotFoundException("Polygon geometry not found"));
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should handle empty FeatureCollection", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      const emptyFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: []
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(emptyFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(0);
+        expect(result.data).toHaveProperty("id", "site-uuid-123");
+      }
     });
   });
 });

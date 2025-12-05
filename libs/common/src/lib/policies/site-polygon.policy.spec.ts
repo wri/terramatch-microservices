@@ -6,7 +6,8 @@ import {
   SiteFactory,
   ProjectFactory,
   ProjectUserFactory,
-  UserFactory
+  UserFactory,
+  RoleFactory
 } from "@terramatch-microservices/database/factories";
 
 describe("SitePolygonPolicy", () => {
@@ -137,5 +138,79 @@ describe("SitePolygonPolicy", () => {
     mockPermissions();
 
     await expectCannot(service, "delete", sitePolygon);
+  });
+
+  describe("greenhouse users", () => {
+    it("allows greenhouse users to delete their own site polygons", async () => {
+      const user = await UserFactory.create();
+      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
+      await user.$add("role", role);
+      const site = await SiteFactory.create();
+
+      mockUserId(user.id);
+      mockPermissions();
+
+      const sitePolygon = new SitePolygon();
+      sitePolygon.siteUuid = site.uuid;
+      sitePolygon.createdBy = user.id;
+
+      await expectCan(service, "delete", sitePolygon);
+    });
+
+    it("blocks greenhouse users from deleting other users' site polygons", async () => {
+      const user = await UserFactory.create();
+      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
+      await user.$add("role", role);
+      const site = await SiteFactory.create();
+
+      mockUserId(user.id);
+      mockPermissions();
+
+      const sitePolygon = new SitePolygon();
+      sitePolygon.siteUuid = site.uuid;
+      sitePolygon.createdBy = 999; // Different user
+
+      await expectCannot(service, "delete", sitePolygon);
+    });
+
+    it("allows greenhouse users to read site polygons", async () => {
+      const user = await UserFactory.create();
+      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
+      await user.$add("role", role);
+      const site = await SiteFactory.create();
+
+      mockUserId(user.id);
+      mockPermissions();
+
+      const sitePolygon = new SitePolygon();
+      sitePolygon.siteUuid = site.uuid;
+
+      await expectCan(service, "read", sitePolygon);
+    });
+
+    it("allows greenhouse users with manage-own to manage but only delete their own", async () => {
+      const user = await UserFactory.create();
+      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
+      await user.$add("role", role);
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+
+      const ownPolygon = new SitePolygon();
+      ownPolygon.siteUuid = site.uuid;
+      ownPolygon.createdBy = user.id;
+
+      const otherPolygon = new SitePolygon();
+      otherPolygon.siteUuid = site.uuid;
+      otherPolygon.createdBy = 999;
+      await expectCan(service, "manage", ownPolygon);
+      await expectCan(service, "manage", otherPolygon);
+
+      await expectCan(service, "delete", ownPolygon);
+      await expectCannot(service, "delete", otherPolygon);
+    });
   });
 });

@@ -88,7 +88,7 @@ describe("FormDataService", () => {
   describe("storeEntityAnswers", () => {
     it("updates the update request if there is one", async () => {
       const site = await SiteFactory.create();
-      const updateRequest = await UpdateRequestFactory.forSite(site).create({ content: { color: "blue" } });
+      const updateRequest = await UpdateRequestFactory.site(site).create({ content: { color: "blue" } });
       const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
       await updateRequest.reload();
@@ -190,7 +190,7 @@ describe("FormDataService", () => {
 
     it("uses update request content and feedback when one exists", async () => {
       const site = await SiteFactory.create();
-      const updateRequest = await UpdateRequestFactory.forSite(site).create({
+      const updateRequest = await UpdateRequestFactory.site(site).create({
         content: { color: "blue" },
         feedback: "please provide new color",
         feedbackFields: ["color"]

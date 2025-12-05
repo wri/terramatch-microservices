@@ -213,16 +213,16 @@ export class EntityStatusUpdate extends EventProcessor {
 
     this.logger.log(`Creating auditStatus [${JSON.stringify({ model: model.constructor.name, id: model.id })}]`);
 
-    if (status === "approved") {
+    if (status === APPROVED) {
       await AuditStatus.createAudit(model, authenticatedUserId(), null, comment ?? `Approved: ${model.feedback}`);
-    } else if (status === "needs-more-information") {
+    } else if (status === NEEDS_MORE_INFORMATION) {
       await AuditStatus.createAudit(
         model,
         authenticatedUserId(),
         "change-request",
         comment ?? (await this.getNeedsMoreInfoComment())
       );
-    } else if (status === "awaiting-approval") {
+    } else if (status === AWAITING_APPROVAL) {
       await AuditStatus.createAudit(model, authenticatedUserId(), null, comment);
     } else {
       // Getting this method called for started is expected on model creation, so no need to warn

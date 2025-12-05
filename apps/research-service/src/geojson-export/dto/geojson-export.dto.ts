@@ -42,9 +42,9 @@ export class GeoJsonExportDto {
           uuid: "123e4567-e89b-12d3-a456-426614174000",
           polyName: "Forest Plot A",
           plantStart: "2024-01-01",
-          practice: ["reforestation"],
+          practice: ["direct-seeding"],
           targetSys: "agroforestry",
-          distr: ["Northern Region"],
+          distr: ["single-line"],
           numTrees: 1500,
           siteId: "123e4567-e89b-12d3-a456-426614174001"
         }

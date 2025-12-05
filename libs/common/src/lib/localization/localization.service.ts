@@ -2,20 +2,17 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
-import { ITranslateParams, normalizeLocale, tx, t } from "@transifex/native";
+import { ITranslateParams, normalizeLocale, tx, t, createNativeInstance } from "@transifex/native";
 import { Dictionary } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;
 
 @Injectable()
 export class LocalizationService {
-  constructor(configService: ConfigService) {
-    tx.init({
-      token: configService.get("TRANSIFEX_TOKEN")
-    });
-  }
+  constructor(private readonly configService: ConfigService) {}
 
   async translateKeys(keyMap: Dictionary<string>, locale: ValidLocale, replacements: Dictionary<string> = {}) {
     const keyStrings = Object.values(keyMap);
@@ -95,5 +92,81 @@ export class LocalizationService {
 
     // Translate the text
     return t(text, params);
+  }
+
+  async pullTranslations() {
+    const tx = createNativeInstance({
+      token: this.configService.get("TRANSIFEX_TOKEN"),
+      secret: this.configService.get("TRANSIFEX_SECRET")
+    });
+    const locales = ["fr_FR" /*, "es_MX", "pt_BR"*/];
+    for (const locale of locales) {
+      const dbLocale = locale.split("_").join("-");
+      await tx.fetchTranslations(locale);
+      console.log(`Fetched translations for ${normalizeLocale(locale)}`);
+      const translations = await tx.cache.getTranslations(locale);
+      const keys = Object.keys(translations);
+      for (const key of keys) {
+        const translation = translations[key];
+        if (translation == null) continue;
+        const i18nItems = await I18nItem.findAll({ where: { hash: key } });
+        if (i18nItems.length === 0) continue;
+        for (const i18nItem of i18nItems) {
+          const isShort = i18nItem.shortValue != null;
+          let i18nTranslation = await I18nTranslation.findOne({
+            where: {
+              i18nItemId: i18nItem.id,
+              language: dbLocale
+            }
+          });
+          if (i18nTranslation == null) {
+            i18nTranslation = await I18nTranslation.create({
+              i18nItemId: i18nItem.id,
+              language: dbLocale,
+              shortValue: isShort ? translation : null,
+              longValue: isShort ? null : translation
+            } as I18nTranslation);
+          } else {
+            i18nTranslation.shortValue = isShort ? translation : null;
+            i18nTranslation.longValue = isShort ? null : translation;
+            await i18nTranslation.save();
+          }
+          i18nItem.status = "translated";
+          await i18nItem.save();
+        }
+      }
+      console.log(`Finished processing ${keys.length} keys for ${normalizeLocale(locale)}`);
+    }
+  }
+
+  async pushTranslations() {
+    const tx = createNativeInstance({
+      token: this.configService.get("TRANSIFEX_TOKEN"),
+      secret: this.configService.get("TRANSIFEX_SECRET")
+    });
+
+    const items = await I18nItem.findAll({
+      where: {
+        status: {
+          [Op.in]: [DRAFT, MODIFIED]
+        }
+      }
+    });
+    const source = items.reduce((source, item) => {
+      return {
+        ...source,
+        [item.hash ?? ""]: {
+          meta: {
+            character_limit: 1000,
+            context: "",
+            developer_comment: "",
+            occurrences: [],
+            tags: ["custom-form"]
+          },
+          string: item.shortValue ?? item.longValue ?? ""
+        }
+      };
+    }, {} as Record<string, { meta: { character_limit: number; context: string; developer_comment: string; occurrences: string[]; tags: string[] }; string: string }>);
+    await tx.pushSource(source);
   }
 }

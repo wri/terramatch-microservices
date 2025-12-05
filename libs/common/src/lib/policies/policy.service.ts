@@ -9,6 +9,7 @@ import {
   FinancialReport,
   Form,
   FormQuestionOption,
+  FormSubmission,
   FundingProgramme,
   ImpactStory,
   Nursery,
@@ -52,6 +53,7 @@ import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
 import { authenticatedUserId } from "../guards/auth.guard";
+import { FormSubmissionPolicy } from "./form-submission.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +75,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [DisturbanceReport, DisturbanceReportPolicy],
   [SrpReport, SrpReportPolicy],
   [Form, FormPolicy],
+  [FormSubmission, FormSubmissionPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],
   [Nursery, NurseryPolicy],

@@ -26,6 +26,7 @@ import { FormsService } from "./forms/forms.service";
 import { FormDataController } from "./entities/form-data.controller";
 import { FormDataService } from "./entities/form-data.service";
 import { UpdateRequestsController } from "./entities/update-requests.controller";
+import { ApplicationsController } from "./applications/applications.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -46,7 +47,8 @@ import { UpdateRequestsController } from "./entities/update-requests.controller"
     EntityAssociationsController,
     OptionLabelsController,
     LinkedFieldsController,
-    FormsController
+    FormsController,
+    ApplicationsController
   ],
   providers: [
     {

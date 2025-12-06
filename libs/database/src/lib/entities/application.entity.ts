@@ -14,8 +14,8 @@ import { BIGINT, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { FormSubmission } from "./form-submission.entity";
 import { FundingProgramme } from "./funding-programme.entity";
+import { Organisation } from "./organisation.entity";
 
-// Incomplete stub: not all indexes are specified
 @Table({
   tableName: "applications",
   underscored: true,
@@ -47,6 +47,13 @@ export class Application extends Model<Application> {
   @AllowNull
   @Column(UUID)
   organisationUuid: string | null;
+
+  @BelongsTo(() => Organisation, { foreignKey: "organisationUuid", targetKey: "uuid" })
+  organisation: Organisation | null;
+
+  get organisationName() {
+    return this.organisation?.name;
+  }
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)

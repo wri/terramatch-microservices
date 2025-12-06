@@ -1,5 +1,6 @@
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { User } from "@terramatch-microservices/database/entities";
 
 export type BuilderType = ReturnType<typeof createMongoAbility>;
 
@@ -25,6 +26,27 @@ export abstract class UserPermissionsPolicy {
     return (this._frameworks = this.permissions
       .filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey));
+  }
+
+  protected _organisationUuids?: string[] | null;
+  protected async getOrgUuids() {
+    if (this._organisationUuids != null) return this._organisationUuids;
+
+    this._organisationUuids = [];
+
+    const user = await User.findOne({
+      where: { id: this.userId },
+      attributes: ["id", "organisationId"],
+      include: [{ association: "organisation", attributes: ["uuid"] }]
+    });
+    if (user == null) return this._organisationUuids;
+
+    if (user.organisation != null) this._organisationUuids.push(user.organisation.uuid);
+
+    const confirmed = await user.$get("organisationsConfirmed", { attributes: ["uuid"] });
+    this._organisationUuids.push(...confirmed.map(({ uuid }) => uuid));
+
+    return this._organisationUuids;
   }
 
   abstract addRules(): Promise<void>;

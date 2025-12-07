@@ -1,7 +1,14 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { Form, FormQuestion, UpdateRequest } from "@terramatch-microservices/database/entities";
+import {
+  Form,
+  FormQuestion,
+  FormSubmission,
+  I18nTranslation,
+  UpdateRequest,
+  User
+} from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import {
   EntityModel,
@@ -12,7 +19,7 @@ import {
   isEntity,
   isReport
 } from "@terramatch-microservices/database/constants/entities";
-import { Dictionary } from "lodash";
+import { Dictionary, isEmpty } from "lodash";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
@@ -23,6 +30,10 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { PolicyService } from "@terramatch-microservices/common";
 import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { SubmissionDto } from "./dto/submission.dto";
+import { Op } from "sequelize";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 @Injectable()
 export class FormDataService {
@@ -72,6 +83,57 @@ export class FormDataService {
       feedback,
       feedbackFields,
       answers
+    });
+  }
+
+  async getFullSubmission(uuid: string) {
+    return await FormSubmission.findOne({
+      where: { uuid },
+      include: [
+        { association: "form" },
+        { association: "application", attributes: ["uuid"] },
+        { association: "organisation" },
+        { association: "projectPitch" }
+      ]
+    });
+  }
+
+  async getSubmissionDto(formSubmission: FormSubmission, form?: Form, locale?: ValidLocale) {
+    form ??=
+      formSubmission.form ??
+      (formSubmission.formId == null ? undefined : await Form.findOne({ where: { id: formSubmission.formId } })) ??
+      undefined;
+    if (form == null) throw new BadRequestException("Form not found for submission");
+
+    locale ??= (await User.findLocale(authenticatedUserId())) ?? "en-US";
+
+    const organisation = formSubmission.organisation ?? (await formSubmission.$get("organisation")) ?? undefined;
+    const projectPitch = formSubmission.projectPitch ?? (await formSubmission.$get("projectPitch")) ?? undefined;
+    const answers = await this.getAnswers(
+      form,
+      { organisations: organisation, projectPitches: projectPitch },
+      formSubmission
+    );
+
+    const i18nItemIds = isEmpty(formSubmission.feedbackFields)
+      ? []
+      : (
+          await I18nTranslation.findAll({
+            where: {
+              [Op.or]: {
+                shortValue: formSubmission.feedbackFields,
+                longValue: formSubmission.feedbackFields
+              }
+            },
+            attributes: ["i18nItemId"]
+          })
+        ).map(({ i18nItemId }) => i18nItemId);
+    const translations = await this.localizationService.translateIds(i18nItemIds, locale);
+
+    return new SubmissionDto(formSubmission, {
+      answers,
+      frameworkKey: form?.frameworkKey,
+      translatedFeedbackFields: Object.values(translations).filter(isNotNull)
     });
   }
 

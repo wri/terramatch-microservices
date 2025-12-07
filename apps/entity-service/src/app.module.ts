@@ -27,6 +27,7 @@ import { FormDataController } from "./entities/form-data.controller";
 import { FormDataService } from "./entities/form-data.service";
 import { UpdateRequestsController } from "./entities/update-requests.controller";
 import { ApplicationsController } from "./applications/applications.controller";
+import { SubmissionsController } from "./forms/submissions.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -48,7 +49,8 @@ import { ApplicationsController } from "./applications/applications.controller";
     OptionLabelsController,
     LinkedFieldsController,
     FormsController,
-    ApplicationsController
+    ApplicationsController,
+    SubmissionsController
   ],
   providers: [
     {

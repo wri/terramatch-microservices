@@ -9,7 +9,16 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Application } from "./application.entity";
 import { FormSubmissionStatus } from "../constants/status";
 import { ProjectPitch } from "./project-pitch.entity";
@@ -18,17 +27,18 @@ import { Form } from "./form.entity";
 import { Stage } from "./stage.entity";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Dictionary } from "lodash";
 
 @Table({ tableName: "form_submissions", underscored: true, paranoid: true })
-export class FormSubmission extends Model<FormSubmission> {
+export class FormSubmission extends Model<InferAttributes<FormSubmission>, InferCreationAttributes<FormSubmission>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(TEXT)
@@ -38,7 +48,7 @@ export class FormSubmission extends Model<FormSubmission> {
   status: FormSubmissionStatus;
 
   @JsonColumn()
-  answers: object;
+  answers: Dictionary<unknown>;
 
   @AllowNull
   @Column(TEXT)
@@ -55,6 +65,10 @@ export class FormSubmission extends Model<FormSubmission> {
 
   @BelongsTo(() => Application)
   application: Application | null;
+
+  get applicationUuid(): string | null {
+    return this.application?.uuid ?? null;
+  }
 
   @AllowNull
   @Column(UUID)
@@ -77,6 +91,10 @@ export class FormSubmission extends Model<FormSubmission> {
   @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid", constraints: false })
   form: Form | null;
 
+  get formUuid(): string | null {
+    return this.form?.uuid ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   stageUuid: string | null;
@@ -90,4 +108,8 @@ export class FormSubmission extends Model<FormSubmission> {
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationUuid", targetKey: "uuid", constraints: false })
   organisation: Organisation | null;
+
+  get organisationName(): string | null {
+    return this.organisation?.name ?? null;
+  }
 }

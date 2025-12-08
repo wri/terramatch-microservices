@@ -17,6 +17,17 @@ import { AdditionalProps, populateDto } from "@terramatch-microservices/common/d
 type FundingProgrammeExtras = "name" | "description" | "location";
 type FundingProgrammeWithoutExtras = Omit<FundingProgramme, FundingProgrammeExtras>;
 
+export class StageDto {
+  @ApiProperty({ nullable: true, type: String })
+  name: string | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  deadlineAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  formUuid: string | null;
+}
+
 @JsonApiDto({ type: "fundingProgrammes" })
 export class FundingProgrammeDto {
   constructor(
@@ -60,4 +71,7 @@ export class FundingProgrammeDto {
 
   @ApiProperty({ nullable: true, type: EmbeddedMediaDto })
   cover: EmbeddedMediaDto | null;
+
+  @ApiProperty({ nullable: true, type: StageDto, isArray: true })
+  stages: StageDto[] | null;
 }

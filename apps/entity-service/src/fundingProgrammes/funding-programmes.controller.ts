@@ -2,10 +2,10 @@ import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { FundingProgramme, Media, User } from "@terramatch-microservices/database/entities";
+import { Form, FundingProgramme, Media, Stage, User } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FundingProgrammeDto } from "./dto/funding-programme.dto";
+import { FundingProgrammeDto, StageDto } from "./dto/funding-programme.dto";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -14,6 +14,7 @@ import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { flatten, uniq } from "lodash";
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("fundingProgrammes/v3/fundingProgrammes")
 export class FundingProgrammesController {
@@ -69,7 +70,26 @@ export class FundingProgrammesController {
       order: [["createdAt", "DESC"]]
     });
 
+    const allStages = await Stage.findAll({
+      where: { fundingProgrammeId: fundingProgrammes.map(({ uuid }) => uuid) },
+      attributes: ["uuid", "fundingProgrammeId", "name", "deadlineAt"],
+      order: [["order", "ASC"]]
+    });
+    const stageForms = await Form.findAll({
+      where: { stageId: allStages.map(({ uuid }) => uuid) },
+      attributes: ["uuid", "stageId"]
+    });
+
     for (const fundingProgramme of fundingProgrammes) {
+      const stages = allStages
+        .filter(({ fundingProgrammeId }) => fundingProgrammeId === fundingProgramme.uuid)
+        .map(({ name, deadlineAt, uuid }) =>
+          populateDto(new StageDto(), {
+            name,
+            deadlineAt,
+            formUuid: stageForms.find(({ stageId }) => stageId === uuid)?.uuid ?? null
+          })
+        );
       const coverMedia = coverMedias.find(({ modelId }) => modelId === fundingProgramme.id);
       document.addData(
         fundingProgramme.uuid,
@@ -85,7 +105,8 @@ export class FundingProgrammesController {
               : new EmbeddedMediaDto(coverMedia, {
                   url: this.mediaService.getUrl(coverMedia),
                   thumbUrl: this.mediaService.getUrl(coverMedia, "thumbnail")
-                })
+                }),
+          stages
         })
       );
     }

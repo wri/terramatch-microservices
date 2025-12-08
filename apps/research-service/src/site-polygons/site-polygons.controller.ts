@@ -190,13 +190,13 @@ export class SitePolygonsController {
     operationId: "getSitePolygonsGeoJson",
     summary: "Export site polygons as GeoJSON",
     description: `Export site polygons as GeoJSON FeatureCollection. 
-    Provide either uuid (for a single polygon) or siteUuid (for all active polygons in a site).
+    Provide exactly one of: uuid (single polygon), siteUuid (all active polygons in a site), or projectUuid (all active polygons across all sites in a project).
     Use includeExtendedData to include additional data from site_polygon_data table.
-    Use geometryOnly to return only geometry without properties.`
+    Use geometryOnly to return only geometry without properties (only applicable when using uuid).`
   })
   @JsonApiResponse(GeoJsonExportDto)
   @ExceptionResponse(BadRequestException, {
-    description: "Invalid query parameters (must provide either uuid or siteUuid, but not both)"
+    description: "Invalid query parameters (must provide exactly one of uuid, siteUuid, or projectUuid)"
   })
   @ExceptionResponse(NotFoundException, {
     description: "Polygon, site polygon, or site not found"
@@ -211,7 +211,7 @@ export class SitePolygonsController {
 
     const document = buildJsonApi(GeoJsonExportDto);
 
-    const resourceId = query.uuid ?? query.siteUuid ?? uuidv4();
+    const resourceId = query.uuid ?? query.siteUuid ?? query.projectUuid ?? uuidv4();
 
     document.addData(resourceId, new GeoJsonExportDto(featureCollection));
 

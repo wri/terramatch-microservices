@@ -22,6 +22,15 @@ export class GeoJsonQueryDto {
   siteUuid?: string;
 
   @ApiProperty({
+    description: "UUID of a project to get all its polygons across all sites",
+    required: false,
+    example: "123e4567-e89b-12d3-a456-426614174002"
+  })
+  @IsOptional()
+  @IsUUID()
+  projectUuid?: string;
+
+  @ApiProperty({
     description: "Include extended data from site_polygon_data table",
     required: false,
     default: true

@@ -5,17 +5,30 @@ import {
   Logger,
   NotFoundException
 } from "@nestjs/common";
-import { PolygonGeometry, Site, SitePolygon, SitePolygonData } from "@terramatch-microservices/database/entities";
+import {
+  PolygonGeometry,
+  Project,
+  Site,
+  SitePolygon,
+  SitePolygonData
+} from "@terramatch-microservices/database/entities";
 import { Feature, FeatureCollection, Geometry } from "geojson";
 import { GeoJsonQueryDto } from "./dto/geojson-query.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { Op } from "sequelize";
 
 @Injectable()
 export class GeoJsonExportService {
   private readonly logger = new Logger(GeoJsonExportService.name);
   async getGeoJson(query: GeoJsonQueryDto): Promise<FeatureCollection> {
-    if ((query.uuid == null) == (query.siteUuid == null)) {
-      throw new BadRequestException("Exactly one of uuid or siteUuid must be provided");
+    const providedParams = [query.uuid, query.siteUuid, query.projectUuid].filter(isNotNull);
+
+    if (providedParams.length === 0) {
+      throw new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided");
+    }
+
+    if (providedParams.length > 1) {
+      throw new BadRequestException("Only one of uuid, siteUuid, or projectUuid can be provided");
     }
 
     const includeExtendedData = query.includeExtendedData ?? true;
@@ -26,8 +39,10 @@ export class GeoJsonExportService {
       features = await this.getSinglePolygonGeoJson(query.uuid, includeExtendedData, geometryOnly);
     } else if (query.siteUuid != null) {
       features = await this.getSitePolygonsGeoJson(query.siteUuid, includeExtendedData);
+    } else if (query.projectUuid != null) {
+      features = await this.getProjectPolygonsGeoJson(query.projectUuid, includeExtendedData);
     } else {
-      throw new BadRequestException("Either uuid or siteUuid must be provided");
+      throw new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided");
     }
 
     return {
@@ -101,6 +116,94 @@ export class GeoJsonExportService {
       if (site == null) {
         throw new NotFoundException(`Site not found for uuid: ${siteUuid}`);
       }
+      return [];
+    }
+
+    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
+
+    if (polygonUuids.length === 0) {
+      return [];
+    }
+
+    const geometryResults = await PolygonGeometry.getGeoJSONBatch(polygonUuids);
+    const geometryMap = new Map<string, Geometry>();
+    for (const result of geometryResults) {
+      try {
+        const geometry = JSON.parse(result.geoJson) as Geometry;
+        geometryMap.set(result.uuid, geometry);
+      } catch (error) {
+        this.logger.error(`Failed to parse geometry JSON for polygon uuid: ${result.uuid}`, `${error}`);
+        continue;
+      }
+    }
+
+    const sitePolygonUuids = sitePolygons.map(sp => sp.uuid);
+    let extendedDataMap: Map<string, Record<string, unknown>> | null = null;
+    if (includeExtendedData) {
+      const extendedDataRecords = await SitePolygonData.findAll({
+        where: { sitePolygonUuid: sitePolygonUuids }
+      });
+      extendedDataMap = new Map();
+      for (const record of extendedDataRecords) {
+        if (record.data != null) {
+          extendedDataMap.set(record.sitePolygonUuid, record.data as Record<string, unknown>);
+        }
+      }
+    }
+
+    const features: Feature[] = [];
+    for (const sitePolygon of sitePolygons) {
+      if (sitePolygon.polygonUuid == null) {
+        continue;
+      }
+
+      const geometry = geometryMap.get(sitePolygon.polygonUuid);
+      if (geometry == null) {
+        continue;
+      }
+
+      const properties = this.buildProperties(sitePolygon, includeExtendedData, null, extendedDataMap);
+
+      features.push({
+        type: "Feature",
+        geometry,
+        properties
+      });
+    }
+
+    return features;
+  }
+
+  private async getProjectPolygonsGeoJson(projectUuid: string, includeExtendedData: boolean): Promise<Feature[]> {
+    const project = await Project.findOne({
+      where: { uuid: projectUuid },
+      attributes: ["id", "uuid"]
+    });
+
+    if (project == null) {
+      throw new NotFoundException(`Project not found for uuid: ${projectUuid}`);
+    }
+
+    const sites = await Site.findAll({
+      where: { projectId: project.id },
+      attributes: ["uuid"]
+    });
+
+    if (sites.length === 0) {
+      return [];
+    }
+
+    const siteUuids = sites.map(site => site.uuid);
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        siteUuid: { [Op.in]: siteUuids },
+        isActive: true
+      },
+      include: [{ model: Site, attributes: ["uuid", "name"] }]
+    });
+
+    if (sitePolygons.length === 0) {
       return [];
     }
 

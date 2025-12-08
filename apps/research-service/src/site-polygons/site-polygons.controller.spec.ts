@@ -1561,5 +1561,105 @@ describe("SitePolygonsController", () => {
         expect(result.data).toHaveProperty("id", "site-uuid-123");
       }
     });
+
+    it("should return GeoJSON FeatureCollection for project polygons", async () => {
+      const query: GeoJsonQueryDto = {
+        projectUuid: "project-uuid-123"
+      };
+
+      const projectFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-1",
+              polyName: "Project Polygon 1",
+              siteId: "site-uuid-1"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [2, 2],
+                  [2, 3],
+                  [3, 3],
+                  [3, 2],
+                  [2, 2]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-2",
+              polyName: "Project Polygon 2",
+              siteId: "site-uuid-1"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [4, 4],
+                  [4, 5],
+                  [5, 5],
+                  [5, 4],
+                  [4, 4]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-3",
+              polyName: "Project Polygon 3",
+              siteId: "site-uuid-2"
+            }
+          }
+        ]
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(projectFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(3);
+      }
+    });
+
+    it("should use projectUuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        projectUuid: "project-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "project-uuid-123");
+      }
+    });
   });
 });

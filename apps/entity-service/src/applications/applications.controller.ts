@@ -3,11 +3,12 @@ import { ApplicationGetQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApplicationDto } from "./dto/application.dto";
-import { Application, FormSubmission } from "@terramatch-microservices/database/entities";
+import { Application, FormSubmission, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("applications/v3/applications")
 export class ApplicationsController {
@@ -45,8 +46,17 @@ export class ApplicationsController {
 
     if (sideloads?.includes("currentSubmission") && currentSubmissionUuid != null) {
       const submission = await this.formDataService.getFullSubmission(currentSubmissionUuid);
-      if (submission != null) {
-        document.addData(submission.uuid, await this.formDataService.getSubmissionDto(submission));
+      if (submission != null) await this.formDataService.addSubmissionDto(document, submission);
+    }
+
+    if (sideloads?.includes("fundingProgramme")) {
+      const fundingProgramme = await application.$get("fundingProgramme");
+      if (fundingProgramme != null) {
+        await this.formDataService.addFundingProgrammeDtos(
+          document,
+          [fundingProgramme],
+          await User.findLocale(authenticatedUserId())
+        );
       }
     }
 

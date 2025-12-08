@@ -17,9 +17,6 @@ export class SubmissionsController {
     if (submission == null) throw new NotFoundException("Submission not found");
     await this.policyService.authorize("read", submission);
 
-    return buildJsonApi(SubmissionDto).addData(
-      submission.uuid,
-      await this.formDataService.getSubmissionDto(submission)
-    );
+    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission);
   }
 }

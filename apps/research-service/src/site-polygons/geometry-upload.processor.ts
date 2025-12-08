@@ -159,12 +159,21 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
     geojson.features.forEach((feature, index) => {
       const uuid = featureUuidMap.get(index);
       if (uuid != null && existingUuidSet.has(uuid)) {
-        featuresForVersioning.push({ feature, baseUuid: uuid });
+        featuresForVersioning.push({
+          feature: {
+            ...feature,
+            properties: {
+              ...(feature.properties ?? {}),
+              site_id: siteId
+            }
+          } as Feature,
+          baseUuid: uuid
+        });
       } else {
         featuresForCreation.push({
           ...feature,
           properties: {
-            ...feature.properties,
+            ...(feature.properties ?? {}),
             site_id: siteId
           }
         } as Feature);

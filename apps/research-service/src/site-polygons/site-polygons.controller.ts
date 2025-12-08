@@ -640,10 +640,10 @@ export class SitePolygonsController {
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  @Post("upload/withVersioning")
+  @Post("upload/versions")
   @ApiOperation({
-    operationId: "uploadGeometryFileWithVersioning",
-    summary: "Upload geometry file with versioning support",
+    operationId: "uploadGeometryFileWithVersions",
+    summary: "Upload geometry file and create versions for existing polygons",
     description: `Parses a geometry file and processes it with versioning enabled. 
       Features with UUIDs in properties.uuid that match existing active SitePolygons will create new versions.
       Features without matching UUIDs (or without UUIDs) will create new polygons.
@@ -657,7 +657,7 @@ export class SitePolygonsController {
     description: "Invalid file format, file parsing failed, or no features found in file."
   })
   @ExceptionResponse(NotFoundException, { description: "Site not found." })
-  async uploadGeometryFileWithVersioning(
+  async uploadGeometryFileWithVersions(
     @UploadedFile() file: Express.Multer.File,
     @Body() payload: GeometryUploadRequestDto
   ) {

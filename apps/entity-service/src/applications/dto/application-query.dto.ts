@@ -1,11 +1,4 @@
-import { IsUUID } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-
-export class SingleApplicationDto {
-  @IsUUID()
-  @ApiProperty({ description: "UUID of the application." })
-  uuid: string;
-}
 
 const APPLICATION_SIDELOADS = ["currentSubmission", "fundingProgramme"] as const;
 type ApplicationSideload = (typeof APPLICATION_SIDELOADS)[number];

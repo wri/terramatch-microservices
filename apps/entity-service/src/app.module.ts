@@ -28,6 +28,7 @@ import { FormDataService } from "./entities/form-data.service";
 import { UpdateRequestsController } from "./entities/update-requests.controller";
 import { ApplicationsController } from "./applications/applications.controller";
 import { SubmissionsController } from "./forms/submissions.controller";
+import { FundingProgrammesController } from "./fundingProgrammes/funding-programmes.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -50,7 +51,8 @@ import { SubmissionsController } from "./forms/submissions.controller";
     LinkedFieldsController,
     FormsController,
     ApplicationsController,
-    SubmissionsController
+    SubmissionsController,
+    FundingProgrammesController
   ],
   providers: [
     {

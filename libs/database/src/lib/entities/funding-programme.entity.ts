@@ -1,15 +1,29 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { FrameworkKey } from "../constants";
+import {
+  BIGINT,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
+import { FrameworkKey, OrganisationType } from "../constants";
 import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { I18nItem } from "./i18n-item.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { ACTIVE, FundingProgrammeStatus } from "../constants/status";
 
 type FundingProgrammeMedia = "cover";
 
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
-export class FundingProgramme extends Model<FundingProgramme> {
+export class FundingProgramme extends Model<
+  InferAttributes<FundingProgramme>,
+  InferCreationAttributes<FundingProgramme>
+> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingProgramme";
 
   static readonly MEDIA: Record<FundingProgrammeMedia, MediaConfiguration> = {
@@ -19,11 +33,11 @@ export class FundingProgramme extends Model<FundingProgramme> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column(STRING)
   name: string;
@@ -42,8 +56,8 @@ export class FundingProgramme extends Model<FundingProgramme> {
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  @Column({ type: STRING(30), defaultValue: "active" })
-  status: string;
+  @Column({ type: STRING(30), defaultValue: ACTIVE })
+  status: CreationOptional<FundingProgrammeStatus>;
 
   @Column(TEXT)
   description: string;
@@ -60,16 +74,16 @@ export class FundingProgramme extends Model<FundingProgramme> {
   location: string | null;
 
   @AllowNull
+  @Column(INTEGER)
+  locationId: number | null;
+
+  @AllowNull
   @Column(TEXT)
   readMoreUrl: string | null;
 
   @AllowNull
   @JsonColumn()
-  organisationTypes: string[] | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  locationId: number | null;
+  organisationTypes: OrganisationType[] | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
   locationI18nItem: I18nItem | null;

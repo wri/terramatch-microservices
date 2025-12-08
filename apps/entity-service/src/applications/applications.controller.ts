@@ -1,5 +1,5 @@
 import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
-import { ApplicationGetQueryDto, SingleApplicationDto } from "./dto/application-query.dto";
+import { ApplicationGetQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApplicationDto } from "./dto/application.dto";
@@ -7,6 +7,7 @@ import { Application, FormSubmission } from "@terramatch-microservices/database/
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
+import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 
 @Controller("applications/v3/applications")
 export class ApplicationsController {
@@ -17,7 +18,7 @@ export class ApplicationsController {
   @JsonApiResponse(ApplicationDto)
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
-  async getApplication(@Param() { uuid }: SingleApplicationDto, @Query() { sideloads }: ApplicationGetQueryDto) {
+  async getApplication(@Param() { uuid }: SingleResourceDto, @Query() { sideloads }: ApplicationGetQueryDto) {
     const application = await Application.findOne({
       where: { uuid },
       include: [

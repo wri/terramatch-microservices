@@ -143,3 +143,9 @@ export const DelayedJobStatusStates: States<DelayedJob, DelayedJobStatus> = {
   default: PENDING,
   transitions: transitions<DelayedJobStatus>().from(PENDING, () => [FAILED, SUCCEEDED]).transitions
 };
+
+export const INACTIVE = "inactive";
+export const ACTIVE = "active";
+export const DISABLED = "disabled";
+export const FUNDING_PROGRAMME_STATUSES = [INACTIVE, ACTIVE, DISABLED] as const;
+export type FundingProgrammeStatus = (typeof FUNDING_PROGRAMME_STATUSES)[number];

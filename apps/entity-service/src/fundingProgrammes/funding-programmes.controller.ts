@@ -5,7 +5,7 @@ import { FundingProgramme, User } from "@terramatch-microservices/database/entit
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { FundingProgrammeDto } from "./dto/funding-programme.dto";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
@@ -23,15 +23,15 @@ export class FundingProgrammesController {
   @ExceptionResponse(UnauthorizedException, {
     description: "User is not authorized to access these funding programmes"
   })
-  async indexFundingProgrammes(@Query() { translated }: FundingProgrammeQueryDto) {
+  async indexFundingProgrammes(@Query() query: FundingProgrammeQueryDto) {
     const fundingProgrammes = await FundingProgramme.findAll();
-    const locale = translated === false ? undefined : await User.findLocale(authenticatedUserId());
+    const locale = query.translated === false ? undefined : await User.findLocale(authenticatedUserId());
     await this.policyService.authorize("read", fundingProgrammes);
-    return await this.formDataService.addFundingProgrammeDtos(
-      buildJsonApi(FundingProgrammeDto, { forceDataArray: true }),
-      fundingProgrammes,
-      locale
-    );
+    const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
+      requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`,
+      total: fundingProgrammes.length
+    });
+    return await this.formDataService.addFundingProgrammeDtos(document, fundingProgrammes, locale);
   }
 
   @Get(":uuid")

@@ -64,6 +64,10 @@ export class ApplicationsController {
       }
     }
 
+    if (query.search != null) {
+      builder.where({ "$organisation.name$": { [Op.like]: `%${query.search}%` } });
+    }
+
     const applications = await builder.execute();
     if (applications.length > 0) await this.policyService.authorize("read", applications);
 

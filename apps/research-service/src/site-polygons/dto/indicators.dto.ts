@@ -1,7 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { INDICATORS } from "@terramatch-microservices/database/constants";
 import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
+@JsonApiDto({ type: "indicatorTreeCoverLoss" })
 export class IndicatorTreeCoverLossDto {
   @ApiProperty({ enum: [INDICATORS[2], INDICATORS[3]] })
   indicatorSlug: (typeof INDICATORS)[2] | (typeof INDICATORS)[3];
@@ -20,6 +22,7 @@ export class IndicatorTreeCoverLossDto {
   value: Record<string, number>;
 }
 
+@JsonApiDto({ type: "indicatorHectares" })
 export class IndicatorHectaresDto {
   @ApiProperty({ enum: [INDICATORS[4], INDICATORS[5], INDICATORS[6]] })
   indicatorSlug: (typeof INDICATORS)[4] | (typeof INDICATORS)[5] | (typeof INDICATORS)[6];
@@ -37,6 +40,8 @@ export class IndicatorHectaresDto {
   })
   value: Record<string, number>;
 }
+
+@JsonApiDto({ type: "indicatorTreeCount" })
 export class IndicatorTreeCountDto {
   @ApiProperty({ enum: [INDICATORS[7], INDICATORS[8]] })
   indicatorSlug: (typeof INDICATORS)[7] | (typeof INDICATORS)[8];
@@ -86,6 +91,7 @@ export class IndicatorTreeCountDto {
   confidence: number | null;
 }
 
+@JsonApiDto({ type: "indicatorTreeCover" })
 export class IndicatorTreeCoverDto {
   @ApiProperty({ enum: [INDICATORS[1]] })
   indicatorSlug: (typeof INDICATORS)[1];
@@ -110,6 +116,7 @@ export class IndicatorTreeCoverDto {
   plusMinusPercent: number | null;
 }
 
+@JsonApiDto({ type: "indicatorFieldMonitoring" })
 export class IndicatorFieldMonitoringDto {
   @ApiProperty({ enum: [INDICATORS[9]] })
   indicatorSlug: (typeof INDICATORS)[9];
@@ -139,6 +146,7 @@ export class IndicatorFieldMonitoringDto {
   survivalRate: number | null;
 }
 
+@JsonApiDto({ type: "indicatorMsuCarbon" })
 export class IndicatorMsuCarbonDto {
   @ApiProperty({ enum: [INDICATORS[10]] })
   indicatorSlug: (typeof INDICATORS)[10];

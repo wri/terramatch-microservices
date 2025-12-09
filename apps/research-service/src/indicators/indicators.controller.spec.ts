@@ -8,6 +8,8 @@ import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
+import { PolicyService } from "@terramatch-microservices/common";
+import { createMock } from "@golevelup/ts-jest";
 
 describe("IndicatorsController", () => {
   let controller: IndicatorsController;
@@ -48,6 +50,12 @@ describe("IndicatorsController", () => {
         {
           provide: getQueueToken("indicators"),
           useValue: mockQueue
+        },
+        {
+          provide: PolicyService,
+          useValue: createMock<PolicyService>({
+            authorize: jest.fn().mockResolvedValue(undefined)
+          })
         }
       ]
     }).compile();

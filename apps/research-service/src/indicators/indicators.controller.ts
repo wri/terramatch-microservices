@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Request, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Request, Type, UnauthorizedException } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import {
   IndicatorFieldMonitoringDto,
@@ -117,7 +117,7 @@ export class IndicatorsController {
       throw new NotFoundException(`Unknown indicator slug: ${slug}`);
     }
 
-    const document = buildJsonApi(DtoClass, { forceDataArray: true });
+    const document = buildJsonApi(DtoClass as Type<unknown>, { forceDataArray: true });
     indicatorData.forEach((indicator, index) => {
       document.addData(`${uuid}-${slug}-${index}`, indicator);
     });

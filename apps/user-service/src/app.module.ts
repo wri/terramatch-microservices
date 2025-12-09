@@ -25,10 +25,10 @@ import { BullModule } from "@nestjs/bullmq";
   ],
   controllers: [
     LoginController,
-    UsersController,
     ResetPasswordController,
     VerificationUserController,
-    OrganisationsController
+    OrganisationsController,
+    UsersController
   ],
   providers: [
     {

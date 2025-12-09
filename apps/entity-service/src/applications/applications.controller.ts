@@ -10,7 +10,7 @@ import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
-@Controller("applications/v3/applications")
+@Controller("applications/v3")
 export class ApplicationsController {
   constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
 

@@ -10,7 +10,7 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { Organisation } from "@terramatch-microservices/database/entities";
 
-@Controller("organisations/v3/organisations")
+@Controller("organisations/v3")
 export class OrganisationsController {
   constructor(
     private readonly policyService: PolicyService,

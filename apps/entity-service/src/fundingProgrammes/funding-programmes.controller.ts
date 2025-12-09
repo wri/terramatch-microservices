@@ -10,7 +10,7 @@ import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
 
-@Controller("fundingProgrammes/v3/fundingProgrammes")
+@Controller("fundingProgrammes/v3")
 export class FundingProgrammesController {
   constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
 
@@ -28,8 +28,7 @@ export class FundingProgrammesController {
     const locale = query.translated === false ? undefined : await User.findLocale(authenticatedUserId());
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
-      requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`,
-      total: fundingProgrammes.length
+      requestPath: `/fundingProgrammes/v3${getStableRequestQuery(query)}`
     });
     return await this.formDataService.addFundingProgrammeDtos(document, fundingProgrammes, locale);
   }

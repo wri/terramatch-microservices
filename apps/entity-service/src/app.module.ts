@@ -47,11 +47,11 @@ import { FundingProgrammesController } from "./fundingProgrammes/funding-program
     FormDataController, // must be before entity association controller.
     UpdateRequestsController, // must be before entity association controller.
     EntityAssociationsController,
-    OptionLabelsController,
-    LinkedFieldsController,
+    OptionLabelsController, // must be before forms controller
+    LinkedFieldsController, // must be before forms controller
+    SubmissionsController, // must be before forms controller
     FormsController,
     ApplicationsController,
-    SubmissionsController,
     FundingProgrammesController
   ],
   providers: [

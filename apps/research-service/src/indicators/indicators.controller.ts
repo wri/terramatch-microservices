@@ -1,13 +1,12 @@
 import { Body, Controller, Param, Post, Request } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
-import { IndicatorTreeCoverDto, IndicatorTreeCoverLossDto } from "../site-polygons/dto/indicators.dto";
+import { IndicatorTreeCoverLossDto } from "../site-polygons/dto/indicators.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob, Site, Project, SitePolygon } from "@terramatch-microservices/database/entities";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
-import { IndicatorsSummaryDto } from "./dto/Indicators-summary.dto";
 import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { IndicatorsParamDto } from "./dto/indicators-param.dto";

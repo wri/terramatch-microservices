@@ -26,7 +26,6 @@ export interface GeometryUploadJobData {
   userId: number;
   source: string;
   userFullName: string | null;
-  enableVersioning: boolean;
 }
 
 @Processor("geometry-upload")
@@ -41,9 +40,9 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
   }
 
   async processDelayedJob(job: Job<GeometryUploadJobData>): Promise<DelayedJobResult> {
-    const { geojson, siteId, userId, source, userFullName, enableVersioning } = job.data;
+    const { geojson, siteId, userId, source, userFullName } = job.data;
 
-    if (enableVersioning) {
+    if (job.name === "geometryUploadWithVersions") {
       return await this.processWithVersioning(job, geojson, siteId, userId, source, userFullName);
     }
 

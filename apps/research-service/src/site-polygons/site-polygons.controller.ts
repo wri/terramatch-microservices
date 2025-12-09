@@ -631,8 +631,7 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null,
-      enableVersioning: false
+      userFullName: user?.fullName ?? null
     };
 
     await this.geometryUploadQueue.add("geometryUpload", jobData);
@@ -707,11 +706,10 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null,
-      enableVersioning: true
+      userFullName: user?.fullName ?? null
     };
 
-    await this.geometryUploadQueue.add("geometryUpload", jobData);
+    await this.geometryUploadQueue.add("geometryUploadWithVersions", jobData);
 
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }

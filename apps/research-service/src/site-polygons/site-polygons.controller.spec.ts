@@ -1168,14 +1168,13 @@ describe("SitePolygonsController", () => {
           createdBy: 1
         })
       );
-      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUpload", {
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUploadWithVersions", {
         delayedJobId: 1,
         siteId: "site-uuid",
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User",
-        enableVersioning: true
+        userFullName: "Test User"
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();

@@ -64,11 +64,13 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       progressMessage: `Starting indicators analysis of ${polygonUuids.length} polygons...`
     });
 
+    // Use batches when forceRecalculation is true (always process, no existence checks)
+    // Otherwise, process one by one with existence checks based on updateExisting
     if (forceRecalculation) {
       return await this.processBatched(job, slug, polygonUuids);
-    } else {
-      return await this.processOneByOne(job, slug, polygonUuids, updateExisting, forceRecalculation);
     }
+
+    return await this.processOneByOne(job, slug, polygonUuids, updateExisting);
   }
 
   /**
@@ -156,14 +158,14 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
 
   /**
    * Process polygons one by one (used when forceRecalculation is false)
-   * Updates progress after each polygon, regardless of updateExisting value
+   * Updates progress after each polygon
+   * If updateExisting is false, skips polygons that already have indicators
    */
   private async processOneByOne(
     job: Job<IndicatorsJobData>,
     slug: IndicatorSlug,
     polygonUuids: string[],
-    updateExisting: boolean,
-    forceRecalculation: boolean
+    updateExisting: boolean
   ) {
     let processed = 0;
     const successfulPolygons: string[] = [];
@@ -171,12 +173,10 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
 
     for (const polygonUuid of polygonUuids) {
       try {
-        if (!updateExisting && !forceRecalculation) {
+        if (!updateExisting) {
           const exists = await this.checkIfExists(slug, polygonUuid);
           if (exists) {
-            this.logger.debug(
-              `Skipping polygon ${polygonUuid} - record already exists and updateExisting=false, forceRecalculation=false`
-            );
+            this.logger.debug(`Skipping polygon ${polygonUuid} - record already exists and updateExisting=false`);
             processed++;
             await this.updateJobProgress(job, {
               processedContent: processed,
@@ -261,7 +261,7 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       return false;
     }
 
-    const exists = await Model.findOne({
+    const count = await Model.count({
       where: {
         sitePolygonId: sitePolygon.id,
         indicatorSlug: slug,
@@ -269,6 +269,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       }
     });
 
-    return exists != null;
+    return count > 0;
   }
 }

@@ -102,6 +102,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
   @BelongsTo(() => Stage, { foreignKey: "stageUuid", targetKey: "uuid", constraints: false })
   stage: Stage | null;
 
+  get stageName(): string | null {
+    return this.stage?.name ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   organisationUuid: string | null;

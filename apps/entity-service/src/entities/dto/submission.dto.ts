@@ -46,4 +46,7 @@ export class SubmissionDto {
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   translatedFeedbackFields: string[] | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  stageName: string | null;
 }

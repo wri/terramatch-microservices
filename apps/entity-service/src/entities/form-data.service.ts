@@ -99,7 +99,8 @@ export class FormDataService {
         { association: "form" },
         { association: "application", attributes: ["uuid"] },
         { association: "organisation" },
-        { association: "projectPitch" }
+        { association: "projectPitch" },
+        { association: "stage", attributes: ["name"] }
       ]
     });
   }

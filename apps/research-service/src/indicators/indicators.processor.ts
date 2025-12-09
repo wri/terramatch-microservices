@@ -15,7 +15,6 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { SitePolygonLightDto } from "../site-polygons/dto/site-polygon.dto";
-import { SitePolygonsService } from "../site-polygons/site-polygons.service";
 
 const SLUG_MAPPINGS = {
   treeCoverLoss: IndicatorOutputTreeCoverLoss,
@@ -43,10 +42,7 @@ const KEEP_JOBS_TIMEOUT = 60 * 60;
 export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
   protected readonly logger = new TMLogger(IndicatorsProcessor.name);
 
-  constructor(
-    private readonly indicatorService: IndicatorsService,
-    private readonly sitePolygonsService: SitePolygonsService
-  ) {
+  constructor(private readonly indicatorService: IndicatorsService) {
     super();
   }
 
@@ -68,12 +64,9 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       progressMessage: `Starting indicators analysis of ${polygonUuids.length} polygons...`
     });
 
-    // Use batches only if forceRecalculation is true (like PHP version)
-    // Otherwise, always process polygon by polygon (regardless of updateExisting)
     if (forceRecalculation) {
       return await this.processBatched(job, slug, polygonUuids);
     } else {
-      // Process polygon by polygon (updateExisting can be true or false)
       return await this.processOneByOne(job, slug, polygonUuids, updateExisting, forceRecalculation);
     }
   }
@@ -86,7 +79,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     const BATCH_SIZE = 50;
     const batches: string[][] = [];
 
-    // Split into batches
     for (let i = 0; i < polygonUuids.length; i += BATCH_SIZE) {
       batches.push(polygonUuids.slice(i, i + BATCH_SIZE));
     }
@@ -105,7 +97,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
 
       for (const polygonUuid of batch) {
         try {
-          // forceRecalculation is true, so always process (no need to check if exists)
           const result = await this.indicatorService.processPolygon(slug, polygonUuid);
           if (result != null) {
             batchResults.push(result);
@@ -123,13 +114,11 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
         }
       }
 
-      // Save batch results immediately
       if (batchResults.length > 0) {
         await this.indicatorService.saveResults(batchResults, slug);
         allResults.push(...batchResults);
       }
 
-      // Update progress after each batch
       await this.updateJobProgress(job, {
         processedContent: processed,
         progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons... (batch ${batchIndex + 1}/${
@@ -180,7 +169,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     const successfulPolygons: string[] = [];
     const results: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
 
-    // Process polygons one by one to update progress after each (like PHP version)
     for (const polygonUuid of polygonUuids) {
       try {
         if (!updateExisting && !forceRecalculation) {
@@ -205,7 +193,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
         }
         processed++;
 
-        // Update progress after each polygon (like PHP version updates periodically)
         await this.updateJobProgress(job, {
           processedContent: processed,
           progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons...`
@@ -217,8 +204,7 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
           }`,
           error
         );
-        processed++; // Count as processed even if failed
-        // Continue processing other polygons even if one fails
+        processed++;
         await this.updateJobProgress(job, {
           processedContent: processed,
           progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons...`
@@ -230,7 +216,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       await this.indicatorService.saveResults(results, slug);
     }
 
-    // Only fetch successful polygons for the response
     const sitePolygons =
       successfulPolygons.length > 0
         ? await SitePolygon.findAll({

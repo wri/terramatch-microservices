@@ -35,11 +35,9 @@ export class IndicatorsController {
     @Request() { authenticatedUserId }
   ) {
     this.logger.debug(`Starting indicator calculation for slug: ${slug}`);
-    this.logger.debug(`payload: ${JSON.stringify(payload)}`);
 
     const { polygonUuids } = payload.data.attributes;
 
-    // Determine entity information from polygons (similar to PolygonClippingController)
     let entityId: number | undefined;
     let entityType: string | undefined;
     let entityName: string;
@@ -70,7 +68,6 @@ export class IndicatorsController {
         const uniqueSiteUuids = uniq(sitePolygons.map(({ siteUuid }) => siteUuid).filter(isNotNull));
 
         if (uniqueSiteUuids.length > 0) {
-          // Extract sites from sitePolygons (they're already loaded with includes)
           const sites = sitePolygons
             .map(sp => sp.site)
             .filter(isNotNull)
@@ -80,13 +77,11 @@ export class IndicatorsController {
             const uniqueProjectIds = new Set(sites.map(s => s.projectId).filter(id => id != null));
 
             if (uniqueSiteUuids.length === 1) {
-              // All polygons belong to a single site
               const site = sites[0];
               entityId = site.id;
               entityType = Site.LARAVEL_TYPE;
               entityName = site.name;
             } else if (uniqueProjectIds.size === 1) {
-              // All polygons belong to different sites but same project
               const project = sites[0]?.project;
               if (project != null) {
                 entityId = project.id;
@@ -96,7 +91,6 @@ export class IndicatorsController {
                 entityName = `${polygonUuids.length} polygons`;
               }
             } else {
-              // Polygons belong to multiple sites/projects
               entityName = `${polygonUuids.length} polygons`;
             }
           } else {

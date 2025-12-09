@@ -28,5 +28,9 @@ export class ApplicationIndexQueryDto extends IndexQueryDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  organisationUuid?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   currentSubmissionStatus?: FormSubmissionStatus;
 }

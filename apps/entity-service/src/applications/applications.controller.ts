@@ -12,6 +12,10 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
+import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+
+const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
+const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
 
 @Controller("applications/v3")
 export class ApplicationsController {
@@ -22,10 +26,11 @@ export class ApplicationsController {
   @JsonApiResponse(ApplicationDto)
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
+  @ExceptionResponse(BadRequestException, { description: "Invalid query params" })
   async indexApplications(@Query() query: ApplicationIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Application, query.page, [
       { association: "organisation", attributes: ["name"] },
-      { association: "fundingProgramme", attributes: ["uuid", "name"] }
+      { association: "fundingProgramme", attributes: ["name"] }
     ]);
 
     if (query.currentSubmissionStatus != null) {
@@ -48,23 +53,36 @@ export class ApplicationsController {
       });
     }
 
+    for (const column of FILTER_COLUMNS) if (query[column] != null) builder.where({ [column]: query[column] });
+    if (query.sort?.field != null) {
+      if (SORT_COLUMNS.includes(query.sort.field as (typeof SORT_COLUMNS)[number])) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organisationName") {
+        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field !== "id") {
+        throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
+      }
+    }
+
     const applications = await builder.execute();
+    if (applications.length > 0) await this.policyService.authorize("read", applications);
 
-    await this.policyService.authorize("read", applications);
-
-    const currentSubmissions = await FormSubmission.findAll({
-      where: {
-        id: {
-          [Op.in]: Subquery.select(FormSubmission, "id", {
-            aggregate: { sqlFn: "MAX", groupColumn: "applicationId" }
-          }).in(
-            "applicationId",
-            applications.map(({ id }) => id)
-          ).literal
-        }
-      },
-      attributes: ["applicationId", "uuid", "status"]
-    });
+    const currentSubmissions =
+      applications.length === 0
+        ? []
+        : await FormSubmission.findAll({
+            where: {
+              id: {
+                [Op.in]: Subquery.select(FormSubmission, "id", {
+                  aggregate: { sqlFn: "MAX", groupColumn: "applicationId" }
+                }).in(
+                  "applicationId",
+                  applications.map(({ id }) => id)
+                ).literal
+              }
+            },
+            attributes: ["applicationId", "uuid", "status"]
+          });
 
     return applications.reduce(
       (document, application) => {

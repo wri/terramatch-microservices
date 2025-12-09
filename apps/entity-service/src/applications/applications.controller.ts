@@ -33,6 +33,13 @@ export class ApplicationsController {
       { association: "fundingProgramme", attributes: ["name"] }
     ]);
 
+    const permissions = await this.policyService.getPermissions();
+    if (permissions.find(p => p.startsWith("framework-")) == null) {
+      // admins have access to everything, so we just filter what's available for non-admins
+      const orgUuids = await User.orgUuids(authenticatedUserId());
+      builder.where({ organisationUuid: { [Op.in]: orgUuids } });
+    }
+
     if (query.currentSubmissionStatus != null) {
       // Use EXISTS() with an INNER JOIN to find applications that have a current submission with the given status
       // within our builder query.

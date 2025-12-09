@@ -17,6 +17,9 @@ export class ApplicationDto {
   currentSubmissionUuid: string | null;
 
   @ApiProperty({ nullable: true, type: String })
+  currentSubmissionStatus: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
   organisationName: string | null;
 
   @ApiProperty({ nullable: true, type: String })

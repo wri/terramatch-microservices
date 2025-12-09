@@ -18,6 +18,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       }
     }
 
+    // if (this.permissions.includes("project-manage")) {
     if (this.permissions.includes("reports-manage")) {
       this.builder.can(["read", "delete", "update", "approve"], FinancialReport);
     }

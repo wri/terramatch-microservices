@@ -81,12 +81,12 @@ export class IndicatorsController {
     description: "Retrieves all indicator records matching the specified slug for the given entity (site polygon)."
   })
   @JsonApiResponse([
-    IndicatorTreeCoverLossDto,
-    IndicatorHectaresDto,
-    IndicatorTreeCountDto,
-    IndicatorTreeCoverDto,
-    IndicatorFieldMonitoringDto,
-    IndicatorMsuCarbonDto
+    { data: IndicatorTreeCoverLossDto, hasMany: true },
+    { data: IndicatorHectaresDto, hasMany: true },
+    { data: IndicatorTreeCountDto, hasMany: true },
+    { data: IndicatorTreeCoverDto, hasMany: true },
+    { data: IndicatorFieldMonitoringDto, hasMany: true },
+    { data: IndicatorMsuCarbonDto, hasMany: true }
   ])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Entity not found or no indicator data available." })

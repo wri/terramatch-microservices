@@ -203,7 +203,7 @@ describe("LocalizationService", () => {
     });
     it("should pull translations when a i18nTranslation is found", async () => {
       const i18nItem = await I18nItemFactory.create();
-      const i18nTranslation = await I18nTranslationFactory.create({
+      await I18nTranslationFactory.create({
         i18nItemId: i18nItem.id,
         language: "fr-FR",
         shortValue: "bar"
@@ -260,7 +260,7 @@ describe("LocalizationService", () => {
       formQuestion.label = "testing";
       const seconLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
       formQuestion.labelId = seconLabelI18nItem.id;
-      const formQuestionAfter = await formQuestion.save();
+      await formQuestion.save();
       // cleaning up the old I18nItems
       await service.cleanOldI18nItems();
       const afterCount = await I18nItem.count();

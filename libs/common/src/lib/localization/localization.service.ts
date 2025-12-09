@@ -199,7 +199,7 @@ export class LocalizationService {
       // @ts-expect-error - entity is a model class
       const entities = await entity.findAll({ attributes });
       for (const entity of entities) {
-        Object.entries(entity.dataValues).forEach(([_, value]) => {
+        Object.entries(entity.dataValues).forEach(([, value]) => {
           if (value != null) {
             i18nIds.push(value);
           }

@@ -2,7 +2,7 @@ import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException
 import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ApplicationDto } from "./dto/application.dto";
+import { ApplicationDto, SubmissionReferenceDto } from "./dto/application.dto";
 import { Application, FormSubmission, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -78,31 +78,22 @@ export class ApplicationsController {
     const applications = await builder.execute();
     if (applications.length > 0) await this.policyService.authorize("read", applications);
 
-    const currentSubmissions =
+    const submissions =
       applications.length === 0
         ? []
         : await FormSubmission.findAll({
-            where: {
-              id: {
-                [Op.in]: Subquery.select(FormSubmission, "id", {
-                  aggregate: { sqlFn: "MAX", groupColumn: "applicationId" }
-                }).in(
-                  "applicationId",
-                  applications.map(({ id }) => id)
-                ).literal
-              }
-            },
+            where: { applicationId: applications.map(({ id }) => id) },
             attributes: ["applicationId", "uuid", "status"]
           });
 
     return applications.reduce(
       (document, application) => {
-        const currentSubmission = currentSubmissions.find(({ applicationId }) => applicationId === application.id);
         return document.addData(
           application.uuid,
           new ApplicationDto(application, {
-            currentSubmissionUuid: currentSubmission?.uuid ?? null,
-            currentSubmissionStatus: currentSubmission?.status ?? null
+            submissions: submissions
+              .filter(({ applicationId }) => applicationId === application.id)
+              .map(submission => new SubmissionReferenceDto(submission))
           })
         ).document;
       },
@@ -130,21 +121,19 @@ export class ApplicationsController {
 
     await this.policyService.authorize("read", application);
 
-    const currentSubmission = await FormSubmission.findOne({
+    const submissions = await FormSubmission.findAll({
       where: { applicationId: application.id },
-      order: [["id", "DESC"]],
       attributes: ["uuid", "status"]
     });
     const document = buildJsonApi(ApplicationDto).addData(
       application.uuid,
       new ApplicationDto(application, {
-        currentSubmissionUuid: currentSubmission?.uuid ?? null,
-        currentSubmissionStatus: currentSubmission?.status ?? null
+        submissions: submissions.map(submission => new SubmissionReferenceDto(submission))
       })
     ).document;
 
-    if (sideloads?.includes("currentSubmission") && currentSubmission != null) {
-      const submission = await this.formDataService.getFullSubmission(currentSubmission.uuid);
+    if (sideloads?.includes("currentSubmission") && submissions.length > 0) {
+      const submission = await this.formDataService.getFullSubmission(submissions[submissions.length - 1].uuid);
       if (submission != null) await this.formDataService.addSubmissionDto(document, submission);
     }
 

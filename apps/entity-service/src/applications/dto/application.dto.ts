@@ -29,6 +29,12 @@ export class ApplicationDto {
   @ApiProperty()
   uuid: string;
 
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+
   @ApiProperty({
     isArray: true,
     type: SubmissionReferenceDto,

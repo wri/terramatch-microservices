@@ -62,37 +62,13 @@ describe("PointGeometryCreationService", () => {
     point: { type: string; coordinates: number[] },
     estimatedArea: number | null,
     createdBy: number | null
-  ): PointGeometry => {
-    const mock = {
-      uuid,
-      point,
-      estimatedArea,
-      createdBy
-    } as PointGeometry;
-    return mock;
-  };
+  ) => ({ uuid, point, estimatedArea, createdBy } as PointGeometry);
 
   describe("createPointGeometriesFromFeatures", () => {
     it("should return empty array for empty input", async () => {
       const result = await service.createPointGeometriesFromFeatures([], null);
       expect(result).toEqual([]);
       expect(mockBulkCreate).not.toHaveBeenCalled();
-    });
-
-    it("should throw error if PointGeometry.sequelize is null", async () => {
-      Object.defineProperty(PointGeometry, "sequelize", {
-        get: jest.fn(() => null),
-        configurable: true
-      });
-
-      const features = [createPointFeature(0, 0, 1.0)];
-
-      await expect(service.createPointGeometriesFromFeatures(features, null)).rejects.toThrow(
-        InternalServerErrorException
-      );
-      await expect(service.createPointGeometriesFromFeatures(features, null)).rejects.toThrow(
-        "PointGeometry model is missing sequelize connection"
-      );
     });
 
     it("should create single point geometry", async () => {

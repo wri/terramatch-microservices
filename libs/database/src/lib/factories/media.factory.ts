@@ -1,4 +1,16 @@
-import { Media, Project, Site, Nursery, ProjectReport, SiteReport, Form, FormQuestionOption } from "../entities";
+import {
+  FinancialIndicator,
+  Form,
+  FormQuestionOption,
+  Media,
+  Nursery,
+  Organisation,
+  Project,
+  ProjectPitch,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { ProjectFactory } from "./project.factory";
 import { SiteFactory } from "./site.factory";
@@ -8,6 +20,8 @@ import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
 import { FormFactory } from "./form.factory";
 import { FormQuestionOptionFactory } from "./form-question-option.factory";
+import { OrganisationFactory } from "./organisation.factory";
+import { FinancialIndicatorFactory } from "./financial-indicator.factory";
 
 const defaultAttributesFactory = async () => ({
   collectionName: faker.lorem.words(1),
@@ -24,39 +38,64 @@ const defaultAttributesFactory = async () => ({
 });
 
 export const MediaFactory = {
-  forProject: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Project.LARAVEL_TYPE,
-    modelId: ProjectFactory.associate("id")
-  })),
-  forSite: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Site.LARAVEL_TYPE,
-    modelId: SiteFactory.associate("id")
-  })),
-  forNursery: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Nursery.LARAVEL_TYPE,
-    modelId: NurseryFactory.associate("id")
-  })),
-  forProjectReport: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: ProjectReport.LARAVEL_TYPE,
-    modelId: ProjectReportFactory.associate("id")
-  })),
-  forSiteReport: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: SiteReport.LARAVEL_TYPE,
-    modelId: SiteReportFactory.associate("id")
-  })),
-  forForm: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: Form.LARAVEL_TYPE,
-    modelId: FormFactory.associate("id")
-  })),
-  forFormQuestionOption: FactoryGirl.define(Media, async () => ({
-    ...(await defaultAttributesFactory()),
-    modelType: FormQuestionOption.LARAVEL_TYPE,
-    modelId: FormQuestionOptionFactory.associate("id")
-  }))
+  project: (project?: Project) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Project.LARAVEL_TYPE,
+      modelId: (project?.id as number) ?? ProjectFactory.associate("id")
+    })),
+  projectPitch: (pitch?: ProjectPitch) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: ProjectPitch.LARAVEL_TYPE,
+      modelId: (pitch?.id as number) ?? ProjectFactory.associate("id")
+    })),
+  site: (site?: Site) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Site.LARAVEL_TYPE,
+      modelId: (site?.id as number) ?? SiteFactory.associate("id")
+    })),
+  nursery: (nursery?: Nursery) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Nursery.LARAVEL_TYPE,
+      modelId: (nursery?.id as number) ?? NurseryFactory.associate("id")
+    })),
+  projectReport: (report?: ProjectReport) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: ProjectReport.LARAVEL_TYPE,
+      modelId: (report?.id as number) ?? ProjectReportFactory.associate("id")
+    })),
+  siteReport: (report?: SiteReport) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: SiteReport.LARAVEL_TYPE,
+      modelId: (report?.id as number) ?? SiteReportFactory.associate("id")
+    })),
+  form: (form?: Form) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Form.LARAVEL_TYPE,
+      modelId: (form?.id as number) ?? FormFactory.associate("id")
+    })),
+  formQuestionOption: (question?: FormQuestionOption) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: FormQuestionOption.LARAVEL_TYPE,
+      modelId: (question?.id as number) ?? FormQuestionOptionFactory.forQuestion().associate("id")
+    })),
+  org: (org?: Organisation) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: Organisation.LARAVEL_TYPE,
+      modelId: (org?.id as number) ?? OrganisationFactory.associate("id")
+    })),
+  financialIndicator: (indicator?: FinancialIndicator) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: FinancialIndicator.LARAVEL_TYPE,
+      modelId: (indicator?.id as number) ?? FinancialIndicatorFactory.report().associate("id")
+    }))
 };

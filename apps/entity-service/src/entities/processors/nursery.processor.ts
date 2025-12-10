@@ -1,4 +1,12 @@
-import { Media, Nursery, NurseryReport, Project, ProjectUser } from "@terramatch-microservices/database/entities";
+import {
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectUser,
+  ScheduledJob,
+  Task
+} from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -6,6 +14,8 @@ import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
+import { EntityCreateAttributes } from "../dto/entity-create.dto";
+import { DateTime } from "luxon";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -38,7 +48,7 @@ export class NurseryProcessor extends EntityProcessor<
         {
           association: "project",
           attributes: ["uuid", "name"],
-          include: [{ association: "organisation", attributes: ["name"] }]
+          include: [{ association: "organisation", attributes: ["name", "uuid"] }]
         }
       ]
     });
@@ -164,5 +174,44 @@ export class NurseryProcessor extends EntityProcessor<
     }
 
     await super.delete(nursery);
+  }
+
+  async create({ parentUuid }: EntityCreateAttributes) {
+    const project = await Project.findOne({ where: { uuid: parentUuid }, attributes: ["frameworkKey", "id"] });
+    if (project == null) {
+      throw new BadRequestException(`Project with uuid ${parentUuid} not found`);
+    }
+
+    const nursery = await this.authorizedCreation(Nursery, {
+      projectId: project.id,
+      frameworkKey: project.frameworkKey
+    });
+
+    const task = await Task.forProject(project.id).dueAtDesc().findOne();
+    if (task != null) {
+      // If we have a task due in the future, create a report
+      let createReport = DateTime.now() <= DateTime.fromJSDate(task.dueAt);
+
+      // Also, if we're more than 4 weeks before the next task will be generated, create a backdated
+      // report for the previous period.
+      if (!createReport) {
+        const nextTask =
+          project.frameworkKey == null ? undefined : await ScheduledJob.taskDue(project.frameworkKey).findOne();
+        createReport =
+          nextTask != null && DateTime.fromISO(nextTask.taskDefinition["dueAt"]) > DateTime.now().plus({ weeks: 4 });
+      }
+
+      if (createReport) {
+        await NurseryReport.create({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          nurseryId: nursery.id,
+          dueAt: task.dueAt,
+          createdBy: this.entitiesService.userId
+        });
+      }
+    }
+
+    return nursery;
   }
 }

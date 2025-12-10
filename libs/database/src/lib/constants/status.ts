@@ -11,9 +11,9 @@ export const NEEDS_MORE_INFORMATION = "needs-more-information";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 
-export const statusUpdateSequelizeHook = (model: Model) => {
+export const statusUpdateSequelizeHook = async (model: Model) => {
   // Processed in event.service.ts in the common lib
-  DatabaseModule.emitModelEvent("statusUpdated", model);
+  await DatabaseModule.emitModelEvent("statusUpdated", model);
 };
 
 const emitStatusUpdateHook = (from: string, model: Model) => statusUpdateSequelizeHook(model);
@@ -109,7 +109,7 @@ export const PENDING = "pending";
 export const ORGANISATION_STATUSES = [APPROVED, PENDING, REJECTED, DRAFT] as const;
 export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];
 
-type AllStatuses = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
+export type AnyStatus = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
 
 /**
  * A mapping of all statuses to an English language display string for that status.
@@ -121,7 +121,7 @@ type AllStatuses = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmi
  * Ideally we fix up and remove those needs over time, and eventually git rid of this structure from
  * BE code.
  */
-export const STATUS_DISPLAY_STRINGS: Record<AllStatuses, string> = {
+export const STATUS_DISPLAY_STRINGS: Record<AnyStatus, string> = {
   [DRAFT]: "Draft",
   [DUE]: "Due",
   [PENDING]: "Pending",

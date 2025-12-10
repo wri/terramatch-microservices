@@ -20,6 +20,7 @@ import { chainScope } from "../util/chain-scope";
 import { laravelType } from "../types/util";
 import { UpdateRequestStatus, UpdateRequestStatusStates } from "../constants/status";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { Dictionary } from "lodash";
 
 @Scopes(() => ({
   entity: (entity: EntityModel) => ({
@@ -39,6 +40,9 @@ export class UpdateRequest extends Model<UpdateRequest> {
     return chainScope(this, "entity", entity) as typeof UpdateRequest;
   }
 
+  /**
+   * Sets up a scope to find the latest unapproved update request.
+   */
   static current() {
     return chainScope(this, "current") as typeof UpdateRequest;
   }
@@ -76,7 +80,7 @@ export class UpdateRequest extends Model<UpdateRequest> {
 
   @AllowNull
   @JsonColumn()
-  content: object | null;
+  content: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

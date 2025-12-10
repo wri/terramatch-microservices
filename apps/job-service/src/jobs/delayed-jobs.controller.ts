@@ -6,7 +6,6 @@ import {
   NotFoundException,
   Param,
   Patch,
-  Request,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
@@ -17,6 +16,7 @@ import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("jobs/v3/delayedJobs")
 export class DelayedJobsController {
@@ -27,11 +27,11 @@ export class DelayedJobsController {
   })
   @JsonApiResponse({ data: DelayedJobDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  async getRunningJobs(@Request() { authenticatedUserId }) {
+  async getRunningJobs() {
     const runningJobs = await DelayedJob.findAll({
       where: {
         isAcknowledged: false,
-        createdBy: authenticatedUserId
+        createdBy: authenticatedUserId()
       },
       order: [["createdAt", "DESC"]]
     });
@@ -74,12 +74,12 @@ export class DelayedJobsController {
   @ExceptionResponse(NotFoundException, {
     description: "One or more jobs specified in the payload could not be found."
   })
-  async bulkUpdateJobs(@Body() bulkUpdateJobsDto: DelayedJobBulkUpdateBodyDto, @Request() { authenticatedUserId }) {
+  async bulkUpdateJobs(@Body() bulkUpdateJobsDto: DelayedJobBulkUpdateBodyDto) {
     const jobUpdates = bulkUpdateJobsDto.data;
     const jobs = await DelayedJob.findAll({
       where: {
         uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
-        createdBy: authenticatedUserId
+        createdBy: authenticatedUserId()
       },
       order: [["createdAt", "DESC"]]
     });

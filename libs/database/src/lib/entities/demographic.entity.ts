@@ -15,6 +15,7 @@ import {
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
+  Op,
   STRING,
   TEXT,
   UUID,
@@ -24,18 +25,20 @@ import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
 import { DemographicType } from "../types/demographic";
-import { FormModel } from "../constants/entities";
-import { laravelType } from "../types/util";
+import { LaravelModel, laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
-  entity: (entity: FormModel) => ({
+  forModels: (models: LaravelModel[]) => ({
     where: {
-      demographicalType: laravelType(entity),
-      demographicalId: entity.id
+      [Op.or]: models.map(model => ({
+        demographicalType: laravelType(model),
+        demographicalId: model.id
+      }))
     }
   }),
-  collection: (collection: string) => ({ where: { collection } })
+  collection: (collection: string) => ({ where: { collection } }),
+  type: (type: DemographicType) => ({ where: { type } })
 }))
 @Table({
   tableName: "demographics",
@@ -73,8 +76,12 @@ export class Demographic extends Model<InferAttributes<Demographic>, InferCreati
     Demographic.ASSOCIATES_TYPES
   ] as const;
 
-  static for(entity: FormModel) {
-    return chainScope(this, "entity", entity) as typeof Demographic;
+  static for(models: LaravelModel | LaravelModel[]) {
+    return chainScope(this, "forModels", Array.isArray(models) ? models : [models]) as typeof Demographic;
+  }
+
+  static type(type: DemographicType) {
+    return chainScope(this, "type", type) as typeof Demographic;
   }
 
   static collection(collection: string) {
@@ -104,8 +111,9 @@ export class Demographic extends Model<InferAttributes<Demographic>, InferCreati
   uuid: CreationOptional<string>;
 
   @Column(STRING)
-  type: string;
+  type: DemographicType;
 
+  // Note: this allows null, but the only rows with a null value have been soft deleted.
   @AllowNull
   @Column(STRING)
   collection: string | null;

@@ -8,8 +8,10 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FormDataService } from "./form-data.service";
 import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
-import { Form } from "@terramatch-microservices/database/entities";
+import { AuditStatus, Form } from "@terramatch-microservices/database/entities";
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
+import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("entities/v3/:entity/:uuid/formData")
 export class FormDataController {
@@ -30,7 +32,7 @@ export class FormDataController {
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
     await this.policyService.authorize("read", model);
 
-    const form = await this.formDataService.getForm(model);
+    const form = await Form.for(model).findOne();
     if (form == null) throw new NotFoundException("Form for entity not found");
 
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
@@ -51,10 +53,17 @@ export class FormDataController {
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
     await this.policyService.authorize("update", model);
 
-    const form = await this.formDataService.getForm(model);
+    const form = await Form.for(model).findOne();
     if (form == null) throw new NotFoundException("Form for entity not found");
 
-    await this.formDataService.storeEntityAnswers(model, form, payload.data.attributes);
+    await this.formDataService.storeEntityAnswers(model, form, payload.data.attributes.answers);
+
+    if (payload.data.attributes.isContinueLater) {
+      const type =
+        model.status === APPROVED || model.status === NEEDS_MORE_INFORMATION ? "change-request-updated" : null;
+      await AuditStatus.createAudit(model, authenticatedUserId(), type, "Updated");
+    }
+
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }
 

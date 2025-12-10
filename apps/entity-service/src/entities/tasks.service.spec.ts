@@ -138,7 +138,7 @@ describe("TasksService", () => {
     it("should sort", async () => {
       // sequelize doesn't support manually setting createdAt or updatedAt, so we have to mess with the
       // system clock for this test.
-      const clock = FakeTimers.install({ shouldAdvanceTime: true });
+      const clock = FakeTimers.install({ shouldAdvanceTime: true, shouldClearNativeTimers: true });
       try {
         const oldDate = faker.date.past({ years: 1 });
         let newDate = faker.date.recent();
@@ -251,10 +251,8 @@ describe("TasksService", () => {
         frameworkKey: project.frameworkKey
       });
       // Unapproved report, should not be included in planted count.
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId: siteReports[0].id });
-      const trees = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(2, {
-        speciesableId: siteReports[2].id
-      });
+      await TreeSpeciesFactory.siteReportTreePlanted(siteReports[0]).create();
+      const trees = await TreeSpeciesFactory.siteReportTreePlanted(siteReports[2]).createMany(2);
 
       const result = (await service.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
       const taskResource = result.data as Resource;

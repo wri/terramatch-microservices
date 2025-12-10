@@ -2,219 +2,218 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { ProjectPitch } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
+export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> = {
   label: "Project Pitch",
-  laravelModelType: ProjectPitch.LARAVEL_TYPE,
   fields: {
-    "pro-pit-name": { property: "project_name", label: "Name", inputType: "text" },
-    "pro-pit-objectives": { property: "project_objectives", label: "Objectives", inputType: "long-text" },
-    "pro-pit-district": { property: "project_county_district", label: "County district", inputType: "text" },
+    "pro-pit-name": { property: "projectName", label: "Name", inputType: "text" },
+    "pro-pit-objectives": { property: "projectObjectives", label: "Objectives", inputType: "long-text" },
+    "pro-pit-district": { property: "projectCountyDistrict", label: "County district", inputType: "text" },
     "pro-pit-country": {
-      property: "project_country",
+      property: "projectCountry",
       label: "Country",
       inputType: "select",
       multiChoice: false,
       optionListKey: "gadm-level-0"
     },
     "pro-pit-rst-inv-types": {
-      property: "restoration_intervention_types",
+      property: "restorationInterventionTypes",
       label: "Restoration intervention types",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "restoration-systems"
     },
     "pro-pit-detailed-rst-inv-types": {
-      property: "detailed_intervention_types",
+      property: "detailedInterventionTypes",
       label: "Detailed intervention types",
       inputType: "select",
       multiChoice: true,
       optionListKey: "interventions"
     },
-    "pro-pit-tot-ha": { property: "total_hectares", label: "Total hectares", inputType: "number" },
-    "pro-pit-tot-trees": { property: "total_trees", label: "Total trees", inputType: "number" },
-    "pro-pit-bgt": { property: "project_budget", label: "Project budget", inputType: "number" },
+    "pro-pit-tot-ha": { property: "totalHectares", label: "Total hectares", inputType: "number" },
+    "pro-pit-tot-trees": { property: "totalTrees", label: "Total trees", inputType: "number" },
+    "pro-pit-bgt": { property: "projectBudget", label: "Project budget", inputType: "number" },
     "pro-pit-cap-bld-needs": {
-      property: "capacity_building_needs",
+      property: "capacityBuildingNeeds",
       label: "Capacity building needs",
       inputType: "select",
       multiChoice: true,
       optionListKey: "building-needs"
     },
     "pro-pit-how-discovered": {
-      property: "how_discovered",
+      property: "howDiscovered",
       label: "How discovered WRI",
       inputType: "select",
       multiChoice: true,
       optionListKey: "media-channels"
     },
     "pro-pit-land-tenure-proj-area": {
-      property: "land_tenure_proj_area",
+      property: "landTenureProjArea",
       label: "Land tenure project area",
       inputType: "select",
       multiChoice: true,
       optionListKey: "land-tenure-proj-area-collection"
     },
     "pro-pit-expected-active-rest-start-date": {
-      property: "expected_active_restoration_start_date",
+      property: "expectedActiveRestorationStartDate",
       label: "Expected active restoration start date",
       inputType: "date"
     },
     "pro-pit-expected-active-rest-end-date": {
-      property: "expected_active_restoration_end_date",
+      property: "expectedActiveRestorationEndDate",
       label: "Expected active restoration end date",
       inputType: "date"
     },
     "pro-pit-desc-of-proj-timeline": {
-      property: "description_of_project_timeline",
+      property: "descriptionOfProjectTimeline",
       label: "Description of project timeline",
       inputType: "long-text"
     },
     "pro-pit-proj-partner-info": {
-      property: "proj_partner_info",
+      property: "projPartnerInfo",
       label: "Project partner info",
       inputType: "long-text"
     },
     "pro-pit-landholder-comm-engage": {
-      property: "landholder_comm_engage",
+      property: "landholderCommEngage",
       label: "Landholder & Community Engagement Strategy",
       inputType: "long-text"
     },
     "pro-pit-proj-success-risks": {
-      property: "proj_success_risks",
+      property: "projSuccessRisks",
       label: "Project risks to success",
       inputType: "long-text"
     },
     "pro-pit-monitor-eval-plan": {
-      property: "monitor_eval_plan",
+      property: "monitorEvalPlan",
       label: "Monitoring and evaluation plan",
       inputType: "long-text"
     },
-    "pro-pit-proj-boundary": { property: "proj_boundary", label: "Project Boundary", inputType: "mapInput" },
+    "pro-pit-proj-boundary": { property: "projBoundary", label: "Project Boundary", inputType: "mapInput" },
     "pro-pit-sustainable-dev-goals": {
-      property: "sustainable_dev_goals",
+      property: "sustainableDevGoals",
       label: "Sustainable Development Goals",
       inputType: "select-image",
       multiChoice: true
     },
     "pro-pit-proj-area-desc": {
-      property: "proj_area_description",
+      property: "projAreaDescription",
       label: "Description of Project Area",
       inputType: "long-text"
     },
     "pro-pit-curr-land-degradation": {
-      property: "curr_land_degradation",
+      property: "currLandDegradation",
       label: "Main causes of degradation",
       inputType: "long-text"
     },
     "pro-pit-proposed-num-sites": {
-      property: "proposed_num_sites",
+      property: "proposedNumSites",
       label: "Proposed Number of Sites",
       inputType: "number"
     },
     "pro-pit-environmental-goals": {
-      property: "environmental_goals",
+      property: "environmentalGoals",
       label: "Environmental goals",
       inputType: "long-text"
     },
     "pro-pit-proposed-num-nurseries": {
-      property: "proposed_num_nurseries",
+      property: "proposedNumNurseries",
       label: "Proposed Number of Nurseries",
       inputType: "number"
     },
     "pro-pit-proj-impact-socieconom": {
-      property: "proj_impact_socieconom",
+      property: "projImpactSocieconom",
       label: "Potential project impact: socioeconomic",
       inputType: "long-text"
     },
     "pro-pit-proj-impact-foodsec": {
-      property: "proj_impact_foodsec",
+      property: "projImpactFoodsec",
       label: "Potential project impact: food security",
       inputType: "long-text"
     },
     "pro-pit-proj-impact-watersec": {
-      property: "proj_impact_watersec",
+      property: "projImpactWatersec",
       label: "Potential project impact: water security",
       inputType: "long-text"
     },
     "pro-pit-proj-impact-jobtypes": {
-      property: "proj_impact_jobtypes",
+      property: "projImpactJobtypes",
       label: "Potential project impact: types of jobs created",
       inputType: "long-text"
     },
-    "pro-pit-num-jobs-created": { property: "num_jobs_created", label: "Number of jobs created", inputType: "number" },
+    "pro-pit-num-jobs-created": { property: "numJobsCreated", label: "Number of jobs created", inputType: "number" },
     "pro-pit-beneficiaries": {
-      property: "proj_beneficiaries",
+      property: "projBeneficiaries",
       label: "Total Expected project beneficiaries",
       inputType: "number"
     },
     "pro-pit-pct-beneficiaries-small": {
-      property: "pct_beneficiaries_small",
+      property: "pctBeneficiariesSmall",
       label: "% Beneficiaries smallholder",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-large": {
-      property: "pct_beneficiaries_large",
+      property: "pctBeneficiariesLarge",
       label: "% Beneficiaries large",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-women": {
-      property: "pct_beneficiaries_women",
+      property: "pctBeneficiariesWomen",
       label: "% Beneficiaries women",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-men": {
-      property: "pct_beneficiaries_men",
+      property: "pctBeneficiariesMen",
       label: "% Beneficiaries men",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-35below": {
-      property: "pct_beneficiaries_youth",
+      property: "pctBeneficiariesYouth",
       label: "% Beneficiaries youth",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-sch-classes": {
-      property: "pct_beneficiaries_scheduled_classes",
+      property: "pctBeneficiariesScheduledClasses",
       label: "% Beneficiaries Scheduled Classes",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-sch-tribes": {
-      property: "pct_beneficiaries_scheduled_tribes",
+      property: "pctBeneficiariesScheduledTribes",
       label: "% Beneficiaries Scheduled Tribes",
       inputType: "number-percentage"
     },
     "pro-pit-pct-beneficiaries-marginalised": {
-      property: "pct_beneficiaries_marginalised",
+      property: "pctBeneficiariesMarginalised",
       label: "% Beneficiaries Marginalised Communities",
       inputType: "number-percentage"
     },
     "pro-pit-main-degradation_causes": {
-      property: "main_degradation_causes",
+      property: "mainDegradationCauses",
       label: "Main degradation causes",
       inputType: "long-text"
     },
-    "pro-pit-seedlings-source": { property: "seedlings_source", label: "Seedlings source", inputType: "long-text" },
+    "pro-pit-seedlings-source": { property: "seedlingsSource", label: "Seedlings source", inputType: "long-text" },
     "pro-pit-pct-employees-men": {
-      property: "pct_employees_men",
+      property: "pctEmployeesMen",
       label: "% of total employees that would be men",
       inputType: "number-percentage"
     },
     "pro-pit-pct-employees-women": {
-      property: "pct_employees_women",
+      property: "pctBeneficiariesWomen",
       label: "% of total employees that would be women",
       inputType: "number-percentage"
     },
     "pro-pit-pct-employees-18to35": {
-      property: "pct_employees_18to35",
+      property: "pctEmployees18To35",
       label: "% of total employees that would be between the ages of 18 and 35",
       inputType: "number-percentage"
     },
     "pro-pit-pct-employees-older35": {
-      property: "pct_employees_older35",
+      property: "pctEmployeesOlder35",
       label: "% of total employees that would be older than 35 years of age",
       inputType: "number-percentage"
     },
     "pro-pit-pct-employees-marginalised": {
-      property: "pct_employees_marginalised",
+      property: "pctEmployeesMarginalised",
       label: "% of total employees that would be part of a marginalised community",
       inputType: "number-percentage"
     },
@@ -226,326 +225,358 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       optionListKey: "gadm-level-1"
     },
     "pro-pit-hec-yr1": {
-      property: "hectares_first_yr",
+      property: "hectaresFirstYr",
       label: "Hectares to be restored in the first year",
       inputType: "number"
     },
     "pro-pit-trees-yr1": {
-      property: "total_trees_first_yr",
+      property: "totalTreesFirstYr",
       label: "Trees planted in the first year",
       inputType: "number"
     },
     "pro-pit-pct-beneficiaries-backward-class": {
-      property: "pct_beneficiaries_backward_class",
+      property: "pctBeneficiariesBackwardClass",
       label: "% Beneficiaries backward class",
       inputType: "number-percentage"
     },
     "pro-pit-land-systems": {
-      property: "land_systems",
+      property: "landSystems",
       label: "Land systems",
       inputType: "select",
       multiChoice: true,
       optionListKey: "restoration-systems"
     },
     "pro-pit-tree-rest-prac": {
-      property: "tree_restoration_practices",
+      property: "treeRestorationPractices",
       label: "Tree Restoration Practices",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "restoration-practices"
     },
     "pro-pit-main-cause-deg": {
-      property: "main_causes_of_degradation",
+      property: "mainCausesOfDegradation",
       label: "Main causes of degradation",
       inputType: "long-text"
     },
-    "pro-theory-of-change": { property: "theory_of_change", label: "Theory of change", inputType: "long-text" },
+    "pro-theory-of-change": { property: "theoryOfChange", label: "Theory of change", inputType: "long-text" },
     "pro-proposed-gov-partners": {
-      property: "proposed_gov_partners",
+      property: "proposedGovPartners",
       label: "Proposed government partners",
       inputType: "long-text"
     },
     "pro-pct-sch-tribe": {
-      property: "pct_sch_tribe",
+      property: "pctSchTribe",
       label: "% of total employees that would be Scheduled Caste/Other Backward Class/Scheduled Tribe",
       inputType: "number-percentage"
     },
     "pro-sustainability-plan": {
-      property: "sustainability_plan",
+      property: "sustainabilityPlan",
       label: "Project sustainability plan",
       inputType: "long-text"
     },
-    "pro-replication-plan": { property: "replication_plan", label: "Project replication plan", inputType: "long-text" },
+    "pro-replication-plan": { property: "replicationPlan", label: "Project replication plan", inputType: "long-text" },
     "pro-replication-challenges": {
-      property: "replication_challenges",
+      property: "replicationChallenges",
       label: "Project replication challenges",
       inputType: "long-text"
     },
     "pro-solution-market-size": {
-      property: "solution_market_size",
+      property: "solutionMarketSize",
       label: "Solution market size",
       inputType: "long-text"
     },
     "pro-affordability-of-solution": {
-      property: "affordability_of_solution",
+      property: "affordabilityOfSolution",
       label: "Affordability of solution/products",
       inputType: "long-text"
     },
     "pro-growth-trends-business": {
-      property: "growth_trends_business",
+      property: "growthTrendsBusiness",
       label: "Growth trends of business",
       inputType: "long-text"
     },
     "pro-limitations-on-scope": {
-      property: "limitations_on_scope",
+      property: "limitationsOnScope",
       label: "Limitations on scope of operations",
       inputType: "long-text"
     },
     "pro-business-model-replication_plan": {
-      property: "business_model_replication_plan",
+      property: "businessModelReplicationPlan",
       label: "Business model replication plan",
       inputType: "long-text"
     },
     "pro-biodiversity-impact": {
-      property: "biodiversity_impact",
+      property: "biodiversityImpact",
       label: "Biodiversity Impact (project)",
       inputType: "long-text"
     },
-    "pro-water-source": { property: "water_source", label: "Water Source (project)", inputType: "long-text" },
+    "pro-water-source": { property: "waterSource", label: "Water Source (project)", inputType: "long-text" },
     "pro-climate-resilience": {
-      property: "climate_resilience",
+      property: "climateResilience",
       label: "Climate resilience (project)",
       inputType: "long-text"
     },
-    "pro-soil-health": { property: "soil_health", label: "Soil Health (project)", inputType: "long-text" },
+    "pro-soil-health": { property: "soilHealth", label: "Soil Health (project)", inputType: "long-text" },
     "pro-pit-land-use-types": {
-      property: "land_use_types",
+      property: "landUseTypes",
       label: "Land use types",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "restoration-systems"
     },
     "pro-pit-restoration_strategy": {
-      property: "restoration_strategy",
+      property: "restorationStrategy",
       label: "Restoration strategy",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "restoration-practices"
     },
     "pro-pit-baseline-biodiversity": {
-      property: "baseline_biodiversity",
+      property: "baselineBiodiversity",
       label: "Baseline Biodiversity Conditions",
       inputType: "long-text"
     },
     "pro-pit-goal-trees-restored-planting": {
-      property: "goal_trees_restored_planting",
+      property: "goalTreesRestoredPlanting",
       label: "Trees Restored Goal - Planting",
       inputType: "number"
     },
     "pro-pit-goal-trees-restored-anr": {
-      property: "goal_trees_restored_anr",
+      property: "goalTreesRestoredAnr",
       label: "Trees Restored Goal - ANR",
       inputType: "number"
     },
     "pro-pit-goal-trees-restored-direct-seeding": {
-      property: "goal_trees_restored_direct_seeding",
+      property: "goalTreesRestoredDirectSeeding",
       label: "Trees Restored Goal - Direct Seeding",
       inputType: "number"
     },
     "pro-pit-direct-seeding-survival-rate": {
-      property: "direct_seeding_survival_rate",
+      property: "directSeedingSurvivalRate",
       label: "Direct Seeding Survival Rate",
       inputType: "number-percentage"
     },
     "pro-pit-level-0-proposed": {
-      property: "level_0_proposed",
+      property: "level0Proposed",
       label: "countries where project will be restoring land",
       inputType: "select",
       multiChoice: true,
       optionListKey: "gadm-level-0"
     },
     "pro-pit-level-1-proposed": {
-      property: "level_1_proposed",
+      property: "level1Proposed",
       label: "GADM level 1 administrative areas where project will be restoring land",
       inputType: "select",
       multiChoice: true,
       optionListKey: "gadm-level-1"
     },
     "pro-pit-level-2-proposed": {
-      property: "level_2_proposed",
+      property: "level2Proposed",
       label: "GADM level 2 administrative areas where project will be restoring land",
       inputType: "select",
       multiChoice: true,
       optionListKey: "gadm-level-2"
     },
     "pro-pit-lat-proposed": {
-      property: "lat_proposed",
+      property: "latProposed",
       label: "Proposed center point of a restoration site - latitude",
       inputType: "number"
     },
     "pro-pit-long-proposed": {
-      property: "long_proposed",
+      property: "lngProposed",
       label: "Proposed center point of a restoration site - longitude",
       inputType: "number"
     },
     "pro-pit-stakeholder-engagement": {
-      property: "stakeholder_engagement",
+      property: "stakeholderEngagement",
       label: "Local stakeholders affected by project",
       inputType: "long-text"
     },
     "pro-pit-landowner-agreement": {
-      property: "landowner_agreement",
+      property: "landownerAgreement",
       label: "Prior agreement with landowner to use their land for restoration",
       inputType: "select",
       multiChoice: false,
       optionListKey: "landowner-collection"
     },
     "pro-pit-landowner-agreement-description": {
-      property: "landowner_agreement_description",
+      property: "landownerAgreementDescription",
       label: "Explanation of landowner agreement",
       inputType: "long-text"
     },
     "pro-pit-land-tenure-risks": {
-      property: "land_tenure_risks",
+      property: "landTenureRisks",
       label: "Risks or challenges in securing tenure arrangements with landowners",
       inputType: "long-text"
     },
     "pro-pit-non-tree-interventions-description": {
-      property: "non_tree_interventions_description",
+      property: "nonTreeInterventionsDescription",
       label: "Additional non-tree intervention description",
       inputType: "long-text"
     },
     "pro-pit-complement-existing-restoration": {
-      property: "complement_existing_restoration",
+      property: "complementExistingRestoration",
       label: "Project complements existing restoration",
       inputType: "long-text"
     },
     "pro-pit-restoration-strategy-distribution": {
-      property: "restoration_strategy_distribution",
+      property: "restorationStrategyDistribution",
       label: "Distribution of restoration strategies",
       inputType: "strategy-area",
       multiChoice: false,
       optionListKey: "strategy-distribution-collection"
     },
     "pro-pit-land-use-type-distribution": {
-      property: "land_use_type_distribution",
+      property: "landUseTypeDistribution",
       label: "Distribution of land use systems",
       inputType: "strategy-area",
       multiChoice: false,
       optionListKey: "land-use-distribution-collection"
     },
     "pro-pit-land-tenure-distribution": {
-      property: "land_tenure_distribution",
+      property: "landTenureDistribution",
       label: "Distribution of land tenure agreement",
       inputType: "strategy-area",
       multiChoice: false,
       optionListKey: "tenure-distribution-collection"
     },
     "pro-pit-total-tree-second-yr": {
-      property: "total_tree_second_yr",
+      property: "totalTreeSecondYr",
       label: "Trees Planted in Second Year",
       inputType: "number"
     },
     "pro-pit-proj-survival-rate": {
-      property: "proj_survival_rate",
+      property: "projSurvivalRate",
       label: "Projected Project Survival Rate",
       inputType: "number-percentage"
     },
-    "pro-pit-anr-approach": { property: "anr_approach", label: "Project Approach to ANR", inputType: "text" },
-    "pro-pit-anr-rights": { property: "anr_rights", label: "How to Secure Rights to Conduct ANR", inputType: "text" },
+    "pro-pit-anr-approach": { property: "anrApproach", label: "Project Approach to ANR", inputType: "text" },
+    "pro-pit-anr-rights": { property: "anrRights", label: "How to Secure Rights to Conduct ANR", inputType: "text" },
     "pro-pit-project-site-model": {
-      property: "project_site_model",
+      property: "projectSiteModel",
       label: "Project site distribution model",
       inputType: "select",
       multiChoice: false,
       optionListKey: "project-site-model-collection"
     },
     "pro-pit-indigenous-impact": {
-      property: "indigenous_impact",
+      property: "indigenousImpact",
       label: "Project Impacts or Benefits for Indigenous People",
       inputType: "text"
     },
     "pro-pit-barriers-project-activity": {
-      property: "barriers_project_activity",
+      property: "barriersProjectActivity",
       label: "Barriers to Project Activities",
       inputType: "select",
       multiChoice: true,
       optionListKey: "barriers-project-collection"
     },
     "pro-pit-barriers-project-activity-description": {
-      property: "barriers_project_activity_description",
+      property: "barriersProjectActivityDescription",
       label: "Barriers to Project Activities Descriptions",
       inputType: "text"
     },
     "pro-pit-other-engage-women-youth": {
-      property: "other_engage_women_youth",
+      property: "otherEngageWomenYouth",
       label: "Other Ways Project will Engage and Benefit Women/Youth",
       inputType: "text"
     },
     "pro-pit-forest-fragments-distance": {
-      property: "forest_fragments_distance",
+      property: "forestFragmentsDistance",
       label: "Approximate distance in meters between project area and the center of the nearest forest fragment",
       inputType: "number"
     },
     "pro-pit-anr-practices-proposed": {
-      property: "anr_practices_proposed",
+      property: "anrPracticesProposed",
       label: "ANR practices that the organization will use during the project",
       inputType: "select",
       multiChoice: true,
       optionListKey: "anr-practices-proposed-collection"
     },
     "pro-pit-information-authorization": {
-      property: "information_authorization",
+      property: "informationAuthorization",
       label: "If the organization authorizes WRI to use their data for research",
       inputType: "boolean"
     },
     "pro-pit-full-time-jobs-count": {
-      property: "full_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time"
+      },
       label: "Aggregate full time jobs",
       inputType: "number"
     },
     "pro-pit-full-time-clt-jobs-count": {
-      property: "full_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "full-time-clt"
+      },
       label: "Aggregate full time CLT jobs",
       inputType: "number"
     },
     "pro-pit-part-time-jobs-count": {
-      property: "part_time_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time"
+      },
       label: "Aggregate part time jobs",
       inputType: "number"
     },
     "pro-pit-part-time-clt-jobs-count": {
-      property: "part_time_clt_jobs_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "jobs",
+        collection: "part-time-clt"
+      },
       label: "Aggregate part time CLT jobs",
       inputType: "number"
     },
     "pro-pit-volunteers-count": {
-      property: "volunteers_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "volunteers",
+        collection: "volunteer"
+      },
       label: "Aggregate volunteers",
       inputType: "number"
     },
     "pro-pit-beneficiaries-count": {
-      property: "all_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "all-beneficiaries",
+        collection: "all"
+      },
       label: "Aggregate beneficiaries",
       inputType: "number"
     },
     "pro-pit-indirect-beneficiaries-count": {
-      property: "indirect_beneficiaries_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "indirect-beneficiaries",
+        collection: "indirect"
+      },
       label: "Aggregate indirect beneficiaries",
       inputType: "number"
     },
     "pro-pit-associates-count": {
-      property: "all_associates_aggregate",
+      virtual: {
+        type: "demographicsAggregate",
+        demographicsType: "associates",
+        collection: "all"
+      },
       label: "Aggregate associates",
       inputType: "number"
     },
     "pro-pit-goal-trees-restored-description": {
-      property: "goal_trees_restored_description",
+      property: "goalTreesRestoredDescription",
       label: "How did you calculate the estimated number of trees planted-restored?",
       inputType: "long-text"
     },
     "pro-pit-jobs-created-beneficiaries-description": {
-      property: "jobs_created_beneficiaries_description",
+      property: "jobsCreatedBeneficiariesDescription",
       label:
         "How did you arrive at the provided estimate of number of jobs created, direct and indirect beneficiaries?",
       inputType: "long-text"

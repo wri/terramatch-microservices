@@ -159,9 +159,12 @@ export class EntityStatusUpdateEmail extends EmailSender {
   private async getEntityUsers(entity: EntityModel) {
     // FinancialReport does not have a projectId, so we send email to the createdBy user
     if (entity instanceof FinancialReport) {
-      const user = await User.findByPk(entity.createdBy, {
-        attributes: ["emailAddress", "locale"]
-      });
+      const user =
+        entity.createdBy == null
+          ? undefined
+          : await User.findByPk(entity.createdBy, {
+              attributes: ["emailAddress", "locale"]
+            });
       return user != null ? [user] : [];
     }
 

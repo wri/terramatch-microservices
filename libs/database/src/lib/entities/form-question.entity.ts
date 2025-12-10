@@ -7,15 +7,21 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { I18nItem } from "./i18n-item.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormSection } from "./form-section.entity";
 import { InputType } from "../constants/linked-fields";
+import { Dictionary } from "lodash";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  form: (formUuid: string) => ({ where: { formSectionId: { [Op.in]: FormSection.forForm(formUuid) } } })
+}))
 @Table({
   tableName: "form_questions",
   underscored: true,
@@ -28,6 +34,10 @@ import { InputType } from "../constants/linked-fields";
   }
 })
 export class FormQuestion extends Model<FormQuestion> {
+  static forForm(formUuid: string) {
+    return chainScope(this, "form", formUuid) as typeof FormQuestion;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -150,4 +160,14 @@ export class FormQuestion extends Model<FormQuestion> {
   @AllowNull
   @JsonColumn()
   years: number[] | null;
+
+  /**
+   * Returns true if this question is hidden based on the parent conditional's answer
+   */
+  isHidden(answers: Dictionary<unknown>, formQuestions: FormQuestion[]) {
+    const parent = this.parentId == null ? undefined : formQuestions.find(({ uuid }) => uuid == this.parentId);
+    if (parent == null || parent.inputType !== "conditional" || this.showOnParentCondition == null) return false;
+
+    return (answers[parent.uuid] ?? false) !== this.showOnParentCondition;
+  }
 }

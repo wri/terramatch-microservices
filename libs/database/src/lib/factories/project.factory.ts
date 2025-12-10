@@ -4,7 +4,7 @@ import { faker } from "@faker-js/faker";
 import { UPDATE_REQUEST_STATUSES } from "../constants/status";
 import { ApplicationFactory } from "./application.factory";
 import { OrganisationFactory } from "./organisation.factory";
-import { FRAMEWORK_KEYS } from "../constants/framework";
+import { FRAMEWORK_KEYS } from "../constants";
 import { fakerCountries, fakerStates } from "../util/gadm-mock-data";
 
 const CONTINENTS = ["africa", "australia", "south-america", "asia", "north-america"];

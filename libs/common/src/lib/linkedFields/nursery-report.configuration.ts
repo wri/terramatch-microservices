@@ -2,19 +2,18 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { NurseryReport } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const NurseryReportConfiguration: LinkedFieldConfiguration = {
+export const NurseryReportConfiguration: LinkedFieldConfiguration<NurseryReport> = {
   label: "Nursery Report",
-  laravelModelType: NurseryReport.LARAVEL_TYPE,
   fields: {
     "nur-rep-title": { property: "title", label: "Title", inputType: "text" },
     "nur-rep-seedlings-young-trees": {
-      property: "seedlings_young_trees",
+      property: "seedlingsYoungTrees",
       label: "Seedlings young trees",
       inputType: "number"
     },
-    "nur-rep-interesting-facts": { property: "interesting_facts", label: "Interesting facts", inputType: "long-text" },
-    "nur-rep-site-prep": { property: "site_prep", label: "Site prep", inputType: "long-text" },
-    "nur-rep-shared-drive-link": { property: "shared_drive_link", label: "Shared drive link", inputType: "url" }
+    "nur-rep-interesting-facts": { property: "interestingFacts", label: "Interesting facts", inputType: "long-text" },
+    "nur-rep-site-prep": { property: "sitePrep", label: "Site prep", inputType: "long-text" },
+    "nur-rep-shared-drive-link": { property: "sharedDriveLink", label: "Shared drive link", inputType: "url" }
   },
   fileCollections: {
     "nur-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },

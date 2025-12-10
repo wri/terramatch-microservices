@@ -2,17 +2,16 @@ import { SrpReport } from "@terramatch-microservices/database/entities";
 import { LinkedFieldConfiguration } from "@terramatch-microservices/database/constants/linked-fields";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const SrpReportConfiguration: LinkedFieldConfiguration = {
+export const SrpReportConfiguration: LinkedFieldConfiguration<SrpReport> = {
   label: "Annual Socio Economic Restoration Report",
-  laravelModelType: SrpReport.LARAVEL_TYPE,
   fields: {
     "srp-other-partners-description": {
-      property: "other_restoration_partners_description",
+      property: "otherRestorationPartnersDescription",
       label: "Other Restoration Partners Description",
       inputType: "long-text"
     },
     "srp-total-unique-restoration-partners": {
-      property: "total_unique_restoration_partners",
+      property: "totalUniqueRestorationPartners",
       label: "Total Unique Restoration Partners",
       inputType: "number"
     }

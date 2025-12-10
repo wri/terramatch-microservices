@@ -1,5 +1,13 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Demographic, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
+import {
+  Demographic,
+  DemographicEntry,
+  Project,
+  ProjectReport,
+  ProjectUser,
+  SiteReport,
+  TreeSpecies
+} from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -8,10 +16,14 @@ import {
   ApplicationFactory,
   DemographicEntryFactory,
   DemographicFactory,
+  EntityFormFactory,
+  FormSubmissionFactory,
+  MediaFactory,
   NurseryFactory,
   NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
+  ProjectPitchFactory,
   ProjectReportFactory,
   ProjectUserFactory,
   SeedingFactory,
@@ -23,7 +35,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { flatten, reverse, sortBy, sum, sumBy } from "lodash";
+import { Dictionary, flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -37,6 +49,7 @@ import { EntityProcessor } from "./entity-processor";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
+  let mediaService: DeepMocked<MediaService>;
   let policyService: DeepMocked<PolicyService>;
   let userId: number;
 
@@ -49,7 +62,7 @@ describe("ProjectProcessor", () => {
 
     const module = await Test.createTestingModule({
       providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         EntitiesService
@@ -380,26 +393,21 @@ describe("ProjectProcessor", () => {
       const treeCounts = approvedSiteReports.map(({ numTreesRegenerating }) => numTreesRegenerating);
       const treeSpecies = flatten(
         await Promise.all(
-          approvedSiteReports.map(({ id }) =>
-            TreeSpeciesFactory.forSiteReportTreePlanted.createMany(faker.number.int({ min: 1, max: 10 }), {
-              speciesableId: id
-            })
+          approvedSiteReports.map(report =>
+            TreeSpeciesFactory.siteReportTreePlanted(report).createMany(faker.number.int({ min: 1, max: 10 }))
           )
         )
       );
-      await TreeSpeciesFactory.forSiteReportNonTree.createMany(5, { speciesableId: approvedSiteReports[0].id });
-      await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(2, {
-        speciesableId: approvedSiteReports[0].id,
-        hidden: true
-      });
+      await TreeSpeciesFactory.siteReportNonTree(approvedSiteReports[0]).createMany(5);
+      await TreeSpeciesFactory.siteReportTreePlanted(approvedSiteReports[0]).createMany(2, { hidden: true });
       const seedings = flatten(
         await Promise.all(
-          approvedSiteReports.map(({ id }) =>
-            SeedingFactory.forSiteReport.createMany(faker.number.int({ min: 1, max: 10 }), { seedableId: id })
+          approvedSiteReports.map(report =>
+            SeedingFactory.siteReport(report).createMany(faker.number.int({ min: 1, max: 10 }))
           )
         )
       );
-      await SeedingFactory.forSiteReport.createMany(2, { seedableId: approvedSiteReports[0].id, hidden: true });
+      await SeedingFactory.siteReport(approvedSiteReports[0]).createMany(2, { hidden: true });
       const regeneratedTreesCount = sum(treeCounts);
       const treesPlantedCount = sumBy(treeSpecies, "amount");
       const seedsPlantedCount = sumBy(seedings, "amount");
@@ -420,54 +428,32 @@ describe("ProjectProcessor", () => {
       // Because of the "demographics cutoff" logic, we have to carefully construct a set of
       // workdays that are on site and project reports, with some that are from before the cutoff,
       // and some that are after.
-      const siteDemographicAfterCutoff = await DemographicFactory.forSiteReportWorkday.create({
-        demographicalId: approvedSiteReports[0].id
-      });
-      const siteDemographicBeforeCutoff = await DemographicFactory.forSiteReportWorkday.create({
-        demographicalId: approvedSiteReports[2].id
-      });
-      const projectDemographicAfterCutoff = await DemographicFactory.forProjectReportWorkday.create({
-        demographicalId: approvedProjectReports[0].id
-      });
-      const projectDemographicBeforeCutoff = await DemographicFactory.forProjectReportWorkday.create({
-        demographicalId: approvedProjectReports[1].id
-      });
-      let workdayCountAfterCutoff = (
-        await DemographicEntryFactory.create({ demographicId: siteDemographicAfterCutoff.id, type: "gender" })
-      ).amount;
-      workdayCountAfterCutoff += (
-        await DemographicEntryFactory.create({ demographicId: projectDemographicAfterCutoff.id, type: "gender" })
-      ).amount;
-      let workdayCountBeforeCutoff = (
-        await DemographicEntryFactory.create({ demographicId: siteDemographicBeforeCutoff.id, type: "gender" })
-      ).amount;
-      workdayCountBeforeCutoff += (
-        await DemographicEntryFactory.create({ demographicId: projectDemographicBeforeCutoff.id, type: "gender" })
-      ).amount;
-      await DemographicEntryFactory.create({ demographicId: siteDemographicAfterCutoff.id, type: "age" });
-      await DemographicEntryFactory.create({ demographicId: projectDemographicBeforeCutoff.id, type: "age" });
+      const siteDemographicAfterCutoff = await DemographicFactory.siteReportWorkday(approvedSiteReports[0]).create();
+      const siteDemographicBeforeCutoff = await DemographicFactory.siteReportWorkday(approvedSiteReports[2]).create();
+      const projectDemographicAfterCutoff = await DemographicFactory.projectReportWorkday(
+        approvedProjectReports[0]
+      ).create();
+      const projectDemographicBeforeCutoff = await DemographicFactory.projectReportWorkday(
+        approvedProjectReports[1]
+      ).create();
+      let workdayCountAfterCutoff = (await DemographicEntryFactory.gender(siteDemographicAfterCutoff).create()).amount;
+      workdayCountAfterCutoff += (await DemographicEntryFactory.gender(projectDemographicAfterCutoff).create()).amount;
+      let workdayCountBeforeCutoff = (await DemographicEntryFactory.gender(siteDemographicBeforeCutoff).create())
+        .amount;
+      workdayCountBeforeCutoff += (await DemographicEntryFactory.gender(projectDemographicBeforeCutoff).create())
+        .amount;
+      await DemographicEntryFactory.age(siteDemographicAfterCutoff).create();
+      await DemographicEntryFactory.age(projectDemographicBeforeCutoff).create();
       const selfReportedWorkdayCount = (reports: (SiteReport | ProjectReport)[]) =>
         sumBy(reports, "workdaysPaid") + sumBy(reports, "workdaysVolunteer");
 
       const totalJobsCreated = sum(
         await Promise.all(
-          approvedProjectReports.map(async ({ id }) => {
-            const fullTime = await DemographicFactory.forProjectReportJobs.create({
-              demographicalId: id,
-              collection: FULL_TIME
-            });
-            const partTime = await DemographicFactory.forProjectReportJobs.create({
-              demographicalId: id,
-              collection: PART_TIME
-            });
-            const { amount: fullTimeAmount } = await DemographicEntryFactory.create({
-              demographicId: fullTime.id,
-              type: "gender"
-            });
-            const { amount: partTimeAmount } = await DemographicEntryFactory.create({
-              demographicId: partTime.id,
-              type: "gender"
-            });
+          approvedProjectReports.map(async report => {
+            const fullTime = await DemographicFactory.projectReportJobs(report).create({ collection: FULL_TIME });
+            const partTime = await DemographicFactory.projectReportJobs(report).create({ collection: PART_TIME });
+            const { amount: fullTimeAmount } = await DemographicEntryFactory.gender(fullTime).create();
+            const { amount: partTimeAmount } = await DemographicEntryFactory.gender(partTime).create();
             return fullTimeAmount + partTimeAmount;
           })
         )
@@ -513,6 +499,161 @@ describe("ProjectProcessor", () => {
           projectPitchUuid: null
         }
       });
+    });
+  });
+
+  describe("create", () => {
+    it("throws if a valid form is not provided", async () => {
+      await expect(processor.create({ formUuid: "fake-uuid" })).rejects.toThrow(
+        "Invalid form for project creation: fake-uuid"
+      );
+
+      let form = await EntityFormFactory.site().create({ frameworkKey: "terrafund" });
+      await expect(processor.create({ formUuid: form.uuid })).rejects.toThrow(
+        `Invalid form for project creation: ${form.uuid}`
+      );
+
+      form = await EntityFormFactory.project().create({ frameworkKey: null });
+      await expect(processor.create({ formUuid: form.uuid })).rejects.toThrow(
+        `Invalid form for project creation: ${form.uuid}`
+      );
+    });
+
+    it("throws if an invalid application UUID is provided", async () => {
+      const form = await EntityFormFactory.project().create();
+      await expect(processor.create({ formUuid: form.uuid, applicationUuid: "fake-uuid" })).rejects.toThrow(
+        "Invalid application for project creation: fake-uuid"
+      );
+    });
+
+    it("throws if the user doesn't have a valid org", async () => {
+      const form = await EntityFormFactory.project().create();
+      await expect(processor.create({ formUuid: form.uuid })).rejects.toThrow(
+        "Current user does not have an organisation associated"
+      );
+    });
+
+    it("throws if the application doesn't have a valid org", async () => {
+      const form = await EntityFormFactory.project().create();
+      const application = await ApplicationFactory.create({ organisationUuid: null });
+      await expect(processor.create({ formUuid: form.uuid, applicationUuid: application.uuid })).rejects.toThrow(
+        `Invalid application for project creation: ${application.uuid}`
+      );
+    });
+
+    it("creates a test project is the org is a test org", async () => {
+      const org = await OrganisationFactory.create({ isTest: true });
+      const user = await UserFactory.create({ organisationId: org.id });
+      (policyService as unknown as Dictionary<unknown>).userId = user.id;
+      const form = await EntityFormFactory.project().create();
+      const project = await processor.create({ formUuid: form.uuid });
+      expect(project.isTest).toBe(true);
+    });
+
+    it("creates blank project if there is no application", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      (policyService as unknown as Dictionary<unknown>).userId = user.id;
+      const form = await EntityFormFactory.project().create();
+      const project = await processor.create({ formUuid: form.uuid });
+      expect(project.isTest).toBe(false);
+      expect(project.frameworkKey).toBe(form.frameworkKey);
+      expect(project.organisationId).toBe(org.id);
+    });
+
+    it("establishes a project user connection", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      (policyService as unknown as Dictionary<unknown>).userId = user.id;
+      const form = await EntityFormFactory.project().create();
+      const project = await processor.create({ formUuid: form.uuid });
+      const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
+      expect(projectUser).toBeDefined();
+    });
+
+    it("throws if the application doesn't have a pitch", async () => {
+      const org = await OrganisationFactory.create();
+      const form = await EntityFormFactory.project().create();
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      await expect(processor.create({ formUuid: form.uuid, applicationUuid: application.uuid })).rejects.toThrow(
+        `No pitch found for application: ${application.uuid}`
+      );
+    });
+
+    it("copies application attributes when creating the project", async () => {
+      const org = await OrganisationFactory.create();
+      const form = await EntityFormFactory.project().create();
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      const pitch = await ProjectPitchFactory.create({
+        // Spot check a couple attributes
+        projectName: "Test Pitch",
+        descriptionOfProjectTimeline: faker.lorem.paragraph()
+      });
+      await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
+
+      const project = await processor.create({ formUuid: form.uuid, applicationUuid: application.uuid });
+      expect(project.applicationId).toBe(application.id);
+      expect(project.organisationId).toBe(org.id);
+      expect(project.frameworkKey).toBe(form.frameworkKey);
+      expect(project.name).toBe(pitch.projectName);
+      expect(project.descriptionOfProjectTimeline).toBe(pitch.descriptionOfProjectTimeline);
+    });
+
+    it("copies trees, demographics and media from the pitch when creating the project", async () => {
+      const org = await OrganisationFactory.create();
+      const form = await EntityFormFactory.project().create();
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      const pitch = await ProjectPitchFactory.create({});
+      await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
+
+      const pitchTrees = await TreeSpeciesFactory.projectPitchTreePlanted(pitch).createMany(3);
+      // hidden trees should be ignored
+      await TreeSpeciesFactory.projectPitchTreePlanted(pitch).create({ hidden: true });
+
+      const pitchDemographic = await DemographicFactory.projectPitch(pitch).create();
+      const pitchEntries = await Promise.all([
+        DemographicEntryFactory.gender(pitchDemographic).create({ amount: 10 }),
+        DemographicEntryFactory.age(pitchDemographic).create({ amount: 10 })
+      ]);
+
+      const pitchMedia = await MediaFactory.projectPitch(pitch).create({ collectionName: "detailed_project_budget" });
+      await MediaFactory.projectPitch(pitch).create({ collectionName: "ignored_collection" });
+
+      const project = await processor.create({ formUuid: form.uuid, applicationUuid: application.uuid });
+      const projectTrees = await TreeSpecies.for(project).findAll();
+      expect(projectTrees.length).toBe(pitchTrees.length);
+      for (const { collection, name, taxonId, amount } of pitchTrees) {
+        expect(projectTrees).toContainEqual(
+          expect.objectContaining({
+            collection,
+            name,
+            taxonId,
+            amount
+          })
+        );
+      }
+
+      const projectDemographics = await Demographic.for(project).findAll();
+      expect(projectDemographics.length).toBe(1);
+      expect(projectDemographics[0].type).toBe(pitchDemographic.type);
+      expect(projectDemographics[0].collection).toBe(pitchDemographic.collection);
+      const projectEntries = await DemographicEntry.demographic(projectDemographics[0].id).findAll();
+      expect(projectEntries.length).toBe(pitchEntries.length);
+      for (const { type, subtype, amount } of pitchEntries) {
+        expect(projectEntries).toContainEqual(
+          expect.objectContaining({
+            type,
+            subtype,
+            amount
+          })
+        );
+      }
+
+      expect(mediaService.duplicateMedia).toHaveBeenCalledTimes(1);
+      expect(mediaService.duplicateMedia).toHaveBeenCalledWith(
+        expect.objectContaining({ uuid: pitchMedia.uuid }),
+        project
+      );
     });
   });
 });

@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Param, Query, Request } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { OptionLabelDto } from "./dto/option-label.dto";
@@ -14,6 +14,7 @@ import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatc
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 export type OptionLabelModel = {
   slug: string;
@@ -32,10 +33,10 @@ export class OptionLabelsController {
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
   @ExceptionResponse(BadRequestException, { description: "Set of slugs is required" })
   @ExceptionResponse(NotFoundException, { description: "No records matching the given slugs exist" })
-  async optionLabelsIndex(@Query("ids") ids: string[], @Request() { authenticatedUserId }) {
+  async optionLabelsIndex(@Query("ids") ids: string[]) {
     if (isEmpty(ids)) throw new BadRequestException("Set of ids is required");
 
-    const locale = await User.findLocale(authenticatedUserId);
+    const locale = await User.findLocale(authenticatedUserId());
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const listOptions = (await FormOptionListOption.findAll({
@@ -71,8 +72,8 @@ export class OptionLabelsController {
   @ApiParam({ name: "listKey", type: "string", description: "The list key" })
   @ExceptionResponse(NotFoundException, { description: "List for listKey not found" })
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
-  async findList(@Param("listKey") listKey: string, @Request() { authenticatedUserId }) {
-    const locale = await User.findLocale(authenticatedUserId);
+  async findList(@Param("listKey") listKey: string) {
+    const locale = await User.findLocale(authenticatedUserId());
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const list = await FormOptionList.findOne({

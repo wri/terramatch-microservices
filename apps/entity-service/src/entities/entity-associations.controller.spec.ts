@@ -5,7 +5,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Test } from "@nestjs/testing";
 import { EntityAssociationsController } from "./entity-associations.controller";
 import { AssociationProcessor } from "./processors/association-processor";
-import { DemographicDto } from "./dto/demographic.dto";
+import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { serialize } from "@terramatch-microservices/common/util/testing";
@@ -93,8 +93,8 @@ describe("EntityAssociationsController", () => {
 
     it("should add all DTOs to the document", async () => {
       const pr = await ProjectReportFactory.create();
-      await DemographicFactory.forProjectReportWorkday.create({ demographicalId: pr.id });
-      await DemographicFactory.forProjectReportJobs.create({ demographicalId: pr.id });
+      await DemographicFactory.projectReportWorkday(pr).create();
+      await DemographicFactory.projectReportJobs(pr).create();
       const result = serialize(
         await controller.associationIndex(
           {

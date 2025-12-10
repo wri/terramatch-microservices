@@ -5,7 +5,6 @@ import { BadRequestException } from "@nestjs/common";
 import { Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { SrpReportFullDto, SrpReportLightDto, SrpReportMedia } from "../dto/srp-report.dto";
-import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -27,8 +26,7 @@ export class SrpReportProcessor extends ReportProcessor<
   SrpReport,
   SrpReportLightDto,
   SrpReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = SrpReportLightDto;
   readonly FULL_DTO = SrpReportFullDto;

@@ -27,19 +27,15 @@ import { Organisation } from "./organisation.entity";
 import { FinancialReport } from "./financial-report.entity";
 
 @Scopes(() => ({
-  organisationByUuid: (uuid: string) => ({ where: { organisationId: uuid } }),
+  organisation: (uuid: string) => ({ where: { organisationId: uuid, financialReportId: null } }),
   financialReport: (id: number) => ({ where: { financialReportId: id } })
 }))
-@Table({
-  tableName: "v2_funding_types",
-  underscored: true,
-  paranoid: true
-})
+@Table({ tableName: "v2_funding_types", underscored: true, paranoid: true })
 export class FundingType extends Model<InferAttributes<FundingType>, InferCreationAttributes<FundingType>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingType";
 
-  static organisationByUuid(uuid: string) {
-    return chainScope(this, "organisationByUuid", uuid) as typeof FundingType;
+  static organisation(uuid: string) {
+    return chainScope(this, "organisation", uuid) as typeof FundingType;
   }
 
   static financialReport(id: number) {

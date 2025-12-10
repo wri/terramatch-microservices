@@ -2,7 +2,7 @@
 import { FormsService } from "./forms.service";
 import { faker } from "@faker-js/faker";
 import { Test } from "@nestjs/testing";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { LocalizationService, Translations } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { NotFoundException } from "@nestjs/common";
@@ -25,9 +25,9 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { pick } from "lodash";
-import { mockUserId } from "@terramatch-microservices/common/policies/policy.service.spec";
+import { Attributes, Model } from "sequelize";
 
 describe("FormsService", () => {
   let service: FormsService;
@@ -110,7 +110,7 @@ describe("FormsService", () => {
     it("adds the light DTOs", async () => {
       mediaService.getUrl.mockReturnValue("fake-url");
       const forms = [...(await FormFactory.createMany(2)), await FormFactory.create({ published: false })];
-      await MediaFactory.forForm.create({ modelId: forms[0].id, collectionName: "banner" });
+      await MediaFactory.form(forms[0]).create({ collectionName: "banner" });
       const document = serialize(await service.addIndex(buildJsonApi<FormLightDto>(FormLightDto), {}));
       const dtos = document.data as Resource[];
       expect(dtos.length).toBe(forms.length);
@@ -142,19 +142,29 @@ describe("FormsService", () => {
         3: "Third Translation",
         4: "Fourth Translation"
       });
+      // Copied from the original service.
+      localizationService.translateFields.mockImplementation(
+        <M extends Model, K extends (keyof Attributes<M>)[]>(translations: Translations, model: M, fields: K) =>
+          fields.reduce(
+            (translated, field) => ({
+              ...translated,
+              [field]: translations[model[`${String(field)}Id` as Attributes<M>[number]] ?? -1] ?? model[field]
+            }),
+            {} as Record<(typeof fields)[number], string>
+          )
+      );
 
       const form = await FormFactory.create({ titleId: 1 });
-      await MediaFactory.forForm.create({ modelId: form.id, collectionName: "banner" });
+      await MediaFactory.form(form).create({ collectionName: "banner" });
       const sections = [
-        await FormSectionFactory.create({ order: 1, titleId: 2, formId: form.uuid }),
-        await FormSectionFactory.create({ order: 0, formId: form.uuid })
+        await FormSectionFactory.form(form).create({ order: 1, titleId: 2 }),
+        await FormSectionFactory.form(form).create({ order: 0 })
       ];
 
       // one text question in the first section
-      const textQuestion = await FormQuestionFactory.create({
+      const textQuestion = await FormQuestionFactory.section(sections[0]).create({
         order: 0,
         labelId: 3,
-        formSectionId: sections[0].id,
         validation: { required: true }
       });
       const textQuestionMatch = {
@@ -167,7 +177,7 @@ describe("FormsService", () => {
       };
 
       // one select question in the first section
-      const selectQuestion = await FormQuestionFactory.create({
+      const selectQuestion = await FormQuestionFactory.section(sections[0]).create({
         order: 1,
         descriptionId: 4,
         formSectionId: sections[0].id,
@@ -175,10 +185,10 @@ describe("FormsService", () => {
         multiChoice: true
       });
       const options = [
-        await FormQuestionOptionFactory.create({ order: 1, labelId: 2, formQuestionId: selectQuestion.id }),
-        await FormQuestionOptionFactory.create({ order: 0, formQuestionId: selectQuestion.id })
+        await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 1, labelId: 2 }),
+        await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 0 })
       ];
-      await MediaFactory.forFormQuestionOption.create({ modelId: options[1].id, collectionName: "image" });
+      await MediaFactory.formQuestionOption(options[1]).create({ collectionName: "image" });
       const selectQuestionMatch = {
         inputType: "select",
         label: selectQuestion.label ?? null,
@@ -204,14 +214,13 @@ describe("FormsService", () => {
       };
 
       // one condition question in the second section
-      const conditionQuestion = await FormQuestionFactory.create({
+      const conditionQuestion = await FormQuestionFactory.section(sections[1]).create({
         order: 1,
         placeholderId: 1,
         formSectionId: sections[1].id,
         inputType: "conditional"
       });
-      const conditionChild = await FormQuestionFactory.create({
-        formSectionId: sections[1].id,
+      const conditionChild = await FormQuestionFactory.section(sections[1]).create({
         parentId: conditionQuestion.uuid
       });
       const conditionQuestionMatch = {
@@ -230,16 +239,16 @@ describe("FormsService", () => {
       };
 
       // one table input question in the second section
-      const tableQuestion = await FormQuestionFactory.create({
+      const tableQuestion = await FormQuestionFactory.section(sections[1]).create({
         order: 0,
         formSectionId: sections[1].id,
         inputType: "tableInput"
       });
       const headers = [
-        await FormTableHeaderFactory.create({ order: 1, labelId: 3, formQuestionId: tableQuestion.id }),
-        await FormTableHeaderFactory.create({ order: 0, formQuestionId: tableQuestion.id })
+        await FormTableHeaderFactory.forQuestion(tableQuestion).create({ order: 1, labelId: 3 }),
+        await FormTableHeaderFactory.forQuestion(tableQuestion).create({ order: 0 })
       ];
-      const tableChild = await FormQuestionFactory.create({
+      const tableChild = await FormQuestionFactory.section(sections[1]).create({
         formSectionId: sections[1].id,
         parentId: tableQuestion.uuid
       });
@@ -485,12 +494,11 @@ describe("FormsService", () => {
 
     it("updates or creates table headers as needed", async () => {
       const form = await FormFactory.create();
-      const section = await FormSectionFactory.create({ formId: form.uuid });
-      const question = await FormQuestionFactory.create({ formSectionId: section.id, inputType: "tableInput" });
-      const headers = [
-        await FormTableHeaderFactory.create({ formQuestionId: question.id, order: 0 }),
-        await FormTableHeaderFactory.create({ formQuestionId: question.id, order: 1 })
-      ];
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create({ inputType: "tableInput" });
+      const headers = await Promise.all(
+        [0, 1].map(order => FormTableHeaderFactory.forQuestion(question).create({ order }))
+      );
       const attributes: StoreFormAttributes = {
         title: form.title,
         frameworkKey: form.frameworkKey ?? undefined,
@@ -524,13 +532,11 @@ describe("FormsService", () => {
 
     it("updates or creates options as needed", async () => {
       const form = await FormFactory.create();
-      const section = await FormSectionFactory.create({ formId: form.uuid });
-      const question = await FormQuestionFactory.create({ formSectionId: section.id, inputType: "select" });
-      const options = [
-        await FormQuestionOptionFactory.create({ formQuestionId: question.id, order: 0 }),
-        await FormQuestionOptionFactory.create({ formQuestionId: question.id, order: 1 }),
-        await FormQuestionOptionFactory.create({ formQuestionId: question.id, order: 2 })
-      ];
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create({ inputType: "select" });
+      const options = await Promise.all(
+        [0, 1, 2].map(order => FormQuestionOptionFactory.forQuestion(question).create({ order }))
+      );
       const attributes: StoreFormAttributes = {
         title: form.title,
         frameworkKey: form.frameworkKey ?? undefined,
@@ -576,11 +582,11 @@ describe("FormsService", () => {
 
     it("removes questions that aren't included in the attributes", async () => {
       const form = await FormFactory.create();
-      const section = await FormSectionFactory.create({ formId: form.uuid });
+      const section = await FormSectionFactory.form(form).create();
       const questions = [
-        await FormQuestionFactory.create({ formSectionId: section.id, order: 0 }),
-        await FormQuestionFactory.create({ formSectionId: section.id, order: 1 }),
-        await FormQuestionFactory.create({ formSectionId: section.id, order: 2 })
+        await FormQuestionFactory.section(section).create({ order: 0 }),
+        await FormQuestionFactory.section(section).create({ order: 1 }),
+        await FormQuestionFactory.section(section).create({ order: 2 })
       ];
       const attributes: StoreFormAttributes = {
         title: form.title,
@@ -612,11 +618,11 @@ describe("FormsService", () => {
     it("removes sections that aren't included in the attributes", async () => {
       const form = await FormFactory.create();
       const sections = [
-        await FormSectionFactory.create({ formId: form.uuid, order: 0 }),
-        await FormSectionFactory.create({ formId: form.uuid, order: 1 }),
-        await FormSectionFactory.create({ formId: form.uuid, order: 2 })
+        await FormSectionFactory.form(form).create({ order: 0 }),
+        await FormSectionFactory.form(form).create({ order: 1 }),
+        await FormSectionFactory.form(form).create({ order: 2 })
       ];
-      const questions = await Promise.all(sections.map(({ id }) => FormQuestionFactory.create({ formSectionId: id })));
+      const questions = await Promise.all(sections.map(section => FormQuestionFactory.section(section).create()));
       const attributes: StoreFormAttributes = {
         title: form.title,
         frameworkKey: form.frameworkKey ?? undefined,

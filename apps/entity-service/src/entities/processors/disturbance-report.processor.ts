@@ -17,7 +17,7 @@ import {
   DisturbanceReportLightDto,
   DisturbanceReportMedia
 } from "../dto/disturbance-report.dto";
-import { DisturbanceReportEntryDto } from "../dto/disturbance-report-entry.dto";
+import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
@@ -94,8 +94,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   DisturbanceReport,
   DisturbanceReportLightDto,
   DisturbanceReportFullDto,
-  ReportUpdateAttributes,
-  EntityCreateAttributes
+  ReportUpdateAttributes
 > {
   readonly LIGHT_DTO = DisturbanceReportLightDto;
   readonly FULL_DTO = DisturbanceReportFullDto;
@@ -294,18 +293,22 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   async create(createPayload: EntityCreateAttributes) {
-    const project = await Project.findOne({ where: { uuid: createPayload.parentUuid } });
+    const project = await Project.findOne({
+      where: { uuid: createPayload.parentUuid },
+      attributes: ["frameworkKey", "id"]
+    });
     if (project == null) {
       throw new BadRequestException(`Project with UUID ${createPayload.parentUuid} not found`);
     }
 
-    const disturbanceReport = await DisturbanceReport.create({
+    const disturbanceReport = await this.authorizedCreation(DisturbanceReport, {
       frameworkKey: project.frameworkKey,
       projectId: project.id,
       status: "due",
       updateRequestStatus: "no-update",
-      title: "Disturbance Report"
-    } as DisturbanceReport);
+      title: "Disturbance Report",
+      createdBy: this.entitiesService.userId
+    });
 
     await DisturbanceReportEntry.bulkCreate(
       REPORT_ENTRIES.map(entry => ({

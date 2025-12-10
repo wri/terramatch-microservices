@@ -9,16 +9,7 @@ import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator"
 import { JsonApiDataDto, JsonApiMultiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Type } from "class-transformer";
 
-export class EntityUpdateAttributes {
-  @IsOptional()
-  @IsIn(ENTITY_STATUSES)
-  @ApiProperty({
-    description: "Request to change to the status of the given entity",
-    required: false,
-    enum: ENTITY_STATUSES
-  })
-  status?: string;
-
+export class FeedbackFieldsAttributes {
   @IsOptional()
   @IsString()
   @ApiProperty({ description: "Specific feedback for the PD", required: false, type: String })
@@ -36,6 +27,17 @@ export class EntityUpdateAttributes {
   feedbackFields?: string[];
 }
 
+export class EntityUpdateAttributes extends FeedbackFieldsAttributes {
+  @IsOptional()
+  @IsIn(ENTITY_STATUSES)
+  @ApiProperty({
+    description: "Request to change to the status of the given entity",
+    required: false,
+    enum: ENTITY_STATUSES
+  })
+  status?: EntityStatus;
+}
+
 export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @IsOptional()
   @IsBoolean()
@@ -43,18 +45,7 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   isTest?: boolean;
 }
 
-export class SiteUpdateAttributes extends EntityUpdateAttributes {
-  @IsOptional()
-  @IsIn(ENTITY_STATUSES)
-  @ApiProperty({
-    description: "Request to change to the status of the given site",
-    required: false,
-    enum: ENTITY_STATUSES
-  })
-  status?: EntityStatus;
-}
-
-export class ReportUpdateAttributes extends EntityUpdateAttributes {
+export class ReportUpdateAttributes extends FeedbackFieldsAttributes {
   @IsOptional()
   @IsIn(REPORT_STATUSES)
   @ApiProperty({
@@ -71,7 +62,7 @@ export class ReportUpdateAttributes extends EntityUpdateAttributes {
 }
 
 export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}
-export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, SiteUpdateAttributes) {}
+export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, EntityUpdateAttributes) {}
 export class NurseryUpdateData extends JsonApiDataDto({ type: "nurseries" }, EntityUpdateAttributes) {}
 export class ProjectReportUpdateData extends JsonApiDataDto({ type: "projectReports" }, ReportUpdateAttributes) {}
 export class SiteReportUpdateData extends JsonApiDataDto({ type: "siteReports" }, ReportUpdateAttributes) {}
@@ -83,11 +74,7 @@ export class DisturbanceReportUpdateData extends JsonApiDataDto(
 ) {}
 export class SrpReportUpdateData extends JsonApiDataDto({ type: "srpReports" }, ReportUpdateAttributes) {}
 
-export type EntityUpdateData =
-  | ProjectUpdateAttributes
-  | SiteUpdateAttributes
-  | ReportUpdateAttributes
-  | EntityUpdateAttributes;
+export type EntityUpdateData = ProjectUpdateAttributes | ReportUpdateAttributes | EntityUpdateAttributes;
 export class EntityUpdateBody extends JsonApiMultiBodyDto([
   ProjectUpdateData,
   SiteUpdateData,

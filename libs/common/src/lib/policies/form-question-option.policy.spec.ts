@@ -1,7 +1,8 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, expectCannot } from "./policy.service.spec";
 import { FormQuestionOptionFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("FormQuestionOptionPolicy", () => {
   let service: PolicyService;
@@ -22,7 +23,7 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("custom-forms-manage");
-    const option = await FormQuestionOptionFactory.create();
+    const option = await FormQuestionOptionFactory.forQuestion().create();
     await expectCan(service, ["uploadFiles"], option);
   });
 
@@ -30,7 +31,7 @@ describe("FormQuestionOptionPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions("framework-terrafund");
-    const option = await FormQuestionOptionFactory.create();
+    const option = await FormQuestionOptionFactory.forQuestion().create();
     await expectCannot(service, ["uploadFiles"], option);
   });
 });

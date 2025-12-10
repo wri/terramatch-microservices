@@ -1,7 +1,7 @@
-import { PolygonGeometry, SitePolygon, Site, PointGeometry } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
-import { NotFoundException, InternalServerErrorException, BadRequestException } from "@nestjs/common";
-import { Transaction, QueryTypes } from "sequelize";
+import { PointGeometry, PolygonGeometry, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { PolygonValidationResult, ValidationResult, Validator } from "./validator.interface";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { QueryTypes, Transaction } from "sequelize";
 import { Feature } from "@terramatch-microservices/database/constants";
 
 interface DuplicateInfo {
@@ -182,20 +182,16 @@ export class DuplicateGeometryValidator implements Validator {
   }
 
   private async checkGeometryDuplicates(targetUuid: string, candidateUuids: string[]): Promise<DuplicateInfo[]> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     if (candidateUuids.length === 0) {
       return [];
     }
 
-    const transaction = await PolygonGeometry.sequelize.transaction({
+    const transaction = await PolygonGeometry.sql.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 
     try {
-      const bboxFilteredResults = (await PolygonGeometry.sequelize.query(
+      const bboxFilteredResults = (await PolygonGeometry.sql.query(
         `
           SELECT candidate.uuid as candidateUuid
           FROM polygon_geometry target
@@ -218,9 +214,9 @@ export class DuplicateGeometryValidator implements Validator {
 
       const bboxFilteredUuids = bboxFilteredResults.map(r => r.candidateUuid);
 
-      const duplicateResults = (await PolygonGeometry.sequelize.query(
+      const duplicateResults = (await PolygonGeometry.sql.query(
         `
-          SELECT 
+          SELECT
             candidate.uuid as candidateUuid,
             sp.poly_name as polyName,
             s.name as siteName
@@ -298,11 +294,7 @@ export class DuplicateGeometryValidator implements Validator {
     `;
 
     try {
-      if (PolygonGeometry.sequelize == null) {
-        throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-      }
-
-      const results = (await PolygonGeometry.sequelize.query(sql, {
+      const results = (await PolygonGeometry.sql.query(sql, {
         replacements: allParams,
         type: QueryTypes.SELECT
       })) as { idx: number; existing_uuid: string }[];
@@ -384,11 +376,7 @@ export class DuplicateGeometryValidator implements Validator {
     `;
 
     try {
-      if (PointGeometry.sequelize == null) {
-        throw new InternalServerErrorException("PointGeometry model is missing sequelize connection");
-      }
-
-      const results = (await PointGeometry.sequelize.query(sql, {
+      const results = (await PointGeometry.sql.query(sql, {
         replacements: allParams,
         type: QueryTypes.SELECT
       })) as { idx: number; existing_uuid: string }[];

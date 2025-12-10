@@ -92,6 +92,9 @@ export class FormDataService {
     });
   }
 
+  /**
+   * Returns a FormSubmission with all the associations needed to fill out the SubmissionDto
+   */
   async getFullSubmission(uuid: string) {
     return await FormSubmission.findOne({
       where: { uuid },
@@ -100,7 +103,8 @@ export class FormDataService {
         { association: "application", attributes: ["uuid"] },
         { association: "organisation" },
         { association: "projectPitch" },
-        { association: "stage", attributes: ["name"] }
+        { association: "stage", attributes: ["name"] },
+        { association: "user", attributes: ["firstName", "lastName"] }
       ]
     });
   }

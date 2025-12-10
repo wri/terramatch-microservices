@@ -84,6 +84,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
   @BelongsTo(() => User, { foreignKey: "userId", targetKey: "uuid", constraints: false })
   user: User | null;
 
+  get updatedByName(): string | null {
+    return this.user?.fullName ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   formId: string | null;

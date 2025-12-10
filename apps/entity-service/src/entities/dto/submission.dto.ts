@@ -1,5 +1,5 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
 import { FORM_SUBMISSION_STATUSES, FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
 import { Dictionary } from "lodash";
@@ -16,6 +16,18 @@ export class SubmissionDto {
       populateDto<SubmissionDto, FormSubmission>(this, submission, additional);
     }
   }
+
+  @ApiProperty()
+  uuid: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+
+  @ApiProperty({ nullable: true, type: String })
+  updatedByName: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   applicationUuid: string | null;
@@ -49,4 +61,22 @@ export class SubmissionDto {
 
   @ApiProperty({ nullable: true, type: String })
   stageName: string | null;
+}
+
+export class EmbeddedSubmissionDto extends PickType(SubmissionDto, [
+  "uuid",
+  "createdAt",
+  "updatedAt",
+  "updatedByName",
+  "status",
+  "stageName"
+]) {
+  constructor(submission?: FormSubmission) {
+    super();
+    if (submission != null)
+      populateDto<EmbeddedSubmissionDto, FormSubmission>(this, submission, {
+        createdAt: submission.createdAt,
+        updatedAt: submission.updatedAt
+      });
+  }
 }

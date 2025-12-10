@@ -2,7 +2,7 @@ import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException
 import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ApplicationDto, SubmissionReferenceDto } from "./dto/application.dto";
+import { ApplicationDto } from "./dto/application.dto";
 import { Application, FormSubmission, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -13,6 +13,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { EmbeddedSubmissionDto } from "../entities/dto/submission.dto";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
@@ -78,14 +79,7 @@ export class ApplicationsController {
     const applications = await builder.execute();
     if (applications.length > 0) await this.policyService.authorize("read", applications);
 
-    const submissions =
-      applications.length === 0
-        ? []
-        : await FormSubmission.findAll({
-            where: { applicationId: applications.map(({ id }) => id) },
-            attributes: ["applicationId", "uuid", "status"],
-            include: [{ association: "stage", attributes: ["name"] }]
-          });
+    const submissions = applications.length === 0 ? [] : await this.findSubmissions(applications.map(({ id }) => id));
 
     return applications.reduce(
       (document, application) => {
@@ -94,7 +88,7 @@ export class ApplicationsController {
           new ApplicationDto(application, {
             submissions: submissions
               .filter(({ applicationId }) => applicationId === application.id)
-              .map(submission => new SubmissionReferenceDto(submission))
+              .map(submission => new EmbeddedSubmissionDto(submission))
           })
         ).document;
       },
@@ -126,15 +120,11 @@ export class ApplicationsController {
 
     await this.policyService.authorize("read", application);
 
-    const submissions = await FormSubmission.findAll({
-      where: { applicationId: application.id },
-      attributes: ["uuid", "status"],
-      include: [{ association: "stage", attributes: ["name"] }]
-    });
+    const submissions = await this.findSubmissions(application.id);
     const document = buildJsonApi(ApplicationDto).addData(
       application.uuid,
       new ApplicationDto(application, {
-        submissions: submissions.map(submission => new SubmissionReferenceDto(submission))
+        submissions: submissions.map(submission => new EmbeddedSubmissionDto(submission))
       })
     ).document;
 
@@ -155,5 +145,16 @@ export class ApplicationsController {
     }
 
     return document;
+  }
+
+  private async findSubmissions(applicationIds: number | number[]) {
+    return await FormSubmission.findAll({
+      where: { applicationId: applicationIds },
+      attributes: ["applicationId", "uuid", "status", "createdAt", "updatedAt"],
+      include: [
+        { association: "stage", attributes: ["name"] },
+        { association: "user", attributes: ["firstName", "lastName"] }
+      ]
+    });
   }
 }

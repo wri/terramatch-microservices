@@ -11,15 +11,19 @@ export class SubmissionReferenceDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: String })
   status: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  stageName: string | null;
 }
 
 @JsonApiDto({ type: "applications" })
 export class ApplicationDto {
   constructor(application?: Application, additional?: AdditionalProps<ApplicationDto, Application>) {
-    if (application != null && additional != null)
+    if (application != null && additional != null) {
       populateDto<ApplicationDto, Application>(this, application, additional);
+    }
   }
 
   @ApiProperty()

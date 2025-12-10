@@ -23,7 +23,7 @@ export class ApplicationsController {
 
   @Get()
   @ApiOperation({ operationId: "applicationIndex", summary: "Get a filtered, paginated view of applications" })
-  @JsonApiResponse(ApplicationDto)
+  @JsonApiResponse({ data: ApplicationDto, hasMany: true })
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
   @ExceptionResponse(BadRequestException, { description: "Invalid query params" })
@@ -83,7 +83,8 @@ export class ApplicationsController {
         ? []
         : await FormSubmission.findAll({
             where: { applicationId: applications.map(({ id }) => id) },
-            attributes: ["applicationId", "uuid", "status"]
+            attributes: ["applicationId", "uuid", "status"],
+            include: [{ association: "stage", attributes: ["name"] }]
           });
 
     return applications.reduce(
@@ -109,7 +110,10 @@ export class ApplicationsController {
   @JsonApiResponse(ApplicationDto)
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
-  async getApplication(@Param() { uuid }: SingleResourceDto, @Query() { sideloads }: ApplicationGetQueryDto) {
+  async getApplication(
+    @Param() { uuid }: SingleResourceDto,
+    @Query() { sideloads, translated }: ApplicationGetQueryDto
+  ) {
     const application = await Application.findOne({
       where: { uuid },
       include: [
@@ -123,7 +127,8 @@ export class ApplicationsController {
 
     const submissions = await FormSubmission.findAll({
       where: { applicationId: application.id },
-      attributes: ["uuid", "status"]
+      attributes: ["uuid", "status"],
+      include: [{ association: "stage", attributes: ["name"] }]
     });
     const document = buildJsonApi(ApplicationDto).addData(
       application.uuid,
@@ -143,7 +148,7 @@ export class ApplicationsController {
         await this.formDataService.addFundingProgrammeDtos(
           document,
           [fundingProgramme],
-          await User.findLocale(authenticatedUserId())
+          translated === false ? undefined : await User.findLocale(authenticatedUserId())
         );
       }
     }

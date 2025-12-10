@@ -1,7 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { IsOptional } from "class-validator";
-import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
+import { FORM_SUBMISSION_STATUSES, FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
 const APPLICATION_SIDELOADS = ["currentSubmission", "fundingProgramme"] as const;
 type ApplicationSideload = (typeof APPLICATION_SIDELOADS)[number];
@@ -15,6 +16,10 @@ export class ApplicationGetQueryDto {
     description: "sideloads to include"
   })
   sideloads?: ApplicationSideload[];
+
+  @ApiProperty({ required: false, default: true })
+  @TransformBooleanString({ optional: true })
+  translated?: boolean;
 }
 
 export class ApplicationIndexQueryDto extends IndexQueryDto {
@@ -30,7 +35,7 @@ export class ApplicationIndexQueryDto extends IndexQueryDto {
   @IsOptional()
   organisationUuid?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, enum: FORM_SUBMISSION_STATUSES })
   @IsOptional()
   currentSubmissionStatus?: FormSubmissionStatus;
 }

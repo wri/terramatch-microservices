@@ -2,8 +2,8 @@ import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException
 import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ApplicationDto } from "./dto/application.dto";
-import { Application, FormSubmission, User } from "@terramatch-microservices/database/entities";
+import { ApplicationDto, ApplicationHistoryDto, ApplicationHistoryEntryDto } from "./dto/application.dto";
+import { Application, Audit, AuditStatus, FormSubmission, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
@@ -14,6 +14,10 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { EmbeddedSubmissionDto } from "../entities/dto/submission.dto";
+import { groupBy, last } from "lodash";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
+import { DateTime } from "luxon";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
@@ -147,10 +151,112 @@ export class ApplicationsController {
     return document;
   }
 
+  @Get(":uuid/history")
+  @ApiOperation({ operationId: "applicationHistoryGet", summary: "Get the history for an application by UUID" })
+  @JsonApiResponse(ApplicationHistoryDto)
+  @ExceptionResponse(NotFoundException, { description: "Application not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
+  async getApplicationHistory(@Param() { uuid }: SingleResourceDto) {
+    const application = await Application.findOne({
+      where: { uuid },
+      include: [
+        { association: "organisation", attributes: ["name"] },
+        { association: "fundingProgramme", attributes: ["name"] }
+      ]
+    });
+    if (application == null) throw new NotFoundException("Application not found");
+
+    await this.policyService.authorize("read", application);
+
+    const submissions = await this.findSubmissions(application.id);
+    const audits = groupBy(await Audit.for(submissions).findAll({ order: [["updatedAt", "DESC"]] }), "auditableId");
+    const auditStatuses = groupBy(
+      await AuditStatus.for(submissions).findAll({ order: [["updatedAt", "DESC"]] }),
+      "auditableId"
+    );
+    const history: ApplicationHistoryEntryDto[] = [];
+    // Reverse the submissions so we go through the history of the newest one first
+    for (const { id, stageName } of submissions.reverse()) {
+      // Consider audit statuses first, as that's the more modern system and will have the most
+      // correct data.
+      this.addHistory(history, auditStatuses[id] ?? [], stageName);
+      this.addHistory(history, audits[id] ?? [], stageName);
+    }
+
+    return buildJsonApi(ApplicationHistoryDto).addData(
+      application.uuid,
+      populateDto(new ApplicationHistoryDto(), {
+        applicationUuid: application.uuid,
+        entries: history
+      })
+    );
+  }
+
+  private addHistory(history: ApplicationHistoryEntryDto[], audits: Audit[] | AuditStatus[], stageName: string | null) {
+    const earliestEntry = last(history);
+    const earliestHistoryDate = earliestEntry == null ? undefined : DateTime.fromJSDate(earliestEntry.date);
+    const startIndex =
+      earliestHistoryDate == null
+        ? 0
+        : audits.findIndex(
+            ({ updatedAt }: Audit | AuditStatus) => DateTime.fromJSDate(updatedAt) <= earliestHistoryDate
+          );
+    if (startIndex < 0) return;
+
+    for (const audit of audits.slice(startIndex)) {
+      const dto = this.createHistoryEntryDto(audit, stageName);
+      // don't record back-to-back updated events unless they're at least 12 hours apart
+      const earliest = last(history);
+      if (
+        earliest?.eventType === "updated" &&
+        dto.eventType === "updated" &&
+        DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(dto.date), "hours").hours < 12
+      ) {
+        continue;
+      }
+
+      // If our earliest history event is an update and this one is "started", and they occurred within
+      // 12 hours of each other, replace the update with the started
+      if (
+        earliest?.eventType === "updated" &&
+        dto.eventType === "status" &&
+        dto.status === "started" &&
+        DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(dto.date), "hours").hours < 12
+      ) {
+        history[history.length - 1] = dto;
+      } else {
+        history.push(dto);
+      }
+    }
+  }
+
+  private createHistoryEntryDto(audit: Audit | AuditStatus, stageName: string | null) {
+    if (audit instanceof AuditStatus) {
+      return populateDto(new ApplicationHistoryEntryDto(), {
+        eventType: audit.type,
+        status: audit.status as FormSubmissionStatus,
+        date: audit.updatedAt,
+        stageName,
+        comment: audit.comment
+      });
+    } else {
+      const status = (audit.newValues?.status ?? null) as FormSubmissionStatus | null;
+      const eventType = audit.event === "updated" && status == null ? audit.event : "status";
+      const comment = eventType === "updated" ? null : (audit.newValues?.feedback as string) ?? null;
+      return populateDto(new ApplicationHistoryEntryDto(), {
+        eventType,
+        status,
+        date: audit.updatedAt,
+        stageName,
+        comment
+      });
+    }
+  }
+
   private async findSubmissions(applicationIds: number | number[]) {
     return await FormSubmission.findAll({
       where: { applicationId: applicationIds },
-      attributes: ["applicationId", "uuid", "status", "createdAt", "updatedAt", "stageUuid", "userId"],
+      attributes: ["applicationId", "id", "uuid", "status", "createdAt", "updatedAt", "stageUuid", "userId"],
       include: [
         { association: "stage", attributes: ["name"] },
         { association: "user", attributes: ["firstName", "lastName"] }

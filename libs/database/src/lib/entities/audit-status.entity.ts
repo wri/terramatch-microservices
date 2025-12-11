@@ -26,27 +26,20 @@ import { DisturbanceReport } from "./disturbance-report.entity";
 import { User } from "./user.entity";
 import { FormSubmission } from "./form-submission.entity";
 import { InternalServerErrorException } from "@nestjs/common";
-
-const TYPES = [
-  "change-request",
-  "status",
-  "submission",
-  "comment",
-  "change-request-updated",
-  "updated",
-  "reminder-sent"
-] as const;
-type AuditStatusType = (typeof TYPES)[number];
+import { AuditStatusType, AUDIT_STATUS_TYPES } from "../constants";
 
 type AuditStatusMedia = "attachments";
 
 @Scopes(() => ({
-  auditable: (auditable: LaravelModel) => ({
-    where: {
-      auditableType: laravelType(auditable),
-      auditableId: auditable.id
-    }
-  })
+  auditable: <T extends LaravelModel>(models: T | T[]) => {
+    models = Array.isArray(models) ? models : [models];
+    return {
+      where: {
+        auditableType: laravelType(models[0]),
+        auditableId: models.map(({ id }) => id)
+      }
+    };
+  }
 }))
 @Table({
   tableName: "audit_statuses",
@@ -73,7 +66,7 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
     FormSubmission.LARAVEL_TYPE
   ];
 
-  static for(auditable: LaravelModel) {
+  static for<T extends LaravelModel>(auditable: T | T[]) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;
   }
 
@@ -88,7 +81,7 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
       return;
     }
 
-    if (type != null && !TYPES.includes(type)) {
+    if (type != null && !AUDIT_STATUS_TYPES.includes(type)) {
       throw new InternalServerErrorException(`Invalid audit status type: ${type})`);
     }
 

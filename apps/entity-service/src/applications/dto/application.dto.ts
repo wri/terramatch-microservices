@@ -3,6 +3,8 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Application } from "@terramatch-microservices/database/entities";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EmbeddedSubmissionDto } from "../../entities/dto/submission.dto";
+import { AUDIT_STATUS_TYPES, AuditStatusType } from "@terramatch-microservices/database/constants";
+import { FORM_SUBMISSION_STATUSES, FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "applications" })
 export class ApplicationDto {
@@ -39,4 +41,35 @@ export class ApplicationDto {
 
   @ApiProperty({ nullable: true, type: String })
   fundingProgrammeUuid: string | null;
+}
+
+export class ApplicationHistoryEntryDto {
+  @ApiProperty({ nullable: true, enum: AUDIT_STATUS_TYPES })
+  eventType: AuditStatusType | null;
+
+  @ApiProperty({ nullable: true, enum: FORM_SUBMISSION_STATUSES })
+  status: FormSubmissionStatus | null;
+
+  @ApiProperty()
+  date: Date;
+
+  @ApiProperty({ nullable: true, type: String })
+  stageName: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  comment: string | null;
+}
+
+@JsonApiDto({ type: "applicationHistories" })
+export class ApplicationHistoryDto {
+  @ApiProperty()
+  applicationUuid: string;
+
+  @ApiProperty({
+    isArray: true,
+    type: ApplicationHistoryEntryDto,
+    description:
+      "List of application history entries sorted in reverse chronological order. The first entry is the most recent."
+  })
+  entries: ApplicationHistoryEntryDto[];
 }

@@ -124,9 +124,8 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       progressMessage: `Starting to process ${totalFeatures} features with versioning...`
     });
 
-    // Extract UUIDs from uploaded features
     const uploadedUuids: string[] = [];
-    const featureUuidMap = new Map<number, string>(); // feature index -> uuid
+    const featureUuidMap = new Map<number, string>();
 
     geojson.features.forEach((feature, index) => {
       const uuid = (feature.properties?.uuid as string) ?? null;
@@ -136,7 +135,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       }
     });
 
-    // Query existing active SitePolygons for this site
     const existingPolygons =
       uploadedUuids.length > 0
         ? await SitePolygon.findAll({
@@ -151,7 +149,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
     const existingUuidSet = new Set(existingPolygons.map(p => p.uuid));
     const existingUuidToPolygon = new Map(existingPolygons.map(p => [p.uuid, p]));
 
-    // Split features into versioning vs creation groups
     const featuresForVersioning: Array<{ feature: Feature; baseUuid: string }> = [];
     const featuresForCreation: Feature[] = [];
 
@@ -201,7 +198,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       };
     }> = [];
 
-    // Process new polygon creation
     if (featuresForCreation.length > 0) {
       await this.updateJobProgress(job, {
         processedContent: 0,
@@ -226,7 +222,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       allValidations.push(...validations);
     }
 
-    // Process version creation
     if (featuresForVersioning.length > 0) {
       await this.updateJobProgress(job, {
         processedContent: featuresForCreation.length,
@@ -245,7 +240,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
             continue;
           }
 
-          // Extract attributes from GeoJSON properties
           const properties = feature.properties ?? {};
           const allProperties = { ...properties };
           if (siteId != null) {
@@ -256,7 +250,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
           const validatedProperties = validateSitePolygonProperties(allProperties);
           const attributeChanges = this.convertPropertiesToAttributeChanges(validatedProperties);
 
-          // Create version with geometry and attributes
           const versionGeometries: CreateSitePolygonRequestDto[] = [
             {
               type: "FeatureCollection" as const,
@@ -288,7 +281,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       });
     }
 
-    // Build response
     const document = buildJsonApi(SitePolygonLightDto);
     const allSitePolygons = [...createdPolygons, ...createdVersions];
     const associations = await this.sitePolygonsService.loadAssociationDtos(allSitePolygons, true);
@@ -317,23 +309,19 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
     };
   }
 
-  /**
-   * Converts validated SitePolygon properties to AttributeChangesDto format for version creation.
-   * Handles date conversion and array formatting.
-   */
   private convertPropertiesToAttributeChanges(properties: Partial<SitePolygon>): AttributeChangesDto {
     const attributeChanges: AttributeChangesDto = {};
 
     if (properties.polyName != null) {
       attributeChanges.polyName = properties.polyName;
-      attributeChanges.poly_name = properties.polyName; // Backward compatibility
+      attributeChanges.poly_name = properties.polyName;
     }
 
     if (properties.plantStart != null) {
       const plantStartString =
         properties.plantStart instanceof Date ? properties.plantStart.toISOString() : String(properties.plantStart);
       attributeChanges.plantStart = plantStartString;
-      attributeChanges.plantstart = plantStartString; // Backward compatibility
+      attributeChanges.plantstart = plantStartString;
     }
 
     if (properties.practice != null && properties.practice.length > 0) {
@@ -342,7 +330,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
 
     if (properties.targetSys != null) {
       attributeChanges.targetSys = properties.targetSys;
-      attributeChanges.target_sys = properties.targetSys; // Backward compatibility
+      attributeChanges.target_sys = properties.targetSys;
     }
 
     if (properties.distr != null && properties.distr.length > 0) {
@@ -351,7 +339,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
 
     if (properties.numTrees != null) {
       attributeChanges.numTrees = properties.numTrees;
-      attributeChanges.num_trees = properties.numTrees; // Backward compatibility
+      attributeChanges.num_trees = properties.numTrees;
     }
 
     return attributeChanges;

@@ -25,7 +25,12 @@ export type Translations = Record<number, string | null>;
 @Injectable()
 export class LocalizationService {
   private readonly logger = new TMLogger(LocalizationService.name);
-  constructor(private readonly configService: ConfigService) {}
+
+  constructor(private readonly configService: ConfigService) {
+    tx.init({
+      token: configService.get("TRANSIFEX_TOKEN")
+    });
+  }
 
   async translateKeys(keyMap: Dictionary<string>, locale: ValidLocale, replacements: Dictionary<string> = {}) {
     const keyStrings = Object.values(keyMap);
@@ -112,7 +117,7 @@ export class LocalizationService {
       token: this.configService.get("TRANSIFEX_TOKEN"),
       secret: this.configService.get("TRANSIFEX_SECRET")
     });
-    const locales = ["fr_FR", "es_MX", "pt_BR"];
+    const locales = ["en_US", "fr_FR", "es_MX", "pt_BR"];
     for (const locale of locales) {
       const dbLocale = locale.split("_").join("-");
       await tx.fetchTranslations(locale);

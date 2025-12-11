@@ -18,7 +18,6 @@ import { TemplateService } from "./templates/template.service";
 import { ReportGenerationService } from "./tasks/report-generation-service";
 import { AnalyticsEventService } from "./analytics/analytics-events.service";
 import { AnalyticsProcessor } from "./analytics/analytics.processor";
-import { AuditsService } from "./audits/audits.service";
 
 export const QUEUES = ["email", "analytics"];
 
@@ -68,8 +67,7 @@ export const QUEUES = ["email", "analytics"];
     EmailProcessor,
     ReportGenerationService,
     AnalyticsEventService,
-    AnalyticsProcessor,
-    AuditsService
+    AnalyticsProcessor
   ],
   exports: [
     PolicyService,

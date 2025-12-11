@@ -1,8 +1,16 @@
 import { AppModule } from "./app.module";
 import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
-import { Form, FormQuestion, Framework, FundingProgramme, I18nItem } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import {
+  Audit,
+  Form,
+  FormQuestion,
+  FormSubmission,
+  Framework,
+  FundingProgramme,
+  I18nItem
+} from "@terramatch-microservices/database/entities";
+import { col, Op, where } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
@@ -88,6 +96,18 @@ bootstrapRepl("Entity Service", AppModule, {
         console.log("Finished updating hashes on I18nItems.");
         console.log(`Updated ${bar.total} I18nItems.`);
       });
+    },
+    cleanAudits: async () => {
+      const deletedAuditCount = await Audit.destroy({
+        where: {
+          [Op.and]: [
+            where(col("old_values"), "=", col("new_values")),
+            { auditableType: { [Op.ne]: FormSubmission.LARAVEL_TYPE } },
+            { createdAt: { [Op.gt]: new Date(2024, 8, 1) } }
+          ]
+        }
+      });
+      console.log(`Deleted ${deletedAuditCount} audits`);
     }
   }
 });

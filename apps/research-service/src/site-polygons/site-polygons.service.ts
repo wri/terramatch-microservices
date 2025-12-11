@@ -215,10 +215,6 @@ export class SitePolygonsService {
       const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
       const primaryUuid = sitePolygon.primaryUuid;
 
-      if (primaryUuid == null) {
-        throw new BadRequestException(`SitePolygon ${uuid} has no primaryUuid`);
-      }
-
       await this.deleteSitePolygonRelatedRecords(
         sitePolygonIds,
         sitePolygonUuids,

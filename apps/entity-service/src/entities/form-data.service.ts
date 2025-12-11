@@ -180,15 +180,11 @@ export class FormDataService {
     });
 
     for (const fundingProgramme of fundingProgrammes) {
-      const stages = allStages
-        .filter(({ fundingProgrammeId }) => fundingProgrammeId === fundingProgramme.uuid)
-        .map(({ name, deadlineAt, uuid }) =>
-          populateDto(new StageDto(), {
-            name,
-            deadlineAt,
-            formUuid: stageForms.find(({ stageId }) => stageId === uuid)?.uuid ?? null
-          })
-        );
+      const programStages = allStages.filter(({ fundingProgrammeId }) => fundingProgrammeId === fundingProgramme.uuid);
+      const stages = programStages.map(({ name, deadlineAt, uuid }) => {
+        const formUuid = stageForms.find(({ stageId }) => stageId === uuid)?.uuid ?? null;
+        return populateDto(new StageDto(), { uuid, name, deadlineAt, formUuid });
+      });
       const coverMedia = coverMedias.find(({ modelId }) => modelId === fundingProgramme.id);
       document.addData(
         fundingProgramme.uuid,

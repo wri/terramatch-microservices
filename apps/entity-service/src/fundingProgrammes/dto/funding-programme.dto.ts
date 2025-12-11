@@ -18,6 +18,9 @@ type FundingProgrammeExtras = "name" | "description" | "location";
 type FundingProgrammeWithoutExtras = Omit<FundingProgramme, FundingProgrammeExtras>;
 
 export class StageDto {
+  @ApiProperty()
+  uuid: string;
+
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
 

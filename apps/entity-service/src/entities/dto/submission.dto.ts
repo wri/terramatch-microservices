@@ -61,6 +61,9 @@ export class SubmissionDto {
 
   @ApiProperty({ nullable: true, type: String })
   stageName: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  stageUuid: string | null;
 }
 
 export class EmbeddedSubmissionDto extends PickType(SubmissionDto, [

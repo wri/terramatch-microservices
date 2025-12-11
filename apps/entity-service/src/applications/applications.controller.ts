@@ -150,7 +150,7 @@ export class ApplicationsController {
   private async findSubmissions(applicationIds: number | number[]) {
     return await FormSubmission.findAll({
       where: { applicationId: applicationIds },
-      attributes: ["applicationId", "uuid", "status", "createdAt", "updatedAt"],
+      attributes: ["applicationId", "uuid", "status", "createdAt", "updatedAt", "stageUuid", "userId"],
       include: [
         { association: "stage", attributes: ["name"] },
         { association: "user", attributes: ["firstName", "lastName"] }

@@ -369,14 +369,11 @@ export class SitePolygonsController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
   @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
   async bulkDelete(@Body() deletePayload: SitePolygonBulkDeleteBodyDto) {
-    if (deletePayload.data == null || deletePayload.data.length === 0) {
-      throw new BadRequestException("At least one site polygon must be provided");
-    }
-
     const uuids = deletePayload.data.map(item => item.id);
 
     const sitePolygons = await SitePolygon.findAll({
-      where: { uuid: { [Op.in]: uuids } }
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "primaryUuid", "siteUuid", "createdBy"]
     });
 
     if (sitePolygons.length === 0) {
@@ -393,7 +390,7 @@ export class SitePolygonsController {
       await this.policyService.authorize("delete", sitePolygon);
     }
 
-    const deletedUuids = await this.sitePolygonService.bulkDeleteSitePolygons(uuids);
+    const deletedUuids = await this.sitePolygonService.bulkDeleteSitePolygons(sitePolygons);
 
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), deletedUuids);
   }

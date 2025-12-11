@@ -154,28 +154,13 @@ export class SitePolygonsService {
       transaction
     });
   }
-  async bulkDeleteSitePolygons(uuids: string[]): Promise<string[]> {
-    if (uuids.length === 0) {
+
+  async bulkDeleteSitePolygons(sitePolygons: SitePolygon[]): Promise<string[]> {
+    if (sitePolygons.length === 0) {
       return [];
     }
 
     return await this.transaction(async transaction => {
-      const sitePolygons = await SitePolygon.findAll({
-        where: { uuid: { [Op.in]: uuids } },
-        attributes: ["id", "uuid", "primaryUuid"],
-        transaction
-      });
-
-      if (sitePolygons.length === 0) {
-        throw new NotFoundException(`No site polygons found for the provided UUIDs`);
-      }
-
-      const foundUuids = new Set(sitePolygons.map(sp => sp.uuid));
-      const missingUuids = uuids.filter(uuid => !foundUuids.has(uuid));
-      if (missingUuids.length > 0) {
-        throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
-      }
-
       const uniquePrimaryUuids = uniq(sitePolygons.map(sp => sp.primaryUuid).filter(isNotNull));
 
       const allRelatedSitePolygons = await SitePolygon.findAll({
@@ -201,6 +186,7 @@ export class SitePolygonsService {
       return allSitePolygonUuids;
     });
   }
+
   async deleteSitePolygon(uuid: string): Promise<void> {
     await this.transaction(async transaction => {
       const sitePolygon = await SitePolygon.findOne({

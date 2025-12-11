@@ -1440,7 +1440,7 @@ describe("SitePolygonsController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon1);
       expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon2);
       expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon3);
-      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith(["uuid-1", "uuid-2", "uuid-3"]);
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([polygon1, polygon2, polygon3]);
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", ["uuid-1", "uuid-2", "uuid-3"]);
@@ -1459,7 +1459,7 @@ describe("SitePolygonsController", () => {
       const result = await controller.bulkDelete(payload);
 
       expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon);
-      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith(["uuid-1"]);
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([polygon]);
       expect(result.meta).toHaveProperty("resourceIds", ["uuid-1"]);
     });
   });

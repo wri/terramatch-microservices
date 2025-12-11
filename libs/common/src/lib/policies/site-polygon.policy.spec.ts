@@ -25,10 +25,33 @@ describe("SitePolygonPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows managing any polygon with polygons-manage", async () => {
-    mockUserId(123);
+  it("allows service accounts with polygons-manage to read and create any polygon", async () => {
+    const user = await UserFactory.create();
+    mockUserId(user.id);
     mockPermissions("polygons-manage");
-    await expectCan(service, "manage", SitePolygon);
+
+    const sitePolygon = new SitePolygon();
+    sitePolygon.createdBy = 999; // Different user
+
+    await expectCan(service, "read", sitePolygon);
+    await expectCan(service, "create", sitePolygon);
+  });
+
+  it("allows service accounts with polygons-manage to update and delete only their own polygons", async () => {
+    const user = await UserFactory.create();
+    mockUserId(user.id);
+    mockPermissions("polygons-manage");
+
+    const ownPolygon = new SitePolygon();
+    ownPolygon.createdBy = user.id;
+
+    const otherPolygon = new SitePolygon();
+    otherPolygon.createdBy = 999;
+
+    await expectCan(service, "update", ownPolygon);
+    await expectCan(service, "delete", ownPolygon);
+    await expectCannot(service, "update", otherPolygon);
+    await expectCannot(service, "delete", otherPolygon);
   });
 
   it("allows managing polygons within frameworks", async () => {
@@ -140,15 +163,13 @@ describe("SitePolygonPolicy", () => {
     await expectCannot(service, "delete", sitePolygon);
   });
 
-  describe("greenhouse users", () => {
-    it("allows greenhouse users to delete their own site polygons", async () => {
+  describe("service accounts with polygons-manage", () => {
+    it("allows service accounts to delete their own site polygons", async () => {
       const user = await UserFactory.create();
-      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
-      await user.$add("role", role);
       const site = await SiteFactory.create();
 
       mockUserId(user.id);
-      mockPermissions();
+      mockPermissions("polygons-manage");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -157,14 +178,12 @@ describe("SitePolygonPolicy", () => {
       await expectCan(service, "delete", sitePolygon);
     });
 
-    it("blocks greenhouse users from deleting other users' site polygons", async () => {
+    it("blocks service accounts from deleting other users' site polygons", async () => {
       const user = await UserFactory.create();
-      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
-      await user.$add("role", role);
       const site = await SiteFactory.create();
 
       mockUserId(user.id);
-      mockPermissions();
+      mockPermissions("polygons-manage");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -173,44 +192,17 @@ describe("SitePolygonPolicy", () => {
       await expectCannot(service, "delete", sitePolygon);
     });
 
-    it("allows greenhouse users to read site polygons", async () => {
+    it("allows service accounts to read site polygons", async () => {
       const user = await UserFactory.create();
-      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
-      await user.$add("role", role);
       const site = await SiteFactory.create();
 
       mockUserId(user.id);
-      mockPermissions();
+      mockPermissions("polygons-manage");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
 
       await expectCan(service, "read", sitePolygon);
-    });
-
-    it("allows greenhouse users with manage-own to manage but only delete their own", async () => {
-      const user = await UserFactory.create();
-      const role = await RoleFactory.create({ name: "greenhouse-service-account" });
-      await user.$add("role", role);
-      const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
-      const site = await SiteFactory.create({ projectId: project.id });
-
-      mockUserId(user.id);
-      mockPermissions("manage-own");
-
-      const ownPolygon = new SitePolygon();
-      ownPolygon.siteUuid = site.uuid;
-      ownPolygon.createdBy = user.id;
-
-      const otherPolygon = new SitePolygon();
-      otherPolygon.siteUuid = site.uuid;
-      otherPolygon.createdBy = 999;
-      await expectCan(service, "manage", ownPolygon);
-      await expectCan(service, "manage", otherPolygon);
-
-      await expectCan(service, "delete", ownPolygon);
-      await expectCannot(service, "delete", otherPolygon);
     });
   });
 });

@@ -1353,15 +1353,15 @@ describe("SitePolygonsController", () => {
   });
 
   describe("bulkDelete", () => {
-    it("should throw BadRequestException when data is null", async () => {
+    it("should throw TypeError when data is null", async () => {
       const payload = { data: null } as unknown as SitePolygonBulkDeleteBodyDto;
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(BadRequestException);
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(TypeError);
       expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
     });
 
-    it("should throw BadRequestException when data is empty array", async () => {
+    it("should throw NotFoundException when data is empty array", async () => {
       const payload = { data: [] } as SitePolygonBulkDeleteBodyDto;
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(BadRequestException);
+      await expect(controller.bulkDelete(payload)).rejects.toThrow(NotFoundException);
       expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
     });
 

@@ -9,18 +9,9 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import {
-  BIGINT,
-  CreationOptional,
-  InferAttributes,
-  InferCreationAttributes,
-  STRING,
-  TEXT,
-  UUID,
-  UUIDV4
-} from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Application } from "./application.entity";
-import { FormSubmissionStatus } from "../constants/status";
+import { FormSubmissionStatus, FormSubmissionStatusStates, statusUpdateSequelizeHook } from "../constants/status";
 import { ProjectPitch } from "./project-pitch.entity";
 import { User } from "./user.entity";
 import { Form } from "./form.entity";
@@ -28,9 +19,17 @@ import { Stage } from "./stage.entity";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Dictionary } from "lodash";
+import { StateMachineColumn } from "../util/model-column-state-machine";
 
-@Table({ tableName: "form_submissions", underscored: true, paranoid: true })
+@Table({
+  tableName: "form_submissions",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
 export class FormSubmission extends Model<InferAttributes<FormSubmission>, InferCreationAttributes<FormSubmission>> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormSubmission";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -44,8 +43,8 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
   @Column(TEXT)
   name: string | null;
 
-  @Column(STRING)
-  status: FormSubmissionStatus;
+  @StateMachineColumn(FormSubmissionStatusStates)
+  status: CreationOptional<FormSubmissionStatus>;
 
   @JsonColumn()
   answers: Dictionary<unknown>;

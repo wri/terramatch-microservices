@@ -89,6 +89,7 @@ export class SitePolygonsService {
       throw e;
     }
   }
+
   private async deleteSitePolygonRelatedRecords(
     sitePolygonIds: number[],
     sitePolygonUuids: string[],

@@ -30,20 +30,34 @@ import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
+  let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
 
   beforeEach(async () => {
+    const mockPolygonGeometryService = {
+      bulkUpdateProjectCentroids: jest.fn().mockResolvedValue(undefined)
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SitePolygonsService]
+      providers: [
+        SitePolygonsService,
+        {
+          provide: PolygonGeometryCreationService,
+          useValue: mockPolygonGeometryService
+        }
+      ]
     }).compile();
 
     service = module.get<SitePolygonsService>(SitePolygonsService);
+    polygonGeometryService = module.get(PolygonGeometryCreationService);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it("should throw with invalid page parameters", async () => {
@@ -878,6 +892,11 @@ describe("SitePolygonsService", () => {
 
       const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
       expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid]),
+        expect.anything()
+      );
     });
 
     it("should successfully delete a site polygon with minimal associations", async () => {
@@ -898,6 +917,11 @@ describe("SitePolygonsService", () => {
 
       const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
       expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid]),
+        expect.anything()
+      );
     });
   });
 
@@ -980,6 +1004,11 @@ describe("SitePolygonsService", () => {
 
       await polygonGeometry1.reload({ paranoid: false });
       expect(polygonGeometry1.deletedAt).toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry2.uuid]),
+        expect.anything()
+      );
     });
 
     it("should not delete shared geometry when other versions use it", async () => {
@@ -1050,6 +1079,11 @@ describe("SitePolygonsService", () => {
 
       const reloadedActiveVersion = await SitePolygon.findOne({ where: { uuid: activeVersion.uuid } });
       expect(reloadedActiveVersion).not.toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid]),
+        expect.anything()
+      );
     });
   });
 });

@@ -187,7 +187,7 @@ export class LocalizationService {
     await tx.pushSource(source);
   }
 
-  cleanOldI18nItems = async () => {
+  async cleanOldI18nItems() {
     const i18nEntitiesColumns = [
       { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
       { entity: FormOptionListOption, attributes: ["labelId"] },
@@ -217,5 +217,5 @@ export class LocalizationService {
     const itemsDeleted = await I18nItem.destroy({ where: { id: { [Op.notIn]: i18nIds } } });
     this.logger.log(`Deleted ${itemsDeleted} I18nItems and ${translationsDeleted} I18nTranslations`);
     this.logger.log(`Finished cleaning old I18nItems`);
-  };
+  }
 }

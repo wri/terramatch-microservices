@@ -5,24 +5,43 @@ import { FormDataService } from "./form-data.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
+  ApplicationFactory,
   EntityFormFactory,
   FormFactory,
   FormQuestionFactory,
   FormSectionFactory,
+  FormSubmissionFactory,
+  FundingProgrammeFactory,
+  I18nItemFactory,
   MediaFactory,
+  OrganisationFactory,
+  ProjectPitchFactory,
   SiteFactory,
   SiteReportFactory,
-  UpdateRequestFactory
+  StageFactory,
+  UpdateRequestFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
-import { Form, Organisation, Project, Site, UpdateRequest } from "@terramatch-microservices/database/entities";
+import {
+  Form,
+  I18nTranslation,
+  Organisation,
+  Project,
+  Site,
+  UpdateRequest
+} from "@terramatch-microservices/database/entities";
 import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
-import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
   RelationResourceCollector
 } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
 import { LinkedFieldResource } from "@terramatch-microservices/database/constants/linked-fields";
 import { faker } from "@faker-js/faker/.";
+import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
+import { SubmissionDto } from "./dto/submission.dto";
+import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
+import { FundingProgrammeDto } from "../fundingProgrammes/dto/funding-programme.dto";
 
 jest.mock("@terramatch-microservices/common/linkedFields/linkedAnswerCollector", () => {
   const { LinkedAnswerCollector } = jest.requireActual(
@@ -282,6 +301,159 @@ describe("FormDataService", () => {
         "sites",
         treesQ2.uuid
       );
+    });
+  });
+
+  describe("getFullSubmission", () => {
+    it("returns a submission with all necessary associations", async () => {
+      const org = await OrganisationFactory.create();
+      const pitch = await ProjectPitchFactory.create();
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      const form = await FormFactory.create();
+      const stage = await StageFactory.create({});
+      const user = await UserFactory.create();
+      const submission = await FormSubmissionFactory.create({
+        organisationUuid: org.uuid,
+        applicationId: application.id,
+        projectPitchUuid: pitch.uuid,
+        formId: form.uuid,
+        stageUuid: stage.uuid,
+        userId: user.uuid
+      });
+
+      const result = await service.getFullSubmission(submission.uuid);
+      expect(result?.form?.title).toBe(form.title);
+      expect(result?.application?.uuid).toBe(application.uuid);
+      expect(result?.organisation?.name).toBe(org.name);
+      expect(result?.projectPitch?.projectCountry).toBe(pitch.projectCountry);
+      expect(result?.stage?.name).toBe(stage.name);
+      expect(result?.user?.firstName).toBe(user.firstName);
+    });
+  });
+
+  describe("addSubmissionDto", () => {
+    it("throws if the submission does not have a form", async () => {
+      const submission = await FormSubmissionFactory.create({ formId: "fake-uuid" });
+      await expect(service.addSubmissionDto(buildJsonApi(SubmissionDto), submission)).rejects.toThrow(
+        "Form not found for submission"
+      );
+    });
+
+    it("fills out the full submission dto", async () => {
+      const org = await OrganisationFactory.create({ phone: faker.phone.number() });
+      const pitch = await ProjectPitchFactory.create({ totalHectares: faker.number.int({ min: 10, max: 100 }) });
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.form(form).create();
+      const orgQuestion = await FormQuestionFactory.section(section).create({
+        inputType: "text",
+        linkedFieldKey: "org-phone"
+      });
+      const pitchQuestion = await FormQuestionFactory.section(section).create({
+        inputType: "number",
+        linkedFieldKey: "pro-pit-tot-ha"
+      });
+      const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
+      const stage = await StageFactory.create({});
+      const user = await UserFactory.create({ locale: "es-MX" });
+      mockUserId(user.id);
+      const submission = await FormSubmissionFactory.create({
+        answers: { [conditional.uuid]: true },
+        organisationUuid: org.uuid,
+        applicationId: application.id,
+        projectPitchUuid: pitch.uuid,
+        formId: form.uuid,
+        stageUuid: stage.uuid,
+        userId: user.uuid,
+        feedbackFields: ["Organisation Phone Number"]
+      });
+
+      const i18nItem = await I18nItemFactory.create({ shortValue: "Organisation Phone Number" });
+      await I18nTranslation.truncate();
+      await I18nTranslationFactory.create({ shortValue: "Organisation Phone Number", i18nItemId: i18nItem.id });
+      localizationService.translateIds.mockResolvedValue({ [i18nItem.id]: "Número de teléfono de la organización" });
+
+      const document = buildJsonApi(SubmissionDto);
+      // Setting up this test is easier if the appropriate associations are loaded by the service.
+      const forService = await service.getFullSubmission(submission.uuid);
+      if (forService == null) throw new Error("Expected submission to exist");
+      // test the service call fetching these when needed
+      forService.organisation = null;
+      forService.projectPitch = null;
+      await service.addSubmissionDto(document, forService);
+
+      expect(localizationService.translateIds).toHaveBeenCalledWith([i18nItem.id], "es-MX");
+      const dto = (serialize(document).data as Resource).attributes;
+      expect(dto.uuid).toBe(submission.uuid);
+      expect(dto.updatedByName).toBe(user.fullName);
+      expect(dto.applicationUuid).toBe(application.uuid);
+      expect(dto.projectPitchUuid).toBe(pitch.uuid);
+      expect(dto.formUuid).toBe(form.uuid);
+      expect(dto.frameworkKey).toBe(form.frameworkKey);
+      expect(dto.status).toBe(submission.status);
+      expect(dto.organisationName).toBe(org.name);
+      expect(dto.translatedFeedbackFields).toEqual(["Número de teléfono de la organización"]);
+      expect(dto.answers).toMatchObject({
+        [conditional.uuid]: true,
+        [orgQuestion.uuid]: org.phone,
+        [pitchQuestion.uuid]: pitch.totalHectares
+      });
+    });
+  });
+
+  describe("addFundingProgrammeDto", () => {
+    it("fills out the funding programme dto", async () => {
+      const programme = await FundingProgrammeFactory.create();
+      const cover = await MediaFactory.fundingProgrammes(programme).create({ collectionName: "cover" });
+      const stages = [
+        await StageFactory.create({ fundingProgrammeId: programme.uuid, order: 2 }),
+        await StageFactory.create({ fundingProgrammeId: programme.uuid, order: 1 })
+      ];
+      await Promise.all(stages.map(stage => stage.reload()));
+      stages.reverse(); // the orders are swapped in the creation order to test the order sort in the service.
+      const forms = await Promise.all(stages.map(stage => FormFactory.create({ stageId: stage.uuid })));
+
+      const result = serialize(await service.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [programme]));
+      const dto = (result.data as Resource).attributes;
+      expect(localizationService.translateIds).not.toHaveBeenCalled();
+      expect(dto).toMatchObject({
+        uuid: programme.uuid,
+        name: programme.name,
+        description: programme.description,
+        location: programme.location,
+        cover: expect.objectContaining({ uuid: cover.uuid, collectionName: "cover" }),
+        stages: stages.map((stage, index) =>
+          expect.objectContaining({ uuid: stage.uuid, formUuid: forms[index].uuid, deadlineAt: stage.deadlineAt })
+        )
+      });
+    });
+
+    it("translates if a locale is provided", async () => {
+      const programmes = [
+        await FundingProgrammeFactory.create({ nameId: 1, descriptionId: 2, locationId: 3 }),
+        await FundingProgrammeFactory.create({ nameId: 4 })
+      ];
+      mockTranslateFieldsWithOriginal(localizationService);
+      localizationService.translateIds.mockResolvedValue({
+        1: "translated name",
+        2: "translated description",
+        3: "translated location",
+        4: "other translated named"
+      });
+      const result = serialize(
+        await service.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), programmes, "es-MX")
+      );
+      const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
+      expect(dtos[0]).toMatchObject({
+        name: "translated name",
+        description: "translated description",
+        location: "translated location"
+      });
+      expect(dtos[1]).toMatchObject({
+        name: "other translated named",
+        description: programmes[1].description,
+        location: programmes[1].location
+      });
     });
   });
 });

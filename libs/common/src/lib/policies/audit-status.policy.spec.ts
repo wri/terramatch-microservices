@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
-import { UserFactory } from "@terramatch-microservices/database/factories";
+import { AuditStatusFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { expectCan } from "./policy.service.spec";
-import { AuditStatusFactory } from "@terramatch-microservices/database/factories/audit-status.factory";
 import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("AuditStatusPolicy", () => {
@@ -24,7 +23,7 @@ describe("AuditStatusPolicy", () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
     mockPermissions();
-    const auditStatus = await AuditStatusFactory.create({ createdBy: user.emailAddress });
+    const auditStatus = await AuditStatusFactory.project().create({ createdBy: user.emailAddress });
     await expectCan(service, "uploadFiles", auditStatus);
   });
 });

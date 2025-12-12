@@ -112,17 +112,20 @@ export class FormDataService {
   async addSubmissionDto(document: DocumentBuilder, formSubmission: FormSubmission, form?: Form, locale?: ValidLocale) {
     form ??=
       formSubmission.form ??
-      (formSubmission.formId == null ? undefined : await Form.findOne({ where: { id: formSubmission.formId } })) ??
+      (formSubmission.formId == null ? undefined : await Form.findOne({ where: { uuid: formSubmission.formId } })) ??
       undefined;
     if (form == null) throw new BadRequestException("Form not found for submission");
 
     locale ??= (await User.findLocale(authenticatedUserId())) ?? "en-US";
 
-    const organisation = formSubmission.organisation ?? (await formSubmission.$get("organisation")) ?? undefined;
-    const projectPitch = formSubmission.projectPitch ?? (await formSubmission.$get("projectPitch")) ?? undefined;
+    formSubmission.organisation ??= (await formSubmission.$get("organisation")) ?? null;
+    formSubmission.projectPitch ??= (await formSubmission.$get("projectPitch")) ?? null;
     const answers = await this.getAnswers(
       form,
-      { organisations: organisation, projectPitches: projectPitch },
+      {
+        organisations: formSubmission.organisation ?? undefined,
+        projectPitches: formSubmission.projectPitch ?? undefined
+      },
       formSubmission
     );
 

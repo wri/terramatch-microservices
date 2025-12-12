@@ -11,7 +11,7 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 import { FormDataService } from "../entities/form-data.service";
 import { uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { Op } from "sequelize";
+import { literal, Op } from "sequelize";
 
 @Controller("fundingProgrammes/v3")
 export class FundingProgrammesController {
@@ -32,18 +32,24 @@ export class FundingProgrammesController {
     if (permissions.find(p => p.startsWith("framework-")) == null) {
       // non-admins only have access to FPs that match their org types
       const orgUuids = await User.orgUuids(authenticatedUserId());
-      const types = uniq(
-        (
-          await Organisation.findAll({
-            where: { uuid: orgUuids },
-            attributes: ["type"]
-          })
-        ).map(({ type }) => type)
-      ).filter(isNotNull);
-      fundingProgrammes = await FundingProgramme.findAll({
-        // It's unclear why, but sequelize is failing to underscore organisationTypes here.
-        where: types.map(type => ({ [Op.or]: { organisation_types: { [Op.like]: `%${type}%` } } }))
-      });
+      const types =
+        orgUuids.length === 0
+          ? []
+          : uniq(
+              (
+                await Organisation.findAll({
+                  where: { uuid: orgUuids },
+                  attributes: ["type"]
+                })
+              ).map(({ type }) => type)
+            ).filter(isNotNull);
+      fundingProgrammes =
+        types.length === 0
+          ? []
+          : await FundingProgramme.findAll({
+              // It's unclear why, but sequelize is failing to generate an appropriate like query here
+              where: { [Op.or]: types.map(type => literal(`organisation_types like '%"${type}"%'`)) }
+            });
     } else {
       // admins have access to everything
       fundingProgrammes = await FundingProgramme.findAll();

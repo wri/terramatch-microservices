@@ -2,7 +2,7 @@
 import { FormsService } from "./forms.service";
 import { faker } from "@faker-js/faker";
 import { Test } from "@nestjs/testing";
-import { LocalizationService, Translations } from "@terramatch-microservices/common/localization/localization.service";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { NotFoundException } from "@nestjs/common";
@@ -25,9 +25,8 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { pick } from "lodash";
-import { Attributes, Model } from "sequelize";
 
 describe("FormsService", () => {
   let service: FormsService;
@@ -142,17 +141,7 @@ describe("FormsService", () => {
         3: "Third Translation",
         4: "Fourth Translation"
       });
-      // Copied from the original service.
-      localizationService.translateFields.mockImplementation(
-        <M extends Model, K extends (keyof Attributes<M>)[]>(translations: Translations, model: M, fields: K) =>
-          fields.reduce(
-            (translated, field) => ({
-              ...translated,
-              [field]: translations[model[`${String(field)}Id` as Attributes<M>[number]] ?? -1] ?? model[field]
-            }),
-            {} as Record<(typeof fields)[number], string>
-          )
-      );
+      mockTranslateFieldsWithOriginal(localizationService);
 
       const form = await FormFactory.create({ titleId: 1 });
       await MediaFactory.form(form).create({ collectionName: "banner" });

@@ -36,10 +36,10 @@ describe("ApplicationPolicy", () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
     mockUserId(user.id);
-    let submission = await ApplicationFactory.create({ organisationUuid: org.uuid });
-    await expectCan(service, "read", submission);
-    submission = await ApplicationFactory.create({ organisationUuid: "other-org" });
-    await expectCannot(service, "read", submission);
+    let application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+    await expectCan(service, "read", application);
+    application = await ApplicationFactory.create();
+    await expectCannot(service, "read", application);
   });
 
   it("allows reading associated org applications", async () => {

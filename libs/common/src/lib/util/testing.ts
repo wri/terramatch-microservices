@@ -4,10 +4,13 @@ import { RequestContext } from "nestjs-request-context";
 import { Permission } from "@terramatch-microservices/database/entities";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { LinkedField, LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "../media/media.service";
 import { FormModels, LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { Dictionary } from "lodash";
+import { LocalizationService, Translations } from "../localization/localization.service";
+import { Model } from "sequelize-typescript";
+import { Attributes } from "sequelize";
 
 /**
  * A utility for unit tests that can take any likely response from a standard v3 controller and
@@ -53,3 +56,17 @@ export class CollectorTestHarness {
     expect(await this.getAnswers(models)).toStrictEqual(expected);
   }
 }
+
+export const mockTranslateFieldsWithOriginal = (service: DeepMocked<LocalizationService>) => {
+  // Copied from the original service.
+  service.translateFields.mockImplementation(
+    <M extends Model, K extends (keyof Attributes<M>)[]>(translations: Translations, model: M, fields: K) =>
+      fields.reduce(
+        (translated, field) => ({
+          ...translated,
+          [field]: translations[model[`${String(field)}Id` as Attributes<M>[number]] ?? -1] ?? model[field]
+        }),
+        {} as Record<(typeof fields)[number], string>
+      )
+  );
+};

@@ -6,5 +6,6 @@ import { FundingProgrammeFactory } from "./funding-programme.factory";
 export const StageFactory = FactoryGirl.define(Stage, async () => ({
   name: faker.animal.petName(),
   order: 1,
-  fundingProgrammeId: FundingProgrammeFactory.associate("uuid")
+  fundingProgrammeId: FundingProgrammeFactory.associate("uuid"),
+  deadlineAt: faker.date.future()
 }));

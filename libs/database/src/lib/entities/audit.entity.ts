@@ -1,83 +1,57 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, ENUM, NOW, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, STRING, TEXT } from "sequelize";
+import { AllowNull, AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { User } from "./user.entity";
+import { Dictionary } from "lodash";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
-const TYPES = ["created", "deleted", "restored", "update", "updated"] as const;
-type AuditType = (typeof TYPES)[number];
-
-@Table({
-  tableName: "audits",
-  underscored: true
-})
-export class Audit extends Model<Audit> {
+// Note: this is a table that was written in the PHP codebase and is only added to v3
+// to support some fallback audit history flows. These records are no longer created. The modern
+// audit system is handled on the `audit_statuses` table with the AuditStatus entity model
+@Table({ tableName: "audits", underscored: true })
+export class Audit extends Model<InferAttributes<Audit>, InferCreationAttributes<Audit>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
-  @Index
-  @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  @AllowNull
+  @Column({ type: STRING, defaultValue: User.LARAVEL_TYPE })
+  userType: string | null;
 
-  @ForeignKey(() => User)
+  @AllowNull
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  userId: number | null;
 
-  @AllowNull
-  @Column({ type: ENUM, values: TYPES })
-  event: string | null;
-
-  @AllowNull
   @Column(STRING)
-  status: string | null;
-
-  @AllowNull
-  @Column(TEXT)
-  oldValues: string | null;
-
-  @AllowNull
-  @Column(TEXT)
-  newValues: string | null;
-
-  @AllowNull
-  @Column(TEXT)
-  comment: string | null;
-
-  @AllowNull
-  @Column(STRING)
-  firstName: string | null;
-
-  @AllowNull
-  @Column(STRING)
-  lastName: string | null;
-
-  @AllowNull
-  @Column({ type: ENUM, values: TYPES })
-  type: AuditType | null;
-
-  @AllowNull
-  @Column(BOOLEAN)
-  isSubmitted: boolean | null;
-
-  @AllowNull
-  @Column(BOOLEAN)
-  isActive: boolean | null;
-
-  @AllowNull
-  @Column(BOOLEAN)
-  requestRemoved: boolean | null;
-
-  @AllowNull
-  @Column({ type: DATE, defaultValue: NOW })
-  dateCreated: Date | null;
-
-  @AllowNull
-  @Column(STRING)
-  createdBy: string | null;
+  event: string;
 
   @Column(STRING)
   auditableType: string;
 
   @Column(BIGINT.UNSIGNED)
   auditableId: number;
+
+  @AllowNull
+  @JsonColumn({ type: TEXT })
+  oldValues: Dictionary<unknown> | null;
+
+  @AllowNull
+  @JsonColumn({ type: TEXT })
+  newValues: Dictionary<unknown> | null;
+
+  @AllowNull
+  @Column(STRING)
+  url: string | null;
+
+  @AllowNull
+  @Column(STRING(45))
+  ipAddress: string | null;
+
+  @AllowNull
+  @Column(STRING(1023))
+  userAgent: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  tags: string | null;
 }

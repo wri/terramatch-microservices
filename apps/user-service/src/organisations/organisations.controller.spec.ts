@@ -5,6 +5,13 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { OrganisationCreationService } from "./organisation-creation.service";
 import { UnauthorizedException } from "@nestjs/common";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
+import {
+  ApplicationFactory,
+  FundingProgrammeFactory,
+  OrganisationFactory
+} from "@terramatch-microservices/database/factories";
+import { serialize } from "@terramatch-microservices/common/util/testing";
+import { Resource } from "@terramatch-microservices/common/util";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -32,6 +39,33 @@ describe("OrganisationsController", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe("index", () => {
+    it("throws if no funding programme filter is provided", async () => {
+      await expect(controller.index({})).rejects.toThrow("Funding programme UUID is required");
+    });
+
+    it("returns orgs associated with a funding programme", async () => {
+      const programme = await FundingProgrammeFactory.create();
+      const orgs = await OrganisationFactory.createMany(3);
+      await ApplicationFactory.create({ organisationUuid: orgs[0].uuid, fundingProgrammeUuid: programme.uuid });
+      await ApplicationFactory.create({ organisationUuid: orgs[1].uuid, fundingProgrammeUuid: programme.uuid });
+
+      const result = serialize(await controller.index({ fundingProgrammeUuid: programme.uuid }));
+
+      expect(policyService.authorize).toHaveBeenCalledWith(
+        "read",
+        expect.arrayContaining(orgs.slice(0, 2).map(({ uuid }) => expect.objectContaining({ uuid })))
+      );
+
+      expect(result.meta.indices?.[0].total).toBe(2);
+      expect(result.data).toHaveLength(2);
+      const uuids = (result.data as Resource[]).map(({ id }) => id);
+      expect(uuids).toContain(orgs[0].uuid);
+      expect(uuids).toContain(orgs[1].uuid);
+      expect(uuids).not.toContain(orgs[2].uuid);
+    });
   });
 
   describe("create", () => {

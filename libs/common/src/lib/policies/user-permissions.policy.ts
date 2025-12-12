@@ -1,5 +1,6 @@
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { User } from "@terramatch-microservices/database/entities";
 
 export type BuilderType = ReturnType<typeof createMongoAbility>;
 
@@ -25,6 +26,13 @@ export abstract class UserPermissionsPolicy {
     return (this._frameworks = this.permissions
       .filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length) as FrameworkKey));
+  }
+
+  protected _organisationUuids?: string[] | null;
+  protected async getOrgUuids() {
+    if (this._organisationUuids == null) this._organisationUuids = await User.orgUuids(this.userId);
+
+    return this._organisationUuids;
   }
 
   abstract addRules(): Promise<void>;

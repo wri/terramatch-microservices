@@ -41,7 +41,7 @@ export class DelayedJobsController {
         (document, job) => document.addData(job.uuid, new DelayedJobDto(job)).document,
         buildJsonApi(DelayedJobDto, { forceDataArray: true })
       )
-      .addIndex({ requestPath: "/jobs/v3/delayedJob" });
+      .addIndex({ requestPath: "/jobs/v3/delayedJobs" });
   }
 
   @Get(":uuid")

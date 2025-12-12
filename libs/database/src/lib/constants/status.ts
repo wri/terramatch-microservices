@@ -1,5 +1,5 @@
 import { States, transitions } from "../util/model-column-state-machine";
-import { DelayedJob, Nursery, Project, ProjectReport, Site, Task, UpdateRequest } from "../entities";
+import { DelayedJob, FormSubmission, Nursery, Project, ProjectReport, Site, Task, UpdateRequest } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 import { ReportModel } from "./entities";
@@ -105,6 +105,22 @@ export const FORM_SUBMISSION_STATUSES = [
 ] as const;
 export type FormSubmissionStatus = (typeof FORM_SUBMISSION_STATUSES)[number];
 
+export const FormSubmissionStatusStates: States<FormSubmission, FormSubmissionStatus> = {
+  default: STARTED,
+
+  transitions: transitions<FormSubmissionStatus>()
+    .from(STARTED, () => [AWAITING_APPROVAL])
+    .from(REQUIRES_MORE_INFORMATION, () => [AWAITING_APPROVAL])
+    .from(AWAITING_APPROVAL, () => [APPROVED, REQUIRES_MORE_INFORMATION, REJECTED]).transitions,
+
+  afterTransitionHooks: {
+    [APPROVED]: emitStatusUpdateHook,
+    [AWAITING_APPROVAL]: emitStatusUpdateHook,
+    [REQUIRES_MORE_INFORMATION]: emitStatusUpdateHook,
+    [REJECTED]: emitStatusUpdateHook
+  }
+};
+
 export const PENDING = "pending";
 export const ORGANISATION_STATUSES = [APPROVED, PENDING, REJECTED, DRAFT] as const;
 export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];
@@ -143,3 +159,9 @@ export const DelayedJobStatusStates: States<DelayedJob, DelayedJobStatus> = {
   default: PENDING,
   transitions: transitions<DelayedJobStatus>().from(PENDING, () => [FAILED, SUCCEEDED]).transitions
 };
+
+export const INACTIVE = "inactive";
+export const ACTIVE = "active";
+export const DISABLED = "disabled";
+export const FUNDING_PROGRAMME_STATUSES = [INACTIVE, ACTIVE, DISABLED] as const;
+export type FundingProgrammeStatus = (typeof FUNDING_PROGRAMME_STATUSES)[number];

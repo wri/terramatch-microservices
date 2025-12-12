@@ -62,9 +62,10 @@ export class LocalizationService {
   async translateIds(ids: number[], locale: ValidLocale) {
     if (ids.length === 0) return {} as Translations;
 
+    const language = locale === "en-US" ? [locale, "en"] : locale;
     return (
       await I18nTranslation.findAll({
-        where: { language: locale, i18nItemId: ids },
+        where: { language, i18nItemId: ids },
         // Note: it is expected that a given translation has either a short value or a long value; never both.
         attributes: ["i18nItemId", "shortValue", "longValue"]
       })

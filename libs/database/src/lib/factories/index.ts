@@ -1,4 +1,6 @@
 export * from "./application.factory";
+export * from "./audit.factory";
+export * from "./audit-status.factory";
 export * from "./srp-report.factory";
 export * from "./delayed-job.factory";
 export * from "./demographic.factory";
@@ -31,6 +33,7 @@ export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";
 export * from "./organisation.factory";
+export * from "./organisation-user.factory";
 export * from "./ownership-stake.factory";
 export * from "./polygon-geometry.factory";
 export * from "./project.factory";

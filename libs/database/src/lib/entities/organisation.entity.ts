@@ -3,6 +3,8 @@ import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, U
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { OrganisationStatus } from "../constants/status";
 import { MediaConfiguration } from "../constants/media-owners";
+import { Application } from "./application.entity";
+import { Subquery } from "../util/subquery.builder";
 
 type OrganisationMedia =
   | "logo"
@@ -74,6 +76,10 @@ export class Organisation extends Model<Organisation> {
     ownershipDocuments: { dbCollection: "ownership_documents", multiple: true, validation: "general-documents" },
     carbonCreditsProof: { dbCollection: "carbon_credits_proof", multiple: true, validation: "general-documents" }
   };
+
+  static uuidForFundingProgramme(fundingProgrammeUuid: string) {
+    return Subquery.select(Application, "organisationUuid").eq("fundingProgrammeUuid", fundingProgrammeUuid).literal;
+  }
 
   @PrimaryKey
   @AutoIncrement

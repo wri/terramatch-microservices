@@ -29,7 +29,7 @@ export class FormDataDto {
   feedbackFields: string[] | null;
 
   @ApiProperty()
-  answers: object;
+  answers: Dictionary<unknown>;
 }
 
 export class StoreFormDataAttributes {

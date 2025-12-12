@@ -2,6 +2,7 @@ import {
   FinancialIndicator,
   Form,
   FormQuestionOption,
+  FundingProgramme,
   Media,
   Nursery,
   Organisation,
@@ -97,5 +98,11 @@ export const MediaFactory = {
       ...(await defaultAttributesFactory()),
       modelType: FinancialIndicator.LARAVEL_TYPE,
       modelId: (indicator?.id as number) ?? FinancialIndicatorFactory.report().associate("id")
+    })),
+  fundingProgrammes: (fp?: FundingProgramme) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: FundingProgramme.LARAVEL_TYPE,
+      modelId: (fp?.id as number) ?? FinancialIndicatorFactory.report().associate("id")
     }))
 };

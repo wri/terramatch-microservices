@@ -4,7 +4,6 @@ import {
   BOOLEAN,
   CreationOptional,
   DATE,
-  ENUM,
   InferAttributes,
   InferCreationAttributes,
   NOW,
@@ -25,19 +24,22 @@ import { NurseryReport } from "./nursery-report.entity";
 import { SitePolygon } from "./site-polygon.entity";
 import { DisturbanceReport } from "./disturbance-report.entity";
 import { User } from "./user.entity";
-
-const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
-type AuditStatusType = (typeof TYPES)[number];
+import { FormSubmission } from "./form-submission.entity";
+import { InternalServerErrorException } from "@nestjs/common";
+import { AuditStatusType, AUDIT_STATUS_TYPES } from "../constants";
 
 type AuditStatusMedia = "attachments";
 
 @Scopes(() => ({
-  auditable: (auditable: LaravelModel) => ({
-    where: {
-      auditableType: laravelType(auditable),
-      auditableId: auditable.id
-    }
-  })
+  auditable: <T extends LaravelModel>(models: T | T[]) => {
+    models = Array.isArray(models) ? models : [models];
+    return {
+      where: {
+        auditableType: laravelType(models[0]),
+        auditableId: models.map(({ id }) => id)
+      }
+    };
+  }
 }))
 @Table({
   tableName: "audit_statuses",
@@ -60,10 +62,11 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
     SiteReport.LARAVEL_TYPE,
     NurseryReport.LARAVEL_TYPE,
     SitePolygon.LARAVEL_TYPE,
-    DisturbanceReport.LARAVEL_TYPE
+    DisturbanceReport.LARAVEL_TYPE,
+    FormSubmission.LARAVEL_TYPE
   ];
 
-  static for(auditable: LaravelModel) {
+  static for<T extends LaravelModel>(auditable: T | T[]) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;
   }
 
@@ -76,6 +79,10 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
     const auditableType = laravelType(model);
     if (!AuditStatus.AUDITABLE_LARAVEL_TYPES.includes(auditableType)) {
       return;
+    }
+
+    if (type != null && !AUDIT_STATUS_TYPES.includes(type)) {
+      throw new InternalServerErrorException(`Invalid audit status type: ${type})`);
     }
 
     const user =
@@ -123,7 +130,7 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
   lastName: string | null;
 
   @AllowNull
-  @Column({ type: ENUM, values: TYPES })
+  @Column(STRING)
   type: AuditStatusType | null;
 
   /**

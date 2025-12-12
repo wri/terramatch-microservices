@@ -1,6 +1,6 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
 import { IsEnum, IsOptional, ValidateNested } from "class-validator";
-import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
+import { NumberPage } from "./page.dto";
 
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })

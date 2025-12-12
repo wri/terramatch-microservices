@@ -562,11 +562,6 @@ export class SitePolygonsController {
       })
     );
 
-    document.addIndex({
-      requestPath: `/research/v3/sitePolygons/upload/comparison`,
-      total: comparisonResult.totalFeatures
-    });
-
     return document;
   }
 
@@ -587,10 +582,7 @@ export class SitePolygonsController {
   async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
+    const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
@@ -662,10 +654,7 @@ export class SitePolygonsController {
   ) {
     await this.policyService.authorize("create", SitePolygon);
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
+    const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],

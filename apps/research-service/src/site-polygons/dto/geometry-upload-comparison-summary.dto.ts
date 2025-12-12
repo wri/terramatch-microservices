@@ -6,7 +6,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 export class GeometryUploadComparisonSummaryDto {
   constructor(data?: Partial<GeometryUploadComparisonSummaryDto>) {
     if (data != null) {
-      populateDto(this, data);
+      populateDto<GeometryUploadComparisonSummaryDto>(this, data as GeometryUploadComparisonSummaryDto);
     }
   }
 

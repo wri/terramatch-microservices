@@ -788,21 +788,6 @@ describe("SitePolygonsController", () => {
       );
     });
 
-    it("should throw UnauthorizedException when userId is null", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", {
-        value: null,
-        writable: true,
-        configurable: true
-      });
-      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
-
-      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
-        UnauthorizedException
-      );
-    });
-
     it("should throw NotFoundException when site is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Site, "findOne").mockResolvedValue(null);
@@ -1099,21 +1084,6 @@ describe("SitePolygonsController", () => {
 
     it("should throw UnauthorizedException when authorization fails", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
-      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
-
-      await expect(
-        controller.uploadGeometryFileWithVersions(file, payload as GeometryUploadRequestDto)
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it("should throw UnauthorizedException when userId is null", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", {
-        value: null,
-        writable: true,
-        configurable: true
-      });
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
       const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
 

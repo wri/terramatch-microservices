@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsOptional, IsUUID } from "class-validator";
+import { IsArray, IsOptional, IsUUID } from "class-validator";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
 export class IndicatorsAttributes {
@@ -13,21 +13,21 @@ export class IndicatorsAttributes {
 
   @ApiProperty({
     description: "Whether to update the existing indicators",
-    example: true
+    example: true,
+    type: Boolean
   })
-  @IsBoolean()
   @IsOptional()
-  updateExisting: boolean | null;
+  updateExisting: boolean;
 
   @ApiProperty({
     description: "Whether to force recalculation of the indicators",
-    example: true
+    example: true,
+    type: Boolean
   })
-  @IsBoolean()
   @IsOptional()
-  forceRecalculation: boolean | null;
+  forceRecalculation: boolean;
 }
 
 export class IndicatorsBodyDto extends JsonApiBodyDto(
-  class IndicatorsRequestData extends CreateDataDto("indicators", IndicatorsAttributes) {}
+  class IndicatorsRequestData extends CreateDataDto("sitePolygons", IndicatorsAttributes) {}
 ) {}

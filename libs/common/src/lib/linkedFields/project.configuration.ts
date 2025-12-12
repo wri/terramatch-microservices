@@ -21,6 +21,13 @@ export const ProjectConfiguration: LinkedFieldConfiguration = {
       multiChoice: true,
       optionListKey: "restoration-practices"
     },
+    "pro-income-generating-activities": {
+      property: "income_generating_activities",
+      label: "Income generating activities",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "income-generating-activities"
+    },
     "pro-land-tenure-proj-area": {
       property: "land_tenure_project_area",
       label: "Land tenure",

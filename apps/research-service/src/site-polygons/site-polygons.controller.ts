@@ -57,6 +57,9 @@ import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { VersionUpdateBody } from "./dto/version-update.dto";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
+import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -68,7 +71,8 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorTreeCoverDto,
   IndicatorFieldMonitoringDto,
   IndicatorMsuCarbonDto,
-  ValidationDto
+  ValidationDto,
+  GeoJsonExportDto
 )
 export class SitePolygonsController {
   constructor(
@@ -77,6 +81,7 @@ export class SitePolygonsController {
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly policyService: PolicyService,
     private readonly versioningService: SitePolygonVersioningService,
+    private readonly geoJsonExportService: GeoJsonExportService,
     @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
@@ -177,6 +182,37 @@ export class SitePolygonsController {
     }
 
     return document;
+  }
+
+  @Get("geojson")
+  @ApiOperation({
+    operationId: "getSitePolygonsGeoJson",
+    summary: "Export site polygons as GeoJSON",
+    description: `Export site polygons as GeoJSON FeatureCollection. 
+    Provide exactly one of: uuid (single polygon), siteUuid (all active polygons in a site), or projectUuid (all active polygons across all sites in a project).
+    Use includeExtendedData to include additional data from site_polygon_data table.
+    Use geometryOnly to return only geometry without properties (only applicable when using uuid).`
+  })
+  @JsonApiResponse(GeoJsonExportDto)
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid query parameters (must provide exactly one of uuid, siteUuid, or projectUuid)"
+  })
+  @ExceptionResponse(NotFoundException, {
+    description: "Polygon, site polygon, or site not found"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed"
+  })
+  async getGeoJson(@Query() query: GeoJsonQueryDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const featureCollection = await this.geoJsonExportService.getGeoJson(query);
+
+    const document = buildJsonApi(GeoJsonExportDto);
+
+    const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
+
+    return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
   }
 
   @Get()

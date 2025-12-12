@@ -6,20 +6,35 @@ import {
 } from "@terramatch-microservices/common/workers/delayed-job-worker.processor";
 import { IndicatorsService } from "./indicators.service";
 import { Job } from "bullmq";
-import { IndicatorsSummaryDto } from "./dto/Indicators-summary.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
+import {
+  SitePolygon,
+  IndicatorOutputHectares,
+  IndicatorOutputTreeCoverLoss
+} from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
+import { SitePolygonLightDto } from "../site-polygons/dto/site-polygon.dto";
+
+const SLUG_MAPPINGS = {
+  treeCoverLoss: IndicatorOutputTreeCoverLoss,
+  treeCoverLossFires: IndicatorOutputTreeCoverLoss,
+  restorationByEcoRegion: IndicatorOutputHectares,
+  restorationByStrategy: IndicatorOutputHectares,
+  restorationByLandUse: IndicatorOutputHectares
+};
 
 export interface IndicatorsJobData {
   slug: IndicatorSlug;
   delayedJobId: number;
   polygonUuids: string[];
+  forceRecalculation?: boolean;
+  updateExisting?: boolean;
 }
 
 const KEEP_JOBS_TIMEOUT = 60 * 60;
 
-@Processor("indicators", {
+@Processor("sitePolygons", {
   concurrency: 10,
   removeOnComplete: { age: KEEP_JOBS_TIMEOUT },
   removeOnFail: { age: KEEP_JOBS_TIMEOUT }
@@ -32,8 +47,12 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
   }
 
   async processDelayedJob(job: Job<IndicatorsJobData>) {
-    const { delayedJobId, polygonUuids, slug } = job.data;
-    this.logger.debug(`polygonUuids ${polygonUuids.join(",")}`);
+    const { delayedJobId, polygonUuids, slug, forceRecalculation = false, updateExisting = false } = job.data;
+    this.logger.debug(
+      `polygonUuids ${polygonUuids.join(
+        ","
+      )}, forceRecalculation: ${forceRecalculation}, updateExisting: ${updateExisting}`
+    );
 
     if (polygonUuids.length === 0) {
       throw new DelayedJobException(404, `No polygons found for delayed job ${delayedJobId.toString()}`);
@@ -45,31 +64,211 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       progressMessage: `Starting indicators analysis of ${polygonUuids.length} polygons...`
     });
 
-    const batchSize = 50;
-    let processed = 0;
+    // Use batches when forceRecalculation is true (always process, no existence checks)
+    // Otherwise, process one by one with existence checks based on updateExisting
+    if (forceRecalculation) {
+      return await this.processBatched(job, slug, polygonUuids);
+    }
 
-    for (let i = 0; i < polygonUuids.length; i += batchSize) {
-      const batch = polygonUuids.slice(i, i + batchSize);
-      await this.indicatorService.process(slug, batch);
-      processed += batch.length;
+    return await this.processOneByOne(job, slug, polygonUuids, updateExisting);
+  }
+
+  /**
+   * Process polygons in batches (used when forceRecalculation is true)
+   * Similar to PHP's processBatchedAnalysis
+   */
+  private async processBatched(job: Job<IndicatorsJobData>, slug: IndicatorSlug, polygonUuids: string[]) {
+    const BATCH_SIZE = 50;
+    const batches: string[][] = [];
+
+    for (let i = 0; i < polygonUuids.length; i += BATCH_SIZE) {
+      batches.push(polygonUuids.slice(i, i + BATCH_SIZE));
+    }
+
+    this.logger.debug(`Processing ${batches.length} batches for slug: ${slug}, batch size: ${BATCH_SIZE}`);
+
+    let processed = 0;
+    const successfulPolygons: string[] = [];
+    const allResults: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      this.logger.debug(`Processing batch ${batchIndex + 1} of ${batches.length}: ${batch.length} polygons`);
+
+      const batchResults: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
+
+      for (const polygonUuid of batch) {
+        try {
+          const result = await this.indicatorService.processPolygon(slug, polygonUuid);
+          if (result != null) {
+            batchResults.push(result);
+            successfulPolygons.push(polygonUuid);
+          }
+          processed++;
+        } catch (error) {
+          this.logger.error(
+            `Error processing polygon ${polygonUuid} for slug ${slug}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            error
+          );
+          processed++;
+        }
+      }
+
+      if (batchResults.length > 0) {
+        await this.indicatorService.saveResults(batchResults, slug);
+        allResults.push(...batchResults);
+      }
+
       await this.updateJobProgress(job, {
         processedContent: processed,
-        progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons...`
+        progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons... (batch ${batchIndex + 1}/${
+          batches.length
+        })`
       });
     }
 
-    const document = buildJsonApi(IndicatorsSummaryDto).addData(
-      polygonUuids.join(","),
-      populateDto(new IndicatorsSummaryDto(), {
-        polygonUuids: polygonUuids,
-        totalPolygons: polygonUuids.length
-      })
-    );
+    const sitePolygons =
+      successfulPolygons.length > 0
+        ? await SitePolygon.findAll({
+            where: {
+              polygonUuid: {
+                [Op.in]: successfulPolygons
+              }
+            }
+          })
+        : [];
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    for (const sitePolygon of sitePolygons) {
+      document.addData(sitePolygon.uuid, new SitePolygonLightDto(sitePolygon));
+    }
 
     return {
-      processedContent: 1,
-      progressMessage: "Completed indicators analysis",
+      processedContent: successfulPolygons.length,
+      progressMessage: `Completed indicators analysis${
+        successfulPolygons.length < polygonUuids.length
+          ? ` (${successfulPolygons.length}/${polygonUuids.length} successful)`
+          : ""
+      }`,
       payload: document
     };
+  }
+
+  /**
+   * Process polygons one by one (used when forceRecalculation is false)
+   * Updates progress after each polygon
+   * If updateExisting is false, skips polygons that already have indicators
+   */
+  private async processOneByOne(
+    job: Job<IndicatorsJobData>,
+    slug: IndicatorSlug,
+    polygonUuids: string[],
+    updateExisting: boolean
+  ) {
+    let processed = 0;
+    const successfulPolygons: string[] = [];
+    const results: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
+
+    for (const polygonUuid of polygonUuids) {
+      try {
+        if (!updateExisting) {
+          const exists = await this.checkIfExists(slug, polygonUuid);
+          if (exists) {
+            this.logger.debug(`Skipping polygon ${polygonUuid} - record already exists and updateExisting=false`);
+            processed++;
+            await this.updateJobProgress(job, {
+              processedContent: processed,
+              progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons...`
+            });
+            continue;
+          }
+        }
+
+        const result = await this.indicatorService.processPolygon(slug, polygonUuid);
+        if (result != null) {
+          results.push(result);
+          successfulPolygons.push(polygonUuid);
+        }
+        processed++;
+
+        await this.updateJobProgress(job, {
+          processedContent: processed,
+          progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons...`
+        });
+      } catch (error) {
+        this.logger.error(
+          `Error processing polygon ${polygonUuid} for slug ${slug}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          error
+        );
+        processed++;
+        await this.updateJobProgress(job, {
+          processedContent: processed,
+          progressMessage: `Analyzing ${processed} out of ${polygonUuids.length} polygons...`
+        });
+      }
+    }
+
+    if (results.length > 0) {
+      await this.indicatorService.saveResults(results, slug);
+    }
+
+    const sitePolygons =
+      successfulPolygons.length > 0
+        ? await SitePolygon.findAll({
+            where: {
+              polygonUuid: {
+                [Op.in]: successfulPolygons
+              }
+            }
+          })
+        : [];
+
+    const document = buildJsonApi(SitePolygonLightDto);
+
+    for (const sitePolygon of sitePolygons) {
+      document.addData(sitePolygon.uuid, new SitePolygonLightDto(sitePolygon));
+    }
+
+    return {
+      processedContent: successfulPolygons.length,
+      progressMessage: `Completed indicators analysis${
+        successfulPolygons.length < polygonUuids.length
+          ? ` (${successfulPolygons.length}/${polygonUuids.length} successful)`
+          : ""
+      }`,
+      payload: document
+    };
+  }
+
+  private async checkIfExists(slug: IndicatorSlug, polygonUuid: string): Promise<boolean> {
+    const Model = SLUG_MAPPINGS[slug];
+    if (Model == null) {
+      return false;
+    }
+
+    const currentYear = new Date().getFullYear();
+
+    const sitePolygon = await SitePolygon.findOne({
+      where: { polygonUuid },
+      attributes: ["id"]
+    });
+
+    if (sitePolygon == null) {
+      return false;
+    }
+
+    const count = await Model.count({
+      where: {
+        sitePolygonId: sitePolygon.id,
+        indicatorSlug: slug,
+        yearOfAnalysis: currentYear
+      }
+    });
+
+    return count > 0;
   }
 }

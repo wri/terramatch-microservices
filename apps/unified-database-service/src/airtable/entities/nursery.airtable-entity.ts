@@ -11,7 +11,12 @@ const COLUMNS: ColumnMapping<Nursery, NurseryAssociations>[] = [
   "name",
   associatedValueColumn("projectUuid", "projectId"),
   "status",
-  "updateRequestStatus"
+  "updateRequestStatus",
+  "seedlingGrown",
+  "type",
+  "startDate",
+  "endDate",
+  "plantingContribution"
 ];
 
 export class NurseryEntity extends AirtableEntity<Nursery, NurseryAssociations> {

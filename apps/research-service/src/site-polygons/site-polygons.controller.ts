@@ -60,7 +60,6 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
-import { v4 as uuidv4 } from "uuid";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -211,11 +210,9 @@ export class SitePolygonsController {
 
     const document = buildJsonApi(GeoJsonExportDto);
 
-    const resourceId = query.uuid ?? query.siteUuid ?? query.projectUuid ?? uuidv4();
+    const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
 
-    document.addData(resourceId, new GeoJsonExportDto(featureCollection));
-
-    return document;
+    return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
   }
 
   @Get()

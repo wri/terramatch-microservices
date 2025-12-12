@@ -20,15 +20,12 @@ import { Op } from "sequelize";
 @Injectable()
 export class GeoJsonExportService {
   private readonly logger = new Logger(GeoJsonExportService.name);
+
   async getGeoJson(query: GeoJsonQueryDto): Promise<FeatureCollection> {
     const providedParams = [query.uuid, query.siteUuid, query.projectUuid].filter(isNotNull);
 
-    if (providedParams.length === 0) {
+    if (providedParams.length !== 1) {
       throw new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided");
-    }
-
-    if (providedParams.length > 1) {
-      throw new BadRequestException("Only one of uuid, siteUuid, or projectUuid can be provided");
     }
 
     const includeExtendedData = query.includeExtendedData ?? true;

@@ -15,9 +15,9 @@ export const JsonColumn =
   (target: unknown, propertyName: string, propertyDescriptor?: PropertyDescriptor) => {
     const { emptyArrayAsObject, ...restOptions } = options;
     return Column({
+      type: JSON_TYPE,
       ...restOptions,
 
-      type: JSON_TYPE,
       get(this: T): object {
         let value = this.getDataValue(propertyName as keyof Attributes<T>);
         if (typeof value === "string") value = JSON.parse(value);

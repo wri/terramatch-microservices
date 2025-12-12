@@ -82,7 +82,7 @@ export class FundingProgramme extends Model<
   readMoreUrl: string | null;
 
   @AllowNull
-  @JsonColumn()
+  @JsonColumn({ type: TEXT })
   organisationTypes: OrganisationType[] | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })

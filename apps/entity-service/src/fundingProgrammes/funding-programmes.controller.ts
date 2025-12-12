@@ -1,7 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { FundingProgramme, User } from "@terramatch-microservices/database/entities";
+import { FundingProgramme, Organisation, User } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { FundingProgrammeDto } from "./dto/funding-programme.dto";
@@ -9,6 +9,9 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
+import { uniq } from "lodash";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { Op } from "sequelize";
 
 @Controller("fundingProgrammes/v3")
 export class FundingProgrammesController {
@@ -24,7 +27,28 @@ export class FundingProgrammesController {
     description: "User is not authorized to access these funding programmes"
   })
   async indexFundingProgrammes(@Query() query: FundingProgrammeQueryDto) {
-    const fundingProgrammes = await FundingProgramme.findAll();
+    const permissions = await this.policyService.getPermissions();
+    let fundingProgrammes: FundingProgramme[];
+    if (permissions.find(p => p.startsWith("framework-")) == null) {
+      // non-admins only have access to FPs that match their org types
+      const orgUuids = await User.orgUuids(authenticatedUserId());
+      const types = uniq(
+        (
+          await Organisation.findAll({
+            where: { uuid: orgUuids },
+            attributes: ["type"]
+          })
+        ).map(({ type }) => type)
+      ).filter(isNotNull);
+      fundingProgrammes = await FundingProgramme.findAll({
+        // It's unclear why, but sequelize is failing to underscore organisationTypes here.
+        where: types.map(type => ({ [Op.or]: { organisation_types: { [Op.like]: `%${type}%` } } }))
+      });
+    } else {
+      // admins have access to everything
+      fundingProgrammes = await FundingProgramme.findAll();
+    }
+
     const locale = query.translated === false ? undefined : await User.findLocale(authenticatedUserId());
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({

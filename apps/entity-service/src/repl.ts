@@ -18,6 +18,7 @@ import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { generateHashedKey } from "@transifex/native";
+import { DateTime } from "luxon";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -103,7 +104,7 @@ bootstrapRepl("Entity Service", AppModule, {
           [Op.and]: [
             where(col("old_values"), "=", col("new_values")),
             { auditableType: { [Op.ne]: FormSubmission.LARAVEL_TYPE } },
-            { createdAt: { [Op.gt]: new Date(2024, 8, 1) } }
+            { createdAt: { [Op.gt]: DateTime.fromObject({ year: 2024, month: 9, day: 1 }).toJSDate() } }
           ]
         }
       });

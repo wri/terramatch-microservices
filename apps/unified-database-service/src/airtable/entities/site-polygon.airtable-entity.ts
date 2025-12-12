@@ -34,7 +34,8 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
     }
   },
   "practice",
-  "targetSys"
+  "targetSys",
+  "polygonUuid"
 ];
 
 export class SitePolygonEntity extends AirtableEntity<SitePolygon, SitePolygonAssociations> {

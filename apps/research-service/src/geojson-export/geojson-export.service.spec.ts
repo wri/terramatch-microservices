@@ -68,7 +68,7 @@ describe("GeoJsonExportService", () => {
       };
 
       await expect(service.getGeoJson(query)).rejects.toThrow(
-        new BadRequestException("Only one of uuid, siteUuid, or projectUuid can be provided")
+        new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided")
       );
     });
 
@@ -79,7 +79,7 @@ describe("GeoJsonExportService", () => {
       };
 
       await expect(service.getGeoJson(query)).rejects.toThrow(
-        new BadRequestException("Only one of uuid, siteUuid, or projectUuid can be provided")
+        new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided")
       );
     });
 
@@ -90,7 +90,7 @@ describe("GeoJsonExportService", () => {
       };
 
       await expect(service.getGeoJson(query)).rejects.toThrow(
-        new BadRequestException("Only one of uuid, siteUuid, or projectUuid can be provided")
+        new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided")
       );
     });
 
@@ -102,7 +102,7 @@ describe("GeoJsonExportService", () => {
       };
 
       await expect(service.getGeoJson(query)).rejects.toThrow(
-        new BadRequestException("Only one of uuid, siteUuid, or projectUuid can be provided")
+        new BadRequestException("Exactly one of uuid, siteUuid, or projectUuid must be provided")
       );
     });
 

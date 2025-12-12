@@ -14,7 +14,7 @@ import {
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { ITranslateParams, normalizeLocale, tx, t, createNativeInstance } from "@transifex/native";
-import { Dictionary } from "lodash";
+import { Dictionary, groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
@@ -121,31 +121,30 @@ export class LocalizationService {
     for (const locale of locales) {
       const dbLocale = locale.split("_").join("-");
       await tx.fetchTranslations(locale);
-      const translations = await tx.cache.getTranslations(locale);
-      const keys = Object.keys(translations);
+      const txTranslations = await tx.cache.getTranslations(locale);
+      const keys = Object.keys(txTranslations);
       for (const key of keys) {
-        const translation = translations[key];
+        const translation = txTranslations[key];
         const i18nItems = await I18nItem.findAll({ where: { hash: key } });
+        const i18nTranslations = await I18nTranslation.findAll({
+          where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) }, language: dbLocale }
+        });
+        const groupByI18nItemId = groupBy(i18nTranslations, "i18nItemId");
         for (const i18nItem of i18nItems) {
           const isShort = i18nItem.shortValue != null;
-          let i18nTranslation = await I18nTranslation.findOne({
-            where: {
-              i18nItemId: i18nItem.id,
-              language: dbLocale
-            }
-          });
-          if (i18nTranslation == null) {
-            i18nTranslation = await I18nTranslation.create({
+          if (groupByI18nItemId[i18nItem.id] != null && groupByI18nItemId[i18nItem.id].length > 0) {
+            const i18nTranslation = groupByI18nItemId[i18nItem.id][0];
+            i18nTranslation.shortValue = isShort ? translation : null;
+            i18nTranslation.longValue = isShort ? null : translation;
+            i18nTranslation.language = dbLocale;
+            await i18nTranslation.save();
+          } else {
+            await I18nTranslation.create({
               i18nItemId: i18nItem.id,
               language: dbLocale,
               shortValue: isShort ? translation : null,
               longValue: isShort ? null : translation
             } as I18nTranslation);
-          } else {
-            i18nTranslation.shortValue = isShort ? translation : null;
-            i18nTranslation.longValue = isShort ? null : translation;
-            i18nTranslation.language = dbLocale;
-            await i18nTranslation.save();
           }
           i18nItem.status = "translated";
           await i18nItem.save({

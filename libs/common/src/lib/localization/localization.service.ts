@@ -125,13 +125,13 @@ export class LocalizationService {
       const keys = Object.keys(txTranslations);
       for (const key of keys) {
         const translation = txTranslations[key];
+        const isShort = translation.length < 256;
         const i18nItems = await I18nItem.findAll({ where: { hash: key } });
         const i18nTranslations = await I18nTranslation.findAll({
           where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) }, language: dbLocale }
         });
         const groupByI18nItemId = groupBy(i18nTranslations, "i18nItemId");
         for (const i18nItem of i18nItems) {
-          const isShort = i18nItem.shortValue != null;
           if (groupByI18nItemId[i18nItem.id] != null && groupByI18nItemId[i18nItem.id].length > 0) {
             const i18nTranslation = groupByI18nItemId[i18nItem.id][0];
             i18nTranslation.shortValue = isShort ? translation : null;
@@ -185,6 +185,7 @@ export class LocalizationService {
       };
     }, {} as Record<string, { meta: { character_limit: number; context: string; developer_comment: string; occurrences: string[]; tags: string[] }; string: string }>);
     await tx.pushSource(source);
+    this.logger.log(`Finished pushing ${items.length} items`);
   }
 
   async cleanOldI18nItems() {

@@ -6,8 +6,7 @@ import {
   SiteFactory,
   ProjectFactory,
   ProjectUserFactory,
-  UserFactory,
-  RoleFactory
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 
 describe("SitePolygonPolicy", () => {

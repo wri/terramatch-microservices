@@ -77,6 +77,61 @@ export function CreateDataDto<T>(type: string, AttributesDto: new () => T) {
   return DataDto;
 }
 
+function UuidDeleteDataDto(type: string) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsUUID()
+    @ApiProperty({ format: "uuid" })
+    id: string;
+  }
+  return DataDto;
+}
+
+function NumberDeleteDataDto(type: string) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsNumberString({ no_symbols: true })
+    @ApiProperty({ pattern: "^\\d{5}$" })
+    id: string;
+  }
+  return DataDto;
+}
+
+function StringDeleteDataDto(type: string) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsString()
+    @ApiProperty()
+    id: string;
+  }
+  return DataDto;
+}
+
+export function DeleteDataDto(options: DtoOptions) {
+  if (options.id === "uuid" || options.id == null) {
+    return UuidDeleteDataDto(options.type);
+  }
+
+  if (options.id === "number") {
+    return NumberDeleteDataDto(options.type);
+  }
+
+  if (options.id === "string") {
+    return StringDeleteDataDto(options.type);
+  }
+
+  throw new InternalServerErrorException(`Options id not recognized [${options.id}]`);
+}
+
 export function JsonApiDataDto<T>(options: DtoOptions, AttributesDto: new () => T) {
   // It's tedious to have these three specified separately, but if we specify these differently as
   // an intermediate base class and then a subclass with the correct id annotations, it mixes up

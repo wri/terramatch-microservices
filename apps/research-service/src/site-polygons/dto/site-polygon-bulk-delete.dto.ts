@@ -1,29 +1,22 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Equals, IsArray, IsUUID, ValidateNested, ArrayMinSize } from "class-validator";
+import { IsArray, ValidateNested, ArrayMinSize } from "class-validator";
 import { Type } from "class-transformer";
+import { DeleteDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
-class SitePolygonDeleteResource {
-  @Equals("sitePolygons")
-  @ApiProperty({ enum: ["sitePolygons"], example: "sitePolygons" })
-  type: string;
-
-  @IsUUID()
-  @ApiProperty({ format: "uuid", description: "UUID of the site polygon to delete" })
-  id: string;
-}
+class SitePolygonDeleteData extends DeleteDataDto({ type: "sitePolygons", id: "uuid" }) {}
 
 export class SitePolygonBulkDeleteBodyDto {
   @IsArray()
   @ArrayMinSize(1, { message: "At least one site polygon must be provided" })
   @ValidateNested({ each: true })
-  @Type(() => SitePolygonDeleteResource)
+  @Type(() => SitePolygonDeleteData)
   @ApiProperty({
     description: "Array of site polygon resource identifiers to delete",
-    type: [SitePolygonDeleteResource],
+    type: [SitePolygonDeleteData],
     example: [
       { type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" },
       { type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174001" }
     ]
   })
-  data: SitePolygonDeleteResource[];
+  data: SitePolygonDeleteData[];
 }

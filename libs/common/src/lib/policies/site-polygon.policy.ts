@@ -5,9 +5,8 @@ import { Op } from "sequelize";
 export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
     const user = await this.getUser();
-    const isServiceAccount = this.permissions.includes("polygons-manage");
 
-    if (isServiceAccount) {
+    if (this.permissions.includes("polygons-manage")) {
       this.builder.can(["read", "create"], SitePolygon);
       this.builder.can(["update", "delete"], SitePolygon, { createdBy: this.userId });
       return;

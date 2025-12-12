@@ -27,6 +27,7 @@ import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
+import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
 
 @Module({
   imports: [
@@ -78,7 +79,8 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     DuplicateGeometryValidator,
     VoronoiService,
     PolygonClippingService,
-    ClippingProcessor
+    ClippingProcessor,
+    GeoJsonExportService
   ]
 })
 export class AppModule {}

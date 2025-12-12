@@ -34,11 +34,13 @@ describe("RestorationByTypeCalculator", () => {
   });
 
   it("should return the already calculated area if the site polygon has a calcArea", async () => {
-    jest.spyOn(SitePolygon, "findOne").mockResolvedValue({
+    const mockSitePolygon = {
       id: 1,
       practice: ["test"],
-      calcArea: 100
-    } as unknown as SitePolygon);
+      calcArea: 100,
+      get: jest.fn((key: string) => (mockSitePolygon as unknown as Record<string, unknown>)[key])
+    } as unknown as SitePolygon;
+    jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon);
     const geometry: Polygon = {
       type: "Polygon",
       coordinates: [
@@ -61,11 +63,13 @@ describe("RestorationByTypeCalculator", () => {
   });
 
   it("should calculate the area if the site polygon does not have a calcArea", async () => {
-    jest.spyOn(SitePolygon, "findOne").mockResolvedValue({
+    const mockSitePolygon = {
       id: 1,
       practice: ["test"],
-      calcArea: null
-    } as unknown as SitePolygon);
+      calcArea: null,
+      get: jest.fn((key: string) => (mockSitePolygon as unknown as Record<string, unknown>)[key])
+    } as unknown as SitePolygon;
+    jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon);
     jest.spyOn(PolygonGeometry, "calculateArea").mockResolvedValue(100);
     const geometry = {
       type: "Polygon",

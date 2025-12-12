@@ -3,28 +3,29 @@ import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { IndicatorTreeCoverLossDto } from "../site-polygons/dto/indicators.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { DelayedJob } from "@terramatch-microservices/database/entities/delayed-job.entity";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
-import { IndicatorsSummaryDto } from "./dto/Indicators-summary.dto";
 import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { IndicatorsParamDto } from "./dto/indicators-param.dto";
+import { IndicatorHectaresDto } from "../site-polygons/dto/indicators.dto";
+import { SitePolygonLightDto } from "../site-polygons/dto/site-polygon.dto";
 
 @Controller("research/v3/indicators")
-@ApiExtraModels(IndicatorTreeCoverLossDto)
+@ApiExtraModels(IndicatorTreeCoverLossDto, IndicatorHectaresDto)
 export class IndicatorsController {
   private readonly logger = new TMLogger(IndicatorsController.name);
 
-  constructor(@InjectQueue("indicators") private readonly indicatorsQueue: Queue) {}
+  constructor(@InjectQueue("sitePolygons") private readonly sitePolygonsQueue: Queue) {}
 
   @Post(":slug")
   @ApiOperation({
     operationId: "startIndicatorCalculation",
     summary: "Start indicator calculation"
   })
-  @JsonApiResponse([IndicatorsSummaryDto, DelayedJobDto])
+  @JsonApiResponse([DelayedJobDto, SitePolygonLightDto])
   async startIndicatorCalculation(
     @Param() { slug }: IndicatorsParamDto,
     @Body() payload: IndicatorsBodyDto,
@@ -32,16 +33,20 @@ export class IndicatorsController {
   ) {
     this.logger.debug(`Starting indicator calculation for slug: ${slug}`);
 
+    const { polygonUuids } = payload.data.attributes;
+
     const delayedJob = await DelayedJob.create({
       isAcknowledged: false,
       name: "Indicator Calculation",
       processedContent: 0,
       progressMessage: "Starting indicator calculation...",
       createdBy: authenticatedUserId,
-      metadata: {}
+      metadata: {
+        entity_name: `${polygonUuids.length} polygons`
+      }
     } as DelayedJob);
 
-    await this.indicatorsQueue.add("indicatorCalculation", {
+    await this.sitePolygonsQueue.add("indicatorCalculation", {
       slug,
       ...payload.data.attributes,
       delayedJobId: delayedJob.id

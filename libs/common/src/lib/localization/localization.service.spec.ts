@@ -1,24 +1,44 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
-import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
+import {
+  FormOptionListOption,
+  FormQuestion,
+  FormQuestionOption,
+  FormSection,
+  FormTableHeader,
+  FundingProgramme,
+  I18nItem,
+  I18nTranslation,
+  LocalizationKey
+} from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { ConfigService } from "@nestjs/config";
-import { normalizeLocale, t, tx } from "@transifex/native";
+import { createNativeInstance, normalizeLocale, t, tx } from "@transifex/native";
 import { createMock } from "@golevelup/ts-jest";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import { I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
 
 jest.mock("@transifex/native", () => ({
   tx: {
     init: jest.fn(),
-    setCurrentLocale: jest.fn()
+    setCurrentLocale: jest.fn(),
+    pushSource: jest.fn()
   },
   t: jest.fn(),
-  normalizeLocale: jest.fn()
+  normalizeLocale: jest.fn(),
+  createNativeInstance: jest.fn().mockImplementation(() => ({
+    fetchTranslations: jest.fn(),
+    cache: {
+      getTranslations: jest.fn().mockImplementation(() => ({
+        foo: "bar"
+      }))
+    },
+    pushSource: jest.fn()
+  }))
 }));
 
 describe("LocalizationService", () => {
@@ -163,6 +183,88 @@ describe("LocalizationService", () => {
 
       expect(shortItem?.shortValue).toBe(trim(shortValue));
       expect(longItem?.longValue).toBe(longValue);
+    });
+  });
+
+  describe("pullTranslations", () => {
+    it("should pull translations when a i18nTranslation is not found", async () => {
+      const i18nItem = await I18nItemFactory.create();
+      (createNativeInstance as jest.Mock).mockImplementation(() => ({
+        fetchTranslations: jest.fn().mockResolvedValue({}),
+        cache: {
+          getTranslations: jest.fn().mockImplementation(() => ({
+            [i18nItem.hash ?? ""]: "bar"
+          }))
+        }
+      }));
+      await service.pullTranslations();
+      const i18nItemAfter = await I18nItem.findOne({ where: { id: i18nItem.id } });
+      expect(i18nItemAfter?.status).toBe("translated");
+    });
+    it("should pull translations when a i18nTranslation is found", async () => {
+      const i18nItem = await I18nItemFactory.create();
+      await I18nTranslationFactory.create({
+        i18nItemId: i18nItem.id,
+        language: "fr-FR",
+        shortValue: "bar"
+      });
+      (createNativeInstance as jest.Mock).mockImplementation(() => ({
+        fetchTranslations: jest.fn().mockResolvedValue({}),
+        cache: {
+          getTranslations: jest.fn().mockImplementation(() => ({
+            [i18nItem.hash ?? ""]: "bar"
+          }))
+        }
+      }));
+      await service.pullTranslations();
+      const i18nItemAfter = await I18nItem.findOne({ where: { id: i18nItem.id } });
+      expect(i18nItemAfter?.status).toBe("translated");
+    });
+  });
+
+  describe("pushTranslations", () => {
+    it("should push translations", async () => {
+      const pushSouceMock = jest.fn();
+      (createNativeInstance as jest.Mock).mockImplementation(() => ({
+        pushSource: pushSouceMock
+      }));
+      await service.pushTranslations();
+      expect(pushSouceMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("cleanOldI18nItems", () => {
+    it("should clean old I18nItems", async () => {
+      // Cleaning up the database
+      const entities = [
+        I18nItem,
+        FormOptionListOption,
+        FormQuestion,
+        FormQuestionOption,
+        FormSection,
+        FormTableHeader,
+        LocalizationKey,
+        FundingProgramme
+      ];
+      for (const entity of entities) {
+        // @ts-expect-error - entity is a model class
+        await entity.truncate();
+      }
+      // First form question with a label
+      const formQuestion = await FormQuestionFactory.create();
+      const firstLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
+      formQuestion.labelId = firstLabelI18nItem.id;
+      await formQuestion.save();
+      const previousCount = await I18nItem.count();
+      // Here we typically replaced the old id with the new id
+      formQuestion.label = "testing";
+      const seconLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
+      formQuestion.labelId = seconLabelI18nItem.id;
+      await formQuestion.save();
+      // cleaning up the old I18nItems
+      await service.cleanOldI18nItems();
+      const afterCount = await I18nItem.count();
+      expect(afterCount).toBe(previousCount);
     });
   });
 });

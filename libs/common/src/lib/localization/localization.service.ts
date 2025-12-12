@@ -1,17 +1,32 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
+import {
+  Form,
+  FormOptionListOption,
+  FormQuestion,
+  FormQuestionOption,
+  FormSection,
+  FormTableHeader,
+  FundingProgramme,
+  I18nItem,
+  I18nTranslation,
+  LocalizationKey
+} from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
-import { ITranslateParams, normalizeLocale, tx, t } from "@transifex/native";
-import { Dictionary } from "lodash";
+import { ITranslateParams, normalizeLocale, tx, t, createNativeInstance } from "@transifex/native";
+import { Dictionary, groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
+import { TMLogger } from "../util/tm-logger";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;
 
 @Injectable()
 export class LocalizationService {
-  constructor(configService: ConfigService) {
+  private readonly logger = new TMLogger(LocalizationService.name);
+
+  constructor(private readonly configService: ConfigService) {
     tx.init({
       token: configService.get("TRANSIFEX_TOKEN")
     });
@@ -95,5 +110,113 @@ export class LocalizationService {
 
     // Translate the text
     return t(text, params);
+  }
+
+  async pullTranslations() {
+    const tx = createNativeInstance({
+      token: this.configService.get("TRANSIFEX_TOKEN"),
+      secret: this.configService.get("TRANSIFEX_SECRET")
+    });
+    const locales = ["en_US", "fr_FR", "es_MX", "pt_BR"];
+    for (const locale of locales) {
+      const dbLocale = locale.split("_").join("-");
+      await tx.fetchTranslations(locale);
+      const txTranslations = await tx.cache.getTranslations(locale);
+      const keys = Object.keys(txTranslations);
+      for (const key of keys) {
+        const translation = txTranslations[key];
+        const isShort = translation.length < 256;
+        const i18nItems = await I18nItem.findAll({ where: { hash: key } });
+        const i18nTranslations = await I18nTranslation.findAll({
+          where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) }, language: dbLocale }
+        });
+        const groupByI18nItemId = groupBy(i18nTranslations, "i18nItemId");
+        for (const i18nItem of i18nItems) {
+          if (groupByI18nItemId[i18nItem.id] != null && groupByI18nItemId[i18nItem.id].length > 0) {
+            const i18nTranslation = groupByI18nItemId[i18nItem.id][0];
+            i18nTranslation.shortValue = isShort ? translation : null;
+            i18nTranslation.longValue = isShort ? null : translation;
+            i18nTranslation.language = dbLocale;
+            await i18nTranslation.save();
+          } else {
+            await I18nTranslation.create({
+              i18nItemId: i18nItem.id,
+              language: dbLocale,
+              shortValue: isShort ? translation : null,
+              longValue: isShort ? null : translation
+            } as I18nTranslation);
+          }
+          i18nItem.status = "translated";
+          await i18nItem.save({
+            hooks: false
+          });
+        }
+      }
+      this.logger.log(`Finished processing ${keys.length} keys for ${normalizeLocale(locale)}`);
+    }
+  }
+
+  async pushTranslations() {
+    const tx = createNativeInstance({
+      token: this.configService.get("TRANSIFEX_TOKEN"),
+      secret: this.configService.get("TRANSIFEX_SECRET")
+    });
+
+    const items = await I18nItem.findAll({
+      where: {
+        status: {
+          [Op.in]: [DRAFT, MODIFIED]
+        }
+      }
+    });
+    const source = items.reduce((source, item) => {
+      return {
+        ...source,
+        [item.hash ?? ""]: {
+          meta: {
+            character_limit: 1000,
+            context: "",
+            developer_comment: "",
+            occurrences: [],
+            tags: ["custom-form"]
+          },
+          string: item.shortValue ?? item.longValue ?? ""
+        }
+      };
+    }, {} as Record<string, { meta: { character_limit: number; context: string; developer_comment: string; occurrences: string[]; tags: string[] }; string: string }>);
+    await tx.pushSource(source);
+    this.logger.log(`Finished pushing ${items.length} items`);
+  }
+
+  async cleanOldI18nItems() {
+    const i18nEntitiesColumns = [
+      { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
+      { entity: FormOptionListOption, attributes: ["labelId"] },
+      { entity: FormQuestion, attributes: ["labelId", "descriptionId"] },
+      { entity: FormQuestionOption, attributes: ["labelId"] },
+      { entity: FormSection, attributes: ["titleId", "subtitleId", "descriptionId"] },
+      { entity: FormTableHeader, attributes: ["labelId"] },
+      { entity: LocalizationKey, attributes: ["valueId"] },
+      { entity: FundingProgramme, attributes: ["locationId"] }
+    ];
+    const i18nIds: number[] = [];
+    for (const { entity, attributes } of i18nEntitiesColumns) {
+      // @ts-expect-error - entity is a model class
+      const entities = await entity.findAll({ attributes });
+      for (const entity of entities) {
+        Object.entries(entity.dataValues).forEach(([, value]) => {
+          if (value != null) {
+            i18nIds.push(value);
+          }
+        });
+      }
+    }
+    this.logger.log(`i18nIds.length: ${i18nIds.length}`);
+    const i18nItems = await I18nItem.count();
+    this.logger.log(`i18nItems.length: ${i18nItems}`);
+    const translationsDeleted = await I18nTranslation.destroy({ where: { i18nItemId: { [Op.notIn]: i18nIds } } });
+    const itemsDeleted = await I18nItem.destroy({ where: { id: { [Op.notIn]: i18nIds } } });
+    this.logger.log(`Deleted ${itemsDeleted} I18nItems and ${translationsDeleted} I18nTranslations`);
+    this.logger.log(`Finished cleaning old I18nItems`);
   }
 }

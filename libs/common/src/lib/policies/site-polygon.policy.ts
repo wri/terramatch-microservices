@@ -4,8 +4,11 @@ import { Op } from "sequelize";
 
 export class SitePolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
+    const user = await this.getUser();
+
     if (this.permissions.includes("polygons-manage")) {
-      this.builder.can("manage", SitePolygon);
+      this.builder.can(["read", "create"], SitePolygon);
+      this.builder.can(["update", "delete"], SitePolygon, { createdBy: this.userId });
       return;
     }
 
@@ -17,6 +20,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
       const siteUuids = sites.map(site => site.uuid);
       this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
     }
+
     if (this.permissions.includes("manage-own")) {
       const sites = await Site.findAll({
         where: { projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.userId) } },
@@ -29,7 +33,6 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("projects-manage")) {
-      const user = await this.getUser();
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {

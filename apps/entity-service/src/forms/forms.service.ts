@@ -110,7 +110,7 @@ export class FormsService {
     }
 
     return document.addIndex({
-      requestPath: `/forms/v3/forms${getStableRequestQuery(query)}`,
+      requestPath: `/forms/v3${getStableRequestQuery(query)}`,
       total: paginationTotal,
       pageNumber: query.page?.number ?? 1
     });

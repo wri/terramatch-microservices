@@ -15,7 +15,14 @@ import {
 } from "@terramatch-microservices/database/constants/entities";
 import { SpecificEntityData } from "../email/email.processor";
 import { EventService } from "./event.service";
-import { Action, AuditStatus, FormQuestion, Task, UpdateRequest } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  AuditStatus,
+  FormQuestion,
+  FormSubmission,
+  Task,
+  UpdateRequest
+} from "@terramatch-microservices/database/entities";
 import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
 import {
@@ -24,6 +31,8 @@ import {
   AWAITING_APPROVAL,
   DUE,
   NEEDS_MORE_INFORMATION,
+  REJECTED,
+  REQUIRES_MORE_INFORMATION,
   STARTED,
   STATUS_DISPLAY_STRINGS
 } from "@terramatch-microservices/database/constants/status";
@@ -213,31 +222,19 @@ export class EntityStatusUpdate extends EventProcessor {
 
     this.logger.log(`Creating auditStatus [${JSON.stringify({ model: model.constructor.name, id: model.id })}]`);
 
-    if (status === APPROVED) {
-      await AuditStatus.createAudit(model, authenticatedUserId(), null, comment ?? `Approved: ${model.feedback}`);
-    } else if (status === NEEDS_MORE_INFORMATION) {
-      await AuditStatus.createAudit(
-        model,
-        authenticatedUserId(),
-        "change-request",
-        comment ?? (await this.getNeedsMoreInfoComment())
-      );
-    } else if (status === AWAITING_APPROVAL) {
-      await AuditStatus.createAudit(model, authenticatedUserId(), null, comment);
-    } else {
-      // Getting this method called for started is expected on model creation, so no need to warn
-      // in that case.
-      if (status !== "started") {
-        this.logger.warn(
-          `Skipping audit status for entity status [${JSON.stringify({
-            model: model.constructor.name,
-            id: model.id,
-            status: model.status
-          })}]`
-        );
+    if (comment == null) {
+      if (model instanceof FormSubmission) {
+        if ([REJECTED, APPROVED, REQUIRES_MORE_INFORMATION].includes(status)) {
+          comment = model.feedback ?? null;
+        }
+      } else if (status === APPROVED) {
+        comment = `Approved: ${model.feedback}`;
+      } else if (status === NEEDS_MORE_INFORMATION) {
+        comment = await this.getNeedsMoreInfoComment();
       }
-      return;
     }
+    const type = status === NEEDS_MORE_INFORMATION ? "change-request" : "status";
+    await AuditStatus.createAudit(model, authenticatedUserId(), type, comment);
   }
 
   private async getNeedsMoreInfoComment() {

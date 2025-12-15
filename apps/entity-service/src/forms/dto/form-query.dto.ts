@@ -1,4 +1,4 @@
-import { IndexQueryDto } from "../../entities/dto/index-query.dto";
+import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsOptional } from "class-validator";
 import { FORM_TYPES, FormType } from "@terramatch-microservices/database/constants/forms";

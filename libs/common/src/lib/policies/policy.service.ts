@@ -1,6 +1,7 @@
 import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
 import {
+  Application,
   AuditStatus,
   Demographic,
   Disturbance,
@@ -9,6 +10,7 @@ import {
   FinancialReport,
   Form,
   FormQuestionOption,
+  FormSubmission,
   FundingProgramme,
   ImpactStory,
   Nursery,
@@ -52,6 +54,8 @@ import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
 import { authenticatedUserId } from "../guards/auth.guard";
+import { FormSubmissionPolicy } from "./form-submission.policy";
+import { ApplicationPolicy } from "./application.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +68,7 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],
   [Demographic, DemographicPolicy],
   [Disturbance, DisturbancePolicy],
@@ -73,6 +78,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [DisturbanceReport, DisturbanceReportPolicy],
   [SrpReport, SrpReportPolicy],
   [Form, FormPolicy],
+  [FormSubmission, FormSubmissionPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],
   [Nursery, NurseryPolicy],

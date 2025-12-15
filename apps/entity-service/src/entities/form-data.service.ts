@@ -1,7 +1,17 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { Form, FormQuestion, UpdateRequest } from "@terramatch-microservices/database/entities";
+import {
+  Form,
+  FormQuestion,
+  FormSubmission,
+  FundingProgramme,
+  I18nTranslation,
+  Media,
+  Stage,
+  UpdateRequest,
+  User
+} from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import {
   EntityModel,
@@ -12,7 +22,7 @@ import {
   isEntity,
   isReport
 } from "@terramatch-microservices/database/constants/entities";
-import { Dictionary } from "lodash";
+import { Dictionary, flatten, isEmpty, uniq } from "lodash";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
@@ -23,6 +33,13 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { PolicyService } from "@terramatch-microservices/common";
 import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { SubmissionDto } from "./dto/submission.dto";
+import { Op } from "sequelize";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { FundingProgrammeDto, StageDto } from "../fundingProgrammes/dto/funding-programme.dto";
+import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
 
 @Injectable()
 export class FormDataService {
@@ -73,6 +90,126 @@ export class FormDataService {
       feedbackFields,
       answers
     });
+  }
+
+  /**
+   * Returns a FormSubmission with all the associations needed to fill out the SubmissionDto
+   */
+  async getFullSubmission(uuid: string) {
+    return await FormSubmission.findOne({
+      where: { uuid },
+      include: [
+        { association: "form" },
+        { association: "application", attributes: ["uuid"] },
+        { association: "organisation" },
+        { association: "projectPitch" },
+        { association: "stage", attributes: ["name"] },
+        { association: "user", attributes: ["firstName", "lastName"] }
+      ]
+    });
+  }
+
+  async addSubmissionDto(document: DocumentBuilder, formSubmission: FormSubmission, form?: Form, locale?: ValidLocale) {
+    form ??=
+      formSubmission.form ??
+      (formSubmission.formId == null ? undefined : await Form.findOne({ where: { uuid: formSubmission.formId } })) ??
+      undefined;
+    if (form == null) throw new BadRequestException("Form not found for submission");
+
+    locale ??= (await User.findLocale(authenticatedUserId())) ?? "en-US";
+
+    formSubmission.organisation ??= (await formSubmission.$get("organisation")) ?? null;
+    formSubmission.projectPitch ??= (await formSubmission.$get("projectPitch")) ?? null;
+    const answers = await this.getAnswers(
+      form,
+      {
+        organisations: formSubmission.organisation ?? undefined,
+        projectPitches: formSubmission.projectPitch ?? undefined
+      },
+      formSubmission
+    );
+
+    const i18nItemIds = isEmpty(formSubmission.feedbackFields)
+      ? []
+      : (
+          await I18nTranslation.findAll({
+            where: {
+              [Op.or]: {
+                shortValue: formSubmission.feedbackFields,
+                longValue: formSubmission.feedbackFields
+              }
+            },
+            attributes: ["i18nItemId"]
+          })
+        ).map(({ i18nItemId }) => i18nItemId);
+    const translations = await this.localizationService.translateIds(i18nItemIds, locale);
+
+    document.addData(
+      formSubmission.uuid,
+      new SubmissionDto(formSubmission, {
+        answers,
+        frameworkKey: form?.frameworkKey,
+        translatedFeedbackFields: Object.values(translations).filter(isNotNull)
+      })
+    );
+
+    return document;
+  }
+
+  async addFundingProgrammeDtos(
+    document: DocumentBuilder,
+    fundingProgrammes: FundingProgramme[],
+    locale?: ValidLocale
+  ) {
+    const translationIds = uniq(
+      flatten(
+        fundingProgrammes.map(({ nameId, descriptionId, locationId }) => [nameId, descriptionId, locationId])
+      ).filter(isNotNull)
+    );
+    const translations = locale == null ? {} : await this.localizationService.translateIds(translationIds, locale);
+    const coverMedias = await Media.for(fundingProgrammes).findAll({
+      where: { collectionName: "cover" },
+      order: [["createdAt", "DESC"]]
+    });
+
+    const allStages = await Stage.findAll({
+      where: { fundingProgrammeId: fundingProgrammes.map(({ uuid }) => uuid) },
+      attributes: ["uuid", "fundingProgrammeId", "name", "deadlineAt"],
+      order: [["order", "ASC"]]
+    });
+    const stageForms = await Form.findAll({
+      where: { stageId: allStages.map(({ uuid }) => uuid) },
+      attributes: ["uuid", "stageId"]
+    });
+
+    for (const fundingProgramme of fundingProgrammes) {
+      const programStages = allStages.filter(({ fundingProgrammeId }) => fundingProgrammeId === fundingProgramme.uuid);
+      const stages = programStages.map(({ name, deadlineAt, uuid }) => {
+        const formUuid = stageForms.find(({ stageId }) => stageId === uuid)?.uuid ?? null;
+        return populateDto(new StageDto(), { uuid, name, deadlineAt, formUuid });
+      });
+      const coverMedia = coverMedias.find(({ modelId }) => modelId === fundingProgramme.id);
+      document.addData(
+        fundingProgramme.uuid,
+        new FundingProgrammeDto(fundingProgramme, {
+          ...this.localizationService.translateFields(translations, fundingProgramme, [
+            "name",
+            "description",
+            "location"
+          ]),
+          cover:
+            coverMedia == null
+              ? null
+              : new EmbeddedMediaDto(coverMedia, {
+                  url: this.mediaService.getUrl(coverMedia),
+                  thumbUrl: this.mediaService.getUrl(coverMedia, "thumbnail")
+                }),
+          stages
+        })
+      );
+    }
+
+    return document;
   }
 
   async getAnswers(form: Form, models: FormModels, answersModel?: { answers: Dictionary<unknown> | null }) {

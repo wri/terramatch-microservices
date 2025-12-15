@@ -1,8 +1,16 @@
 import { AppModule } from "./app.module";
 import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
-import { Form, FormQuestion, Framework, FundingProgramme, I18nItem } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import {
+  Audit,
+  Form,
+  FormQuestion,
+  FormSubmission,
+  Framework,
+  FundingProgramme,
+  I18nItem
+} from "@terramatch-microservices/database/entities";
+import { col, Op, where } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
@@ -10,6 +18,7 @@ import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { generateHashedKey } from "@transifex/native";
+import { DateTime } from "luxon";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -88,6 +97,18 @@ bootstrapRepl("Entity Service", AppModule, {
         console.log("Finished updating hashes on I18nItems.");
         console.log(`Updated ${bar.total} I18nItems.`);
       });
+    },
+    cleanAudits: async () => {
+      const deletedAuditCount = await Audit.destroy({
+        where: {
+          [Op.and]: [
+            where(col("old_values"), "=", col("new_values")),
+            { auditableType: { [Op.ne]: FormSubmission.LARAVEL_TYPE } },
+            { createdAt: { [Op.gt]: DateTime.fromObject({ year: 2024, month: 9, day: 1 }).toJSDate() } }
+          ]
+        }
+      });
+      console.log(`Deleted ${deletedAuditCount} audits`);
     }
   }
 });

@@ -46,7 +46,7 @@ describe("IndicatorsController", () => {
           useValue: mockValidationService
         },
         {
-          provide: getQueueToken("indicators"),
+          provide: getQueueToken("sitePolygons"),
           useValue: mockQueue
         }
       ]
@@ -68,8 +68,8 @@ describe("IndicatorsController", () => {
           type: "indicators",
           attributes: {
             polygonUuids: sampleIndicatorsSummary.polygonUuids,
-            updateExisting: null,
-            forceRecalculation: null
+            updateExisting: false,
+            forceRecalculation: false
           }
         }
       };

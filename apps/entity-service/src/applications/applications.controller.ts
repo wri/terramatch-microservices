@@ -1,11 +1,16 @@
-import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
+import { Controller, Delete, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
 import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApplicationDto, ApplicationHistoryDto, ApplicationHistoryEntryDto } from "./dto/application.dto";
 import { Application, Audit, AuditStatus, FormSubmission, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
@@ -18,6 +23,7 @@ import { groupBy, last } from "lodash";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
@@ -149,6 +155,31 @@ export class ApplicationsController {
     }
 
     return document;
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({ operationId: "applicationDelete", summary: "Delete an application by UUID" })
+  @JsonApiDeletedResponse(getDtoType(ApplicationDto), { description: "Application and its submissions were deleted" })
+  @ExceptionResponse(NotFoundException, { description: "Application not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to delete this application" })
+  async deleteApplication(@Param() { uuid }: SingleResourceDto) {
+    const application = await Application.findOne({ where: { uuid }, attributes: ["id", "uuid"] });
+    if (application == null) throw new NotFoundException("Application not found");
+
+    await this.policyService.authorize("delete", application);
+
+    const submissions = await FormSubmission.findAll({
+      where: { applicationId: application.id },
+      attributes: ["id", "uuid"]
+    });
+    await FormSubmission.destroy({ where: { id: submissions.map(({ id }) => id) } });
+    await application.destroy();
+
+    return buildDeletedResponse(
+      "applications",
+      application.uuid,
+      submissions.map(({ uuid }) => ({ resource: "submissions", id: uuid }))
+    );
   }
 
   @Get(":uuid/history")

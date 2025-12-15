@@ -257,6 +257,32 @@ describe("ApplicationsController", () => {
     });
   });
 
+  describe("deleteApplication", () => {
+    it("throws if the application is not found", async () => {
+      await expect(controller.deleteApplication({ uuid: "fake-uuid" })).rejects.toThrow("Application not found");
+    });
+
+    it("deletes the application and its submissions", async () => {
+      const application = await ApplicationFactory.create();
+      const submissions = await FormSubmissionFactory.createMany(2, { applicationId: application.id });
+
+      const result = serialize(await controller.deleteApplication({ uuid: application.uuid }));
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: application.id }));
+      expect(result.meta.resourceType).toBe("applications");
+      expect(result.meta.resourceId).toBe(application.uuid);
+      expect(result.meta.deleted).toHaveLength(2);
+      expect(result.meta.deleted).toContainEqual(
+        expect.objectContaining({ resource: "submissions", id: submissions[0].uuid })
+      );
+      expect(result.meta.deleted).toContainEqual(
+        expect.objectContaining({ resource: "submissions", id: submissions[1].uuid })
+      );
+      await Promise.all(submissions.map(sub => sub.reload({ paranoid: false })));
+      expect(submissions[0].deletedAt).not.toBeNull();
+      expect(submissions[1].deletedAt).not.toBeNull();
+    });
+  });
+
   describe("getApplicationHistory", () => {
     it("throws if the application is not found", async () => {
       await expect(controller.getApplicationHistory({ uuid: "fake-uuid" })).rejects.toThrow("Application not found");

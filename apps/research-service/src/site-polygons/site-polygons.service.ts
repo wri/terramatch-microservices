@@ -12,6 +12,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
+import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
   IndicatorDto,
   ReportingPeriodDto,
@@ -37,6 +38,8 @@ type AssociationDtos = {
 
 @Injectable()
 export class SitePolygonsService {
+  constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
+
   async buildQuery(page: CursorPage | NumberPage) {
     const builder = new SitePolygonQueryBuilder(page.size);
     if ((page as CursorPage).after != null && (page as NumberPage).number != null) {
@@ -154,6 +157,9 @@ export class SitePolygonsService {
       where: { primaryUuid: { [Op.in]: primaryUuids } },
       transaction
     });
+    if (polygonUuids.length > 0) {
+      await this.polygonGeometryService.bulkUpdateProjectCentroids(polygonUuids, transaction);
+    }
   }
 
   async bulkDeleteSitePolygons(sitePolygons: SitePolygon[]): Promise<string[]> {
@@ -326,6 +332,10 @@ export class SitePolygonsService {
         where: { uuid },
         transaction
       });
+
+      if (polygonUuid != null) {
+        await this.polygonGeometryService.bulkUpdateProjectCentroids([polygonUuid], transaction);
+      }
     });
   }
 

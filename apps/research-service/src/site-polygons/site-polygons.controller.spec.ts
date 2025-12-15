@@ -27,7 +27,6 @@ import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
 import { FeatureCollection, Polygon } from "geojson";
 import { Job } from "bullmq";
 import { VersionUpdateBody } from "./dto/version-update.dto";
-import { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 

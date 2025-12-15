@@ -1,5 +1,15 @@
 import { DtoOptions } from "../decorators/json-api-dto.decorator";
-import { Equals, IsIn, IsNotEmpty, IsNumberString, IsString, IsUUID, ValidateNested } from "class-validator";
+import {
+  ArrayMinSize,
+  Equals,
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsNumberString,
+  IsString,
+  IsUUID,
+  ValidateNested
+} from "class-validator";
 import { ApiExtraModels, ApiProperty, getSchemaPath } from "@nestjs/swagger";
 import { DiscriminatorDescriptor, Type } from "class-transformer";
 import { InternalServerErrorException } from "@nestjs/common";
@@ -161,6 +171,31 @@ export function JsonApiBodyDto<T>(DataDto: new () => T) {
   }
 
   return BodyDto;
+}
+
+/**
+ * Creates a DTO object for JSON:API bulk operations (arrays).
+ * Similar to JsonApiBodyDto but for bulk operations.
+ */
+export function JsonApiBulkBodyDto<T>(
+  DataDto: new () => T,
+  options?: { minSize?: number; minSizeMessage?: string; description?: string; example?: unknown[] }
+) {
+  class BulkBodyDto {
+    @IsArray()
+    @ArrayMinSize(options?.minSize ?? 1, { message: options?.minSizeMessage ?? "At least one item must be provided" })
+    @ValidateNested({ each: true })
+    @Type(() => DataDto)
+    @ApiProperty({
+      description: options?.description ?? "Array of resource identifiers",
+      type: [DataDto],
+      isArray: true,
+      ...(options?.example != null ? { example: options.example } : {})
+    })
+    data: T[];
+  }
+
+  return BulkBodyDto;
 }
 
 /**

@@ -250,6 +250,17 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
           const validatedProperties = validateSitePolygonProperties(allProperties);
           const attributeChanges = this.convertPropertiesToAttributeChanges(validatedProperties);
 
+          const uploadedPolyName = attributeChanges.polyName ?? attributeChanges.poly_name;
+          const basePolyName = basePolygon.polyName ?? null;
+
+          if (uploadedPolyName != null && uploadedPolyName.length > 0 && uploadedPolyName !== basePolyName) {
+            attributeChanges.polyName = uploadedPolyName;
+            attributeChanges.poly_name = uploadedPolyName;
+          } else {
+            attributeChanges.polyName = basePolyName != null ? `${basePolyName} (new)` : " (new)";
+            attributeChanges.poly_name = attributeChanges.polyName;
+          }
+
           const versionGeometries: CreateSitePolygonRequestDto[] = [
             {
               type: "FeatureCollection" as const,

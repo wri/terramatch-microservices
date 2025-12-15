@@ -18,7 +18,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { EmbeddedSubmissionDto } from "../entities/dto/submission.dto";
+import { EmbeddedSubmissionDto, SubmissionDto } from "../entities/dto/submission.dto";
 import { groupBy, last } from "lodash";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
@@ -176,9 +176,9 @@ export class ApplicationsController {
     await application.destroy();
 
     return buildDeletedResponse(
-      "applications",
+      getDtoType(ApplicationDto),
       application.uuid,
-      submissions.map(({ uuid }) => ({ resource: "submissions", id: uuid }))
+      submissions.map(({ uuid }) => ({ resource: getDtoType(SubmissionDto), id: uuid }))
     );
   }
 

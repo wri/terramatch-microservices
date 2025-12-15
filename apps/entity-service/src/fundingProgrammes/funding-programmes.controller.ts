@@ -1,17 +1,24 @@
-import { Controller, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
+import { Controller, Delete, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { FundingProgramme, Organisation, User } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { FundingProgrammeDto } from "./dto/funding-programme.dto";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util";
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
 import { uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { literal, Op } from "sequelize";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
+import { ApplicationDto } from "../applications/dto/application.dto";
 
 @Controller("fundingProgrammes/v3")
 export class FundingProgrammesController {
@@ -83,5 +90,20 @@ export class FundingProgrammesController {
       [fundingProgramme],
       locale
     );
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({ operationId: "fundingProgrammeDelete", summary: "Delete a funding programme by UUID" })
+  @JsonApiDeletedResponse(getDtoType(ApplicationDto), { description: "Funding programme was deleted" })
+  @ExceptionResponse(NotFoundException, { description: "Funding programme not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to delete this funding programme" })
+  async deleteFundingProgramme(@Param() { uuid }: SingleResourceDto) {
+    const fundingProgramme = await FundingProgramme.findOne({ where: { uuid }, attributes: ["id"] });
+    if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
+
+    await this.policyService.authorize("delete", fundingProgramme);
+
+    await fundingProgramme.destroy();
+    return buildDeletedResponse(getDtoType(FundingProgrammeDto), uuid);
   }
 }

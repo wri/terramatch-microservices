@@ -10,7 +10,7 @@ import {
   OrganisationUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("FundingProgrammesController", () => {
   let controller: FundingProgrammesController;
@@ -132,6 +132,26 @@ describe("FundingProgrammesController", () => {
         expect.arrayContaining([expect.objectContaining({ uuid: programme.uuid })]),
         "es-MX"
       );
+    });
+  });
+
+  describe("deleteFundingProgramme", () => {
+    it("throws if the programme is not found", async () => {
+      await expect(controller.deleteFundingProgramme({ uuid: "fake-uuid" })).rejects.toThrow(
+        "Funding programme not found"
+      );
+    });
+
+    it("deletes the programme", async () => {
+      const programme = await FundingProgrammeFactory.create();
+
+      const result = serialize(await controller.deleteFundingProgramme({ uuid: programme.uuid }));
+      await programme.reload({ paranoid: false });
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: programme.id }));
+      await expect(programme.deletedAt).not.toBeNull();
+      expect(result.meta.resourceType).toBe("fundingProgrammes");
+      expect(result.meta.resourceId).toBe(programme.uuid);
     });
   });
 });

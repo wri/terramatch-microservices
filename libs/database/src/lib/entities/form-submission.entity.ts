@@ -21,6 +21,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "form_submissions", underscored: true, paranoid: true })
 export class FormSubmission extends Model<FormSubmission> {
+  static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormSubmission";
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

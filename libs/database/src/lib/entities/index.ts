@@ -74,4 +74,5 @@ export * from "./world-country-generalized.entity";
 export * from "./funding-type.entity";
 export * from "./disturbance-report.entity";
 export * from "./disturbance-report-entry.entity";
+export * from "./audit.entity";
 export * from "./failed-job.entity";

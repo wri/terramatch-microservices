@@ -44,7 +44,8 @@ type ApprovedIdsSubqueryOptions = {
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
-  task: (taskId: number) => ({ where: { taskId } })
+  task: (taskId: number) => ({ where: { taskId } }),
+  lastReport: { order: [["updatedAt", "DESC"]], limit: 1 }
 }))
 @Table({
   tableName: "v2_site_reports",
@@ -104,6 +105,10 @@ export class SiteReport extends Model<SiteReport> {
 
   static task(taskId: number) {
     return chainScope(this, "task", taskId) as typeof SiteReport;
+  }
+
+  static lastReport() {
+    return chainScope(this, "lastReport") as typeof SiteReport;
   }
 
   static approvedIdsSubquery(siteIds: number[] | Literal, opts: ApprovedIdsSubqueryOptions = {}) {
@@ -375,4 +380,34 @@ export class SiteReport extends Model<SiteReport> {
     scope: { seedable_type: SiteReport.LARAVEL_TYPE }
   })
   seedsPlanted: Seeding[] | null;
+
+  static siteUuidsForLatestApprovedPlantingStatus(plantingStatus: PlantingStatus) {
+    if (SiteReport.sequelize == null) {
+      throw new Error("Sequelize instance not available");
+    }
+    const sql = SiteReport.sequelize;
+    return sql.literal(
+      `(
+        SELECT s.uuid
+        FROM v2_sites s
+        WHERE s.deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM v2_site_reports sr
+            WHERE sr.site_id = s.id
+              AND sr.deleted_at IS NULL
+              AND sr.status = 'approved'
+          )
+          AND (
+            SELECT sr2.planting_status
+            FROM v2_site_reports sr2
+            WHERE sr2.site_id = s.id
+              AND sr2.deleted_at IS NULL
+              AND sr2.status = 'approved'
+            ORDER BY sr2.updated_at DESC
+            LIMIT 1
+          ) = ${sql.escape(plantingStatus)}
+      )`
+    );
+  }
 }

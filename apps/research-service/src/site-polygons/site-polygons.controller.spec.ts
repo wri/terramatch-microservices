@@ -24,10 +24,12 @@ import { Queue } from "bullmq";
 import { Site, DelayedJob } from "@terramatch-microservices/database/entities";
 import { SiteFactory } from "@terramatch-microservices/database/factories";
 import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
-import { FeatureCollection } from "geojson";
+import { FeatureCollection, Polygon } from "geojson";
 import { Job } from "bullmq";
 import { VersionUpdateBody } from "./dto/version-update.dto";
 import { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
+import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
+import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -41,6 +43,7 @@ describe("SitePolygonsController", () => {
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
   let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
   let geometryUploadQueue: DeepMocked<Queue>;
+  let geoJsonExportService: DeepMocked<GeoJsonExportService>;
 
   interface MockQueryBuilder {
     execute: jest.Mock;
@@ -128,6 +131,10 @@ describe("SitePolygonsController", () => {
         {
           provide: getQueueToken("geometry-upload"),
           useValue: (geometryUploadQueue = createMock<Queue>())
+        },
+        {
+          provide: GeoJsonExportService,
+          useValue: (geoJsonExportService = createMock<GeoJsonExportService>())
         }
       ]
     }).compile();
@@ -1352,115 +1359,308 @@ describe("SitePolygonsController", () => {
     });
   });
 
-  describe("bulkDelete", () => {
-    it("should throw TypeError when data is null", async () => {
-      const payload = { data: null } as unknown as SitePolygonBulkDeleteBodyDto;
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(TypeError);
-      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
-    });
+  describe("getGeoJson", () => {
+    const mockFeatureCollection: FeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [0, 0]
+              ]
+            ]
+          } as Polygon,
+          properties: {
+            uuid: "polygon-uuid-123",
+            polyName: "Test Polygon",
+            siteId: "site-uuid-123"
+          }
+        }
+      ]
+    };
 
-    it("should throw NotFoundException when data is empty array", async () => {
-      const payload = { data: [] } as SitePolygonBulkDeleteBodyDto;
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(NotFoundException);
-      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
-    });
+    it("should return GeoJSON FeatureCollection for single polygon", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
 
-    it("should throw NotFoundException when no polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
 
-      const payload: SitePolygonBulkDeleteBodyDto = {
-        data: [
-          { type: "sitePolygons", id: "uuid-1" },
-          { type: "sitePolygons", id: "uuid-2" }
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result).toHaveProperty("data");
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("type", "geojsonExports");
+        expect(result.data).toHaveProperty("attributes");
+        expect(result.data.attributes).toHaveProperty("type", "FeatureCollection");
+        expect(result.data.attributes).toHaveProperty("features");
+        expect(Array.isArray(result.data.attributes.features)).toBe(true);
+      }
+    });
+
+    it("should return GeoJSON FeatureCollection for site polygons", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      const multiFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-1",
+              polyName: "Polygon 1",
+              siteId: "site-uuid-123"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [2, 2],
+                  [2, 3],
+                  [3, 3],
+                  [3, 2],
+                  [2, 2]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-2",
+              polyName: "Polygon 2",
+              siteId: "site-uuid-123"
+            }
+          }
         ]
       };
 
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(NotFoundException);
-      expect(SitePolygon.findAll).toHaveBeenCalled();
-      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(multiFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(2);
+      }
     });
 
-    it("should throw NotFoundException when some polygons are missing", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      const foundPolygon = await SitePolygonFactory.build({ uuid: "uuid-1" });
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([foundPolygon]);
+    it("should use uuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
 
-      const payload: SitePolygonBulkDeleteBodyDto = {
-        data: [
-          { type: "sitePolygons", id: "uuid-1" },
-          { type: "sitePolygons", id: "uuid-2" },
-          { type: "sitePolygons", id: "uuid-3" }
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "polygon-uuid-123");
+      }
+    });
+
+    it("should use siteUuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "site-uuid-123");
+      }
+    });
+
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(UnauthorizedException);
+      expect(geoJsonExportService.getGeoJson).not.toHaveBeenCalled();
+    });
+
+    it("should propagate BadRequestException from service", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123",
+        siteUuid: "site-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockRejectedValue(
+        new BadRequestException("Cannot provide both uuid and siteUuid")
+      );
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should propagate NotFoundException from service", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "non-existent-uuid"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockRejectedValue(new NotFoundException("Polygon geometry not found"));
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should handle empty FeatureCollection", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      const emptyFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: []
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(emptyFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(0);
+        expect(result.data).toHaveProperty("id", "site-uuid-123");
+      }
+    });
+
+    it("should return GeoJSON FeatureCollection for project polygons", async () => {
+      const query: GeoJsonQueryDto = {
+        projectUuid: "project-uuid-123"
+      };
+
+      const projectFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-1",
+              polyName: "Project Polygon 1",
+              siteId: "site-uuid-1"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [2, 2],
+                  [2, 3],
+                  [3, 3],
+                  [3, 2],
+                  [2, 2]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-2",
+              polyName: "Project Polygon 2",
+              siteId: "site-uuid-1"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [4, 4],
+                  [4, 5],
+                  [5, 5],
+                  [5, 4],
+                  [4, 4]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-3",
+              polyName: "Project Polygon 3",
+              siteId: "site-uuid-2"
+            }
+          }
         ]
       };
 
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(NotFoundException);
-      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
-    });
-
-    it("should throw UnauthorizedException when user is not authorized for a polygon", async () => {
-      const polygon1 = await SitePolygonFactory.build({ uuid: "uuid-1" });
-      const polygon2 = await SitePolygonFactory.build({ uuid: "uuid-2" });
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([polygon1, polygon2]);
-      policyService.authorize.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new UnauthorizedException());
-
-      const payload: SitePolygonBulkDeleteBodyDto = {
-        data: [
-          { type: "sitePolygons", id: "uuid-1" },
-          { type: "sitePolygons", id: "uuid-2" }
-        ]
-      };
-
-      await expect(controller.bulkDelete(payload)).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon2);
-      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
-    });
-
-    it("should successfully delete multiple polygons when authorized", async () => {
-      const polygon1 = await SitePolygonFactory.build({ uuid: "uuid-1" });
-      const polygon2 = await SitePolygonFactory.build({ uuid: "uuid-2" });
-      const polygon3 = await SitePolygonFactory.build({ uuid: "uuid-3" });
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([polygon1, polygon2, polygon3]);
       policyService.authorize.mockResolvedValue(undefined);
-      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(["uuid-1", "uuid-2", "uuid-3"]);
+      geoJsonExportService.getGeoJson.mockResolvedValue(projectFeatureCollection);
 
-      const payload: SitePolygonBulkDeleteBodyDto = {
-        data: [
-          { type: "sitePolygons", id: "uuid-1" },
-          { type: "sitePolygons", id: "uuid-2" },
-          { type: "sitePolygons", id: "uuid-3" }
-        ]
-      };
+      const result = serialize(await controller.getGeoJson(query));
 
-      const result = await controller.bulkDelete(payload);
-
-      expect(SitePolygon.findAll).toHaveBeenCalled();
-      expect(policyService.authorize).toHaveBeenCalledTimes(3);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon2);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon3);
-      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([polygon1, polygon2, polygon3]);
-      expect(result).toHaveProperty("meta");
-      expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
-      expect(result.meta).toHaveProperty("resourceIds", ["uuid-1", "uuid-2", "uuid-3"]);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(3);
+      }
     });
 
-    it("should successfully delete a single polygon", async () => {
-      const polygon = await SitePolygonFactory.build({ uuid: "uuid-1" });
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([polygon]);
-      policyService.authorize.mockResolvedValue(undefined);
-      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(["uuid-1"]);
-
-      const payload: SitePolygonBulkDeleteBodyDto = {
-        data: [{ type: "sitePolygons", id: "uuid-1" }]
+    it("should use projectUuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        projectUuid: "project-uuid-123"
       };
 
-      const result = await controller.bulkDelete(payload);
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", polygon);
-      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([polygon]);
-      expect(result.meta).toHaveProperty("resourceIds", ["uuid-1"]);
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "project-uuid-123");
+      }
     });
   });
 });

@@ -60,6 +60,8 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
+import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -72,7 +74,8 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorFieldMonitoringDto,
   IndicatorMsuCarbonDto,
   ValidationDto,
-  GeoJsonExportDto
+  GeoJsonExportDto,
+  GeometryUploadComparisonSummaryDto
 )
 export class SitePolygonsController {
   constructor(
@@ -82,6 +85,7 @@ export class SitePolygonsController {
     private readonly policyService: PolicyService,
     private readonly versioningService: SitePolygonVersioningService,
     private readonly geoJsonExportService: GeoJsonExportService,
+    private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
@@ -548,6 +552,55 @@ export class SitePolygonsController {
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
   }
 
+  @Post("upload/comparison")
+  @ApiOperation({
+    operationId: "compareGeometryFile",
+    summary: "Compare uploaded geometry file with existing polygons",
+    description: `Parses a geometry file and returns UUIDs of existing SitePolygons found in the database.`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse(GeometryUploadComparisonSummaryDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async compareGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const comparisonResult = await this.geometryUploadComparisonService.compareUploadedFeaturesWithExisting(
+      geojson,
+      siteId
+    );
+
+    const document = buildJsonApi(GeometryUploadComparisonSummaryDto);
+
+    document.addData(
+      "summary",
+      new GeometryUploadComparisonSummaryDto({
+        existingUuids: comparisonResult.existingUuids,
+        totalFeatures: comparisonResult.totalFeatures,
+        featuresForVersioning: comparisonResult.featuresForVersioning,
+        featuresForCreation: comparisonResult.featuresForCreation
+      })
+    );
+
+    return document;
+  }
+
   @Post("upload")
   @ApiOperation({
     operationId: "uploadGeometryFile",
@@ -565,10 +618,7 @@ export class SitePolygonsController {
   async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
+    const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
@@ -613,6 +663,78 @@ export class SitePolygonsController {
     };
 
     await this.geometryUploadQueue.add("geometryUpload", jobData);
+
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+  }
+
+  @Post("upload/versions")
+  @ApiOperation({
+    operationId: "uploadGeometryFileWithVersions",
+    summary: "Upload geometry file and create versions for existing polygons",
+    description: `Parses a geometry file and processes it with versioning enabled. 
+      Features with UUIDs in properties.uuid that match existing active SitePolygons will create new versions.
+      Features without matching UUIDs (or without UUIDs) will create new polygons.
+      Attributes are extracted from GeoJSON feature properties for both versions and new polygons.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse([SitePolygonLightDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async uploadGeometryFileWithVersions(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: GeometryUploadRequestDto
+  ) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId as number;
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Geometry Upload with Versioning",
+      totalContent: geojson.features.length,
+      processedContent: 0,
+      progressMessage: "Parsing geometry file...",
+      createdBy: userId,
+      metadata: {
+        entity_id: site.id,
+        entity_type: Site.LARAVEL_TYPE,
+        entity_name: site.name
+      }
+    } as DelayedJob);
+
+    const jobData: GeometryUploadJobData = {
+      delayedJobId: delayedJob.id,
+      siteId,
+      geojson,
+      userId,
+      source,
+      userFullName: user?.fullName ?? null
+    };
+
+    await this.geometryUploadQueue.add("geometryUploadWithVersions", jobData);
 
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }

@@ -5,6 +5,7 @@ import { TMLogger } from "../util/tm-logger";
 import { Queue } from "bullmq";
 import { Dictionary } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { DateTime } from "luxon";
 
 type PolygonClippingCompleteEmailData = {
   userId: number;
@@ -70,7 +71,7 @@ export class PolygonClippingCompleteEmail extends EmailSender {
       if (uniqueSiteUuids.length === 1) {
         targetSiteUuid = uniqueSiteUuids[0];
       } else {
-        this.logger.log(
+        this.logger.warn(
           `Skipping email: polygons span ${uniqueSiteUuids.length} sites (email only sent for single-site operations)`
         );
         return;
@@ -122,8 +123,6 @@ export class PolygonClippingCompleteEmail extends EmailSender {
   }
 
   private formatTime(date: Date): string {
-    const hours = date.getUTCHours().toString().padStart(2, "0");
-    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes} GMT`;
+    return DateTime.fromJSDate(date).toUTC().toFormat("HH:mm 'GMT'");
   }
 }

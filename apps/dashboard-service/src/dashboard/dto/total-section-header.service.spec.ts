@@ -61,7 +61,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
   it("should apply basic filters in DashboardProjectsQueryBuilder", async () => {
     const filters: DashboardQueryDto = {
-      organisationType: ["org-uuid-1"],
+      organisationType: ["non-profit-organization"],
       country: "BJ",
       programmes: ["terrafund"],
       projectUuid: "uuid",

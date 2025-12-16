@@ -83,7 +83,7 @@ describe("SubmissionsController", () => {
       // The service that generates the DTO is mocked in this spec, so we pull the most recently created
       // submission
       const submission = (await FormSubmission.findOne({
-        order: [["createdAt", "DESC"]],
+        order: [["id", "DESC"]],
         include: [
           { association: "projectPitch", attributes: ["organisationId", "fundingProgrammeId"] },
           { association: "application", attributes: ["organisationUuid", "fundingProgrammeUuid", "updatedBy"] }

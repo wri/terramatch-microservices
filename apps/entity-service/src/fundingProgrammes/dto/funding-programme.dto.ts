@@ -13,7 +13,11 @@ import {
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FundingProgramme } from "@terramatch-microservices/database/entities";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import {
+  CreateDataDto,
+  JsonApiBodyDto,
+  JsonApiDataDto
+} from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsDate, IsEnum, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
@@ -99,7 +103,13 @@ export class FundingProgrammeDto {
   stages: StageDto[] | null;
 }
 
-export class StoreStageAttributes extends PickType(StageDto, ["name", "deadlineAt", "formUuid"]) {}
+export class StoreStageAttributes extends PickType(StageDto, ["name", "deadlineAt", "formUuid"]) {
+  // optional on request, but not in response
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false })
+  uuid?: string;
+}
 
 export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDto, [
   "name",
@@ -118,4 +128,11 @@ export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDt
 
 export class CreateFundingProgrammeBody extends JsonApiBodyDto(
   class CreateFundingProgrammeData extends CreateDataDto("fundingProgrammes", StoreFundingProgrammeAttributes) {}
+) {}
+
+export class UpdateFundingProgrammeBody extends JsonApiBodyDto(
+  class UpdateFundingProgrammeData extends JsonApiDataDto(
+    { type: "fundingProgrammes" },
+    StoreFundingProgrammeAttributes
+  ) {}
 ) {}

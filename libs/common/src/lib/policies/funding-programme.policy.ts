@@ -8,7 +8,7 @@ export class FundingProgrammePolicy extends UserPermissionsPolicy {
     this.builder.can(["read"], FundingProgramme);
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["uploadFiles", "delete", "create"], FundingProgramme, {
+      this.builder.can(["uploadFiles", "delete", "create", "update"], FundingProgramme, {
         frameworkKey: { $in: this.frameworks }
       });
     }

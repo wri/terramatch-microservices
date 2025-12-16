@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
@@ -14,7 +15,11 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Form, FundingProgramme, Organisation, Stage, User } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { CreateFundingProgrammeBody, FundingProgrammeDto } from "./dto/funding-programme.dto";
+import {
+  CreateFundingProgrammeBody,
+  FundingProgrammeDto,
+  UpdateFundingProgrammeBody
+} from "./dto/funding-programme.dto";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -24,7 +29,7 @@ import {
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
-import { uniq } from "lodash";
+import { difference, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { literal, Op } from "sequelize";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
@@ -129,10 +134,8 @@ export class FundingProgrammesController {
   @ExceptionResponse(UnauthorizedException, { description: "Funding programme creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Funding programme payload malformed." })
   async createFundingProgramme(@Body() payload: CreateFundingProgrammeBody) {
-    await this.policyService.authorize("create", FundingProgramme);
-
     const attributes = payload.data.attributes;
-    const fundingProgramme = await FundingProgramme.create({
+    const fundingProgramme = FundingProgramme.build({
       name: attributes.name,
       nameId: await this.localizationService.generateI18nId(attributes.name),
       description: attributes.description,
@@ -144,6 +147,9 @@ export class FundingProgrammesController {
       frameworkKey: attributes.framework,
       organisationTypes: attributes.organisationTypes
     });
+    // authorize creation before saving the built model
+    await this.policyService.authorize("create", fundingProgramme);
+    await fundingProgramme.save();
 
     await Promise.all(
       (attributes.stages ?? []).map(async ({ name, deadlineAt, formUuid }, index) => {
@@ -164,6 +170,86 @@ export class FundingProgrammesController {
         }
       })
     );
+
+    return await this.formDataService.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [fundingProgramme]);
+  }
+
+  // Using PUT instead of PATCH because if a stage is left out of the attributes, it is removed from
+  // the funding programme. PUT is the correct method for this mechanic.
+  @Put(":uuid")
+  @ApiOperation({ operationId: "fundingProgrammeUpdate", description: "Update a funding programme" })
+  @JsonApiResponse(FundingProgrammeDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Funding Programme update not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Funding Programme payload malformed." })
+  @ExceptionResponse(NotFoundException, { description: "Funding Programme not found." })
+  async updateFundingProgramme(@Param() { uuid }: SingleResourceDto, @Body() payload: UpdateFundingProgrammeBody) {
+    if (uuid !== payload.data.id) {
+      throw new BadRequestException("Funding programme id in path and payload do not match");
+    }
+
+    const fundingProgramme = await FundingProgramme.findOne({ where: { uuid } });
+    if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
+
+    await this.policyService.authorize("update", fundingProgramme);
+
+    const attributes = payload.data.attributes;
+    await fundingProgramme.update({
+      name: attributes.name,
+      nameId:
+        attributes.name === fundingProgramme.name
+          ? fundingProgramme.nameId
+          : await this.localizationService.generateI18nId(attributes.name),
+      description: attributes.description,
+      descriptionId:
+        attributes.description === fundingProgramme.description
+          ? fundingProgramme.descriptionId
+          : await this.localizationService.generateI18nId(attributes.description),
+      location: attributes.location,
+      locationId:
+        attributes.location === fundingProgramme.location
+          ? fundingProgramme.locationId
+          : await this.localizationService.generateI18nId(attributes.location),
+      readMoreUrl: attributes.readMoreUrl,
+      status: attributes.status,
+      frameworkKey: attributes.framework,
+      organisationTypes: attributes.organisationTypes
+    });
+
+    const currentStages = await Stage.findAll({ where: { fundingProgrammeId: fundingProgramme.uuid } });
+    const updateStages = await Promise.all(
+      (attributes.stages ?? []).map(async ({ uuid, name, deadlineAt, formUuid }, index) => {
+        const stage = currentStages.find(stage => stage.uuid === uuid) ?? new Stage();
+        stage.fundingProgrammeId = fundingProgramme.uuid;
+        stage.name = name ?? null;
+        stage.deadlineAt = deadlineAt ?? null;
+        stage.order = index + 1;
+        await stage.save();
+
+        const form = await Form.findOne({ where: { stageId: stage.uuid }, attributes: ["id", "uuid"] });
+        // If the currently assigned form is no longer correct, unassign stage from that form
+        if (form != null && formUuid !== form.uuid) await form.update({ stageId: null });
+        // If a form UUID is assigned and it doesn't match what was found for this stage, assign it.
+        if (formUuid != null && (form == null || form.uuid !== formUuid)) {
+          await Form.update(
+            {
+              stageId: stage.uuid,
+              frameworkKey: fundingProgramme.frameworkKey
+            },
+            { where: { uuid: formUuid } }
+          );
+        }
+
+        return stage;
+      })
+    );
+
+    const currentUuids = currentStages.map(({ uuid }) => uuid);
+    const updateUuids = updateStages.map(({ uuid }) => uuid);
+    const removed = difference(currentUuids, updateUuids);
+    if (removed.length > 0) {
+      await Stage.destroy({ where: { uuid: removed } });
+      await Form.update({ stageId: null }, { where: { stageId: removed } });
+    }
 
     return await this.formDataService.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [fundingProgramme]);
   }

@@ -74,6 +74,8 @@ export class PolygonClippingController {
     let entityType: string;
     let entityName: string;
 
+    let siteUuid: string | undefined;
+
     if (hasSiteUuid) {
       if (query.siteUuid == null) {
         throw new BadRequestException("Parameter siteUuid must be a string");
@@ -89,6 +91,7 @@ export class PolygonClippingController {
       entityId = result.site.id;
       entityType = Site.LARAVEL_TYPE;
       entityName = result.site.name;
+      siteUuid = query.siteUuid;
     } else {
       if (query.projectUuid == null) {
         throw new BadRequestException("Parameter projectUuid must be a string");
@@ -125,7 +128,8 @@ export class PolygonClippingController {
       userId: authenticatedUserId,
       userFullName,
       source,
-      delayedJobId: delayedJob.id
+      delayedJobId: delayedJob.id,
+      siteUuid
     });
 
     return buildDelayedJobResponse(delayedJob);
@@ -208,6 +212,7 @@ export class PolygonClippingController {
     let entityId: number | undefined;
     let entityType: string | undefined;
     let entityName: string;
+    let siteUuidForEmail: string | undefined;
 
     if (sitePolygons.length > 0) {
       const uniqueSiteUuids = uniq(sitePolygons.map(({ siteUuid }) => siteUuid).filter(isNotNull));
@@ -232,6 +237,7 @@ export class PolygonClippingController {
             entityId = site.id;
             entityType = Site.LARAVEL_TYPE;
             entityName = site.name;
+            siteUuidForEmail = site.uuid;
           } else if (uniqueProjectIds.size === 1) {
             const project = sites[0]?.project;
             if (project != null) {
@@ -273,7 +279,8 @@ export class PolygonClippingController {
       userId: authenticatedUserId,
       userFullName,
       source,
-      delayedJobId: delayedJob.id
+      delayedJobId: delayedJob.id,
+      siteUuid: siteUuidForEmail
     });
 
     return buildDelayedJobResponse(delayedJob);

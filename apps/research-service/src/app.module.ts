@@ -51,7 +51,8 @@ import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
     BullModule.registerQueue({ name: "geometry-upload" }),
     BullModule.registerQueue({ name: "indicators" }),
     BullModule.registerQueue({ name: "clipping" }),
-    BullModule.registerQueue({ name: "sitePolygons" })
+    BullModule.registerQueue({ name: "sitePolygons" }),
+    BullModule.registerQueue({ name: "email" })
   ],
   controllers: [
     SitePolygonsController,

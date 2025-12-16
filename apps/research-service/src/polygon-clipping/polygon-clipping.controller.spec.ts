@@ -151,7 +151,8 @@ describe("PolygonClippingController", () => {
         "clipAndVersion",
         expect.objectContaining({
           polygonUuids,
-          userId: 1
+          userId: 1,
+          siteUuid
         })
       );
       expect(result).toBeDefined();
@@ -201,7 +202,8 @@ describe("PolygonClippingController", () => {
         "clipAndVersion",
         expect.objectContaining({
           polygonUuids,
-          userId: 1
+          userId: 1,
+          siteUuid: undefined
         })
       );
       expect(result).toBeDefined();
@@ -556,6 +558,12 @@ describe("PolygonClippingController", () => {
             entity_type: Site.LARAVEL_TYPE,
             entity_name: siteName
           })
+        })
+      );
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({
+          siteUuid
         })
       );
     });

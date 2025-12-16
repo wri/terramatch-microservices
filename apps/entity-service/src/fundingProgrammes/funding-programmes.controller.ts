@@ -1,10 +1,20 @@
-import { Controller, Delete, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { FundingProgramme, Organisation, User } from "@terramatch-microservices/database/entities";
+import { Form, FundingProgramme, Organisation, Stage, User } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FundingProgrammeDto } from "./dto/funding-programme.dto";
+import { CreateFundingProgrammeBody, FundingProgrammeDto } from "./dto/funding-programme.dto";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -19,10 +29,16 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { literal, Op } from "sequelize";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { ApplicationDto } from "../applications/dto/application.dto";
+import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 @Controller("fundingProgrammes/v3")
 export class FundingProgrammesController {
-  constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly formDataService: FormDataService,
+    private readonly localizationService: LocalizationService
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -105,5 +121,50 @@ export class FundingProgrammesController {
 
     await fundingProgramme.destroy();
     return buildDeletedResponse(getDtoType(FundingProgrammeDto), uuid);
+  }
+
+  @Post()
+  @ApiOperation({ operationId: "fundingProgrammeCreate", description: "Create a new funding programme" })
+  @JsonApiResponse(FundingProgrammeDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Funding programme creation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Funding programme payload malformed." })
+  async createFundingProgramme(@Body() payload: CreateFundingProgrammeBody) {
+    await this.policyService.authorize("create", FundingProgramme);
+
+    const attributes = payload.data.attributes;
+    const fundingProgramme = await FundingProgramme.create({
+      name: attributes.name,
+      nameId: await this.localizationService.generateI18nId(attributes.name),
+      description: attributes.description,
+      descriptionId: await this.localizationService.generateI18nId(attributes.description),
+      location: attributes.location,
+      locationId: await this.localizationService.generateI18nId(attributes.location),
+      readMoreUrl: attributes.readMoreUrl,
+      status: attributes.status,
+      frameworkKey: attributes.framework,
+      organisationTypes: attributes.organisationTypes
+    });
+
+    await Promise.all(
+      (attributes.stages ?? []).map(async ({ name, deadlineAt, formUuid }, index) => {
+        const stage = await Stage.create({
+          fundingProgrammeId: fundingProgramme.uuid,
+          name,
+          deadlineAt,
+          order: index + 1
+        });
+        if (formUuid != null) {
+          await Form.update(
+            {
+              stageId: stage.uuid,
+              frameworkKey: fundingProgramme.frameworkKey
+            },
+            { where: { uuid: formUuid } }
+          );
+        }
+      })
+    );
+
+    return await this.formDataService.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [fundingProgramme]);
   }
 }

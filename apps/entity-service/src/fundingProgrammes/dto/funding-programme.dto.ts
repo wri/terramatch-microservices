@@ -1,5 +1,5 @@
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
 import {
   FRAMEWORK_KEYS,
   FrameworkKey,
@@ -13,6 +13,9 @@ import {
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FundingProgramme } from "@terramatch-microservices/database/entities";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { IsDate, IsEnum, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 
 type FundingProgrammeExtras = "name" | "description" | "location";
 type FundingProgrammeWithoutExtras = Omit<FundingProgramme, FundingProgrammeExtras>;
@@ -21,14 +24,20 @@ export class StageDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  name: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false, nullable: true, type: String })
+  name?: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  deadlineAt: Date | null;
+  @IsOptional()
+  @IsDate()
+  @ApiProperty({ required: false, nullable: true, type: Date })
+  deadlineAt?: Date | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  formUuid: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false, nullable: true, type: String })
+  formUuid?: string | null;
 }
 
 @JsonApiDto({ type: "fundingProgrammes" })
@@ -51,26 +60,37 @@ export class FundingProgrammeDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ nullable: true, enum: FRAMEWORK_KEYS })
-  framework: FrameworkKey | null;
+  @IsOptional()
+  @IsEnum(FRAMEWORK_KEYS)
+  @ApiProperty({ required: false, nullable: true, enum: FRAMEWORK_KEYS })
+  framework?: FrameworkKey | null;
 
+  @IsString()
   @ApiProperty()
   name: string;
 
+  @IsString()
   @ApiProperty()
   description: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  location: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false, nullable: true, type: String })
+  location?: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  readMoreUrl: string | null;
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false, nullable: true, type: String })
+  readMoreUrl?: string | null;
 
+  @IsEnum(FUNDING_PROGRAMME_STATUSES)
   @ApiProperty({ enum: FUNDING_PROGRAMME_STATUSES })
   status: FundingProgrammeStatus;
 
-  @ApiProperty({ isArray: true, enum: ORGANISATION_TYPES })
-  organisationTypes: OrganisationType[] | null;
+  @IsOptional()
+  @IsEnum(ORGANISATION_TYPES, { each: true })
+  @ApiProperty({ required: false, isArray: true, enum: ORGANISATION_TYPES })
+  organisationTypes?: OrganisationType[] | null;
 
   @ApiProperty({ nullable: true, type: EmbeddedMediaDto })
   cover: EmbeddedMediaDto | null;
@@ -78,3 +98,24 @@ export class FundingProgrammeDto {
   @ApiProperty({ nullable: true, type: StageDto, isArray: true })
   stages: StageDto[] | null;
 }
+
+export class StoreStageAttributes extends PickType(StageDto, ["name", "deadlineAt", "formUuid"]) {}
+
+export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDto, [
+  "name",
+  "description",
+  "location",
+  "readMoreUrl",
+  "status",
+  "framework",
+  "organisationTypes"
+]) {
+  @ValidateNested()
+  @Type(() => StoreStageAttributes)
+  @ApiProperty({ required: false, isArray: true, type: () => StoreStageAttributes })
+  stages?: StoreStageAttributes[];
+}
+
+export class CreateFundingProgrammeBody extends JsonApiBodyDto(
+  class CreateFundingProgrammeData extends CreateDataDto("fundingProgrammes", StoreFundingProgrammeAttributes) {}
+) {}

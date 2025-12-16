@@ -3,26 +3,34 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { FormDataService } from "../entities/form-data.service";
 import { FundingProgrammesController } from "./funding-programmes.controller";
 import { PolicyService } from "@terramatch-microservices/common";
-import { FundingProgramme } from "@terramatch-microservices/database/entities";
+import { FundingProgramme, Stage } from "@terramatch-microservices/database/entities";
 import {
+  FormFactory,
   FundingProgrammeFactory,
   OrganisationFactory,
   OrganisationUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { StoreFundingProgrammeAttributes } from "./dto/funding-programme.dto";
+import { faker } from "@faker-js/faker";
+import { FUNDING_PROGRAMME_STATUSES } from "@terramatch-microservices/database/constants/status";
+import { FRAMEWORK_KEYS, ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
 
 describe("FundingProgrammesController", () => {
   let controller: FundingProgrammesController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: DeepMocked<PolicyService>;
+  let localizationService: DeepMocked<LocalizationService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FundingProgrammesController],
       providers: [
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) }
       ]
     }).compile();
 
@@ -69,12 +77,16 @@ describe("FundingProgrammesController", () => {
       policyService.getPermissions.mockResolvedValue(["manage-own"]);
       await FundingProgramme.truncate();
       const programmes = [
-        await FundingProgrammeFactory.create({ organisationTypes: ["for-profit", "non-profit"] }),
-        await FundingProgrammeFactory.create({ organisationTypes: ["non-profit"] }),
-        await FundingProgrammeFactory.create({ organisationTypes: ["gov"] })
+        await FundingProgrammeFactory.create({
+          organisationTypes: ["for-profit", "non-profit"] as unknown as OrganisationType[]
+        }),
+        await FundingProgrammeFactory.create({ organisationTypes: ["non-profit"] as unknown as OrganisationType[] }),
+        await FundingProgrammeFactory.create({ organisationTypes: ["gov"] as unknown as OrganisationType[] })
       ];
-      await FundingProgrammeFactory.create({ organisationTypes: ["non-profit-other"] });
-      await FundingProgrammeFactory.create({ organisationTypes: ["for-profit"] });
+      await FundingProgrammeFactory.create({
+        organisationTypes: ["non-profit-other"] as unknown as OrganisationType[]
+      });
+      await FundingProgrammeFactory.create({ organisationTypes: ["for-profit"] as unknown as OrganisationType[] });
 
       await controller.indexFundingProgrammes({ translated: false });
 
@@ -152,6 +164,54 @@ describe("FundingProgrammesController", () => {
       await expect(programme.deletedAt).not.toBeNull();
       expect(result.meta.resourceType).toBe("fundingProgrammes");
       expect(result.meta.resourceId).toBe(programme.uuid);
+    });
+  });
+
+  describe("createFundingProgramme", () => {
+    it("creates the funding programme", async () => {
+      const stageForms = await FormFactory.createMany(2);
+      const attributes: StoreFundingProgrammeAttributes = {
+        name: faker.company.name(),
+        description: faker.lorem.sentence(),
+        location: faker.location.city(),
+        readMoreUrl: faker.internet.url(),
+        status: faker.helpers.arrayElement(FUNDING_PROGRAMME_STATUSES),
+        framework: faker.helpers.arrayElement(FRAMEWORK_KEYS),
+        organisationTypes: [faker.helpers.arrayElement(ORGANISATION_TYPES)],
+
+        stages: [
+          { name: faker.company.name(), deadlineAt: faker.date.future(), formUuid: stageForms[0].uuid },
+          { name: faker.company.name(), deadlineAt: faker.date.future(), formUuid: stageForms[1].uuid }
+        ]
+      };
+
+      localizationService.generateI18nId.mockResolvedValue(1);
+
+      await controller.createFundingProgramme({ data: { type: "fundingProgrammes", attributes } });
+      const fp = await FundingProgramme.findOne({ order: [["createdAt", "DESC"]], attributes: ["uuid"] });
+      const stages = await Stage.findAll({ where: { fundingProgrammeId: fp?.uuid }, order: [["order", "ASC"]] });
+      await Promise.all(stageForms.map(form => form.reload()));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("create", FundingProgramme);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.name);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.description);
+      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.location);
+      expect(stages.length).toBe(2);
+      expect(stageForms[0].stageId).toBe(stages[0].uuid);
+      expect(stageForms[0].frameworkKey).toBe(attributes.framework);
+      expect(stageForms[1].stageId).toBe(stages[1].uuid);
+      expect(stageForms[1].frameworkKey).toBe(attributes.framework);
+      expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), [
+        expect.objectContaining({
+          name: attributes.name,
+          description: attributes.description,
+          location: attributes.location,
+          readMoreUrl: attributes.readMoreUrl,
+          status: attributes.status,
+          frameworkKey: attributes.framework,
+          organisationTypes: attributes.organisationTypes
+        })
+      ]);
     });
   });
 });

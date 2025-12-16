@@ -36,6 +36,7 @@ import {
   IndicatorTreeCoverLossDto
 } from "./dto/indicators.dto";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
+import { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
 import { GeometryFileProcessingService } from "./geometry-file-processing.service";
@@ -44,6 +45,7 @@ import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import "multer";
 import { SitePolygon, User, DelayedJob, Site } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
@@ -388,6 +390,49 @@ export class SitePolygonsController {
 
       await Promise.all(updates);
     });
+  }
+
+  @Delete()
+  @ApiOperation({
+    operationId: "bulkDeleteSitePolygons",
+    summary: "Bulk delete site polygons and all associated records",
+    description: `Deletes multiple site polygons and all their associated records including indicators, 
+       criteria site records, audit statuses, and geometry data. This operation soft deletes 
+       ALL related site polygons by primaryUuid (version management) and deletes polygon 
+       geometry for all related site polygons. The request body follows JSON:API format with 
+       an array of resource identifiers (type and id).`
+  })
+  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
+    description: "Site polygons and all associated records were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
+  @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
+  async bulkDelete(@Body() deletePayload: SitePolygonBulkDeleteBodyDto) {
+    const uuids = deletePayload.data.map(item => item.id);
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "primaryUuid", "siteUuid", "createdBy"]
+    });
+
+    if (sitePolygons.length === 0) {
+      throw new NotFoundException(`No site polygons found for the provided UUIDs`);
+    }
+
+    const foundUuids = new Set(sitePolygons.map(sp => sp.uuid));
+    const missingUuids = uuids.filter(uuid => !foundUuids.has(uuid));
+    if (missingUuids.length > 0) {
+      throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      await this.policyService.authorize("delete", sitePolygon);
+    }
+
+    const deletedUuids = await this.sitePolygonService.bulkDeleteSitePolygons(sitePolygons);
+
+    return buildDeletedResponse(getDtoType(SitePolygonFullDto), deletedUuids);
   }
 
   @Get(":primaryUuid/versions")

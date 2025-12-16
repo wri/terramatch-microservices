@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsUUID, ValidateNested } from "class-validator";
+import { IsBoolean, IsUUID, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
+import { JsonApiBulkBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
 export class DelayedJobAttributes {
   @IsBoolean()
@@ -22,10 +23,7 @@ export class DelayedJobData {
   attributes: DelayedJobAttributes;
 }
 
-export class DelayedJobBulkUpdateBodyDto {
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => DelayedJobData)
-  @ApiProperty({ description: "List of jobs to update isAcknowledged", type: [DelayedJobData] })
-  data: DelayedJobData[];
-}
+export class DelayedJobBulkUpdateBodyDto extends JsonApiBulkBodyDto(DelayedJobData, {
+  description: "List of jobs to update isAcknowledged",
+  minSize: 1
+}) {}

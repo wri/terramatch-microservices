@@ -47,6 +47,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-1";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-1",
           projectId: 1,
@@ -68,10 +70,13 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        sum_area_site: 800,
-        sum_area_project: 4000,
-        percentage_site: 80,
-        percentage_project: 80,
+        polygon_status: "approved",
+        polygon_area: 100,
+        is_polygon_approved: true,
+        sum_area_site_approved: 800,
+        sum_area_project_approved: 4000,
+        percentage_site_approved: 80,
+        percentage_project_approved: 80,
         total_area_site: 1000,
         total_area_project: 5000
       });
@@ -81,6 +86,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-2";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 50,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-2",
           projectId: 2,
@@ -102,10 +109,13 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        sum_area_site: 500,
-        sum_area_project: 2000,
-        percentage_site: 50,
-        percentage_project: 40,
+        polygon_status: "approved",
+        polygon_area: 50,
+        is_polygon_approved: true,
+        sum_area_site_approved: 500,
+        sum_area_project_approved: 2000,
+        percentage_site_approved: 50,
+        percentage_project_approved: 40,
         total_area_site: 1000,
         total_area_project: 5000
       });
@@ -115,6 +125,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-3";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-3",
           projectId: 3,
@@ -141,6 +153,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-4";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 50,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-4",
           projectId: 4,
@@ -167,6 +181,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-5";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-5",
           projectId: 5,
@@ -185,7 +201,7 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only project validation matters
-      expect(result.extraInfo?.sum_area_site).toBeNull();
+      expect(result.extraInfo?.sum_area_site_approved).toBeNull();
       expect(result.extraInfo?.total_area_site).toBeNull();
     });
 
@@ -193,6 +209,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-6";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-6",
           projectId: 6,
@@ -210,7 +228,7 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only site validation matters
-      expect(result.extraInfo?.sum_area_project).toBeNull();
+      expect(result.extraInfo?.sum_area_project_approved).toBeNull();
       expect(result.extraInfo?.total_area_project).toBeNull();
     });
 
@@ -227,6 +245,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-7";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-7",
           projectId: 7,
@@ -245,7 +265,7 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only project validation matters
-      expect(result.extraInfo?.sum_area_site).toBeNull();
+      expect(result.extraInfo?.sum_area_site_approved).toBeNull();
       expect(result.extraInfo?.total_area_site).toBe(0);
     });
 
@@ -253,6 +273,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-8";
       const mockSitePolygon = {
         polygonUuid,
+        status: "approved",
+        calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-8",
           projectId: 8,
@@ -270,8 +292,168 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only site validation matters
-      expect(result.extraInfo?.sum_area_project).toBeNull();
+      expect(result.extraInfo?.sum_area_project_approved).toBeNull();
       expect(result.extraInfo?.total_area_project).toBe(0);
+    });
+
+    it("should calculate projected values for unapproved polygon (draft status)", async () => {
+      const polygonUuid = "test-uuid-draft";
+      const mockSitePolygon = {
+        polygonUuid,
+        status: "draft",
+        calcArea: 100,
+        loadSite: jest.fn().mockResolvedValue({
+          uuid: "site-uuid-draft",
+          projectId: 10,
+          hectaresToRestoreGoal: 1000
+        })
+      } as unknown as SitePolygon;
+
+      mockSitePolygonFindOne.mockResolvedValue(mockSitePolygon);
+      mockProjectFindByPk.mockResolvedValue({
+        id: 10,
+        totalHectaresRestoredGoal: 5000
+      } as unknown as Project);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
+      mockSitePolygonSum
+        .mockResolvedValueOnce(800) // Site area sum (approved only)
+        .mockResolvedValueOnce(4000); // Project area sum (approved only)
+
+      const result = await validator.validatePolygon(polygonUuid);
+
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toEqual({
+        polygon_status: "draft",
+        polygon_area: 100,
+        is_polygon_approved: false,
+        sum_area_site_approved: 800,
+        sum_area_project_approved: 4000,
+        percentage_site_approved: 80,
+        percentage_project_approved: 80,
+        total_area_site: 1000,
+        total_area_project: 5000,
+        projected_sum_area_site: 900,
+        projected_percentage_site: 90,
+        projected_sum_area_project: 4100,
+        projected_percentage_project: 82
+      });
+    });
+
+    it("should calculate projected values for unapproved polygon (submitted status)", async () => {
+      const polygonUuid = "test-uuid-submitted";
+      const mockSitePolygon = {
+        polygonUuid,
+        status: "submitted",
+        calcArea: 250,
+        loadSite: jest.fn().mockResolvedValue({
+          uuid: "site-uuid-submitted",
+          projectId: 11,
+          hectaresToRestoreGoal: 2000
+        })
+      } as unknown as SitePolygon;
+
+      mockSitePolygonFindOne.mockResolvedValue(mockSitePolygon);
+      mockProjectFindByPk.mockResolvedValue({
+        id: 11,
+        totalHectaresRestoredGoal: 10000
+      } as unknown as Project);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
+      mockSitePolygonSum
+        .mockResolvedValueOnce(1500) // Site area sum (approved only)
+        .mockResolvedValueOnce(7500); // Project area sum (approved only)
+
+      const result = await validator.validatePolygon(polygonUuid);
+
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toEqual({
+        polygon_status: "submitted",
+        polygon_area: 250,
+        is_polygon_approved: false,
+        sum_area_site_approved: 1500,
+        sum_area_project_approved: 7500,
+        percentage_site_approved: 75,
+        percentage_project_approved: 75,
+        total_area_site: 2000,
+        total_area_project: 10000,
+        projected_sum_area_site: 1750,
+        projected_percentage_site: 88,
+        projected_sum_area_project: 7750,
+        projected_percentage_project: 78
+      });
+    });
+
+    it("should not include projected values for unapproved polygon with zero area", async () => {
+      const polygonUuid = "test-uuid-zero-area";
+      const mockSitePolygon = {
+        polygonUuid,
+        status: "draft",
+        calcArea: 0,
+        loadSite: jest.fn().mockResolvedValue({
+          uuid: "site-uuid-zero",
+          projectId: 12,
+          hectaresToRestoreGoal: 1000
+        })
+      } as unknown as SitePolygon;
+
+      mockSitePolygonFindOne.mockResolvedValue(mockSitePolygon);
+      mockProjectFindByPk.mockResolvedValue({
+        id: 12,
+        totalHectaresRestoredGoal: 5000
+      } as unknown as Project);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
+      mockSitePolygonSum
+        .mockResolvedValueOnce(800) // Site area sum (approved only)
+        .mockResolvedValueOnce(4000); // Project area sum (approved only)
+
+      const result = await validator.validatePolygon(polygonUuid);
+
+      expect(result.extraInfo?.projected_sum_area_site).toBeUndefined();
+      expect(result.extraInfo?.projected_percentage_site).toBeUndefined();
+      expect(result.extraInfo?.projected_sum_area_project).toBeUndefined();
+      expect(result.extraInfo?.projected_percentage_project).toBeUndefined();
+    });
+
+    it("should show projection would push validation outside acceptable range", async () => {
+      const polygonUuid = "test-uuid-over-limit";
+      const mockSitePolygon = {
+        polygonUuid,
+        status: "draft",
+        calcArea: 500,
+        loadSite: jest.fn().mockResolvedValue({
+          uuid: "site-uuid-over",
+          projectId: 13,
+          hectaresToRestoreGoal: 1000
+        })
+      } as unknown as SitePolygon;
+
+      mockSitePolygonFindOne.mockResolvedValue(mockSitePolygon);
+      mockProjectFindByPk.mockResolvedValue({
+        id: 13,
+        totalHectaresRestoredGoal: 5000
+      } as unknown as Project);
+      mockSiteUuidsSubquery.mockReturnValue("subquery-literal" as unknown as Literal);
+      mockSitePolygonSum
+        .mockResolvedValueOnce(900) // Site area sum (approved only) - 90%, within bounds
+        .mockResolvedValueOnce(6000); // Project area sum (approved only) - 120%, within bounds (75-125%)
+
+      const result = await validator.validatePolygon(polygonUuid);
+
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toEqual({
+        polygon_status: "draft",
+        polygon_area: 500,
+        is_polygon_approved: false,
+        sum_area_site_approved: 900,
+        sum_area_project_approved: 6000,
+        percentage_site_approved: 90,
+        percentage_project_approved: 120,
+        total_area_site: 1000,
+        total_area_project: 5000,
+        projected_sum_area_site: 1400, // Would be 140% - way over limit
+        projected_percentage_site: 140,
+        projected_sum_area_project: 6500, // Would be 130% - over limit
+        projected_percentage_project: 130
+      });
     });
   });
 
@@ -280,6 +462,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuids = ["uuid-1", "uuid-2"];
       const mockSitePolygon1 = {
         polygonUuid: "uuid-1",
+        status: "approved",
+        calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-1",
           projectId: 1,
@@ -289,6 +473,8 @@ describe("EstimatedAreaValidator", () => {
 
       const mockSitePolygon2 = {
         polygonUuid: "uuid-2",
+        status: "approved",
+        calcArea: 150,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-2",
           projectId: 2,
@@ -325,16 +511,16 @@ describe("EstimatedAreaValidator", () => {
         polygonUuid: "uuid-1",
         valid: true,
         extraInfo: expect.objectContaining({
-          sum_area_site: 800,
-          sum_area_project: 4000
+          sum_area_site_approved: 800,
+          sum_area_project_approved: 4000
         })
       });
       expect(result[1]).toEqual({
         polygonUuid: "uuid-2",
         valid: true,
         extraInfo: expect.objectContaining({
-          sum_area_site: 1500,
-          sum_area_project: 8000
+          sum_area_site_approved: 1500,
+          sum_area_project_approved: 8000
         })
       });
     });
@@ -343,6 +529,8 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuids = ["uuid-1", "uuid-2"];
       const mockSitePolygon = {
         polygonUuid: "uuid-1",
+        status: "approved",
+        calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-1",
           projectId: 1,
@@ -370,8 +558,8 @@ describe("EstimatedAreaValidator", () => {
         polygonUuid: "uuid-1",
         valid: true,
         extraInfo: expect.objectContaining({
-          sum_area_site: 800,
-          sum_area_project: 4000
+          sum_area_site_approved: 800,
+          sum_area_project_approved: 4000
         })
       });
       expect(result[1]).toEqual({

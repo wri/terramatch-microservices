@@ -109,7 +109,7 @@ describe("SitePolygonPolicy", () => {
   it("disallows reading polygons without polygons-manage", async () => {
     mockUserId(123);
     mockPermissions();
-    await expectCannot(service, "readAll", SitePolygon);
+    await expectCannot(service, "read", SitePolygon);
   });
 
   it("allows deleting polygons within frameworks", async () => {

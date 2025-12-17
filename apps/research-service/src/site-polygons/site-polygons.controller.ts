@@ -230,7 +230,7 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto) {
-    await this.policyService.authorize("readAll", SitePolygon);
+    await this.policyService.authorize("read", SitePolygon);
 
     const {
       siteId,

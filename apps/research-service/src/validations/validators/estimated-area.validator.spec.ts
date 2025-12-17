@@ -376,9 +376,9 @@ describe("EstimatedAreaValidator", () => {
         total_area_site: 2000,
         total_area_project: 10000,
         projected_sum_area_site: 1750,
-        projected_percentage_site: 88,
+        projected_percentage_site: 87.5,
         projected_sum_area_project: 7750,
-        projected_percentage_project: 78
+        projected_percentage_project: 77.5
       });
     });
 

@@ -12,10 +12,12 @@ import {
   UpdateRequest,
   User
 } from "@terramatch-microservices/database/entities";
-import { laravelType } from "@terramatch-microservices/database/types/util";
+import { AnswersModel, laravelType } from "@terramatch-microservices/database/types/util";
 import {
   EntityModel,
   EntityType,
+  FormModel,
+  formModelType,
   getOrganisationId,
   getProjectId,
   hasNothingToReport,
@@ -24,7 +26,6 @@ import {
 } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary, flatten, isEmpty, uniq } from "lodash";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isField, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
@@ -43,8 +44,6 @@ import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto
 
 @Injectable()
 export class FormDataService {
-  private logger = new TMLogger(FormDataService.name);
-
   constructor(
     private readonly localizationService: LocalizationService,
     private readonly mediaService: MediaService,
@@ -68,8 +67,27 @@ export class FormDataService {
       model.updateRequestStatus = newUpdateRequest.status;
       await model.save();
     } else {
-      await this.updateEntityFromForm(model, form, answers);
+      await this.updateModelFromForm(model, form, answers);
     }
+  }
+
+  async storeSubmissionAnswers(submission: FormSubmission, form: Form, answers: Dictionary<unknown>) {
+    const models: FormModels = {
+      organisations:
+        submission.organisation ??
+        (submission.organisationUuid == null ? undefined : await submission.$get("organisation")) ??
+        undefined,
+      projectPitches:
+        submission.projectPitch ??
+        (submission.projectPitchUuid == null ? undefined : await submission.$get("projectPitch")) ??
+        undefined
+    };
+
+    if (models.organisations == null || models.projectPitches == null) {
+      throw new InternalServerErrorException("Submission must have an organisation and project pitch");
+    }
+
+    await this.updateModelFromForm(submission, form, answers, models);
   }
 
   async getDtoForEntity(entityType: EntityType, entity: EntityModel, form: Form, locale: ValidLocale) {
@@ -236,60 +254,65 @@ export class FormDataService {
     return this.localizationService.translateFields(translations, form, ["title"]).title;
   }
 
-  private async updateEntityFromForm<T extends EntityModel>(model: T, form: Form, answers: Dictionary<unknown>) {
-    model.answers = {};
+  private async updateModelFromForm<T extends AnswersModel>(
+    answersModel: T,
+    form: Form,
+    answers: Dictionary<unknown>,
+    associatedModels: FormModels = {}
+  ) {
+    answersModel.answers = {};
+    const type = formModelType(answersModel as unknown as FormModel);
+    const models: FormModels = type == null ? associatedModels : { [type]: answersModel, ...associatedModels };
 
     const questions = await FormQuestion.forForm(form.uuid).findAll();
     const collector = new LinkedAnswerCollector(this.mediaService);
     const syncPromises: Promise<void>[] = [];
     for (const question of questions) {
-      if (question.inputType === "conditional") {
-        model.answers[question.uuid] = answers[question.uuid];
-      } else {
-        const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
-        if (config == null) {
-          this.logger.warn("Entity question with no linked field config", { questionUuid: question.uuid });
-          continue;
-        }
+      const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
+      if (config == null) {
+        answersModel.answers[question.uuid] = answers[question.uuid];
+        continue;
+      }
 
-        // Note: file questions are currently handled with direct file upload in the entity form on the FE
-        const { field } = config;
-        if (isField(field)) {
-          syncPromises.push(collector.fields.syncField(model, question, field, answers));
-        } else if (isRelation(field)) {
-          syncPromises.push(
-            collector[field.resource].syncRelation(
-              model,
-              field,
-              answers[question.uuid] as object[] | null | undefined,
-              question.isHidden(answers, questions)
-            )
-          );
-        }
+      const model = models[config.model];
+      if (model == null) throw new InternalServerErrorException(`Missing model for linked field ${config.model}`);
+
+      // Note: file questions are currently handled with direct file upload in the entity form on the FE
+      if (isField(config.field)) {
+        syncPromises.push(collector.fields.syncField(model, question, config.field, answers));
+      } else if (isRelation(config.field)) {
+        syncPromises.push(
+          collector[config.field.resource].syncRelation(
+            model,
+            config.field,
+            answers[question.uuid] as object[] | null | undefined,
+            question.isHidden(answers, questions)
+          )
+        );
       }
     }
     await Promise.all(syncPromises);
 
-    if (isReport(model)) {
-      model.completion = this.calculateProgress(answers, questions);
+    if (isReport(answersModel)) {
+      answersModel.completion = this.calculateProgress(answers, questions);
 
-      const isAdmin = (await this.policyService.getPermissions()).includes(`framework-${model.frameworkKey}`);
-      if (model.createdBy == null && !isAdmin) {
-        model.createdBy = authenticatedUserId() ?? null;
+      const isAdmin = (await this.policyService.getPermissions()).includes(`framework-${answersModel.frameworkKey}`);
+      if (answersModel.createdBy == null && !isAdmin) {
+        answersModel.createdBy = authenticatedUserId() ?? null;
       }
 
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case
       // we want the transition to go ahead and take place.
-      if (model.status === DUE || !isAdmin) {
-        model.status = STARTED;
+      if (answersModel.status === DUE || !isAdmin) {
+        answersModel.status = STARTED;
       }
 
       // This update has to happen after the status set above or moving to STARTED can fail if the
       // record is currently in AWAITING_APPROVAL.
-      if (hasNothingToReport(model)) model.nothingToReport = false;
+      if (hasNothingToReport(answersModel)) answersModel.nothingToReport = false;
     }
 
-    await model.save();
+    await Promise.all([answersModel, ...Object.values(models)].map(model => model.save()));
   }
 
   private calculateProgress(answers: Dictionary<unknown>, questions: FormQuestion[]) {

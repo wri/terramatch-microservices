@@ -1,14 +1,16 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Post, Put, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { CreateSubmissionBody, SubmissionDto } from "../entities/dto/submission.dto";
+import { CreateSubmissionBody, SubmissionDto, UpdateSubmissionBody } from "../entities/dto/submission.dto";
 import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { Application, Form, FormSubmission, ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { FormDataDto } from "../entities/dto/form-data.dto";
+import { isEmpty } from "lodash";
 
 @Controller("forms/v3/submissions")
 export class SubmissionsController {
@@ -79,5 +81,39 @@ export class SubmissionsController {
     submission.projectPitch = pitch;
 
     return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user.locale);
+  }
+
+  @Put()
+  @ApiOperation({ operationId: "submissionUpdate", summary: "Update form submission." })
+  @JsonApiResponse(FormDataDto)
+  @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
+  @ExceptionResponse(NotFoundException, { description: "Form submission or associated form not found" })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Current user is not authorized to access this form submission"
+  })
+  async update(@Param() { uuid }: SingleResourceDto, @Body() payload: UpdateSubmissionBody) {
+    if (payload.data.id !== uuid) throw new BadRequestException("Submission id in path and payload do not match");
+
+    const submission = await this.formDataService.getFullSubmission(uuid);
+    if (submission == null) throw new NotFoundException("Submission not found");
+
+    const form = submission.formId == null ? undefined : await Form.findOne({ where: { uuid: submission.formId } });
+    if (form == null) throw new NotFoundException("Form for submission not found");
+
+    const attributes = payload.data.attributes;
+    if (attributes.answers != null) {
+      await this.policyService.authorize("updateAnswers", submission);
+      await this.formDataService.storeSubmissionAnswers(submission, form, attributes.answers);
+    }
+    if (attributes.status != null || attributes.feedback != null || !isEmpty(attributes.feedbackFields)) {
+      await this.policyService.authorize("update", submission);
+      await submission.update({
+        status: attributes.status,
+        feedback: attributes.feedback,
+        feedbackFields: attributes.feedbackFields
+      });
+    }
+
+    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form);
   }
 }

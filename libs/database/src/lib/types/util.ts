@@ -1,12 +1,14 @@
 import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes } from "sequelize";
 import { FormModel } from "../constants/entities";
-import { isFunction } from "lodash";
+import { Dictionary, isFunction } from "lodash";
 
 export type UuidModel = Model & { uuid: string };
 export type StatusModel = Model & { status: string };
 export type FeedbackModel = Model & { feedback?: string | null; feedbackFields?: string[] | null };
 export type StatusUpdateModel = UuidModel & LaravelModel & StatusModel & FeedbackModel;
+
+export type AnswersModel = Model & { answers: Dictionary<unknown> | null };
 
 export type CollectionModelCtor<M extends Model = Model> = ModelCtor<M> & {
   // Scope function

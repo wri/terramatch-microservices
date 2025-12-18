@@ -12,6 +12,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { FormSubmission } from "@terramatch-microservices/database/entities";
+import { UpdateSubmissionAttributes } from "../entities/dto/submission.dto";
 
 describe("SubmissionsController", () => {
   let controller: SubmissionsController;
@@ -106,6 +107,70 @@ describe("SubmissionsController", () => {
         expect.objectContaining({ uuid: form.uuid }),
         user.locale
       );
+    });
+  });
+
+  describe("update", () => {
+    it("throws if the path and payload don't match", async () => {
+      await expect(
+        controller.update({ uuid: "fake-uuid" }, { data: { id: "fake-uuid-2", type: "submissions", attributes: {} } })
+      ).rejects.toThrow("Submission id in path and payload do not match");
+    });
+
+    it("throws if the submission is not found", async () => {
+      await expect(
+        controller.update({ uuid: "fake-uuid" }, { data: { id: "fake-uuid", type: "submissions", attributes: {} } })
+      ).rejects.toThrow("Submission not found");
+    });
+
+    it("throws if the submission doesn't have a form", async () => {
+      const submission = await FormSubmissionFactory.create();
+      await expect(
+        controller.update(
+          { uuid: submission.uuid },
+          { data: { id: submission.uuid, type: "submissions", attributes: {} } }
+        )
+      ).rejects.toThrow("Form for submission not found");
+    });
+
+    it("calls the service to update the answers", async () => {
+      const form = await FormFactory.create();
+      const submission = await FormSubmissionFactory.create({ formId: form.uuid });
+      const attributes = { answers: {} };
+
+      formDataService.getFullSubmission.mockResolvedValue(submission);
+      await controller.update(
+        { uuid: submission.uuid },
+        { data: { id: submission.uuid, type: "submissions", attributes } }
+      );
+
+      expect(policyService.authorize).toHaveBeenCalledWith("updateAnswers", submission);
+      expect(formDataService.storeSubmissionAnswers).toHaveBeenCalledWith(
+        submission,
+        expect.objectContaining({ uuid: form.uuid }),
+        attributes.answers
+      );
+    });
+
+    it("updates the submissions status and feedback", async () => {
+      const form = await FormFactory.create();
+      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "pending" });
+      const attributes: UpdateSubmissionAttributes = {
+        status: "rejected",
+        feedback: "Some feedback",
+        feedbackFields: ["one", "two"]
+      };
+
+      await controller.update(
+        { uuid: submission.uuid },
+        { data: { id: submission.uuid, type: "submissions", attributes } }
+      );
+
+      await submission.reload();
+      expect(policyService.authorize).toHaveBeenCalledWith("update", submission);
+      expect(submission.status).toBe("rejected");
+      expect(submission.feedback).toBe("Some feedback");
+      expect(submission.feedbackFields).toEqual(["one", "two"]);
     });
   });
 });

@@ -1,5 +1,15 @@
 import { DtoOptions } from "../decorators/json-api-dto.decorator";
-import { Equals, IsIn, IsNotEmpty, IsNumberString, IsString, IsUUID, ValidateNested } from "class-validator";
+import {
+  ArrayMinSize,
+  Equals,
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsNumberString,
+  IsString,
+  IsUUID,
+  ValidateNested
+} from "class-validator";
 import { ApiExtraModels, ApiProperty, getSchemaPath } from "@nestjs/swagger";
 import { DiscriminatorDescriptor, Type } from "class-transformer";
 import { InternalServerErrorException } from "@nestjs/common";
@@ -77,6 +87,61 @@ export function CreateDataDto<T>(type: string, AttributesDto: new () => T) {
   return DataDto;
 }
 
+function UuidDeleteDataDto(type: string) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsUUID()
+    @ApiProperty({ format: "uuid" })
+    id: string;
+  }
+  return DataDto;
+}
+
+function NumberDeleteDataDto(type: string) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsNumberString({ no_symbols: true })
+    @ApiProperty({ pattern: "^\\d{5}$" })
+    id: string;
+  }
+  return DataDto;
+}
+
+function StringDeleteDataDto(type: string) {
+  class DataDto {
+    @Equals(type)
+    @ApiProperty({ enum: [type] })
+    type: string;
+
+    @IsString()
+    @ApiProperty()
+    id: string;
+  }
+  return DataDto;
+}
+
+export function DeleteDataDto(options: DtoOptions) {
+  if (options.id === "uuid" || options.id == null) {
+    return UuidDeleteDataDto(options.type);
+  }
+
+  if (options.id === "number") {
+    return NumberDeleteDataDto(options.type);
+  }
+
+  if (options.id === "string") {
+    return StringDeleteDataDto(options.type);
+  }
+
+  throw new InternalServerErrorException(`Options id not recognized [${options.id}]`);
+}
+
 export function JsonApiDataDto<T>(options: DtoOptions, AttributesDto: new () => T) {
   // It's tedious to have these three specified separately, but if we specify these differently as
   // an intermediate base class and then a subclass with the correct id annotations, it mixes up
@@ -106,6 +171,31 @@ export function JsonApiBodyDto<T>(DataDto: new () => T) {
   }
 
   return BodyDto;
+}
+
+/**
+ * Creates a DTO object for JSON:API bulk operations (arrays).
+ * Similar to JsonApiBodyDto but for bulk operations.
+ */
+export function JsonApiBulkBodyDto<T>(
+  DataDto: new () => T,
+  options?: { minSize?: number; minSizeMessage?: string; description?: string; example?: unknown[] }
+) {
+  class BulkBodyDto {
+    @IsArray()
+    @ArrayMinSize(options?.minSize ?? 1, { message: options?.minSizeMessage ?? "At least one item must be provided" })
+    @ValidateNested({ each: true })
+    @Type(() => DataDto)
+    @ApiProperty({
+      description: options?.description ?? "Array of resource identifiers",
+      type: [DataDto],
+      isArray: true,
+      ...(options?.example != null ? { example: options.example } : {})
+    })
+    data: T[];
+  }
+
+  return BulkBodyDto;
 }
 
 /**

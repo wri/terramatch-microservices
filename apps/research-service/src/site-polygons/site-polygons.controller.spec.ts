@@ -1159,12 +1159,25 @@ describe("SitePolygonsController", () => {
   });
 
   describe("uploadVersionForSitePolygon", () => {
+    let originalSequelize: typeof SitePolygon.sequelize;
+
     beforeEach(() => {
+      originalSequelize = SitePolygon.sequelize;
       Object.defineProperty(policyService, "userId", {
         value: 1,
         writable: true,
         configurable: true
       });
+    });
+
+    afterEach(() => {
+      if (SitePolygon.sequelize !== originalSequelize) {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize,
+          writable: true,
+          configurable: true
+        });
+      }
     });
 
     it("should successfully create version from uploaded file", async () => {

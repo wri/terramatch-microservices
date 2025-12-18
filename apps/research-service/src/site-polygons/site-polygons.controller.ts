@@ -830,7 +830,7 @@ export class SitePolygonsController {
 
     const basePolygon = await SitePolygon.findOne({
       where: { uuid: sitePolygonUuid, siteUuid: siteId },
-      attributes: ["id", "uuid", "primaryUuid"]
+      attributes: ["id", "uuid", "primaryUuid", "polyName"]
     });
 
     if (basePolygon == null) {

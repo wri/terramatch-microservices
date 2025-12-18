@@ -12,6 +12,7 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
+import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
   IndicatorDto,
   ReportingPeriodDto,
@@ -27,6 +28,7 @@ import { Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { INDICATOR_SLUGS } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -36,6 +38,8 @@ type AssociationDtos = {
 
 @Injectable()
 export class SitePolygonsService {
+  constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
+
   async buildQuery(page: CursorPage | NumberPage) {
     const builder = new SitePolygonQueryBuilder(page.size);
     if ((page as CursorPage).after != null && (page as NumberPage).number != null) {
@@ -89,10 +93,107 @@ export class SitePolygonsService {
     }
   }
 
-  /**
-   * Deletes a site polygon and all its associated records.
-   * This method handles cascade deletion of all related entities.
-   */
+  private async deleteSitePolygonRelatedRecords(
+    sitePolygonIds: number[],
+    sitePolygonUuids: string[],
+    polygonUuids: string[],
+    pointUuids: string[],
+    primaryUuids: string[],
+    transaction: Transaction
+  ): Promise<void> {
+    for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
+      await IndicatorClass.destroy({
+        where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
+        transaction
+      });
+    }
+
+    if (polygonUuids.length > 0) {
+      await CriteriaSite.destroy({
+        where: { polygonId: { [Op.in]: polygonUuids } },
+        transaction
+      });
+      await CriteriaSiteHistoric.destroy({
+        where: { polygonId: { [Op.in]: polygonUuids } },
+        transaction
+      });
+    }
+
+    await SitePolygonData.destroy({
+      where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+      transaction
+    });
+
+    await AuditStatus.destroy({
+      where: {
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: { [Op.in]: sitePolygonIds }
+      },
+      transaction
+    });
+
+    if (polygonUuids.length > 0) {
+      await ProjectPolygon.destroy({
+        where: { polyUuid: { [Op.in]: polygonUuids } },
+        transaction
+      });
+    }
+
+    if (pointUuids.length > 0) {
+      await PointGeometry.destroy({
+        where: { uuid: { [Op.in]: pointUuids } },
+        transaction
+      });
+    }
+
+    if (polygonUuids.length > 0) {
+      await PolygonGeometry.destroy({
+        where: { uuid: { [Op.in]: polygonUuids } },
+        transaction
+      });
+    }
+
+    await SitePolygon.destroy({
+      where: { primaryUuid: { [Op.in]: primaryUuids } },
+      transaction
+    });
+    if (polygonUuids.length > 0) {
+      await this.polygonGeometryService.bulkUpdateProjectCentroids(polygonUuids, transaction);
+    }
+  }
+
+  async bulkDeleteSitePolygons(sitePolygons: SitePolygon[]): Promise<string[]> {
+    if (sitePolygons.length === 0) {
+      return [];
+    }
+
+    return await this.transaction(async transaction => {
+      const uniquePrimaryUuids = uniq(sitePolygons.map(sp => sp.primaryUuid).filter(isNotNull));
+
+      const allRelatedSitePolygons = await SitePolygon.findAll({
+        where: { primaryUuid: { [Op.in]: uniquePrimaryUuids } },
+        attributes: ["id", "uuid", "polygonUuid", "pointUuid"],
+        transaction
+      });
+
+      const allSitePolygonIds = allRelatedSitePolygons.map(sp => sp.id);
+      const allSitePolygonUuids = allRelatedSitePolygons.map(sp => sp.uuid);
+      const allPolygonUuids = allRelatedSitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
+      const allPointUuids = allRelatedSitePolygons.map(sp => sp.pointUuid).filter(isNotNull);
+
+      await this.deleteSitePolygonRelatedRecords(
+        allSitePolygonIds,
+        allSitePolygonUuids,
+        allPolygonUuids,
+        allPointUuids,
+        uniquePrimaryUuids,
+        transaction
+      );
+
+      return allSitePolygonUuids;
+    });
+  }
+
   async deleteSitePolygon(uuid: string): Promise<void> {
     await this.transaction(async transaction => {
       const sitePolygon = await SitePolygon.findOne({
@@ -119,63 +220,16 @@ export class SitePolygonsService {
       const sitePolygonUuids = relatedSitePolygons.map(sp => sp.uuid);
       const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
       const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
+      const primaryUuid = sitePolygon.primaryUuid;
 
-      for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
-        await IndicatorClass.destroy({
-          where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
-          transaction
-        });
-      }
-
-      if (polygonUuids.length > 0) {
-        await CriteriaSite.destroy({
-          where: { polygonId: { [Op.in]: polygonUuids } },
-          transaction
-        });
-        await CriteriaSiteHistoric.destroy({
-          where: { polygonId: { [Op.in]: polygonUuids } },
-          transaction
-        });
-      }
-
-      await SitePolygonData.destroy({
-        where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+      await this.deleteSitePolygonRelatedRecords(
+        sitePolygonIds,
+        sitePolygonUuids,
+        polygonUuids,
+        pointUuids,
+        [primaryUuid],
         transaction
-      });
-
-      await AuditStatus.destroy({
-        where: {
-          auditableType: SitePolygon.LARAVEL_TYPE,
-          auditableId: { [Op.in]: sitePolygonIds }
-        },
-        transaction
-      });
-
-      if (polygonUuids.length > 0) {
-        await ProjectPolygon.destroy({
-          where: { polyUuid: { [Op.in]: polygonUuids } },
-          transaction
-        });
-      }
-
-      if (pointUuids.length > 0) {
-        await PointGeometry.destroy({
-          where: { uuid: { [Op.in]: pointUuids } },
-          transaction
-        });
-      }
-
-      if (polygonUuids.length > 0) {
-        await PolygonGeometry.destroy({
-          where: { uuid: { [Op.in]: polygonUuids } },
-          transaction
-        });
-      }
-
-      await SitePolygon.destroy({
-        where: { primaryUuid: sitePolygon.primaryUuid },
-        transaction
-      });
+      );
     });
   }
 
@@ -278,6 +332,10 @@ export class SitePolygonsService {
         where: { uuid },
         transaction
       });
+
+      if (polygonUuid != null) {
+        await this.polygonGeometryService.bulkUpdateProjectCentroids([polygonUuid], transaction);
+      }
     });
   }
 

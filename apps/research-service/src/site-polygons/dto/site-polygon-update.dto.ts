@@ -3,6 +3,7 @@ import { IndicatorDto } from "./site-polygon.dto";
 import { Equals, IsArray, IsUUID, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { INDICATOR_DTOS } from "./indicators.dto";
+import { JsonApiBulkBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
 class SitePolygonUpdateAttributes {
   @IsArray()
@@ -46,10 +47,7 @@ class SitePolygonUpdate {
   attributes: SitePolygonUpdateAttributes;
 }
 
-export class SitePolygonBulkUpdateBodyDto {
-  @IsArray()
-  @ValidateNested()
-  @Type(() => SitePolygonUpdate)
-  @ApiProperty({ isArray: true, type: () => SitePolygonUpdate })
-  data: SitePolygonUpdate[];
-}
+export class SitePolygonBulkUpdateBodyDto extends JsonApiBulkBodyDto(SitePolygonUpdate, {
+  description: "Array of site polygons to update",
+  minSize: 1
+}) {}

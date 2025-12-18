@@ -1,5 +1,6 @@
 import { Processor } from "@nestjs/bullmq";
-import { Job } from "bullmq";
+import { Job, Queue } from "bullmq";
+import { InjectQueue } from "@nestjs/bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolygonClippingService } from "./polygon-clipping.service";
 import {
@@ -9,6 +10,7 @@ import {
 import { ClippedVersionDto } from "./dto/clipped-version.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { PolygonClippingCompleteEmail } from "@terramatch-microservices/common/email/polygon-clipping-complete.email";
 
 export interface ClippingJobData {
   polygonUuids: string[];
@@ -16,6 +18,7 @@ export interface ClippingJobData {
   userFullName: string | null;
   source: string;
   delayedJobId: number;
+  siteUuid?: string;
 }
 
 const KEEP_JOBS_TIMEOUT = 60 * 60;
@@ -28,12 +31,15 @@ const KEEP_JOBS_TIMEOUT = 60 * 60;
 export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
   protected readonly logger = new TMLogger(ClippingProcessor.name);
 
-  constructor(private readonly clippingService: PolygonClippingService) {
+  constructor(
+    private readonly clippingService: PolygonClippingService,
+    @InjectQueue("email") private readonly emailQueue: Queue
+  ) {
     super();
   }
 
   async processDelayedJob(job: Job<ClippingJobData>) {
-    const { polygonUuids, userId, userFullName, source } = job.data;
+    const { polygonUuids, userId, userFullName, source, siteUuid } = job.data;
 
     if (polygonUuids.length === 0) {
       throw new DelayedJobException(400, "No polygon UUIDs provided");
@@ -74,6 +80,19 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
           areaRemoved: version.areaRemoved
         })
       );
+    }
+
+    try {
+      const completedAt = new Date();
+      await new PolygonClippingCompleteEmail({
+        userId,
+        siteUuid,
+        polygonUuids,
+        completedAt
+      }).sendLater(this.emailQueue);
+      this.logger.log(`Queued polygon clipping complete email for user ${userId}`);
+    } catch (error) {
+      this.logger.error(`Failed to queue clipping complete email for user ${userId}`, error);
     }
 
     return {

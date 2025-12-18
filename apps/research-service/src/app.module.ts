@@ -23,10 +23,12 @@ import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
+import { GeometryUploadComparisonService } from "./site-polygons/geometry-upload-comparison.service";
 import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
+import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
 
 @Module({
   imports: [
@@ -48,7 +50,9 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     BullModule.registerQueue({ name: "validation" }),
     BullModule.registerQueue({ name: "geometry-upload" }),
     BullModule.registerQueue({ name: "indicators" }),
-    BullModule.registerQueue({ name: "clipping" })
+    BullModule.registerQueue({ name: "clipping" }),
+    BullModule.registerQueue({ name: "sitePolygons" }),
+    BullModule.registerQueue({ name: "email" })
   ],
   controllers: [
     SitePolygonsController,
@@ -69,6 +73,7 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     GeometryFileProcessingService,
+    GeometryUploadComparisonService,
     BoundingBoxService,
     ValidationService,
     ValidationProcessor,
@@ -77,7 +82,8 @@ import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor
     DuplicateGeometryValidator,
     VoronoiService,
     PolygonClippingService,
-    ClippingProcessor
+    ClippingProcessor,
+    GeoJsonExportService
   ]
 })
 export class AppModule {}

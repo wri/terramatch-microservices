@@ -58,6 +58,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         indicators: indicators ?? [],
         siteName: sitePolygon.site?.name,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
+        created_At: sitePolygon.createdAt,
         lightResource: true
       });
     }
@@ -182,6 +183,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
     description: "Whether the site polygon is active"
   })
   isActive: boolean;
+
+  @ApiProperty({ nullable: true, type: Date })
+  created_At: Date | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })
@@ -205,6 +209,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],
       disturbanceableId: sitePolygon.disturbance?.disturbanceableId ?? null,
+      created_At: sitePolygon.createdAt,
       lightResource: false
     });
   }

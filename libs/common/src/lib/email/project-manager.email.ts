@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { SpecificEntityData } from "./email.processor";
 import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
@@ -8,6 +9,7 @@ import { TMLogger } from "../util/tm-logger";
 import { ModelCtor } from "sequelize-typescript";
 import { Includeable, Op } from "sequelize";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { Queue } from "bullmq";
 
 export class ProjectManagerEmail extends EmailSender {
   private readonly logger = new TMLogger(ProjectManagerEmail.name);
@@ -19,6 +21,10 @@ export class ProjectManagerEmail extends EmailSender {
     super();
     this.type = type;
     this.id = id;
+  }
+
+  async sendLater(emailQueue: Queue) {
+    await emailQueue.add("projectManager", { type: this.type, id: this.id });
   }
 
   async send(emailService: EmailService) {

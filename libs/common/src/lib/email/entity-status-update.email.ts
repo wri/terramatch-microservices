@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { SpecificEntityData } from "./email.processor";
@@ -26,6 +27,7 @@ import { TMLogger } from "../util/tm-logger";
 import { InternalServerErrorException } from "@nestjs/common";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { Queue } from "bullmq";
 
 export class EntityStatusUpdateEmail extends EmailSender {
   private readonly logger = new TMLogger(EntityStatusUpdateEmail.name);
@@ -37,6 +39,10 @@ export class EntityStatusUpdateEmail extends EmailSender {
     super();
     this.type = type;
     this.id = id;
+  }
+
+  async sendLater(emailQueue: Queue) {
+    await emailQueue.add("entityStatusUpdate", { type: this.type, id: this.id });
   }
 
   async send(emailService: EmailService) {

@@ -12,6 +12,7 @@ import { ValidLocale } from "@terramatch-microservices/database/constants/locale
 type I18nEmailOptions = {
   i18nReplacements?: Dictionary<string>;
   additionalValues?: Dictionary<string>;
+  body?: string;
 };
 
 const EMAIL_TEMPLATE = "libs/common/src/lib/views/default-email.hbs";
@@ -83,7 +84,7 @@ export class EmailService {
   private async renderI18nTemplateEmail(
     locale: ValidLocale,
     i18nKeys: Dictionary<string>,
-    { i18nReplacements, additionalValues }: I18nEmailOptions = {}
+    { i18nReplacements, additionalValues, body }: I18nEmailOptions = {}
   ) {
     if (!this.hasSubject(i18nKeys)) throw new InternalServerErrorException("Email subject is required");
 
@@ -116,7 +117,7 @@ export class EmailService {
       data["link"] = `${this.configService.get("APP_FRONT_END")}${data["link"]}`;
     }
 
-    const body = this.templateService.render(EMAIL_TEMPLATE, data);
+    body ??= this.templateService.render(EMAIL_TEMPLATE, data);
     return { subject, body };
   }
 

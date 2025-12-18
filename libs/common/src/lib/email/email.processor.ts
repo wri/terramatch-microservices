@@ -10,6 +10,7 @@ import { TerrafundReportReminderEmail } from "./terrafund-report-reminder.email"
 import { TerrafundSiteAndNurseryReminderEmail } from "./terrafund-site-and-nursery-reminder.email";
 import { AdminUserCreationEmail } from "./admin-user-creation.email";
 import { ProjectManagerEmail } from "./project-manager.email";
+import { ApplicationSubmittedEmail } from "./application-submitted.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -21,11 +22,12 @@ export type ProjectEmailData = {
 };
 
 const EMAIL_PROCESSORS = {
-  statusUpdate: EntityStatusUpdateEmail,
+  entityStatusUpdate: EntityStatusUpdateEmail,
   terrafundReportReminder: TerrafundReportReminderEmail,
   terrafundSiteAndNurseryReminder: TerrafundSiteAndNurseryReminderEmail,
   adminUserCreation: AdminUserCreationEmail,
-  projectManager: ProjectManagerEmail
+  projectManager: ProjectManagerEmail,
+  applicationSubmitted: ApplicationSubmittedEmail
 };
 
 /**

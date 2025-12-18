@@ -13,13 +13,15 @@ import {
   isReport,
   ReportModel
 } from "@terramatch-microservices/database/constants/entities";
-import { SpecificEntityData } from "../email/email.processor";
 import { EventService } from "./event.service";
 import {
   Action,
+  Application,
   AuditStatus,
+  Form,
   FormQuestion,
   FormSubmission,
+  ProjectPitch,
   Task,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
@@ -45,6 +47,9 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { APPROVAL_PROCESSERS } from "./processors";
 import { authenticatedUserId } from "../guards/auth.guard";
 import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
+import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
+import { ProjectManagerEmail } from "../email/project-manager.email";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -71,6 +76,8 @@ export class EntityStatusUpdate extends EventProcessor {
 
     if (this.model instanceof UpdateRequest) {
       await this.handleUpdateRequest(this.model);
+    } else if (this.model instanceof FormSubmission) {
+      await this.handleFormSubmission(this.model);
     } else {
       await this.handleBaseModel();
     }
@@ -179,14 +186,48 @@ export class EntityStatusUpdate extends EventProcessor {
     }
   }
 
+  private async handleFormSubmission(submission: FormSubmission) {
+    await this.createAuditStatus();
+
+    if (submission.status === "awaiting-approval") {
+      if (submission.applicationId != null) {
+        await Application.update({ updatedBy: authenticatedUserId() }, { where: { id: submission.applicationId } });
+      }
+
+      if (submission.projectPitchUuid != null) {
+        await ProjectPitch.update({ status: "active" }, { where: { uuid: submission.projectPitchUuid } });
+      }
+
+      await this.sendApplicationSubmittedEmail(submission);
+    }
+  }
+
   private async sendStatusUpdateEmail(type: EntityType, model: StatusUpdateModel = this.model) {
     this.logger.log(`Sending status update to email queue [${JSON.stringify({ type, id: model.id })}]`);
-    await this.eventService.emailQueue.add("statusUpdate", { type, id: model.id } as SpecificEntityData);
+    await new EntityStatusUpdateEmail({ type, id: model.id }).sendLater(this.eventService.emailQueue);
   }
 
   private async sendProjectManagerEmail(type: EntityType, model: StatusUpdateModel = this.model) {
     this.logger.log(`Sending project manager email queue [${JSON.stringify({ type, id: model.id })}]`);
-    await this.eventService.emailQueue.add("projectManager", { type, id: model.id } as SpecificEntityData);
+    await new ProjectManagerEmail({ type, id: model.id }).sendLater(this.eventService.emailQueue);
+  }
+
+  private async sendApplicationSubmittedEmail(submission: FormSubmission) {
+    this.logger.log(`Sending application submitted email queue [${JSON.stringify({ id: submission.id })}]`);
+
+    const userId = authenticatedUserId();
+    if (userId == null) {
+      this.logger.error("Cannot send application submitted email without authenticated user");
+      return;
+    }
+
+    const form =
+      submission.form ??
+      (submission.formId == null ? undefined : await Form.findOne({ where: { uuid: submission.formId } }));
+    await new ApplicationSubmittedEmail({
+      message: form?.submissionMessage ?? "Thank you for sending your application.",
+      userId
+    }).sendLater(this.eventService.emailQueue);
   }
 
   private async updateActions() {

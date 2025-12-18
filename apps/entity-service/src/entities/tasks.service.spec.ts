@@ -6,7 +6,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TaskQueryDto } from "./dto/task-query.dto";
 import { Task } from "@terramatch-microservices/database/entities";
-import { reverse, sortBy, sumBy, uniq } from "lodash";
+import { orderBy, reverse, sortBy, sumBy, uniq } from "lodash";
 import {
   NurseryFactory,
   NurseryReportFactory,
@@ -143,7 +143,7 @@ describe("TasksService", () => {
         const oldDate = faker.date.past({ years: 1 });
         let newDate = faker.date.recent();
         clock.setSystemTime(oldDate);
-        const tasks = await TaskFactory.createMany(3);
+        const tasks = orderBy(await TaskFactory.createMany(3), "id");
         clock.setSystemTime(newDate);
         tasks[0].setDataValue("status", "approved");
         await tasks[0].save();

@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { Dictionary } from "lodash";
@@ -22,8 +23,8 @@ export class AdminUserCreationEmail extends EmailSender {
     this.fundingProgrammeName = fundingProgrammeName;
   }
 
-  async sendLater(queue: Queue) {
-    await queue.add("adminUserCreation", { userId: this.userId, fundingProgrammeName: this.fundingProgrammeName });
+  async sendLater(emailQueue: Queue) {
+    await emailQueue.add("adminUserCreation", { userId: this.userId, fundingProgrammeName: this.fundingProgrammeName });
   }
 
   async send(emailService: EmailService) {

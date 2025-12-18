@@ -118,6 +118,7 @@ describe("SubmissionsController", () => {
     });
 
     it("throws if the submission is not found", async () => {
+      formDataService.getFullSubmission.mockResolvedValue(null);
       await expect(
         controller.update({ uuid: "fake-uuid" }, { data: { id: "fake-uuid", type: "submissions", attributes: {} } })
       ).rejects.toThrow("Submission not found");
@@ -125,6 +126,7 @@ describe("SubmissionsController", () => {
 
     it("throws if the submission doesn't have a form", async () => {
       const submission = await FormSubmissionFactory.create();
+      formDataService.getFullSubmission.mockResolvedValue(submission);
       await expect(
         controller.update(
           { uuid: submission.uuid },
@@ -134,6 +136,9 @@ describe("SubmissionsController", () => {
     });
 
     it("calls the service to update the answers", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
       const form = await FormFactory.create();
       const submission = await FormSubmissionFactory.create({ formId: form.uuid });
       const attributes = { answers: {} };
@@ -153,13 +158,18 @@ describe("SubmissionsController", () => {
     });
 
     it("updates the submissions status and feedback", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
       const form = await FormFactory.create();
-      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "pending" });
+      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "awaiting-approval" });
       const attributes: UpdateSubmissionAttributes = {
         status: "rejected",
         feedback: "Some feedback",
         feedbackFields: ["one", "two"]
       };
+
+      formDataService.getFullSubmission.mockResolvedValue(submission);
 
       await controller.update(
         { uuid: submission.uuid },

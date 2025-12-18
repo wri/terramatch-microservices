@@ -100,20 +100,33 @@ export class SubmissionsController {
     const form = submission.formId == null ? undefined : await Form.findOne({ where: { uuid: submission.formId } });
     if (form == null) throw new NotFoundException("Form for submission not found");
 
+    const user = await User.findOne({ where: { id: authenticatedUserId() }, attributes: ["uuid", "locale"] });
+
     const attributes = payload.data.attributes;
     if (attributes.answers != null) {
       await this.policyService.authorize("updateAnswers", submission);
       await this.formDataService.storeSubmissionAnswers(submission, form, attributes.answers);
-    }
-    if (attributes.status != null || attributes.feedback != null || !isEmpty(attributes.feedbackFields)) {
-      await this.policyService.authorize("update", submission);
-      await submission.update({
-        status: attributes.status,
-        feedback: attributes.feedback,
-        feedbackFields: attributes.feedbackFields
-      });
+
+      await submission.update({ userId: user?.uuid });
+      if (submission.applicationId != null) {
+        await Application.update({ updatedBy: authenticatedUserId() }, { where: { id: submission.applicationId } });
+      }
     }
 
-    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form);
+    const hasFeedback = attributes.feedback != null || !isEmpty(attributes.feedbackFields);
+    if (attributes.status != null || hasFeedback) {
+      await this.policyService.authorize("update", submission);
+      const updates: Parameters<typeof submission.update>[0] = {};
+      if (attributes.status != null) {
+        updates.status = attributes.status;
+      }
+      if (hasFeedback) {
+        updates.feedback = attributes.feedback;
+        updates.feedbackFields = attributes.feedbackFields;
+      }
+      await submission.update(updates);
+    }
+
+    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user?.locale);
   }
 }

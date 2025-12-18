@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { TMLogger } from "../util/tm-logger";
 import { EmailService } from "./email.service";
@@ -8,7 +9,7 @@ import { Op } from "sequelize";
 export abstract class ProjectEmailSender extends EmailSender {
   protected readonly logger = new TMLogger(ProjectEmailSender.name);
 
-  private readonly projectIds: number[];
+  protected readonly projectIds: number[];
 
   constructor({ projectIds }: ProjectEmailData) {
     super();

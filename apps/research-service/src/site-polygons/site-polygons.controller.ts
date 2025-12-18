@@ -53,7 +53,9 @@ import { GeometryUploadJobData } from "./geometry-upload.processor";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
   CreateSitePolygonBatchRequestDto,
-  CreateSitePolygonJsonApiRequestDto
+  CreateSitePolygonJsonApiRequestDto,
+  CreateSitePolygonRequestDto,
+  Feature
 } from "./dto/create-site-polygon-request.dto";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -64,6 +66,8 @@ import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
+import { validateSitePolygonProperties } from "./utils/site-polygon-property-validator";
+import { convertPropertiesToAttributeChanges } from "./utils/attribute-changes-converter";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -783,6 +787,135 @@ export class SitePolygonsController {
 
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
+
+  @Post(":uuid/upload/versions")
+  @ApiOperation({
+    operationId: "uploadVersionForSitePolygon",
+    summary: "Upload geometry file to create a new version of a specific site polygon",
+    description: `Uploads a geometry file and creates a new version of the specified site polygon.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse(SitePolygonLightDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, no features found, or multiple features provided."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon or site not found." })
+  async uploadVersionForSitePolygon(
+    @Param("uuid") sitePolygonUuid: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: GeometryUploadRequestDto
+  ) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId as number;
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const basePolygon = await SitePolygon.findOne({
+      where: { uuid: sitePolygonUuid, siteUuid: siteId },
+      attributes: ["id", "uuid", "primaryUuid"]
+    });
+
+    if (basePolygon == null) {
+      throw new NotFoundException(`Site polygon ${sitePolygonUuid} not found in site ${siteId}`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    if (geojson.features.length === 0) {
+      throw new BadRequestException("No features found in uploaded file");
+    }
+
+    if (geojson.features.length > 1) {
+      throw new BadRequestException(
+        `Explicit versioning only supports single polygon. Received ${geojson.features.length} features`
+      );
+    }
+
+    const feature = geojson.features[0];
+    const properties = feature.properties ?? {};
+    const allProperties = { ...properties };
+    if (siteId != null) {
+      allProperties.siteId = siteId;
+      allProperties.site_id = siteId;
+    }
+
+    const validatedProperties = validateSitePolygonProperties(allProperties);
+    const attributeChanges = convertPropertiesToAttributeChanges(validatedProperties);
+
+    const uploadedPolyName = attributeChanges.polyName ?? attributeChanges.poly_name;
+    const basePolyName = basePolygon.polyName ?? null;
+
+    if (uploadedPolyName != null && uploadedPolyName.length > 0 && uploadedPolyName !== basePolyName) {
+      attributeChanges.polyName = uploadedPolyName;
+      attributeChanges.poly_name = uploadedPolyName;
+    } else {
+      attributeChanges.polyName = basePolyName != null ? `${basePolyName} (new)` : " (new)";
+      attributeChanges.poly_name = attributeChanges.polyName;
+    }
+
+    const versionGeometries: CreateSitePolygonRequestDto[] = [
+      {
+        type: "FeatureCollection" as const,
+        features: [
+          {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              site_id: siteId
+            }
+          } as Feature
+        ]
+      }
+    ];
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const newVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      return await this.sitePolygonCreationService.createSitePolygonVersion(
+        sitePolygonUuid,
+        versionGeometries,
+        attributeChanges,
+        "Version created from geometry file upload",
+        userId,
+        user?.fullName ?? null,
+        source,
+        transaction
+      );
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
+
+    document.addData(
+      newVersion.uuid,
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+    );
+
+    this.logger.log(`Created version ${newVersion.uuid} from site polygon ${sitePolygonUuid} by user ${userId}`);
+
+    return document;
+  }
+
   private async createVersion(
     baseSitePolygonUuid: string,
     geometries: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["geometries"],

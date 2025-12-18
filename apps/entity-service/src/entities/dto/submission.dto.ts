@@ -5,6 +5,7 @@ import { FORM_SUBMISSION_STATUSES, FormSubmissionStatus } from "@terramatch-micr
 import { Dictionary } from "lodash";
 import { FormSubmission } from "@terramatch-microservices/database/entities";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
 @JsonApiDto({ type: "submissions" })
 export class SubmissionDto {
@@ -38,8 +39,8 @@ export class SubmissionDto {
   @ApiProperty({ nullable: true, type: String, enum: FRAMEWORK_KEYS })
   frameworkKey: FrameworkKey | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  formUuid: string | null;
+  @ApiProperty()
+  formUuid: string;
 
   @ApiProperty({ nullable: true, enum: FORM_SUBMISSION_STATUSES })
   status: FormSubmissionStatus;
@@ -83,3 +84,8 @@ export class EmbeddedSubmissionDto extends PickType(SubmissionDto, [
       });
   }
 }
+
+export class CreateSubmissionAttributes extends PickType(SubmissionDto, ["formUuid"]) {}
+export class CreateSubmissionBody extends JsonApiBodyDto(
+  class CreateSubmissionData extends CreateDataDto("submissions", CreateSubmissionAttributes) {}
+) {}

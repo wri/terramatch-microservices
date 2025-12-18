@@ -195,6 +195,18 @@ function buildSchema(options: JsonApiOptions) {
       };
     }
     addMeta(document, "indices", { type: "array", items: { type: "object", properties } });
+
+    addMeta(document, "deleted", {
+      type: "array",
+      required: false,
+      items: {
+        type: "object",
+        properties: {
+          resource: { type: "string", description: "The resource type for this deleted resource" },
+          id: { type: "string", description: "The ID of the deleted resource" }
+        }
+      }
+    });
   }
 
   return { document, extraModels };

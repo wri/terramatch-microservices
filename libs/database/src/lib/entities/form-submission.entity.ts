@@ -20,6 +20,7 @@ import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Dictionary } from "lodash";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @Table({
   tableName: "form_submissions",
@@ -29,6 +30,13 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 })
 export class FormSubmission extends Model<InferAttributes<FormSubmission>, InferCreationAttributes<FormSubmission>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormSubmission";
+
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("FormSubmission model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
 
   @PrimaryKey
   @AutoIncrement
@@ -94,8 +102,8 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
   @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid", constraints: false })
   form: Form | null;
 
-  get formUuid(): string | null {
-    return this.form?.uuid ?? null;
+  get formUuid() {
+    return this.formId;
   }
 
   @AllowNull

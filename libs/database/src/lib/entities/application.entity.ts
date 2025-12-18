@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, UUID, UUIDV4 } from "sequelize";
 import { User } from "./user.entity";
 import { FormSubmission } from "./form-submission.entity";
 import { FundingProgramme } from "./funding-programme.entity";
@@ -23,15 +23,15 @@ import { Organisation } from "./organisation.entity";
   // @Index doesn't work with underscored column names
   indexes: [{ name: "applications_funding_programme_uuid_index", fields: ["funding_programme_uuid"] }]
 })
-export class Application extends Model<Application> {
+export class Application extends Model<InferAttributes<Application>, InferCreationAttributes<Application>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(UUID)

@@ -1,17 +1,27 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  TINYINT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { FundingProgramme } from "./funding-programme.entity";
 
 @Table({ tableName: "stages", underscored: true, paranoid: true })
-export class Stage extends Model<Stage> {
+export class Stage extends Model<InferAttributes<Stage>, InferCreationAttributes<Stage>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { Attributes, Model, Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
-import { ITranslateParams, normalizeLocale, tx, t } from "@transifex/native";
+import { ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
@@ -37,9 +37,9 @@ export class LocalizationService {
   }
 
   async generateI18nId(value?: string | null, currentId?: number | null) {
-    if (value == null) return currentId ?? null;
+    value = value?.trim();
+    if (value == null || value === "") return currentId ?? null;
 
-    value = value.trim();
     const current = currentId == null ? null : await I18nItem.findOne({ where: { id: currentId } });
     if (current != null && (current.shortValue === value || current.longValue === value)) {
       return current.id;

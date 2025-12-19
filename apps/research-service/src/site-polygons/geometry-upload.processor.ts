@@ -72,7 +72,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
           ...f,
           properties: {
             ...f.properties,
-            site_id: siteId
+            siteId: siteId
           }
         })) as Feature[]
       }
@@ -160,7 +160,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
             ...feature,
             properties: {
               ...(feature.properties ?? {}),
-              site_id: siteId
+              siteId: siteId
             }
           } as Feature,
           baseUuid: uuid
@@ -170,7 +170,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
           ...feature,
           properties: {
             ...(feature.properties ?? {}),
-            site_id: siteId
+            siteId: siteId
           }
         } as Feature);
       }
@@ -244,7 +244,6 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
           const allProperties = { ...properties };
           if (siteId != null) {
             allProperties.siteId = siteId;
-            allProperties.site_id = siteId;
           }
 
           const validatedProperties = validateSitePolygonProperties(allProperties);
@@ -269,7 +268,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
                   ...feature,
                   properties: {
                     ...feature.properties,
-                    site_id: siteId
+                    siteId: siteId
                   }
                 } as Feature
               ]

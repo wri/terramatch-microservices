@@ -38,6 +38,9 @@ import {
 import { InternalServerErrorException } from "@nestjs/common";
 import { mockUserId } from "../util/testing";
 import { getLinkedFieldConfig } from "../linkedFields";
+import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
+import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 
 describe("EntityStatusUpdate EventProcessor", () => {
   let eventService: DeepMocked<EventService>;
@@ -67,7 +70,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     const project = await ProjectFactory.create();
     await new EntityStatusUpdate(eventService, project).handle();
     expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-      "entityStatusUpdate",
+      EntityStatusUpdateEmail.NAME,
       expect.objectContaining({ type: "projects", id: project.id })
     );
   });
@@ -268,7 +271,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
       await new EntityStatusUpdate(eventService, financialReport).handle();
 
       expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-        "entityStatusUpdate",
+        EntityStatusUpdateEmail.NAME,
         expect.objectContaining({ type: "financialReports", id: financialReport.id })
       );
     });
@@ -375,8 +378,21 @@ describe("EntityStatusUpdate EventProcessor", () => {
       expect(application.updatedBy).toBe(user.id);
       expect(pitch.status).toBe("active");
       expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-        "applicationSubmitted",
+        ApplicationSubmittedEmail.NAME,
         expect.objectContaining({ message: form.submissionMessage, userId: user.id })
+      );
+    });
+
+    it("should handle admin feedback", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const submission = await FormSubmissionFactory.create({ status: "rejected" });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
+        FormSubmissionFeedbackEmail.NAME,
+        expect.objectContaining({ submissionId: submission.id })
       );
     });
   });

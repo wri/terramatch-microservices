@@ -3,33 +3,25 @@ import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { User } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../util/tm-logger";
-import { Queue } from "bullmq";
 
 export type ApplicationSubmittedEmailData = {
   message: string;
   userId: number;
 };
 
-export class ApplicationSubmittedEmail extends EmailSender {
+export class ApplicationSubmittedEmail extends EmailSender<ApplicationSubmittedEmailData> {
+  static readonly NAME = "applicationSubmitted";
+
   private readonly logger = new TMLogger(ApplicationSubmittedEmail.name);
 
-  private readonly message: string;
-  private readonly userId: number;
-
-  constructor({ message, userId }: ApplicationSubmittedEmailData) {
-    super();
-    this.message = message;
-    this.userId = userId;
-  }
-
-  async sendLater(emailQueue: Queue) {
-    await emailQueue.add("applicationSubmitted", { message: this.message, userId: this.userId });
+  constructor(data: ApplicationSubmittedEmailData) {
+    super(ApplicationSubmittedEmail.NAME, data);
   }
 
   async send(emailService: EmailService) {
-    const user = await User.findOne({ where: { id: this.userId }, attributes: ["emailAddress", "locale"] });
+    const user = await User.findOne({ where: { id: this.data.userId }, attributes: ["emailAddress", "locale"] });
     if (user == null) {
-      this.logger.error(`User not found [${this.userId}]`);
+      this.logger.error(`User not found [${this.data.userId}]`);
       return;
     }
 
@@ -40,6 +32,6 @@ export class ApplicationSubmittedEmail extends EmailSender {
       title: "application-submitted-confirmation.title"
     };
 
-    await emailService.sendI18nTemplateEmail(emailAddress, locale, i18nKeys, { body: this.message });
+    await emailService.sendI18nTemplateEmail(emailAddress, locale, i18nKeys, { body: this.data.message });
   }
 }

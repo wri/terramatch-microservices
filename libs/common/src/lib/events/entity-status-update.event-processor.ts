@@ -50,6 +50,7 @@ import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
 import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 import { ProjectManagerEmail } from "../email/project-manager.email";
+import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -199,6 +200,8 @@ export class EntityStatusUpdate extends EventProcessor {
       }
 
       await this.sendApplicationSubmittedEmail(submission);
+    } else if (submission.status !== "started") {
+      await this.sendSubmissionStatusEmail(submission);
     }
   }
 
@@ -210,6 +213,11 @@ export class EntityStatusUpdate extends EventProcessor {
   private async sendProjectManagerEmail(type: EntityType, model: StatusUpdateModel = this.model) {
     this.logger.log(`Sending project manager email queue [${JSON.stringify({ type, id: model.id })}]`);
     await new ProjectManagerEmail({ type, id: model.id }).sendLater(this.eventService.emailQueue);
+  }
+
+  private async sendSubmissionStatusEmail(submission: FormSubmission) {
+    this.logger.log(`Sending submission status email queue [${JSON.stringify({ id: submission.id })}]`);
+    await new FormSubmissionFeedbackEmail({ submissionId: submission.id }).sendLater(this.eventService.emailQueue);
   }
 
   private async sendApplicationSubmittedEmail(submission: FormSubmission) {

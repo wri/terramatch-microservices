@@ -9,7 +9,7 @@ import { TemplateService } from "../templates/template.service";
 import { JwtService } from "@nestjs/jwt";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
-type I18nEmailOptions = {
+export type I18nEmailOptions = {
   i18nReplacements?: Dictionary<string>;
   additionalValues?: Dictionary<string>;
   body?: string;

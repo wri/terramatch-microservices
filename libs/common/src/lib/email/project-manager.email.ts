@@ -1,7 +1,7 @@
 /* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { SpecificEntityData } from "./email.processor";
-import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { ENTITY_MODELS } from "@terramatch-microservices/database/constants/entities";
 import { EmailService } from "./email.service";
 import { Dictionary, groupBy } from "lodash";
 import { Nursery, Project, ProjectReport, ProjectUser, Site, User } from "@terramatch-microservices/database/entities";
@@ -9,22 +9,14 @@ import { TMLogger } from "../util/tm-logger";
 import { ModelCtor } from "sequelize-typescript";
 import { Includeable, Op } from "sequelize";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { Queue } from "bullmq";
 
-export class ProjectManagerEmail extends EmailSender {
+export class ProjectManagerEmail extends EmailSender<SpecificEntityData> {
+  static readonly NAME = "projectManager";
+
   private readonly logger = new TMLogger(ProjectManagerEmail.name);
 
-  private readonly type: EntityType;
-  private readonly id: number;
-
-  constructor({ type, id }: SpecificEntityData) {
-    super();
-    this.type = type;
-    this.id = id;
-  }
-
-  async sendLater(emailQueue: Queue) {
-    await emailQueue.add("projectManager", { type: this.type, id: this.id });
+  constructor(data: SpecificEntityData) {
+    super(ProjectManagerEmail.NAME, data);
   }
 
   async send(emailService: EmailService) {
@@ -68,11 +60,11 @@ export class ProjectManagerEmail extends EmailSender {
     const entity = await this.getEntity();
     const project = entity instanceof Project ? entity : entity?.project;
     if (entity == null || project == null) {
-      this.logger.error(`Could not find entity or project [type=${this.type}, id=${this.id}]`);
+      this.logger.error(`Could not find entity or project [type=${this.data.type}, id=${this.data.id}]`);
       return undefined;
     }
 
-    const entityTypeName = this.type === "projectReports" ? "Project" : entity.constructor.name;
+    const entityTypeName = this.data.type === "projectReports" ? "Project" : entity.constructor.name;
     const i18nReplacements: Dictionary<string> = {
       "{projectName}": project.name ?? "",
       "{entityTypeName}": entityTypeName
@@ -92,17 +84,17 @@ export class ProjectManagerEmail extends EmailSender {
   }
 
   private async getEntity() {
-    if (!["projects", "projectReports", "sites", "nurseries"].includes(this.type)) {
+    if (!["projects", "projectReports", "sites", "nurseries"].includes(this.data.type)) {
       return undefined;
     }
 
-    const entityClass = ENTITY_MODELS[this.type] as ModelCtor<Project | ProjectReport | Site | Nursery>;
+    const entityClass = ENTITY_MODELS[this.data.type] as ModelCtor<Project | ProjectReport | Site | Nursery>;
     const attributes = ["uuid", "name"];
     const include: Includeable[] = [];
-    if (this.type !== "projects") {
+    if (this.data.type !== "projects") {
       attributes.push("projectId");
       include.push({ association: "project", attributes: ["name", "uuid"] });
     }
-    return await entityClass.findOne({ where: { id: this.id }, attributes, include });
+    return await entityClass.findOne({ where: { id: this.data.id }, attributes, include });
   }
 }

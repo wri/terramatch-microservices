@@ -29,6 +29,9 @@ import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
+import { ProjectPolygonsController } from "./project-polygons/project-polygons.controller";
+import { ProjectPolygonsService } from "./project-polygons/project-polygons.service";
+import { ProjectPolygonCreationService } from "./project-polygons/project-polygon-creation.service";
 
 @Module({
   imports: [
@@ -59,7 +62,8 @@ import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
     BoundingBoxController,
     ValidationController,
     PolygonClippingController,
-    IndicatorsController
+    IndicatorsController,
+    ProjectPolygonsController
   ],
   providers: [
     {
@@ -83,7 +87,9 @@ import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
     VoronoiService,
     PolygonClippingService,
     ClippingProcessor,
-    GeoJsonExportService
+    GeoJsonExportService,
+    ProjectPolygonsService,
+    ProjectPolygonCreationService
   ]
 })
 export class AppModule {}

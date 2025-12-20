@@ -9,6 +9,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import {
   Application,
+  AuditStatus,
   Form,
   FormSubmission,
   FundingProgramme,
@@ -177,6 +178,8 @@ export class SubmissionsController {
         updates.feedbackFields = attributes.feedbackFields;
       }
       await submission.update(updates);
+    } else {
+      await AuditStatus.ensureRecentAudit(submission, authenticatedUserId());
     }
 
     return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user?.locale);

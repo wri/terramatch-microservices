@@ -27,6 +27,7 @@ import { User } from "./user.entity";
 import { FormSubmission } from "./form-submission.entity";
 import { InternalServerErrorException } from "@nestjs/common";
 import { AuditStatusType, AUDIT_STATUS_TYPES } from "../constants";
+import { DateTime } from "luxon";
 
 type AuditStatusMedia = "attachments";
 
@@ -102,6 +103,26 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
       type,
       comment
     });
+  }
+
+  static async ensureRecentAudit(
+    model: LaravelModel & StatusModel,
+    createdBy?: number | null,
+    type: AuditStatusType = "updated"
+  ) {
+    // When the user is going through a form, their progress gets saved a lot. We only really care
+    // about when last save in a session, so if the most recent audit is less than an hour old, and
+    // is an update, just change that one instead of creating a new one.
+    const currentAudit = await AuditStatus.for(model).findOne({ order: [["createdAt", "DESC"]] });
+    if (
+      currentAudit?.type === type &&
+      DateTime.fromJSDate(currentAudit.updatedAt) > DateTime.now().minus({ hours: 1 })
+    ) {
+      // This is the simplest way to update updated_at without changing any other values.
+      await AuditStatus.update({}, { where: { id: currentAudit.id } });
+    } else {
+      await AuditStatus.createAudit(model, createdBy, type);
+    }
   }
 
   @PrimaryKey

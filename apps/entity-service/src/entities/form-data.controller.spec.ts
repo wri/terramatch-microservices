@@ -6,10 +6,10 @@ import { EntitiesService } from "./entities.service";
 import { FormDataController } from "./form-data.controller";
 import { FormDataService } from "./form-data.service";
 import { StubProcessor } from "./entities.controller.spec";
-import { AuditStatus, Form, Project } from "@terramatch-microservices/database/entities";
-import { FormFactory, ProjectFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { Form, Project } from "@terramatch-microservices/database/entities";
+import { FormFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 import { Dictionary } from "lodash";
 
@@ -43,7 +43,7 @@ describe("FormDataController", () => {
 
   describe("formDataGet", () => {
     it("throws if the entity is not found", async () => {
-      await expect(controller.formDataGet({ entity: "projects", uuid: "fake-uuid" })).rejects.toThrow(
+      await expect(controller.get({ entity: "projects", uuid: "fake-uuid" })).rejects.toThrow(
         "Entity not found for uuid: fake-uuid"
       );
     });
@@ -51,7 +51,7 @@ describe("FormDataController", () => {
     it("throws if the form is not found", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      await expect(controller.formDataGet({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
+      await expect(controller.get({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
         "Form for entity not found"
       );
     });
@@ -65,7 +65,7 @@ describe("FormDataController", () => {
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
 
-      const result = serialize(await controller.formDataGet({ entity: "projects", uuid: project.uuid }));
+      const result = serialize(await controller.get({ entity: "projects", uuid: project.uuid }));
       expect(entitiesService.getUserLocale).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
       expect(policyService.authorize).toHaveBeenCalledWith("read", project);
@@ -75,23 +75,19 @@ describe("FormDataController", () => {
   });
 
   describe("formDataUpdate", () => {
-    const createPayload = (
-      id: string,
-      answers: Dictionary<unknown>,
-      isContinueLater?: boolean
-    ): UpdateFormDataBody => ({
-      data: { type: "formData", id, attributes: { answers, isContinueLater } }
+    const createPayload = (id: string, answers: Dictionary<unknown>): UpdateFormDataBody => ({
+      data: { type: "formData", id, attributes: { answers } }
     });
 
     it("throws if the payload and path do not match", async () => {
       await expect(
-        controller.formDataUpdate({ entity: "projects", uuid: "fake-uuid" }, createPayload("fake-uuid", {}))
+        controller.update({ entity: "projects", uuid: "fake-uuid" }, createPayload("fake-uuid", {}))
       ).rejects.toThrow("Id in payload does not match entity and uuid from path");
     });
 
     it("throws if the model is not found", async () => {
       await expect(
-        controller.formDataUpdate({ entity: "projects", uuid: "fake-uuid" }, createPayload("projects:fake-uuid", {}))
+        controller.update({ entity: "projects", uuid: "fake-uuid" }, createPayload("projects:fake-uuid", {}))
       ).rejects.toThrow("Entity not found for uuid: fake-uuid");
     });
 
@@ -99,10 +95,7 @@ describe("FormDataController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       await expect(
-        controller.formDataUpdate(
-          { entity: "projects", uuid: project.uuid },
-          createPayload(`projects:${project.uuid}`, {})
-        )
+        controller.update({ entity: "projects", uuid: project.uuid }, createPayload(`projects:${project.uuid}`, {}))
       ).rejects.toThrow("Form for entity not found");
     });
 
@@ -117,7 +110,7 @@ describe("FormDataController", () => {
 
       const answers = { jedi: "Obi-Wan Kenobi", sith: "Darth Vader" };
       const result = serialize(
-        await controller.formDataUpdate(
+        await controller.update(
           { entity: "projects", uuid: project.uuid },
           createPayload(`projects:${project.uuid}`, answers)
         )
@@ -128,31 +121,6 @@ describe("FormDataController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("update", project);
       expect((result.data as Resource).id).toBe(`projects:${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
-    });
-
-    it("Creates an audit status if this is a continue later action", async () => {
-      const project = await ProjectFactory.create({ status: "approved" });
-      processor.findOne.mockResolvedValue(project);
-      const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
-      await form.reload();
-      entitiesService.getUserLocale.mockResolvedValue("es-MX");
-      const dto = new FormDataDto();
-      service.getDtoForEntity.mockResolvedValue(dto);
-      const answers = { jedi: "Obi-Wan Kenobi", sith: "Darth Vader" };
-      const user = await UserFactory.create();
-      mockUserId(user.id);
-      await controller.formDataUpdate(
-        { entity: "projects", uuid: project.uuid },
-        createPayload(`projects:${project.uuid}`, answers, true)
-      );
-
-      const lastStatus = await AuditStatus.findOne({ order: [["createdAt", "DESC"]] });
-      expect(lastStatus!.auditableType).toBe(Project.LARAVEL_TYPE);
-      expect(lastStatus!.auditableId).toBe(project.id);
-      expect(lastStatus!.status).toBe(project.status);
-      expect(lastStatus!.createdBy).toBe(user.emailAddress);
-      expect(lastStatus!.type).toBe("change-request-updated");
-      expect(lastStatus!.comment).toBe("Updated");
     });
   });
 });

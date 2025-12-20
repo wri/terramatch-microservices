@@ -1,4 +1,14 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  HasMany,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
 import {
   BIGINT,
   CreationOptional,
@@ -16,6 +26,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { I18nItem } from "./i18n-item.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { ACTIVE, FundingProgrammeStatus } from "../constants/status";
+import { Stage } from "./stage.entity";
 
 type FundingProgrammeMedia = "cover";
 
@@ -87,4 +98,7 @@ export class FundingProgramme extends Model<
 
   @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
   locationI18nItem: I18nItem | null;
+
+  @HasMany(() => Stage, { foreignKey: "fundingProgrammeId", sourceKey: "uuid", constraints: false })
+  stages: Stage[] | null;
 }

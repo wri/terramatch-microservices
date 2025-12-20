@@ -95,7 +95,20 @@ export class EmbeddedSubmissionDto extends PickType(SubmissionDto, [
   }
 }
 
-export class CreateSubmissionAttributes extends PickType(SubmissionDto, ["formUuid"]) {}
+export class CreateSubmissionAttributes {
+  @ApiProperty()
+  @IsString()
+  fundingProgrammeUuid: string;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+    description: "If supplied, a submission will be created for the stage following this one."
+  })
+  @IsOptional()
+  @IsString()
+  nextStageFromSubmissionUuid?: string;
+}
 export class CreateSubmissionBody extends JsonApiBodyDto(
   class CreateSubmissionData extends CreateDataDto("submissions", CreateSubmissionAttributes) {}
 ) {}

@@ -7,7 +7,14 @@ import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { Application, Form, FormSubmission, ProjectPitch, User } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Form,
+  FormSubmission,
+  FundingProgramme,
+  ProjectPitch,
+  User
+} from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataDto } from "../entities/dto/form-data.dto";
 import { isEmpty } from "lodash";
@@ -35,15 +42,49 @@ export class SubmissionsController {
   @ExceptionResponse(UnauthorizedException, { description: "Form submission creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form submission payload malformed." })
   async create(@Body() payload: CreateSubmissionBody) {
-    const { formUuid } = payload.data.attributes;
-    const form =
-      formUuid == null
+    const { fundingProgrammeUuid, nextStageFromSubmissionUuid } = payload.data.attributes;
+    const programme = await FundingProgramme.findOne({
+      where: { uuid: fundingProgrammeUuid },
+      include: [{ association: "stages", attributes: ["uuid", "order"], order: [["order", "ASC"]] }]
+    });
+    if (programme == null) throw new BadRequestException("Funding programme not found");
+    if (programme.stages == null || programme.stages.length === 0) {
+      throw new BadRequestException("Funding programme has no stages");
+    }
+
+    const previousSubmission =
+      nextStageFromSubmissionUuid == null
         ? undefined
-        : await Form.findOne({
-            where: { uuid: formUuid },
-            include: [{ association: "stage", attributes: ["uuid", "fundingProgrammeId"] }]
+        : await FormSubmission.findOne({
+            where: { uuid: nextStageFromSubmissionUuid },
+            include: [{ association: "projectPitch" }]
           });
-    if (form?.stage == null) throw new BadRequestException("Form is not assigned to a stage");
+    if (nextStageFromSubmissionUuid != null && previousSubmission == null) {
+      throw new BadRequestException("Previous submission not found");
+    }
+    const stageIndex =
+      previousSubmission == null
+        ? 0
+        : programme.stages.findIndex(stage => stage.uuid === previousSubmission.stageUuid) + 1;
+    if (previousSubmission != null) {
+      if (previousSubmission.status !== "approved") {
+        throw new BadRequestException("Previous submission is not approved");
+      }
+      if (previousSubmission.applicationId == null || previousSubmission.projectPitchUuid == null) {
+        throw new BadRequestException("Previous submission is missing an application or project pitch");
+      }
+      if (stageIndex === 0) {
+        throw new BadRequestException("Previous submission stage not found in funding programme");
+      }
+    }
+
+    const stageUuid = programme.stages[stageIndex]?.uuid;
+    if (stageUuid == null) {
+      throw new BadRequestException("There is no next stage in the funding programme");
+    }
+
+    const form = await Form.findOne({ where: { stageId: stageUuid } });
+    if (form == null) throw new BadRequestException("Form for stage not found");
 
     const user = await User.findByPk(authenticatedUserId(), {
       attributes: ["uuid", "locale"],
@@ -54,26 +95,37 @@ export class SubmissionsController {
     }
 
     const submission = FormSubmission.build({
-      formId: formUuid,
-      stageUuid: form.stage.uuid,
+      formId: form.uuid,
+      stageUuid: stageUuid,
       userId: user.uuid,
       organisationUuid: user.organisation.uuid,
       answers: {}
     });
     await this.policyService.authorize("create", submission);
 
-    const pitch = await ProjectPitch.create({
-      organisationId: user.organisation.uuid,
-      fundingProgrammeId: form.stage.fundingProgrammeId
-    });
+    const pitch =
+      previousSubmission?.projectPitch ??
+      (await ProjectPitch.create({
+        organisationId: user.organisation.uuid,
+        fundingProgrammeId: programme.uuid
+      }));
     submission.projectPitchUuid = pitch.uuid;
 
-    const application = await Application.create({
-      organisationUuid: user.organisation.uuid,
-      fundingProgrammeUuid: form.stage.fundingProgrammeId,
-      updatedBy: authenticatedUserId()
-    });
-    submission.applicationId = application.id;
+    submission.applicationId =
+      previousSubmission?.applicationId ??
+      (
+        await Application.create({
+          organisationUuid: user.organisation.uuid,
+          fundingProgrammeUuid: programme.uuid,
+          updatedBy: authenticatedUserId()
+        })
+      ).id;
+    if (previousSubmission?.applicationId != null) {
+      await Application.update(
+        { updatedBy: authenticatedUserId() },
+        { where: { id: previousSubmission?.applicationId } }
+      );
+    }
 
     await submission.save();
     // assign associations to avoid some additional queries in the DTO builder below

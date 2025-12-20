@@ -21,7 +21,7 @@ import {
 import { IsDate, IsEnum, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
-type FundingProgrammeExtras = "name" | "description" | "location";
+type FundingProgrammeExtras = "name" | "description" | "location" | "stages";
 type FundingProgrammeWithoutExtras = Omit<FundingProgramme, FundingProgrammeExtras>;
 
 export class StageDto {

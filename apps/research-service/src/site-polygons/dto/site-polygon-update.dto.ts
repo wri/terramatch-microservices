@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IndicatorDto } from "./site-polygon.dto";
-import { Equals, IsArray, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+import { Equals, IsArray, IsUUID, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { INDICATOR_DTOS } from "./indicators.dto";
 import { JsonApiBulkBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
@@ -50,9 +50,4 @@ export class SitePolygonUpdate {
 export class SitePolygonBulkUpdateBodyDto extends JsonApiBulkBodyDto(SitePolygonUpdate, {
   description: "Array of site polygons to update",
   minSize: 1
-}) {
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ description: "Comment for the status update", required: false, type: String })
-  comment: string | null = null;
-}
+}) {}

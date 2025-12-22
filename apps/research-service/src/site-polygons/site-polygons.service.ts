@@ -30,7 +30,7 @@ import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-
 import { INDICATOR_SLUGS, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { SitePolygonUpdate } from "./dto/site-polygon-update.dto";
+import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -515,7 +515,7 @@ export class SitePolygonsService {
 
   async updateStatus(
     status: PolygonStatus,
-    sitePolygonsUpdate: SitePolygonUpdate[],
+    sitePolygonsUpdate: SitePolygonStatusUpdate[],
     comment: string | null,
     user: User | null
   ) {

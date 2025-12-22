@@ -45,7 +45,7 @@ export class FormDataController {
   @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
   async update(@Param() { entity, uuid }: SpecificEntityDto, @Body() payload: UpdateFormDataBody) {
-    if (payload.data.id !== `${entity}:${uuid}`) {
+    if (payload.data.id !== `${entity}|${uuid}`) {
       throw new BadRequestException("Id in payload does not match entity and uuid from path");
     }
 
@@ -72,6 +72,6 @@ export class FormDataController {
       form,
       await this.entitiesService.getUserLocale()
     );
-    return document.addData(`${entityType}:${entity.uuid}`, dto).document;
+    return document.addData(`${entityType}|${entity.uuid}`, dto).document;
   }
 }

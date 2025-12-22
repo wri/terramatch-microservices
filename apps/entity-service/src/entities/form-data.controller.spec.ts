@@ -69,7 +69,7 @@ describe("FormDataController", () => {
       expect(entitiesService.getUserLocale).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
       expect(policyService.authorize).toHaveBeenCalledWith("read", project);
-      expect((result.data as Resource).id).toBe(`projects:${project.uuid}`);
+      expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
     });
   });
@@ -87,7 +87,7 @@ describe("FormDataController", () => {
 
     it("throws if the model is not found", async () => {
       await expect(
-        controller.update({ entity: "projects", uuid: "fake-uuid" }, createPayload("projects:fake-uuid", {}))
+        controller.update({ entity: "projects", uuid: "fake-uuid" }, createPayload("projects|fake-uuid", {}))
       ).rejects.toThrow("Entity not found for uuid: fake-uuid");
     });
 
@@ -95,7 +95,7 @@ describe("FormDataController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       await expect(
-        controller.update({ entity: "projects", uuid: project.uuid }, createPayload(`projects:${project.uuid}`, {}))
+        controller.update({ entity: "projects", uuid: project.uuid }, createPayload(`projects|${project.uuid}`, {}))
       ).rejects.toThrow("Form for entity not found");
     });
 
@@ -112,14 +112,14 @@ describe("FormDataController", () => {
       const result = serialize(
         await controller.update(
           { entity: "projects", uuid: project.uuid },
-          createPayload(`projects:${project.uuid}`, answers)
+          createPayload(`projects|${project.uuid}`, answers)
         )
       );
       expect(service.storeEntityAnswers).toHaveBeenCalledWith(project, form, answers);
       expect(entitiesService.getUserLocale).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
       expect(policyService.authorize).toHaveBeenCalledWith("update", project);
-      expect((result.data as Resource).id).toBe(`projects:${project.uuid}`);
+      expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
     });
   });

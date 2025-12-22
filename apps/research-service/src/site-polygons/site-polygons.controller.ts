@@ -64,6 +64,7 @@ import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
+import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -363,6 +364,34 @@ export class SitePolygonsController {
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
     else indexData.cursor = cursor;
     return document.addIndex(indexData);
+  }
+
+  @Patch("status/:status")
+  @ApiOperation({
+    operationId: "updateSitePolygonStatus",
+    summary: "Update the status of a site polygon",
+    description: "Update the status of a site polygon"
+  })
+  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  async updateBulkStatus(@Param("status") status: string, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
+    await this.policyService.authorize("update", SitePolygon);
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+    const user = await User.findByPk(userId, {
+      attributes: ["id", "firstName", "lastName", "emailAddress"]
+    });
+    const { data, comment } = request;
+    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
+    const document = buildJsonApi(SitePolygonLightDto);
+    for (const sitePolygon of updatedUuids) {
+      document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon, {}));
+    }
+    return document;
   }
 
   @Patch()

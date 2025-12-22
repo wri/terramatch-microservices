@@ -21,7 +21,7 @@ import { I18nTranslationFactory } from "@terramatch-microservices/database/facto
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import { FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationFormService } from "./localization-form.service";
 
 jest.mock("@transifex/native", () => ({
@@ -235,6 +235,18 @@ describe("LocalizationService", () => {
         pushSource: pushSouceMock
       }));
       await service.pushNewTranslations();
+      expect(pushSouceMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("pushTranslationByForm", () => {
+    it("should push translations by form", async () => {
+      const form = await FormFactory.create();
+      const pushSouceMock = jest.fn();
+      (createNativeInstance as jest.Mock).mockImplementation(() => ({
+        pushSource: pushSouceMock
+      }));
+      await service.pushTranslationByForm(form);
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });

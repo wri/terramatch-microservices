@@ -11,7 +11,7 @@ import {
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
 import { intersection } from "lodash";
-import { Op } from "sequelize";
+import { Model, Op } from "sequelize";
 
 type TranslationModelType =
   | typeof Form
@@ -43,7 +43,6 @@ export class LocalizationFormService {
   ) {
     const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
     const i18nFields = this.getI18nTranslationEntityFields(model);
-    console.log(filterParamsArray);
     // @ts-expect-error - entity is a model class
     const entities = await model.findAll({
       where: {
@@ -55,19 +54,23 @@ export class LocalizationFormService {
       attributes: intersection(Object.keys(model.getAttributes()), [...i18nFields, ...this.extraFields])
     });
 
-    //postprocess entities
     entities.forEach(entity => {
-      Object.entries(entity.dataValues).forEach(([key, value]) => {
-        if (i18nFields.includes(key) && value != null) {
-          this.i18nIdsToBePushed.push(value);
-        }
-      });
+      this.pushI18nIds(entity, i18nFields);
     });
 
     return entities;
   }
 
+  private pushI18nIds(entity: Model, i18nFields: string[]) {
+    Object.entries(entity.dataValues).forEach(([key, value]) => {
+      if (i18nFields.includes(key) && value != null) {
+        this.i18nIdsToBePushed.push(value as number);
+      }
+    });
+  }
+
   async getI18nIdsForForm(form: Form) {
+    this.pushI18nIds(form, this.getI18nTranslationEntityFields(Form));
     const formSections = await this.processTranslationEntity(FormSection, "formId", [form.uuid]);
     const formQuestions = await this.processTranslationEntity(
       FormQuestion,

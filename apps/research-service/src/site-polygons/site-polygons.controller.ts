@@ -64,7 +64,6 @@ import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
-import { PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
@@ -377,7 +376,7 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
-  async updateStatus(@Param("status") status: string, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
+  async updateBulkStatus(@Param("status") status: string, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
     await this.policyService.authorize("update", SitePolygon);
     const userId = this.policyService.userId;
     if (userId == null) {
@@ -387,7 +386,7 @@ export class SitePolygonsController {
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
     const { data, comment } = request;
-    const updatedUuids = await this.sitePolygonService.updateStatus(status, data, comment, user);
+    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
     const document = buildJsonApi(SitePolygonLightDto);
     for (const sitePolygon of updatedUuids) {
       document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon, {}));

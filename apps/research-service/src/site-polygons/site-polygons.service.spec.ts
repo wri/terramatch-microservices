@@ -14,7 +14,8 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
-  TreeSpeciesFactory
+  TreeSpeciesFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import {
   Indicator,
@@ -31,6 +32,7 @@ import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto 
 import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
+import { Op } from "sequelize";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -1153,6 +1155,21 @@ describe("SitePolygonsService", () => {
       expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
         expect.arrayContaining([polygonGeometry.uuid]),
         expect.anything()
+      );
+    });
+  });
+
+  describe("updateBulkStatus", () => {
+    it("should update the status of multiple site polygons", async () => {
+      const data = [{ type: "sitePolygons", id: "1234" }];
+      const status = "submitted";
+      const comment = "comment";
+      const user = await UserFactory.create();
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      await service.updateBulkStatus(status, data, comment, user);
+      expect(SitePolygon.update).toHaveBeenCalledWith(
+        { status },
+        { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
       );
     });
   });

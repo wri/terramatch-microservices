@@ -513,7 +513,7 @@ export class SitePolygonsService {
     ) as Record<number, SiteReport[]>;
   }
 
-  async updateStatus(
+  async updateBulkStatus(
     status: PolygonStatus,
     sitePolygonsUpdate: SitePolygonStatusUpdate[],
     comment: string | null,

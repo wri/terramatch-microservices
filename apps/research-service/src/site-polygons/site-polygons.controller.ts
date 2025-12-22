@@ -367,18 +367,17 @@ export class SitePolygonsController {
     return document.addIndex(indexData);
   }
 
-  @Patch("/status/:status")
+  @Patch("status/:status")
   @ApiOperation({
     operationId: "updateSitePolygonStatus",
     summary: "Update the status of a site polygon",
     description: "Update the status of a site polygon"
   })
-  @JsonApiResponse({ data: SitePolygonLightDto })
+  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
-  async updateStatus(@Param("status") status: PolygonStatus, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
-    console.log("request", request);
+  async updateStatus(@Param("status") status: string, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
     await this.policyService.authorize("update", SitePolygon);
     const userId = this.policyService.userId;
     if (userId == null) {

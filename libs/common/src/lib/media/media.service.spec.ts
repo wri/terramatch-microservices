@@ -8,7 +8,9 @@ import { createMock, PartialFuncReturn } from "@golevelup/ts-jest";
 import { MediaFactory, ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { Media, Project, Site } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker/.";
-import { CopyObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 jest.mock("@aws-sdk/client-s3");
 
@@ -73,6 +75,38 @@ describe("MediaService", () => {
   afterEach(() => {
     jest.restoreAllMocks();
     jest.clearAllMocks();
+  });
+
+  describe("getProjectForModel", () => {
+    it("should return the project if the model is a project", async () => {
+      const model = await ProjectFactory.create();
+      const project = await service.getProjectForModel(model);
+      expect(project).not.toBeNull();
+    });
+
+    it("should return the project if the model is not a Project", async () => {
+      const project = await ProjectFactory.create();
+      const model = await SiteFactory.create({ projectId: project.id });
+      const returnedProject = await service.getProjectForModel(model);
+      expect(returnedProject).not.toBeNull();
+    });
+
+    it("should throw an error if the model is not part of a project", async () => {
+      const model = await SiteFactory.create({ projectId: undefined });
+      await expect(service.getProjectForModel(model)).rejects.toThrow("Media is not part of a project.");
+    });
+  });
+
+  describe("unsetMediaCoverForProject", () => {
+    it("should unset the cover successfully", async () => {
+      const project = await ProjectFactory.create();
+      const newCover = await MediaFactory.project(project).create();
+      const previousCover = await MediaFactory.project(project).create({ isCover: true });
+      jest.spyOn(Media, "findAll").mockResolvedValue([previousCover]);
+      const updateMedias = await service.unsetMediaCoverForProject(newCover, project);
+      expect(updateMedias).toHaveLength(1);
+      expect(updateMedias[0]).toBe(previousCover);
+    });
   });
 
   describe("getUrl", () => {
@@ -206,6 +240,57 @@ describe("MediaService", () => {
       expect(duplicate.modelType).toBe(Site.LARAVEL_TYPE);
       expect(duplicate.modelId).toBe(site.id);
       expect(duplicate.generatedConversions).toStrictEqual(media.generatedConversions);
+    });
+
+    describe("getMedia", () => {
+      it("should return the media successfully", async () => {
+        const media = await MediaFactory.project().create();
+        jest.spyOn(Media, "findOne").mockResolvedValue(media);
+        const returnedMedia = await service.getMedia(media.uuid);
+        expect(Media.findOne).toHaveBeenCalledWith({ where: { uuid: media.uuid } });
+        expect(returnedMedia).not.toBeNull();
+      });
+
+      it("should throw an error if the media is not found", async () => {
+        jest.spyOn(Media, "findOne").mockResolvedValue(null);
+        await expect(service.getMedia("media-uuid")).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe("deleteMedia", () => {
+      it("should delete the media successfully", async () => {
+        const media = await MediaFactory.project().create();
+        media.destroy = jest.fn();
+        await service.deleteMedia(media);
+        expect(DeleteObjectCommand).toHaveBeenCalled();
+        expect(media.destroy).toHaveBeenCalled();
+      });
+    });
+
+    describe("deleteMediaByUuid", () => {
+      it("should delete the media successfully", async () => {
+        const media = await MediaFactory.project().create();
+        jest.spyOn(Media, "findOne").mockResolvedValue(media);
+        jest.spyOn(service, "deleteMedia").mockResolvedValue(media);
+        await service.deleteMediaByUuid(media.uuid);
+        expect(Media.findOne).toHaveBeenCalledWith({ where: { uuid: media.uuid } });
+        expect(service.deleteMedia).toHaveBeenCalledWith(media);
+      });
+
+      it("should throw an error if the media is not found", async () => {
+        jest.spyOn(Media, "findOne").mockResolvedValue(null);
+        await expect(service.deleteMediaByUuid("media-uuid")).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe("getMedias", () => {
+      it("should return the medias successfully", async () => {
+        const medias = await MediaFactory.project().createMany(3);
+        jest.spyOn(Media, "findAll").mockResolvedValue(medias);
+        const returnedMedias = await service.getMedias(medias.map(media => media.uuid));
+        expect(Media.findAll).toHaveBeenCalledWith({ where: { uuid: { [Op.in]: medias.map(media => media.uuid) } } });
+        expect(returnedMedias).toHaveLength(3);
+      });
     });
   });
 });

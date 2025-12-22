@@ -7,10 +7,11 @@ import { mockUserId, serialize } from "@terramatch-microservices/common/util/tes
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
+import { GeometryValidationRequestBody } from "./dto/geometry-validation-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
-import { ValidationType } from "@terramatch-microservices/database/constants";
+import { CRITERIA_ID_TO_VALIDATION_TYPE, ValidationType } from "@terramatch-microservices/database/constants";
 
 describe("ValidationController", () => {
   let controller: ValidationController;
@@ -21,12 +22,14 @@ describe("ValidationController", () => {
     criteriaList: [
       {
         criteriaId: 4,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
       },
       {
         criteriaId: 8,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -40,6 +43,7 @@ describe("ValidationController", () => {
     criteriaList: [
       {
         criteriaId: 4,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
         valid: true,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: null
@@ -53,6 +57,7 @@ describe("ValidationController", () => {
     criteriaList: [
       {
         criteriaId: 8,
+        validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
         valid: false,
         createdAt: new Date("2025-01-08T22:15:15.000Z"),
         extraInfo: { reason: "Test" }
@@ -67,7 +72,25 @@ describe("ValidationController", () => {
       total: 2
     }),
     validatePolygonsBatch: jest.fn().mockResolvedValue(undefined),
-    getSitePolygonUuids: jest.fn().mockResolvedValue(["polygon-1", "polygon-2"])
+    getSitePolygonUuids: jest.fn().mockResolvedValue(["polygon-1", "polygon-2"]),
+    validateGeometries: jest.fn().mockResolvedValue([
+      {
+        type: "validation",
+        id: "feature-1",
+        attributes: {
+          polygonUuid: "feature-1",
+          criteriaList: [
+            {
+              criteriaId: 5,
+              validationType: CRITERIA_ID_TO_VALIDATION_TYPE[5],
+              valid: true,
+              createdAt: new Date("2025-01-08T22:15:15.000Z"),
+              extraInfo: null
+            }
+          ]
+        }
+      }
+    ])
   };
 
   const mockQueue = {
@@ -192,12 +215,14 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 4,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: null
           },
           {
             criteriaId: 8,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: { spikes: [], spikeCount: 0 }
@@ -211,6 +236,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 4,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: null
@@ -272,6 +298,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 4,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: null
@@ -312,6 +339,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 14,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[14],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -368,6 +396,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 15,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[15],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -425,6 +454,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 6,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[6],
             valid: false,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -477,6 +507,7 @@ describe("ValidationController", () => {
         criteriaList: [
           {
             criteriaId: 12,
+            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[12],
             valid: true,
             createdAt: new Date("2025-01-08T22:15:15.000Z"),
             extraInfo: {
@@ -570,6 +601,98 @@ describe("ValidationController", () => {
       mockUserId(1);
       await controller.createSiteValidation(siteUuid, request);
       expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
+    });
+  });
+
+  describe("validateGeometries", () => {
+    it("should validate geometries and return JSON:API format", async () => {
+      const request: GeometryValidationRequestBody = {
+        data: {
+          type: "geometryValidations",
+          attributes: {
+            geometries: [
+              {
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature",
+                    geometry: {
+                      type: "Polygon",
+                      coordinates: [
+                        [
+                          [0, 0],
+                          [0, 1],
+                          [1, 1],
+                          [1, 0],
+                          [0, 0]
+                        ]
+                      ]
+                    },
+                    properties: {
+                      id: "feature-1",
+                      site_id: "site-123",
+                      poly_name: "Test Polygon"
+                    }
+                  }
+                ]
+              }
+            ],
+            validationTypes: ["FEATURE_BOUNDS", "GEOMETRY_TYPE"]
+          }
+        }
+      };
+
+      const result = serialize(await controller.validateGeometries(request));
+
+      expect(mockValidationService.validateGeometries).toHaveBeenCalledWith(request.data.attributes.geometries, [
+        "FEATURE_BOUNDS",
+        "GEOMETRY_TYPE"
+      ]);
+      expect(result.data).toBeDefined();
+      if (Array.isArray(result.data)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].id).toBe("feature-1");
+      }
+    });
+
+    it("should use all validations types when none provided", async () => {
+      const request: GeometryValidationRequestBody = {
+        data: {
+          type: "geometryValidations",
+          attributes: {
+            geometries: [
+              {
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature",
+                    geometry: {
+                      type: "Polygon",
+                      coordinates: [
+                        [
+                          [0, 0],
+                          [0, 1],
+                          [1, 1],
+                          [1, 0],
+                          [0, 0]
+                        ]
+                      ]
+                    },
+                    properties: { id: "feature-1" }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      };
+
+      await controller.validateGeometries(request);
+
+      expect(mockValidationService.validateGeometries).toHaveBeenCalled();
+      const callArgs = mockValidationService.validateGeometries.mock.calls[0];
+      expect(callArgs[1]).toBeDefined();
+      expect(Array.isArray(callArgs[1])).toBe(true);
     });
   });
 });

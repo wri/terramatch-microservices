@@ -88,6 +88,10 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     return Subquery.select(Nursery, "id").eq("projectId", projectId).in("status", Nursery.APPROVED_STATUSES).literal;
   }
 
+  static idsSubquery(projectId: number) {
+    return Subquery.select(Nursery, "id").eq("projectId", projectId).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

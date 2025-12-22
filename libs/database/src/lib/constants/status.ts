@@ -8,8 +8,17 @@ export const STARTED = "started";
 export const AWAITING_APPROVAL = "awaiting-approval";
 export const APPROVED = "approved";
 export const NEEDS_MORE_INFORMATION = "needs-more-information";
+export const MODIFIED = "modified";
 export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
+export const PLANTING_STATUSES = [
+  "no-restoration-expected",
+  "not-started",
+  "in-progress",
+  "replacement-planting",
+  "completed"
+] as const;
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
+export type PlantingStatus = (typeof PLANTING_STATUSES)[number];
 
 export const statusUpdateSequelizeHook = async (model: Model) => {
   // Processed in event.service.ts in the common lib

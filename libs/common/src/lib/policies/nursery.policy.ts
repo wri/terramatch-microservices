@@ -10,9 +10,13 @@ export class NurseryPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], Nursery, {
-        frameworkKey: { $in: this.frameworks }
-      });
+      this.builder.can(
+        ["read", "delete", "create", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        Nursery,
+        {
+          frameworkKey: { $in: this.frameworks }
+        }
+      );
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -26,7 +30,13 @@ export class NurseryPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "uploadFiles"], Nursery, { projectId: { $in: projectIds } });
+          this.builder.can(
+            ["read", "delete", "create", "update", "uploadFiles", "deleteFiles", "updateFiles"],
+            Nursery,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
           this.builder.can("updateAnswers", Nursery, { projectId: { $in: projectIds }, status: STARTED });
         }
       }
@@ -37,9 +47,23 @@ export class NurseryPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], Nursery, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            [
+              "read",
+              "delete",
+              "create",
+              "update",
+              "approve",
+              "uploadFiles",
+              "deleteFiles",
+              "updateFiles",
+              "updateAnswers"
+            ],
+            Nursery,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
         }
       }
     }

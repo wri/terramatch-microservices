@@ -5,6 +5,8 @@ import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
 import { cloneDeep } from "lodash";
 import * as qs from "qs";
+import { DelayedJobDto } from "../dto";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 type AttributeValue = string | number | boolean;
 type Attributes = {
@@ -32,7 +34,7 @@ export type Resource = {
 type DocumentMeta = {
   resourceType: string;
   // Only supplied in the case of a delete
-  resourceId?: string;
+  resourceIds?: string[];
   indices?: IndexData[];
   deleted?: Deleted[];
 };
@@ -123,7 +125,7 @@ type DocumentBuilderOptions = {
 };
 
 export type SerializeOptions = {
-  deletedResourceId?: string;
+  deletedResourceIds?: string[];
 };
 
 export type IndexData = {
@@ -148,10 +150,22 @@ export class DocumentBuilder {
 
   constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
 
-  addData<DTO>(id: string, attributes: DTO): ResourceBuilder {
+  /**
+   * Adds data to the final JSON:API document. If the type of the resource does not match the declared
+   * type of the document builder, it will be included in the `included` array of the document.
+   *
+   * If the goal is to send the data to the `included` array even if it does match, use the forceIncluded
+   * parameter
+   *
+   * @param id String ID of the resource (usually the UUID)
+   * @param attributes The DTO attributes for the resource
+   * @param forceIncluded Set to true if you wish this data to go to the included array even if it
+   *   matches the declared type of the document builder. Defaults to false.
+   */
+  addData<DTO>(id: string, attributes: DTO, forceIncluded = false): ResourceBuilder {
     const builder = new ResourceBuilder(id, attributes as Attributes, this);
 
-    if (builder.type === this.resourceType) {
+    if (forceIncluded || builder.type === this.resourceType) {
       const collision = this.data.find(({ id: existingId }) => existingId === id);
       if (collision != null) {
         throw new ApiBuilderException(`This resource is already in data [${id}]`);
@@ -188,14 +202,14 @@ export class DocumentBuilder {
     return this;
   }
 
-  serialize({ deletedResourceId }: SerializeOptions = {}): JsonApiDocument {
+  serialize({ deletedResourceIds }: SerializeOptions = {}): JsonApiDocument {
     const singular = this.data.length === 1 && this.indexData.length === 0 && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
       meta: { resourceType: this.resourceType }
     };
 
-    if (deletedResourceId != null) {
-      doc.meta.resourceId = deletedResourceId;
+    if (deletedResourceIds != null) {
+      doc.meta.resourceIds = deletedResourceIds;
     } else {
       // Data can either be a single object or an array
       doc.data = singular ? this.data[0].serialize() : this.data.map(resource => resource.serialize());
@@ -223,13 +237,13 @@ export const getDtoType = <DTO>(dtoClass: Type<DTO>) => Reflect.getMetadata(DTO_
 export const buildJsonApi = <DTO>(dtoClass: Type<DTO>, options?: DocumentBuilderOptions) =>
   new DocumentBuilder(getDtoType(dtoClass), options);
 
-export const buildDeletedResponse = (resourceType: string, id: string, additionalDeleted?: Deleted[]) =>
+export const buildDeletedResponse = (resourceType: string, ids: string | string[], additionalDeleted?: Deleted[]) =>
   (additionalDeleted ?? [])
     .reduce(
       (document, { resource, id }) => document.addDeletedResource(resource, id),
       new DocumentBuilder(resourceType)
     )
-    .serialize({ deletedResourceId: id });
+    .serialize({ deletedResourceIds: Array.isArray(ids) ? ids : [ids] });
 
 export const getStableRequestQuery = (originalQuery: object) => {
   const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };
@@ -243,3 +257,6 @@ export const getStableRequestQuery = (originalQuery: object) => {
   const query = qs.stringify(normalizedQuery, { arrayFormat: "indices", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;
 };
+
+export const buildDelayedJobResponse = (delayedJob: DelayedJob): ResourceBuilder =>
+  buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));

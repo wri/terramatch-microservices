@@ -11,11 +11,11 @@ fi
 echo "Enter release name:"
 read release
 
+jql=$(echo "fixVersion=\"$release\"" | jq -SRr @uri)
 jiraTicketsResponse=$(curl \
-  --get -s \
+  -s \
   -u "$JIRA_USER":"$JIRA_TOKEN" \
-  --data-urlencode "jql=fixVersion=\"$release\"" \
-  "https://gfw.atlassian.net/rest/api/3/search")
+  "https://gfw.atlassian.net/rest/api/3/search/jql?jql=$jql&fields=key")
 error=$(echo "$jiraTicketsResponse" | jq ".errorMessages")
 if [[ $error != "null" ]]; then
   echo "Release not found in Jira: $release"
@@ -23,48 +23,82 @@ if [[ $error != "null" ]]; then
   exit 100
 fi
 
-v3Result=$(gh -R wri/terramatch-microservices pr list --search "head:release" -L 1 --json headRefName,title)
+v3Result=$(gh -R wri/terramatch-microservices pr list --search "head:release" -L 1 --json headRefName,title,number)
 v3Title=$(echo "$v3Result" | jq -r .[].title)
 v3Branch=$(echo "$v3Result" | jq -r .[].headRefName)
+v3Number=$(echo "$v3Result" | jq -r .[].number)
 
-phpResult=$(gh -R wri/wri-terramatch-api pr list --search "head:release" -L 1 --json headRefName,title)
+phpResult=$(gh -R wri/wri-terramatch-api pr list --search "head:release" -L 1 --json headRefName,title,number)
 phpTitle=$(echo "$phpResult" | jq -r .[].title)
 phpBranch=$(echo "$phpResult" | jq -r .[].headRefName)
+phpNumber=$(echo "$phpResult" | jq -r .[].number)
 
-feResult=$(gh -R wri/wri-terramatch-website pr list --search "head:release" -L 1 --json headRefName,title)
+feResult=$(gh -R wri/wri-terramatch-website pr list --search "head:release" -L 1 --json headRefName,title,number)
 feTitle=$(echo "$feResult" | jq -r .[].title)
 feBranch=$(echo "$feResult" | jq -r .[].headRefName)
+feNumber=$(echo "$feResult" | jq -r .[].number)
 
 # Enable case-insensitive matching
 shopt -s nocasematch
 if [[ ! ($v3Title =~ $release && $phpTitle =~ $release && $feTitle =~ $release) ]]; then
   echo -e "\nOne or more PR not found. Current release branches:"
-  echo "  v3: $v3Title, $v3Branch"
-  echo "  PHP: $phpTitle, $phpBranch"
-  echo "  FE: $feTitle, $feBranch"
+  echo "  v3: $v3Title, $v3Branch, $v3Number"
+  echo "  PHP: $phpTitle, $phpBranch, $phpNumber"
+  echo "  FE: $feTitle, $feBranch, $feNumber"
   exit 100
 fi
 # Disable case-insensitive matching
 shopt -u nocasematch
 
 echo -e "\nFound PRs:"
-echo "  v3: $v3Title, $v3Branch"
-echo "  PHP: $phpTitle, $phpBranch"
-echo "  FE: $feTitle, $feBranch"
+echo "  v3: $v3Title, $v3Branch, $v3Number"
+echo "  PHP: $phpTitle, $phpBranch, $phpNumber"
+echo "  FE: $feTitle, $feBranch, $feNumber"
 
 jiraTickets=$(echo "$jiraTicketsResponse" | jq -r ".issues[].key" | sort)
 echo -e "\nJira Tickets:\n$jiraTickets"
 
-v3Tickets=$(gh -R wri/terramatch-microservices pr view "$v3Branch" --json commits -q ".commits[] .messageHeadline" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-")
+# gh pr view has a hidden limit of 100 commits. The only way to work around it is to run our own
+# GraphQL query with pagination.
+query=$(cat << QUERY
+  query(\$repo: String!, \$pr: Int!, \$endCursor: String) {
+    repository(owner: "wri", name: \$repo) {
+      pullRequest(number: \$pr) {
+        commits(first: 100, after: \$endCursor) {
+          pageInfo { hasNextPage, endCursor }
+          nodes { commit { messageHeadline } }
+        }
+      }
+    }
+  }
+QUERY
+)
+
+v3Tickets=$(gh api graphql \
+  -F repo='terramatch-microservices' \
+  -F pr="$v3Number" \
+  -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
+  --paginate \
+  -f query="$query" \
+  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nv3 Tickets:\n$v3Tickets"
 
-phpTickets=$(gh -R wri/wri-terramatch-api pr view "$phpBranch" --json commits -q ".commits[] .messageHeadline" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-")
+phpTickets=$(gh api graphql \
+  -F repo='wri-terramatch-api' \
+  -F pr="$phpNumber" \
+  -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
+  --paginate \
+  -f query="$query" \
+  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nPHP Tickets:\n$phpTickets"
 
-feTickets=$(gh -R wri/wri-terramatch-website pr view "$feBranch" --json commits -q ".commits[] .messageHeadline" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-")
+feTickets=$(gh api graphql \
+  -F repo='wri-terramatch-website' \
+  -F pr="$feNumber" \
+  -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
+  --paginate \
+  -f query="$query" \
+  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nFE Tickets:\n$feTickets"
 
 codeTickets=$(echo -e "$v3Tickets\n$phpTickets\n$feTickets" | sort | uniq)

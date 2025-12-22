@@ -8,6 +8,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { ScheduledJobsService } from "./scheduled-jobs/scheduled-jobs.service";
 import { BullModule } from "@nestjs/bullmq";
 import { ScheduledJobsProcessor } from "./scheduled-jobs/scheduled-jobs.processor";
+import { DelayedJobsService } from "./jobs/delayed-jobs.service";
 
 @Module({
   imports: [
@@ -19,6 +20,11 @@ import { ScheduledJobsProcessor } from "./scheduled-jobs/scheduled-jobs.processo
     HealthModule
   ],
   controllers: [DelayedJobsController],
-  providers: [{ provide: APP_FILTER, useClass: SentryGlobalFilter }, ScheduledJobsService, ScheduledJobsProcessor]
+  providers: [
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    ScheduledJobsService,
+    ScheduledJobsProcessor,
+    DelayedJobsService
+  ]
 })
 export class AppModule {}

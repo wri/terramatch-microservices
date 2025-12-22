@@ -1,9 +1,20 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Media, User } from "@terramatch-microservices/database/entities";
-import { CopyObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport,
+  User
+} from "@terramatch-microservices/database/entities";
+import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
+import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
+import { Op } from "sequelize";
 import {
   abbreviatedValidationMimeTypes,
   FILE_VALIDATION,
@@ -15,6 +26,7 @@ import {
   MimeType,
   sizeValidation
 } from "@terramatch-microservices/database/constants/media-owners";
+import { EntityModel, getProjectId } from "@terramatch-microservices/database/constants/entities";
 import { TranslatableException } from "../exceptions/translatable.exception";
 import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
@@ -61,9 +73,77 @@ export class MediaService {
     return this.configService.get<string>("AWS_BUCKET");
   }
 
+  async getProjectForModel(model: MediaOwnerModel) {
+    const projectId = await getProjectId(model as EntityModel);
+    const project =
+      projectId == null
+        ? null
+        : await Project.findOne({ where: { id: projectId }, attributes: ["id", "frameworkKey"] });
+    if (project == null) throw new BadRequestException(`Media is not part of a project.`);
+    return project;
+  }
+
+  async unsetMediaCoverForProject(media: Media, project: Project) {
+    const whereClause = {
+      isCover: true,
+      id: {
+        [Op.ne]: media.id
+      },
+      [Op.or]: [
+        {
+          modelType: Project.LARAVEL_TYPE,
+          modelId: project.id
+        },
+        {
+          modelType: Site.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: Site.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: Nursery.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: Nursery.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: ProjectReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: ProjectReport.idsSubquery(project.id)
+          }
+        },
+        {
+          modelType: SiteReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: SiteReport.idsSubquery(Site.idsSubquery(project.id))
+          }
+        },
+        {
+          modelType: NurseryReport.LARAVEL_TYPE,
+          modelId: {
+            [Op.in]: NurseryReport.idsSubquery(Nursery.idsSubquery(project.id))
+          }
+        }
+      ]
+    };
+
+    const medias = await Media.findAll({ where: whereClause });
+    const mediaIds = medias.map(m => m.id);
+    await Media.update({ isCover: false }, { where: { id: mediaIds } });
+    for (const media of medias) {
+      // update the models in memory to match the bulk query above
+      media.isCover = false;
+    }
+    return medias;
+  }
+
+  async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
+    return await media.update(updatePayload.data.attributes);
+  }
+
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
   // complexity by making some assumptions that hold true for our use of Spatie (like how
-  // we only use the "s3" drive type.
+  // we only use the "s3" drive type).
   public getUrl(media: Media, conversion?: string) {
     const endpoint = this.endpoint;
     if (conversion == null) return `${endpoint}${this.filePath(media)}`;
@@ -265,5 +345,43 @@ export class MediaService {
     }
 
     return false;
+  }
+
+  async getMedia(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+    return media;
+  }
+
+  async deleteMedia(media: Media) {
+    const key = `${media.id}/${media.fileName}`;
+
+    const command = new DeleteObjectCommand({
+      Bucket: this.configService.get<string>("AWS_BUCKET") ?? "",
+      Key: key
+    });
+
+    this.logger.log(`Deleting media ${media.uuid} from S3`);
+    await this.s3.send(command);
+    await media.destroy();
+
+    return media;
+  }
+
+  async deleteMediaByUuid(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid }
+    });
+    if (media == null) throw new NotFoundException();
+
+    return this.deleteMedia(media);
+  }
+
+  async getMedias(uuids: string[]) {
+    return Media.findAll({
+      where: { uuid: { [Op.in]: uuids } }
+    });
   }
 }

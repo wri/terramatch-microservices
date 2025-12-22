@@ -1,20 +1,27 @@
 import { SitePolygon, Site, Project } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
-import { Op } from "sequelize";
+import { Op, WhereOptions } from "sequelize";
 
 interface EstimatedAreaResult extends ValidationResult {
   extraInfo: {
-    sum_area_site: number | null;
-    sum_area_project: number | null;
-    percentage_site: number | null;
-    percentage_project: number | null;
+    polygon_status: string | null;
+    polygon_area: number | null;
+    is_polygon_approved: boolean;
+    sum_area_site_approved: number | null;
+    percentage_site_approved: number | null;
     total_area_site: number | null;
+    sum_area_project_approved: number | null;
+    percentage_project_approved: number | null;
     total_area_project: number | null;
+    projected_sum_area_site?: number | null;
+    projected_percentage_site?: number | null;
+    projected_sum_area_project?: number | null;
+    projected_percentage_project?: number | null;
   } | null;
 }
 
-export class EstimatedAreaValidator implements Validator {
+export class EstimatedAreaValidator implements PolygonValidator {
   private static readonly LOWER_BOUND_MULTIPLIER = 0.75;
   private static readonly UPPER_BOUND_MULTIPLIER = 1.25;
 
@@ -29,15 +36,28 @@ export class EstimatedAreaValidator implements Validator {
 
     const valid = siteData.valid || projectData.valid;
 
+    const isApproved = sitePolygon.status === "approved";
+
     return {
       valid,
       extraInfo: {
-        sum_area_site: siteData.sumAreaSite,
-        sum_area_project: projectData.sumAreaProject,
-        percentage_site: siteData.percentageSite,
-        percentage_project: projectData.percentageProject,
+        polygon_status: sitePolygon.status,
+        polygon_area: sitePolygon.calcArea != null ? this.round2(sitePolygon.calcArea) : null,
+        is_polygon_approved: isApproved,
+        sum_area_site_approved: siteData.sumAreaSiteApproved,
+        percentage_site_approved: siteData.percentageSiteApproved,
         total_area_site: siteData.totalAreaSite,
-        total_area_project: projectData.totalAreaProject
+        sum_area_project_approved: projectData.sumAreaProjectApproved,
+        percentage_project_approved: projectData.percentageProjectApproved,
+        total_area_project: projectData.totalAreaProject,
+        ...(siteData.projectedSumAreaSite !== undefined && {
+          projected_sum_area_site: siteData.projectedSumAreaSite,
+          projected_percentage_site: siteData.projectedPercentageSite
+        }),
+        ...(projectData.projectedSumAreaProject !== undefined && {
+          projected_sum_area_project: projectData.projectedSumAreaProject,
+          projected_percentage_project: projectData.projectedPercentageProject
+        })
       }
     };
   }
@@ -80,46 +100,65 @@ export class EstimatedAreaValidator implements Validator {
 
   private async generateAreaDataSite(sitePolygon: SitePolygon): Promise<{
     valid: boolean;
-    sumAreaSite: number | null;
-    percentageSite: number | null;
+    sumAreaSiteApproved: number | null;
+    percentageSiteApproved: number | null;
     totalAreaSite: number | null;
+    projectedSumAreaSite?: number | null;
+    projectedPercentageSite?: number | null;
   }> {
     const site = await sitePolygon.loadSite();
     if (site == null || site.hectaresToRestoreGoal == null || site.hectaresToRestoreGoal <= 0) {
       return {
         valid: false,
-        sumAreaSite: null,
-        percentageSite: null,
+        sumAreaSiteApproved: null,
+        percentageSiteApproved: null,
         totalAreaSite: site != null ? site.hectaresToRestoreGoal : null
       };
     }
 
-    const sumAreaSite = await this.calculateSiteAreaSum(site.uuid);
+    const sumAreaSiteApproved = await this.calculateSiteAreaSum(site.uuid, "approved");
+
     const lowerBound = EstimatedAreaValidator.LOWER_BOUND_MULTIPLIER * site.hectaresToRestoreGoal;
     const upperBound = EstimatedAreaValidator.UPPER_BOUND_MULTIPLIER * site.hectaresToRestoreGoal;
-    const valid = sumAreaSite >= lowerBound && sumAreaSite <= upperBound;
-    const percentage = (sumAreaSite / site.hectaresToRestoreGoal) * 100;
+
+    const valid = sumAreaSiteApproved >= lowerBound && sumAreaSiteApproved <= upperBound;
+    const percentageApproved = (sumAreaSiteApproved / site.hectaresToRestoreGoal) * 100;
+
+    const isApproved = sitePolygon.status === "approved";
+    const polygonArea = sitePolygon.calcArea ?? 0;
+
+    let projectedSum: number | undefined;
+    let projectedPercentage: number | undefined;
+
+    if (!isApproved && polygonArea > 0) {
+      projectedSum = sumAreaSiteApproved + polygonArea;
+      projectedPercentage = (projectedSum / site.hectaresToRestoreGoal) * 100;
+    }
 
     return {
       valid,
-      sumAreaSite: Math.round(sumAreaSite),
-      percentageSite: Math.round(percentage),
-      totalAreaSite: site.hectaresToRestoreGoal
+      sumAreaSiteApproved: this.round2(sumAreaSiteApproved),
+      percentageSiteApproved: this.round2(percentageApproved),
+      totalAreaSite: site.hectaresToRestoreGoal,
+      projectedSumAreaSite: projectedSum !== undefined ? this.round2(projectedSum) : undefined,
+      projectedPercentageSite: projectedPercentage !== undefined ? this.round2(projectedPercentage) : undefined
     };
   }
 
   private async generateAreaDataProject(sitePolygon: SitePolygon): Promise<{
     valid: boolean;
-    sumAreaProject: number | null;
-    percentageProject: number | null;
+    sumAreaProjectApproved: number | null;
+    percentageProjectApproved: number | null;
     totalAreaProject: number | null;
+    projectedSumAreaProject?: number | null;
+    projectedPercentageProject?: number | null;
   }> {
     const site = await sitePolygon.loadSite();
     if (site == null || site.projectId == null) {
       return {
         valid: false,
-        sumAreaProject: null,
-        percentageProject: null,
+        sumAreaProjectApproved: null,
+        percentageProjectApproved: null,
         totalAreaProject: null
       };
     }
@@ -128,44 +167,78 @@ export class EstimatedAreaValidator implements Validator {
     if (project == null || project.totalHectaresRestoredGoal == null || project.totalHectaresRestoredGoal <= 0) {
       return {
         valid: false,
-        sumAreaProject: null,
-        percentageProject: null,
+        sumAreaProjectApproved: null,
+        percentageProjectApproved: null,
         totalAreaProject: project?.totalHectaresRestoredGoal ?? null
       };
     }
 
-    const sumAreaProject = await this.calculateProjectAreaSum(project.id);
+    const sumAreaProjectApproved = await this.calculateProjectAreaSum(project.id, "approved");
+
     const lowerBound = EstimatedAreaValidator.LOWER_BOUND_MULTIPLIER * project.totalHectaresRestoredGoal;
     const upperBound = EstimatedAreaValidator.UPPER_BOUND_MULTIPLIER * project.totalHectaresRestoredGoal;
-    const valid = sumAreaProject >= lowerBound && sumAreaProject <= upperBound;
-    const percentage = (sumAreaProject / project.totalHectaresRestoredGoal) * 100;
+
+    const valid = sumAreaProjectApproved >= lowerBound && sumAreaProjectApproved <= upperBound;
+    const percentageApproved = (sumAreaProjectApproved / project.totalHectaresRestoredGoal) * 100;
+
+    const isApproved = sitePolygon.status === "approved";
+    const polygonArea = sitePolygon.calcArea ?? 0;
+
+    let projectedSum: number | undefined;
+    let projectedPercentage: number | undefined;
+
+    if (!isApproved && polygonArea > 0) {
+      projectedSum = sumAreaProjectApproved + polygonArea;
+      projectedPercentage = (projectedSum / project.totalHectaresRestoredGoal) * 100;
+    }
 
     return {
       valid,
-      sumAreaProject: Math.round(sumAreaProject),
-      percentageProject: Math.round(percentage),
-      totalAreaProject: project.totalHectaresRestoredGoal
+      sumAreaProjectApproved: this.round2(sumAreaProjectApproved),
+      percentageProjectApproved: this.round2(percentageApproved),
+      totalAreaProject: project.totalHectaresRestoredGoal,
+      projectedSumAreaProject: projectedSum !== undefined ? this.round2(projectedSum) : undefined,
+      projectedPercentageProject: projectedPercentage !== undefined ? this.round2(projectedPercentage) : undefined
     };
   }
 
-  private async calculateSiteAreaSum(siteUuid: string): Promise<number> {
+  private async calculateSiteAreaSum(siteUuid: string, status?: string): Promise<number> {
     if (siteUuid == null || siteUuid === "") {
       return 0;
     }
 
+    const whereClause: WhereOptions<SitePolygon> = {
+      siteUuid,
+      isActive: true
+    };
+
+    if (status != null) {
+      whereClause.status = status;
+    }
+
     const result = await SitePolygon.sum("calcArea", {
-      where: { siteUuid, isActive: true }
+      where: whereClause
     });
     return result ?? 0;
   }
 
-  private async calculateProjectAreaSum(projectId: number): Promise<number> {
+  private async calculateProjectAreaSum(projectId: number, status?: string): Promise<number> {
+    const whereClause: WhereOptions<SitePolygon> = {
+      siteUuid: { [Op.in]: Site.uuidsSubquery(projectId) },
+      isActive: true
+    };
+
+    if (status != null) {
+      whereClause.status = status;
+    }
+
     const result = await SitePolygon.sum("calcArea", {
-      where: {
-        siteUuid: { [Op.in]: Site.uuidsSubquery(projectId) },
-        isActive: true
-      }
+      where: whereClause
     });
     return result ?? 0;
+  }
+
+  private round2(value: number): number {
+    return Number(value.toFixed(2));
   }
 }

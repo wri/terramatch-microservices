@@ -29,6 +29,7 @@ import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { statusUpdateSequelizeHook } from "../constants/status";
 import { Disturbance } from "./disturbance.entity";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -128,16 +129,16 @@ export class SitePolygon extends Model<SitePolygon> {
   plantStart: Date | null;
 
   @AllowNull
-  @Column(STRING)
-  practice: string | null;
+  @JsonColumn({ type: STRING })
+  practice: string[] | null;
 
   @AllowNull
   @Column(STRING)
   targetSys: string | null;
 
   @AllowNull
-  @Column(STRING)
-  distr: string | null;
+  @JsonColumn({ type: STRING })
+  distr: string[] | null;
 
   @AllowNull
   @Column(INTEGER)

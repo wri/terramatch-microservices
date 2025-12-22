@@ -72,7 +72,8 @@ type ProjectReportMedia =
   project: (id: number) => ({ where: { projectId: id } }),
   projectsIds: (ids: number[]) => ({ where: { projectId: { [Op.in]: ids } } }),
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
-  task: (taskId: number) => ({ where: { taskId } })
+  task: (taskId: number) => ({ where: { taskId } }),
+  lastReport: { order: [["updatedAt", "DESC"]], limit: 1 }
 }))
 @Table({
   tableName: "v2_project_reports",
@@ -185,6 +186,10 @@ export class ProjectReport extends Model<ProjectReport> {
     return chainScope(this, "dueBefore", date) as typeof ProjectReport;
   }
 
+  static lastReport() {
+    return chainScope(this, "lastReport") as typeof ProjectReport;
+  }
+
   static approvedIdsSubquery(projectId: number, opts: ApprovedIdsSubqueryOptions = {}) {
     const builder = Subquery.select(ProjectReport, "id")
       .eq("projectId", projectId)
@@ -199,6 +204,10 @@ export class ProjectReport extends Model<ProjectReport> {
       .in("projectId", projectIds)
       .in("status", ProjectReport.APPROVED_STATUSES);
     return builder.literal;
+  }
+
+  static idsSubquery(projectId: number) {
+    return Subquery.select(ProjectReport, "id").eq("projectId", projectId).literal;
   }
 
   static task(taskId: number) {
@@ -681,4 +690,34 @@ export class ProjectReport extends Model<ProjectReport> {
     scope: { speciesable_type: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
   nurserySeedlings: TreeSpecies[] | null;
+
+  static projectUuidsForLatestApprovedPlantingStatus(plantingStatus: PlantingStatus) {
+    if (ProjectReport.sequelize == null) {
+      throw new Error("Sequelize instance not available");
+    }
+    const sql = ProjectReport.sequelize;
+    return sql.literal(
+      `(
+        SELECT p.uuid
+        FROM v2_projects p
+        WHERE p.deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM v2_project_reports pr
+            WHERE pr.project_id = p.id
+              AND pr.deleted_at IS NULL
+              AND pr.status = 'approved'
+          )
+          AND (
+            SELECT pr2.planting_status
+            FROM v2_project_reports pr2
+            WHERE pr2.project_id = p.id
+              AND pr2.deleted_at IS NULL
+              AND pr2.status = 'approved'
+            ORDER BY pr2.updated_at DESC
+            LIMIT 1
+          ) = ${sql.escape(plantingStatus)}
+      )`
+    );
+  }
 }

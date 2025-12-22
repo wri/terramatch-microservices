@@ -73,6 +73,9 @@ export class SrpReportLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true, type: Date })
+  submittedAt: Date | null;
 }
 
 export type SrpReportMedia = Pick<SrpReportFullDto, keyof typeof SrpReport.MEDIA>;
@@ -119,7 +122,7 @@ export class SrpReportFullDto extends SrpReportLightDto {
   answers: string | null;
 
   @ApiProperty({ nullable: true, type: String })
-  otherRestorationPartnersDescription: string | null;
+  restorationPartnersDescription: string | null;
 
   @ApiProperty({ type: Number })
   totalUniqueRestorationPartners: number;

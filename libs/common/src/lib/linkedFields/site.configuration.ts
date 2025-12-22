@@ -13,14 +13,21 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
       label: "Land use types",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "site-restoration-strategy": {
       property: "restorationStrategy",
       label: "Restoration strategy",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-practices"
+      optionListKey: "restoration-strategies"
+    },
+    "site-anr-practices": {
+      property: "anrPractices",
+      label: "ANR practices",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "anr-practices"
     },
     "site-description": { property: "description", label: "Description", inputType: "long-text" },
     "site-history": { property: "history", label: "History", inputType: "long-text" },
@@ -87,7 +94,7 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
       label: "Siting Strategy",
       inputType: "select",
       multiChoice: false,
-      optionListKey: "siting-strategy-collection"
+      optionListKey: "siting-strategies"
     },
     "site-detailed-rst-inv-types": {
       property: "detailedInterventionTypes",

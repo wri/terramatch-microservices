@@ -31,6 +31,7 @@ import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
+import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -164,6 +165,12 @@ export class ProjectProcessor extends EntityProcessor<
       builder.where({ name: { [Op.like]: `%${query.search ?? query.searchFilter}%` } });
     }
 
+    if (query.plantingStatus != null) {
+      builder.where({
+        uuid: { [Op.in]: ProjectReport.projectUuidsForLatestApprovedPlantingStatus(query.plantingStatus) }
+      });
+    }
+
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
@@ -197,12 +204,14 @@ export class ProjectProcessor extends EntityProcessor<
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
+    const lastReport = await this.getLastReport(projectId);
 
     return {
       id: project.uuid,
       dto: new ProjectLightDto(project, {
         totalHectaresRestoredSum,
         treesPlantedCount: 0,
+        plantingStatus: lastReport?.plantingStatus as PlantingStatus,
         ...associateDto
       })
     };
@@ -235,6 +244,7 @@ export class ProjectProcessor extends EntityProcessor<
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const lastReport = await this.getLastReport(projectId);
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
@@ -248,6 +258,7 @@ export class ProjectProcessor extends EntityProcessor<
       regeneratedTreesCount,
       treesPlantedCount,
       seedsPlantedCount,
+      plantingStatus: lastReport?.plantingStatus as PlantingStatus,
       treesRestoredPpc:
         regeneratedTreesCount +
         (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
@@ -348,6 +359,13 @@ export class ProjectProcessor extends EntityProcessor<
     const nTotal = await NurseryReport.incomplete().nurseries(Nursery.approvedIdsSubquery(projectId)).count(countOpts);
 
     return pTotal + sTotal + nTotal;
+  }
+
+  protected async getLastReport(projectId: number) {
+    return await ProjectReport.approved()
+      .project(projectId)
+      .lastReport()
+      .findOne({ attributes: ["plantingStatus"] });
   }
 
   /* istanbul ignore next */

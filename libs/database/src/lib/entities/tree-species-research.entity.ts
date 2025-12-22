@@ -1,5 +1,6 @@
-import { Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { AllowNull, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 import { STRING } from "sequelize";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "tree_species_research", underscored: true, paranoid: true })
 export class TreeSpeciesResearch extends Model<TreeSpeciesResearch> {
@@ -22,4 +23,12 @@ export class TreeSpeciesResearch extends Model<TreeSpeciesResearch> {
 
   @Column(STRING)
   infraspecificEpithet: string;
+
+  @AllowNull
+  @JsonColumn()
+  nativeDistribution: string[] | null;
+
+  @AllowNull
+  @JsonColumn()
+  suitability: string[] | null;
 }

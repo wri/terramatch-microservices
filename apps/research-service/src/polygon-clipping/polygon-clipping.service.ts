@@ -1,11 +1,13 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
-import { PolygonGeometry, SitePolygon, CriteriaSite, Site } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, SitePolygon, CriteriaSite, Site, Project } from "@terramatch-microservices/database/entities";
 import { QueryTypes, Transaction } from "sequelize";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import { simplify } from "@turf/simplify";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon } from "@turf/helpers";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { SitePolygonCreationService } from "../site-polygons/site-polygon-creation.service";
+import { CreateSitePolygonRequestDto } from "../site-polygons/dto/create-site-polygon-request.dto";
 
 interface OverlapInfo {
   polyUuid: string;
@@ -23,6 +25,14 @@ interface ClippedPolygonResult {
   areaRemoved: number;
 }
 
+export interface ClippedVersionResult {
+  uuid: string;
+  polyName: string | null;
+  originalArea: number;
+  newArea: number;
+  areaRemoved: number;
+}
+
 const MAX_OVERLAP_PERCENTAGE = 3.5;
 const MAX_OVERLAP_AREA_HECTARES = 0.118;
 const BUFFER_DISTANCE = 0.000001;
@@ -32,8 +42,13 @@ const OVERLAPPING_CRITERIA_ID = VALIDATION_CRITERIA_IDS.OVERLAPPING;
 export class PolygonClippingService {
   private readonly logger = new Logger(PolygonClippingService.name);
 
-  async getFixablePolygonsForSite(siteUuid: string): Promise<string[]> {
-    const site = await Site.findOne({ where: { uuid: siteUuid } });
+  constructor(private readonly sitePolygonCreationService: SitePolygonCreationService) {}
+
+  async getFixablePolygonsForSite(siteUuid: string): Promise<{ site: Site; polygonIds: string[] }> {
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["id", "name"]
+    });
 
     if (site == null) {
       throw new NotFoundException(`Site not found: ${siteUuid}`);
@@ -47,41 +62,50 @@ export class PolygonClippingService {
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
 
     if (polygonUuids.length === 0) {
-      return [];
+      return { site, polygonIds: [] };
     }
 
-    return this.filterFixablePolygons(polygonUuids);
+    const polygonIds = await this.filterFixablePolygons(polygonUuids);
+    return { site, polygonIds };
   }
 
-  async getFixablePolygonsForProjectBySite(siteUuid: string): Promise<string[]> {
-    const site = await Site.findOne({
-      where: { uuid: siteUuid },
-      attributes: ["projectId"]
+  async getFixablePolygonsForProject(projectUuid: string): Promise<{ project: Project; polygonIds: string[] }> {
+    const project = await Project.findOne({
+      where: { uuid: projectUuid },
+      attributes: ["id", "name"]
     });
 
-    if (site == null || site.projectId == null) {
-      throw new NotFoundException(`Project not found for site: ${siteUuid}`);
+    if (project == null) {
+      throw new NotFoundException(`Project not found: ${projectUuid}`);
     }
 
     const projectSites = await Site.findAll({
-      where: { projectId: site.projectId },
+      where: { projectId: project.id },
       attributes: ["uuid"]
     });
 
     const siteUuids = projectSites.map(s => s.uuid);
 
+    if (siteUuids.length === 0) {
+      return { project, polygonIds: [] };
+    }
+
     const sitePolygons = await SitePolygon.findAll({
-      where: { siteUuid: siteUuids, isActive: true },
+      where: {
+        siteUuid: siteUuids,
+        isActive: true
+      },
       attributes: ["polygonUuid"]
     });
 
     const polygonUuids = sitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
 
     if (polygonUuids.length === 0) {
-      return [];
+      return { project, polygonIds: [] };
     }
 
-    return this.filterFixablePolygons(polygonUuids);
+    const polygonIds = await this.filterFixablePolygons(polygonUuids);
+    return { project, polygonIds };
   }
 
   private async filterFixablePolygons(polygonUuids: string[]): Promise<string[]> {
@@ -502,5 +526,163 @@ export class PolygonClippingService {
       type: "FeatureCollection",
       features
     };
+  }
+
+  private async getRelatedPolygonUuids(polygonUuids: string[]): Promise<string[]> {
+    if (polygonUuids.length === 0) {
+      return [];
+    }
+
+    const criteriaRecords = await CriteriaSite.findAll({
+      where: {
+        polygonId: polygonUuids,
+        criteriaId: OVERLAPPING_CRITERIA_ID
+      },
+      attributes: ["polygonId", "extraInfo"]
+    });
+
+    const relatedUuids = new Set<string>();
+
+    for (const record of criteriaRecords) {
+      relatedUuids.add(record.polygonId);
+
+      if (record.extraInfo != null && Array.isArray(record.extraInfo)) {
+        const overlaps = record.extraInfo as OverlapInfo[];
+        for (const overlap of overlaps) {
+          if (overlap.polyUuid != null) {
+            relatedUuids.add(overlap.polyUuid);
+          }
+        }
+      }
+    }
+
+    return Array.from(relatedUuids);
+  }
+
+  private async clearValidationForPolygons(polygonUuids: string[], transaction: Transaction): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    await CriteriaSite.destroy({
+      where: {
+        polygonId: polygonUuids
+      },
+      transaction
+    });
+
+    await SitePolygon.update(
+      { validationStatus: null },
+      {
+        where: {
+          polygonUuid: polygonUuids,
+          isActive: true
+        },
+        transaction
+      }
+    );
+  }
+
+  async clipAndCreateVersions(
+    polygonUuids: string[],
+    userId: number,
+    userFullName: string | null,
+    source: string
+  ): Promise<ClippedVersionResult[]> {
+    if (polygonUuids.length === 0) {
+      this.logger.warn("No polygons provided for clipping and versioning");
+      return [];
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new InternalServerErrorException("SitePolygon model is missing sequelize connection");
+    }
+
+    const clippedResults = await this.clipPolygons(polygonUuids);
+
+    if (clippedResults.length === 0) {
+      this.logger.log("No fixable overlaps found for the provided polygons");
+      return [];
+    }
+    const clippedPolygonUuids = clippedResults.map(r => r.polyUuid);
+    const relatedPolygonUuids = await this.getRelatedPolygonUuids(clippedPolygonUuids);
+
+    const baseSitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: clippedPolygonUuids,
+        isActive: true
+      }
+    });
+
+    const polygonUuidToSitePolygon = new Map<string, SitePolygon>();
+    for (const sp of baseSitePolygons) {
+      if (sp.polygonUuid != null) {
+        polygonUuidToSitePolygon.set(sp.polygonUuid, sp);
+      }
+    }
+
+    const BATCH_SIZE = 10;
+    const results: ClippedVersionResult[] = [];
+
+    for (let i = 0; i < clippedResults.length; i += BATCH_SIZE) {
+      const batch = clippedResults.slice(i, i + BATCH_SIZE);
+
+      await SitePolygon.sequelize.transaction(async transaction => {
+        for (const clippedResult of batch) {
+          const baseSitePolygon = polygonUuidToSitePolygon.get(clippedResult.polyUuid);
+
+          if (baseSitePolygon == null) {
+            this.logger.warn(`No active site polygon found for polygon UUID ${clippedResult.polyUuid}`);
+            continue;
+          }
+
+          try {
+            const changeReason = `Clipped due to overlap, area reduced from ${clippedResult.originalArea.toFixed(
+              4
+            )}ha to ${clippedResult.newArea.toFixed(4)}ha`;
+
+            const newGeometry: CreateSitePolygonRequestDto[] = [
+              {
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature",
+                    geometry: clippedResult.geometry,
+                    properties: {
+                      site_id: baseSitePolygon.siteUuid
+                    }
+                  }
+                ]
+              }
+            ];
+
+            const newVersion = await this.sitePolygonCreationService.createSitePolygonVersion(
+              baseSitePolygon.uuid,
+              newGeometry,
+              undefined, // No attribute changes
+              changeReason,
+              userId,
+              userFullName,
+              source,
+              transaction
+            );
+
+            results.push({
+              uuid: newVersion.uuid,
+              polyName: newVersion.polyName,
+              originalArea: clippedResult.originalArea,
+              newArea: clippedResult.newArea,
+              areaRemoved: clippedResult.areaRemoved
+            });
+          } catch (error) {
+            this.logger.error(`Failed to create version for polygon ${baseSitePolygon.uuid}`, error);
+          }
+        }
+
+        await this.clearValidationForPolygons(relatedPolygonUuids, transaction);
+      });
+    }
+
+    return results;
   }
 }

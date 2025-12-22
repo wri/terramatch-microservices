@@ -180,6 +180,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   restorationStrategy: string[] | null;
 
   @AllowNull
+  @JsonColumn()
+  incomeGeneratingActivities: string[] | null;
+
+  @AllowNull
   @Column(TEXT)
   country: string | null;
 

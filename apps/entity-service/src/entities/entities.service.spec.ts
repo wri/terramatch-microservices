@@ -11,6 +11,8 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -63,6 +65,17 @@ describe("EntitiesService", () => {
       expect(() => service.createAssociationProcessor("foo" as EntityType, "", "demographics")).toThrow(
         BadRequestException
       );
+    });
+  });
+
+  describe("createMediaOwnerProcessor", () => {
+    it("throws with an unknown media owner type", async () => {
+      expect(() => service.createMediaOwnerProcessor("foo" as MediaOwnerType, "bar")).toThrow(BadRequestException);
+    });
+
+    it("returns a MediaOwnerProcessor", async () => {
+      const processor = service.createMediaOwnerProcessor("projects", "123");
+      expect(processor).toBeInstanceOf(MediaOwnerProcessor);
     });
   });
 

@@ -8,7 +8,7 @@ import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
-import { FileUploadController } from "./entities/file-upload.controller";
+import { FilesController } from "./entities/files.controller";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
@@ -39,7 +39,7 @@ import { FundingProgrammesController } from "./fundingProgrammes/funding-program
     ProjectPitchesController,
     ImpactStoriesController,
     TasksController,
-    FileUploadController,
+    FilesController,
     TreesController,
     DemographicsController,
     DisturbancesController,

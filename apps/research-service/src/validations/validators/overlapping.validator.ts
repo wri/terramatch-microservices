@@ -1,6 +1,6 @@
-import { PolygonGeometry, Site, SitePolygon } from "@terramatch-microservices/database/entities";
-import { PolygonValidationResult, ValidationResult, Validator } from "./validator.interface";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { PolygonGeometry, SitePolygon, Site } from "@terramatch-microservices/database/entities";
+import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Transaction } from "sequelize";
 
 interface OverlapInfo {
@@ -27,7 +27,7 @@ interface IntersectionQueryResult {
   intersectionLatitude: number;
 }
 
-export class OverlappingValidator implements Validator {
+export class OverlappingValidator implements PolygonValidator {
   async validatePolygon(polygonUuid: string): Promise<OverlappingValidationResult> {
     const projectPolygons = await this.getProjectPolygons(polygonUuid);
 

@@ -69,7 +69,7 @@ export class VoronoiService {
       const feature = features[i];
       const point = points[i];
       const properties = feature.properties ?? {};
-      const estArea = (properties.est_area as number) ?? 0;
+      const estArea = (properties.estArea as number) ?? (properties.est_area as number) ?? 0;
 
       const projectedPoint = toProjected.forward(point) as Point;
 
@@ -118,9 +118,7 @@ export class VoronoiService {
     ymin -= BUFFER_ENVELOPE_SIZE;
     ymax += BUFFER_ENVELOPE_SIZE;
 
-    const voronoi = delaunay.voronoi([xmin, ymin, xmax, ymax]);
-
-    return voronoi;
+    return delaunay.voronoi([xmin, ymin, xmax, ymax]);
   }
 
   private createOutputGeoJSON(
@@ -199,7 +197,7 @@ export class VoronoiService {
 
         outputFeatures.push(outputFeature);
       } catch {
-        continue;
+        // NOOP
       }
     }
 
@@ -219,14 +217,6 @@ export class VoronoiService {
 
     const voronoi = await this.generateVoronoiPolygons(transformedPoints);
 
-    const outputFeatures = this.createOutputGeoJSON(
-      points,
-      transformedPoints,
-      bufferedPolygons,
-      validFeatureIndices,
-      voronoi,
-      toWGS84
-    );
-    return outputFeatures;
+    return this.createOutputGeoJSON(points, transformedPoints, bufferedPolygons, validFeatureIndices, voronoi, toWGS84);
   }
 }

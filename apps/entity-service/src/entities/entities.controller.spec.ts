@@ -126,7 +126,7 @@ describe("EntitiesController", () => {
       const result = serialize(await controller.entityDelete({ entity: "projects", uuid: project.uuid }));
       expect(processor.delete).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
-      expect(result.meta.resourceId).toBe(project.uuid);
+      expect(result.meta.resourceIds).toStrictEqual([project.uuid]);
       expect(result.data).toBeUndefined();
     });
   });

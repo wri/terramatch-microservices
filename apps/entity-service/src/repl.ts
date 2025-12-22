@@ -2,21 +2,25 @@ import { AppModule } from "./app.module";
 import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
 import {
+  Audit,
   Form,
   FormQuestion,
   FormSection,
   FormSubmission,
   Framework,
   FundingProgramme,
+  I18nItem,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
-import { col, fn, literal, Op } from "sequelize";
+import { col, fn, literal, Op, where } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
 import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import { generateHashedKey } from "@transifex/native";
+import { DateTime } from "luxon";
 import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
 import { cloneDeep, Dictionary, isEqual, isUndefined, omitBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -316,6 +320,41 @@ bootstrapRepl("Entity Service", AppModule, {
 
         console.log("Finished updating FormSubmissions...");
       });
+    },
+
+    updateHashOni18nItems: async () => {
+      await withoutSqlLogs(async () => {
+        const builder = new PaginatedQueryBuilder(I18nItem, 100).where({ hash: null });
+        const bar = new ProgressBar("Processing I18nItems [:bar] :percent :etas", {
+          width: 40,
+          total: await builder.paginationTotal()
+        });
+        for await (const page of batchFindAll(builder)) {
+          for (const i18nItem of page) {
+            if (i18nItem.shortValue == null && i18nItem.longValue == null) continue;
+            i18nItem.hash = generateHashedKey(i18nItem.shortValue ?? i18nItem.longValue ?? "");
+            i18nItem.status = "draft";
+            await i18nItem.save();
+            bar.tick();
+          }
+        }
+
+        console.log("Finished updating hashes on I18nItems.");
+        console.log(`Updated ${bar.total} I18nItems.`);
+      });
+    },
+
+    cleanAudits: async () => {
+      const deletedAuditCount = await Audit.destroy({
+        where: {
+          [Op.and]: [
+            where(col("old_values"), "=", col("new_values")),
+            { auditableType: { [Op.ne]: FormSubmission.LARAVEL_TYPE } },
+            { createdAt: { [Op.gt]: DateTime.fromObject({ year: 2024, month: 9, day: 1 }).toJSDate() } }
+          ]
+        }
+      });
+      console.log(`Deleted ${deletedAuditCount} audits`);
     }
   }
 });

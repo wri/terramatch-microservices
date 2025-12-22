@@ -39,8 +39,8 @@ describe("DisturbanceReportPolicy", () => {
     const ppc = await DisturbanceReportFactory.create({ frameworkKey: "ppc" });
     const tf = await DisturbanceReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve", "create"], ppc]],
-      cannot: [[["read", "delete", "update", "approve", "create"], tf]]
+      can: [[["read", "delete", "update", "approve", "create", "deleteFiles"], ppc]],
+      cannot: [[["read", "delete", "update", "approve", "create", "deleteFiles"], tf]]
     });
   });
 
@@ -64,9 +64,9 @@ describe("DisturbanceReportPolicy", () => {
 
     await expectAuthority(service, {
       can: [
-        [["read", "update", "create"], pr1],
-        [["read", "update", "create"], pr3],
-        [["read", "update", "create"], pr4]
+        [["read", "update", "create", "deleteFiles"], pr1],
+        [["read", "update", "create", "deleteFiles"], pr3],
+        [["read", "update", "create", "deleteFiles"], pr4]
       ],
       cannot: [
         [["delete", "approve"], pr1],
@@ -90,8 +90,8 @@ describe("DisturbanceReportPolicy", () => {
     const pr2 = await DisturbanceReportFactory.create({ projectId: p2.id });
 
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve", "create"], pr1]],
-      cannot: [[["read", "delete", "update", "approve", "create"], pr2]]
+      can: [[["read", "delete", "update", "approve", "create", "deleteFiles"], pr1]],
+      cannot: [[["read", "delete", "update", "approve", "create", "deleteFiles"], pr2]]
     });
   });
 });

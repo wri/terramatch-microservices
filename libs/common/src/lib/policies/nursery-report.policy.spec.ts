@@ -40,8 +40,8 @@ describe("NurseryReportPolicy", () => {
     const ppc = await NurseryReportFactory.create({ frameworkKey: "ppc" });
     const tf = await NurseryReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], ppc]],
-      cannot: [[["read", "delete", "update", "approve"], tf]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], tf]]
     });
   });
 
@@ -71,8 +71,8 @@ describe("NurseryReportPolicy", () => {
     await expectAuthority(service, {
       can: [
         [["read", "update"], nr1],
-        [["read", "update"], nr3],
-        [["read", "update"], nr4]
+        [["read", "update", "deleteFiles"], nr3],
+        [["read", "update", "deleteFiles"], nr4]
       ],
       cannot: [
         [["delete", "approve"], nr1],
@@ -99,8 +99,8 @@ describe("NurseryReportPolicy", () => {
     const nr2 = await NurseryReportFactory.create({ nurseryId: n2.id });
 
     await expectAuthority(service, {
-      can: [[["read", "delete", "update", "approve"], nr1]],
-      cannot: [[["read", "delete", "update", "approve"], nr2]]
+      can: [[["read", "delete", "update", "approve", "deleteFiles"], nr1]],
+      cannot: [[["read", "delete", "update", "approve", "deleteFiles"], nr2]]
     });
   });
 });

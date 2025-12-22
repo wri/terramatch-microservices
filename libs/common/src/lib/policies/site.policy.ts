@@ -10,9 +10,13 @@ export class SitePolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "create", "update", "approve", "uploadFiles", "updateAnswers"], Site, {
-        frameworkKey: { $in: this.frameworks }
-      });
+      this.builder.can(
+        ["read", "delete", "create", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        Site,
+        {
+          frameworkKey: { $in: this.frameworks }
+        }
+      );
     }
 
     if (this.permissions.includes("media-manage")) {
@@ -31,7 +35,7 @@ export class SitePolicy extends UserPermissionsPolicy {
         ];
 
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "create", "update", "uploadFiles"], Site, {
+          this.builder.can(["read", "delete", "create", "update", "uploadFiles", "deleteFiles", "updateFiles"], Site, {
             projectId: { $in: projectIds }
           });
           this.builder.can("updateAnswers", Site, { projectId: { $in: projectIds }, status: STARTED });
@@ -44,9 +48,23 @@ export class SitePolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "create", "update", "approve", "uploadFiles", "updateAnswers"], Site, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            [
+              "read",
+              "delete",
+              "create",
+              "update",
+              "approve",
+              "uploadFiles",
+              "deleteFiles",
+              "updateFiles",
+              "updateAnswers"
+            ],
+            Site,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
         }
       }
     }

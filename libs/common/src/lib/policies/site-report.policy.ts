@@ -11,9 +11,13 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], SiteReport, {
-        frameworkKey: { $in: this.frameworks }
-      });
+      this.builder.can(
+        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        SiteReport,
+        {
+          frameworkKey: { $in: this.frameworks }
+        }
+      );
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -30,7 +34,9 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           })
         ).map(({ id }) => id);
         if (siteIds.length > 0) {
-          this.builder.can(["read", "update", "uploadFiles"], SiteReport, { siteId: { $in: siteIds } });
+          this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], SiteReport, {
+            siteId: { $in: siteIds }
+          });
           this.builder.can("updateAnswers", SiteReport, { siteId: { $in: siteIds }, status: { $in: [STARTED, DUE] } });
           this.builder.can("updateAnswers", SiteReport, {
             siteId: { $in: siteIds },
@@ -50,9 +56,13 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
             await Site.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })
           ).map(({ id }) => id);
           if (siteIds.length > 0) {
-            this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], SiteReport, {
-              siteId: { $in: siteIds }
-            });
+            this.builder.can(
+              ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+              SiteReport,
+              {
+                siteId: { $in: siteIds }
+              }
+            );
           }
         }
       }

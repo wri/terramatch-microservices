@@ -10,6 +10,7 @@ import { Type } from "class-transformer";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
+import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 
 export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
 
@@ -114,6 +115,10 @@ export class EntityQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   shortName?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  plantingStatus?: PlantingStatus;
 
   // This one is internal use only, not exposed to the API surface
   taskId?: number;

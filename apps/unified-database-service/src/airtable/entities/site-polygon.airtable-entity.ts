@@ -8,19 +8,12 @@ type SitePolygonAssociations = {
   disturbanceUuid?: string;
 };
 
-// The data in these columns is really inconsistent. It would be nice to clean these up into a standard JSON string array at some point.
-const cleanMultiSelect = (value?: string | null) => value?.split(",").map(value => value.trim().toLowerCase());
-
 const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
   ...commonEntityColumns<SitePolygon, SitePolygonAssociations>(),
   "primaryUuid",
   "siteUuid",
   "calcArea",
-  {
-    airtableColumn: "distr",
-    dbColumn: "distr",
-    valueMap: async ({ distr }) => cleanMultiSelect(distr)
-  },
+  "distr",
   "numTrees",
   "validationStatus",
   "status",
@@ -40,12 +33,9 @@ const COLUMNS: ColumnMapping<SitePolygon, SitePolygonAssociations>[] = [
       return plantStart;
     }
   },
-  {
-    airtableColumn: "practice",
-    dbColumn: "practice",
-    valueMap: async ({ practice }) => cleanMultiSelect(practice)
-  },
-  "targetSys"
+  "practice",
+  "targetSys",
+  "polygonUuid"
 ];
 
 export class SitePolygonEntity extends AirtableEntity<SitePolygon, SitePolygonAssociations> {

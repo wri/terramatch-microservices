@@ -11,21 +11,28 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Land use types",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "pro-restoration_strategy": {
       property: "restorationStrategy",
       label: "Restoration strategy",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-practices"
+      optionListKey: "restoration-strategies"
+    },
+    "pro-income-generating-activities": {
+      property: "incomeGeneratingActivities",
+      label: "Income generating activities",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "income-generating-activities"
     },
     "pro-land-tenure-proj-area": {
       property: "landTenureProjectArea",
       label: "Land tenure",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "project-land-tenures"
+      optionListKey: "land-tenures"
     },
     "pro-country": {
       property: "country",
@@ -105,7 +112,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Siting Strategy",
       inputType: "select",
       multiChoice: false,
-      optionListKey: "siting-strategy"
+      optionListKey: "siting-strategies"
     },
     "pro-landholder-comm-engage": {
       property: "landholderCommEngage",

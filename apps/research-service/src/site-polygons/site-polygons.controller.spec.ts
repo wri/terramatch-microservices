@@ -2,10 +2,11 @@
 import { SitePolygonsController } from "./site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
@@ -17,20 +18,55 @@ import { LandscapeSlug } from "@terramatch-microservices/database/types/landscap
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
+import { getQueueToken } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { Site, DelayedJob } from "@terramatch-microservices/database/entities";
+import { SiteFactory } from "@terramatch-microservices/database/factories";
+import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
+import { FeatureCollection, Polygon } from "geojson";
+import { Job } from "bullmq";
+import { VersionUpdateBody } from "./dto/version-update.dto";
+import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
+import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
+import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
   let sitePolygonService: DeepMocked<SitePolygonsService>;
   let policyService: DeepMocked<PolicyService>;
   let sitePolygonCreationService: DeepMocked<SitePolygonCreationService>;
+  let versioningService: DeepMocked<SitePolygonVersioningService>;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let polygonGeometryService: DeepMocked<PolygonGeometryCreationService>;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
+  let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
+  let geometryUploadQueue: DeepMocked<Queue>;
+  let geometryUploadComparisonService: DeepMocked<GeometryUploadComparisonService>;
+  let geoJsonExportService: DeepMocked<GeoJsonExportService>;
 
-  const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {
+  interface MockQueryBuilder {
+    execute: jest.Mock;
+    paginationTotal: jest.Mock;
+    hasStatuses: jest.Mock;
+    modifiedSince: jest.Mock;
+    isMissingIndicators: jest.Mock;
+    hasPresentIndicators: jest.Mock;
+    lightResource: jest.Mock;
+    order: jest.Mock;
+    filterProjectUuids: jest.Mock;
+    filterProjectAttributes: jest.Mock;
+    filterSiteUuids: jest.Mock;
+    excludeTestProjects: jest.Mock;
+    filterValidationStatus: jest.Mock;
+    filterProjectShortNames: jest.Mock;
+    filterPolygonUuids: jest.Mock;
+    addSearch: jest.Mock;
+  }
+
+  const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockQueryBuilder => {
+    const builder = {
       execute: jest.fn(),
       paginationTotal: jest.fn(),
       hasStatuses: jest.fn().mockReturnThis(),
@@ -38,19 +74,31 @@ describe("SitePolygonsController", () => {
       isMissingIndicators: jest.fn().mockReturnThis(),
       hasPresentIndicators: jest.fn().mockReturnThis(),
       lightResource: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis()
-    };
-    builder.filterProjectUuids = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectAttributes = jest.fn().mockResolvedValue(builder);
-    builder.filterSiteUuids = jest.fn().mockResolvedValue(builder);
-    builder.excludeTestProjects = jest.fn().mockResolvedValue(builder);
-    builder.filterValidationStatus = jest.fn().mockResolvedValue(builder);
-    builder.filterProjectShortNames = jest.fn().mockResolvedValue(builder);
-    builder.filterPolygonUuids = jest.fn().mockResolvedValue(builder);
+      order: jest.fn().mockReturnThis(),
+      filterProjectUuids: jest.fn().mockResolvedValue(undefined),
+      filterProjectAttributes: jest.fn().mockResolvedValue(undefined),
+      filterSiteUuids: jest.fn().mockResolvedValue(undefined),
+      excludeTestProjects: jest.fn().mockResolvedValue(undefined),
+      filterValidationStatus: jest.fn().mockResolvedValue(undefined),
+      filterProjectShortNames: jest.fn().mockResolvedValue(undefined),
+      filterPolygonUuids: jest.fn().mockResolvedValue(undefined),
+      addSearch: jest.fn().mockResolvedValue(undefined)
+    } as unknown as MockQueryBuilder;
+
+    builder.filterProjectUuids.mockResolvedValue(builder);
+    builder.filterProjectAttributes.mockResolvedValue(builder);
+    builder.filterSiteUuids.mockResolvedValue(builder);
+    builder.excludeTestProjects.mockResolvedValue(builder);
+    builder.filterValidationStatus.mockResolvedValue(builder);
+    builder.filterProjectShortNames.mockResolvedValue(builder);
+    builder.filterPolygonUuids.mockResolvedValue(builder);
+    builder.addSearch.mockResolvedValue(builder);
 
     builder.execute.mockResolvedValue(executeResult);
     builder.paginationTotal.mockResolvedValue(totalResult);
-    sitePolygonService.buildQuery.mockResolvedValue(builder);
+    sitePolygonService.buildQuery.mockResolvedValue(
+      builder as unknown as Awaited<ReturnType<typeof sitePolygonService.buildQuery>>
+    );
 
     return builder;
   };
@@ -66,12 +114,32 @@ describe("SitePolygonsController", () => {
           useValue: (sitePolygonCreationService = createMock<SitePolygonCreationService>())
         },
         {
+          provide: SitePolygonVersioningService,
+          useValue: (versioningService = createMock<SitePolygonVersioningService>())
+        },
+        {
           provide: PolygonGeometryCreationService,
           useValue: (polygonGeometryService = createMock<PolygonGeometryCreationService>())
         },
         {
           provide: DuplicateGeometryValidator,
           useValue: (duplicateGeometryValidator = createMock<DuplicateGeometryValidator>())
+        },
+        {
+          provide: GeometryFileProcessingService,
+          useValue: (geometryFileProcessingService = createMock<GeometryFileProcessingService>())
+        },
+        {
+          provide: GeometryUploadComparisonService,
+          useValue: (geometryUploadComparisonService = createMock<GeometryUploadComparisonService>())
+        },
+        {
+          provide: getQueueToken("geometry-upload"),
+          useValue: (geometryUploadQueue = createMock<Queue>())
+        },
+        {
+          provide: GeoJsonExportService,
+          useValue: (geoJsonExportService = createMock<GeoJsonExportService>())
         }
       ]
     }).compile();
@@ -396,6 +464,7 @@ describe("SitePolygonsController", () => {
       const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
 
       expect(User.findByPk).toHaveBeenCalledWith(1, {
+        attributes: ["firstName", "lastName"],
         include: [{ association: "roles", attributes: ["name"] }]
       });
       expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith(
@@ -435,6 +504,181 @@ describe("SitePolygonsController", () => {
       const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
 
       expect(result.data).toBeDefined();
+    });
+
+    it("should throw BadRequestException when creating version with no changes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            geometries: [],
+            attributeChanges: {},
+            changeReason: "Test"
+          }
+        }
+      };
+
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException when database connection is not available for versioning", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      const geometries = [{ type: "FeatureCollection", features: [] }];
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            geometries,
+            changeReason: "Test"
+          }
+        }
+      };
+
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should successfully create a version with geometry changes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid" });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      sitePolygonCreationService.createSitePolygonVersion.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const geometries = [{ type: "FeatureCollection", features: [{ type: "Feature", geometry: {}, properties: {} }] }];
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            geometries,
+            changeReason: "Updated geometry"
+          }
+        }
+      };
+
+      const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
+
+      expect(result.data).toBeDefined();
+      expect(sitePolygonCreationService.createSitePolygonVersion).toHaveBeenCalledWith(
+        "base-uuid",
+        geometries,
+        undefined,
+        "Updated geometry",
+        1,
+        "Test User",
+        "terramatch",
+        mockTransaction
+      );
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should successfully create a version with attribute changes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid" });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      sitePolygonCreationService.createSitePolygonVersion.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const attributeChanges = { polyName: "Updated Name" };
+      const request = {
+        data: {
+          type: "sitePolygons",
+          attributes: {
+            baseSitePolygonUuid: "base-uuid",
+            attributeChanges,
+            changeReason: "Updated attributes"
+          }
+        }
+      };
+
+      const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
+
+      expect(result.data).toBeDefined();
+      expect(sitePolygonCreationService.createSitePolygonVersion).toHaveBeenCalledWith(
+        "base-uuid",
+        undefined,
+        attributeChanges,
+        "Updated attributes",
+        1,
+        "Test User",
+        "terramatch",
+        mockTransaction
+      );
+
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
     });
   });
 
@@ -519,7 +763,1084 @@ describe("SitePolygonsController", () => {
       expect(sitePolygonService.deleteSitePolygon).toHaveBeenCalledWith(sitePolygon.uuid);
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
-      expect(result.meta).toHaveProperty("resourceId", sitePolygon.uuid);
+      expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+
+    it("should throw NotFoundException when site polygon is not found", async () => {
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      await expect(controller.deleteOne("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(sitePolygonService.deleteSitePolygon).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("uploadGeometryFile", () => {
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should throw NotFoundException when site is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "non-existent-uuid" } } };
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        NotFoundException
+      );
+      expect(geometryFileProcessingService.parseGeometryFile).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when file parsing fails", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build();
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      geometryFileProcessingService.parseGeometryFile.mockRejectedValue(
+        new BadRequestException("Failed to parse file")
+      );
+
+      await expect(controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should successfully upload geometry file and create delayed job", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const geojson: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: {}
+          }
+        ]
+      };
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
+
+      const delayedJob = {
+        id: 1,
+        uuid: "job-uuid",
+        isAcknowledged: false,
+        name: "Geometry Upload",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Parsing geometry file...",
+        createdBy: 1
+      } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+      geometryUploadQueue.add.mockResolvedValue({} as Job);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      const result = await controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto);
+
+      expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Geometry Upload",
+          totalContent: 1,
+          processedContent: 0,
+          progressMessage: "Parsing geometry file...",
+          createdBy: 1,
+          metadata: {
+            entity_id: site.id,
+            entity_type: Site.LARAVEL_TYPE,
+            entity_name: "Test Site"
+          }
+        })
+      );
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUpload", {
+        delayedJobId: 1,
+        siteId: "site-uuid",
+        geojson,
+        userId: 1,
+        source: "terramatch",
+        userFullName: "Test User"
+      });
+      const serialized = serialize(result);
+      expect(serialized.data).toBeDefined();
+      if (Array.isArray(serialized.data)) {
+        expect(serialized.data[0].id).toBe("job-uuid");
+      } else if (serialized.data != null) {
+        expect(serialized.data.id).toBe("job-uuid");
+      }
+    });
+
+    it("should handle user with null fullName", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build({ firstName: null, lastName: null });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const geojson: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: {}
+          }
+        ]
+      };
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
+
+      const delayedJob = {
+        id: 1,
+        uuid: "job-uuid",
+        isAcknowledged: false,
+        name: "Geometry Upload",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Parsing geometry file...",
+        createdBy: 1
+      } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+      geometryUploadQueue.add.mockResolvedValue({} as Job);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await controller.uploadGeometryFile(file, payload as GeometryUploadRequestDto);
+
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUpload", {
+        delayedJobId: 1,
+        siteId: "site-uuid",
+        geojson,
+        userId: 1,
+        source: "terramatch",
+        userFullName: null
+      });
+    });
+  });
+
+  describe("compareGeometryFile", () => {
+    const createGeoJSON = (features: Array<{ uuid?: string }>): FeatureCollection => ({
+      type: "FeatureCollection",
+      features: features.map(f => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: f.uuid != null && f.uuid.length > 0 ? { uuid: f.uuid } : {}
+      }))
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await expect(controller.compareGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should throw NotFoundException when site is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "non-existent-uuid" } } };
+
+      await expect(controller.compareGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw BadRequestException when file parsing fails", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      geometryFileProcessingService.parseGeometryFile.mockRejectedValue(
+        new BadRequestException("Failed to parse file")
+      );
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await expect(controller.compareGeometryFile(file, payload as GeometryUploadRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should return comparison summary with existing UUIDs", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const geojson = createGeoJSON([{ uuid: "existing-uuid-1" }, { uuid: "new-uuid-1" }, {}]);
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
+      geometryUploadComparisonService.compareUploadedFeaturesWithExisting.mockResolvedValue({
+        existingUuids: ["existing-uuid-1"],
+        totalFeatures: 3,
+        featuresForVersioning: 1,
+        featuresForCreation: 2
+      });
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      const result = await controller.compareGeometryFile(file, payload as GeometryUploadRequestDto);
+      const serialized = serialize(result);
+
+      expect(geometryUploadComparisonService.compareUploadedFeaturesWithExisting).toHaveBeenCalledWith(
+        geojson,
+        "site-uuid"
+      );
+      expect(serialized.data).toBeDefined();
+      if (Array.isArray(serialized.data)) {
+        expect(serialized.data[0].attributes.existingUuids).toEqual(["existing-uuid-1"]);
+        expect(serialized.data[0].attributes.totalFeatures).toBe(3);
+        expect(serialized.data[0].attributes.featuresForVersioning).toBe(1);
+        expect(serialized.data[0].attributes.featuresForCreation).toBe(2);
+      }
+    });
+  });
+
+  describe("uploadGeometryFileWithVersions", () => {
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    const createGeoJSON = (): FeatureCollection => ({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature" as const,
+          geometry: {
+            type: "Polygon" as const,
+            coordinates: [
+              [
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 1],
+                [0, 0]
+              ]
+            ]
+          },
+          properties: { uuid: "existing-uuid", polyName: "Test Polygon" }
+        }
+      ]
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await expect(
+        controller.uploadGeometryFileWithVersions(file, payload as GeometryUploadRequestDto)
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw NotFoundException when site is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "non-existent-uuid" } } };
+
+      await expect(
+        controller.uploadGeometryFileWithVersions(file, payload as GeometryUploadRequestDto)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should successfully upload with versioning and create delayed job", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+      const geojson = createGeoJSON();
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
+
+      const delayedJob = {
+        id: 1,
+        uuid: "job-uuid",
+        isAcknowledged: false,
+        name: "Geometry Upload with Versioning",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Parsing geometry file...",
+        createdBy: 1
+      } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+      geometryUploadQueue.add.mockResolvedValue({} as Job);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      const result = await controller.uploadGeometryFileWithVersions(file, payload as GeometryUploadRequestDto);
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Geometry Upload with Versioning",
+          totalContent: 1,
+          createdBy: 1
+        })
+      );
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith("geometryUploadWithVersions", {
+        delayedJobId: 1,
+        siteId: "site-uuid",
+        geojson,
+        userId: 1,
+        source: "terramatch",
+        userFullName: "Test User"
+      });
+      const serialized = serialize(result);
+      expect(serialized.data).toBeDefined();
+    });
+  });
+
+  describe("getVersions", () => {
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.getVersions("test-primary-uuid")).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw NotFoundException when polygon is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      versioningService.getVersionHistory.mockResolvedValue([]);
+
+      await expect(controller.getVersions("non-existent-primary-uuid")).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(versioningService.getVersionHistory).toHaveBeenCalledWith("non-existent-primary-uuid");
+    });
+
+    it("should return all versions ordered by creation date", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const primaryUuid = "primary-uuid-123";
+
+      const version1 = await SitePolygonFactory.build({
+        uuid: "version-1-uuid",
+        primaryUuid,
+        createdAt: new Date("2024-01-01")
+      });
+      const version2 = await SitePolygonFactory.build({
+        uuid: "version-2-uuid",
+        primaryUuid,
+        createdAt: new Date("2024-01-02")
+      });
+      const versions = [version2, version1];
+
+      versioningService.getVersionHistory.mockResolvedValue(versions);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [version1.id]: {},
+        [version2.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockImplementation(sitePolygon => {
+        return Promise.resolve(new SitePolygonLightDto(sitePolygon, []));
+      });
+
+      const result = serialize(await controller.getVersions(primaryUuid));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(versioningService.getVersionHistory).toHaveBeenCalledWith(primaryUuid);
+      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, false);
+      expect(result.data).toBeDefined();
+      expect(result.meta).toBeDefined();
+      expect(result.meta?.indices).toBeDefined();
+      expect(result.meta?.indices).toHaveLength(1);
+      expect(result.meta?.indices?.[0].requestPath).toBe("/research/v3/sitePolygons/primary-uuid-123/versions");
+      expect(result.meta?.indices?.[0].ids).toEqual(["version-2-uuid", "version-1-uuid"]);
+      expect(result.meta?.indices?.[0].total).toBe(2);
+    });
+  });
+
+  describe("updateVersion", () => {
+    let originalSequelize: typeof SitePolygon.sequelize;
+
+    beforeEach(() => {
+      originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    afterEach(() => {
+      if (SitePolygon.sequelize !== originalSequelize) {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize,
+          writable: true,
+          configurable: true
+        });
+      }
+    });
+
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "test-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "test-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw BadRequestException when id in path and payload do not match", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "different-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when isActive is not true", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "test-uuid",
+          attributes: {
+            isActive: false
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when database connection is not available", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "test-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should successfully activate version without comment", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const activatedVersion = await SitePolygonFactory.build({
+        uuid: "version-uuid",
+        primaryUuid: "primary-uuid",
+        versionName: "Test Version",
+        isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      versioningService.activateVersion.mockResolvedValue(activatedVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [activatedVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
+
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "version-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      const result = await controller.updateVersion("version-uuid", request);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
+      expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
+      expect(versioningService.trackChange).not.toHaveBeenCalled();
+      expect(result.data).toBeDefined();
+    });
+
+    it("should successfully activate version with comment", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const activatedVersion = await SitePolygonFactory.build({
+        uuid: "version-uuid",
+        primaryUuid: "primary-uuid",
+        versionName: "Test Version",
+        isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      versioningService.activateVersion.mockResolvedValue(activatedVersion);
+      versioningService.trackChange.mockResolvedValue();
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [activatedVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
+
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "version-uuid",
+          attributes: {
+            isActive: true,
+            comment: "Reverting to previous version"
+          }
+        }
+      };
+
+      const result = await controller.updateVersion("version-uuid", request);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
+      expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
+      expect(versioningService.trackChange).toHaveBeenCalledWith(
+        activatedVersion.primaryUuid,
+        activatedVersion.versionName ?? "Unknown",
+        "Comment: Reverting to previous version",
+        1,
+        "update",
+        undefined,
+        undefined,
+        mockTransaction
+      );
+      expect(result.data).toBeDefined();
+    });
+
+    it("should not track change when comment is empty string", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const activatedVersion = await SitePolygonFactory.build({
+        uuid: "version-uuid",
+        primaryUuid: "primary-uuid",
+        versionName: "Test Version",
+        isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      versioningService.activateVersion.mockResolvedValue(activatedVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [activatedVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
+
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "version-uuid",
+          attributes: {
+            isActive: true,
+            comment: ""
+          }
+        }
+      };
+
+      await controller.updateVersion("version-uuid", request);
+
+      expect(versioningService.trackChange).not.toHaveBeenCalled();
+    });
+
+    it("should not track change when comment is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const activatedVersion = await SitePolygonFactory.build({
+        uuid: "version-uuid",
+        primaryUuid: "primary-uuid",
+        versionName: "Test Version",
+        isActive: true
+      });
+
+      const mockTransaction = {} as Transaction;
+      const mockSequelize = {
+        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      versioningService.activateVersion.mockResolvedValue(activatedVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [activatedVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(activatedVersion, []));
+
+      const request: VersionUpdateBody = {
+        data: {
+          type: "sitePolygons",
+          id: "version-uuid",
+          attributes: {
+            isActive: true
+          }
+        }
+      };
+
+      await controller.updateVersion("version-uuid", request);
+
+      expect(versioningService.trackChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteVersion", () => {
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.deleteVersion(sitePolygon.uuid)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(sitePolygonService.deleteSingleVersion).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when polygon is not found", async () => {
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      await expect(controller.deleteVersion("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      expect(sitePolygonService.deleteSingleVersion).not.toHaveBeenCalled();
+    });
+
+    it("should successfully delete a version when authorized", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(sitePolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.deleteSingleVersion.mockResolvedValue(undefined);
+
+      const result = await controller.deleteVersion(sitePolygon.uuid);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(sitePolygonService.deleteSingleVersion).toHaveBeenCalledWith(sitePolygon.uuid);
+      expect(result).toHaveProperty("meta");
+      expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
+      expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+  });
+
+  describe("getGeoJson", () => {
+    const mockFeatureCollection: FeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [0, 0]
+              ]
+            ]
+          } as Polygon,
+          properties: {
+            uuid: "polygon-uuid-123",
+            polyName: "Test Polygon",
+            siteId: "site-uuid-123"
+          }
+        }
+      ]
+    };
+
+    it("should return GeoJSON FeatureCollection for single polygon", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result).toHaveProperty("data");
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("type", "geojsonExports");
+        expect(result.data).toHaveProperty("attributes");
+        expect(result.data.attributes).toHaveProperty("type", "FeatureCollection");
+        expect(result.data.attributes).toHaveProperty("features");
+        expect(Array.isArray(result.data.attributes.features)).toBe(true);
+      }
+    });
+
+    it("should return GeoJSON FeatureCollection for site polygons", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      const multiFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-1",
+              polyName: "Polygon 1",
+              siteId: "site-uuid-123"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [2, 2],
+                  [2, 3],
+                  [3, 3],
+                  [3, 2],
+                  [2, 2]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-2",
+              polyName: "Polygon 2",
+              siteId: "site-uuid-123"
+            }
+          }
+        ]
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(multiFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(2);
+      }
+    });
+
+    it("should use uuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "polygon-uuid-123");
+      }
+    });
+
+    it("should use siteUuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "site-uuid-123");
+      }
+    });
+
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123"
+      };
+
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(UnauthorizedException);
+      expect(geoJsonExportService.getGeoJson).not.toHaveBeenCalled();
+    });
+
+    it("should propagate BadRequestException from service", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "polygon-uuid-123",
+        siteUuid: "site-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockRejectedValue(
+        new BadRequestException("Cannot provide both uuid and siteUuid")
+      );
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should propagate NotFoundException from service", async () => {
+      const query: GeoJsonQueryDto = {
+        uuid: "non-existent-uuid"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockRejectedValue(new NotFoundException("Polygon geometry not found"));
+
+      await expect(controller.getGeoJson(query)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should handle empty FeatureCollection", async () => {
+      const query: GeoJsonQueryDto = {
+        siteUuid: "site-uuid-123"
+      };
+
+      const emptyFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: []
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(emptyFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(0);
+        expect(result.data).toHaveProperty("id", "site-uuid-123");
+      }
+    });
+
+    it("should return GeoJSON FeatureCollection for project polygons", async () => {
+      const query: GeoJsonQueryDto = {
+        projectUuid: "project-uuid-123"
+      };
+
+      const projectFeatureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-1",
+              polyName: "Project Polygon 1",
+              siteId: "site-uuid-1"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [2, 2],
+                  [2, 3],
+                  [3, 3],
+                  [3, 2],
+                  [2, 2]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-2",
+              polyName: "Project Polygon 2",
+              siteId: "site-uuid-1"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [4, 4],
+                  [4, 5],
+                  [5, 5],
+                  [5, 4],
+                  [4, 4]
+                ]
+              ]
+            } as Polygon,
+            properties: {
+              uuid: "polygon-uuid-3",
+              polyName: "Project Polygon 3",
+              siteId: "site-uuid-2"
+            }
+          }
+        ]
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(projectFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getGeoJson).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data.attributes.features).toHaveLength(3);
+      }
+    });
+
+    it("should use projectUuid as resourceId when provided", async () => {
+      const query: GeoJsonQueryDto = {
+        projectUuid: "project-uuid-123"
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson(query));
+
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "project-uuid-123");
+      }
     });
   });
 });

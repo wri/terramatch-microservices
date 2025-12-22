@@ -269,7 +269,7 @@ describe("ApplicationsController", () => {
       const result = serialize(await controller.deleteApplication({ uuid: application.uuid }));
       expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: application.id }));
       expect(result.meta.resourceType).toBe("applications");
-      expect(result.meta.resourceId).toBe(application.uuid);
+      expect(result.meta.resourceIds).toEqual([application.uuid]);
       expect(result.meta.deleted).toHaveLength(2);
       expect(result.meta.deleted).toContainEqual(
         expect.objectContaining({ resource: "submissions", id: submissions[0].uuid })

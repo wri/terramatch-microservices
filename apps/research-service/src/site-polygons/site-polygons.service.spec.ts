@@ -30,20 +30,34 @@ import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
+  let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
 
   beforeEach(async () => {
+    const mockPolygonGeometryService = {
+      bulkUpdateProjectCentroids: jest.fn().mockResolvedValue(undefined)
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SitePolygonsService]
+      providers: [
+        SitePolygonsService,
+        {
+          provide: PolygonGeometryCreationService,
+          useValue: mockPolygonGeometryService
+        }
+      ]
     }).compile();
 
     service = module.get<SitePolygonsService>(SitePolygonsService);
+    polygonGeometryService = module.get(PolygonGeometryCreationService);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it("should throw with invalid page parameters", async () => {
@@ -838,6 +852,11 @@ describe("SitePolygonsService", () => {
 
       const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
       expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid]),
+        expect.anything()
+      );
     });
 
     it("should successfully delete a site polygon with minimal associations", async () => {
@@ -858,6 +877,243 @@ describe("SitePolygonsService", () => {
 
       const deletedPolygonGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
       expect(deletedPolygonGeometry?.deletedAt).not.toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid]),
+        expect.anything()
+      );
+    });
+  });
+
+  describe("bulkDeleteSitePolygons", () => {
+    it("should return empty array when no site polygons provided", async () => {
+      const result = await service.bulkDeleteSitePolygons([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should successfully delete multiple site polygons", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry1 = await PolygonGeometryFactory.create();
+      const polygonGeometry2 = await PolygonGeometryFactory.create();
+
+      const sitePolygon1 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry1.uuid
+      });
+
+      const sitePolygon2 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry2.uuid
+      });
+
+      // Reload to ensure we have the required attributes
+      await sitePolygon1.reload({ attributes: ["id", "uuid", "primaryUuid"] });
+      await sitePolygon2.reload({ attributes: ["id", "uuid", "primaryUuid"] });
+
+      const deletedUuids = await service.bulkDeleteSitePolygons([sitePolygon1, sitePolygon2]);
+
+      expect(deletedUuids).toContain(sitePolygon1.uuid);
+      expect(deletedUuids).toContain(sitePolygon2.uuid);
+
+      await sitePolygon1.reload({ paranoid: false });
+      await sitePolygon2.reload({ paranoid: false });
+      expect(sitePolygon1.deletedAt).not.toBeNull();
+      expect(sitePolygon2.deletedAt).not.toBeNull();
+    });
+
+    it("should delete all versions when deleting by primaryUuid", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+
+      const sitePolygon1 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: true
+      });
+
+      const sitePolygon2 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: sitePolygon1.primaryUuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: false
+      });
+
+      // Reload to ensure we have the required attributes
+      await sitePolygon1.reload({ attributes: ["id", "uuid", "primaryUuid"] });
+
+      const deletedUuids = await service.bulkDeleteSitePolygons([sitePolygon1]);
+
+      expect(deletedUuids).toContain(sitePolygon1.uuid);
+      expect(deletedUuids).toContain(sitePolygon2.uuid);
+
+      await sitePolygon1.reload({ paranoid: false });
+      await sitePolygon2.reload({ paranoid: false });
+      expect(sitePolygon1.deletedAt).not.toBeNull();
+      expect(sitePolygon2.deletedAt).not.toBeNull();
+    });
+  });
+
+  describe("deleteSingleVersion", () => {
+    it("should throw NotFoundException when polygon is not found", async () => {
+      await expect(service.deleteSingleVersion("non-existent-uuid")).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw BadRequestException when trying to delete the last version", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        primaryUuid: "primary-uuid-123",
+        isActive: false
+      });
+
+      await expect(service.deleteSingleVersion(sitePolygon.uuid)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when trying to delete the active version", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+      const primaryUuid = "primary-uuid-456";
+
+      const version1 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        primaryUuid,
+        isActive: true
+      });
+
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        primaryUuid,
+        isActive: false
+      });
+
+      await expect(service.deleteSingleVersion(version1.uuid)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should successfully delete a non-active version", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry1 = await PolygonGeometryFactory.create();
+      const polygonGeometry2 = await PolygonGeometryFactory.create();
+      const primaryUuid = "primary-uuid-789";
+
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry1.uuid,
+        primaryUuid,
+        isActive: true
+      });
+
+      const oldVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry2.uuid,
+        primaryUuid,
+        isActive: false
+      });
+
+      await IndicatorOutputHectaresFactory.create({ sitePolygonId: oldVersion.id });
+
+      await service.deleteSingleVersion(oldVersion.uuid);
+
+      await oldVersion.reload({ paranoid: false });
+      expect(oldVersion.deletedAt).not.toBeNull();
+
+      const reloadedActive = await SitePolygon.findOne({ where: { uuid: activeVersion.uuid } });
+      expect(reloadedActive).not.toBeNull();
+      expect(reloadedActive?.isActive).toBe(true);
+
+      await polygonGeometry2.reload({ paranoid: false });
+      expect(polygonGeometry2.deletedAt).not.toBeNull();
+
+      await polygonGeometry1.reload({ paranoid: false });
+      expect(polygonGeometry1.deletedAt).toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry2.uuid]),
+        expect.anything()
+      );
+    });
+
+    it("should not delete shared geometry when other versions use it", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const sharedGeometry = await PolygonGeometryFactory.create();
+      const primaryUuid = "primary-uuid-shared";
+
+      const version1 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: sharedGeometry.uuid,
+        primaryUuid,
+        isActive: true
+      });
+
+      const version2 = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: sharedGeometry.uuid,
+        primaryUuid,
+        isActive: false
+      });
+
+      await service.deleteSingleVersion(version2.uuid);
+
+      await version2.reload({ paranoid: false });
+      expect(version2.deletedAt).not.toBeNull();
+
+      const reloadedGeometry = await PolygonGeometry.findOne({
+        where: { uuid: sharedGeometry.uuid },
+        paranoid: false
+      });
+      expect(reloadedGeometry).not.toBeNull();
+      expect(reloadedGeometry?.deletedAt).toBeNull();
+
+      const reloadedVersion1 = await SitePolygon.findOne({ where: { uuid: version1.uuid } });
+      expect(reloadedVersion1).not.toBeNull();
+    });
+
+    it("should delete associated indicators and criteria records", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+      const primaryUuid = "primary-uuid-indicators";
+
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        primaryUuid,
+        isActive: true
+      });
+
+      const oldVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        primaryUuid,
+        isActive: false
+      });
+
+      const indicator = await IndicatorOutputHectaresFactory.create({ sitePolygonId: oldVersion.id });
+
+      await service.deleteSingleVersion(oldVersion.uuid);
+
+      const deletedIndicator = await IndicatorOutputHectares.findByPk(indicator.id, {
+        paranoid: false
+      });
+      expect(deletedIndicator).not.toBeNull();
+      expect(deletedIndicator?.deletedAt).not.toBeNull();
+
+      const reloadedActiveVersion = await SitePolygon.findOne({ where: { uuid: activeVersion.uuid } });
+      expect(reloadedActiveVersion).not.toBeNull();
+
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid]),
+        expect.anything()
+      );
     });
   });
 });

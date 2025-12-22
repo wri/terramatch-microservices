@@ -1,14 +1,18 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
+import { Geometry } from "geojson";
+import { isArray } from "lodash";
+
+type ValidationError = {
+  field: string;
+  error: string;
+  exists: boolean;
+};
 
 interface DataCompletenessValidationResult extends ValidationResult {
-  extraInfo: Array<{
-    field: string;
-    error: string;
-    exists: boolean;
-  }> | null;
+  extraInfo: ValidationError[] | null;
 }
 
 const VALIDATION_FIELDS: (keyof Attributes<SitePolygon>)[] = [
@@ -29,6 +33,11 @@ const FIELD_NAME_MAP: Record<string, string> = {
   plantStart: "plantstart"
 };
 
+function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: string, snakeCaseKey: string): unknown {
+  // Prefer camelCase if present, otherwise fall back to snake_case
+  return properties[camelCaseKey] != null ? properties[camelCaseKey] : properties[snakeCaseKey];
+}
+
 const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
 
 const VALID_SYSTEMS = [
@@ -45,7 +54,7 @@ const VALID_SYSTEMS = [
 
 const VALID_DISTRIBUTIONS = ["single-line", "partial", "full"];
 
-export class DataCompletenessValidator implements Validator {
+export class DataCompletenessValidator implements PolygonValidator, GeometryValidator {
   async validatePolygon(polygonUuid: string): Promise<DataCompletenessValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid },
@@ -56,13 +65,13 @@ export class DataCompletenessValidator implements Validator {
       throw new NotFoundException(`No site polygon found with polygon UUID ${polygonUuid}`);
     }
 
-    const validationErrors = this.validateSitePolygonData(sitePolygon);
-    const valid = validationErrors.length === 0;
+    const validationErrors = this.validateFields(
+      VALIDATION_FIELDS,
+      field => sitePolygon[field],
+      field => FIELD_NAME_MAP[field] ?? field
+    );
 
-    return {
-      valid,
-      extraInfo: validationErrors.length > 0 ? validationErrors : null
-    };
+    return this.buildValidationResult(validationErrors);
   }
 
   async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
@@ -83,40 +92,52 @@ export class DataCompletenessValidator implements Validator {
         };
       }
 
-      const validationErrors = this.validateSitePolygonData(sitePolygon);
-      const valid = validationErrors.length === 0;
+      const validationErrors = this.validateFields(
+        VALIDATION_FIELDS,
+        field => sitePolygon[field],
+        field => FIELD_NAME_MAP[field] ?? field
+      );
 
       return {
         polygonUuid,
-        valid,
+        valid: validationErrors.length === 0,
         extraInfo: validationErrors.length > 0 ? validationErrors : null
       };
     });
   }
 
-  private validateSitePolygonData(sitePolygon: SitePolygon): Array<{
-    field: string;
-    error: string;
-    exists: boolean;
-  }> {
-    const validationErrors: Array<{
-      field: string;
-      error: string;
-      exists: boolean;
-    }> = [];
+  private validateFields(
+    fields: string[],
+    getValue: (field: string) => unknown,
+    getFieldName: (field: string) => string,
+    getFieldKey?: (field: string) => string
+  ): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
 
-    for (const field of VALIDATION_FIELDS) {
-      const value = sitePolygon[field];
-      if (this.isInvalidField(field, value)) {
+    for (const field of fields) {
+      const value = getValue(field);
+      const fieldKey = getFieldKey != null ? getFieldKey(field) : field;
+      if (this.isInvalidField(fieldKey, value)) {
         validationErrors.push({
-          field: FIELD_NAME_MAP[field] ?? field,
-          error: this.getFieldError(field, value),
-          exists: value != null && value !== ""
+          field: getFieldName(field),
+          error: this.getFieldError(fieldKey, value),
+          exists: this.valueExists(value)
         });
       }
     }
 
     return validationErrors;
+  }
+
+  private valueExists(value: unknown): boolean {
+    return value != null && value !== "";
+  }
+
+  private buildValidationResult(validationErrors: ValidationError[]): DataCompletenessValidationResult {
+    return {
+      valid: validationErrors.length === 0,
+      extraInfo: validationErrors.length > 0 ? validationErrors : null
+    };
   }
 
   private isInvalidField(field: string, value: unknown): boolean {
@@ -128,11 +149,11 @@ export class DataCompletenessValidator implements Validator {
       case "plantStart":
         return !this.isValidDate(value);
       case "practice":
-        return typeof value === "string" ? !this.areValidItems(value, VALID_PRACTICES) : true;
+        return isArray(value) ? !this.areValidItems(value, VALID_PRACTICES) : true;
       case "targetSys":
         return typeof value === "string" ? !this.areValidItems(value, VALID_SYSTEMS) : true;
       case "distr":
-        return typeof value === "string" ? !this.areValidItems(value, VALID_DISTRIBUTIONS) : true;
+        return isArray(value) ? !this.areValidItems(value, VALID_DISTRIBUTIONS) : true;
       case "numTrees":
         return !this.isValidInteger(value);
       default:
@@ -161,8 +182,8 @@ export class DataCompletenessValidator implements Validator {
     }
   }
 
-  private areValidItems(value: string, validItems: string[]): boolean {
-    const items = value.split(",");
+  private areValidItems(value: string | string[], validItems: string[]): boolean {
+    const items = isArray(value) ? value : value.split(",");
     return items.every(item => validItems.includes(item.trim()));
   }
 
@@ -179,5 +200,38 @@ export class DataCompletenessValidator implements Validator {
 
   private isValidInteger(value: unknown): boolean {
     return Number.isInteger(Number(value)) && Number(value) > 0;
+  }
+
+  async validateGeometry(
+    geometry: Geometry,
+    properties?: Record<string, unknown>
+  ): Promise<DataCompletenessValidationResult> {
+    if (properties == null) {
+      return {
+        valid: false,
+        extraInfo: [
+          {
+            field: "properties",
+            error: "Feature properties are required",
+            exists: false
+          }
+        ]
+      };
+    }
+
+    // Validate using camelCase field names, but check both camelCase and snake_case properties
+    const validationErrors = this.validateFields(
+      VALIDATION_FIELDS,
+      field => {
+        // Map model field to property names
+        const camelCaseKey = field;
+        const snakeCaseKey = FIELD_NAME_MAP[field];
+        return getPropertyValue(properties, camelCaseKey, snakeCaseKey ?? camelCaseKey);
+      },
+      field => FIELD_NAME_MAP[field] ?? field,
+      field => field
+    );
+
+    return this.buildValidationResult(validationErrors);
   }
 }

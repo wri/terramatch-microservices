@@ -9,13 +9,13 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("users-manage")) {
-      this.builder.can(["create", "uploadFiles"], Organisation);
+      this.builder.can(["create", "uploadFiles", "deleteFiles", "updateFiles"], Organisation);
     }
 
     if (this.permissions.includes("manage-own")) {
       const primaryOrg = await this.getPrimaryOrganisation();
       if (primaryOrg != null) {
-        this.builder.can(["uploadFiles"], Organisation, { id: primaryOrg.id });
+        this.builder.can(["uploadFiles", "deleteFiles", "updateFiles"], Organisation, { id: primaryOrg.id });
       }
     }
   }

@@ -1,32 +1,5 @@
 import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
-import {
-  Application,
-  AuditStatus,
-  Demographic,
-  Disturbance,
-  DisturbanceReport,
-  FinancialIndicator,
-  FinancialReport,
-  Form,
-  FormQuestionOption,
-  FormSubmission,
-  FundingProgramme,
-  ImpactStory,
-  Nursery,
-  NurseryReport,
-  Organisation,
-  Permission,
-  Project,
-  ProjectPitch,
-  ProjectReport,
-  Site,
-  SitePolygon,
-  SiteReport,
-  SrpReport,
-  Task,
-  User
-} from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { SitePolygonPolicy } from "./site-polygon.policy";
@@ -53,9 +26,38 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
+import {
+  Application,
+  AuditStatus,
+  Demographic,
+  Disturbance,
+  DisturbanceReport,
+  FinancialIndicator,
+  FinancialReport,
+  Form,
+  FormQuestionOption,
+  FormSubmission,
+  FundingProgramme,
+  ImpactStory,
+  Media,
+  Nursery,
+  NurseryReport,
+  Organisation,
+  Permission,
+  Project,
+  ProjectPitch,
+  ProjectReport,
+  Site,
+  SitePolygon,
+  SiteReport,
+  SrpReport,
+  Task,
+  User
+} from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "../guards/auth.guard";
 import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
+import { MediaPolicy } from "./media.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,6 +83,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [FormSubmission, FormSubmissionPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],
+  [Media, MediaPolicy],
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],
   [Organisation, OrganisationPolicy],

@@ -164,7 +164,7 @@ describe("FundingProgrammesController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: programme.id }));
       await expect(programme.deletedAt).not.toBeNull();
       expect(result.meta.resourceType).toBe("fundingProgrammes");
-      expect(result.meta.resourceId).toBe(programme.uuid);
+      expect(result.meta.resourceIds).toEqual([programme.uuid]);
     });
   });
 

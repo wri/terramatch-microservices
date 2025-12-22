@@ -10,8 +10,11 @@ import {
   Patch,
   Post,
   Query,
-  UnauthorizedException
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -33,10 +36,20 @@ import {
   IndicatorTreeCoverLossDto
 } from "./dto/indicators.dto";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
+import { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygon-creation.service";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { SitePolygon, User } from "@terramatch-microservices/database/entities";
+import { GeometryUploadRequestDto } from "./dto/geometry-upload.dto";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
+import "multer";
+import { SitePolygon, User, DelayedJob, Site } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { GeometryUploadJobData } from "./geometry-upload.processor";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
   CreateSitePolygonBatchRequestDto,
@@ -44,6 +57,13 @@ import {
 } from "./dto/create-site-polygon-request.dto";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { VersionUpdateBody } from "./dto/version-update.dto";
+import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
+import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
+import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -55,13 +75,20 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorTreeCoverDto,
   IndicatorFieldMonitoringDto,
   IndicatorMsuCarbonDto,
-  ValidationDto
+  ValidationDto,
+  GeoJsonExportDto,
+  GeometryUploadComparisonSummaryDto
 )
 export class SitePolygonsController {
   constructor(
     private readonly sitePolygonService: SitePolygonsService,
     private readonly sitePolygonCreationService: SitePolygonCreationService,
-    private readonly policyService: PolicyService
+    private readonly geometryFileProcessingService: GeometryFileProcessingService,
+    private readonly policyService: PolicyService,
+    private readonly versioningService: SitePolygonVersioningService,
+    private readonly geoJsonExportService: GeoJsonExportService,
+    private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
+    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
   private readonly logger = new Logger(SitePolygonsController.name);
@@ -69,13 +96,34 @@ export class SitePolygonsController {
   @Post()
   @ApiOperation({
     operationId: "createSitePolygons",
-    summary: "Create site polygons from GeoJSON",
-    description: `Create site polygons. Supports multi-site batch creation.
-      Duplicate validation results are always included in the response when duplicates are found.`
+    summary: "Create site polygons from GeoJSON or create version from existing",
+    description: `Create site polygons OR create a new version of an existing polygon.
+
+    Normal Creation (new polygons):
+    - Provide \`geometries\` array with \`siteId\`in feature properties (required)
+    - Attributes (polyName, plantstart, practice, etc.) come from feature \`properties\`
+    - Properties support both camelCase and snake_case
+    - Do NOT provide \`baseSitePolygonUuid\` or \`attributeChanges\`
+    
+    Version Creation (new version of existing polygon):
+    - Provide \`baseSitePolygonUuid\` (required) + \`changeReason\` (optional, defaults to "Version created via API")
+    - Then provide ONE of the following:
+      - Geometry only: Provide \`geometries\` array (geometry properties are ignored)
+      - Attributes only: Provide \`attributeChanges\` object
+      - Both: Provide both \`geometries\` and \`attributeChanges\`
+    - At least one of \`geometries\` or \`attributeChanges\` must be provided
+    
+    Important: When creating versions, \`attributeChanges\` is the ONLY way to update attributes. 
+    Geometry properties are ignored during version creation - use \`attributeChanges\` instead.
+    
+    Duplicate validation results are included in the \`included\` section of the JSON:API response when duplicates are found.
+    Property naming: GeoJSON properties support both camelCase and snake_case.`
   })
-  @JsonApiResponse([SitePolygonLightDto])
+  @JsonApiResponse({ data: SitePolygonLightDto, included: [ValidationDto] })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid request data or site not found." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid request data, site not found, or versioning validation failed."
+  })
   async create(@Body() createRequest: CreateSitePolygonJsonApiRequestDto) {
     await this.policyService.authorize("create", SitePolygon);
 
@@ -85,15 +133,39 @@ export class SitePolygonsController {
     }
 
     const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const userFullName = user?.fullName ?? null;
 
-    const geometries = createRequest.data.attributes.geometries;
+    const baseSitePolygonUuid = createRequest?.data?.attributes?.baseSitePolygonUuid;
+    const changeReason = createRequest?.data?.attributes?.changeReason;
+    const attributeChanges = createRequest?.data?.attributes?.attributeChanges;
+    const geometries = createRequest?.data?.attributes?.geometries;
+
+    if (baseSitePolygonUuid != null && baseSitePolygonUuid.length > 0) {
+      return this.createVersion(
+        baseSitePolygonUuid,
+        geometries,
+        attributeChanges,
+        changeReason ?? "Version created via API",
+        userId,
+        userFullName,
+        source
+      );
+    }
+
+    if (geometries == null || geometries.length === 0) {
+      throw new BadRequestException(
+        "geometries array is required for normal polygon creation. For versioning, provide baseSitePolygonUuid."
+      );
+    }
+
     const batchRequest: CreateSitePolygonBatchRequestDto = { geometries };
 
     const { data: createdSitePolygons, included: validations } =
-      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, user?.fullName ?? null);
+      await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, userFullName);
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
@@ -118,6 +190,37 @@ export class SitePolygonsController {
     return document;
   }
 
+  @Get("geojson")
+  @ApiOperation({
+    operationId: "getSitePolygonsGeoJson",
+    summary: "Export site polygons as GeoJSON",
+    description: `Export site polygons as GeoJSON FeatureCollection. 
+    Provide exactly one of: uuid (single polygon), siteUuid (all active polygons in a site), or projectUuid (all active polygons across all sites in a project).
+    Use includeExtendedData to include additional data from site_polygon_data table.
+    Use geometryOnly to return only geometry without properties (only applicable when using uuid).`
+  })
+  @JsonApiResponse(GeoJsonExportDto)
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid query parameters (must provide exactly one of uuid, siteUuid, or projectUuid)"
+  })
+  @ExceptionResponse(NotFoundException, {
+    description: "Polygon, site polygon, or site not found"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed"
+  })
+  async getGeoJson(@Query() query: GeoJsonQueryDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const featureCollection = await this.geoJsonExportService.getGeoJson(query);
+
+    const document = buildJsonApi(GeoJsonExportDto);
+
+    const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
+
+    return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
+  }
+
   @Get()
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
   @JsonApiResponse([
@@ -127,7 +230,7 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
   async findMany(@Query() query: SitePolygonQueryDto) {
-    await this.policyService.authorize("readAll", SitePolygon);
+    await this.policyService.authorize("read", SitePolygon);
 
     const {
       siteId,
@@ -289,6 +392,184 @@ export class SitePolygonsController {
     });
   }
 
+  @Delete()
+  @ApiOperation({
+    operationId: "bulkDeleteSitePolygons",
+    summary: "Bulk delete site polygons and all associated records",
+    description: `Deletes multiple site polygons and all their associated records including indicators, 
+       criteria site records, audit statuses, and geometry data. This operation soft deletes 
+       ALL related site polygons by primaryUuid (version management) and deletes polygon 
+       geometry for all related site polygons. The request body follows JSON:API format with 
+       an array of resource identifiers (type and id).`
+  })
+  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
+    description: "Site polygons and all associated records were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
+  @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
+  async bulkDelete(@Body() deletePayload: SitePolygonBulkDeleteBodyDto) {
+    const uuids = deletePayload.data.map(item => item.id);
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "primaryUuid", "siteUuid", "createdBy"]
+    });
+
+    if (sitePolygons.length === 0) {
+      throw new NotFoundException(`No site polygons found for the provided UUIDs`);
+    }
+
+    const foundUuids = new Set(sitePolygons.map(sp => sp.uuid));
+    const missingUuids = uuids.filter(uuid => !foundUuids.has(uuid));
+    if (missingUuids.length > 0) {
+      throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      await this.policyService.authorize("delete", sitePolygon);
+    }
+
+    const deletedUuids = await this.sitePolygonService.bulkDeleteSitePolygons(sitePolygons);
+
+    return buildDeletedResponse(getDtoType(SitePolygonFullDto), deletedUuids);
+  }
+
+  @Get(":primaryUuid/versions")
+  @ApiOperation({
+    operationId: "listSitePolygonVersions",
+    summary: "Get all versions of a site polygon",
+    description: "Returns all versions sharing the same primaryUuid, ordered by creation date (newest first)"
+  })
+  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  async getVersions(@Param("primaryUuid") primaryUuid: string) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const versions = await this.versioningService.getVersionHistory(primaryUuid);
+    if (versions.length === 0) {
+      throw new NotFoundException(`Site polygon not found: ${primaryUuid}`);
+    }
+
+    const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
+    const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
+
+    const versionIds: string[] = [];
+    for (const version of versions) {
+      versionIds.push(version.uuid);
+      document.addData(
+        version.uuid,
+        await this.sitePolygonService.buildLightDto(version, associations[version.id] ?? {})
+      );
+    }
+
+    document.addIndex({
+      requestPath: `/research/v3/sitePolygons/${primaryUuid}/versions`,
+      total: versions.length
+    });
+
+    if (document.indexData.length > 0) {
+      document.indexData[document.indexData.length - 1].ids = versionIds;
+    }
+
+    return document;
+  }
+
+  @Patch(":uuid/version")
+  @ApiOperation({
+    operationId: "updateSitePolygonVersion",
+    summary: "Update a site polygon version (e.g., activate/deactivate)",
+    description: `Update version properties. Setting isActive to true will activate this version and deactivate all others in the version group.
+      Both admins and project developers can manage versions.`
+  })
+  @JsonApiResponse(SitePolygonLightDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
+  async updateVersion(@Param("uuid") uuid: string, @Body() request: VersionUpdateBody) {
+    if (uuid !== request.data.id) {
+      throw new BadRequestException("Entity id in path and payload do not match");
+    }
+
+    await this.policyService.authorize("update", SitePolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    if (request.data.attributes.isActive !== true) {
+      throw new BadRequestException("Only isActive: true is supported. Use DELETE to remove a version.");
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const activatedVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      const version = await this.versioningService.activateVersion(uuid, userId, transaction);
+
+      if (request.data.attributes.comment != null && request.data.attributes.comment.length > 0) {
+        await this.versioningService.trackChange(
+          version.primaryUuid,
+          version.versionName ?? "Unknown",
+          `Comment: ${request.data.attributes.comment}`,
+          userId,
+          "update",
+          undefined,
+          undefined,
+          transaction
+        );
+      }
+
+      return version;
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([activatedVersion], false);
+
+    document.addData(
+      activatedVersion.uuid,
+      await this.sitePolygonService.buildLightDto(activatedVersion, associations[activatedVersion.id] ?? {})
+    );
+
+    this.logger.log(`Activated version ${activatedVersion.uuid} by user ${userId}`);
+
+    return document;
+  }
+
+  @Delete(":uuid/version")
+  @ApiOperation({
+    operationId: "deleteSitePolygonVersion",
+    summary: "Delete a single site polygon version",
+    description: `Deletes a specific version of a site polygon. Restrictions:
+       - Cannot delete the last version (use DELETE /:uuid to delete all versions)
+       - Cannot delete the active version (activate another version first)
+       - Only deletes polygon_geometry if not used by other versions
+       - Deletes all associations (indicators, criteria_site, audit_status) for this version`
+  })
+  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
+    description: "Site polygon version and its associations were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(BadRequestException, { description: "Cannot delete last version or active version." })
+  async deleteVersion(@Param("uuid") uuid: string) {
+    const sitePolygon = await SitePolygon.findOne({ where: { uuid } });
+    if (sitePolygon == null) {
+      throw new NotFoundException(`Site polygon not found for uuid: ${uuid}`);
+    }
+
+    await this.policyService.authorize("delete", sitePolygon);
+
+    await this.sitePolygonService.deleteSingleVersion(uuid);
+
+    this.logger.log(`Deleted version ${uuid}`);
+
+    return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
   @Delete(":uuid")
   @ApiOperation({
     operationId: "deleteSitePolygon",
@@ -314,5 +595,239 @@ export class SitePolygonsController {
     await this.sitePolygonService.deleteSitePolygon(uuid);
 
     return buildDeletedResponse(getDtoType(SitePolygonFullDto), uuid);
+  }
+
+  @Post("upload/comparison")
+  @ApiOperation({
+    operationId: "compareGeometryFile",
+    summary: "Compare uploaded geometry file with existing polygons",
+    description: `Parses a geometry file and returns UUIDs of existing SitePolygons found in the database.`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse(GeometryUploadComparisonSummaryDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async compareGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const comparisonResult = await this.geometryUploadComparisonService.compareUploadedFeaturesWithExisting(
+      geojson,
+      siteId
+    );
+
+    const document = buildJsonApi(GeometryUploadComparisonSummaryDto);
+
+    document.addData(
+      "summary",
+      new GeometryUploadComparisonSummaryDto({
+        existingUuids: comparisonResult.existingUuids,
+        totalFeatures: comparisonResult.totalFeatures,
+        featuresForVersioning: comparisonResult.featuresForVersioning,
+        featuresForCreation: comparisonResult.featuresForCreation
+      })
+    );
+
+    return document;
+  }
+
+  @Post("upload")
+  @ApiOperation({
+    operationId: "uploadGeometryFile",
+    summary: "Upload and parse geometry file (KML, Shapefile, GeoJSON)",
+    description: `Parses a geometry file (KML, Shapefile, or GeoJSON) and creates site polygons asynchronously.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse([SitePolygonLightDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async uploadGeometryFile(@UploadedFile() file: Express.Multer.File, @Body() payload: GeometryUploadRequestDto) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId as number;
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Geometry Upload",
+      totalContent: geojson.features.length,
+      processedContent: 0,
+      progressMessage: "Parsing geometry file...",
+      createdBy: userId,
+      metadata: {
+        entity_id: site.id,
+        entity_type: Site.LARAVEL_TYPE,
+        entity_name: site.name
+      }
+    } as DelayedJob);
+
+    const jobData: GeometryUploadJobData = {
+      delayedJobId: delayedJob.id,
+      siteId,
+      geojson,
+      userId,
+      source,
+      userFullName: user?.fullName ?? null
+    };
+
+    await this.geometryUploadQueue.add("geometryUpload", jobData);
+
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+  }
+
+  @Post("upload/versions")
+  @ApiOperation({
+    operationId: "uploadGeometryFileWithVersions",
+    summary: "Upload geometry file and create versions for existing polygons",
+    description: `Parses a geometry file and processes it with versioning enabled. 
+      Features with UUIDs in properties.uuid that match existing active SitePolygons will create new versions.
+      Features without matching UUIDs (or without UUIDs) will create new polygons.
+      Attributes are extracted from GeoJSON feature properties for both versions and new polygons.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse([SitePolygonLightDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  async uploadGeometryFileWithVersions(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: GeometryUploadRequestDto
+  ) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId as number;
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Geometry Upload with Versioning",
+      totalContent: geojson.features.length,
+      processedContent: 0,
+      progressMessage: "Parsing geometry file...",
+      createdBy: userId,
+      metadata: {
+        entity_id: site.id,
+        entity_type: Site.LARAVEL_TYPE,
+        entity_name: site.name
+      }
+    } as DelayedJob);
+
+    const jobData: GeometryUploadJobData = {
+      delayedJobId: delayedJob.id,
+      siteId,
+      geojson,
+      userId,
+      source,
+      userFullName: user?.fullName ?? null
+    };
+
+    await this.geometryUploadQueue.add("geometryUploadWithVersions", jobData);
+
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+  }
+  private async createVersion(
+    baseSitePolygonUuid: string,
+    geometries: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["geometries"],
+    attributeChanges: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["attributeChanges"],
+    changeReason: string,
+    userId: number,
+    userFullName: string | null,
+    source: string
+  ) {
+    const hasGeometryChange = geometries != null && geometries.length > 0;
+    const hasAttributeChange = attributeChanges != null && Object.keys(attributeChanges).length > 0;
+
+    if (!hasGeometryChange && !hasAttributeChange) {
+      throw new BadRequestException(
+        "Version creation requires either geometry changes (geometries array) or attribute changes (attributeChanges object)"
+      );
+    }
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const newVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      return this.sitePolygonCreationService.createSitePolygonVersion(
+        baseSitePolygonUuid,
+        geometries,
+        attributeChanges,
+        changeReason,
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+    });
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
+
+    document.addData(
+      newVersion.uuid,
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+    );
+
+    this.logger.log(`Created version ${newVersion.uuid} from base ${baseSitePolygonUuid} by user ${userId}`);
+
+    return document;
   }
 }

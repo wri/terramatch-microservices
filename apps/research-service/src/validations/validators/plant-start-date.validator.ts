@@ -1,5 +1,5 @@
 import { SitePolygon, Site } from "@terramatch-microservices/database/entities";
-import { Validator, ValidationResult, PolygonValidationResult } from "./validator.interface";
+import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 
@@ -23,7 +23,7 @@ interface PlantStartDateValidationResult extends ValidationResult {
 
 const MIN_DATE = "2018-01-01";
 
-export class PlantStartDateValidator implements Validator {
+export class PlantStartDateValidator implements PolygonValidator {
   async validatePolygon(polygonUuid: string): Promise<PlantStartDateValidationResult> {
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid },
@@ -50,7 +50,10 @@ export class PlantStartDateValidator implements Validator {
 
   async validatePolygons(polygonUuids: string[]): Promise<PolygonValidationResult[]> {
     const sitePolygons = await SitePolygon.findAll({
-      where: { polygonUuid: polygonUuids },
+      where: {
+        polygonUuid: polygonUuids,
+        isActive: true
+      },
       attributes: ["polygonUuid", "polyName", "plantStart", "siteUuid"],
       include: [
         {
@@ -61,10 +64,30 @@ export class PlantStartDateValidator implements Validator {
       ]
     });
 
-    return sitePolygons.map(sitePolygon => {
-      const validationResult = this.validatePlantStartDate(sitePolygon, sitePolygon.polygonUuid);
+    const resultMap = new Map<string, SitePolygon>();
+    for (const sitePolygon of sitePolygons) {
+      if (sitePolygon.polygonUuid != null && !resultMap.has(sitePolygon.polygonUuid)) {
+        resultMap.set(sitePolygon.polygonUuid, sitePolygon);
+      }
+    }
+
+    return polygonUuids.map(polygonUuid => {
+      const sitePolygon = resultMap.get(polygonUuid);
+      if (sitePolygon == null) {
+        return {
+          polygonUuid,
+          valid: false,
+          extraInfo: {
+            error_type: "NOT_FOUND",
+            polygon_uuid: polygonUuid,
+            error_details: "Site polygon not found"
+          }
+        };
+      }
+
+      const validationResult = this.validatePlantStartDate(sitePolygon, polygonUuid);
       return {
-        polygonUuid: sitePolygon.polygonUuid,
+        polygonUuid,
         valid: validationResult.valid,
         extraInfo: validationResult.extraInfo
       };

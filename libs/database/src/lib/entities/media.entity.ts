@@ -49,6 +49,7 @@ import { Dictionary } from "factory-girl-ts";
 @Table({
   tableName: "media",
   underscored: true,
+  paranoid: true,
   // @Index doesn't work with underscored column names
   indexes: [
     { name: "media_model_type_model_id_index", fields: ["model_type", "model_id"] },

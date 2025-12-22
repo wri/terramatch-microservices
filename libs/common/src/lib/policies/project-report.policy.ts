@@ -10,9 +10,13 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], ProjectReport, {
-        frameworkKey: { $in: this.frameworks }
-      });
+      this.builder.can(
+        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        ProjectReport,
+        {
+          frameworkKey: { $in: this.frameworks }
+        }
+      );
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -26,7 +30,9 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "update", "uploadFiles"], ProjectReport, { projectId: { $in: projectIds } });
+          this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], ProjectReport, {
+            projectId: { $in: projectIds }
+          });
           this.builder.can("updateAnswers", ProjectReport, {
             projectId: { $in: projectIds },
             status: { $in: [STARTED, DUE] }
@@ -40,9 +46,13 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "updateAnswers"], ProjectReport, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+            ProjectReport,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
         }
       }
     }

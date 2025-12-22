@@ -72,10 +72,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       multiChoice: false,
       optionListKey: "months"
     },
-    "org-fin-bgt-cur-year": { property: "finBudgetCurrentYear", label: "Budget current year", inputType: "number" },
-    "org-fin-bgt-1year": { property: "finBudget1Year", label: "Budget -1 year", inputType: "number" },
-    "org-fin-bgt-2year": { property: "finBudget2Year", label: "Budget -2 year", inputType: "number" },
-    "org-fin-bgt-3year": { property: "finBudget3Year", label: "Budget -3 year", inputType: "number" },
     "org-eng-farmers": {
       property: "engagementFarmers",
       label: "Engagement farmers",
@@ -217,11 +213,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       label: "Percent smallholder engaged (3yr)",
       inputType: "number-percentage"
     },
-    "org-rev-this-year": {
-      property: "organisationRevenueThisYear",
-      label: "Organization revenue for this year",
-      inputType: "number"
-    },
     "org-restoration-types-implemented": {
       property: "restorationTypesImplemented",
       label: "Restoration Intervention Types Implemented",
@@ -266,7 +257,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       label: "Land Systems",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "org-fund-utilisation": {
       property: "fundUtilisation",
@@ -280,7 +271,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       label: "Tree Restoration Practices",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-practices"
+      optionListKey: "restoration-strategies"
     },
     "org-detailed-interventions": {
       property: "detailedInterventionTypes",
@@ -465,7 +456,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       label: "Territories in which the organization operates",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "territories-of-operation-collection"
+      optionListKey: "land-tenures-brazil"
     },
     "org-decisionmaking-structure-description": {
       property: "decisionMakingStructureDescription",
@@ -487,7 +478,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       label: "ANR practices that the organization has used",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "anr-practices-past-collection"
+      optionListKey: "anr-practices"
     },
     "org-anr-monitoring-approaches": {
       property: "anrMonitoringApproaches",

@@ -4,7 +4,7 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 export class ProjectPitchPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "uploadFiles"], ProjectPitch);
+      this.builder.can(["read", "uploadFiles", "deleteFiles", "updateFiles"], ProjectPitch);
       return;
     }
 
@@ -13,7 +13,9 @@ export class ProjectPitchPolicy extends UserPermissionsPolicy {
       if (user?.organisationId != null) {
         const orgUuid = (await Organisation.findOne({ where: { id: user.organisationId }, attributes: ["uuid"] }))
           ?.uuid;
-        this.builder.can(["read", "update", "uploadFiles"], ProjectPitch, { organisationId: orgUuid });
+        this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], ProjectPitch, {
+          organisationId: orgUuid
+        });
       }
     }
   }

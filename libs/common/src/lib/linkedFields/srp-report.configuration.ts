@@ -5,12 +5,12 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 export const SrpReportConfiguration: LinkedFieldConfiguration<SrpReport> = {
   label: "Annual Socio Economic Restoration Report",
   fields: {
-    "srp-other-partners-description": {
-      property: "otherRestorationPartnersDescription",
+    "srp-rep-restoration-partners-description": {
+      property: "restorationPartnersDescription",
       label: "Other Restoration Partners Description",
       inputType: "long-text"
     },
-    "srp-total-unique-restoration-partners": {
+    "srp-rep-total-unique-restoration-partners": {
       property: "totalUniqueRestorationPartners",
       label: "Total Unique Restoration Partners",
       inputType: "number"

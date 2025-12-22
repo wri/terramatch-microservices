@@ -13,16 +13,6 @@ import {
 import { intersection } from "lodash";
 import { Op } from "sequelize";
 
-type TranslationInstanceType =
-  | Form
-  | FormSection
-  | FormQuestion
-  | FormQuestionOption
-  | FormTableHeader
-  | FormOptionList
-  | FundingProgramme
-  | LocalizationKey
-  | FormOptionListOption;
 type TranslationModelType =
   | typeof Form
   | typeof FormSection

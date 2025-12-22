@@ -14,6 +14,7 @@ import { NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
+import { LocalizationFormService } from "@terramatch-microservices/common/localization/localization-form.service";
 
 const mockLocale = (locale: ValidLocale) => {
   jest.spyOn(User, "findOne").mockResolvedValue({ locale } as User);
@@ -25,7 +26,11 @@ describe("OptionsLabelsController", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [OptionLabelsController],
-      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
+      providers: [
+        LocalizationService,
+        LocalizationFormService,
+        { provide: ConfigService, useValue: createMock<ConfigService>() }
+      ]
     }).compile();
 
     controller = module.get(OptionLabelsController);

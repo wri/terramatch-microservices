@@ -1182,53 +1182,16 @@ describe("SitePolygonsController", () => {
 
     it("should successfully create version from uploaded file", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const site = await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" });
-      jest.spyOn(Site, "findOne").mockResolvedValue(site);
       const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
       user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
       jest.spyOn(User, "findByPk").mockResolvedValue(user);
-      const basePolygon = await SitePolygonFactory.build({
-        uuid: "base-uuid",
-        siteUuid: "site-uuid",
-        polyName: "Base Polygon"
-      });
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
 
-      const geojson: FeatureCollection = {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            geometry: {
-              type: "Polygon",
-              coordinates: [
-                [
-                  [0, 0],
-                  [1, 0],
-                  [1, 1],
-                  [0, 1],
-                  [0, 0]
-                ]
-              ]
-            },
-            properties: { polyName: "New Version" }
-          }
-        ]
-      };
-      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(geojson);
-
-      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid" });
-      const mockTransaction = {} as Transaction;
-      const mockSequelize = {
-        transaction: jest.fn().mockImplementation(callback => Promise.resolve(callback(mockTransaction)))
-      };
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid", id: 123 });
+      sitePolygonCreationService.uploadVersionFromFile.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
       });
-      sitePolygonCreationService.createSitePolygonVersion.mockResolvedValue(newVersion);
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
 
       const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
       const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
@@ -1239,8 +1202,15 @@ describe("SitePolygonsController", () => {
         payload as GeometryUploadRequestDto
       );
 
-      expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
-      expect(sitePolygonCreationService.createSitePolygonVersion).toHaveBeenCalled();
+      expect(sitePolygonCreationService.uploadVersionFromFile).toHaveBeenCalledWith(
+        file,
+        "base-uuid",
+        "site-uuid",
+        1,
+        user.fullName,
+        "terramatch"
+      );
+      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
     });

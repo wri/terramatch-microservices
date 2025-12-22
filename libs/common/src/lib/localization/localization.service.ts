@@ -11,22 +11,43 @@ import {
   I18nTranslation,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { ITranslateParams, normalizeLocale, tx, t, createNativeInstance } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
+import { LocalizationFormService } from "./localization-form.service";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;
+export type TransifexSource = Record<
+  string,
+  {
+    meta: {
+      character_limit: number;
+      context: string;
+      developer_comment: string;
+      occurrences: string[];
+      tags: string[];
+    };
+    string: string;
+  }
+>;
+export type TransifexPullTranslationsConfig = {
+  filterTags?: string;
+  refresh?: boolean;
+};
 
 @Injectable()
 export class LocalizationService {
   private readonly logger = new TMLogger(LocalizationService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly localizationFormService: LocalizationFormService
+  ) {
     tx.init({
       token: configService.get("TRANSIFEX_TOKEN")
     });
@@ -112,15 +133,12 @@ export class LocalizationService {
     return t(text, params);
   }
 
-  async pullTranslations() {
-    const tx = createNativeInstance({
-      token: this.configService.get("TRANSIFEX_TOKEN"),
-      secret: this.configService.get("TRANSIFEX_SECRET")
-    });
+  async pullTranslations(config?: TransifexPullTranslationsConfig) {
+    const tx = this.createNativeInstance();
     const locales = ["en_US", "fr_FR", "es_MX", "pt_BR"];
     for (const locale of locales) {
       const dbLocale = locale.split("_").join("-");
-      await tx.fetchTranslations(locale);
+      await tx.fetchTranslations(locale, config);
       const txTranslations = await tx.cache.getTranslations(locale);
       const keys = Object.keys(txTranslations);
       for (const key of keys) {
@@ -156,20 +174,37 @@ export class LocalizationService {
     }
   }
 
-  async pushTranslations() {
-    const tx = createNativeInstance({
+  public async pushNewTranslations() {
+    const tx = this.createNativeInstance();
+    const condition: WhereOptions<I18nItem> = { status: { [Op.in]: [DRAFT, MODIFIED] } };
+    const items = await this.getTranslationsByCondition(condition);
+    const source = this.createSource(items, ["custom-form"]);
+    await tx.pushSource(source);
+    this.logger.log(`Finished pushing ${items.length} items`);
+  }
+
+  public async pushTranslationByForm(form: Form) {
+    const tx = this.createNativeInstance();
+    const i18nIds = await this.localizationFormService.getI18nIdsForForm(form);
+    const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
+    const source = this.createSource(items, ["custom-form", form.uuid]);
+    await tx.pushSource(source);
+    this.logger.log(`Finished pushing ${items.length} items`);
+  }
+
+  private createNativeInstance() {
+    return createNativeInstance({
       token: this.configService.get("TRANSIFEX_TOKEN"),
       secret: this.configService.get("TRANSIFEX_SECRET")
     });
+  }
 
-    const items = await I18nItem.findAll({
-      where: {
-        status: {
-          [Op.in]: [DRAFT, MODIFIED]
-        }
-      }
-    });
-    const source = items.reduce((source, item) => {
+  private async getTranslationsByCondition(where: WhereOptions<I18nItem>): Promise<I18nItem[]> {
+    return await I18nItem.findAll({ where, attributes: ["hash", "shortValue", "longValue"] });
+  }
+
+  private createSource(items: I18nItem[], tags: string[]) {
+    return items.reduce((source, item) => {
       return {
         ...source,
         [item.hash ?? ""]: {
@@ -178,26 +213,24 @@ export class LocalizationService {
             context: "",
             developer_comment: "",
             occurrences: [],
-            tags: ["custom-form"]
+            tags
           },
           string: item.shortValue ?? item.longValue ?? ""
         }
       };
-    }, {} as Record<string, { meta: { character_limit: number; context: string; developer_comment: string; occurrences: string[]; tags: string[] }; string: string }>);
-    await tx.pushSource(source);
-    this.logger.log(`Finished pushing ${items.length} items`);
+    }, {} as TransifexSource);
   }
 
   async cleanOldI18nItems() {
     const i18nEntitiesColumns = [
-      { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
       { entity: FormOptionListOption, attributes: ["labelId"] },
-      { entity: FormQuestion, attributes: ["labelId", "descriptionId"] },
       { entity: FormQuestionOption, attributes: ["labelId"] },
+      { entity: FormQuestion, attributes: ["labelId", "descriptionId", "placeholderId"] },
       { entity: FormSection, attributes: ["titleId", "subtitleId", "descriptionId"] },
       { entity: FormTableHeader, attributes: ["labelId"] },
-      { entity: LocalizationKey, attributes: ["valueId"] },
-      { entity: FundingProgramme, attributes: ["locationId"] }
+      { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
+      { entity: FundingProgramme, attributes: ["locationId"] },
+      { entity: LocalizationKey, attributes: ["valueId"] }
     ];
     const i18nIds: number[] = [];
     for (const { entity, attributes } of i18nEntitiesColumns) {

@@ -20,11 +20,16 @@ import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Form } from "@terramatch-microservices/database/entities";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
 export class FormsController {
-  constructor(private readonly formsService: FormsService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly formsService: FormsService,
+    private readonly policyService: PolicyService,
+    private readonly localizationService: LocalizationService
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -99,5 +104,28 @@ export class FormsController {
     await this.policyService.authorize("update", form);
     await this.formsService.store(payload.data.attributes, form);
     return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
+  }
+
+  @Post(":uuid/translate")
+  @ApiOperation({ operationId: "formTranslate", description: "Translate a form" })
+  @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
+  @ExceptionResponse(NotFoundException, { description: "Form not found." })
+  async translate(@Param("uuid") uuid: string) {
+    const form = await this.formsService.findOne(uuid);
+    await this.policyService.authorize("update", form);
+    await this.localizationService.pushTranslationByForm(form);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
+  }
+
+  @Get(":uuid/translate")
+  @ApiOperation({ operationId: "formPullTranslations", description: "Pull translations for a form" })
+  @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
+  @ExceptionResponse(NotFoundException, { description: "Form not found." })
+  async pullTranslations(@Param("uuid") uuid: string) {
+    const form = await this.formsService.findOne(uuid);
+    await this.policyService.authorize("update", form);
+    await this.localizationService.pullTranslations({ filterTags: form.uuid });
   }
 }

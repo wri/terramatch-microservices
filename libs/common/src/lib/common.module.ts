@@ -6,6 +6,7 @@ import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { PolicyService } from "./policies/policy.service";
 import { LocalizationService } from "./localization/localization.service";
+import { LocalizationFormService } from "./localization/localization-form.service";
 import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
 import { SlackService } from "./slack/slack.service";
@@ -60,6 +61,7 @@ export const QUEUES = ["email", "analytics"];
     { provide: APP_GUARD, useClass: AuthGuard },
     EmailService,
     LocalizationService,
+    LocalizationFormService,
     MediaService,
     TemplateService,
     SlackService,

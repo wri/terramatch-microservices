@@ -32,7 +32,7 @@ class SitePolygonUpdateAttributes {
   indicators: IndicatorDto[];
 }
 
-export class SitePolygonUpdate {
+class SitePolygonUpdate {
   @Equals("sitePolygons")
   @ApiProperty({ enum: ["sitePolygons"] })
   type: string;

@@ -7,12 +7,12 @@ export class FormSubmissionPolicy extends UserPermissionsPolicy {
     this.builder.can("create", FormSubmission);
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read"], FormSubmission);
+      this.builder.can(["read", "update", "updateAnswers"], FormSubmission);
     }
 
     if (this.permissions.includes("manage-own")) {
       const orgUuids = await this.getOrgUuids();
-      this.builder.can("read", FormSubmission, { organisationUuid: { $in: orgUuids } });
+      this.builder.can(["read", "update", "updateAnswers"], FormSubmission, { organisationUuid: { $in: orgUuids } });
     }
   }
 }

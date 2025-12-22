@@ -10,6 +10,9 @@ import { TerrafundReportReminderEmail } from "./terrafund-report-reminder.email"
 import { TerrafundSiteAndNurseryReminderEmail } from "./terrafund-site-and-nursery-reminder.email";
 import { AdminUserCreationEmail } from "./admin-user-creation.email";
 import { ProjectManagerEmail } from "./project-manager.email";
+import { ApplicationSubmittedEmail } from "./application-submitted.email";
+import { EmailSender } from "./email-sender";
+import { FormSubmissionFeedbackEmail } from "./form-submission-feedback.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -20,13 +23,15 @@ export type ProjectEmailData = {
   projectIds: number[];
 };
 
-const EMAIL_PROCESSORS = {
-  statusUpdate: EntityStatusUpdateEmail,
-  terrafundReportReminder: TerrafundReportReminderEmail,
-  terrafundSiteAndNurseryReminder: TerrafundSiteAndNurseryReminderEmail,
-  adminUserCreation: AdminUserCreationEmail,
-  projectManager: ProjectManagerEmail
-};
+const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME: string })[] = [
+  EntityStatusUpdateEmail,
+  TerrafundReportReminderEmail,
+  TerrafundSiteAndNurseryReminderEmail,
+  AdminUserCreationEmail,
+  ProjectManagerEmail,
+  ApplicationSubmittedEmail,
+  FormSubmissionFeedbackEmail
+];
 
 /**
  * Watches for jobs related to sending email
@@ -41,9 +46,9 @@ export class EmailProcessor extends WorkerHost {
 
   async process(job: Job) {
     const { name, data } = job;
-    const processor = EMAIL_PROCESSORS[name as keyof typeof EMAIL_PROCESSORS];
+    const processor = EMAIL_PROCESSORS.find(processor => processor.NAME === name);
     if (processor == null) {
-      throw new NotImplementedException(`Unknown job type: ${name}`);
+      throw new NotImplementedException(`Unknown email name [${name}]`);
     }
 
     await new processor(data).send(this.emailService);

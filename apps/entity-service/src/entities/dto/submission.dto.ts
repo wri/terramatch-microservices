@@ -5,7 +5,12 @@ import { FORM_SUBMISSION_STATUSES, FormSubmissionStatus } from "@terramatch-micr
 import { Dictionary } from "lodash";
 import { FormSubmission } from "@terramatch-microservices/database/entities";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import {
+  CreateDataDto,
+  JsonApiBodyDto,
+  JsonApiDataDto
+} from "@terramatch-microservices/common/util/json-api-update-dto";
+import { IsEnum, IsObject, IsOptional, IsString } from "class-validator";
 
 @JsonApiDto({ type: "submissions" })
 export class SubmissionDto {
@@ -40,10 +45,13 @@ export class SubmissionDto {
   frameworkKey: FrameworkKey | null;
 
   @ApiProperty()
+  @IsString()
   formUuid: string;
 
-  @ApiProperty({ nullable: true, enum: FORM_SUBMISSION_STATUSES })
-  status: FormSubmissionStatus;
+  @ApiProperty({ required: false, nullable: true, enum: FORM_SUBMISSION_STATUSES })
+  @IsOptional()
+  @IsEnum(FORM_SUBMISSION_STATUSES)
+  status?: FormSubmissionStatus;
 
   @ApiProperty()
   answers: Dictionary<unknown>;
@@ -54,8 +62,10 @@ export class SubmissionDto {
   @ApiProperty({ nullable: true, type: String })
   organisationName: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
+  @ApiProperty({ required: false, nullable: true, type: String })
+  @IsOptional()
+  @IsString()
+  feedback?: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   translatedFeedbackFields: string[] | null;
@@ -85,7 +95,36 @@ export class EmbeddedSubmissionDto extends PickType(SubmissionDto, [
   }
 }
 
-export class CreateSubmissionAttributes extends PickType(SubmissionDto, ["formUuid"]) {}
+export class CreateSubmissionAttributes {
+  @ApiProperty()
+  @IsString()
+  fundingProgrammeUuid: string;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+    description: "If supplied, a submission will be created for the stage following this one."
+  })
+  @IsOptional()
+  @IsString()
+  nextStageFromSubmissionUuid?: string;
+}
 export class CreateSubmissionBody extends JsonApiBodyDto(
   class CreateSubmissionData extends CreateDataDto("submissions", CreateSubmissionAttributes) {}
+) {}
+
+export class UpdateSubmissionAttributes extends PickType(SubmissionDto, ["status", "feedback"]) {
+  // Optional in update if this is a status update.
+  @ApiProperty({ required: false, type: Object })
+  @IsOptional()
+  @IsObject()
+  answers?: Dictionary<unknown>;
+
+  @ApiProperty({ required: false, type: String, isArray: true })
+  @IsOptional()
+  @IsString({ each: true })
+  feedbackFields?: string[] | null;
+}
+export class UpdateSubmissionBody extends JsonApiBodyDto(
+  class UpdateSubmissionData extends JsonApiDataDto({ type: "submissions" }, UpdateSubmissionAttributes) {}
 ) {}

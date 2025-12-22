@@ -4,6 +4,8 @@ import { EntityQueryDto } from "./entities/dto/entity-query.dto";
 import {
   Form,
   FormQuestion,
+  FormSection,
+  FormSubmission,
   Framework,
   FundingProgramme,
   UpdateRequest
@@ -16,7 +18,8 @@ import ProgressBar from "progress";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
-import { cloneDeep, isEqual, isUndefined, omitBy } from "lodash";
+import { cloneDeep, Dictionary, isEqual, isUndefined, omitBy, uniq } from "lodash";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -259,6 +262,59 @@ bootstrapRepl("Entity Service", AppModule, {
           }
         });
         console.log(`Deleted rows: ${deleted}`);
+      });
+    },
+
+    // The PHP BE was storing the answer to _every_ question on the form_submissions `answers`
+    // column even though most conditional answers sync to the associated project pitch or
+    // organisation, and are pulled from the associated table when the submission DTO is rendered.
+    // In order to clear out a bunch of unnecessary data, let's update those records now.
+    updateFormSubmissionAnswers: async () => {
+      await withoutSqlLogs(async () => {
+        const builder = new PaginatedQueryBuilder(FormSubmission, 100);
+        const bar = new ProgressBar(`Processing :total FormSubmissions [:bar] :percent :etas`, {
+          width: 40,
+          total: await builder.paginationTotal()
+        });
+        for await (const page of batchFindAll(builder)) {
+          const formUuids = uniq(page.map(submission => submission.formId)).filter(isNotNull);
+          const sections = await FormSection.findAll({ where: { formId: formUuids } });
+          const questions = await FormQuestion.findAll({ where: { formSectionId: sections.map(({ id }) => id) } });
+          const answerQuestionUuidsByFormUuid = questions.reduce(
+            (questions, { uuid, linkedFieldKey, formSectionId }) => {
+              if (linkedFieldKey != null) return questions;
+
+              const formId = sections.find(({ id }) => id === formSectionId)?.formId;
+              if (formId == null) return questions;
+
+              questions[formId] ??= [];
+              questions[formId].push(uuid);
+              return questions;
+            },
+            {} as Dictionary<string[]>
+          );
+
+          for (const submission of page) {
+            if (submission.formId == null) {
+              bar.tick();
+              continue;
+            }
+
+            const questionUuids = answerQuestionUuidsByFormUuid[submission.formId] ?? [];
+            const answers = questionUuids.reduce((answers, uuid) => {
+              const answer = submission.answers?.[uuid];
+              if (answer == null) return answers;
+
+              return { ...answers, [uuid]: answer };
+            }, {} as Dictionary<unknown>);
+
+            // silent to avoid setting the updatedAt timestamp
+            await submission.update({ answers }, { silent: true });
+            bar.tick();
+          }
+        }
+
+        console.log("Finished updating FormSubmissions...");
       });
     }
   }

@@ -194,6 +194,54 @@ describe("FormDataService", () => {
     });
   });
 
+  describe("storeSubmissionAnswers", () => {
+    it("throws if the org or project pitch is missing", async () => {
+      const form = await FormFactory.create();
+      const pitch = await ProjectPitchFactory.create();
+      let submission = await FormSubmissionFactory.create({ projectPitchUuid: pitch.uuid });
+      await expect(service.storeSubmissionAnswers(submission, form, {})).rejects.toThrow(
+        "Submission must have an organisation and project pitch"
+      );
+
+      const organisation = await OrganisationFactory.create();
+      submission = await FormSubmissionFactory.create({ organisationUuid: organisation.uuid });
+      await expect(service.storeSubmissionAnswers(submission, form, {})).rejects.toThrow(
+        "Submission must have an organisation and project pitch"
+      );
+    });
+
+    it("updates content in the org and pitch", async () => {
+      const pitch = await ProjectPitchFactory.create();
+      const org = await OrganisationFactory.create();
+      const submission = await FormSubmissionFactory.create({
+        organisationUuid: org.uuid,
+        projectPitchUuid: pitch.uuid
+      });
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.form(form).create();
+      const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
+      const orgQuestion = await FormQuestionFactory.section(section).create({
+        inputType: "text",
+        linkedFieldKey: "org-name"
+      });
+      const pitchQuestion = await FormQuestionFactory.section(section).create({
+        inputType: "text",
+        linkedFieldKey: "pro-pit-name"
+      });
+      await service.storeSubmissionAnswers(submission, form, {
+        [conditional.uuid]: true,
+        [orgQuestion.uuid]: "Org Name",
+        [pitchQuestion.uuid]: "Pitch Name"
+      });
+
+      await org.reload();
+      await pitch.reload();
+      expect(submission.answers).toMatchObject({ [conditional.uuid]: true });
+      expect(org.name).toEqual("Org Name");
+      expect(pitch.projectName).toEqual("Pitch Name");
+    });
+  });
+
   describe("getDtoForEntity", () => {
     it("translates the form title", async () => {
       let form = await FormFactory.create();

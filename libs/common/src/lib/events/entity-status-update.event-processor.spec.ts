@@ -3,12 +3,16 @@ import * as FakeTimers from "@sinonjs/fake-timers";
 import { EventService } from "./event.service";
 import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import {
+  ApplicationFactory,
   EntityFormFactory,
   FinancialReportFactory,
+  FormFactory,
   FormQuestionFactory,
   FormSectionFactory,
+  FormSubmissionFactory,
   NurseryReportFactory,
   ProjectFactory,
+  ProjectPitchFactory,
   ProjectReportFactory,
   SiteReportFactory,
   TaskFactory,
@@ -27,12 +31,16 @@ import {
   AWAITING_APPROVAL,
   DUE,
   NEEDS_MORE_INFORMATION,
+  REJECTED,
   ReportStatus,
   STARTED
 } from "@terramatch-microservices/database/constants/status";
 import { InternalServerErrorException } from "@nestjs/common";
 import { mockUserId } from "../util/testing";
 import { getLinkedFieldConfig } from "../linkedFields";
+import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
+import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 
 describe("EntityStatusUpdate EventProcessor", () => {
   let eventService: DeepMocked<EventService>;
@@ -62,7 +70,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     const project = await ProjectFactory.create();
     await new EntityStatusUpdate(eventService, project).handle();
     expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-      "statusUpdate",
+      EntityStatusUpdateEmail.NAME,
       expect.objectContaining({ type: "projects", id: project.id })
     );
   });
@@ -263,7 +271,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
       await new EntityStatusUpdate(eventService, financialReport).handle();
 
       expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-        "statusUpdate",
+        EntityStatusUpdateEmail.NAME,
         expect.objectContaining({ type: "financialReports", id: financialReport.id })
       );
     });
@@ -328,6 +336,64 @@ describe("EntityStatusUpdate EventProcessor", () => {
         `Awaiting Review: ${getLinkedFieldConfig("site-rep-survival-calculation")?.field.label}`
       );
       expect(pmEmailSpy).toHaveBeenCalledWith("siteReports", expect.objectContaining({ uuid: siteReport.uuid }));
+    });
+  });
+
+  describe("handleFormSubmission", () => {
+    it("should create an audit status", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const feedback = faker.lorem.sentence();
+      const submission = await FormSubmissionFactory.create({ status: REJECTED, feedback });
+      await new EntityStatusUpdate(eventService, submission).handle();
+
+      const auditStatus = await AuditStatus.for(submission).findOne({ order: [["createdAt", "DESC"]] });
+      expect(auditStatus).toMatchObject({
+        createdBy: user.emailAddress,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        comment: feedback
+      });
+    });
+
+    it("should handle submit for approval", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const application = await ApplicationFactory.create();
+      const pitch = await ProjectPitchFactory.create();
+      const form = await FormFactory.create({ submissionMessage: faker.lorem.sentence() });
+      const submission = await FormSubmissionFactory.create({
+        applicationId: application.id,
+        projectPitchUuid: pitch.uuid,
+        formId: form.uuid,
+        status: "awaiting-approval"
+      });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      await application.reload();
+      await pitch.reload();
+
+      expect(application.updatedBy).toBe(user.id);
+      expect(pitch.status).toBe("active");
+      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
+        ApplicationSubmittedEmail.NAME,
+        expect.objectContaining({ message: form.submissionMessage, userId: user.id })
+      );
+    });
+
+    it("should handle admin feedback", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const submission = await FormSubmissionFactory.create({ status: "rejected" });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
+        FormSubmissionFeedbackEmail.NAME,
+        expect.objectContaining({ submissionId: submission.id })
+      );
     });
   });
 });

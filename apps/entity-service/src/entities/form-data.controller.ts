@@ -27,7 +27,7 @@ export class FormDataController {
   @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
   @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
-  async formDataGet(@Param() { entity, uuid }: SpecificEntityDto) {
+  async get(@Param() { entity, uuid }: SpecificEntityDto) {
     const model = await this.entitiesService.createEntityProcessor(entity).findOne(uuid);
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
     await this.policyService.authorize("read", model);
@@ -44,7 +44,7 @@ export class FormDataController {
   @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })
   @ExceptionResponse(NotFoundException, { description: "Entity or associated form not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to access this resource" })
-  async formDataUpdate(@Param() { entity, uuid }: SpecificEntityDto, @Body() payload: UpdateFormDataBody) {
+  async update(@Param() { entity, uuid }: SpecificEntityDto, @Body() payload: UpdateFormDataBody) {
     if (payload.data.id !== `${entity}:${uuid}`) {
       throw new BadRequestException("Id in payload does not match entity and uuid from path");
     }
@@ -58,11 +58,9 @@ export class FormDataController {
 
     await this.formDataService.storeEntityAnswers(model, form, payload.data.attributes.answers);
 
-    if (payload.data.attributes.isContinueLater) {
-      const type =
-        model.status === APPROVED || model.status === NEEDS_MORE_INFORMATION ? "change-request-updated" : null;
-      await AuditStatus.createAudit(model, authenticatedUserId(), type, "Updated");
-    }
+    const type =
+      model.status === APPROVED || model.status === NEEDS_MORE_INFORMATION ? "change-request-updated" : "updated";
+    await AuditStatus.ensureRecentAudit(model, authenticatedUserId(), type);
 
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }

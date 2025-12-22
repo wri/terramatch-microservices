@@ -70,8 +70,8 @@ export class SitePolygonCreationService {
     private readonly pointGeometryService: PointGeometryCreationService,
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
     private readonly voronoiService: VoronoiService,
-    private readonly versioningService: SitePolygonVersioningService,
-    private readonly geometryFileProcessingService: GeometryFileProcessingService
+    private readonly geometryFileProcessingService: GeometryFileProcessingService,
+    private readonly versioningService: SitePolygonVersioningService
   ) {}
 
   async createSitePolygons(

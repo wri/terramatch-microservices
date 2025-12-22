@@ -34,7 +34,6 @@ describe("SitePolygonCreationService", () => {
   let pointGeometryService: PointGeometryCreationService;
   let voronoiService: VoronoiService;
   let geometryFileProcessingService: GeometryFileProcessingService;
-  let versioningService: SitePolygonVersioningService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -96,7 +95,6 @@ describe("SitePolygonCreationService", () => {
     pointGeometryService = module.get<PointGeometryCreationService>(PointGeometryCreationService);
     voronoiService = module.get<VoronoiService>(VoronoiService);
     geometryFileProcessingService = module.get<GeometryFileProcessingService>(GeometryFileProcessingService);
-    versioningService = module.get<SitePolygonVersioningService>(SitePolygonVersioningService);
 
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),

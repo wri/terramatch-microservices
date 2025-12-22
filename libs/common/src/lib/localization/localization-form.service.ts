@@ -89,8 +89,8 @@ export class LocalizationFormService {
       "formQuestionId",
       formQuestions.map(question => question.id)
     );
-    // @ts-expect-error - optionsList is a field of FormQuestion
     const optionsListParams = formQuestions
+      // @ts-expect-error - optionsList is a field of FormQuestion
       .map(question => question.optionsList)
       .filter(optionsList => optionsList != null)
       .filter(optionsList => optionsList != "0");

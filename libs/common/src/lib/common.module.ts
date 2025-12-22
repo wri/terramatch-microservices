@@ -76,6 +76,7 @@ export const QUEUES = ["email", "analytics"];
     JwtModule,
     EmailService,
     LocalizationService,
+    LocalizationFormService,
     MediaService,
     TemplateService,
     SlackService,

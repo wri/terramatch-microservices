@@ -228,7 +228,7 @@ describe("LocalizationService", () => {
       (createNativeInstance as jest.Mock).mockImplementation(() => ({
         pushSource: pushSouceMock
       }));
-      await service.pushTranslations();
+      await service.pushNewTranslations();
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });

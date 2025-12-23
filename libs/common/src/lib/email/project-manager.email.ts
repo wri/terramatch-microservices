@@ -89,11 +89,14 @@ export class ProjectManagerEmail extends EmailSender<SpecificEntityData> {
     }
 
     const entityClass = ENTITY_MODELS[this.data.type] as ModelCtor<Project | ProjectReport | Site | Nursery>;
-    const attributes = ["uuid", "name"];
+    const attributes = ["uuid"];
     const include: Includeable[] = [];
     if (this.data.type !== "projects") {
       attributes.push("projectId");
       include.push({ association: "project", attributes: ["name", "uuid"] });
+    }
+    if (this.data.type !== "projectReports") {
+      attributes.push("name");
     }
     return await entityClass.findOne({ where: { id: this.data.id }, attributes, include });
   }

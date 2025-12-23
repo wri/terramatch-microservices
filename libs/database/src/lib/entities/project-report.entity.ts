@@ -268,7 +268,7 @@ export class ProjectReport extends Model<ProjectReport> {
     return this.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 

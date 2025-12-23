@@ -254,7 +254,7 @@ export class FormDataService {
     return this.localizationService.translateFields(translations, form, ["title"]).title;
   }
 
-  private async updateModelFromForm<T extends AnswersModel>(
+  async updateModelFromForm<T extends AnswersModel>(
     answersModel: T,
     form: Form,
     answers: Dictionary<unknown>,

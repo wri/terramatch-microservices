@@ -55,7 +55,7 @@ export class UpdateRequestsController {
       // the update data on the base entity before updating the UpdateRequest.
       if (attributes.status === "approved") {
         getStateMachine(updateRequest, "status")?.validateTransition("approved");
-        await this.formDataService.storeEntityAnswers(model, form, updateRequest.content ?? {});
+        await this.formDataService.updateModelFromForm(model, form, updateRequest.content ?? {});
       }
 
       await updateRequest.update({

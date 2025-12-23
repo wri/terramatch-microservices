@@ -78,7 +78,7 @@ describe("UpdateRequestsController", () => {
       const result = serialize(await controller.updateRequestGet({ entity: "projects", uuid: project.uuid }));
       const resource = result.data as Resource;
       expect(policyService.authorize).toHaveBeenCalledWith("approve", project);
-      expect(resource.id).toBe(`projects:${project.uuid}`);
+      expect(resource.id).toBe(`projects|${project.uuid}`);
       expect(resource.type).toBe("updateRequests");
       expect(resource.attributes).toMatchObject({
         formUuid: form.uuid,
@@ -118,7 +118,7 @@ describe("UpdateRequestsController", () => {
       const updateSpy = jest.spyOn(updateRequest, "update");
       await controller.updateRequestUpdate(
         { entity: "projects", uuid: project.uuid },
-        createPayload(`projects:${project.uuid}`, updateRequest.status)
+        createPayload(`projects|${project.uuid}`, updateRequest.status)
       );
       expect(updateSpy).not.toHaveBeenCalled();
     });
@@ -137,7 +137,7 @@ describe("UpdateRequestsController", () => {
       const updateSpy = jest.spyOn(updateRequest, "update");
       await controller.updateRequestUpdate(
         { entity: "projects", uuid: project.uuid },
-        createPayload(`projects:${project.uuid}`, "needs-more-information", "feedback", ["feedback", "fields"])
+        createPayload(`projects|${project.uuid}`, "needs-more-information", "feedback", ["feedback", "fields"])
       );
       await updateRequest.reload();
       expect(updateSpy).toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe("UpdateRequestsController", () => {
       expect(updateRequest.status).toBe("needs-more-information");
       expect(updateRequest.feedback).toBe("feedback");
       expect(updateRequest.feedbackFields).toMatchObject(["feedback", "fields"]);
-      expect(service.storeEntityAnswers).not.toHaveBeenCalledWith();
+      expect(service.updateModelFromForm).not.toHaveBeenCalledWith();
     });
 
     it("stores the update request answers if the status is approved", async () => {
@@ -161,9 +161,13 @@ describe("UpdateRequestsController", () => {
 
       await controller.updateRequestUpdate(
         { entity: "projects", uuid: project.uuid },
-        createPayload(`projects:${project.uuid}`, "approved")
+        createPayload(`projects|${project.uuid}`, "approved")
       );
-      expect(service.storeEntityAnswers).toHaveBeenCalledWith(project, form, expect.objectContaining({ color: "red" }));
+      expect(service.updateModelFromForm).toHaveBeenCalledWith(
+        project,
+        form,
+        expect.objectContaining({ color: "red" })
+      );
     });
   });
 });

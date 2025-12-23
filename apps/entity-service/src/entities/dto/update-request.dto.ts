@@ -5,7 +5,7 @@ import { IsIn, IsOptional } from "class-validator";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { FeedbackFieldsAttributes } from "./entity-update.dto";
 
-@JsonApiDto({ type: "updateRequests" })
+@JsonApiDto({ type: "updateRequests", id: "string" })
 export class UpdateRequestDto {
   @ApiProperty()
   formUuid: string;
@@ -32,5 +32,5 @@ export class UpdateRequestAttributes extends FeedbackFieldsAttributes {
 }
 
 export class UpdateRequestUpdateBody extends JsonApiBodyDto(
-  class UpdateRequestData extends JsonApiDataDto({ type: "updateRequests" }, UpdateRequestAttributes) {}
+  class UpdateRequestData extends JsonApiDataDto({ type: "updateRequests", id: "string" }, UpdateRequestAttributes) {}
 ) {}

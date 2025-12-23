@@ -41,7 +41,7 @@ export class UpdateRequestsController {
     @Param() { entity, uuid }: SpecificEntityDto,
     @Body() updatePayload: UpdateRequestUpdateBody
   ) {
-    if (updatePayload.data.type !== "updateRequests" || updatePayload.data.id !== `${entity}:${uuid}`) {
+    if (updatePayload.data.type !== "updateRequests" || updatePayload.data.id !== `${entity}|${uuid}`) {
       throw new BadRequestException("Payload type and ID do not match the request path");
     }
 
@@ -90,7 +90,7 @@ export class UpdateRequestsController {
     model: EntityModel
   ) {
     return document.addData(
-      `${entity}:${model.uuid}`,
+      `${entity}|${model.uuid}`,
       populateDto<UpdateRequestDto>(new UpdateRequestDto(), {
         formUuid: form.uuid,
         status: updateRequest.status,

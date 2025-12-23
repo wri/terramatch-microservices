@@ -136,7 +136,7 @@ export class SubmissionsController {
     return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user.locale);
   }
 
-  @Put()
+  @Put(":uuid")
   @ApiOperation({ operationId: "submissionUpdate", summary: "Update form submission." })
   @JsonApiResponse(FormDataDto)
   @ExceptionResponse(BadRequestException, { description: "Request params are invalid" })

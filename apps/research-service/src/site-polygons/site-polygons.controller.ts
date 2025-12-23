@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   Param,
@@ -806,9 +807,6 @@ export class SitePolygonsController {
     await this.policyService.authorize("create", SitePolygon);
 
     const userId = this.policyService.userId as number;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
@@ -830,10 +828,14 @@ export class SitePolygonsController {
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
 
-    document.addData(
-      newVersion.uuid,
-      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
-    );
+    const associationData = associations[newVersion.id];
+    if (associationData == null) {
+      throw new InternalServerErrorException(
+        `Failed to load associations for newly created site polygon version ${newVersion.uuid}`
+      );
+    }
+
+    document.addData(newVersion.uuid, await this.sitePolygonService.buildLightDto(newVersion, associationData));
 
     this.logger.log(`Created version ${newVersion.uuid} from site polygon ${sitePolygonUuid} by user ${userId}`);
 

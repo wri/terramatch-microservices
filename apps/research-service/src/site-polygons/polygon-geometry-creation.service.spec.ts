@@ -344,13 +344,9 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest
-        .spyOn(service, "batchPrepareGeometries")
-        .mockResolvedValue([
-          { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 }
-        ]);
-
       jest.spyOn(service, "bulkInsertGeometries").mockResolvedValue(["uuid-1"]);
+
+      mockSequelize.query.mockResolvedValue([{ uuid: "uuid-1", area_hectares: 10.5 }]);
 
       const result = await service.createGeometriesFromFeatures(geometries, 1);
 
@@ -385,23 +381,18 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest.spyOn(service, "batchPrepareGeometries").mockResolvedValue([
-        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 },
-        { uuid: "uuid-2", geomJson: '{"type":"Polygon","coordinates":[[[2,2],[2,3],[3,3],[3,2],[2,2]]]}', area: 8.3 }
-      ]);
-
       jest.spyOn(service, "bulkInsertGeometries").mockResolvedValue(["uuid-1", "uuid-2"]);
+
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: 10.5 },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
 
       const result = await service.createGeometriesFromFeatures(geometries, 1);
 
       expect(result.uuids).toHaveLength(2);
       expect(result.areas).toHaveLength(2);
-      expect(service.batchPrepareGeometries).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ type: "Polygon" }),
-          expect.objectContaining({ type: "Polygon" })
-        ])
-      );
+      expect(result.areas).toEqual([10.5, 8.3]);
     });
 
     it("should handle mixed Polygon and MultiPolygon geometries", async () => {
@@ -434,16 +425,17 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest.spyOn(service, "batchPrepareGeometries").mockResolvedValue([
-        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 },
-        { uuid: "uuid-2", geomJson: '{"type":"Polygon","coordinates":[[[2,2],[2,3],[3,3],[3,2],[2,2]]]}', area: 8.3 }
-      ]);
-
       jest.spyOn(service, "bulkInsertGeometries").mockResolvedValue(["uuid-1", "uuid-2"]);
+
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: 10.5 },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
 
       const result = await service.createGeometriesFromFeatures(geometries, 1);
 
       expect(result.uuids).toHaveLength(2);
+      expect(result.areas).toHaveLength(2);
     });
   });
 

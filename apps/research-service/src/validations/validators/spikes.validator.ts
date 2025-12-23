@@ -1,6 +1,6 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
-import { NotFoundException, Logger } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { Geometry } from "geojson";
 
 interface GeoJSONPolygon {

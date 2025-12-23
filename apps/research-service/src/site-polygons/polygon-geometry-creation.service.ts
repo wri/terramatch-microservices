@@ -103,14 +103,72 @@ export class PolygonGeometryCreationService {
       }
     }
 
-    const geometriesWithAreas = await this.batchPrepareGeometries(expandedGeometries);
+    const geometriesWithUuids: GeometryWithArea[] = expandedGeometries.map(geom => ({
+      uuid: uuidv4(),
+      geomJson: JSON.stringify(geom),
+      area: 0
+    }));
 
-    const uuids = await this.bulkInsertGeometries(geometriesWithAreas, createdBy, transaction);
+    const uuids = await this.bulkInsertGeometries(geometriesWithUuids, createdBy, transaction);
+
+    const areas = await this.calculateAreasFromStoredGeometries(uuids, transaction);
 
     return {
       uuids,
-      areas: geometriesWithAreas.map(g => g.area)
+      areas
     };
+  }
+
+  private async calculateAreasFromStoredGeometries(
+    polygonUuids: string[],
+    transaction?: Transaction
+  ): Promise<number[]> {
+    if (polygonUuids.length === 0) {
+      return [];
+    }
+
+    if (PolygonGeometry.sequelize == null) {
+      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
+    }
+
+    try {
+      const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
+      const replacements: Record<string, string> = {};
+      polygonUuids.forEach((uuid, index) => {
+        replacements[`uuid${index}`] = uuid;
+      });
+
+      const orderCases = polygonUuids.map((uuid, index) => `WHEN uuid = :uuid${index} THEN ${index}`).join(" ");
+      const orderByCase = `CASE ${orderCases} END`;
+
+      const query = `
+        SELECT 
+          uuid,
+          ST_Area(geom) * 
+          POW(6378137 * PI() / 180, 2) * 
+          COS(RADIANS(ST_Y(ST_Centroid(geom)))) / 10000 as area_hectares
+        FROM polygon_geometry
+        WHERE uuid IN (${placeholders})
+        ORDER BY ${orderByCase}
+      `;
+
+      const results = (await PolygonGeometry.sequelize.query(query, {
+        replacements,
+        type: QueryTypes.SELECT,
+        transaction
+      })) as Array<{
+        uuid: string;
+        area_hectares: number | null;
+      }>;
+
+      return results.map(result => {
+        const area = result.area_hectares ?? 0;
+        return Number.isNaN(area) ? 0 : area;
+      });
+    } catch (error) {
+      this.logger.error("Error calculating areas from stored geometries", error);
+      throw new InternalServerErrorException("Failed to calculate areas from stored geometries");
+    }
   }
 
   async bulkUpdateSitePolygonCentroids(polygonUuids: string[], transaction?: Transaction): Promise<void> {
@@ -167,6 +225,55 @@ export class PolygonGeometryCreationService {
         replacements[`uuid${index}`] = uuid;
       });
 
+      // First, query to check for potential NaN values before update
+      const checkQuery = `
+        SELECT 
+          sp.poly_id,
+          sp.uuid as site_polygon_uuid,
+          ST_Area(pg.geom) as st_area,
+          ST_Y(ST_Centroid(pg.geom)) as centroid_y,
+          COS(RADIANS(ST_Y(ST_Centroid(pg.geom)))) as cos_value,
+          ST_Area(pg.geom) * 
+          POW(6378137 * PI() / 180, 2) * 
+          COS(RADIANS(ST_Y(ST_Centroid(pg.geom)))) / 10000 as calculated_area
+        FROM site_polygon sp
+        JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
+        WHERE sp.poly_id IN (${placeholders})
+      `;
+
+      const checkResults = (await PolygonGeometry.sequelize.query(checkQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
+        transaction
+      })) as Array<{
+        poly_id: string;
+        site_polygon_uuid: string;
+        st_area: number | null;
+        centroid_y: number | null;
+        cos_value: number | null;
+        calculated_area: number | null;
+      }>;
+
+      // Log potential NaN sources
+      for (const checkResult of checkResults) {
+        const calculatedArea = checkResult.calculated_area;
+        const isNaN = calculatedArea != null && Number.isNaN(calculatedArea);
+        const isNull = calculatedArea == null;
+
+        if (isNaN || isNull) {
+          this.logger.error(`[bulkUpdateSitePolygonAreas] Potential NaN/Null detected before update:`, {
+            poly_id: checkResult.poly_id,
+            site_polygon_uuid: checkResult.site_polygon_uuid,
+            st_area: checkResult.st_area,
+            centroid_y: checkResult.centroid_y,
+            cos_value: checkResult.cos_value,
+            calculated_area: calculatedArea,
+            isNaN,
+            isNull
+          });
+        }
+      }
+
       const query = `
         UPDATE site_polygon sp
         JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
@@ -177,11 +284,57 @@ export class PolygonGeometryCreationService {
         WHERE sp.poly_id IN (${placeholders})
       `;
 
+      this.logger.log(`[bulkUpdateSitePolygonAreas] Updating areas for ${polygonUuids.length} site polygons`, {
+        polygonUuids: polygonUuids.slice(0, 5), // Log first 5 for reference
+        totalCount: polygonUuids.length
+      });
+
       await PolygonGeometry.sequelize.query(query, {
         replacements,
         type: QueryTypes.UPDATE,
         transaction
       });
+
+      // Verify the update didn't create NaN values
+      const verifyQuery = `
+        SELECT 
+          sp.poly_id,
+          sp.uuid as site_polygon_uuid,
+          sp.calc_area
+        FROM site_polygon sp
+        WHERE sp.poly_id IN (${placeholders})
+      `;
+
+      const verifyResults = (await PolygonGeometry.sequelize.query(verifyQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
+        transaction
+      })) as Array<{
+        poly_id: string;
+        site_polygon_uuid: string;
+        calc_area: number | null;
+      }>;
+
+      for (const verifyResult of verifyResults) {
+        const calcArea = verifyResult.calc_area;
+        const isNaN = calcArea != null && (Number.isNaN(calcArea) || String(calcArea).toLowerCase() === "nan");
+        const isNull = calcArea == null;
+
+        if (isNaN) {
+          this.logger.error(`[bulkUpdateSitePolygonAreas] NaN detected after update!`, {
+            poly_id: verifyResult.poly_id,
+            site_polygon_uuid: verifyResult.site_polygon_uuid,
+            calc_area: calcArea,
+            calc_area_type: typeof calcArea,
+            calc_area_string: String(calcArea)
+          });
+        } else if (isNull) {
+          this.logger.warn(`[bulkUpdateSitePolygonAreas] Null calc_area after update:`, {
+            poly_id: verifyResult.poly_id,
+            site_polygon_uuid: verifyResult.site_polygon_uuid
+          });
+        }
+      }
 
       this.logger.log(`Updated areas for ${polygonUuids.length} site polygons`);
     } catch (error) {

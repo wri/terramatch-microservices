@@ -12,7 +12,7 @@ export class ProjectPolygonDto extends HybridSupportDto {
       populateDto<ProjectPolygonDto, ProjectPolygon>(this, projectPolygon, {
         lightResource: true,
         polygonUuid: projectPolygon.polyUuid,
-        projectPitchId: projectPitchUuid ?? null
+        projectPitchUuid: projectPitchUuid ?? null
       });
     }
   }
@@ -35,7 +35,7 @@ export class ProjectPolygonDto extends HybridSupportDto {
     nullable: true,
     type: String
   })
-  projectPitchId: string | null;
+  projectPitchUuid: string | null;
 
   @ApiProperty({
     description: "Entity type (currently only supports ProjectPitch)",

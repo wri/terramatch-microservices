@@ -18,15 +18,11 @@ export class ProjectPolygonCreationService {
     const createdProjectPolygons: ProjectPolygon[] = [];
 
     try {
-      // Extract all features and group by projectPitchId
       const groupedByProjectPitch = this.groupGeometriesByProjectPitchId(request.geometries);
 
-      // Validate all project pitches exist
       await this.validateProjectPitchesExist(Object.keys(groupedByProjectPitch), transaction);
 
-      // Process each project pitch
       for (const [projectPitchUuid, features] of Object.entries(groupedByProjectPitch)) {
-        // Get project pitch to get its ID
         const projectPitch = await ProjectPitch.findOne({
           where: { uuid: projectPitchUuid },
           attributes: ["id", "uuid"],
@@ -37,7 +33,6 @@ export class ProjectPolygonCreationService {
           throw new NotFoundException(`Project pitch not found: ${projectPitchUuid}`);
         }
 
-        // Check if project polygon already exists for this pitch
         const existingProjectPolygon = await ProjectPolygon.findOne({
           where: {
             entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
@@ -52,10 +47,8 @@ export class ProjectPolygonCreationService {
           );
         }
 
-        // Extract geometries from features
         const geometries = features.map(f => f.geometry as Geometry);
 
-        // Create polygon geometries
         const { uuids: polygonUuids } = await this.polygonGeometryService.createGeometriesFromFeatures(
           geometries,
           userId,
@@ -66,10 +59,8 @@ export class ProjectPolygonCreationService {
           throw new BadRequestException("No valid geometries were created");
         }
 
-        // Only use the first polygon (one polygon per project pitch)
         const polygonUuid = polygonUuids[0];
 
-        // Create project polygon
         const projectPolygon = await ProjectPolygon.create(
           {
             polyUuid: polygonUuid,
@@ -93,9 +84,9 @@ export class ProjectPolygonCreationService {
   }
 
   private groupGeometriesByProjectPitchId(geometries: { type: string; features: Feature[] }[]): {
-    [projectPitchId: string]: Feature[];
+    [projectPitchUuid: string]: Feature[];
   } {
-    const grouped: { [projectPitchId: string]: Feature[] } = {};
+    const grouped: { [projectPitchUuid: string]: Feature[] } = {};
 
     for (const geometryCollection of geometries) {
       if (geometryCollection.features == null) {
@@ -103,17 +94,16 @@ export class ProjectPolygonCreationService {
       }
 
       for (const feature of geometryCollection.features) {
-        const projectPitchId =
-          (feature.properties?.projectPitchId as string) ?? (feature.properties?.project_pitch_id as string);
-        if (projectPitchId == null) {
-          throw new BadRequestException("All features must have projectPitchId in properties");
+        const projectPitchUuid = feature.properties?.projectPitchUuid as string;
+        if (projectPitchUuid == null) {
+          throw new BadRequestException("All features must have projectPitchUuid in properties");
         }
 
-        if (grouped[projectPitchId] == null) {
-          grouped[projectPitchId] = [];
+        if (grouped[projectPitchUuid] == null) {
+          grouped[projectPitchUuid] = [];
         }
 
-        grouped[projectPitchId].push(feature);
+        grouped[projectPitchUuid].push(feature);
       }
     }
 

@@ -4,8 +4,7 @@ import { Type } from "class-transformer";
 import { Feature as BaseFeature } from "@terramatch-microservices/database/constants";
 
 export interface FeatureProperties {
-  projectPitchId?: string;
-  project_pitch_id?: string;
+  projectPitchUuid?: string;
 }
 
 export interface Feature extends BaseFeature {
@@ -23,7 +22,7 @@ export class CreateProjectPolygonRequestDto {
   type: "FeatureCollection";
 
   @ApiProperty({
-    description: `Array of features to create. Each feature must have \`projectPitchId\` (camelCase, preferred) or \`project_pitch_id\` (snake_case, backward compatibility) in properties.
+    description: `Array of features to create. Each feature must have \`projectPitchUuid\` in properties.
     Only one polygon per project pitch is supported.`,
     example: [
       {
@@ -41,7 +40,7 @@ export class CreateProjectPolygonRequestDto {
           ]
         },
         properties: {
-          projectPitchId: "550e8400-e29b-41d4-a716-446655440000"
+          projectPitchUuid: "550e8400-e29b-41d4-a716-446655440000"
         }
       }
     ],
@@ -56,7 +55,7 @@ export class CreateProjectPolygonAttributesDto {
   @ApiProperty({
     description: `Array of feature collections containing geometries to create.
     
-    Each feature must have \`projectPitchId\` (camelCase, preferred) or \`project_pitch_id\` (snake_case, backward compatibility) in properties.
+    Each feature must have \`projectPitchUuid\` in properties.
     Only one polygon per project pitch is supported.`,
     type: CreateProjectPolygonRequestDto,
     isArray: true,
@@ -79,7 +78,7 @@ export class CreateProjectPolygonAttributesDto {
               ]
             },
             properties: {
-              projectPitchId: "550e8400-e29b-41d4-a716-446655440000"
+              projectPitchUuid: "550e8400-e29b-41d4-a716-446655440000"
             }
           }
         ]

@@ -8,13 +8,24 @@ import {
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Op } from "sequelize";
 
+/**
+ * Policy for ProjectPolygon entity access control
+ *
+ * Rules:
+ * 1. Admins with "polygons-manage" permission can read, create, update, and delete all project polygons
+ * 2. Framework managers can read and create project polygons for their frameworks
+ * 3. Organization members ("manage-own" permission) can read, create, update, and delete project polygons
+ *    for project pitches belonging to their organization
+ */
 export class ProjectPolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
+    // Admins can perform all operations on all project polygons
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can(["read", "create", "update", "delete"], ProjectPolygon);
       return;
     }
 
+    // Framework managers can read and create project polygons for their frameworks
     if (this.frameworks.length > 0) {
       const fundingProgrammes = await FundingProgramme.findAll({
         where: { frameworkKey: { [Op.in]: this.frameworks } },
@@ -37,6 +48,7 @@ export class ProjectPolygonPolicy extends UserPermissionsPolicy {
       }
     }
 
+    // Organization members can manage (read, create, update, delete) their organization's project polygons
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user?.organisationId != null) {

@@ -33,7 +33,7 @@ export class ProjectPolygonsController {
   @Get()
   @ApiOperation({
     operationId: "getProjectPolygon",
-    summary: "Get project polygon by project pitch ID",
+    summary: "Get project polygon by project pitch UUID",
     description: `Get the project polygon for a specific project pitch. Only one polygon per project pitch is supported.`
   })
   @JsonApiResponse(ProjectPolygonDto)
@@ -43,18 +43,18 @@ export class ProjectPolygonsController {
   async findOne(@Query() query: ProjectPolygonQueryDto) {
     await this.policyService.authorize("read", ProjectPolygon);
 
-    if (query.projectPitchId == null) {
-      throw new BadRequestException("projectPitchId query parameter is required");
+    if (query.projectPitchUuid == null) {
+      throw new BadRequestException("projectPitchUuid query parameter is required");
     }
 
-    const projectPolygon = await this.projectPolygonService.findByProjectPitchUuid(query.projectPitchId);
+    const projectPolygon = await this.projectPolygonService.findByProjectPitchUuid(query.projectPitchUuid);
 
     if (projectPolygon == null) {
-      throw new NotFoundException(`Project polygon not found for project pitch: ${query.projectPitchId}`);
+      throw new NotFoundException(`Project polygon not found for project pitch: ${query.projectPitchUuid}`);
     }
 
     const document = buildJsonApi(ProjectPolygonDto);
-    const dto = await this.projectPolygonService.buildDto(projectPolygon, query.projectPitchId);
+    const dto = await this.projectPolygonService.buildDto(projectPolygon, query.projectPitchUuid);
     document.addData(projectPolygon.uuid, dto);
 
     return document;
@@ -66,7 +66,7 @@ export class ProjectPolygonsController {
     summary: "Create project polygon from GeoJSON",
     description: `Create a project polygon for a project pitch from GeoJSON.
     
-    Each feature must have \`projectPitchId\` (camelCase, preferred) or \`project_pitch_id\` (snake_case, backward compatibility) in properties.
+    Each feature must have \`projectPitchUuid\` in properties.
     Only one polygon per project pitch is supported. If a polygon already exists for the project pitch, the request will fail.`
   })
   @JsonApiResponse(ProjectPolygonDto)

@@ -121,3 +121,13 @@ export class CreateProjectPolygonJsonApiRequestDto {
   @Type(() => CreateProjectPolygonDataDto)
   data: CreateProjectPolygonDataDto;
 }
+
+export class CreateProjectPolygonBatchRequestDto {
+  @ApiProperty({
+    description: "Array of feature collections (supports multi-project-pitch batch creation)",
+    type: CreateProjectPolygonRequestDto,
+    isArray: true
+  })
+  @IsArray()
+  geometries: CreateProjectPolygonRequestDto[];
+}

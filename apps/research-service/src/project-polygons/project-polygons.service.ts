@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op } from "sequelize";
@@ -59,19 +59,18 @@ export class ProjectPolygonsService {
   }
 
   async buildDto(projectPolygon: ProjectPolygon, projectPitchUuid?: string): Promise<ProjectPolygonDto> {
-    const dto = new ProjectPolygonDto(projectPolygon);
+    let finalProjectPitchUuid: string | null = null;
 
-    // Set projectPitchId if we have it
     if (projectPitchUuid != null) {
-      dto.projectPitchId = projectPitchUuid;
+      finalProjectPitchUuid = projectPitchUuid;
     } else if (projectPolygon.entityType === ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH) {
-      // Load it if not provided
       const projectPitch = await ProjectPitch.findByPk(projectPolygon.entityId, {
         attributes: ["uuid"]
       });
-      dto.projectPitchId = projectPitch?.uuid ?? null;
+      finalProjectPitchUuid = projectPitch?.uuid ?? null;
     }
 
+    const dto = new ProjectPolygonDto(projectPolygon, finalProjectPitchUuid);
     return dto;
   }
 

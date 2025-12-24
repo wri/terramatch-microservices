@@ -6,11 +6,13 @@ import { ProjectPolygon } from "@terramatch-microservices/database/entities";
 
 @JsonApiDto({ type: "projectPolygons" })
 export class ProjectPolygonDto extends HybridSupportDto {
-  constructor(projectPolygon?: ProjectPolygon) {
+  constructor(projectPolygon?: ProjectPolygon, projectPitchUuid?: string | null) {
     super();
     if (projectPolygon != null) {
       populateDto<ProjectPolygonDto, ProjectPolygon>(this, projectPolygon, {
-        polygonUuid: projectPolygon.polyUuid
+        lightResource: true,
+        polygonUuid: projectPolygon.polyUuid,
+        projectPitchId: projectPitchUuid ?? null
       });
     }
   }
@@ -49,17 +51,17 @@ export class ProjectPolygonDto extends HybridSupportDto {
 
   @ApiProperty({
     nullable: true,
-    type: String,
-    description: "User who created the project polygon"
+    type: Number,
+    description: "User ID who created the project polygon"
   })
-  createdBy: string | null;
+  createdBy: number | null;
 
   @ApiProperty({
     nullable: true,
-    type: String,
-    description: "User who last modified the project polygon"
+    type: Number,
+    description: "User ID who last modified the project polygon"
   })
-  lastModifiedBy: string | null;
+  lastModifiedBy: number | null;
 
   @ApiProperty({
     nullable: true,

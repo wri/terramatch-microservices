@@ -9,11 +9,7 @@ import { Geometry } from "@terramatch-microservices/database/constants";
 export class ProjectPolygonCreationService {
   constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
 
-  async createProjectPolygons(
-    request: CreateProjectPolygonBatchRequestDto,
-    userId: number,
-    userFullName: string | null
-  ): Promise<ProjectPolygon[]> {
+  async createProjectPolygons(request: CreateProjectPolygonBatchRequestDto, userId: number): Promise<ProjectPolygon[]> {
     if (PolygonGeometry.sequelize == null) {
       throw new BadRequestException("Database connection not available");
     }
@@ -79,9 +75,9 @@ export class ProjectPolygonCreationService {
             polyUuid: polygonUuid,
             entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
             entityId: projectPitch.id,
-            createdBy: userFullName,
-            lastModifiedBy: userFullName
-          },
+            createdBy: userId,
+            lastModifiedBy: userId
+          } as ProjectPolygon,
           { transaction }
         );
 

@@ -18,7 +18,6 @@ import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-poly
 import { ProjectPolygonsService } from "./project-polygons.service";
 import { ProjectPolygonCreationService } from "./project-polygon-creation.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { User } from "@terramatch-microservices/database/entities";
 import { ProjectPolygon } from "@terramatch-microservices/database/entities";
 
 @Controller("research/v3/projectPolygons")
@@ -83,12 +82,6 @@ export class ProjectPolygonsController {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
-    });
-    const userFullName = user?.fullName ?? null;
-
     const geometries = createRequest?.data?.attributes?.geometries;
 
     if (geometries == null || geometries.length === 0) {
@@ -97,11 +90,7 @@ export class ProjectPolygonsController {
 
     const batchRequest = { geometries };
 
-    const createdProjectPolygons = await this.projectPolygonCreationService.createProjectPolygons(
-      batchRequest,
-      userId,
-      userFullName
-    );
+    const createdProjectPolygons = await this.projectPolygonCreationService.createProjectPolygons(batchRequest, userId);
 
     const document = buildJsonApi(ProjectPolygonDto);
 

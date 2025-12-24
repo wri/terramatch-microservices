@@ -90,7 +90,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
@@ -151,7 +153,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
@@ -194,7 +198,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([]);
 
       await expect(service.createProjectPolygons(request, 1)).rejects.toThrow(NotFoundException);
@@ -238,7 +244,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(null);
 
@@ -287,7 +295,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(existingPolygon);
@@ -333,7 +343,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
@@ -379,7 +391,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
 
       await expect(service.createProjectPolygons(request, 1)).rejects.toThrow(BadRequestException);
       await expect(service.createProjectPolygons(request, 1)).rejects.toThrow(
@@ -447,7 +461,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch1, projectPitch2]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValueOnce(projectPitch1).mockResolvedValueOnce(projectPitch2);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
@@ -522,7 +538,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
@@ -595,7 +613,9 @@ describe("ProjectPolygonCreationService", () => {
         rollback: jest.fn()
       };
 
-      jest.spyOn(PolygonGeometry.sequelize!, "transaction").mockResolvedValue(mockTransaction as never);
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);

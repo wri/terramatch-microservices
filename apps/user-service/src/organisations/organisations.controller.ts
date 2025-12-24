@@ -43,7 +43,7 @@ export class OrganisationsController {
     return orgs.reduce(
       (document, org) => document.addData(org.uuid, new OrganisationDto(org)).document,
       buildJsonApi(OrganisationDto, { forceDataArray: true }).addIndex({
-        requestPath: `/organisations/v3${getStableRequestQuery(query)}`,
+        requestPath: `/organisations/v3/organisation${getStableRequestQuery(query)}`,
         total: await builder.paginationTotal(),
         pageNumber: query.page?.number ?? 1
       })

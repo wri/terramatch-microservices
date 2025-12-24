@@ -103,7 +103,7 @@ export class ApplicationsController {
         ).document;
       },
       buildJsonApi(ApplicationDto, { forceDataArray: true }).addIndex({
-        requestPath: `/applications/v3${getStableRequestQuery(query)}`,
+        requestPath: `/applications/v3/applications${getStableRequestQuery(query)}`,
         total: await builder.paginationTotal(),
         pageNumber: query.page?.number ?? 1
       })

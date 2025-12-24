@@ -86,7 +86,7 @@ export class FundingProgrammesController {
     const locale = query.translated === false ? undefined : await User.findLocale(authenticatedUserId());
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
-      requestPath: `/fundingProgrammes/v3${getStableRequestQuery(query)}`
+      requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`
     });
     return await this.formDataService.addFundingProgrammeDtos(document, fundingProgrammes, locale);
   }

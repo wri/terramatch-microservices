@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 
 @Injectable()
 export class ProjectPolygonsService {
@@ -74,7 +74,7 @@ export class ProjectPolygonsService {
     return dto;
   }
 
-  async transaction<TReturn>(callback: (transaction: any) => Promise<TReturn>) {
+  async transaction<TReturn>(callback: (transaction: Transaction) => Promise<TReturn>) {
     if (ProjectPolygon.sequelize == null) {
       throw new InternalServerErrorException("Database connection not available");
     }

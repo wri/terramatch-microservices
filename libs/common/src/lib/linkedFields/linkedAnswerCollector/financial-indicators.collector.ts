@@ -1,7 +1,7 @@
 import { FinancialIndicator, FinancialReport, Media, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
-import { Dictionary } from "lodash";
+import { Dictionary, isEmpty } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { CreationAttributes, Op } from "sequelize";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -115,9 +115,10 @@ export function financialIndicatorsCollector(
 
       if (toCreate.length > 0) await FinancialIndicator.bulkCreate(toCreate);
 
-      const { startMonth, currency } = dtos[0];
-      if (startMonth != null || currency != null) {
-        model.finStartMonth = startMonth;
+      const startMonth = Number(dtos[0].startMonth);
+      const currency = dtos[0].currency;
+      if (!isNaN(startMonth) || !isEmpty(currency)) {
+        model.finStartMonth = isNaN(startMonth) ? 0 : startMonth ?? model.finStartMonth ?? 0;
         model.currency = currency ?? model.currency;
         await model.save();
       }

@@ -225,7 +225,6 @@ export class PolygonGeometryCreationService {
         replacements[`uuid${index}`] = uuid;
       });
 
-      // First, query to check for potential NaN values before update
       const checkQuery = `
         SELECT 
           sp.poly_id,
@@ -254,7 +253,6 @@ export class PolygonGeometryCreationService {
         calculated_area: number | null;
       }>;
 
-      // Log potential NaN sources
       for (const checkResult of checkResults) {
         const calculatedArea = checkResult.calculated_area;
         const isNaN = calculatedArea != null && Number.isNaN(calculatedArea);
@@ -285,7 +283,7 @@ export class PolygonGeometryCreationService {
       `;
 
       this.logger.log(`[bulkUpdateSitePolygonAreas] Updating areas for ${polygonUuids.length} site polygons`, {
-        polygonUuids: polygonUuids.slice(0, 5), // Log first 5 for reference
+        polygonUuids: polygonUuids.slice(0, 5),
         totalCount: polygonUuids.length
       });
 
@@ -295,7 +293,6 @@ export class PolygonGeometryCreationService {
         transaction
       });
 
-      // Verify the update didn't create NaN values
       const verifyQuery = `
         SELECT 
           sp.poly_id,

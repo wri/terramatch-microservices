@@ -100,7 +100,7 @@ export class LinkedAnswerCollector {
   }
   get financialIndicators() {
     return this.getCollector("financialIndicators", () =>
-      financialIndicatorsCollector(new TMLogger("Financial Indicators Collector"))
+      financialIndicatorsCollector(new TMLogger("Financial Indicators Collector"), this.mediaService)
     );
   }
   get disturbanceReportEntries() {

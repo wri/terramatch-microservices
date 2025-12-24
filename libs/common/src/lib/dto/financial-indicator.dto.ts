@@ -4,7 +4,7 @@ import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { AssociationDto } from "./association.dto";
 import { FinancialIndicator } from "@terramatch-microservices/database/entities";
 import { HybridSupportProps } from "./hybrid-support.dto";
-import { MediaDto } from "./media.dto";
+import { EmbeddedMediaDto } from "./media.dto";
 
 @JsonApiDto({ type: "financialIndicators" })
 export class FinancialIndicatorDto extends AssociationDto {
@@ -33,17 +33,13 @@ export class FinancialIndicatorDto extends AssociationDto {
   @ApiProperty()
   year: number;
 
-  @ApiProperty({ type: () => MediaDto, isArray: true, nullable: true })
-  documentation: MediaDto[] | null;
+  @ApiProperty({ type: () => EmbeddedMediaDto, isArray: true, nullable: true })
+  documentation: EmbeddedMediaDto[] | null;
 }
 
 export type FinancialIndicatorMedia = Pick<FinancialIndicatorDto, keyof typeof FinancialIndicator.MEDIA>;
 
-export class EmbeddedFinancialIndicatorDto extends OmitType(FinancialIndicatorDto, [
-  "entityType",
-  "entityUuid",
-  "documentation"
-]) {
+export class EmbeddedFinancialIndicatorDto extends OmitType(FinancialIndicatorDto, ["entityType", "entityUuid"]) {
   constructor(
     financialIndicator: FinancialIndicator,
     additionalProps: AdditionalProps<EmbeddedFinancialIndicatorDto, FinancialIndicator>

@@ -8,6 +8,7 @@ import {
 import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
+  MediaFactory,
   OrganisationFactory
 } from "@terramatch-microservices/database/factories";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
@@ -48,7 +49,8 @@ describe("FinancialIndicatorCollector", () => {
             indicator =>
               new EmbeddedFinancialIndicatorDto(indicator, {
                 startMonth: org.finStartMonth,
-                currency: org.currency
+                currency: org.currency,
+                documentation: []
               })
           )
         }
@@ -63,14 +65,20 @@ describe("FinancialIndicatorCollector", () => {
       await FinancialReportFactory.org(org).create();
       const indicators = await FinancialIndicatorFactory.report(report).createMany(3);
       await Promise.all(indicators.map(indicator => indicator.reload()));
+      const media = await Promise.all(
+        indicators.map(indicator =>
+          MediaFactory.financialIndicator(indicator).create({ collectionName: "documentation" })
+        )
+      );
       await harness.expectAnswers(
         { financialReports: report },
         {
           one: orderBy(indicators, "id").map(
-            indicator =>
+            (indicator, index) =>
               new EmbeddedFinancialIndicatorDto(indicator, {
                 startMonth: report.finStartMonth,
-                currency: report.currency
+                currency: report.currency,
+                documentation: [expect.objectContaining({ uuid: media[index].uuid })]
               })
           )
         }

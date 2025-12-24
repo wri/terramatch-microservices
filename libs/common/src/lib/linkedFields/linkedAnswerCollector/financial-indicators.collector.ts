@@ -1,12 +1,17 @@
-import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, Media, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { CreationAttributes, Op } from "sequelize";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { MediaService } from "../../media/media.service";
+import { EmbeddedMediaDto } from "../../dto/media.dto";
 
-export function financialIndicatorsCollector(logger: LoggerService): RelationResourceCollector {
+export function financialIndicatorsCollector(
+  logger: LoggerService,
+  mediaService: MediaService
+): RelationResourceCollector {
   const questions: Dictionary<string> = {};
 
   return {
@@ -36,16 +41,22 @@ export function financialIndicatorsCollector(logger: LoggerService): RelationRes
         ]
       });
 
-      answers[Object.values(questions)[0]] = financialIndicators.map(
-        financialIndicator =>
-          new EmbeddedFinancialIndicatorDto(financialIndicator, {
-            startMonth:
-              financialIndicator.financialReport?.finStartMonth ??
-              financialIndicator.organisation?.finStartMonth ??
-              null,
-            currency: financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null
-          })
-      );
+      const medias = await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
+      const createMediaDto = (media: Media) =>
+        new EmbeddedMediaDto(media, {
+          url: mediaService.getUrl(media),
+          thumbUrl: mediaService.getUrl(media, "thumbnail")
+        });
+
+      answers[Object.values(questions)[0]] = financialIndicators.map(financialIndicator => {
+        const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
+        return new EmbeddedFinancialIndicatorDto(financialIndicator, {
+          startMonth:
+            financialIndicator.financialReport?.finStartMonth ?? financialIndicator.organisation?.finStartMonth ?? null,
+          currency: financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
+          documentation: documentationMedia.map(createMediaDto)
+        });
+      });
     },
 
     async syncRelation(model, _, answer) {

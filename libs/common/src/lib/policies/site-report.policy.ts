@@ -5,7 +5,7 @@ import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/datab
 
 export class SiteReportPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.includes("view-dashboard")) {
+    if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
       this.builder.can("read", SiteReport);
       return;
     }

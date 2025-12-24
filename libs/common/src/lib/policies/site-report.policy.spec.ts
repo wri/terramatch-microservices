@@ -34,6 +34,13 @@ describe("SiteReportPolicy", () => {
     await expectCannot(service, "delete", new SiteReport());
   });
 
+  it("allows reading all site reports with projects-read permissions", async () => {
+    mockUserId(123);
+    mockPermissions("projects-read");
+    await expectCan(service, "read", new SiteReport());
+    await expectCannot(service, "delete", new SiteReport());
+  });
+
   it("allows managing site reports in your framework", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");

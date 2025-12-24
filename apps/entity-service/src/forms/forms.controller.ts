@@ -21,7 +21,7 @@ import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorat
 import { PolicyService } from "@terramatch-microservices/common";
 import { Form } from "@terramatch-microservices/database/entities";
 
-@Controller("forms/v3")
+@Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
 export class FormsController {
   constructor(private readonly formsService: FormsService, private readonly policyService: PolicyService) {}

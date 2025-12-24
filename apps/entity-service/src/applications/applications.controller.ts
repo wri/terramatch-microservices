@@ -28,7 +28,7 @@ import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorat
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
 
-@Controller("applications/v3")
+@Controller("applications/v3/applications")
 export class ApplicationsController {
   constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
 

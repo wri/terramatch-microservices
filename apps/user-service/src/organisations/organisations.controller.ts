@@ -12,7 +12,7 @@ import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { Op } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
-@Controller("organisations/v3")
+@Controller("organisations/v3/organisations")
 export class OrganisationsController {
   constructor(
     private readonly policyService: PolicyService,

@@ -37,7 +37,7 @@ import { ApplicationDto } from "../applications/dto/application.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
-@Controller("fundingProgrammes/v3")
+@Controller("fundingProgrammes/v3/fundingProgrammes")
 export class FundingProgrammesController {
   constructor(
     private readonly policyService: PolicyService,

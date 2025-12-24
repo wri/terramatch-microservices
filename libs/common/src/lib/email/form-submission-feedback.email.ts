@@ -91,6 +91,7 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
               })) === 0;
         if (isFinalStage) withPrefix("final-stage-approved", feedback, i18nKeys, i18nReplacements);
         else withPrefix("approved", feedback, i18nKeys, i18nReplacements);
+        i18nKeys.cta = "form-submission-approved.cta";
         break;
       }
 

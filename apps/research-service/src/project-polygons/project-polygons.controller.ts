@@ -94,7 +94,6 @@ export class ProjectPolygonsController {
 
     const document = buildJsonApi(ProjectPolygonDto);
 
-    // Load project pitch associations
     const projectPitchMap = await this.projectPolygonService.loadProjectPitchAssociation(createdProjectPolygons);
 
     for (const projectPolygon of createdProjectPolygons) {

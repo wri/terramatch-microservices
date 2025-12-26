@@ -39,6 +39,8 @@ export class Form extends Model<Form> {
     banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
   } as const;
 
+  static readonly I18N_FIELDS = ["title", "subtitle", "description", "submissionMessage"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

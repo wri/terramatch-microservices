@@ -13,6 +13,8 @@ export class FundingProgramme extends Model<FundingProgramme> {
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" }
   } as const;
 
+  static readonly I18N_FIELDS = ["location"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -2,6 +2,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
 import {
+  Form,
   FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
@@ -20,7 +21,8 @@ import { I18nTranslationFactory } from "@terramatch-microservices/database/facto
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import { FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { LocalizationFormService } from "./localization-form.service";
 
 jest.mock("@transifex/native", () => ({
   tx: {
@@ -46,7 +48,11 @@ describe("LocalizationService", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
+      providers: [
+        LocalizationService,
+        LocalizationFormService,
+        { provide: ConfigService, useValue: createMock<ConfigService>() }
+      ]
     }).compile();
 
     service = module.get<LocalizationService>(LocalizationService);
@@ -228,7 +234,19 @@ describe("LocalizationService", () => {
       (createNativeInstance as jest.Mock).mockImplementation(() => ({
         pushSource: pushSouceMock
       }));
-      await service.pushTranslations();
+      await service.pushNewTranslations();
+      expect(pushSouceMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("pushTranslationByForm", () => {
+    it("should push translations by form", async () => {
+      const form = await FormFactory.create();
+      const pushSouceMock = jest.fn();
+      (createNativeInstance as jest.Mock).mockImplementation(() => ({
+        pushSource: pushSouceMock
+      }));
+      await service.pushTranslationByForm(form);
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });
@@ -238,11 +256,12 @@ describe("LocalizationService", () => {
       // Cleaning up the database
       const entities = [
         I18nItem,
-        FormOptionListOption,
+        Form,
+        FormSection,
         FormQuestion,
         FormQuestionOption,
-        FormSection,
         FormTableHeader,
+        FormOptionListOption,
         LocalizationKey,
         FundingProgramme
       ];

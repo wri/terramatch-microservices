@@ -37,7 +37,7 @@ export * from "./investment.entity";
 export * from "./investment-split.entity";
 export * from "./landscape-geometry.entity";
 export * from "./leadership.entity";
-export * from "./localization-key";
+export * from "./localization-key.entity";
 export * from "./media.entity";
 export * from "./model-has-role.entity";
 export * from "./notification.entity";

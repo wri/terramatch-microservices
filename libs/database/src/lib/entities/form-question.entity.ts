@@ -28,6 +28,8 @@ import { InputType } from "../constants/linked-fields";
   }
 })
 export class FormQuestion extends Model<FormQuestion> {
+  static readonly I18N_FIELDS = ["label", "description", "placeholder"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

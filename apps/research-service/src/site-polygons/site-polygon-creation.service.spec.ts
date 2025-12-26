@@ -5,6 +5,7 @@ import { PointGeometryCreationService } from "./point-geometry-creation.service"
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { VoronoiService } from "../voronoi/voronoi.service";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import {
   Site,
   SitePolygon,
@@ -13,8 +14,9 @@ import {
   CriteriaSite
 } from "@terramatch-microservices/database/entities";
 import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
+import { FeatureCollection } from "geojson";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -31,6 +33,7 @@ describe("SitePolygonCreationService", () => {
   let duplicateGeometryValidator: DuplicateGeometryValidator;
   let pointGeometryService: PointGeometryCreationService;
   let voronoiService: VoronoiService;
+  let geometryFileProcessingService: GeometryFileProcessingService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -76,6 +79,12 @@ describe("SitePolygonCreationService", () => {
             createVersion: jest.fn(),
             generateVersionName: jest.fn()
           }
+        },
+        {
+          provide: GeometryFileProcessingService,
+          useValue: {
+            parseGeometryFile: jest.fn()
+          }
         }
       ]
     }).compile();
@@ -85,6 +94,7 @@ describe("SitePolygonCreationService", () => {
     duplicateGeometryValidator = module.get<DuplicateGeometryValidator>(DuplicateGeometryValidator);
     pointGeometryService = module.get<PointGeometryCreationService>(PointGeometryCreationService);
     voronoiService = module.get<VoronoiService>(VoronoiService);
+    geometryFileProcessingService = module.get<GeometryFileProcessingService>(GeometryFileProcessingService);
 
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
@@ -746,6 +756,229 @@ describe("SitePolygonCreationService", () => {
       expect(voronoiService.transformPointsToPolygons).toHaveBeenCalled();
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalled();
       expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+  });
+
+  describe("uploadVersionFromFile", () => {
+    const mockFile = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+    const siteId = "site-uuid";
+    const sitePolygonUuid = "polygon-uuid";
+    const userId = 123;
+    const userFullName = "Test User";
+    const source = "terramatch";
+
+    beforeEach(() => {
+      const transactionMock = {
+        ...mockSequelize,
+        transaction: jest.fn().mockImplementation(async callback => {
+          return await callback(mockTransaction);
+        })
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        get: jest.fn(() => transactionMock),
+        configurable: true
+      });
+    });
+
+    it("should throw NotFoundException when site does not exist", async () => {
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+
+      await expect(
+        service.uploadVersionFromFile(mockFile, sitePolygonUuid, siteId, userId, userFullName, source)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw NotFoundException when base polygon does not exist", async () => {
+      const site = { id: 1, uuid: siteId, name: "Test Site" } as Site;
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+
+      await expect(
+        service.uploadVersionFromFile(mockFile, sitePolygonUuid, siteId, userId, userFullName, source)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw BadRequestException when no features found", async () => {
+      const site = { id: 1, uuid: siteId, name: "Test Site" } as Site;
+      const basePolygon = { id: 1, uuid: sitePolygonUuid, siteUuid: siteId, polyName: "Base" } as SitePolygon;
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
+      jest.spyOn(geometryFileProcessingService, "parseGeometryFile").mockResolvedValue({
+        type: "FeatureCollection",
+        features: []
+      } as FeatureCollection);
+
+      await expect(
+        service.uploadVersionFromFile(mockFile, sitePolygonUuid, siteId, userId, userFullName, source)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when multiple features provided", async () => {
+      const site = { id: 1, uuid: siteId, name: "Test Site" } as Site;
+      const basePolygon = { id: 1, uuid: sitePolygonUuid, siteUuid: siteId, polyName: "Base" } as SitePolygon;
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
+      jest.spyOn(geometryFileProcessingService, "parseGeometryFile").mockResolvedValue({
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", geometry: { type: "Polygon", coordinates: [] }, properties: {} },
+          { type: "Feature", geometry: { type: "Polygon", coordinates: [] }, properties: {} }
+        ]
+      } as FeatureCollection);
+
+      await expect(
+        service.uploadVersionFromFile(mockFile, sitePolygonUuid, siteId, userId, userFullName, source)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should create version with uploaded polyName when different from base", async () => {
+      const site = { id: 1, uuid: siteId, name: "Test Site" } as Site;
+      const basePolygon = { id: 1, uuid: sitePolygonUuid, siteUuid: siteId, polyName: "Base" } as SitePolygon;
+      const newVersion = { uuid: "new-version-uuid", polyName: "New Name" } as SitePolygon;
+
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
+      jest.spyOn(geometryFileProcessingService, "parseGeometryFile").mockResolvedValue({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: { polyName: "New Name" }
+          }
+        ]
+      } as FeatureCollection);
+      jest.spyOn(service, "createSitePolygonVersion").mockResolvedValue(newVersion);
+
+      const result = await service.uploadVersionFromFile(
+        mockFile,
+        sitePolygonUuid,
+        siteId,
+        userId,
+        userFullName,
+        source
+      );
+
+      expect(result).toBe(newVersion);
+      expect(service.createSitePolygonVersion).toHaveBeenCalledWith(
+        sitePolygonUuid,
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "FeatureCollection",
+            features: expect.arrayContaining([
+              expect.objectContaining({
+                properties: expect.objectContaining({ site_id: siteId, polyName: "New Name" })
+              })
+            ])
+          })
+        ]),
+        expect.objectContaining({ polyName: "New Name", poly_name: "New Name" }),
+        "Version created from geometry file upload",
+        userId,
+        userFullName,
+        source,
+        mockTransaction
+      );
+    });
+
+    it("should create version with generated polyName when uploaded name matches base", async () => {
+      const site = { id: 1, uuid: siteId, name: "Test Site" } as Site;
+      const basePolygon = { id: 1, uuid: sitePolygonUuid, siteUuid: siteId, polyName: "Base" } as SitePolygon;
+      const newVersion = { uuid: "new-version-uuid", polyName: "Base (new)" } as SitePolygon;
+
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
+      jest.spyOn(geometryFileProcessingService, "parseGeometryFile").mockResolvedValue({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: { polyName: "Base" }
+          }
+        ]
+      } as FeatureCollection);
+      jest.spyOn(service, "createSitePolygonVersion").mockResolvedValue(newVersion);
+
+      const result = await service.uploadVersionFromFile(
+        mockFile,
+        sitePolygonUuid,
+        siteId,
+        userId,
+        userFullName,
+        source
+      );
+
+      expect(result).toBe(newVersion);
+      expect(service.createSitePolygonVersion).toHaveBeenCalledWith(
+        sitePolygonUuid,
+        expect.any(Array),
+        expect.objectContaining({ polyName: "Base (new)", poly_name: "Base (new)" }),
+        "Version created from geometry file upload",
+        userId,
+        userFullName,
+        source,
+        mockTransaction
+      );
+    });
+
+    it("should throw BadRequestException when database connection is not available", async () => {
+      const site = { id: 1, uuid: siteId, name: "Test Site" } as Site;
+      const basePolygon = { id: 1, uuid: sitePolygonUuid, siteUuid: siteId, polyName: "Base" } as SitePolygon;
+
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(basePolygon);
+      jest.spyOn(geometryFileProcessingService, "parseGeometryFile").mockResolvedValue({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: {}
+          }
+        ]
+      } as FeatureCollection);
+      Object.defineProperty(SitePolygon, "sequelize", {
+        get: jest.fn(() => null),
+        configurable: true
+      });
+
+      await expect(
+        service.uploadVersionFromFile(mockFile, sitePolygonUuid, siteId, userId, userFullName, source)
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

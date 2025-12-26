@@ -829,7 +829,7 @@ export class SitePolygonsController {
 
     document.addData(
       newVersion.uuid,
-      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? { indicators: [] })
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
     );
 
     this.logger.log(`Created version ${newVersion.uuid} from site polygon ${sitePolygonUuid} by user ${userId}`);

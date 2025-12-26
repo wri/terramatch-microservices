@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
   Param,
@@ -828,14 +827,10 @@ export class SitePolygonsController {
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
 
-    const associationData = associations[newVersion.id];
-    if (associationData == null) {
-      throw new InternalServerErrorException(
-        `Failed to load associations for newly created site polygon version ${newVersion.uuid}`
-      );
-    }
-
-    document.addData(newVersion.uuid, await this.sitePolygonService.buildLightDto(newVersion, associationData));
+    document.addData(
+      newVersion.uuid,
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+    );
 
     this.logger.log(`Created version ${newVersion.uuid} from site polygon ${sitePolygonUuid} by user ${userId}`);
 
@@ -882,7 +877,7 @@ export class SitePolygonsController {
 
     document.addData(
       newVersion.uuid,
-      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? { indicators: [] })
     );
 
     this.logger.log(`Created version ${newVersion.uuid} from base ${baseSitePolygonUuid} by user ${userId}`);

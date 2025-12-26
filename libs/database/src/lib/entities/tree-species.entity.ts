@@ -10,13 +10,24 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, Op, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  Op,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { NurseryReport } from "./nursery-report.entity";
 import { ProjectReport } from "./project-report.entity";
+import { LaravelModel, laravelType } from "../types/util";
 
 @Scopes(() => ({
   visible: { where: { hidden: false } },
@@ -38,7 +49,13 @@ import { ProjectReport } from "./project-report.entity";
       speciesableId: { [Op.in]: ids }
     }
   }),
-  collection: (collection: string) => ({ where: { collection } })
+  collection: (collection: string) => ({ where: { collection } }),
+  forModel: (model: LaravelModel) => ({
+    where: {
+      speciesableType: laravelType(model),
+      speciesableId: model.id
+    }
+  })
 }))
 @Table({
   tableName: "v2_tree_species",
@@ -50,7 +67,10 @@ import { ProjectReport } from "./project-report.entity";
     { name: "v2_tree_species_morph_index", fields: ["speciesable_id", "speciesable_type"] }
   ]
 })
-export class TreeSpecies extends Model<TreeSpecies> {
+export class TreeSpecies extends Model<InferAttributes<TreeSpecies>, InferCreationAttributes<TreeSpecies>> {
+  static readonly POLYMORPHIC_TYPE = "speciesableType";
+  static readonly POLYMORPHIC_ID = "speciesableId";
+
   static visible() {
     return chainScope(this, "visible") as typeof TreeSpecies;
   }
@@ -71,14 +91,18 @@ export class TreeSpecies extends Model<TreeSpecies> {
     return chainScope(this, "projectReports", ids) as typeof TreeSpecies;
   }
 
+  static for(model: LaravelModel) {
+    return chainScope(this, "forModel", model) as typeof TreeSpecies;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -99,7 +123,7 @@ export class TreeSpecies extends Model<TreeSpecies> {
   collection: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: boolean;
+  hidden: CreationOptional<boolean>;
 
   @Column(STRING)
   speciesableType: string;

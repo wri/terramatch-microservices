@@ -4,9 +4,9 @@ import { INPUT_TYPES, InputType } from "@terramatch-microservices/database/const
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormQuestion } from "@terramatch-microservices/database/entities";
 import { OptionLabelDto } from "./option-label.dto";
-import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/common/linkedFields";
 import { IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
+import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/database/constants/entities";
 
 export class FormQuestionOptionDto extends OptionLabelDto {
   @ApiProperty()

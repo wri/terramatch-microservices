@@ -1,19 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
 import { UnauthorizedException } from "@nestjs/common";
-import { ModelHasRole, Permission, User } from "@terramatch-microservices/database/entities";
-import { RequestContext } from "nestjs-request-context";
+import { ModelHasRole, User } from "@terramatch-microservices/database/entities";
 import { isArray } from "lodash";
-
-export function mockUserId(userId?: number) {
-  jest
-    .spyOn(RequestContext, "currentContext", "get")
-    .mockReturnValue({ req: { authenticatedUserId: userId }, res: {} });
-}
-
-export function mockPermissions(...permissions: string[]) {
-  Permission.getUserPermissionNames = jest.fn().mockResolvedValue(permissions);
-}
+import { mockUserId } from "../util/testing";
 
 type Subject = Parameters<PolicyService["authorize"]>[1];
 export async function expectCan(service: PolicyService, action: string | string[], subject: Subject) {

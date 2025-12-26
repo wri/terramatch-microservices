@@ -157,11 +157,7 @@ export class PolygonClippingService {
       return [];
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const transaction = await PolygonGeometry.sequelize.transaction();
+    const transaction = await PolygonGeometry.sql.transaction();
 
     try {
       const fixableOverlapPairs = await this.getFixableOverlapPairs(polygonUuids);
@@ -249,10 +245,6 @@ export class PolygonClippingService {
     polygonUuids: string[],
     transaction: Transaction
   ): Promise<Map<string, { uuid: string; name: string; area: number; geojson: string }>> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     const placeholders = polygonUuids.map((_, i) => `:uuid${i}`).join(",");
     const replacements: Record<string, string> = {};
     polygonUuids.forEach((uuid, i) => {
@@ -271,7 +263,7 @@ export class PolygonClippingService {
         AND pg.deleted_at IS NULL
     `;
 
-    const results = (await PolygonGeometry.sequelize.query(query, {
+    const results = (await PolygonGeometry.sql.query(query, {
       replacements,
       type: QueryTypes.SELECT,
       transaction
@@ -290,10 +282,6 @@ export class PolygonClippingService {
     polygonMap: Map<string, { uuid: string; name: string; area: number; geojson: string }>,
     transaction: Transaction
   ): Promise<ClippedPolygonResult[]> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     const polygonOverlaps = new Map<string, Set<string>>();
     const totalAreaRemoved = new Map<string, number>();
 
@@ -367,7 +355,7 @@ export class PolygonClippingService {
     smallerUuids: string[],
     transaction: Transaction
   ): Promise<Polygon | MultiPolygon | null> {
-    if (PolygonGeometry.sequelize == null) {
+    if (PolygonGeometry.sql == null) {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
     }
 
@@ -416,7 +404,7 @@ export class PolygonClippingService {
           replacements.currentGeom = JSON.stringify(currentGeometry);
         }
 
-        const results = (await PolygonGeometry.sequelize.query(query, {
+        const results = (await PolygonGeometry.sql.query(query, {
           replacements,
           type: QueryTypes.SELECT,
           transaction
@@ -503,10 +491,6 @@ export class PolygonClippingService {
   }
 
   async getOriginalGeometriesGeoJson(polygonUuids: string[]): Promise<FeatureCollection<Polygon | MultiPolygon>> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     const placeholders = polygonUuids.map((_, i) => `:uuid${i}`).join(",");
     const replacements: Record<string, string> = {};
     polygonUuids.forEach((uuid, i) => {
@@ -524,7 +508,7 @@ export class PolygonClippingService {
         AND pg.deleted_at IS NULL
     `;
 
-    const results = (await PolygonGeometry.sequelize.query(query, {
+    const results = (await PolygonGeometry.sql.query(query, {
       replacements,
       type: QueryTypes.SELECT
     })) as Array<{ uuid: string; name: string; geojson: string }>;

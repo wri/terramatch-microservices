@@ -10,7 +10,16 @@ import {
   Index,
   Scopes
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { DisturbanceReport } from "./disturbance-report.entity";
 import { chainScope } from "../util/chain-scope";
 
@@ -22,7 +31,10 @@ import { chainScope } from "../util/chain-scope";
 @Scopes(() => ({
   report: (id: number) => ({ where: { disturbanceReportId: id } })
 }))
-export class DisturbanceReportEntry extends Model<DisturbanceReportEntry> {
+export class DisturbanceReportEntry extends Model<
+  InferAttributes<DisturbanceReportEntry>,
+  InferCreationAttributes<DisturbanceReportEntry>
+> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\DisturbanceReportEntry";
 
   static report(id: number) {
@@ -32,11 +44,11 @@ export class DisturbanceReportEntry extends Model<DisturbanceReportEntry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @ForeignKey(() => DisturbanceReport)
   @Column({ type: BIGINT.UNSIGNED })
@@ -61,5 +73,5 @@ export class DisturbanceReportEntry extends Model<DisturbanceReportEntry> {
   value: string | null;
 
   @BelongsTo(() => DisturbanceReport)
-  disturbanceReport: DisturbanceReport;
+  disturbanceReport: CreationOptional<DisturbanceReport>;
 }

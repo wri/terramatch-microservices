@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsOptional } from "class-validator";
-import { IndexQueryDto } from "./index-query.dto";
+import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 
 export class DemographicQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false, isArray: true, description: "project uuid array" })

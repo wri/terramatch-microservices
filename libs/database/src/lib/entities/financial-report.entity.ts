@@ -20,6 +20,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
 import { FinancialIndicator } from "./financial-indicator.entity";
+import { Dictionary } from "lodash";
 
 @Scopes(() => ({
   organisation: (id: number) => ({ where: { organisationId: id } })
@@ -75,9 +76,10 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column(BIGINT.UNSIGNED)
   approvedBy: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @AllowNull
   @Column(DATE)
@@ -103,8 +105,8 @@ export class FinancialReport extends Model<FinancialReport> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(INTEGER)

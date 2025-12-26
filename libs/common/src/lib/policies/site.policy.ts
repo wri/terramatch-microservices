@@ -1,5 +1,6 @@
 import { Project, Site, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
+import { STARTED } from "@terramatch-microservices/database/constants/status";
 
 export class SitePolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -9,10 +10,15 @@ export class SitePolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"], Site, {
-        frameworkKey: { $in: this.frameworks }
-      });
+      this.builder.can(
+        ["read", "delete", "create", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        Site,
+        {
+          frameworkKey: { $in: this.frameworks }
+        }
+      );
     }
+
     if (this.permissions.includes("media-manage")) {
       this.builder.can("uploadFiles", Site);
     }
@@ -29,9 +35,10 @@ export class SitePolicy extends UserPermissionsPolicy {
         ];
 
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "uploadFiles", "deleteFiles", "updateFiles"], Site, {
+          this.builder.can(["read", "delete", "create", "update", "uploadFiles", "deleteFiles", "updateFiles"], Site, {
             projectId: { $in: projectIds }
           });
+          this.builder.can("updateAnswers", Site, { projectId: { $in: projectIds }, status: STARTED });
         }
       }
     }
@@ -41,9 +48,23 @@ export class SitePolicy extends UserPermissionsPolicy {
       if (user != null) {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
-          this.builder.can(["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"], Site, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            [
+              "read",
+              "delete",
+              "create",
+              "update",
+              "approve",
+              "uploadFiles",
+              "deleteFiles",
+              "updateFiles",
+              "updateAnswers"
+            ],
+            Site,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
         }
       }
     }

@@ -9,7 +9,6 @@ import { EntitiesController } from "./entities/entities.controller";
 import { EntityAssociationsController } from "./entities/entity-associations.controller";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { FilesController } from "./entities/files.controller";
-import { FileUploadService } from "./file/file-upload.service";
 import { ProjectPitchesController } from "./entities/project-pitches.controller";
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
@@ -24,6 +23,12 @@ import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
 import { FormsController } from "./forms/forms.controller";
 import { FormsService } from "./forms/forms.service";
+import { FormDataController } from "./entities/form-data.controller";
+import { FormDataService } from "./entities/form-data.service";
+import { UpdateRequestsController } from "./entities/update-requests.controller";
+import { ApplicationsController } from "./applications/applications.controller";
+import { SubmissionsController } from "./forms/submissions.controller";
+import { FundingProgrammesController } from "./fundingProgrammes/funding-programmes.controller";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -39,10 +44,15 @@ import { FormsService } from "./forms/forms.service";
     DemographicsController,
     DisturbancesController,
     EntitiesController,
+    FormDataController, // must be before entity association controller.
+    UpdateRequestsController, // must be before entity association controller.
     EntityAssociationsController,
-    OptionLabelsController,
-    LinkedFieldsController,
-    FormsController
+    OptionLabelsController, // must be before forms controller
+    LinkedFieldsController, // must be before forms controller
+    SubmissionsController, // must be before forms controller
+    FormsController,
+    ApplicationsController,
+    FundingProgrammesController
   ],
   providers: [
     {
@@ -51,13 +61,13 @@ import { FormsService } from "./forms/forms.service";
     },
     EntitiesService,
     TreeService,
-    FileUploadService,
     ProjectPitchService,
     ImpactStoryService,
     TasksService,
     DemographicService,
     DisturbanceService,
-    FormsService
+    FormsService,
+    FormDataService
   ]
 })
 export class AppModule {}

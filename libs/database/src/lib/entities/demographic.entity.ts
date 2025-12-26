@@ -1,10 +1,45 @@
-import { AllowNull, AutoIncrement, Column, HasMany, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  AllowNull,
+  AutoIncrement,
+  Column,
+  HasMany,
+  Model,
+  PrimaryKey,
+  Scopes,
+  Table,
+  Unique
+} from "sequelize-typescript";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { DemographicEntry } from "./demographic-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
 import { DemographicType } from "../types/demographic";
+import { LaravelModel, laravelType } from "../types/util";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  forModels: (models: LaravelModel[]) => ({
+    where: {
+      [Op.or]: models.map(model => ({
+        demographicalType: laravelType(model),
+        demographicalId: model.id
+      }))
+    }
+  }),
+  collection: (collection: string) => ({ where: { collection } }),
+  type: (type: DemographicType) => ({ where: { type } })
+}))
 @Table({
   tableName: "demographics",
   underscored: true,
@@ -14,7 +49,10 @@ import { DemographicType } from "../types/demographic";
     { name: "demographics_morph_index", fields: ["demographical_id", "demographical_type"] }
   ]
 })
-export class Demographic extends Model<Demographic> {
+export class Demographic extends Model<InferAttributes<Demographic>, InferCreationAttributes<Demographic>> {
+  static readonly POLYMORPHIC_TYPE = "demographicalType";
+  static readonly POLYMORPHIC_ID = "demographicalId";
+
   static readonly DEMOGRAPHIC_COUNT_CUTOFF = "2024-07-05";
 
   static readonly WORKDAYS_TYPE = "workdays";
@@ -38,6 +76,18 @@ export class Demographic extends Model<Demographic> {
     Demographic.ASSOCIATES_TYPES
   ] as const;
 
+  static for(models: LaravelModel | LaravelModel[]) {
+    return chainScope(this, "forModels", Array.isArray(models) ? models : [models]) as typeof Demographic;
+  }
+
+  static type(type: DemographicType) {
+    return chainScope(this, "type", type) as typeof Demographic;
+  }
+
+  static collection(collection: string) {
+    return chainScope(this, "collection", collection) as typeof Demographic;
+  }
+
   static idsSubquery(demographicalIds: Literal | number[], demographicalType: string, type?: DemographicType) {
     const query = Subquery.select(Demographic, "id")
       .eq("demographicalType", demographicalType)
@@ -54,15 +104,16 @@ export class Demographic extends Model<Demographic> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column(STRING)
-  type: string;
+  type: DemographicType;
 
+  // Note: this allows null, but the only rows with a null value have been soft deleted.
   @AllowNull
   @Column(STRING)
   collection: string | null;
@@ -75,10 +126,10 @@ export class Demographic extends Model<Demographic> {
 
   @AllowNull
   @Column(TEXT)
-  description: string;
+  description: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: boolean;
+  hidden: CreationOptional<boolean>;
 
   @HasMany(() => DemographicEntry, { constraints: false })
   entries: DemographicEntry[] | null;

@@ -29,11 +29,7 @@ describe("WithinCountryValidator - Integration Tests", () => {
 
     validator = module.get<WithinCountryValidator>(WithinCountryValidator);
 
-    if (WorldCountryGeneralized.sequelize == null) {
-      throw new Error("Sequelize connection not available");
-    }
-
-    await WorldCountryGeneralized.sequelize.query(
+    await WorldCountryGeneralized.sql.query(
       `
       INSERT INTO world_countries_generalized (country, iso, geometry)
       VALUES (

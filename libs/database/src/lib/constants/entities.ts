@@ -3,13 +3,15 @@ import {
   FinancialReport,
   Nursery,
   NurseryReport,
+  Organisation,
   Project,
+  ProjectPitch,
   ProjectReport,
   Site,
   SiteReport,
   SrpReport
 } from "../entities";
-import { ModelCtor } from "sequelize-typescript";
+import { Model, ModelCtor } from "sequelize-typescript";
 import { ModelStatic } from "sequelize";
 import { kebabCase } from "lodash";
 
@@ -25,7 +27,7 @@ export type ReportType = (typeof REPORT_TYPES)[number];
 
 export type ReportModel = ProjectReport | SiteReport | NurseryReport | FinancialReport | DisturbanceReport | SrpReport;
 export type ReportClass<T extends ReportModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
-export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
+export const REPORT_MODELS: Record<ReportType, ReportClass<ReportModel>> = {
   projectReports: ProjectReport,
   siteReports: SiteReport,
   nurseryReports: NurseryReport,
@@ -34,20 +36,45 @@ export const REPORT_MODELS: { [R in ReportType]: ReportClass<ReportModel> } = {
   srpReports: SrpReport
 };
 
+export const NOTHING_TO_REPORT_MODELS = [SiteReport, NurseryReport, FinancialReport, DisturbanceReport, SrpReport];
+export type NothingToReportModel = SiteReport | NurseryReport | FinancialReport | DisturbanceReport | SrpReport;
+
+export const TASK_MODELS = [ProjectReport, SiteReport, NurseryReport, SrpReport];
+export type TaskModel = ProjectReport | SiteReport | NurseryReport | SrpReport;
+
 export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export type EntityModel = ReportModel | Project | Site | Nursery;
 export type EntityClass<T extends EntityModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
-export const ENTITY_MODELS: { [E in EntityType]: EntityClass<EntityModel> } = {
+export const ENTITY_MODELS: Record<EntityType, EntityClass<EntityModel>> = {
   ...REPORT_MODELS,
   projects: Project,
   sites: Site,
   nurseries: Nursery
 };
 
-export const isReport = (entity: EntityModel): entity is ReportModel =>
+export const FORM_MODEL_TYPES = [...ENTITY_TYPES, "organisations", "projectPitches"] as const;
+export type FormModelType = (typeof FORM_MODEL_TYPES)[number];
+
+export type FormModel = EntityModel | Organisation | ProjectPitch;
+export type FormClass<T extends FormModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
+export const FORM_MODELS: Record<FormModelType, FormClass<FormModel>> = {
+  ...ENTITY_MODELS,
+  organisations: Organisation,
+  projectPitches: ProjectPitch
+};
+
+export const formModelType = (model: FormModel) => FORM_MODEL_TYPES.find(type => model instanceof FORM_MODELS[type]);
+
+export const isEntity = (entity: Model): entity is EntityModel =>
+  Object.values(ENTITY_MODELS).find(model => entity instanceof model) != null;
+export const isReport = (entity: Model): entity is ReportModel =>
   Object.values(REPORT_MODELS).find(model => entity instanceof model) != null;
+export const hasNothingToReport = (entity: Model): entity is NothingToReportModel =>
+  NOTHING_TO_REPORT_MODELS.find(model => entity instanceof model) != null;
+export const hasTaskId = (entity: Model): entity is TaskModel =>
+  TASK_MODELS.find(model => entity instanceof model) != null;
 
 /**
  * Get the project ID associated with the given entity, which may be any one of EntityModels defined in this file.

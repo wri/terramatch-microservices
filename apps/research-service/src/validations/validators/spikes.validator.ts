@@ -53,7 +53,7 @@ export class SpikesValidator implements PolygonValidator, GeometryValidator {
 
     return polygonUuids.map(polygonUuid => {
       const geoJson = resultMap.get(polygonUuid);
-      if (geoJson == null || geoJson == undefined) {
+      if (geoJson == null) {
         return {
           polygonUuid,
           valid: false,
@@ -166,9 +166,7 @@ export class SpikesValidator implements PolygonValidator, GeometryValidator {
     const cosAngle = dot / (mag1 * mag2);
     const clampedCos = Math.max(-1, Math.min(1, cosAngle));
     const angleRad = Math.acos(clampedCos);
-    const angleDeg = angleRad * (180 / Math.PI);
-
-    return angleDeg;
+    return angleRad * (180 / Math.PI);
   }
 
   private calculateDistance(point1: number[], point2: number[]): number {

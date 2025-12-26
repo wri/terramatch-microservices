@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
-  FinancialReport,
   FinancialIndicator,
+  FinancialReport,
+  FundingType,
   Media,
-  Organisation,
-  FundingType
+  Organisation
 } from "@terramatch-microservices/database/entities";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -13,17 +13,17 @@ import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  FinancialIndicatorFactory,
   FinancialReportFactory,
-  OrganisationFactory,
-  UserFactory,
   FundingTypeFactory,
-  FinancialIndicatorFactory
+  OrganisationFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FinancialReportProcessor } from "./financial-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { FundingTypeDto } from "../dto/funding-type.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 
 describe("FinancialReportProcessor", () => {
   let processor: FinancialReportProcessor;
@@ -59,7 +59,7 @@ describe("FinancialReportProcessor", () => {
   describe("findOne", () => {
     it("should return a financial report with associations", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
+      const financialReport = await FinancialReportFactory.org(organisation).create();
 
       const result = await processor.findOne(financialReport.uuid);
 
@@ -98,14 +98,8 @@ describe("FinancialReportProcessor", () => {
 
     it("should filter by status", async () => {
       const organisation = await OrganisationFactory.create();
-      const approvedReports = await FinancialReportFactory.createMany(2, {
-        organisationId: organisation.id,
-        status: "approved"
-      });
-      await FinancialReportFactory.createMany(3, {
-        organisationId: organisation.id,
-        status: "started"
-      });
+      const approvedReports = await FinancialReportFactory.org(organisation).createMany(2, { status: "approved" });
+      await FinancialReportFactory.org(organisation).createMany(3, { status: "started" });
 
       await expectFinancialReports(approvedReports, { status: "approved" });
     });
@@ -114,30 +108,30 @@ describe("FinancialReportProcessor", () => {
       const organisation1 = await OrganisationFactory.create();
       const organisation2 = await OrganisationFactory.create();
 
-      const reports1 = await FinancialReportFactory.createMany(2, { organisationId: organisation1.id });
-      await FinancialReportFactory.createMany(3, { organisationId: organisation2.id });
+      const reports1 = await FinancialReportFactory.org(organisation1).createMany(2);
+      await FinancialReportFactory.org(organisation2).createMany(3);
 
       await expectFinancialReports(reports1, { organisationUuid: organisation1.uuid });
     });
 
     it("should search by organisation name", async () => {
       const organisation = await OrganisationFactory.create({ name: "Test Organisation" });
-      const financialReports = await FinancialReportFactory.createMany(2, { organisationId: organisation.id });
-      await FinancialReportFactory.createMany(3);
+      const financialReports = await FinancialReportFactory.org(organisation).createMany(2);
+      await FinancialReportFactory.org().createMany(3);
 
       await expectFinancialReports(financialReports, { search: "Test Organisation" });
     });
 
     it("should search by title", async () => {
-      const financialReport = await FinancialReportFactory.create({ title: "Special Report Title" });
-      await FinancialReportFactory.createMany(3);
+      const financialReport = await FinancialReportFactory.org().create({ title: "Special Report Title" });
+      await FinancialReportFactory.org().createMany(3);
 
       await expectFinancialReports([financialReport], { search: "Special Report Title" });
     });
 
     it("should sort by valid fields", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReports = await FinancialReportFactory.createMany(3, { organisationId: organisation.id });
+      const financialReports = await FinancialReportFactory.org(organisation).createMany(3);
 
       await expectFinancialReports(financialReports, { sort: { field: "createdAt", direction: "ASC" } });
       await expectFinancialReports(financialReports, { sort: { field: "status", direction: "DESC" } });
@@ -145,7 +139,7 @@ describe("FinancialReportProcessor", () => {
 
     it("should sort by organisation name", async () => {
       const organisation = await OrganisationFactory.create({ name: "A Organisation" });
-      const financialReports = await FinancialReportFactory.createMany(3, { organisationId: organisation.id });
+      const financialReports = await FinancialReportFactory.org(organisation).createMany(3);
 
       await expectFinancialReports(financialReports, { sort: { field: "organisationName", direction: "ASC" } });
     });
@@ -158,7 +152,7 @@ describe("FinancialReportProcessor", () => {
 
     it("should handle pagination", async () => {
       const organisation = await OrganisationFactory.create();
-      await FinancialReportFactory.createMany(5, { organisationId: organisation.id });
+      await FinancialReportFactory.org(organisation).createMany(5);
 
       const result = await processor.findMany({ page: { size: 2, number: 1 } });
       expect(result.models.length).toBe(2);
@@ -169,7 +163,7 @@ describe("FinancialReportProcessor", () => {
   describe("getFullDto", () => {
     it("should return full DTO with funding types and financial indicators", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
+      const financialReport = await FinancialReportFactory.org(organisation).create();
 
       await financialReport.reload({ include: [{ association: "organisation" }] });
 
@@ -195,7 +189,7 @@ describe("FinancialReportProcessor", () => {
   describe("getLightDto", () => {
     it("should return light DTO", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
+      const financialReport = await FinancialReportFactory.org(organisation).create();
 
       await financialReport.reload({ include: [{ association: "organisation" }] });
 
@@ -209,8 +203,8 @@ describe("FinancialReportProcessor", () => {
   describe("getFundingTypes", () => {
     it("should return funding types for financial report", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
-      await FundingTypeFactory.createMany(2, { financialReportId: financialReport.id });
+      const financialReport = await FinancialReportFactory.org(organisation).create();
+      await FundingTypeFactory.report(financialReport, organisation).createMany(2);
 
       await financialReport.reload({ include: [{ association: "organisation" }] });
 
@@ -229,10 +223,8 @@ describe("FinancialReportProcessor", () => {
   describe("getFinancialIndicatorsWithMedia", () => {
     it("should return financial indicators with media", async () => {
       const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({ organisationId: organisation.id });
-      await FinancialIndicatorFactory.createMany(2, {
-        financialReportId: financialReport.id
-      });
+      const financialReport = await FinancialReportFactory.org(organisation).create();
+      await FinancialIndicatorFactory.report(financialReport).createMany(2);
 
       const mockMedia = { findAll: jest.fn().mockResolvedValue([]) };
       jest.spyOn(Media, "for").mockReturnValue(mockMedia as unknown as ReturnType<typeof Media.for>);
@@ -243,263 +235,6 @@ describe("FinancialReportProcessor", () => {
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(Promise);
-    });
-  });
-
-  describe("processReportSpecificLogic", () => {
-    it("should update organisation fields when financial report is approved", async () => {
-      const organisation = await OrganisationFactory.create({
-        finStartMonth: null,
-        currency: undefined
-      });
-      const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id,
-        finStartMonth: 3,
-        currency: "USD",
-        status: "awaiting-approval"
-      });
-
-      await processor.update(financialReport, { status: "approved" });
-
-      await organisation.reload();
-      expect(organisation.finStartMonth).toBe(3);
-      expect(organisation.currency).toBe("USD");
-    });
-
-    it("should create new financial indicators when none exist in organisation", async () => {
-      const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id,
-        status: "awaiting-approval"
-      });
-
-      // Create FundingTypes for the financial report
-      await FundingTypeFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.uuid,
-        source: "Government Grant",
-        year: 2023,
-        type: "Grant",
-        amount: 10000
-      });
-
-      await FinancialIndicatorFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "revenue",
-        amount: 1000,
-        description: "Test revenue",
-        exchangeRate: 1.0
-      });
-
-      await FinancialIndicatorFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "expenses",
-        amount: 500,
-        description: "Test expenses",
-        exchangeRate: 1.0
-      });
-
-      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
-      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
-
-      await processor.update(financialReport, { status: "approved" });
-
-      expect(mockBulkCreate).toHaveBeenCalledWith([
-        {
-          organisationId: organisation.id,
-          year: 2023,
-          collection: "revenue",
-          amount: 1000,
-          description: "Test revenue",
-          exchangeRate: 1.0
-        },
-        {
-          organisationId: organisation.id,
-          year: 2023,
-          collection: "expenses",
-          amount: 500,
-          description: "Test expenses",
-          exchangeRate: 1.0
-        }
-      ]);
-
-      expect(mockUpdate).not.toHaveBeenCalled();
-
-      mockBulkCreate.mockRestore();
-      mockUpdate.mockRestore();
-    });
-
-    it("should update existing financial indicators when they exist in organisation", async () => {
-      const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id,
-        status: "awaiting-approval"
-      });
-
-      // Create FundingTypes for the financial report
-      await FundingTypeFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.uuid,
-        source: "Private Donation",
-        year: 2023,
-        type: "Donation",
-        amount: 5000
-      });
-
-      const existingIndicator1 = await FinancialIndicatorFactory.create({
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "revenue",
-        amount: 500,
-        description: "Old revenue",
-        exchangeRate: 1.2
-      });
-
-      const existingIndicator2 = await FinancialIndicatorFactory.create({
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "expenses",
-        amount: 200,
-        description: "Old expenses",
-        exchangeRate: 1.1
-      });
-
-      await FinancialIndicatorFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "revenue",
-        amount: 1000,
-        description: "New revenue",
-        exchangeRate: 1.0
-      });
-
-      await FinancialIndicatorFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "expenses",
-        amount: 500,
-        description: "New expenses",
-        exchangeRate: 1.0
-      });
-
-      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
-      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
-
-      await processor.update(financialReport, { status: "approved" });
-
-      expect(mockUpdate).toHaveBeenCalledTimes(2);
-      expect(mockUpdate).toHaveBeenCalledWith(
-        {
-          amount: 1000,
-          description: "New revenue",
-          exchangeRate: 1.0
-        },
-        { where: { id: existingIndicator1.id } }
-      );
-      expect(mockUpdate).toHaveBeenCalledWith(
-        {
-          amount: 500,
-          description: "New expenses",
-          exchangeRate: 1.0
-        },
-        { where: { id: existingIndicator2.id } }
-      );
-
-      expect(mockBulkCreate).not.toHaveBeenCalled();
-
-      mockBulkCreate.mockRestore();
-      mockUpdate.mockRestore();
-    });
-
-    it("should handle mixed scenario with both creating and updating indicators", async () => {
-      const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id,
-        status: "awaiting-approval"
-      });
-
-      const existingIndicator = await FinancialIndicatorFactory.create({
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "revenue",
-        amount: 500,
-        description: "Old revenue",
-        exchangeRate: 1.2
-      });
-
-      await FinancialIndicatorFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "revenue",
-        amount: 1000,
-        description: "New revenue",
-        exchangeRate: 1.0
-      });
-
-      await FinancialIndicatorFactory.create({
-        financialReportId: financialReport.id,
-        organisationId: organisation.id,
-        year: 2023,
-        collection: "expenses",
-        amount: 500,
-        description: "New expenses",
-        exchangeRate: 1.0
-      });
-
-      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
-      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
-
-      await processor.update(financialReport, { status: "approved" });
-
-      expect(mockBulkCreate).toHaveBeenCalledWith([
-        {
-          organisationId: organisation.id,
-          year: 2023,
-          collection: "expenses",
-          amount: 500,
-          description: "New expenses",
-          exchangeRate: 1.0
-        }
-      ]);
-
-      expect(mockUpdate).toHaveBeenCalledTimes(1);
-      expect(mockUpdate).toHaveBeenCalledWith(
-        {
-          amount: 1000,
-          description: "New revenue",
-          exchangeRate: 1.0
-        },
-        { where: { id: existingIndicator.id } }
-      );
-
-      mockBulkCreate.mockRestore();
-      mockUpdate.mockRestore();
-    });
-
-    it("should handle case when no financial indicators exist in report", async () => {
-      const organisation = await OrganisationFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        organisationId: organisation.id,
-        status: "awaiting-approval"
-      });
-
-      const mockBulkCreate = jest.spyOn(FinancialIndicator, "bulkCreate").mockResolvedValue([]);
-      const mockUpdate = jest.spyOn(FinancialIndicator, "update").mockResolvedValue([1]);
-
-      await processor.update(financialReport, { status: "approved" });
-
-      expect(mockBulkCreate).not.toHaveBeenCalled();
-      expect(mockUpdate).not.toHaveBeenCalled();
-
-      mockBulkCreate.mockRestore();
-      mockUpdate.mockRestore();
     });
   });
 });

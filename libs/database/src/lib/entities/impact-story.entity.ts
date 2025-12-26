@@ -1,15 +1,18 @@
-import { BelongsTo, AutoIncrement, Column, Index, Model, PrimaryKey, Table, DataType } from "sequelize-typescript";
+import { AutoIncrement, BelongsTo, Column, DataType, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, DATE, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { MediaConfiguration } from "../constants/media-owners";
+
+type ImpactStoryMedia = "thumbnail";
 
 @Table({ tableName: "impact_stories", underscored: true, paranoid: true })
 export class ImpactStory extends Model<ImpactStory> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ImpactStory";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<ImpactStoryMedia, MediaConfiguration> = {
     thumbnail: { dbCollection: "thumbnail", multiple: false, validation: "logo-image" }
-  } as const;
+  };
 
   @PrimaryKey
   @AutoIncrement

@@ -251,7 +251,7 @@ describe("LocalizationService", () => {
         await entity.truncate();
       }
       // First form question with a label
-      const formQuestion = await FormQuestionFactory.create();
+      const formQuestion = await FormQuestionFactory.section().create();
       const firstLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
       formQuestion.labelId = firstLabelI18nItem.id;
       await formQuestion.save();

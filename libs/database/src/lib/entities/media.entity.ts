@@ -11,7 +11,20 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, ENUM, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DOUBLE,
+  ENUM,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
@@ -20,7 +33,9 @@ import { Dictionary } from "factory-girl-ts";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
-  collection: (collectionName: string) => ({ where: { collectionName } }),
+  collection: (collectionName: string | string[]) => ({
+    where: { collectionName: { [Op.in]: Array.isArray(collectionName) ? collectionName : [collectionName] } }
+  }),
   associations: <T extends LaravelModel>(associations: T | T[]) => {
     const models = Array.isArray(associations) ? associations : [associations];
     return {
@@ -41,9 +56,9 @@ import { Dictionary } from "factory-girl-ts";
     { name: "media_order_column_index", fields: ["order_column"] }
   ]
 })
-export class Media extends Model<Media> {
-  static collection(collectionName: string) {
-    return chainScope(this, "collection", collectionName) as typeof Media;
+export class Media extends Model<InferAttributes<Media>, InferCreationAttributes<Media>> {
+  static collection(collections: string | string[]) {
+    return chainScope(this, "collection", collections) as typeof Media;
   }
 
   /**
@@ -57,11 +72,11 @@ export class Media extends Model<Media> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column(STRING)
   modelType: string;
@@ -94,10 +109,10 @@ export class Media extends Model<Media> {
   lng: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: true })
-  isPublic: boolean;
+  isPublic: CreationOptional<boolean>;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  isCover: boolean;
+  isCover: CreationOptional<boolean>;
 
   @AllowNull
   @Column(ENUM("media", "documents"))
@@ -146,7 +161,7 @@ export class Media extends Model<Media> {
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
   @Column({ type: STRING, defaultValue: "s3" })
-  disk: string;
+  disk: CreationOptional<string>;
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
@@ -159,11 +174,11 @@ export class Media extends Model<Media> {
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
   @JsonColumn({ defaultValue: [] })
-  manipulations: string[];
+  manipulations: CreationOptional<string[]>;
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
   @JsonColumn({ defaultValue: [] })
-  responsiveImages: string[];
+  responsiveImages: CreationOptional<string[]>;
 }

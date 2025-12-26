@@ -1,12 +1,15 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { FormQuestionOption } from "../entities";
+import { FormQuestion, FormQuestionOption } from "../entities";
 import { faker } from "@faker-js/faker";
 import { FormQuestionFactory } from "./form-question.factory";
 
-export const FormQuestionOptionFactory = FactoryGirl.define(FormQuestionOption, async () => ({
-  formQuestionId: FormQuestionFactory.associate("id"),
-  order: faker.number.int({ min: 1, max: 10 }),
-  slug: faker.lorem.slug(),
-  label: faker.lorem.word(),
-  imageUrl: faker.image.url()
-}));
+export const FormQuestionOptionFactory = {
+  forQuestion: (formQuestion?: FormQuestion) =>
+    FactoryGirl.define(FormQuestionOption, async () => ({
+      formQuestionId: formQuestion?.id ?? FormQuestionFactory.section().associate("id"),
+      order: faker.number.int({ min: 1, max: 10 }),
+      slug: faker.lorem.slug(),
+      label: faker.lorem.word(),
+      imageUrl: faker.image.url()
+    }))
+};

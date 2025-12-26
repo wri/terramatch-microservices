@@ -12,6 +12,8 @@ import {
   SiteAndNurseryReminder,
   TaskDue
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { TerrafundReportReminderEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
+import { TerrafundSiteAndNurseryReminderEmail } from "@terramatch-microservices/common/email/terrafund-site-and-nursery-reminder.email";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
@@ -98,7 +100,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
       })
     ).map(({ id }) => id);
 
-    await this.emailQueue.add("terrafundReportReminder", { projectIds });
+    await new TerrafundReportReminderEmail({ projectIds }).sendLater(this.emailQueue);
   }
 
   private async processSiteAndNurseryReminder(siteAndNurseryReminder: SiteAndNurseryReminder) {
@@ -121,6 +123,6 @@ export class ScheduledJobsProcessor extends WorkerHost {
       })
     ).map(({ id }) => id);
 
-    await this.emailQueue.add("terrafundSiteAndNurseryReminder", { projectIds });
+    await new TerrafundSiteAndNurseryReminderEmail({ projectIds }).sendLater(this.emailQueue);
   }
 }

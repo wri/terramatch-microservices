@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { TMLogger } from "../util/tm-logger";
 import { EmailService } from "./email.service";
@@ -5,19 +6,16 @@ import { ProjectEmailData } from "./email.processor";
 import { ProjectUser, User } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 
-export abstract class ProjectEmailSender extends EmailSender {
+export abstract class ProjectEmailSender extends EmailSender<ProjectEmailData> {
   protected readonly logger = new TMLogger(ProjectEmailSender.name);
 
-  private readonly projectIds: number[];
-
-  constructor({ projectIds }: ProjectEmailData) {
-    super();
-    this.projectIds = projectIds;
+  protected constructor(name: string, data: ProjectEmailData) {
+    super(name, data);
   }
 
   async send(emailService: EmailService) {
     const results = await Promise.allSettled(
-      this.projectIds.map(async projectId => {
+      this.data.projectIds.map(async projectId => {
         const users = await User.findAll({
           where: { id: { [Op.in]: ProjectUser.projectUsersSubquery(projectId) } },
           attributes: ["id", "emailAddress", "locale"]

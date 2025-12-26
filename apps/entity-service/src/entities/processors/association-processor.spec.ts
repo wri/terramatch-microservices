@@ -12,10 +12,10 @@ import {
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
-import { DemographicDto, DemographicEntryDto } from "../dto/demographic.dto";
+import { DemographicDto, DemographicEntryDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { TreeSpeciesDto } from "../dto/tree-species.dto";
-import { SeedingDto } from "../dto/seeding.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
@@ -42,28 +42,28 @@ describe("AssociationProcessor", () => {
 
   describe("addDtos", () => {
     it("should include demographic entries", async () => {
-      const { uuid: projectReportUuid, id: demographicalId } = await ProjectReportFactory.create();
-      const { id: demographicId, uuid } = await DemographicFactory.forProjectReportJobs.create({ demographicalId });
+      const projectReport = await ProjectReportFactory.create();
+      const demographic = await DemographicFactory.projectReportJobs(projectReport).create();
       const female = pickApiProperties(
-        await DemographicEntryFactory.create({ demographicId, type: "gender", subtype: "female" }),
+        await DemographicEntryFactory.gender(demographic, "female").create(),
         DemographicEntryDto
       );
       const unknown = pickApiProperties(
-        await DemographicEntryFactory.create({ demographicId, type: "gender", subtype: "unknown" }),
+        await DemographicEntryFactory.gender(demographic, "unknown").create(),
         DemographicEntryDto
       );
       const youth = pickApiProperties(
-        await DemographicEntryFactory.create({ demographicId, type: "age", subtype: "youth" }),
+        await DemographicEntryFactory.age(demographic, "youth").create(),
         DemographicEntryDto
       );
 
       const document = buildJsonApi(DemographicDto, { forceDataArray: true });
-      await service.createAssociationProcessor("projectReports", projectReportUuid, "demographics").addDtos(document);
+      await service.createAssociationProcessor("projectReports", projectReport.uuid, "demographics").addDtos(document);
       const result = document.serialize();
       const data = result.data as Resource[];
       expect(data.length).toEqual(1);
 
-      const dto = data.find(({ id }) => id === uuid)?.attributes as unknown as DemographicDto;
+      const dto = data.find(({ id }) => id === demographic.uuid)?.attributes as unknown as DemographicDto;
       expect(dto).not.toBeNull();
       expect(dto.entries.length).toBe(3);
       expect(dto.entries.find(({ type, subtype }) => type === "gender" && subtype === "female")).toMatchObject(female);
@@ -75,18 +75,18 @@ describe("AssociationProcessor", () => {
       expect(result.meta.indices?.length).toBe(1);
       expect(result.meta.indices?.[0]).toMatchObject({
         resource: "demographics",
-        requestPath: `/entities/v3/projectReports/${projectReportUuid}/demographics`,
+        requestPath: `/entities/v3/projectReports/${projectReport.uuid}/demographics`,
         ids: undefined
       });
     });
 
     it("should include tree species", async () => {
-      const { id: speciesableId, uuid: siteReportUuid } = await SiteReportFactory.create();
-      const species = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(5, { speciesableId });
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({ speciesableId, hidden: true });
+      const siteReport = await SiteReportFactory.create();
+      const species = await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(5);
+      await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({ hidden: true });
 
       const document = buildJsonApi(TreeSpeciesDto, { forceDataArray: true });
-      await service.createAssociationProcessor("siteReports", siteReportUuid, "treeSpecies").addDtos(document);
+      await service.createAssociationProcessor("siteReports", siteReport.uuid, "treeSpecies").addDtos(document);
       const data = document.serialize().data as Resource[];
       expect(data.length).toEqual(species.length);
 
@@ -100,12 +100,12 @@ describe("AssociationProcessor", () => {
     });
 
     it("should include seedings", async () => {
-      const { id: seedableId, uuid: siteReportUuid } = await SiteReportFactory.create();
-      const seedings = await SeedingFactory.forSiteReport.createMany(5, { seedableId });
-      await SeedingFactory.forSiteReport.create({ seedableId, hidden: true });
+      const report = await SiteReportFactory.create();
+      const seedings = await SeedingFactory.siteReport(report).createMany(5);
+      await SeedingFactory.siteReport(report).create({ hidden: true });
 
       const document = buildJsonApi(SeedingDto, { forceDataArray: true });
-      await service.createAssociationProcessor("siteReports", siteReportUuid, "seedings").addDtos(document);
+      await service.createAssociationProcessor("siteReports", report.uuid, "seedings").addDtos(document);
       const data = document.serialize().data as Resource[];
       expect(data.length).toEqual(seedings.length);
 

@@ -4,8 +4,14 @@ import { DisturbanceReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { DisturbanceReportEntryDto } from "./disturbance-report-entry.dto";
-import { MediaDto } from "./media.dto";
+import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import {
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "disturbanceReports" })
 export class DisturbanceReportLightDto extends EntityDto {
@@ -22,11 +28,18 @@ export class DisturbanceReportLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty()
-  status: string;
+  @ApiProperty({
+    description: "Entity status for this disturbance report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
 
-  @ApiProperty()
-  updateRequestStatus: string;
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this disturbance report",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({ nullable: true, type: String, description: "The associated project name" })
   projectName: string | null;
@@ -36,6 +49,9 @@ export class DisturbanceReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation name" })
   organisationName: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation uuid" })
+  organisationUuid: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
   intensity: string | null;
@@ -61,7 +77,7 @@ export type DisturbanceReportMedia = Pick<DisturbanceReportFullDto, keyof typeof
 export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
   constructor(
     disturbanceReport: DisturbanceReport,
-    props?: HybridSupportProps<DisturbanceReportFullDto, DisturbanceReport>
+    props?: HybridSupportProps<DisturbanceReportFullDto, Omit<DisturbanceReport, "feedback" | "feedbackFields">>
   ) {
     super();
     if (disturbanceReport != null && props != null) {

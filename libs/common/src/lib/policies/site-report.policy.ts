@@ -1,6 +1,7 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Project, Site, SiteReport, User } from "@terramatch-microservices/database/entities";
 import { Op, WhereAttributeHash } from "sequelize";
+import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 
 export class SiteReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -11,7 +12,7 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"],
+        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
         SiteReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -36,6 +37,12 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], SiteReport, {
             siteId: { $in: siteIds }
           });
+          this.builder.can("updateAnswers", SiteReport, { siteId: { $in: siteIds }, status: { $in: [STARTED, DUE] } });
+          this.builder.can("updateAnswers", SiteReport, {
+            siteId: { $in: siteIds },
+            status: AWAITING_APPROVAL,
+            nothingToReport: true
+          });
         }
       }
     }
@@ -50,7 +57,7 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           ).map(({ id }) => id);
           if (siteIds.length > 0) {
             this.builder.can(
-              ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles"],
+              ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
               SiteReport,
               {
                 siteId: { $in: siteIds }

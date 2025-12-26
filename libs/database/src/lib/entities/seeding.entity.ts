@@ -9,11 +9,24 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DOUBLE, Op, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DOUBLE,
+  InferAttributes,
+  InferCreationAttributes,
+  Op,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
 import { chainScope } from "../util/chain-scope";
+import { FormModel } from "../constants/entities";
+import { laravelType } from "../types/util";
 
 @Scopes(() => ({
   visible: { where: { hidden: false } },
@@ -21,6 +34,12 @@ import { chainScope } from "../util/chain-scope";
     where: {
       seedableType: SiteReport.LARAVEL_TYPE,
       seedableId: { [Op.in]: ids }
+    }
+  }),
+  entity: (entity: FormModel) => ({
+    where: {
+      seedableType: laravelType(entity),
+      seedableId: entity.id
     }
   })
 }))
@@ -31,9 +50,16 @@ import { chainScope } from "../util/chain-scope";
   // @Index doesn't work with underscored column names
   indexes: [{ name: "v2_seedings_morph_index", fields: ["seedable_id", "seedable_type"] }]
 })
-export class Seeding extends Model<Seeding> {
+export class Seeding extends Model<InferAttributes<Seeding>, InferCreationAttributes<Seeding>> {
+  static readonly POLYMORPHIC_TYPE = "seedableType";
+  static readonly POLYMORPHIC_ID = "seedableId";
+
   static visible() {
     return chainScope(this, "visible") as typeof Seeding;
+  }
+
+  static for(entity: FormModel) {
+    return chainScope(this, "entity", entity) as typeof Seeding;
   }
 
   static siteReports(ids: number[] | Literal) {
@@ -43,11 +69,11 @@ export class Seeding extends Model<Seeding> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -63,7 +89,7 @@ export class Seeding extends Model<Seeding> {
   amount: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: boolean;
+  hidden: CreationOptional<boolean>;
 
   @AllowNull
   @Column(DOUBLE)

@@ -95,34 +95,18 @@ describe("TreeService", () => {
       const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
       const ppcProjectReport = await ProjectReportFactory.create({ projectId: ppcProject.id, frameworkKey: "ppc" });
 
-      const tfProjectTrees = sortedSpeciesDto(
-        await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: tfProject.id })
-      );
+      const tfProjectTrees = sortedSpeciesDto(await TreeSpeciesFactory.projectTreePlanted(tfProject).createMany(3));
 
       // hidden trees are ignored
-      await TreeSpeciesFactory.forProjectTreePlanted.create({
-        speciesableId: tfProject.id,
-        hidden: true
-      });
-      const ppcProjectTrees = sortedSpeciesDto(
-        await TreeSpeciesFactory.forProjectTreePlanted.createMany(3, { speciesableId: ppcProject.id })
-      );
-      const siteTreesPlanted = sortedSpeciesDto(
-        await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, { speciesableId: site.id })
-      );
-      await TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id, hidden: true });
-      const siteNonTrees = sortedSpeciesDto(
-        await TreeSpeciesFactory.forSiteNonTree.createMany(3, { speciesableId: site.id })
-      );
-      const siteSeedings = sortedSpeciesDto(await SeedingFactory.forSite.createMany(3, { seedableId: site.id }));
-      await SeedingFactory.forSite.create({ seedableId: site.id, hidden: true });
-      const nurserySeedlings = sortedSpeciesDto(
-        await TreeSpeciesFactory.forNurserySeedling.createMany(4, { speciesableId: nursery.id })
-      );
-      await TreeSpeciesFactory.forNurserySeedling.create({
-        speciesableId: nursery.id,
-        hidden: true
-      });
+      await TreeSpeciesFactory.projectTreePlanted(tfProject).create({ hidden: true });
+      const ppcProjectTrees = sortedSpeciesDto(await TreeSpeciesFactory.projectTreePlanted(ppcProject).createMany(3));
+      const siteTreesPlanted = sortedSpeciesDto(await TreeSpeciesFactory.siteTreePlanted(site).createMany(2));
+      await TreeSpeciesFactory.siteTreePlanted(site).create({ hidden: true });
+      const siteNonTrees = sortedSpeciesDto(await TreeSpeciesFactory.siteNonTree(site).createMany(3));
+      const siteSeedings = sortedSpeciesDto(await SeedingFactory.site(site).createMany(3));
+      await SeedingFactory.site(site).create({ hidden: true });
+      const nurserySeedlings = sortedSpeciesDto(await TreeSpeciesFactory.nurserySeedling(nursery).createMany(4));
+      await TreeSpeciesFactory.nurserySeedling(nursery).create({ hidden: true });
 
       let result = await service.getEstablishmentTrees("projectReports", tfProjectReport.uuid);
       expect(Object.keys(result).length).toBe(1);
@@ -194,48 +178,32 @@ describe("TreeService", () => {
           amount: (counts[tree.name!]?.amount ?? 0) + (tree.amount ?? 0)
         }
       });
-      const projectReportTreesPlanted = await TreeSpeciesFactory.forProjectReportNurserySeedling.createMany(3, {
-        speciesableId: projectReport1.id
-      });
+      const projectReportTreesPlanted = await TreeSpeciesFactory.projectReportNurserySeedling(
+        projectReport1
+      ).createMany(3);
       projectReportTreesPlanted.push(
-        await TreeSpeciesFactory.forProjectReportNurserySeedling.create({
-          speciesableId: projectReport1.id,
+        await TreeSpeciesFactory.projectReportNurserySeedling(projectReport1).create({
           taxonId: "wfo-projectreporttree"
         })
       );
       // hidden trees should be ignored
-      let hidden = await TreeSpeciesFactory.forProjectReportNurserySeedling.create({
-        speciesableId: projectReport1.id,
-        hidden: true
-      });
+      let hidden = await TreeSpeciesFactory.projectReportNurserySeedling(projectReport1).create({ hidden: true });
 
       let result = await service.getPreviousPlanting("projectReports", projectReport2.uuid);
       expect(Object.keys(result ?? {})).toMatchObject(["nursery-seedling"]);
       expect(result).toMatchObject({ "nursery-seedling": projectReportTreesPlanted.reduce(reduceTreeCounts, {}) });
       expect(Object.keys(result!["nursery-seedling"])).not.toContain(hidden.name);
 
-      const siteReport1TreesPlanted = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, {
-        speciesableId: siteReport1.id
-      });
+      const siteReport1TreesPlanted = await TreeSpeciesFactory.siteReportTreePlanted(siteReport1).createMany(3);
       siteReport1TreesPlanted.push(
-        await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-          speciesableId: siteReport1.id,
-          taxonId: "wfo-sitereporttree"
-        })
+        await TreeSpeciesFactory.siteReportTreePlanted(siteReport1).create({ taxonId: "wfo-sitereporttree" })
       );
       // hidden trees should be ignored
-      hidden = await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: siteReport1.id,
-        hidden: true
-      });
-      const siteReport2TreesPlanted = await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, {
-        speciesableId: siteReport2.id
-      });
-      const siteReport2NonTrees = await TreeSpeciesFactory.forSiteReportNonTree.createMany(2, {
-        speciesableId: siteReport2.id
-      });
-      const siteReport2Seedings = await SeedingFactory.forSiteReport.createMany(2, { seedableId: siteReport2.id });
-      await SeedingFactory.forSiteReport.create({ seedableId: siteReport2.id, hidden: true });
+      hidden = await TreeSpeciesFactory.siteReportTreePlanted(siteReport1).create({ hidden: true });
+      const siteReport2TreesPlanted = await TreeSpeciesFactory.siteReportTreePlanted(siteReport1).createMany(3);
+      const siteReport2NonTrees = await TreeSpeciesFactory.siteReportNonTree(siteReport2).createMany(2);
+      const siteReport2Seedings = await SeedingFactory.siteReport(siteReport2).createMany(2);
+      await SeedingFactory.siteReport(siteReport2).create({ hidden: true });
 
       result = await service.getPreviousPlanting("siteReports", siteReport1.uuid);
       expect(result).toMatchObject({});
@@ -255,14 +223,9 @@ describe("TreeService", () => {
 
       result = await service.getPreviousPlanting("nurseryReports", nurseryReport2.uuid);
       expect(result).toMatchObject({});
-      const nurseryReportSeedlings = await TreeSpeciesFactory.forNurseryReportSeedling.createMany(5, {
-        speciesableId: nurseryReport1.id
-      });
+      const nurseryReportSeedlings = await TreeSpeciesFactory.nurseryReportSeedling(nurseryReport1).createMany(5);
       // hidden trees should be ignored
-      hidden = await TreeSpeciesFactory.forNurseryReportSeedling.create({
-        speciesableId: nurseryReport1.id,
-        hidden: true
-      });
+      hidden = await TreeSpeciesFactory.nurseryReportSeedling(nurseryReport1).create({ hidden: true });
 
       result = await service.getPreviousPlanting("nurseryReports", nurseryReport2.uuid);
       expect(Object.keys(result ?? {})).toMatchObject(["nursery-seedling"]);
@@ -317,35 +280,22 @@ describe("TreeService", () => {
       const task1SiteReports = siteReports.filter(({ taskId }) => taskId === tasks[0].id);
       const task2SiteReports = siteReports.filter(({ taskId }) => taskId === tasks[1].id);
       const coffeeTrees = await Promise.all(
-        [...task1SiteReports, ...task2SiteReports].map(({ id }) =>
-          TreeSpeciesFactory.forSiteReportTreePlanted.create({
-            speciesableId: id,
-            name: "Coffee"
-          })
+        [...task1SiteReports, ...task2SiteReports].map(report =>
+          TreeSpeciesFactory.siteReportTreePlanted(report).create({ name: "Coffee" })
         )
       );
       const seeds = await Promise.all(
-        [...task1SiteReports, ...task2SiteReports].map(({ id }) =>
-          SeedingFactory.forSiteReport.create({
-            seedableId: id,
-            name: "Acacia"
-          })
+        [...task1SiteReports, ...task2SiteReports].map(report =>
+          SeedingFactory.siteReport(report).create({ name: "Acacia" })
         )
       );
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: (
-          await SiteReportFactory.create({
-            siteId: sites[0].id,
-            status: "needs-more-information"
-          })
-        ).id,
-        name: "Coffee"
-      });
-      await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-        speciesableId: task1SiteReports[0].id,
-        name: "Coffee",
-        hidden: true
-      });
+      await TreeSpeciesFactory.siteReportTreePlanted(
+        await SiteReportFactory.create({
+          siteId: sites[0].id,
+          status: "needs-more-information"
+        })
+      ).create({ name: "Coffee" });
+      await TreeSpeciesFactory.siteReportTreePlanted(task1SiteReports[0]).create({ name: "Coffee", hidden: true });
       const polymorphicId = (plant: TreeSpecies | Seeding) =>
         plant instanceof TreeSpecies ? plant.speciesableId : plant.seedableId;
       const plantsInReports = <P extends TreeSpecies | Seeding>(reports: SiteReport[], plants: P[]) =>
@@ -362,9 +312,8 @@ describe("TreeService", () => {
       const nurseryReports = await NurseryReportFactory.createMany(2, { nurseryId: nursery.id, status: "approved" });
       const nurseryCoffee = sumBy(
         await Promise.all(
-          nurseryReports.map(({ id }, index) =>
-            TreeSpeciesFactory.forNurseryReportSeedling.create({
-              speciesableId: id,
+          nurseryReports.map((report, index) =>
+            TreeSpeciesFactory.nurseryReportSeedling(report).create({
               name: "Coffee",
               taxonId: index === 1 ? "wfo-nurseryreporttree" : undefined
             })
@@ -372,19 +321,15 @@ describe("TreeService", () => {
         ),
         "amount"
       );
-      const { amount: nurseryAcacia } = await TreeSpeciesFactory.forNurseryReportSeedling.create({
-        speciesableId: nurseryReports[0].id,
+      const { amount: nurseryAcacia } = await TreeSpeciesFactory.nurseryReportSeedling(nurseryReports[0]).create({
         name: "Acacia"
       });
-      await TreeSpeciesFactory.forNurseryReportSeedling.create({
-        speciesableId: (
-          await NurseryReportFactory.create({
-            nurseryId: nursery.id,
-            status: "awaiting-approval"
-          })
-        ).id,
-        name: "Coffee"
-      });
+      await TreeSpeciesFactory.nurseryReportSeedling(
+        await NurseryReportFactory.create({
+          nurseryId: nursery.id,
+          status: "awaiting-approval"
+        })
+      ).create({ name: "Coffee" });
 
       let result = await service.getAssociatedReportCounts("nurseries", nursery.uuid);
       expect(Object.keys(result)).toEqual(["nursery-seedling"]);

@@ -3,7 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityDto } from "./entity.dto";
 
 @JsonApiDto({ type: "impactStories" })

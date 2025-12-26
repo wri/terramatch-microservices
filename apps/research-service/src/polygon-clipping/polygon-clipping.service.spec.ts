@@ -1369,8 +1369,7 @@ describe("PolygonClippingService", () => {
 
   describe("getFixableOverlapPairs", () => {
     it("should return empty array when no polygon UUIDs provided", async () => {
-      const mockCriteriaRecords: MockCriteriaSiteRecord[] = [];
-      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue(mockCriteriaRecords as unknown as CriteriaSite[]);
+      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([] as CriteriaSite[]);
 
       const result = await service["getFixableOverlapPairs"]([]);
 
@@ -1485,48 +1484,6 @@ describe("PolygonClippingService", () => {
         transaction: jest.fn().mockResolvedValue(mockTransaction),
         query: jest.fn().mockImplementation(() => {
           (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
-          return Promise.reject(
-            new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
-          );
-        })
-      };
-
-      await expect(service.clipPolygons([polygonUuid1, polygonUuid2])).rejects.toThrow(InternalServerErrorException);
-    });
-
-    it("should handle getPolygonsWithGeometry when sequelize becomes null during transaction", async () => {
-      const polygonUuid1 = "polygon-uuid-1";
-      const polygonUuid2 = "polygon-uuid-2";
-
-      const mockCriteriaRecord: MockCriteriaSiteRecord = {
-        polygonId: polygonUuid1,
-        extraInfo: [
-          {
-            polyUuid: polygonUuid2,
-            percentage: 2.5,
-            intersectionArea: 0.05
-          }
-        ]
-      };
-
-      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([mockCriteriaRecord as unknown as CriteriaSite]);
-
-      let callCount = 0;
-      (PolygonGeometry.sequelize as unknown as MockSequelize | null) = {
-        transaction: jest.fn().mockResolvedValue(mockTransaction),
-        query: jest.fn().mockImplementation(() => {
-          callCount++;
-          if (callCount === 1) {
-            (PolygonGeometry.sequelize as unknown as MockSequelize | null) = null;
-            return Promise.resolve([
-              {
-                uuid: polygonUuid1,
-                name: "Polygon 1",
-                area: 0.001,
-                geojson: JSON.stringify(samplePolygon)
-              }
-            ]);
-          }
           return Promise.reject(
             new InternalServerErrorException("PolygonGeometry model is missing sequelize connection")
           );

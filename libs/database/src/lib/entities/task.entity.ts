@@ -9,6 +9,7 @@ import {
   Index,
   Model,
   PrimaryKey,
+  Scopes,
   Table
 } from "sequelize-typescript";
 import { BIGINT, DATE, STRING, UUID, UUIDV4 } from "sequelize";
@@ -20,10 +21,23 @@ import { ProjectReport } from "./project-report.entity";
 import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { SrpReport } from "./srp-report.entity";
+import { chainScope } from "../util/chain-scope";
 
+@Scopes(() => ({
+  project: (projectId: number) => ({ where: { projectId: projectId } }),
+  dueAtDesc: () => ({ order: [["dueAt", "DESC"]] })
+}))
 @Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
 export class Task extends Model<Task> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Tasks\\Task";
+
+  static forProject(projectId: number) {
+    return chainScope(this, "project", projectId) as typeof Task;
+  }
+
+  static dueAtDesc() {
+    return chainScope(this, "dueAtDesc") as typeof Task;
+  }
 
   @PrimaryKey
   @AutoIncrement

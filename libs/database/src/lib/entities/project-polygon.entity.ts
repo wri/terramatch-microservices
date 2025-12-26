@@ -4,8 +4,6 @@ import { PolygonGeometry } from "./polygon-geometry.entity";
 
 @Table({ tableName: "project_polygon", underscored: true, paranoid: true })
 export class ProjectPolygon extends Model<ProjectPolygon> {
-  static readonly LARAVEL_TYPE_PROJECT_PITCH = "App\\Models\\V2\\ProjectPitch";
-
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

@@ -11,18 +11,18 @@ export const ScheduledJobFactory = {
   forTaskDue: FactoryGirl.define(ScheduledJob, async () => ({
     ...(await defaultAttributesFactory()),
     type: TASK_DUE,
-    taskDefinition: { framework_key: "terrafund", due_at: faker.date.soon().toISOString() }
+    taskDefinition: { frameworkKey: "terrafund", dueAt: faker.date.soon().toISOString() }
   })),
 
   forReportReminder: FactoryGirl.define(ScheduledJob, async () => ({
     ...(await defaultAttributesFactory()),
     type: REPORT_REMINDER,
-    taskDefinition: { framework_key: "terrafund" }
+    taskDefinition: { frameworkKey: "terrafund" }
   })),
 
   forSiteAndNurseryReminder: FactoryGirl.define(ScheduledJob, async () => ({
     ...(await defaultAttributesFactory()),
     type: SITE_AND_NURSERY_REMINDER,
-    taskDefinition: { framework_key: "terrafund" }
+    taskDefinition: { frameworkKey: "terrafund" }
   }))
 };

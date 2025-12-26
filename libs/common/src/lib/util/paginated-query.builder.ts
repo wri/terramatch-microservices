@@ -32,12 +32,8 @@ export function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions)
 
 export const MAX_PAGE_SIZE = 100 as const;
 
-export class PaginatedQueryBuilder<T extends Model<T>> {
-  public static forNumberPage<T extends Model<T>>(
-    modelClass: ModelCtor<T>,
-    page?: NumberPage,
-    include?: Includeable[]
-  ) {
+export class PaginatedQueryBuilder<T extends Model> {
+  public static forNumberPage<T extends Model>(modelClass: ModelCtor<T>, page?: NumberPage, include?: Includeable[]) {
     const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = page ?? {};
     if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
       throw new BadRequestException(`Invalid page size: ${pageSize}`);

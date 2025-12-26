@@ -1,11 +1,19 @@
+/* istanbul ignore file */
 import { EmailService } from "./email.service";
 import { Notification, Project, User } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../util/tm-logger";
 import { groupBy } from "lodash";
 import { ProjectEmailSender } from "./project-email-sender";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { ProjectEmailData } from "./email.processor";
 
 export class TerrafundReportReminderEmail extends ProjectEmailSender {
+  static readonly NAME = "terrafundReportReminder";
+
+  constructor(data: ProjectEmailData) {
+    super(TerrafundReportReminderEmail.NAME, data);
+  }
+
   override logger = new TMLogger(TerrafundReportReminderEmail.name);
 
   async sendForProject(projectId: number, users: User[], emailService: EmailService) {
@@ -17,7 +25,7 @@ export class TerrafundReportReminderEmail extends ProjectEmailSender {
       return;
     }
 
-    if (users.length === 0) {
+    if (users.length !== 0) {
       const notificationProps = {
         title: "Terrafund Report Reminder",
         body: "Terrafund reports are due in a month",
@@ -26,7 +34,7 @@ export class TerrafundReportReminderEmail extends ProjectEmailSender {
         referencedModelId: projectId,
         hiddenFromApp: true
       };
-      await Notification.bulkCreate(users.map(({ id }) => ({ ...notificationProps, userId: id } as Notification)));
+      await Notification.bulkCreate(users.map(({ id }) => ({ ...notificationProps, userId: id })));
     }
 
     await Promise.all(

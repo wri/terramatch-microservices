@@ -139,7 +139,7 @@ describe("ImpactStoryService", () => {
         page: { number: 1 },
         search: "test",
         country: "US",
-        organisationType: ["type1"],
+        organisationType: ["non-profit-organization"],
         projectUuid: "project-uuid"
       };
 
@@ -191,7 +191,7 @@ describe("ImpactStoryService", () => {
     it("should handle organisationType filter", async () => {
       const query: ImpactStoryQueryDto = {
         page: { number: 1 },
-        organisationType: ["type1"]
+        organisationType: ["non-profit-organization"]
       };
 
       await service.getImpactStories(query);

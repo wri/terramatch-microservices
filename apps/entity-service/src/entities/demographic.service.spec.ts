@@ -3,6 +3,7 @@ import { Demographic } from "@terramatch-microservices/database/entities";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { DemographicService } from "./demographic.service";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
+import { DemographicFactory } from "@terramatch-microservices/database/factories";
 
 function getDefaultPagination() {
   const params = new DemographicQueryDto();
@@ -29,10 +30,7 @@ describe("DemographicService", () => {
 
   describe("Get Demographics", () => {
     it("returns paginated demographics", async () => {
-      const demographics = [
-        new Demographic({ uuid: "uuid y", type: "type 1" } as Demographic),
-        new Demographic({ uuid: "uuid x", type: "type 2" } as Demographic)
-      ];
+      const demographics = await DemographicFactory.projectReport().createMany(2);
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
@@ -40,13 +38,13 @@ describe("DemographicService", () => {
       const result = await service.getDemographics(params);
 
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].uuid).toBe("uuid y");
-      expect(result.data[1].uuid).toBe("uuid x");
+      expect(result.data[0].uuid).toBe(demographics[0].uuid);
+      expect(result.data[1].uuid).toBe(demographics[1].uuid);
       expect(result.pageNumber).toBe(1);
     });
 
     it("deny unexpected filter", async () => {
-      const demographics = [new Demographic({ uuid: "uuid10", type: "Filtered" } as Demographic)];
+      const demographics = [await DemographicFactory.projectReport().create()];
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
@@ -56,7 +54,7 @@ describe("DemographicService", () => {
     });
 
     it("applies projectUuid filter", async () => {
-      const demographics = [new Demographic({ uuid: "uuid10", type: "Filtered" } as Demographic)];
+      const demographics = [await DemographicFactory.projectReport().create()];
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
@@ -67,7 +65,7 @@ describe("DemographicService", () => {
     });
 
     it("applies projectReportUuid filter", async () => {
-      const demographics = [new Demographic({ uuid: "uuid1", type: "Filtered" } as Demographic)];
+      const demographics = [await DemographicFactory.projectReport().create()];
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
@@ -78,7 +76,7 @@ describe("DemographicService", () => {
     });
 
     it("applies siteReportUuid filter", async () => {
-      const demographics = [new Demographic({ uuid: "uuid44", type: "Filtered" } as Demographic)];
+      const demographics = [await DemographicFactory.projectReport().create()];
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
@@ -89,7 +87,7 @@ describe("DemographicService", () => {
     });
 
     it("deny orders fields", async () => {
-      const demographics = [new Demographic({ uuid: "uuid1", type: "Filtered" } as Demographic)];
+      const demographics = [await DemographicFactory.projectReport().create()];
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
@@ -99,7 +97,7 @@ describe("DemographicService", () => {
     });
 
     it("applies order correctly", async () => {
-      const demographics = [new Demographic({ uuid: "uuid1", type: "Filtered" } as Demographic)];
+      const demographics = [await DemographicFactory.projectReport().create()];
       jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();

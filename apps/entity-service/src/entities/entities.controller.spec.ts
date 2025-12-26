@@ -11,17 +11,9 @@ import { BadRequestException, NotFoundException, UnauthorizedException } from "@
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
-import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
-import { EntityCreateAttributes } from "./dto/entity-create.dto";
 
-class StubProcessor extends EntityProcessor<
-  Project,
-  ProjectLightDto,
-  ProjectFullDto,
-  EntityUpdateData,
-  EntityCreateAttributes
-> {
+export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
   FULL_DTO = ProjectFullDto;
 
@@ -30,7 +22,7 @@ class StubProcessor extends EntityProcessor<
   getFullDto = jest.fn(() =>
     Promise.resolve({
       id: "uuid",
-      dto: new ProjectFullDto(new Project(), {} as HybridSupportProps<ProjectFullDto, Omit<Project, "application">>)
+      dto: new ProjectFullDto(new Project(), {} as ConstructorParameters<typeof ProjectFullDto>[1])
     })
   );
   getLightDto = jest.fn(() => Promise.resolve({ id: faker.string.uuid(), dto: new ProjectLightDto() }));
@@ -191,7 +183,7 @@ describe("EntitiesController", () => {
       processor.findOne.mockResolvedValue(project);
       const { uuid } = project;
       policyService.authorize.mockResolvedValueOnce(undefined);
-      const attributes = { status: "approved", feedback: "foo" };
+      const attributes = { status: "approved", feedback: "foo" } as const;
       await controller.entityUpdate({ entity: "projects", uuid }, { data: { type: "projects", id: uuid, attributes } });
 
       expect(processor.update).toHaveBeenCalledWith(project, attributes);

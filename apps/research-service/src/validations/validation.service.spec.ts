@@ -1174,10 +1174,7 @@ describe("ValidationService", () => {
       };
 
       // Create a validator without validateGeometry method
-      const validatorWithoutGeometry = {
-        validatePolygon: jest.fn()
-      };
-      (VALIDATORS as Record<string, unknown>).SELF_INTERSECTION = validatorWithoutGeometry;
+      (VALIDATORS as Record<string, unknown>).SELF_INTERSECTION = { validatePolygon: jest.fn() };
       (VALIDATORS as Record<string, unknown>).GEOMETRY_TYPE = mockGeometryTypeValidator;
 
       mockGeometryTypeValidator.validateGeometry.mockResolvedValue({

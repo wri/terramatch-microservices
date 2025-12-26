@@ -13,7 +13,6 @@ import {
   UploadedFile,
   UseInterceptors
 } from "@nestjs/common";
-import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
@@ -21,7 +20,6 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { ApiOperation } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
-import { MediaDto } from "./dto/media.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
 import "multer";
@@ -32,13 +30,13 @@ import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-proces
 import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
 import { SingleMediaDto } from "./dto/media-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 
 @Controller("entities/v3/files")
 export class FilesController {
   private logger = new TMLogger(FilesController.name);
 
   constructor(
-    private readonly fileUploadService: FileUploadService,
     private readonly policyService: PolicyService,
     private readonly mediaService: MediaService,
     private readonly entitiesService: EntitiesService
@@ -80,7 +78,14 @@ export class FilesController {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const media = await this.fileUploadService.uploadFile(model, entity, collection, file, payload.data.attributes);
+    const media = await this.mediaService.createMedia(
+      model,
+      entity,
+      this.entitiesService.userId,
+      collection,
+      file,
+      payload.data.attributes
+    );
     return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {

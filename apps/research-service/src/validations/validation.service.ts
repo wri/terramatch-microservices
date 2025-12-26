@@ -140,7 +140,7 @@ export class ValidationService {
     let polygonsWithValidations: string[];
     if (criteriaId !== undefined) {
       const filteredCriteriaData = allCriteriaData.filter(
-        criteria => criteria.criteriaId === criteriaId && criteria.valid === false
+        criteria => criteria.criteriaId === criteriaId && !criteria.valid
       );
       polygonsWithValidations = [...new Set(filteredCriteriaData.map(criteria => criteria.polygonId))];
     } else {
@@ -177,37 +177,6 @@ export class ValidationService {
 
   private getCriteriaIdForValidationType(validationType: ValidationType): CriteriaId {
     return VALIDATION_CRITERIA_IDS[validationType];
-  }
-
-  private async saveValidationResult(
-    polygonUuid: string,
-    criteriaId: CriteriaId,
-    valid: boolean,
-    extraInfo: object | null
-  ): Promise<void> {
-    const existingCriteria = await CriteriaSite.findOne({
-      where: {
-        polygonId: polygonUuid,
-        criteriaId
-      }
-    });
-
-    if (existingCriteria !== null) {
-      const historicRecord = new CriteriaSiteHistoric();
-      historicRecord.polygonId = polygonUuid;
-      historicRecord.criteriaId = criteriaId;
-      historicRecord.valid = existingCriteria.valid;
-      historicRecord.extraInfo = existingCriteria.extraInfo;
-      await historicRecord.save();
-      await existingCriteria.destroy();
-    }
-
-    await CriteriaSite.create({
-      polygonId: polygonUuid,
-      criteriaId: criteriaId,
-      valid: valid,
-      extraInfo: extraInfo
-    } as CriteriaSite);
   }
 
   async getSitePolygonUuids(siteUuid: string): Promise<string[]> {
@@ -408,13 +377,13 @@ export class ValidationService {
       if (polygonCriteria.length === 0) {
         newValidationStatus = null;
       } else {
-        const hasAnyFailing = polygonCriteria.some(c => c.valid === false);
+        const hasAnyFailing = polygonCriteria.some(c => !c.valid);
 
         if (!hasAnyFailing) {
           newValidationStatus = "passed";
         } else {
           const nonExcludedCriteria = polygonCriteria.filter(c => !excludedCriteriaSet.has(c.criteriaId));
-          const hasFailingNonExcluded = nonExcludedCriteria.some(c => c.valid === false);
+          const hasFailingNonExcluded = nonExcludedCriteria.some(c => !c.valid);
 
           newValidationStatus = hasFailingNonExcluded ? "failed" : "partial";
         }
@@ -601,7 +570,7 @@ export class ValidationService {
 
     const dataCriteria = allCriteria.find(c => c.criteriaId === DATA_COMPLETENESS_CRITERIA_ID);
 
-    if (dataCriteria != null && dataCriteria.valid === false && dataCriteria.extraInfo != null) {
+    if (dataCriteria?.extraInfo != null && !dataCriteria.valid) {
       const validationErrors = Array.isArray(dataCriteria.extraInfo) ? dataCriteria.extraInfo : [];
       const numTreesError = validationErrors.find((error: { field?: string }) => error.field === "num_trees");
       const hasOnlyNumTreesError = validationErrors.length === 1 && numTreesError != null;

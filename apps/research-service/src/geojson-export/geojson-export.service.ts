@@ -130,7 +130,6 @@ export class GeoJsonExportService {
         geometryMap.set(result.uuid, geometry);
       } catch (error) {
         this.logger.error(`Failed to parse geometry JSON for polygon uuid: ${result.uuid}`, `${error}`);
-        continue;
       }
     }
 
@@ -218,7 +217,6 @@ export class GeoJsonExportService {
         geometryMap.set(result.uuid, geometry);
       } catch (error) {
         this.logger.error(`Failed to parse geometry JSON for polygon uuid: ${result.uuid}`, `${error}`);
-        continue;
       }
     }
 

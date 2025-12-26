@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing";
 import { LinkedFieldsController } from "./linked-fields.controller";
 import { serialize } from "@terramatch-microservices/common/util/testing";
-import { FORM_MODEL_TYPES } from "@terramatch-microservices/common/linkedFields";
 import { Resource } from "@terramatch-microservices/common/util";
 import { uniq } from "lodash";
+import { FORM_MODEL_TYPES } from "@terramatch-microservices/database/constants/entities";
 
 describe("LinkedFieldsController", () => {
   let controller: LinkedFieldsController;

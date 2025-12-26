@@ -6,7 +6,7 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 import { InternalServerErrorException } from "@nestjs/common";
 
-export class DashboardProjectsQueryBuilder<T extends Model<T> = Project> {
+export class DashboardProjectsQueryBuilder<T extends Model = Project> {
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };

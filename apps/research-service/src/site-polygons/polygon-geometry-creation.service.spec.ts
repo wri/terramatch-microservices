@@ -233,14 +233,12 @@ describe("PolygonGeometryCreationService", () => {
     });
   });
 
-  const createMockPolygonGeometry = (uuid: string, polygon: Polygon, createdBy: number | null): PolygonGeometry => {
-    const mock = {
+  const createMockPolygonGeometry = (uuid: string, polygon: Polygon, createdBy: number | null): PolygonGeometry =>
+    ({
       uuid,
       polygon,
       createdBy
-    } as PolygonGeometry;
-    return mock;
-  };
+    } as PolygonGeometry);
 
   describe("bulkInsertGeometries", () => {
     it("should return empty array for empty input", async () => {
@@ -397,24 +395,6 @@ describe("PolygonGeometryCreationService", () => {
       expect(bulkCreateCall[1]).toEqual({ transaction: mockTransaction });
     });
 
-    it("should throw error if sequelize is not available", async () => {
-      Object.defineProperty(PolygonGeometry, "sequelize", {
-        get: jest.fn(() => null),
-        configurable: true
-      });
-
-      jest.spyOn(service["logger"], "error").mockImplementation();
-
-      const geometriesWithAreas = [
-        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 }
-      ];
-
-      await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(InternalServerErrorException);
-      await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(
-        "PolygonGeometry model is missing sequelize connection"
-      );
-    });
-
     it("should handle database errors and throw InternalServerErrorException", async () => {
       jest.spyOn(service["logger"], "error").mockImplementation(() => {
         // Suppress console output during test
@@ -567,22 +547,6 @@ describe("PolygonGeometryCreationService", () => {
       const result = await service["calculateAreasFromStoredGeometries"]([]);
       expect(result).toEqual([]);
       expect(mockSequelize.query).not.toHaveBeenCalled();
-    });
-
-    it("should throw error if sequelize is not available", async () => {
-      Object.defineProperty(PolygonGeometry, "sequelize", {
-        get: jest.fn(() => null),
-        configurable: true
-      });
-
-      jest.spyOn(service["logger"], "error").mockImplementation();
-
-      await expect(service["calculateAreasFromStoredGeometries"](["uuid-1"])).rejects.toThrow(
-        InternalServerErrorException
-      );
-      await expect(service["calculateAreasFromStoredGeometries"](["uuid-1"])).rejects.toThrow(
-        "PolygonGeometry model is missing sequelize connection"
-      );
     });
 
     it("should calculate areas from stored geometries", async () => {

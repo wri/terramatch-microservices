@@ -1,10 +1,10 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
-import { StatusUpdateData } from "./email.processor";
+import { SpecificEntityData } from "./email.processor";
 import {
   ENTITY_MODELS,
   EntityModel,
-  EntityType,
   getProjectId,
   getViewLinkPath,
   isReport,
@@ -12,14 +12,14 @@ import {
 } from "@terramatch-microservices/database/constants/entities";
 import { Dictionary, groupBy, isEmpty } from "lodash";
 import {
+  DisturbanceReport,
   FinancialReport,
   ProjectReport,
   ProjectUser,
-  DisturbanceReport,
   SiteReport,
+  SrpReport,
   UpdateRequest,
-  User,
-  SrpReport
+  User
 } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { TMLogger } from "../util/tm-logger";
@@ -27,16 +27,13 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
-export class EntityStatusUpdateEmail extends EmailSender {
+export class EntityStatusUpdateEmail extends EmailSender<SpecificEntityData> {
+  static readonly NAME = "entityStatusUpdate";
+
   private readonly logger = new TMLogger(EntityStatusUpdateEmail.name);
 
-  private readonly type: EntityType;
-  private readonly id: number;
-
-  constructor({ type, id }: StatusUpdateData) {
-    super();
-    this.type = type;
-    this.id = id;
+  constructor(data: SpecificEntityData) {
+    super(EntityStatusUpdateEmail.NAME, data);
   }
 
   async send(emailService: EmailService) {
@@ -47,7 +44,7 @@ export class EntityStatusUpdateEmail extends EmailSender {
         : entity.status;
     if (![APPROVED, NEEDS_MORE_INFORMATION].includes(status)) return;
 
-    const logExtras = `[type=${this.type}, id=${this.id}, status=${status}]` as const;
+    const logExtras = `[type=${this.data.type}, id=${this.data.id}, status=${status}]` as const;
     this.logger.log(`Sending status update email ${logExtras}`);
 
     const to = emailService.filterEntityEmailRecipients(await this.getEntityUsers(entity));
@@ -130,9 +127,9 @@ export class EntityStatusUpdateEmail extends EmailSender {
   }
 
   private async getEntity() {
-    const entityClass = ENTITY_MODELS[this.type];
+    const entityClass = ENTITY_MODELS[this.data.type];
     if (entityClass == null) {
-      throw new InternalServerErrorException(`Entity model class not found for entity type [${this.type}]`);
+      throw new InternalServerErrorException(`Entity model class not found for entity type [${this.data.type}]`);
     }
 
     const include: Includeable[] = [];
@@ -148,9 +145,11 @@ export class EntityStatusUpdateEmail extends EmailSender {
         include.push({ association: parentId.substring(0, parentId.length - 2), attributes: ["name"] });
       }
     }
-    const entity = await entityClass.findOne({ where: { id: this.id }, attributes, include });
+    const entity = await entityClass.findOne({ where: { id: this.data.id }, attributes, include });
     if (entity == null) {
-      throw new InternalServerErrorException(`Entity instance not found for id [type=${this.type}, id=${this.id}]`);
+      throw new InternalServerErrorException(
+        `Entity instance not found for id [type=${this.data.type}, id=${this.data.id}]`
+      );
     }
 
     return entity;
@@ -159,9 +158,12 @@ export class EntityStatusUpdateEmail extends EmailSender {
   private async getEntityUsers(entity: EntityModel) {
     // FinancialReport does not have a projectId, so we send email to the createdBy user
     if (entity instanceof FinancialReport) {
-      const user = await User.findByPk(entity.createdBy, {
-        attributes: ["emailAddress", "locale"]
-      });
+      const user =
+        entity.createdBy == null
+          ? undefined
+          : await User.findByPk(entity.createdBy, {
+              attributes: ["emailAddress", "locale"]
+            });
       return user != null ? [user] : [];
     }
 

@@ -9,7 +9,7 @@ import {
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "nurseries" })
@@ -55,6 +55,13 @@ export class NurseryLightDto extends EntityDto {
   })
   organisationName: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation uuid"
+  })
+  organisationUuid: string | null;
+
   @ApiProperty({ nullable: true, type: Date })
   startDate: Date | null;
 
@@ -74,7 +81,10 @@ export class NurseryLightDto extends EntityDto {
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
 
 export class NurseryFullDto extends NurseryLightDto {
-  constructor(nursery: Nursery, props: HybridSupportProps<NurseryFullDto, Nursery>) {
+  constructor(
+    nursery: Nursery,
+    props: HybridSupportProps<NurseryFullDto, Omit<Nursery, "feedback" | "feedbackFields">>
+  ) {
     super();
     populateDto<NurseryFullDto, Nursery>(this, nursery, { lightResource: false, ...props });
   }

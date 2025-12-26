@@ -80,8 +80,8 @@ export class OrganisationCreationService {
       projectPitchUuid: pitch.uuid,
       applicationId: application.id,
       status: "started",
-      answers: []
-    } as FormSubmission);
+      answers: {}
+    });
 
     // send verification email
     await new AdminUserCreationEmail({ userId: user.id, fundingProgrammeName }).sendLater(this.emailQueue);

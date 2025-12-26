@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
-import { expectAuthority, expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectAuthority, expectCan, expectCannot } from "./policy.service.spec";
 import { FinancialIndicatorFactory } from "@terramatch-microservices/database/factories/financial-indicator.factory";
+import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("FinancialIndicatorPolicy", () => {
   let service: PolicyService;
@@ -24,15 +25,15 @@ describe("FinancialIndicatorPolicy", () => {
     const user = await UserFactory.create({ organisationId: org.id });
     mockUserId(user.id);
     mockPermissions();
-    const financialIndicator = await FinancialIndicatorFactory.create({ organisationId: org.id });
+    const financialIndicator = await FinancialIndicatorFactory.org(org).create();
     await expectCan(service, ["uploadFiles", "deleteFiles"], financialIndicator);
   });
 
   it("should allow managing all financial indicators with framework permissions", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
-    const fi1 = await FinancialIndicatorFactory.create();
-    const fi2 = await FinancialIndicatorFactory.create();
+    const fi1 = await FinancialIndicatorFactory.org().create();
+    const fi2 = await FinancialIndicatorFactory.org().create();
     await expectAuthority(service, {
       can: [
         [["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles"], fi1],
@@ -46,7 +47,7 @@ describe("FinancialIndicatorPolicy", () => {
     const user = await UserFactory.create({ organisationId: org.id });
     mockUserId(user.id);
     mockPermissions("other-permission");
-    const financialIndicator = await FinancialIndicatorFactory.create({ organisationId: org.id });
+    const financialIndicator = await FinancialIndicatorFactory.org(org).create();
     await expectCannot(service, ["read", "delete", "update", "approve", "create"], financialIndicator);
     await expectCan(service, ["uploadFiles", "deleteFiles"], financialIndicator);
   });

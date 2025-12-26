@@ -30,14 +30,6 @@ export abstract class DashboardEntityProcessor<ModelType, LightDto, FullDto> {
     return results;
   }
 
-  async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
-    const results: DtoResult<FullDto>[] = [];
-    for (const model of models) {
-      results.push(await this.getFullDto(model));
-    }
-    return results;
-  }
-
   protected getCacheService(): CacheService {
     return this.cacheService;
   }

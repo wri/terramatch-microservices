@@ -333,4 +333,38 @@ describe("ProjectPolygonsController", () => {
       expect(projectPolygonService.loadProjectPitchAssociation).toHaveBeenCalledWith([projectPolygon]);
     });
   });
+
+  describe("delete", () => {
+    it("should throw NotFoundException when project polygon is not found", async () => {
+      projectPolygonService.findByUuid.mockResolvedValue(null);
+
+      await expect(controller.delete("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(controller.delete("non-existent-uuid")).rejects.toThrow(
+        "Project polygon not found for uuid: non-existent-uuid"
+      );
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      projectPolygonService.findByUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.delete(projectPolygon.uuid)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should call deleteProjectPolygon on the service", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      projectPolygonService.findByUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      projectPolygonService.deleteProjectPolygon.mockResolvedValue(projectPolygon.uuid);
+
+      const result = serialize(await controller.delete(projectPolygon.uuid));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", projectPolygon);
+      expect(projectPolygonService.deleteProjectPolygon).toHaveBeenCalledWith(projectPolygon.uuid);
+      expect(result.meta.resourceType).toBe("projectPolygons");
+      expect(result.meta.resourceIds).toStrictEqual([projectPolygon.uuid]);
+      expect(result.data).toBeUndefined();
+    });
+  });
 });

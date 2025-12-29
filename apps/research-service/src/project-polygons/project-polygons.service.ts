@@ -1,10 +1,18 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Injectable, InternalServerErrorException, NotFoundException, Logger } from "@nestjs/common";
+import {
+  ProjectPolygon,
+  ProjectPitch,
+  PolygonGeometry,
+  SitePolygon,
+  PointGeometry
+} from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op, Transaction } from "sequelize";
 
 @Injectable()
 export class ProjectPolygonsService {
+  private readonly logger = new Logger(ProjectPolygonsService.name);
+
   async findByProjectPitchUuid(projectPitchUuid: string): Promise<ProjectPolygon | null> {
     const projectPitch = await ProjectPitch.findOne({
       where: { uuid: projectPitchUuid },
@@ -88,5 +96,66 @@ export class ProjectPolygonsService {
       await transaction.rollback();
       throw e;
     }
+  }
+
+  async deleteProjectPolygon(uuid: string): Promise<string> {
+    return await this.transaction(async transaction => {
+      const projectPolygon = await ProjectPolygon.findOne({
+        where: { uuid },
+        attributes: ["id", "uuid", "polyUuid", "entityId", "entityType"],
+        transaction
+      });
+
+      if (projectPolygon === null) {
+        throw new NotFoundException(`Project polygon not found for uuid: ${uuid}`);
+      }
+
+      const polygonUuid = projectPolygon.polyUuid;
+
+      const sitePolygon = await SitePolygon.findOne({
+        where: { polygonUuid: polygonUuid },
+        attributes: ["id", "uuid", "pointUuid"],
+        transaction
+      });
+
+      if (sitePolygon !== null) {
+        const pointUuid = sitePolygon.pointUuid;
+
+        if (pointUuid !== null) {
+          await PointGeometry.destroy({
+            where: { uuid: pointUuid },
+            transaction
+          });
+          this.logger.log(`Deleted PointGeometry ${pointUuid} associated with ProjectPolygon ${uuid}`);
+        }
+
+        await SitePolygon.destroy({
+          where: { uuid: sitePolygon.uuid },
+          transaction
+        });
+        this.logger.log(`Deleted SitePolygon ${sitePolygon.uuid} associated with ProjectPolygon ${uuid}`);
+      }
+
+      await ProjectPolygon.destroy({
+        where: { uuid },
+        transaction
+      });
+      this.logger.log(`Deleted ProjectPolygon ${uuid}`);
+
+      await PolygonGeometry.destroy({
+        where: { uuid: polygonUuid },
+        transaction
+      });
+      this.logger.log(`Deleted PolygonGeometry ${polygonUuid} associated with ProjectPolygon ${uuid}`);
+
+      return uuid;
+    });
+  }
+
+  async findByUuid(uuid: string): Promise<ProjectPolygon | null> {
+    return await ProjectPolygon.findOne({
+      where: { uuid },
+      attributes: ["id", "uuid", "polyUuid", "entityId", "entityType", "createdBy"]
+    });
   }
 }

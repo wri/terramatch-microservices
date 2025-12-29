@@ -113,12 +113,8 @@ export class ProjectPolygonsController {
   @Delete(":uuid")
   @ApiOperation({
     operationId: "deleteProjectPolygon",
-    summary: "Delete a project polygon and all associated records",
-    description: `Deletes a project polygon and all its associated records including:
-       - Associated site polygon (if any)
-       - Associated point geometry (if any)
-       - Polygon geometry record
-       This operation performs soft deletes on all records.`
+    summary: "Delete a project polygon and its polygon geometry",
+    description: `Soft deletes a project polygon and its associated polygon geometry record.`
   })
   @JsonApiDeletedResponse(getDtoType(ProjectPolygonDto), {
     description: "Project polygon and all associated records were deleted"

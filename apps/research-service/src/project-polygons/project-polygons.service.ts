@@ -1,11 +1,5 @@
 import { Injectable, InternalServerErrorException, NotFoundException, Logger } from "@nestjs/common";
-import {
-  ProjectPolygon,
-  ProjectPitch,
-  PolygonGeometry,
-  SitePolygon,
-  PointGeometry
-} from "@terramatch-microservices/database/entities";
+import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op, Transaction } from "sequelize";
 
@@ -102,7 +96,7 @@ export class ProjectPolygonsService {
     return await this.transaction(async transaction => {
       const projectPolygon = await ProjectPolygon.findOne({
         where: { uuid },
-        attributes: ["id", "uuid", "polyUuid", "entityId", "entityType"],
+        attributes: ["id", "uuid", "polyUuid"],
         transaction
       });
 
@@ -111,30 +105,6 @@ export class ProjectPolygonsService {
       }
 
       const polygonUuid = projectPolygon.polyUuid;
-
-      const sitePolygon = await SitePolygon.findOne({
-        where: { polygonUuid: polygonUuid },
-        attributes: ["id", "uuid", "pointUuid"],
-        transaction
-      });
-
-      if (sitePolygon !== null) {
-        const pointUuid = sitePolygon.pointUuid;
-
-        if (pointUuid !== null) {
-          await PointGeometry.destroy({
-            where: { uuid: pointUuid },
-            transaction
-          });
-          this.logger.log(`Deleted PointGeometry ${pointUuid} associated with ProjectPolygon ${uuid}`);
-        }
-
-        await SitePolygon.destroy({
-          where: { uuid: sitePolygon.uuid },
-          transaction
-        });
-        this.logger.log(`Deleted SitePolygon ${sitePolygon.uuid} associated with ProjectPolygon ${uuid}`);
-      }
 
       await ProjectPolygon.destroy({
         where: { uuid },
@@ -146,7 +116,7 @@ export class ProjectPolygonsService {
         where: { uuid: polygonUuid },
         transaction
       });
-      this.logger.log(`Deleted PolygonGeometry ${polygonUuid} associated with ProjectPolygon ${uuid}`);
+      this.logger.log(`Deleted PolygonGeometry ${polygonUuid}`);
 
       return uuid;
     });

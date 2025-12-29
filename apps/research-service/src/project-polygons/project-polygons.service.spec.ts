@@ -1,13 +1,7 @@
 import { ProjectPolygonsService } from "./project-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProjectPolygonFactory, ProjectPitchFactory } from "@terramatch-microservices/database/factories";
-import {
-  ProjectPolygon,
-  ProjectPitch,
-  PolygonGeometry,
-  SitePolygon,
-  PointGeometry
-} from "@terramatch-microservices/database/entities";
+import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 
@@ -331,69 +325,32 @@ describe("ProjectPolygonsService", () => {
       );
     });
 
-    it("should delete project polygon without site polygon", async () => {
+    it("should delete project polygon and polygon geometry", async () => {
       const projectPolygon = await ProjectPolygonFactory.build();
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectPolygon, "destroy").mockResolvedValue(1);
       jest.spyOn(PolygonGeometry, "destroy").mockResolvedValue(1);
 
       const result = await service.deleteProjectPolygon(projectPolygon.uuid);
 
       expect(result).toBe(projectPolygon.uuid);
-      expect(ProjectPolygon.destroy).toHaveBeenCalled();
-      expect(PolygonGeometry.destroy).toHaveBeenCalled();
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("should delete project polygon with site polygon but no point", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
-      const mockSitePolygon = {
-        id: 1,
-        uuid: "site-polygon-uuid",
-        pointUuid: null
-      };
-
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon as unknown as SitePolygon);
-      jest.spyOn(SitePolygon, "destroy").mockResolvedValue(1);
-      jest.spyOn(ProjectPolygon, "destroy").mockResolvedValue(1);
-      jest.spyOn(PolygonGeometry, "destroy").mockResolvedValue(1);
-
-      const result = await service.deleteProjectPolygon(projectPolygon.uuid);
-
-      expect(result).toBe(projectPolygon.uuid);
-      expect(SitePolygon.destroy).toHaveBeenCalled();
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("should delete project polygon with site polygon and point geometry", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
-      const mockSitePolygon = {
-        id: 1,
-        uuid: "site-polygon-uuid",
-        pointUuid: "point-uuid"
-      };
-
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon as unknown as SitePolygon);
-      jest.spyOn(PointGeometry, "destroy").mockResolvedValue(1);
-      jest.spyOn(SitePolygon, "destroy").mockResolvedValue(1);
-      jest.spyOn(ProjectPolygon, "destroy").mockResolvedValue(1);
-      jest.spyOn(PolygonGeometry, "destroy").mockResolvedValue(1);
-
-      const result = await service.deleteProjectPolygon(projectPolygon.uuid);
-
-      expect(result).toBe(projectPolygon.uuid);
-      expect(PointGeometry.destroy).toHaveBeenCalled();
-      expect(SitePolygon.destroy).toHaveBeenCalled();
+      expect(ProjectPolygon.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { uuid: projectPolygon.uuid }
+        })
+      );
+      expect(PolygonGeometry.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { uuid: projectPolygon.polyUuid }
+        })
+      );
       expect(mockTransaction.commit).toHaveBeenCalled();
     });
 
     it("should rollback transaction on error", async () => {
       const projectPolygon = await ProjectPolygonFactory.build();
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
-      jest.spyOn(SitePolygon, "findOne").mockRejectedValue(new Error("Database error"));
+      jest.spyOn(ProjectPolygon, "destroy").mockRejectedValue(new Error("Database error"));
 
       await expect(service.deleteProjectPolygon(projectPolygon.uuid)).rejects.toThrow("Database error");
       expect(mockTransaction.rollback).toHaveBeenCalled();

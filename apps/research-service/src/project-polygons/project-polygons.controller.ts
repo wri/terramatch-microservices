@@ -7,18 +7,24 @@ import {
   NotFoundException,
   Post,
   Query,
-  UnauthorizedException
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { ProjectPolygonQueryDto } from "./dto/project-polygon-query.dto";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";
+import { ProjectPolygonUploadRequestDto } from "./dto/project-polygon-upload.dto";
 import { ProjectPolygonsService } from "./project-polygons.service";
 import { ProjectPolygonCreationService } from "./project-polygon-creation.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPolygon } from "@terramatch-microservices/database/entities";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
+import "multer";
 
 @Controller("research/v3/projectPolygons")
 export class ProjectPolygonsController {
@@ -104,6 +110,52 @@ export class ProjectPolygonsController {
 
     this.logger.log(`Created ${createdProjectPolygons.length} project polygon(s) by user ${userId}`);
 
+    return document;
+  }
+
+  @Post("upload")
+  @ApiOperation({
+    operationId: "uploadProjectPolygonFile",
+    summary: "Upload geometry file to create project polygon",
+    description: `Upload a geometry file (KML, Shapefile, or GeoJSON) to create a project polygon.
+    
+    Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)
+    
+    Geometry transformation rules:
+    - Single point: Creates a circular polygon using est_area
+    - Two or more points: Uses Voronoi transformation, then convex hull to merge
+    - Multiple features (mixed geometries): Creates a convex hull encompassing all features
+    - Single polygon/line: Uses the geometry as-is
+    
+    
+    If a project polygon already exists for the project pitch, it will be replaced.`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse(ProjectPolygonDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, or no features found in file."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Project pitch not found." })
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Body() payload: ProjectPolygonUploadRequestDto) {
+    await this.policyService.authorize("create", ProjectPolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const projectPitchUuid = payload.data.attributes.projectPitchUuid;
+
+    const createdProjectPolygon = await this.projectPolygonCreationService.uploadProjectPolygonFromFile(
+      file,
+      projectPitchUuid,
+      userId
+    );
+
+    const document = buildJsonApi(ProjectPolygonDto);
+    const dto = await this.projectPolygonService.buildDto(createdProjectPolygon, projectPitchUuid);
+    document.addData(createdProjectPolygon.uuid, dto);
     return document;
   }
 }

@@ -32,6 +32,7 @@ import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
 import { ProjectPolygonsController } from "./project-polygons/project-polygons.controller";
 import { ProjectPolygonsService } from "./project-polygons/project-polygons.service";
 import { ProjectPolygonCreationService } from "./project-polygons/project-polygon-creation.service";
+import { ProjectPolygonGeometryService } from "./project-polygons/project-polygon-geometry.service";
 
 @Module({
   imports: [
@@ -89,7 +90,8 @@ import { ProjectPolygonCreationService } from "./project-polygons/project-polygo
     ClippingProcessor,
     GeoJsonExportService,
     ProjectPolygonsService,
-    ProjectPolygonCreationService
+    ProjectPolygonCreationService,
+    ProjectPolygonGeometryService
   ]
 })
 export class AppModule {}

@@ -1,6 +1,17 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  ForeignKey,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
+import { User } from "./user.entity";
 
 @Table({ tableName: "project_polygon", underscored: true, paranoid: true })
 export class ProjectPolygon extends Model<ProjectPolygon> {
@@ -27,13 +38,15 @@ export class ProjectPolygon extends Model<ProjectPolygon> {
   @Column(BIGINT.UNSIGNED)
   entityId: number;
 
+  @ForeignKey(() => User)
   @AllowNull
-  @Column(STRING)
-  lastModifiedBy: string | null;
+  @Column(BIGINT.UNSIGNED)
+  lastModifiedBy: number | null;
 
+  @ForeignKey(() => User)
   @AllowNull
-  @Column(STRING)
-  createdBy: string | null;
+  @Column(BIGINT.UNSIGNED)
+  createdBy: number | null;
 
   async loadPolygon() {
     if (this.polygon == null && this.polyUuid != null) {

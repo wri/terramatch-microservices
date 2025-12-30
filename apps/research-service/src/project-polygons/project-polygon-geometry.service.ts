@@ -59,6 +59,13 @@ export class ProjectPolygonGeometryService {
       return this.computeConvexHull(features);
     }
 
+    if (voronoiPolygons.length === 1) {
+      const geometry = voronoiPolygons[0].geometry;
+      if (geometry.type === "Polygon") {
+        return geometry as Polygon;
+      }
+    }
+
     const voronoiFeatures: Feature[] = voronoiPolygons.map(vp => ({
       type: "Feature" as const,
       geometry: vp.geometry as Polygon | MultiPolygon,

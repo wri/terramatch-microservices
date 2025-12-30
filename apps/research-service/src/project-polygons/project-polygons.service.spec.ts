@@ -4,6 +4,7 @@ import { ProjectPolygonFactory, ProjectPitchFactory } from "@terramatch-microser
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
+import { Transaction } from "sequelize";
 
 describe("ProjectPolygonsService", () => {
   let service: ProjectPolygonsService;
@@ -343,6 +344,35 @@ describe("ProjectPolygonsService", () => {
 
       await expect(service.deleteProjectPolygon(projectPolygon)).rejects.toThrow("Database error");
       expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteProjectPolygonAndGeometry", () => {
+    it("should delete project polygon and polygon geometry with provided transaction", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      const providedTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      } as unknown as Transaction;
+
+      jest.spyOn(ProjectPolygon, "destroy").mockResolvedValue(1);
+      jest.spyOn(PolygonGeometry, "destroy").mockResolvedValue(1);
+
+      const result = await service.deleteProjectPolygonAndGeometry(projectPolygon, providedTransaction);
+
+      expect(result).toBe(projectPolygon.uuid);
+      expect(ProjectPolygon.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { uuid: projectPolygon.uuid },
+          transaction: providedTransaction
+        })
+      );
+      expect(PolygonGeometry.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { uuid: projectPolygon.polyUuid },
+          transaction: providedTransaction
+        })
+      );
     });
   });
 });

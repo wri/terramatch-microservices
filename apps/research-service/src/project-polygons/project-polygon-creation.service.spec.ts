@@ -3,6 +3,7 @@ import { ProjectPolygonCreationService } from "./project-polygon-creation.servic
 import { PolygonGeometryCreationService } from "../site-polygons/polygon-geometry-creation.service";
 import { GeometryFileProcessingService } from "../site-polygons/geometry-file-processing.service";
 import { ProjectPolygonGeometryService } from "./project-polygon-geometry.service";
+import { ProjectPolygonsService } from "./project-polygons.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { ProjectPitchFactory, ProjectPolygonFactory } from "@terramatch-microservices/database/factories";
@@ -14,6 +15,7 @@ describe("ProjectPolygonCreationService", () => {
   let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
   let geometryFileProcessingService: jest.Mocked<GeometryFileProcessingService>;
   let projectPolygonGeometryService: jest.Mocked<ProjectPolygonGeometryService>;
+  let projectPolygonsService: jest.Mocked<ProjectPolygonsService>;
 
   beforeEach(async () => {
     const mockPolygonGeometryService = {
@@ -26,6 +28,10 @@ describe("ProjectPolygonCreationService", () => {
 
     const mockProjectPolygonGeometryService = {
       transformFeaturesToSinglePolygon: jest.fn()
+    };
+
+    const mockProjectPolygonsService = {
+      deleteProjectPolygonAndGeometry: jest.fn()
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -42,6 +48,10 @@ describe("ProjectPolygonCreationService", () => {
         {
           provide: ProjectPolygonGeometryService,
           useValue: mockProjectPolygonGeometryService
+        },
+        {
+          provide: ProjectPolygonsService,
+          useValue: mockProjectPolygonsService
         }
       ]
     }).compile();
@@ -50,6 +60,7 @@ describe("ProjectPolygonCreationService", () => {
     polygonGeometryService = module.get(PolygonGeometryCreationService);
     geometryFileProcessingService = module.get(GeometryFileProcessingService);
     projectPolygonGeometryService = module.get(ProjectPolygonGeometryService);
+    projectPolygonsService = module.get(ProjectPolygonsService);
   });
 
   afterEach(() => {
@@ -801,6 +812,93 @@ describe("ProjectPolygonCreationService", () => {
       const result = await service.uploadProjectPolygonFromFile(file, projectPitch.uuid, userId);
 
       expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
+      expect(ProjectPolygon.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+            entityId: projectPitch.id
+          },
+          transaction: mockTransaction
+        })
+      );
+      expect(projectPolygonGeometryService.transformFeaturesToSinglePolygon).toHaveBeenCalledWith(featureCollection);
+      expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
+        [transformedGeometry],
+        userId,
+        mockTransaction
+      );
+      expect(result.entityId).toBe(projectPitch.id);
+      expect(result.polyUuid).toBe(polygonUuid);
+      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(mockTransaction.rollback).not.toHaveBeenCalled();
+    });
+
+    it("should delete existing project polygon before creating new one", async () => {
+      const userId = 1;
+      const projectPitch = await ProjectPitchFactory.build();
+      const existingProjectPolygon = await ProjectPolygonFactory.build({
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id,
+        polyUuid: crypto.randomUUID()
+      });
+      const file = createMockFile();
+      const featureCollection = createFeatureCollection();
+      const transformedGeometry: Polygon = {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      };
+      const polygonUuid = crypto.randomUUID();
+
+      const mockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) throw new Error("Sequelize not available");
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(existingProjectPolygon);
+      projectPolygonsService.deleteProjectPolygonAndGeometry.mockResolvedValue(existingProjectPolygon.uuid);
+      projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
+      polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
+        uuids: [polygonUuid],
+        areas: [100]
+      });
+
+      const mockProjectPolygon = await ProjectPolygonFactory.build({
+        polyUuid: polygonUuid,
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id,
+        createdBy: userId,
+        lastModifiedBy: userId
+      });
+      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+
+      const result = await service.uploadProjectPolygonFromFile(file, projectPitch.uuid, userId);
+
+      expect(ProjectPolygon.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+            entityId: projectPitch.id
+          },
+          transaction: mockTransaction
+        })
+      );
+      expect(projectPolygonsService.deleteProjectPolygonAndGeometry).toHaveBeenCalledWith(
+        existingProjectPolygon,
+        mockTransaction
+      );
       expect(projectPolygonGeometryService.transformFeaturesToSinglePolygon).toHaveBeenCalledWith(featureCollection);
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
         [transformedGeometry],

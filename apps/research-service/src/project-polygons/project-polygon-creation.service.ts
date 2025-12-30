@@ -5,6 +5,7 @@ import { CreateProjectPolygonBatchRequestDto, Feature } from "./dto/create-proje
 import { PolygonGeometryCreationService } from "../site-polygons/polygon-geometry-creation.service";
 import { GeometryFileProcessingService } from "../site-polygons/geometry-file-processing.service";
 import { ProjectPolygonGeometryService } from "./project-polygon-geometry.service";
+import { ProjectPolygonsService } from "./project-polygons.service";
 import { Geometry } from "@terramatch-microservices/database/constants";
 import "multer";
 
@@ -13,7 +14,8 @@ export class ProjectPolygonCreationService {
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
-    private readonly projectPolygonGeometryService: ProjectPolygonGeometryService
+    private readonly projectPolygonGeometryService: ProjectPolygonGeometryService,
+    private readonly projectPolygonsService: ProjectPolygonsService
   ) {}
 
   async createProjectPolygons(request: CreateProjectPolygonBatchRequestDto, userId: number): Promise<ProjectPolygon[]> {
@@ -162,14 +164,7 @@ export class ProjectPolygonCreationService {
       return;
     }
 
-    if (existingProjectPolygon.polyUuid != null) {
-      await PolygonGeometry.destroy({
-        where: { uuid: existingProjectPolygon.polyUuid },
-        transaction
-      });
-    }
-
-    await existingProjectPolygon.destroy({ transaction });
+    await this.projectPolygonsService.deleteProjectPolygonAndGeometry(existingProjectPolygon, transaction);
   }
 
   private groupGeometriesByProjectPitchId(geometries: { type: string; features: Feature[] }[]): {

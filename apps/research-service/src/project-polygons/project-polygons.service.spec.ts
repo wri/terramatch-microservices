@@ -2,9 +2,11 @@ import { ProjectPolygonsService } from "./project-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProjectPolygonFactory, ProjectPitchFactory } from "@terramatch-microservices/database/factories";
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { InternalServerErrorException } from "@nestjs/common";
+import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Transaction } from "sequelize";
+import { Polygon } from "geojson";
+import { ProjectPolygonGeoJsonQueryDto } from "./dto/project-polygon-geojson-query.dto";
 
 describe("ProjectPolygonsService", () => {
   let service: ProjectPolygonsService;
@@ -373,6 +375,126 @@ describe("ProjectPolygonsService", () => {
           transaction: providedTransaction
         })
       );
+    });
+  });
+
+  describe("getGeoJson", () => {
+    const mockGeometry: Polygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+          [1, 1],
+          [1, 0],
+          [0, 0]
+        ]
+      ]
+    };
+    const mockGeoJsonString = JSON.stringify(mockGeometry);
+
+    it("should return FeatureCollection with geometry only (no properties)", async () => {
+      const projectPitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.build({
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      });
+      const query: ProjectPolygonGeoJsonQueryDto = {
+        projectPitchUuid: projectPitch.uuid
+      };
+
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
+      jest.spyOn(PolygonGeometry, "getGeoJSON").mockResolvedValue(mockGeoJsonString);
+
+      const result = await service.getGeoJson(query);
+
+      expect(result.type).toBe("FeatureCollection");
+      expect(result.features).toHaveLength(1);
+      expect(result.features[0].type).toBe("Feature");
+      expect(result.features[0].geometry).toEqual(mockGeometry);
+      expect(result.features[0].properties).toBeNull();
+    });
+
+    it("should throw NotFoundException when project pitch is not found", async () => {
+      const query: ProjectPolygonGeoJsonQueryDto = {
+        projectPitchUuid: "non-existent-pitch-uuid"
+      };
+
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(null);
+
+      await expect(service.getGeoJson(query)).rejects.toThrow(
+        new NotFoundException("Project pitch not found for uuid: non-existent-pitch-uuid")
+      );
+    });
+
+    it("should throw NotFoundException when project polygon is not found for pitch", async () => {
+      const projectPitch = await ProjectPitchFactory.build();
+      const query: ProjectPolygonGeoJsonQueryDto = {
+        projectPitchUuid: projectPitch.uuid
+      };
+
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+
+      await expect(service.getGeoJson(query)).rejects.toThrow(
+        new NotFoundException(`Project polygon not found for project pitch: ${projectPitch.uuid}`)
+      );
+    });
+
+    it("should throw NotFoundException when polygon geometry UUID is null", async () => {
+      const projectPitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.build({
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      });
+      Object.assign(projectPolygon, { polyUuid: null });
+      const query: ProjectPolygonGeoJsonQueryDto = {
+        projectPitchUuid: projectPitch.uuid
+      };
+
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
+
+      await expect(service.getGeoJson(query)).rejects.toThrow(
+        new NotFoundException("Polygon geometry UUID not found for project polygon")
+      );
+    });
+
+    it("should throw NotFoundException when polygon geometry is not found", async () => {
+      const projectPitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.build({
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      });
+      const query: ProjectPolygonGeoJsonQueryDto = {
+        projectPitchUuid: projectPitch.uuid
+      };
+
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
+      jest.spyOn(PolygonGeometry, "getGeoJSON").mockResolvedValue(undefined);
+
+      await expect(service.getGeoJson(query)).rejects.toThrow(
+        new NotFoundException(`Polygon geometry not found for uuid: ${projectPolygon.polyUuid}`)
+      );
+    });
+
+    it("should throw InternalServerErrorException on invalid geometry JSON", async () => {
+      const projectPitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.build({
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      });
+      const query: ProjectPolygonGeoJsonQueryDto = {
+        projectPitchUuid: projectPitch.uuid
+      };
+
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
+      jest.spyOn(PolygonGeometry, "getGeoJSON").mockResolvedValue("invalid-json");
+
+      await expect(service.getGeoJson(query)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

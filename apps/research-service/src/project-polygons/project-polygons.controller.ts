@@ -14,7 +14,7 @@ import {
   UseInterceptors
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
@@ -27,9 +27,12 @@ import { ProjectPolygonCreationService } from "./project-polygon-creation.servic
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
+import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { ProjectPolygonGeoJsonQueryDto } from "./dto/project-polygon-geojson-query.dto";
 import "multer";
 
 @Controller("research/v3/projectPolygons")
+@ApiExtraModels(GeoJsonExportDto)
 export class ProjectPolygonsController {
   constructor(
     private readonly projectPolygonService: ProjectPolygonsService,
@@ -38,6 +41,32 @@ export class ProjectPolygonsController {
   ) {}
 
   private readonly logger = new Logger(ProjectPolygonsController.name);
+
+  @Get("geojson")
+  @ApiOperation({
+    operationId: "getProjectPolygonGeoJson",
+    summary: "Export project polygon as GeoJSON",
+    description: `Export a project polygon as GeoJSON FeatureCollection for a specific project pitch.`
+  })
+  @JsonApiResponse(GeoJsonExportDto)
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid query parameters (projectPitchUuid is required)"
+  })
+  @ExceptionResponse(NotFoundException, {
+    description: "Project polygon, project pitch, or polygon geometry not found"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed"
+  })
+  async getGeoJson(@Query() query: ProjectPolygonGeoJsonQueryDto) {
+    await this.policyService.authorize("read", ProjectPolygon);
+
+    const featureCollection = await this.projectPolygonService.getGeoJson(query);
+
+    const document = buildJsonApi(GeoJsonExportDto);
+
+    return document.addData(query.projectPitchUuid, new GeoJsonExportDto(featureCollection));
+  }
 
   @Get()
   @ApiOperation({

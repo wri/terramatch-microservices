@@ -13,6 +13,7 @@ import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { ProjectPolygonQueryDto } from "./dto/project-polygon-query.dto";
+import { FeatureCollection, Polygon } from "geojson";
 
 describe("ProjectPolygonsController", () => {
   let controller: ProjectPolygonsController;
@@ -490,6 +491,103 @@ describe("ProjectPolygonsController", () => {
       expect(result.meta.resourceType).toBe("projectPolygons");
       expect(result.meta.resourceIds).toStrictEqual([projectPolygon.uuid]);
       expect(result.data).toBeUndefined();
+    });
+  });
+
+  describe("getGeoJson", () => {
+    const mockGeometry: Polygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+          [1, 1],
+          [1, 0],
+          [0, 0]
+        ]
+      ]
+    };
+
+    const mockFeatureCollection: FeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: mockGeometry,
+          properties: null
+        }
+      ]
+    };
+
+    it("should throw UnauthorizedException if the policy does not authorize", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.getGeoJson({ projectPitchUuid: "test-uuid" })).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should return GeoJSON for a project pitch polygon by projectPitchUuid", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const projectPitchUuid = "project-pitch-uuid";
+
+      projectPolygonService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson({ projectPitchUuid }));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", ProjectPolygon);
+      expect(projectPolygonService.getGeoJson).toHaveBeenCalledWith({ projectPitchUuid });
+      expect(result.data).not.toBeNull();
+
+      const resource = result.data as Resource;
+      expect(resource.id).toBe(projectPitchUuid);
+      expect(resource.type).toBe("geojsonExports");
+      expect(resource.attributes).toHaveProperty("type", "FeatureCollection");
+      expect(resource.attributes).toHaveProperty("features");
+    });
+
+    it("should return geometry only (no properties)", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const projectPitchUuid = "project-pitch-uuid";
+
+      projectPolygonService.getGeoJson.mockResolvedValue(mockFeatureCollection);
+
+      const result = serialize(await controller.getGeoJson({ projectPitchUuid }));
+
+      const resource = result.data as Resource;
+      const attributes = resource.attributes as unknown as { features: Array<{ properties: unknown }> };
+      expect(attributes.features[0].properties).toBeNull();
+      expect(attributes.features[0]).toHaveProperty("geometry");
+    });
+
+    it("should throw NotFoundException when project pitch is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      projectPolygonService.getGeoJson.mockRejectedValue(
+        new NotFoundException("Project pitch not found for uuid: non-existent-pitch-uuid")
+      );
+
+      await expect(controller.getGeoJson({ projectPitchUuid: "non-existent-pitch-uuid" })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw NotFoundException when project polygon is not found for pitch", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      projectPolygonService.getGeoJson.mockRejectedValue(
+        new NotFoundException("Project polygon not found for project pitch: non-existent-pitch-uuid")
+      );
+
+      await expect(controller.getGeoJson({ projectPitchUuid: "non-existent-pitch-uuid" })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw NotFoundException when polygon geometry is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      projectPolygonService.getGeoJson.mockRejectedValue(
+        new NotFoundException("Polygon geometry not found for uuid: polygon-uuid")
+      );
+
+      await expect(controller.getGeoJson({ projectPitchUuid: "project-pitch-uuid" })).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 });

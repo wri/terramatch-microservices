@@ -78,7 +78,7 @@ export class DelayedJobsController {
     const jobUpdates = bulkUpdateJobsDto.data;
     const jobs = await DelayedJob.findAll({
       where: {
-        uuid: { [Op.in]: jobUpdates.map(({ uuid }) => uuid) },
+        uuid: { [Op.in]: jobUpdates.map(({ id }) => id) },
         createdBy: authenticatedUserId
       },
       order: [["createdAt", "DESC"]]
@@ -91,9 +91,9 @@ export class DelayedJobsController {
     const updatedJobs = (
       await Promise.all(
         jobUpdates
-          .filter(({ uuid }) => jobs.some(job => job.uuid === uuid))
-          .map(async ({ uuid, attributes }) => {
-            const job = jobs.find(job => job.uuid === uuid);
+          .filter(({ id }) => jobs.some(job => job.uuid === id))
+          .map(async ({ id, attributes }) => {
+            const job = jobs.find(job => job.uuid === id);
             return await job?.update({ isAcknowledged: attributes.isAcknowledged });
           })
       )

@@ -108,12 +108,12 @@ describe("DelayedJobsController", () => {
         data: [
           {
             type: "delayedJobs",
-            uuid: job1.uuid,
+            id: job1.uuid,
             attributes: { isAcknowledged: true }
           },
           {
             type: "delayedJobs",
-            uuid: job2.uuid,
+            id: job2.uuid,
             attributes: { isAcknowledged: true }
           }
         ]
@@ -147,12 +147,12 @@ describe("DelayedJobsController", () => {
         data: [
           {
             type: "delayedJobs",
-            uuid: job1.uuid,
+            id: job1.uuid,
             attributes: { isAcknowledged: true }
           },
           {
             type: "delayedJobs",
-            uuid: job2.uuid,
+            id: job2.uuid,
             attributes: { isAcknowledged: true }
           }
         ]
@@ -178,7 +178,7 @@ describe("DelayedJobsController", () => {
         data: [
           {
             type: "delayedJobs",
-            uuid: "non-existent-uuid",
+            id: "non-existent-uuid",
             attributes: { isAcknowledged: true }
           }
         ]
@@ -210,12 +210,12 @@ describe("DelayedJobsController", () => {
         data: [
           {
             type: "delayedJobs",
-            uuid: pendingJob.uuid,
+            id: pendingJob.uuid,
             attributes: { isAcknowledged: true }
           },
           {
             type: "delayedJobs",
-            uuid: pendingJob2.uuid,
+            id: pendingJob2.uuid,
             attributes: { isAcknowledged: true }
           }
         ]
@@ -247,13 +247,13 @@ describe("DelayedJobsController", () => {
     it("should validate nested DelayedJobAttributes", async () => {
       const validData = {
         type: "delayedJobs",
-        uuid: uuidv4(),
+        id: uuidv4(),
         attributes: { isAcknowledged: true }
       };
 
       const invalidData = {
         type: "delayedJobs",
-        uuid: uuidv4(),
+        id: uuidv4(),
         attributes: {
           isAcknowledged: "not a boolean"
         }

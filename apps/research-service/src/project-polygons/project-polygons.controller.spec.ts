@@ -8,6 +8,7 @@ import { BadRequestException, NotFoundException, UnauthorizedException } from "@
 import { ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonFactory, ProjectPitchFactory } from "@terramatch-microservices/database/factories";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";
+import { ProjectPolygonUploadRequestDto } from "./dto/project-polygon-upload.dto";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
@@ -334,6 +335,130 @@ describe("ProjectPolygonsController", () => {
     });
   });
 
+  describe("uploadFile", () => {
+    const createMockFile = (): Express.Multer.File =>
+      ({
+        originalname: "test.geojson",
+        mimetype: "application/geo+json",
+        buffer: Buffer.from(JSON.stringify({ type: "FeatureCollection", features: [] }))
+      } as Express.Multer.File);
+
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const file = createMockFile();
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: "pitch-uuid" } } };
+
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should throw UnauthorizedException when userId is null", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+      const file = createMockFile();
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: "pitch-uuid" } } };
+
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        UnauthorizedException
+      );
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        "User must be authenticated"
+      );
+    });
+
+    it("should throw NotFoundException when project pitch is not found", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const file = createMockFile();
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: "non-existent-uuid" } } };
+
+      projectPolygonCreationService.uploadProjectPolygonFromFile.mockRejectedValue(
+        new NotFoundException("Project pitch not found: non-existent-uuid")
+      );
+
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        NotFoundException
+      );
+      expect(projectPolygonCreationService.uploadProjectPolygonFromFile).toHaveBeenCalledWith(
+        file,
+        "non-existent-uuid",
+        1
+      );
+    });
+
+    it("should throw BadRequestException when file parsing fails", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const file = createMockFile();
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: "pitch-uuid" } } };
+
+      projectPolygonCreationService.uploadProjectPolygonFromFile.mockRejectedValue(
+        new BadRequestException("Failed to parse file")
+      );
+
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should successfully upload file and create project polygon", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const projectPitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.build({
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      });
+
+      const file = createMockFile();
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: projectPitch.uuid } } };
+
+      projectPolygonCreationService.uploadProjectPolygonFromFile.mockResolvedValue(projectPolygon);
+
+      const result = serialize(await controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("create", ProjectPolygon);
+      expect(projectPolygonCreationService.uploadProjectPolygonFromFile).toHaveBeenCalledWith(
+        file,
+        projectPitch.uuid,
+        1
+      );
+      expect(projectPolygonService.buildDto).toHaveBeenCalledWith(projectPolygon, projectPitch.uuid);
+      expect(result.data).toBeDefined();
+
+      const resource = result.data as Resource;
+      expect(resource.id).toBe(projectPolygon.uuid);
+      expect(resource.type).toBe("projectPolygons");
+      expect(resource.attributes).toHaveProperty("projectPitchUuid", projectPitch.uuid);
+    });
+
+    it("should handle service errors and propagate them", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const file = createMockFile();
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: "pitch-uuid" } } };
+
+      projectPolygonCreationService.uploadProjectPolygonFromFile.mockRejectedValue(
+        new BadRequestException("Geometry transformation failed")
+      );
+
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto)).rejects.toThrow(
+        "Geometry transformation failed"
+      );
+    });
+  });
   describe("delete", () => {
     it("should throw NotFoundException when project polygon is not found", async () => {
       projectPolygonService.findOne.mockResolvedValue(null);

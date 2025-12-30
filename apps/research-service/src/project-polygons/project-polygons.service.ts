@@ -94,23 +94,27 @@ export class ProjectPolygonsService {
 
   async deleteProjectPolygon(projectPolygon: ProjectPolygon): Promise<string> {
     return await this.transaction(async transaction => {
-      const polygonUuid = projectPolygon.polyUuid;
-      const uuid = projectPolygon.uuid;
-
-      await ProjectPolygon.destroy({
-        where: { uuid },
-        transaction
-      });
-      this.logger.log(`Deleted ProjectPolygon ${uuid}`);
-
-      await PolygonGeometry.destroy({
-        where: { uuid: polygonUuid },
-        transaction
-      });
-      this.logger.log(`Deleted PolygonGeometry ${polygonUuid}`);
-
-      return uuid;
+      return await this.deleteProjectPolygonAndGeometry(projectPolygon, transaction);
     });
+  }
+
+  async deleteProjectPolygonAndGeometry(projectPolygon: ProjectPolygon, transaction: Transaction): Promise<string> {
+    const polygonUuid = projectPolygon.polyUuid;
+    const uuid = projectPolygon.uuid;
+
+    await ProjectPolygon.destroy({
+      where: { uuid },
+      transaction
+    });
+    this.logger.log(`Deleted ProjectPolygon ${uuid}`);
+
+    await PolygonGeometry.destroy({
+      where: { uuid: polygonUuid },
+      transaction
+    });
+    this.logger.log(`Deleted PolygonGeometry ${polygonUuid}`);
+
+    return uuid;
   }
 
   async findOne(uuid: string): Promise<ProjectPolygon | null> {

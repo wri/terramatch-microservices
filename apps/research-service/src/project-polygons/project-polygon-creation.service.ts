@@ -3,11 +3,20 @@ import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-micro
 import { Transaction } from "sequelize";
 import { CreateProjectPolygonBatchRequestDto, Feature } from "./dto/create-project-polygon-request.dto";
 import { PolygonGeometryCreationService } from "../site-polygons/polygon-geometry-creation.service";
+import { GeometryFileProcessingService } from "../site-polygons/geometry-file-processing.service";
+import { ProjectPolygonGeometryService } from "./project-polygon-geometry.service";
+import { ProjectPolygonsService } from "./project-polygons.service";
 import { Geometry } from "@terramatch-microservices/database/constants";
+import "multer";
 
 @Injectable()
 export class ProjectPolygonCreationService {
-  constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
+  constructor(
+    private readonly polygonGeometryService: PolygonGeometryCreationService,
+    private readonly geometryFileProcessingService: GeometryFileProcessingService,
+    private readonly projectPolygonGeometryService: ProjectPolygonGeometryService,
+    private readonly projectPolygonsService: ProjectPolygonsService
+  ) {}
 
   async createProjectPolygons(request: CreateProjectPolygonBatchRequestDto, userId: number): Promise<ProjectPolygon[]> {
     if (PolygonGeometry.sequelize == null) {
@@ -81,6 +90,81 @@ export class ProjectPolygonCreationService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  async uploadProjectPolygonFromFile(
+    file: Express.Multer.File,
+    projectPitchUuid: string,
+    userId: number
+  ): Promise<ProjectPolygon> {
+    if (PolygonGeometry.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const featureCollection = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    const transaction = await PolygonGeometry.sequelize.transaction();
+
+    try {
+      const projectPitch = await ProjectPitch.findOne({
+        where: { uuid: projectPitchUuid },
+        attributes: ["id", "uuid"],
+        transaction
+      });
+
+      if (projectPitch == null) {
+        throw new NotFoundException(`Project pitch not found: ${projectPitchUuid}`);
+      }
+
+      await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
+
+      const transformedGeometry = await this.projectPolygonGeometryService.transformFeaturesToSinglePolygon(
+        featureCollection
+      );
+
+      const { uuids: polygonUuids } = await this.polygonGeometryService.createGeometriesFromFeatures(
+        [transformedGeometry as Geometry],
+        userId,
+        transaction
+      );
+
+      if (polygonUuids.length === 0) {
+        throw new BadRequestException("Failed to create polygon geometry");
+      }
+
+      const projectPolygon = await ProjectPolygon.create(
+        {
+          polyUuid: polygonUuids[0],
+          entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+          entityId: projectPitch.id,
+          createdBy: userId,
+          lastModifiedBy: userId
+        } as ProjectPolygon,
+        { transaction }
+      );
+
+      await transaction.commit();
+      return projectPolygon;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  private async deleteExistingProjectPolygon(projectPitchId: number, transaction: Transaction): Promise<void> {
+    const existingProjectPolygon = await ProjectPolygon.findOne({
+      where: {
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitchId
+      },
+      transaction
+    });
+
+    if (existingProjectPolygon == null) {
+      return;
+    }
+
+    await this.projectPolygonsService.deleteProjectPolygonAndGeometry(existingProjectPolygon, transaction);
   }
 
   private groupGeometriesByProjectPitchId(geometries: { type: string; features: Feature[] }[]): {

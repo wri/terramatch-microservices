@@ -336,7 +336,7 @@ describe("ProjectPolygonsController", () => {
 
   describe("delete", () => {
     it("should throw NotFoundException when project polygon is not found", async () => {
-      projectPolygonService.findByUuid.mockResolvedValue(null);
+      projectPolygonService.findOne.mockResolvedValue(null);
 
       await expect(controller.delete("non-existent-uuid")).rejects.toThrow(NotFoundException);
       await expect(controller.delete("non-existent-uuid")).rejects.toThrow(
@@ -346,7 +346,7 @@ describe("ProjectPolygonsController", () => {
 
     it("should throw UnauthorizedException when authorization fails", async () => {
       const projectPolygon = await ProjectPolygonFactory.build();
-      projectPolygonService.findByUuid.mockResolvedValue(projectPolygon);
+      projectPolygonService.findOne.mockResolvedValue(projectPolygon);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.delete(projectPolygon.uuid)).rejects.toThrow(UnauthorizedException);
@@ -354,7 +354,7 @@ describe("ProjectPolygonsController", () => {
 
     it("should call deleteProjectPolygon with the model", async () => {
       const projectPolygon = await ProjectPolygonFactory.build();
-      projectPolygonService.findByUuid.mockResolvedValue(projectPolygon);
+      projectPolygonService.findOne.mockResolvedValue(projectPolygon);
       policyService.authorize.mockResolvedValue(undefined);
       projectPolygonService.deleteProjectPolygon.mockResolvedValue(projectPolygon.uuid);
 

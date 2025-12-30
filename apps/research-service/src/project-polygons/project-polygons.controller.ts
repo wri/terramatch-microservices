@@ -122,7 +122,7 @@ export class ProjectPolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Project polygon not found." })
   async delete(@Param("uuid") uuid: string) {
-    const projectPolygon = await this.projectPolygonService.findByUuid(uuid);
+    const projectPolygon = await this.projectPolygonService.findOne(uuid);
 
     if (projectPolygon === null) {
       throw new NotFoundException(`Project polygon not found for uuid: ${uuid}`);

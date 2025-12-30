@@ -113,7 +113,7 @@ export class ProjectPolygonsService {
     });
   }
 
-  async findByUuid(uuid: string): Promise<ProjectPolygon | null> {
+  async findOne(uuid: string): Promise<ProjectPolygon | null> {
     return await ProjectPolygon.findOne({
       where: { uuid },
       attributes: ["id", "uuid", "polyUuid", "entityId", "entityType", "createdBy"]

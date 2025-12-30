@@ -262,12 +262,12 @@ describe("ProjectPolygonsService", () => {
     });
   });
 
-  describe("findByUuid", () => {
+  describe("findOne", () => {
     it("should return project polygon when found", async () => {
       const projectPolygon = await ProjectPolygonFactory.build();
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
 
-      const result = await service.findByUuid(projectPolygon.uuid);
+      const result = await service.findOne(projectPolygon.uuid);
 
       expect(result).not.toBeNull();
       if (result !== null) {
@@ -278,7 +278,7 @@ describe("ProjectPolygonsService", () => {
     it("should return null when project polygon is not found", async () => {
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
 
-      const result = await service.findByUuid("non-existent-uuid");
+      const result = await service.findOne("non-existent-uuid");
 
       expect(result).toBeNull();
     });
@@ -287,7 +287,7 @@ describe("ProjectPolygonsService", () => {
       const projectPolygon = await ProjectPolygonFactory.build();
       const findOneSpy = jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
 
-      await service.findByUuid(projectPolygon.uuid);
+      await service.findOne(projectPolygon.uuid);
 
       expect(findOneSpy).toHaveBeenCalledWith({
         where: { uuid: projectPolygon.uuid },

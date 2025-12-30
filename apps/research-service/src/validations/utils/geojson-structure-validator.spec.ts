@@ -34,6 +34,33 @@ describe("geojson-structure-validator", () => {
       expect(result.error).toContain("index 1");
     });
 
+    it("should return valid=false when array contains null value", () => {
+      const result = validateFeatureCollectionStructure([{ type: "FeatureCollection", features: [] }, null]);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe("FeatureCollection at index 1 cannot be null or undefined");
+    });
+
+    it("should return valid=false when array contains undefined value", () => {
+      const result = validateFeatureCollectionStructure([{ type: "FeatureCollection", features: [] }, undefined]);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe("FeatureCollection at index 1 cannot be null or undefined");
+    });
+
+    it("should return valid=false when array contains non-object value", () => {
+      const result = validateFeatureCollectionStructure([{ type: "FeatureCollection", features: [] }, "not an object"]);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe("FeatureCollection at index 1 must be an object");
+    });
+
+    it("should return valid=false when array contains array value", () => {
+      const result = validateFeatureCollectionStructure([
+        { type: "FeatureCollection", features: [] },
+        ["not", "an", "object"]
+      ]);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe("FeatureCollection at index 1 must be an object");
+    });
+
     it("should return valid=false when type is not FeatureCollection", () => {
       const result = validateFeatureCollectionStructure({ type: "Feature", features: [] });
       expect(result.valid).toBe(false);

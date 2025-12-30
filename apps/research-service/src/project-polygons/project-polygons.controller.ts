@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Logger,
   NotFoundException,
+  Param,
   Post,
   Query,
   UnauthorizedException,
@@ -14,7 +16,8 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { ProjectPolygonQueryDto } from "./dto/project-polygon-query.dto";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";
@@ -157,5 +160,31 @@ export class ProjectPolygonsController {
     const dto = await this.projectPolygonService.buildDto(createdProjectPolygon, projectPitchUuid);
     document.addData(createdProjectPolygon.uuid, dto);
     return document;
+  }
+  @Delete(":uuid")
+  @ApiOperation({
+    operationId: "deleteProjectPolygon",
+    summary: "Delete a project polygon and its polygon geometry",
+    description: `Soft deletes a project polygon and its associated polygon geometry record.`
+  })
+  @JsonApiDeletedResponse(getDtoType(ProjectPolygonDto), {
+    description: "Project polygon and all associated records were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Project polygon not found." })
+  async delete(@Param("uuid") uuid: string) {
+    const projectPolygon = await this.projectPolygonService.findOne(uuid);
+
+    if (projectPolygon === null) {
+      throw new NotFoundException(`Project polygon not found for uuid: ${uuid}`);
+    }
+
+    await this.policyService.authorize("delete", projectPolygon);
+
+    await this.projectPolygonService.deleteProjectPolygon(projectPolygon);
+
+    this.logger.log(`Deleted project polygon ${uuid}`);
+
+    return buildDeletedResponse(getDtoType(ProjectPolygonDto), uuid);
   }
 }

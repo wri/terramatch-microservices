@@ -5,6 +5,7 @@ import { PointGeometryCreationService } from "./point-geometry-creation.service"
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import { VoronoiService } from "../voronoi/voronoi.service";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { SitePolygon, CriteriaSite } from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AttributeChangesDto } from "./dto/create-site-polygon-request.dto";
@@ -58,6 +59,12 @@ describe("SitePolygonCreationService - Versioning", () => {
           useValue: {
             validateVersioningEligibility: jest.fn(),
             createVersion: jest.fn()
+          }
+        },
+        {
+          provide: GeometryFileProcessingService,
+          useValue: {
+            parseGeometryFile: jest.fn()
           }
         }
       ]

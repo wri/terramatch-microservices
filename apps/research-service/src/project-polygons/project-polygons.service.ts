@@ -1,7 +1,9 @@
-import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op, Transaction } from "sequelize";
+import { FeatureCollection, Geometry } from "geojson";
+import { ProjectPolygonGeoJsonQueryDto } from "./dto/project-polygon-geojson-query.dto";
 
 @Injectable()
 export class ProjectPolygonsService {
@@ -122,5 +124,57 @@ export class ProjectPolygonsService {
       where: { uuid },
       attributes: ["id", "uuid", "polyUuid", "entityId", "entityType", "createdBy"]
     });
+  }
+
+  async getGeoJson(query: ProjectPolygonGeoJsonQueryDto): Promise<FeatureCollection> {
+    const projectPitch = await ProjectPitch.findOne({
+      where: { uuid: query.projectPitchUuid },
+      attributes: ["id", "uuid"]
+    });
+
+    if (projectPitch == null) {
+      throw new NotFoundException(`Project pitch not found for uuid: ${query.projectPitchUuid}`);
+    }
+
+    const projectPolygon = await ProjectPolygon.findOne({
+      where: {
+        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityId: projectPitch.id
+      },
+      attributes: ["polyUuid"]
+    });
+
+    if (projectPolygon == null) {
+      throw new NotFoundException(`Project polygon not found for project pitch: ${query.projectPitchUuid}`);
+    }
+
+    if (projectPolygon.polyUuid == null) {
+      throw new NotFoundException(`Polygon geometry UUID not found for project polygon`);
+    }
+
+    const geoJsonString = await PolygonGeometry.getGeoJSON(projectPolygon.polyUuid);
+    if (geoJsonString == null) {
+      throw new NotFoundException(`Polygon geometry not found for uuid: ${projectPolygon.polyUuid}`);
+    }
+
+    let geometry: Geometry;
+    try {
+      geometry = JSON.parse(geoJsonString) as Geometry;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to parse geometry JSON: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry,
+          properties: null
+        }
+      ]
+    };
   }
 }

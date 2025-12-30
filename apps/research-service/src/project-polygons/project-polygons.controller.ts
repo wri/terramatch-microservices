@@ -130,7 +130,7 @@ export class ProjectPolygonsController {
 
     await this.policyService.authorize("delete", projectPolygon);
 
-    await this.projectPolygonService.deleteProjectPolygon(uuid);
+    await this.projectPolygonService.deleteProjectPolygon(projectPolygon);
 
     this.logger.log(`Deleted project polygon ${uuid}`);
 

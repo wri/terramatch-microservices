@@ -352,7 +352,7 @@ describe("ProjectPolygonsController", () => {
       await expect(controller.delete(projectPolygon.uuid)).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should call deleteProjectPolygon on the service", async () => {
+    it("should call deleteProjectPolygon with the model", async () => {
       const projectPolygon = await ProjectPolygonFactory.build();
       projectPolygonService.findByUuid.mockResolvedValue(projectPolygon);
       policyService.authorize.mockResolvedValue(undefined);
@@ -361,7 +361,7 @@ describe("ProjectPolygonsController", () => {
       const result = serialize(await controller.delete(projectPolygon.uuid));
 
       expect(policyService.authorize).toHaveBeenCalledWith("delete", projectPolygon);
-      expect(projectPolygonService.deleteProjectPolygon).toHaveBeenCalledWith(projectPolygon.uuid);
+      expect(projectPolygonService.deleteProjectPolygon).toHaveBeenCalledWith(projectPolygon);
       expect(result.meta.resourceType).toBe("projectPolygons");
       expect(result.meta.resourceIds).toStrictEqual([projectPolygon.uuid]);
       expect(result.data).toBeUndefined();

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, Logger } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op, Transaction } from "sequelize";
@@ -92,19 +92,10 @@ export class ProjectPolygonsService {
     }
   }
 
-  async deleteProjectPolygon(uuid: string): Promise<string> {
+  async deleteProjectPolygon(projectPolygon: ProjectPolygon): Promise<string> {
     return await this.transaction(async transaction => {
-      const projectPolygon = await ProjectPolygon.findOne({
-        where: { uuid },
-        attributes: ["id", "uuid", "polyUuid"],
-        transaction
-      });
-
-      if (projectPolygon === null) {
-        throw new NotFoundException(`Project polygon not found for uuid: ${uuid}`);
-      }
-
       const polygonUuid = projectPolygon.polyUuid;
+      const uuid = projectPolygon.uuid;
 
       await ProjectPolygon.destroy({
         where: { uuid },

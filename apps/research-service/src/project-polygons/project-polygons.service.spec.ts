@@ -1,7 +1,7 @@
 import { ProjectPolygonsService } from "./project-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProjectPolygonFactory, ProjectPitchFactory } from "@terramatch-microservices/database/factories";
-import { ProjectPolygon, ProjectPitch } from "@terramatch-microservices/database/entities";
+import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 
@@ -259,6 +259,90 @@ describe("ProjectPolygonsService", () => {
         writable: true,
         configurable: true
       });
+    });
+  });
+
+  describe("findOne", () => {
+    it("should return project polygon when found", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
+
+      const result = await service.findOne(projectPolygon.uuid);
+
+      expect(result).not.toBeNull();
+      if (result !== null) {
+        expect(result.uuid).toBe(projectPolygon.uuid);
+      }
+    });
+
+    it("should return null when project polygon is not found", async () => {
+      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+
+      const result = await service.findOne("non-existent-uuid");
+
+      expect(result).toBeNull();
+    });
+
+    it("should query with correct parameters", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      const findOneSpy = jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
+
+      await service.findOne(projectPolygon.uuid);
+
+      expect(findOneSpy).toHaveBeenCalledWith({
+        where: { uuid: projectPolygon.uuid },
+        attributes: ["id", "uuid", "polyUuid", "entityId", "entityType", "createdBy"]
+      });
+    });
+  });
+
+  describe("deleteProjectPolygon", () => {
+    interface MockTransaction {
+      commit: jest.Mock;
+      rollback: jest.Mock;
+    }
+
+    let mockTransaction: MockTransaction;
+
+    beforeEach(() => {
+      mockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+      const sequelize = ProjectPolygon.sequelize;
+      if (sequelize !== null && sequelize !== undefined) {
+        // @ts-expect-error incomplete mock
+        jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction);
+      }
+    });
+
+    it("should delete project polygon and polygon geometry", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      jest.spyOn(ProjectPolygon, "destroy").mockResolvedValue(1);
+      jest.spyOn(PolygonGeometry, "destroy").mockResolvedValue(1);
+
+      const result = await service.deleteProjectPolygon(projectPolygon);
+
+      expect(result).toBe(projectPolygon.uuid);
+      expect(ProjectPolygon.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { uuid: projectPolygon.uuid }
+        })
+      );
+      expect(PolygonGeometry.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { uuid: projectPolygon.polyUuid }
+        })
+      );
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("should rollback transaction on error", async () => {
+      const projectPolygon = await ProjectPolygonFactory.build();
+      jest.spyOn(ProjectPolygon, "destroy").mockRejectedValue(new Error("Database error"));
+
+      await expect(service.deleteProjectPolygon(projectPolygon)).rejects.toThrow("Database error");
+      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
   });
 });

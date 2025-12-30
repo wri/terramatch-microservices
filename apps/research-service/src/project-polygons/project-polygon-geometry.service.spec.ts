@@ -5,12 +5,6 @@ import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
 import { FeatureCollection, Feature, Point, Polygon, LineString } from "geojson";
 import { QueryTypes, Transaction } from "sequelize";
-import * as turf from "@turf/turf";
-
-jest.mock("@turf/turf", () => ({
-  circle: jest.fn(),
-  point: jest.fn()
-}));
 
 describe("ProjectPolygonGeometryService", () => {
   let service: ProjectPolygonGeometryService;
@@ -68,14 +62,14 @@ describe("ProjectPolygonGeometryService", () => {
       );
     });
 
-    it("should buffer single point feature with default est_area", async () => {
+    it("should transform single point feature via Voronoi with default est_area", async () => {
       const point: Point = { type: "Point", coordinates: [0, 0] };
       const featureCollection: FeatureCollection = {
         type: "FeatureCollection",
         features: [{ type: "Feature", geometry: point, properties: {} }]
       };
 
-      const expectedPolygon: Polygon = {
+      const voronoiPolygon: Polygon = {
         type: "Polygon",
         coordinates: [
           [
@@ -88,24 +82,28 @@ describe("ProjectPolygonGeometryService", () => {
         ]
       };
 
-      (turf.point as jest.Mock).mockReturnValue({ type: "Point", coordinates: [0, 0] });
-      (turf.circle as jest.Mock).mockReturnValue({ geometry: expectedPolygon });
+      voronoiService.transformPointsToPolygons.mockResolvedValue([
+        {
+          type: "Feature",
+          geometry: voronoiPolygon,
+          properties: {}
+        }
+      ]);
 
       const result = await service.transformFeaturesToSinglePolygon(featureCollection);
 
-      expect(turf.point).toHaveBeenCalledWith([0, 0]);
-      expect(turf.circle).toHaveBeenCalled();
-      expect(result).toEqual(expectedPolygon);
+      expect(voronoiService.transformPointsToPolygons).toHaveBeenCalled();
+      expect(result).toEqual(voronoiPolygon);
     });
 
-    it("should buffer single point feature with estArea property", async () => {
+    it("should transform single point feature via Voronoi with estArea property", async () => {
       const point: Point = { type: "Point", coordinates: [0, 0] };
       const featureCollection: FeatureCollection = {
         type: "FeatureCollection",
         features: [{ type: "Feature", geometry: point, properties: { estArea: 100 } }]
       };
 
-      const expectedPolygon: Polygon = {
+      const voronoiPolygon: Polygon = {
         type: "Polygon",
         coordinates: [
           [
@@ -118,23 +116,28 @@ describe("ProjectPolygonGeometryService", () => {
         ]
       };
 
-      (turf.point as jest.Mock).mockReturnValue({ type: "Point", coordinates: [0, 0] });
-      (turf.circle as jest.Mock).mockReturnValue({ geometry: expectedPolygon });
+      voronoiService.transformPointsToPolygons.mockResolvedValue([
+        {
+          type: "Feature",
+          geometry: voronoiPolygon,
+          properties: { estArea: 100 }
+        }
+      ]);
 
       const result = await service.transformFeaturesToSinglePolygon(featureCollection);
 
-      expect(turf.circle).toHaveBeenCalled();
-      expect(result).toEqual(expectedPolygon);
+      expect(voronoiService.transformPointsToPolygons).toHaveBeenCalled();
+      expect(result).toEqual(voronoiPolygon);
     });
 
-    it("should buffer single point feature with est_area property", async () => {
+    it("should transform single point feature via Voronoi with est_area property", async () => {
       const point: Point = { type: "Point", coordinates: [0, 0] };
       const featureCollection: FeatureCollection = {
         type: "FeatureCollection",
         features: [{ type: "Feature", geometry: point, properties: { est_area: 50 } }]
       };
 
-      const expectedPolygon: Polygon = {
+      const voronoiPolygon: Polygon = {
         type: "Polygon",
         coordinates: [
           [
@@ -147,13 +150,18 @@ describe("ProjectPolygonGeometryService", () => {
         ]
       };
 
-      (turf.point as jest.Mock).mockReturnValue({ type: "Point", coordinates: [0, 0] });
-      (turf.circle as jest.Mock).mockReturnValue({ geometry: expectedPolygon });
+      voronoiService.transformPointsToPolygons.mockResolvedValue([
+        {
+          type: "Feature",
+          geometry: voronoiPolygon,
+          properties: { est_area: 50 }
+        }
+      ]);
 
       const result = await service.transformFeaturesToSinglePolygon(featureCollection);
 
-      expect(turf.circle).toHaveBeenCalled();
-      expect(result).toEqual(expectedPolygon);
+      expect(voronoiService.transformPointsToPolygons).toHaveBeenCalled();
+      expect(result).toEqual(voronoiPolygon);
     });
 
     it("should fallback to convex hull when Voronoi returns empty array", async () => {

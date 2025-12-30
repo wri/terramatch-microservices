@@ -1,13 +1,11 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { Feature, FeatureCollection, Geometry, Point, Polygon, MultiPolygon } from "geojson";
-import * as turf from "@turf/turf";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { QueryTypes, Transaction } from "sequelize";
 import { VoronoiService } from "../voronoi/voronoi.service";
 import { Feature as RequestFeature } from "../site-polygons/dto/create-site-polygon-request.dto";
 
-const DEFAULT_EST_AREA_HECTARES = 78;
-const ADDITIONAL_RADIUS_METERS = 5;
+const DEFAULT_EST_AREA_HECTARES = 10;
 
 @Injectable()
 export class ProjectPolygonGeometryService {
@@ -23,10 +21,6 @@ export class ProjectPolygonGeometryService {
     const allPoints = this.areAllPoints(features);
 
     if (allPoints) {
-      if (features.length === 1) {
-        return this.bufferSinglePoint(features[0]);
-      }
-
       return this.transformPointsViaVoronoi(features);
     }
 
@@ -39,25 +33,6 @@ export class ProjectPolygonGeometryService {
 
   private areAllPoints(features: Feature[]): boolean {
     return features.every(f => f.geometry.type === "Point");
-  }
-
-  private calculateCircleRadiusMeters(hectaresArea: number): number {
-    const squareMeters = hectaresArea * 10000;
-    const radius = Math.sqrt(squareMeters / Math.PI);
-    return radius + ADDITIONAL_RADIUS_METERS;
-  }
-
-  private bufferSinglePoint(feature: Feature): Polygon {
-    const point = feature.geometry as Point;
-    const estArea =
-      (feature.properties?.estArea as number) ?? (feature.properties?.est_area as number) ?? DEFAULT_EST_AREA_HECTARES;
-
-    const radiusMeters = this.calculateCircleRadiusMeters(estArea);
-    const radiusKm = radiusMeters / 1000;
-
-    const buffered = turf.circle(turf.point(point.coordinates), radiusKm, { units: "kilometers" });
-
-    return buffered.geometry;
   }
 
   private async transformPointsViaVoronoi(features: Feature[]): Promise<Polygon> {

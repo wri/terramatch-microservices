@@ -83,8 +83,9 @@ describe("ProjectPolygonsController", () => {
 
       expect(result.data).not.toBeNull();
       const resource = result.data as Resource;
-      expect(resource.id).toBe(projectPolygon.uuid);
+      expect(resource.id).toBe(`?projectPitchUuid=${projectPitch.uuid}`);
       expect(resource.type).toBe("projectPolygons");
+      expect(resource.attributes).toHaveProperty("uuid", projectPolygon.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("read", ProjectPolygon);
     });
 

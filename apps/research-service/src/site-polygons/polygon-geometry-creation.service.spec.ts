@@ -143,6 +143,94 @@ describe("PolygonGeometryCreationService", () => {
 
       expect(PolygonGeometry.batchCalculateAreas).toHaveBeenCalledWith(geometries);
     });
+
+    it("should process MultiPolygon geometry", async () => {
+      const geometries: Geometry[] = [
+        {
+          type: "MultiPolygon",
+          coordinates: [
+            [
+              [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [0, 0]
+              ]
+            ]
+          ]
+        }
+      ];
+
+      jest.spyOn(PolygonGeometry, "batchCalculateAreas").mockResolvedValue([{ area: 15.2 }]);
+
+      const result = await service.batchPrepareGeometries(geometries);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].area).toBe(15.2);
+      expect(PolygonGeometry.batchCalculateAreas).toHaveBeenCalledWith(geometries);
+    });
+
+    it("should handle non-Polygon/MultiPolygon geometries with area 0", async () => {
+      const geometries: Geometry[] = [
+        {
+          type: "Point",
+          coordinates: [0, 0]
+        } as Geometry
+      ];
+
+      jest.spyOn(PolygonGeometry, "batchCalculateAreas").mockResolvedValue([]);
+
+      const result = await service.batchPrepareGeometries(geometries);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].area).toBe(0);
+      expect(PolygonGeometry.batchCalculateAreas).toHaveBeenCalledWith([]);
+    });
+
+    it("should handle mixed Polygon, MultiPolygon and other geometries", async () => {
+      const geometries: Geometry[] = [
+        {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        {
+          type: "MultiPolygon",
+          coordinates: [
+            [
+              [
+                [2, 2],
+                [2, 3],
+                [3, 3],
+                [3, 2],
+                [2, 2]
+              ]
+            ]
+          ]
+        },
+        {
+          type: "Point",
+          coordinates: [5, 5]
+        } as Geometry
+      ];
+
+      jest.spyOn(PolygonGeometry, "batchCalculateAreas").mockResolvedValue([{ area: 10.5 }, { area: 8.3 }]);
+
+      const result = await service.batchPrepareGeometries(geometries);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].area).toBe(10.5);
+      expect(result[1].area).toBe(8.3);
+      expect(result[2].area).toBe(0);
+    });
   });
 
   const createMockPolygonGeometry = (uuid: string, polygon: Polygon, createdBy: number | null): PolygonGeometry => {
@@ -309,6 +397,24 @@ describe("PolygonGeometryCreationService", () => {
       expect(bulkCreateCall[1]).toEqual({ transaction: mockTransaction });
     });
 
+    it("should throw error if sequelize is not available", async () => {
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        get: jest.fn(() => null),
+        configurable: true
+      });
+
+      jest.spyOn(service["logger"], "error").mockImplementation();
+
+      const geometriesWithAreas = [
+        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 }
+      ];
+
+      await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(
+        "PolygonGeometry model is missing sequelize connection"
+      );
+    });
+
     it("should handle database errors and throw InternalServerErrorException", async () => {
       jest.spyOn(service["logger"], "error").mockImplementation(() => {
         // Suppress console output during test
@@ -323,6 +429,23 @@ describe("PolygonGeometryCreationService", () => {
       await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(InternalServerErrorException);
       await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(
         "Failed to insert geometries: Database connection failed"
+      );
+    });
+
+    it("should handle non-Error type errors and throw InternalServerErrorException", async () => {
+      jest.spyOn(service["logger"], "error").mockImplementation(() => {
+        // Suppress console output during test
+      });
+      const error = "String error";
+      mockBulkCreate.mockRejectedValue(error);
+
+      const geometriesWithAreas = [
+        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 }
+      ];
+
+      await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.bulkInsertGeometries(geometriesWithAreas, 1)).rejects.toThrow(
+        "Failed to insert geometries: String error"
       );
     });
   });
@@ -344,13 +467,9 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest
-        .spyOn(service, "batchPrepareGeometries")
-        .mockResolvedValue([
-          { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 }
-        ]);
-
       jest.spyOn(service, "bulkInsertGeometries").mockResolvedValue(["uuid-1"]);
+
+      mockSequelize.query.mockResolvedValue([{ uuid: "uuid-1", area_hectares: 10.5 }]);
 
       const result = await service.createGeometriesFromFeatures(geometries, 1);
 
@@ -385,23 +504,18 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest.spyOn(service, "batchPrepareGeometries").mockResolvedValue([
-        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 },
-        { uuid: "uuid-2", geomJson: '{"type":"Polygon","coordinates":[[[2,2],[2,3],[3,3],[3,2],[2,2]]]}', area: 8.3 }
-      ]);
-
       jest.spyOn(service, "bulkInsertGeometries").mockResolvedValue(["uuid-1", "uuid-2"]);
+
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: 10.5 },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
 
       const result = await service.createGeometriesFromFeatures(geometries, 1);
 
       expect(result.uuids).toHaveLength(2);
       expect(result.areas).toHaveLength(2);
-      expect(service.batchPrepareGeometries).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ type: "Polygon" }),
-          expect.objectContaining({ type: "Polygon" })
-        ])
-      );
+      expect(result.areas).toEqual([10.5, 8.3]);
     });
 
     it("should handle mixed Polygon and MultiPolygon geometries", async () => {
@@ -434,16 +548,99 @@ describe("PolygonGeometryCreationService", () => {
         }
       ];
 
-      jest.spyOn(service, "batchPrepareGeometries").mockResolvedValue([
-        { uuid: "uuid-1", geomJson: '{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}', area: 10.5 },
-        { uuid: "uuid-2", geomJson: '{"type":"Polygon","coordinates":[[[2,2],[2,3],[3,3],[3,2],[2,2]]]}', area: 8.3 }
-      ]);
-
       jest.spyOn(service, "bulkInsertGeometries").mockResolvedValue(["uuid-1", "uuid-2"]);
+
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: 10.5 },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
 
       const result = await service.createGeometriesFromFeatures(geometries, 1);
 
       expect(result.uuids).toHaveLength(2);
+      expect(result.areas).toHaveLength(2);
+    });
+  });
+
+  describe("calculateAreasFromStoredGeometries", () => {
+    it("should return empty array for empty input", async () => {
+      const result = await service["calculateAreasFromStoredGeometries"]([]);
+      expect(result).toEqual([]);
+      expect(mockSequelize.query).not.toHaveBeenCalled();
+    });
+
+    it("should throw error if sequelize is not available", async () => {
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        get: jest.fn(() => null),
+        configurable: true
+      });
+
+      jest.spyOn(service["logger"], "error").mockImplementation();
+
+      await expect(service["calculateAreasFromStoredGeometries"](["uuid-1"])).rejects.toThrow(
+        InternalServerErrorException
+      );
+      await expect(service["calculateAreasFromStoredGeometries"](["uuid-1"])).rejects.toThrow(
+        "PolygonGeometry model is missing sequelize connection"
+      );
+    });
+
+    it("should calculate areas from stored geometries", async () => {
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: 10.5 },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
+
+      const result = await service["calculateAreasFromStoredGeometries"](["uuid-1", "uuid-2"]);
+
+      expect(result).toEqual([10.5, 8.3]);
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT"),
+        expect.objectContaining({
+          type: QueryTypes.SELECT,
+          replacements: expect.objectContaining({
+            uuid0: "uuid-1",
+            uuid1: "uuid-2"
+          })
+        })
+      );
+    });
+
+    it("should handle null area values", async () => {
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: null },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
+
+      const result = await service["calculateAreasFromStoredGeometries"](["uuid-1", "uuid-2"]);
+
+      expect(result).toEqual([0, 8.3]);
+    });
+
+    it("should handle NaN area values", async () => {
+      mockSequelize.query.mockResolvedValue([
+        { uuid: "uuid-1", area_hectares: Number.NaN },
+        { uuid: "uuid-2", area_hectares: 8.3 }
+      ]);
+
+      const result = await service["calculateAreasFromStoredGeometries"](["uuid-1", "uuid-2"]);
+
+      expect(result).toEqual([0, 8.3]);
+    });
+
+    it("should handle database errors and throw InternalServerErrorException", async () => {
+      jest.spyOn(service["logger"], "error").mockImplementation(() => {
+        // Suppress console output during test
+      });
+      const error = new Error("Database query failed");
+      mockSequelize.query.mockRejectedValue(error);
+
+      await expect(service["calculateAreasFromStoredGeometries"](["uuid-1"])).rejects.toThrow(
+        InternalServerErrorException
+      );
+      await expect(service["calculateAreasFromStoredGeometries"](["uuid-1"])).rejects.toThrow(
+        "Failed to calculate areas from stored geometries"
+      );
     });
   });
 
@@ -488,6 +685,21 @@ describe("PolygonGeometryCreationService", () => {
         expect.anything()
       );
     });
+
+    it("should handle database errors and throw InternalServerErrorException", async () => {
+      jest.spyOn(service["logger"], "error").mockImplementation(() => {
+        // Suppress console output during test
+      });
+      const error = new Error("Database query failed");
+      mockSequelize.query.mockRejectedValue(error);
+
+      await expect(service.bulkUpdateSitePolygonCentroids(["polygon-uuid-1"])).rejects.toThrow(
+        InternalServerErrorException
+      );
+      await expect(service.bulkUpdateSitePolygonCentroids(["polygon-uuid-1"])).rejects.toThrow(
+        "Failed to update site polygon centroids"
+      );
+    });
   });
 
   describe("bulkUpdateSitePolygonAreas", () => {
@@ -522,6 +734,158 @@ describe("PolygonGeometryCreationService", () => {
         })
       );
       expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("ST_Area(pg.geom)"), expect.anything());
+    });
+
+    it("should handle NaN/null values in checkResults and log error", async () => {
+      const mockLoggerError = jest.spyOn(service["logger"], "error").mockImplementation();
+      mockSequelize.query
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            st_area: null,
+            centroid_y: null,
+            cos_value: null,
+            calculated_area: Number.NaN
+          }
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            calc_area: 10.5
+          }
+        ]);
+
+      await service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"]);
+
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        expect.stringContaining("[bulkUpdateSitePolygonAreas] Potential NaN/Null detected before update:"),
+        expect.objectContaining({
+          poly_id: "poly-id-1",
+          site_polygon_uuid: "site-uuid-1",
+          isNaN: true,
+          isNull: false
+        })
+      );
+    });
+
+    it("should handle null calculated_area in checkResults and log error", async () => {
+      const mockLoggerError = jest.spyOn(service["logger"], "error").mockImplementation();
+      mockSequelize.query
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            st_area: 100,
+            centroid_y: 45.0,
+            cos_value: 0.707,
+            calculated_area: null
+          }
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            calc_area: 10.5
+          }
+        ]);
+
+      await service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"]);
+
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        expect.stringContaining("[bulkUpdateSitePolygonAreas] Potential NaN/Null detected before update:"),
+        expect.objectContaining({
+          poly_id: "poly-id-1",
+          site_polygon_uuid: "site-uuid-1",
+          isNaN: false,
+          isNull: true
+        })
+      );
+    });
+
+    it("should handle NaN values in verifyResults and log error", async () => {
+      const mockLoggerError = jest.spyOn(service["logger"], "error").mockImplementation();
+      mockSequelize.query
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            st_area: 100,
+            centroid_y: 45.0,
+            cos_value: 0.707,
+            calculated_area: 10.5
+          }
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            calc_area: Number.NaN
+          }
+        ]);
+
+      await service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"]);
+
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        expect.stringContaining("[bulkUpdateSitePolygonAreas] NaN detected after update!"),
+        expect.objectContaining({
+          poly_id: "poly-id-1",
+          site_polygon_uuid: "site-uuid-1",
+          calc_area: Number.NaN
+        })
+      );
+    });
+
+    it("should handle null calc_area in verifyResults and log warning", async () => {
+      const mockLoggerWarn = jest.spyOn(service["logger"], "warn").mockImplementation();
+      mockSequelize.query
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            st_area: 100,
+            centroid_y: 45.0,
+            cos_value: 0.707,
+            calculated_area: 10.5
+          }
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            poly_id: "poly-id-1",
+            site_polygon_uuid: "site-uuid-1",
+            calc_area: null
+          }
+        ]);
+
+      await service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"]);
+
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
+        expect.stringContaining("[bulkUpdateSitePolygonAreas] Null calc_area after update:"),
+        expect.objectContaining({
+          poly_id: "poly-id-1",
+          site_polygon_uuid: "site-uuid-1"
+        })
+      );
+    });
+
+    it("should handle database errors and throw InternalServerErrorException", async () => {
+      jest.spyOn(service["logger"], "error").mockImplementation(() => {
+        // Suppress console output during test
+      });
+      const error = new Error("Database query failed");
+      mockSequelize.query.mockRejectedValue(error);
+
+      await expect(service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"])).rejects.toThrow(
+        InternalServerErrorException
+      );
+      await expect(service.bulkUpdateSitePolygonAreas(["polygon-uuid-1"])).rejects.toThrow(
+        "Failed to update site polygon areas"
+      );
     });
   });
 
@@ -568,6 +932,21 @@ describe("PolygonGeometryCreationService", () => {
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("AVG(ST_X(ST_Centroid(pg.geom)))"),
         expect.anything()
+      );
+    });
+
+    it("should handle database errors and throw InternalServerErrorException", async () => {
+      jest.spyOn(service["logger"], "error").mockImplementation(() => {
+        // Suppress console output during test
+      });
+      const error = new Error("Database query failed");
+      mockSequelize.query.mockRejectedValue(error);
+
+      await expect(service.bulkUpdateProjectCentroids(["polygon-uuid-1"])).rejects.toThrow(
+        InternalServerErrorException
+      );
+      await expect(service.bulkUpdateProjectCentroids(["polygon-uuid-1"])).rejects.toThrow(
+        "Failed to update project centroids"
       );
     });
   });

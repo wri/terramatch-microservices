@@ -12,11 +12,12 @@ import { SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidationDto } from "../validations/dto/validation.dto";
 import { FeatureCollection } from "geojson";
-import { Feature, CreateSitePolygonRequestDto, AttributeChangesDto } from "./dto/create-site-polygon-request.dto";
+import { Feature, CreateSitePolygonRequestDto } from "./dto/create-site-polygon-request.dto";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { validateSitePolygonProperties } from "./utils/site-polygon-property-validator";
+import { convertPropertiesToAttributeChanges } from "./utils/attribute-changes-converter";
 import { CriteriaId, ValidationType } from "@terramatch-microservices/database/constants";
 
 export interface GeometryUploadJobData {
@@ -247,7 +248,7 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
           }
 
           const validatedProperties = validateSitePolygonProperties(allProperties);
-          const attributeChanges = this.convertPropertiesToAttributeChanges(validatedProperties);
+          const attributeChanges = convertPropertiesToAttributeChanges(validatedProperties);
 
           const uploadedPolyName = attributeChanges.polyName ?? attributeChanges.poly_name;
           const basePolyName = basePolygon.polyName ?? null;
@@ -317,41 +318,5 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       progressMessage: `Created ${createdPolygons.length} new polygons and ${createdVersions.length} new versions`,
       payload: document
     };
-  }
-
-  private convertPropertiesToAttributeChanges(properties: Partial<SitePolygon>): AttributeChangesDto {
-    const attributeChanges: AttributeChangesDto = {};
-
-    if (properties.polyName != null) {
-      attributeChanges.polyName = properties.polyName;
-      attributeChanges.poly_name = properties.polyName;
-    }
-
-    if (properties.plantStart != null) {
-      const plantStartString =
-        properties.plantStart instanceof Date ? properties.plantStart.toISOString() : String(properties.plantStart);
-      attributeChanges.plantStart = plantStartString;
-      attributeChanges.plantstart = plantStartString;
-    }
-
-    if (properties.practice != null && properties.practice.length > 0) {
-      attributeChanges.practice = properties.practice;
-    }
-
-    if (properties.targetSys != null) {
-      attributeChanges.targetSys = properties.targetSys;
-      attributeChanges.target_sys = properties.targetSys;
-    }
-
-    if (properties.distr != null && properties.distr.length > 0) {
-      attributeChanges.distr = properties.distr;
-    }
-
-    if (properties.numTrees != null) {
-      attributeChanges.numTrees = properties.numTrees;
-      attributeChanges.num_trees = properties.numTrees;
-    }
-
-    return attributeChanges;
   }
 }

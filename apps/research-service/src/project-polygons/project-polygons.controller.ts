@@ -98,8 +98,7 @@ export class ProjectPolygonsController {
 
     const document = buildJsonApi(ProjectPolygonDto);
     const dto = await this.projectPolygonService.buildDto(projectPolygon, query.projectPitchUuid);
-    const id = getStableRequestQuery(query);
-    document.addData(id, dto);
+    document.addData(getStableRequestQuery(query), dto);
 
     return document;
   }

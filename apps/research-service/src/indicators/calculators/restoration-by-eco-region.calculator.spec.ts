@@ -5,6 +5,7 @@ import { NotFoundException } from "@nestjs/common";
 import { DataApiService } from "@terramatch-microservices/data-api";
 
 describe("RestorationByEcoRegionCalculator", () => {
+  const currentYear = new Date().getFullYear();
   let calculator: RestorationByEcoRegionCalculator;
   const ecoRegion1 = {
     eco_name: "ecoRegion1",
@@ -68,7 +69,7 @@ describe("RestorationByEcoRegionCalculator", () => {
     const result = await calculator.calculate("uuid", geometry, dataApiServiceMock as unknown as DataApiService);
     expect(result).toMatchObject({
       indicatorSlug: "restorationByEcoRegion",
-      yearOfAnalysis: 2025,
+      yearOfAnalysis: currentYear,
       value: {
         ecoRegion1: 100,
         ecoRegion2: 100,
@@ -102,7 +103,7 @@ describe("RestorationByEcoRegionCalculator", () => {
     );
     expect(result).toMatchObject({
       indicatorSlug: "restorationByEcoRegion",
-      yearOfAnalysis: 2025,
+      yearOfAnalysis: currentYear,
       value: {
         ecoRegion1: 100,
         ecoRegion2: 100,

@@ -72,7 +72,7 @@ export class GeoJsonExportService {
         {
           type: "Feature",
           geometry,
-          properties: null
+          properties: {}
         }
       ];
     }

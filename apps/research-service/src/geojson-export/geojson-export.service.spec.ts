@@ -156,7 +156,7 @@ describe("GeoJsonExportService", () => {
             {
               type: "Feature",
               geometry: mockGeometry,
-              properties: null
+              properties: {}
             }
           ]
         });

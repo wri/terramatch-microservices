@@ -172,7 +172,9 @@ export class ProjectPolygonsService {
         {
           type: "Feature",
           geometry,
-          properties: null
+          properties: {
+            projectPitchUuid: query.projectPitchUuid
+          }
         }
       ]
     };

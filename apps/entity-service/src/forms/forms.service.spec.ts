@@ -476,7 +476,7 @@ describe("FormsService", () => {
       expect(questions).toHaveLength(2);
       expect(questions[0].additionalProps).toEqual({
         with_private_checkbox: true,
-        accept: ["image/jpeg", "image/png", "video/mp4"]
+        accept: ["image/jpeg", "image/png", "video/mp4", "image/heic", "image/heif"]
       });
       expect(questions[1].additionalProps).toEqual({
         with_private_checkbox: false

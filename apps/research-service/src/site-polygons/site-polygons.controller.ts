@@ -375,18 +375,15 @@ export class SitePolygonsController {
   @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
+  @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
   async updateBulkStatus(@Param("status") status: string, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
     await this.policyService.authorize("update", SitePolygon);
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
+    const userId = this.policyService.userId as number;
     const user = await User.findByPk(userId, {
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
     const { data, comment } = request;
-    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
+    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment as string, user);
     const document = buildJsonApi(SitePolygonLightDto);
     for (const sitePolygon of updatedUuids) {
       document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon, {}));

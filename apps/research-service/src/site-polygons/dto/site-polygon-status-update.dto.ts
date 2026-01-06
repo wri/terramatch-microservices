@@ -21,5 +21,5 @@ export class SitePolygonStatusBulkUpdateBodyDto extends JsonApiBulkBodyDto(SiteP
   @IsOptional()
   @IsString()
   @ApiProperty({ description: "Comment for the status update", required: false, type: String })
-  comment: string | null = null;
+  comment?: string;
 }

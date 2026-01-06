@@ -2,7 +2,7 @@ import { IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 
-@JsonApiDto({ type: "media-bulk-response" })
+@JsonApiDto({ type: "mediaBulkResponse" })
 export class MediaBulkResponseDto {
   constructor(index: number, error: string) {
     this.index = index;

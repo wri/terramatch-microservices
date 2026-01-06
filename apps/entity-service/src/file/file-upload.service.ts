@@ -55,7 +55,8 @@ export class FileUploadService {
       throw new BadRequestException("Invalid file type");
     }
     const contentType = res.headers.get("content-type") ?? "";
-    const contentLength = Number(res.headers.get("content-length")) || buffer.length;
+    const contentLength =
+      res.headers.get("content-length") == null ? buffer.length : Number(res.headers.get("content-length"));
 
     return {
       fieldname: "uploadFile",
@@ -158,6 +159,7 @@ export class FileUploadService {
       const result = await callback(transaction);
       await transaction.commit();
       return result;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       await transaction.rollback();
     }

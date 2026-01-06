@@ -20,6 +20,9 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaRequestAttributes } from "../entities/dto/media-request.dto";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
+import { Readable } from "stream";
+import path from "path";
+import { Transaction } from "sequelize";
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
 
@@ -29,12 +32,52 @@ export class FileUploadService {
 
   constructor(private readonly mediaService: MediaService, private readonly entitiesService: EntitiesService) {}
 
+  public async fetchDataFromUrlAsMulterFile(url: string): Promise<Express.Multer.File> {
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (error) {
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${error.message}`);
+    }
+
+    if (!res.ok) {
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${res.statusText}`);
+    }
+
+    const filename = path.basename(new URL(url).pathname);
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const allowedMimeTypes = ["image/png", "image/jpg", "image/jpeg", "image/heif", "image/heic"];
+
+    if (!allowedMimeTypes.includes(res.headers.get("content-type") ?? "")) {
+      throw new BadRequestException("Invalid file type");
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    const contentLength = Number(res.headers.get("content-length")) || buffer.length;
+
+    return {
+      fieldname: "uploadFile",
+      originalname: url.split("/").pop() ?? "downloaded-file",
+      encoding: "7bit",
+      mimetype: contentType,
+      size: contentLength,
+      buffer,
+      stream: Readable.from(buffer),
+      destination: "",
+      filename,
+      path: ""
+    };
+  }
+
   public async uploadFile(
     model: MediaOwnerModel,
     entity: MediaOwnerType,
     collection: string,
     file: Express.Multer.File,
-    data: MediaRequestAttributes
+    data: MediaRequestAttributes,
+    transaction?: Transaction
   ): Promise<Media> {
     if (file == null) {
       throw new BadRequestException("No file provided");
@@ -71,7 +114,7 @@ export class FileUploadService {
     media.createdBy = this.entitiesService.userId;
     media.photographer = user?.fullName ?? null;
 
-    await media.save();
+    await media.save({ transaction });
     try {
       const { buffer, originalname, mimetype } = file;
 
@@ -91,10 +134,13 @@ export class FileUploadService {
         const extension = originalname.substring(extensionIdx);
         const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${extension}`;
         await this.mediaService.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
-        await media.update({
-          generatedConversions: { thumbnail: true },
-          customProperties: { ...media.customProperties, thumbnailExtension: extension }
-        });
+        await media.update(
+          {
+            generatedConversions: { thumbnail: true },
+            customProperties: { ...media.customProperties, thumbnailExtension: extension }
+          },
+          { transaction }
+        );
       }
 
       return media;
@@ -102,6 +148,18 @@ export class FileUploadService {
       this.logger.error(`Error uploading file to S3 [${error}]`);
       await media.destroy({ force: true });
       throw error;
+    }
+  }
+
+  async transaction<TReturn>(callback: (transaction: Transaction) => Promise<TReturn>) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const transaction = await Media.sequelize!.transaction();
+    try {
+      const result = await callback(transaction);
+      await transaction.commit();
+      return result;
+    } catch (e) {
+      await transaction.rollback();
     }
   }
 

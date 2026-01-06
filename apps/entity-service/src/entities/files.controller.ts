@@ -32,6 +32,11 @@ import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-proces
 import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-update.dto";
 import { SingleMediaDto } from "./dto/media-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { SiteMediaBulkUploadDto } from "./dto/site-media-bulk-upload.dto";
+import { Site } from "@terramatch-microservices/database/entities/site.entity";
+import { MediaRequestBulkBody } from "./dto/media-request-bulk.dto";
+import { MediaBulkResponseDto } from "./dto/media-bulk-response.dto";
+import { Media } from "@terramatch-microservices/database/entities/media.entity";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -57,6 +62,75 @@ export class FilesController {
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("read", media);
     return this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid });
+  }
+
+  @Post("/site/:siteUuid/bulkUpload")
+  @ApiOperation({
+    operationId: "siteMediaBulkUpload",
+    summary: "Upload multiple files to a site photos collection",
+    description: "Upload multiple files to a site photos collection"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or site unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @JsonApiResponse([MediaDto, MediaBulkResponseDto])
+  async siteMediaBulkUpload(@Param() { siteUuid }: SiteMediaBulkUploadDto, @Body() payload: MediaRequestBulkBody) {
+    const site = await Site.findOne({ where: { uuid: siteUuid } });
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
+    }
+    await this.policyService.authorize("uploadFiles", site);
+    const errors: MediaBulkResponseDto[] = [];
+    const createdMedias: Media[] = [];
+    await this.fileUploadService.transaction(async transaction => {
+      for (const [index, payloadData] of payload.data.entries()) {
+        let file: Express.Multer.File;
+        try {
+          file = await this.fileUploadService.fetchDataFromUrlAsMulterFile(payloadData.attributes.downloadUrl);
+          const media = await this.fileUploadService.uploadFile(
+            site,
+            "sites",
+            "photos",
+            file,
+            payloadData.attributes,
+            transaction
+          );
+          createdMedias.push(media);
+        } catch (error) {
+          errors.push(new MediaBulkResponseDto(index, error.message));
+        }
+      }
+      if (errors.length > 0) {
+        // clear s3 files
+        for (const media of createdMedias) {
+          await this.mediaService.deleteMediaFromS3(media);
+        }
+        throw new BadRequestException("Failed to upload some files");
+      }
+    });
+    let document;
+    if (errors.length > 0) {
+      document = buildJsonApi(MediaBulkResponseDto);
+      for (const error of errors) {
+        document.addData(error.index.toString(), new MediaBulkResponseDto(error.index, error.error));
+      }
+    } else {
+      document = buildJsonApi(MediaDto);
+      for (const media of createdMedias) {
+        document.addData(
+          media.uuid,
+          new MediaDto(media, {
+            url: this.mediaService.getUrl(media),
+            thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+            entityType: "sites",
+            entityUuid: site.uuid
+          })
+        );
+      }
+    }
+    return document;
   }
 
   @Post("/:entity/:uuid/:collection")

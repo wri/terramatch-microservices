@@ -150,18 +150,19 @@ export class MediaService {
     return media;
   }
 
-  async deleteMedia(media: Media) {
+  async deleteMediaFromS3(media: Media) {
     const key = `${media.id}/${media.fileName}`;
-
     const command = new DeleteObjectCommand({
       Bucket: this.configService.get<string>("AWS_BUCKET") ?? "",
       Key: key
     });
-
     this.logger.log(`Deleting media ${media.uuid} from S3`);
     await this.s3.send(command);
-    await media.destroy();
+  }
 
+  async deleteMedia(media: Media) {
+    await this.deleteMediaFromS3(media);
+    await media.destroy();
     return media;
   }
 

@@ -19,7 +19,7 @@ import { ValidLocale } from "@terramatch-microservices/database/constants/locale
 import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
 import { LocalizationFormService } from "./localization-form.service";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
@@ -152,7 +152,7 @@ export class LocalizationService {
       console.log(txTranslations);
       const keys = Object.keys(txTranslations);
       for (const key of keys) {
-        if (!txMapHashToTranslations[key]) {
+        if (txMapHashToTranslations[key] == null) {
           txMapHashToTranslations[key] = [];
         }
         txMapHashToTranslations[key].push({
@@ -171,7 +171,7 @@ export class LocalizationService {
     const i18nTranslationsMap = groupBy(i18nTranslations, "i18nItemId");
     for (const i18nItem of i18nItems) {
       const { hash } = i18nItem;
-      txMapHashToTranslations[hash!].forEach(async txTranslation => {
+      txMapHashToTranslations[hash as string].forEach(async txTranslation => {
         const i18nItemId = i18nItem.id;
         const dbI18nTranslations = i18nTranslationsMap[i18nItemId];
         const i18nTranslation = dbI18nTranslations?.find(
@@ -222,7 +222,7 @@ export class LocalizationService {
     const i18nIds = await this.localizationFormService.getI18nIdsForForm(form);
     const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
     const source = this.createSource(items, ["custom-form", form.uuid]);
-    // await tx.pushSource(source);
+    await tx.pushSource(source);
     this.logger.log(`Finished pushing ${items.length} items`);
     return i18nIds;
   }

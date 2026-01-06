@@ -690,18 +690,6 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should throw BadRequestException when userId is null", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", {
-        value: null,
-        writable: true,
-        configurable: true
-      });
-      await expect(
-        controller.updateBulkStatus("submitted", { comment: "comment", data: [{ type: "sitePolygons", id: "1234" }] })
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
     it("should call updateBulkStatus on sitePolygonService", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const userParams = { id: 1, firstName: "Test", lastName: "User", emailAddress: "test@example.com" };

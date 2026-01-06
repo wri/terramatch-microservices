@@ -23,6 +23,8 @@ import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
 import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationFormService } from "./localization-form.service";
+import { buildJsonApi } from "../util/json-api-builder";
+import { FormTranslationDto } from "../dto/form-translation.dto";
 
 jest.mock("@transifex/native", () => ({
   tx: {
@@ -284,6 +286,15 @@ describe("LocalizationService", () => {
       await service.cleanOldI18nItems();
       const afterCount = await I18nItem.count();
       expect(afterCount).toBe(previousCount);
+    });
+  });
+
+  describe("addTranslationDto", () => {
+    it("should add translation DTOs to the document", () => {
+      const document = buildJsonApi(FormTranslationDto);
+      const i18nItemIds = [1, 2, 3];
+      service.addTranslationDto(document, i18nItemIds);
+      expect(document.data.length).toBe(i18nItemIds.length);
     });
   });
 });

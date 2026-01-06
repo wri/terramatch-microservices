@@ -149,7 +149,6 @@ export class LocalizationService {
       const dbLocale = locale.split("_").join("-");
       await tx.fetchTranslations(locale, config);
       const txTranslations = await tx.cache.getTranslations(locale);
-      console.log(txTranslations);
       const keys = Object.keys(txTranslations);
       for (const key of keys) {
         if (txMapHashToTranslations[key] == null) {
@@ -164,7 +163,6 @@ export class LocalizationService {
       }
     }
     const i18nItems = await I18nItem.findAll({ where: { hash: { [Op.in]: Object.keys(txMapHashToTranslations) } } });
-    console.log(i18nItems.length);
     const i18nTranslations = await I18nTranslation.findAll({
       where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) } }
     });

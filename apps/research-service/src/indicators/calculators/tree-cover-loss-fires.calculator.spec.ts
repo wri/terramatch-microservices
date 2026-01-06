@@ -5,11 +5,12 @@ import { Polygon } from "geojson";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 
 describe("TreeCoverLossFiresCalculator", () => {
+  const currentYear = new Date().getFullYear();
   let calculator: TreeCoverLossFiresCalculator;
   const dataApiServiceMock = {
     getIndicatorsDataset: jest.fn().mockResolvedValue([
       {
-        umd_tree_cover_loss_from_fires__year: 25,
+        umd_tree_cover_loss_from_fires__year: Number(currentYear.toString().slice(-2)),
         area__ha: 100
       }
     ])
@@ -61,8 +62,8 @@ describe("TreeCoverLossFiresCalculator", () => {
     expect(result).toMatchObject({
       indicatorSlug: "treeCoverLossFires",
       sitePolygonId: 1,
-      value: { 2025: 100 },
-      yearOfAnalysis: 2025
+      value: { [currentYear]: 100 },
+      yearOfAnalysis: currentYear
     });
   });
 });

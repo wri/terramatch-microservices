@@ -1189,6 +1189,64 @@ describe("SitePolygonsController", () => {
     });
   });
 
+  describe("uploadVersionForSitePolygon", () => {
+    let originalSequelize: typeof SitePolygon.sequelize;
+
+    beforeEach(() => {
+      originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    afterEach(() => {
+      if (SitePolygon.sequelize !== originalSequelize) {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize,
+          writable: true,
+          configurable: true
+        });
+      }
+    });
+
+    it("should successfully create version from uploaded file", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid", id: 123 });
+      sitePolygonCreationService.uploadVersionFromFile.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      const result = await controller.uploadVersionForSitePolygon(
+        "base-uuid",
+        file,
+        payload as GeometryUploadRequestDto
+      );
+
+      expect(sitePolygonCreationService.uploadVersionFromFile).toHaveBeenCalledWith(
+        file,
+        "base-uuid",
+        "site-uuid",
+        1,
+        user.fullName,
+        "terramatch"
+      );
+      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
+      const serialized = serialize(result);
+      expect(serialized.data).toBeDefined();
+    });
+  });
+
   describe("getVersions", () => {
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());

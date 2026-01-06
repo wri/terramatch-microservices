@@ -812,6 +812,60 @@ export class SitePolygonsController {
 
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
+
+  @Post(":uuid/upload/versions")
+  @ApiOperation({
+    operationId: "uploadVersionForSitePolygon",
+    summary: "Upload geometry file to create a new version of a specific site polygon",
+    description: `Uploads a geometry file and creates a new version of the specified site polygon.
+      Supported formats: KML (.kml), Shapefile (.zip with .shp/.shx/.dbf), GeoJSON (.geojson)`
+  })
+  @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
+  @JsonApiResponse(SitePolygonLightDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, file parsing failed, no features found, or multiple features provided."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site polygon or site not found." })
+  async uploadVersionForSitePolygon(
+    @Param("uuid") sitePolygonUuid: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: GeometryUploadRequestDto
+  ) {
+    await this.policyService.authorize("create", SitePolygon);
+
+    const userId = this.policyService.userId as number;
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+
+    const siteId = payload.data.attributes.siteId;
+
+    const newVersion = await this.sitePolygonCreationService.uploadVersionFromFile(
+      file,
+      sitePolygonUuid,
+      siteId,
+      userId,
+      user?.fullName ?? null,
+      source
+    );
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);
+
+    document.addData(
+      newVersion.uuid,
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+    );
+
+    this.logger.log(`Created version ${newVersion.uuid} from site polygon ${sitePolygonUuid} by user ${userId}`);
+
+    return document;
+  }
+
   private async createVersion(
     baseSitePolygonUuid: string,
     geometries: CreateSitePolygonJsonApiRequestDto["data"]["attributes"]["geometries"],
@@ -852,7 +906,7 @@ export class SitePolygonsController {
 
     document.addData(
       newVersion.uuid,
-      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? {})
+      await this.sitePolygonService.buildLightDto(newVersion, associations[newVersion.id] ?? { indicators: [] })
     );
 
     this.logger.log(`Created version ${newVersion.uuid} from base ${baseSitePolygonUuid} by user ${userId}`);

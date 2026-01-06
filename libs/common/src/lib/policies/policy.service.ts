@@ -8,6 +8,7 @@ import {
   Permission,
   Project,
   ProjectPitch,
+  ProjectPolygon,
   ProjectReport,
   Site,
   SitePolygon,
@@ -31,6 +32,7 @@ import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
+import { ProjectPolygonPolicy } from "./project-polygon.policy";
 import { isArray } from "lodash";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
@@ -82,6 +84,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Organisation, OrganisationPolicy],
   [Project, ProjectPolicy],
   [ProjectPitch, ProjectPitchPolicy],
+  [ProjectPolygon, ProjectPolygonPolicy],
   [ProjectReport, ProjectReportPolicy],
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],

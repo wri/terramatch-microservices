@@ -4,6 +4,7 @@ import { PolygonGeometry, SitePolygon } from "@terramatch-microservices/database
 import { NotFoundException } from "@nestjs/common";
 
 describe("RestorationByTypeCalculator", () => {
+  const currentYear = new Date().getFullYear();
   let calculator: RestorationByTypeCalculator;
 
   beforeEach(async () => {
@@ -58,7 +59,7 @@ describe("RestorationByTypeCalculator", () => {
       indicatorSlug: "restorationByStrategy",
       sitePolygonId: 1,
       value: { test: 100 },
-      yearOfAnalysis: 2025
+      yearOfAnalysis: currentYear
     });
   });
 
@@ -88,7 +89,7 @@ describe("RestorationByTypeCalculator", () => {
       indicatorSlug: "restorationByStrategy",
       sitePolygonId: 1,
       value: { test: 100 },
-      yearOfAnalysis: 2025
+      yearOfAnalysis: currentYear
     });
     expect(PolygonGeometry.calculateArea).toHaveBeenCalledWith(geometry);
   });

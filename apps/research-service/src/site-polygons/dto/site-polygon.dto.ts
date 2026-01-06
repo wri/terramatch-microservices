@@ -182,6 +182,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
     description: "Whether the site polygon is active"
   })
   isActive: boolean;
+
+  @ApiProperty({ nullable: true, type: Date })
+  createdAt: Date | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })

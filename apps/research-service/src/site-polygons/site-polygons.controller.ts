@@ -369,8 +369,8 @@ export class SitePolygonsController {
   @Patch("status/:status")
   @ApiOperation({
     operationId: "updateSitePolygonStatus",
-    summary: "Update the status of a site polygon",
-    description: "Update the status of a site polygon"
+    summary: "Update the status of the list of site polygons",
+    description: "Update the status of the list of site polygons"
   })
   @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })

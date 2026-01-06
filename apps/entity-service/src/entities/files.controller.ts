@@ -77,7 +77,7 @@ export class FilesController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
   @JsonApiResponse([MediaDto, MediaBulkResponseDto])
   async siteMediaBulkUpload(@Param() { siteUuid }: SiteMediaBulkUploadDto, @Body() payload: MediaRequestBulkBody) {
-    const site = await Site.findOne({ where: { uuid: siteUuid } });
+    const site = await Site.findOne({ where: { uuid: siteUuid }, attributes: ["id", "frameworkKey", "projectId"] });
     if (site == null) {
       throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
     }

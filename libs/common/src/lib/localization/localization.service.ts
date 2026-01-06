@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
   Form,
+  FormOptionList,
   FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
@@ -11,14 +12,13 @@ import {
   I18nTranslation,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Op, WhereOptions } from "sequelize";
+import { Model, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { ITranslateParams, normalizeLocale, tx, t, createNativeInstance } from "@transifex/native";
-import { Dictionary, groupBy } from "lodash";
+import { Dictionary, groupBy, intersection } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
-import { LocalizationFormService } from "./localization-form.service";
 import { DocumentBuilder } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 
@@ -48,14 +48,27 @@ export type TransifexPullTranslationsMap = {
   i18nTranslationId: number | null;
 };
 
+type TranslationModelType =
+  | typeof Form
+  | typeof FormSection
+  | typeof FormQuestion
+  | typeof FormQuestionOption
+  | typeof FormTableHeader
+  | typeof FormOptionList
+  | typeof FundingProgramme
+  | typeof LocalizationKey
+  | typeof FormOptionListOption;
+
+type TranslationParamsType = string | number;
+
 @Injectable()
 export class LocalizationService {
   private readonly logger = new TMLogger(LocalizationService.name);
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly localizationFormService: LocalizationFormService
-  ) {
+  private extraFields: string[] = ["id", "optionsList"];
+  private i18nIdsToBePushed: number[] = [];
+
+  constructor(private readonly configService: ConfigService) {
     tx.init({
       token: configService.get("TRANSIFEX_TOKEN")
     });
@@ -217,7 +230,7 @@ export class LocalizationService {
 
   public async pushTranslationByForm(form: Form) {
     const tx = this.createNativeInstance();
-    const i18nIds = await this.localizationFormService.getI18nIdsForForm(form);
+    const i18nIds = await this.getI18nIdsForForm(form);
     const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
     const source = this.createSource(items, ["custom-form", form.uuid]);
     await tx.pushSource(source);
@@ -291,5 +304,68 @@ export class LocalizationService {
       document.addData(id.toString(), new FormTranslationDto(id));
     }
     return document;
+  }
+
+  private getI18nTranslationEntityFields(translationEntity: TranslationModelType) {
+    return translationEntity.I18N_FIELDS.map(field => `${field}Id`);
+  }
+
+  private async processTranslationEntity<M extends TranslationModelType>(
+    model: M,
+    property: string,
+    filterParams: TranslationParamsType | TranslationParamsType[]
+  ): Promise<InstanceType<M>[]> {
+    const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
+    const i18nFields = this.getI18nTranslationEntityFields(model);
+    // @ts-expect-error - entity is a model class
+    const entities = await model.findAll({
+      where: {
+        [property]: {
+          [Op.in]: filterParamsArray
+        }
+      },
+      // @ts-expect-error - model is a model class
+      attributes: intersection(Object.keys(model.getAttributes()), [...i18nFields, ...this.extraFields])
+    });
+
+    entities.forEach(entity => {
+      this.pushI18nIds(entity, i18nFields);
+    });
+
+    return entities as InstanceType<M>[];
+  }
+
+  private pushI18nIds(entity: Model, i18nFields: string[]) {
+    Object.entries(entity.dataValues).forEach(([key, value]) => {
+      if (i18nFields.includes(key) && value != null) {
+        this.i18nIdsToBePushed.push(value as number);
+      }
+    });
+  }
+
+  async getI18nIdsForForm(form: Form) {
+    this.pushI18nIds(form, this.getI18nTranslationEntityFields(Form));
+    const formSections = await this.processTranslationEntity(FormSection, "formId", [form.uuid]);
+    const formQuestions = await this.processTranslationEntity(
+      FormQuestion,
+      "formSectionId",
+      formSections.map(section => section.id)
+    );
+    await this.processTranslationEntity(
+      FormTableHeader,
+      "formQuestionId",
+      formQuestions.map(question => question.id)
+    );
+    const optionsListParams = formQuestions
+      .map(question => question.optionsList)
+      .filter(optionsList => optionsList != null)
+      .filter(optionsList => optionsList != "0");
+    const formOptionsLists = await this.processTranslationEntity(FormOptionList, "key", optionsListParams);
+    await this.processTranslationEntity(
+      FormOptionListOption,
+      "formOptionListId",
+      formOptionsLists.map(list => list.id)
+    );
+    return this.i18nIdsToBePushed;
   }
 }

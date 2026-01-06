@@ -21,8 +21,12 @@ import { I18nTranslationFactory } from "@terramatch-microservices/database/facto
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
-import { LocalizationFormService } from "./localization-form.service";
+import {
+  FormFactory,
+  FormQuestionFactory,
+  FormSectionFactory,
+  I18nItemFactory
+} from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "../util/json-api-builder";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 
@@ -50,11 +54,7 @@ describe("LocalizationService", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LocalizationService,
-        LocalizationFormService,
-        { provide: ConfigService, useValue: createMock<ConfigService>() }
-      ]
+      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
     }).compile();
 
     service = module.get<LocalizationService>(LocalizationService);
@@ -295,6 +295,19 @@ describe("LocalizationService", () => {
       const i18nItemIds = [1, 2, 3];
       service.addTranslationDto(document, i18nItemIds);
       expect(document.data.length).toBe(i18nItemIds.length);
+    });
+  });
+
+  describe("getI18nIdsForForm", () => {
+    it("should return the I18n IDs for a form", async () => {
+      const i18nItem = await I18nItemFactory.create();
+      const form = await FormFactory.create({ titleId: i18nItem.id });
+      const formSection1 = await FormSectionFactory.create({ formId: form.uuid });
+      const formSection2 = await FormSectionFactory.create({ formId: form.uuid });
+      await FormQuestionFactory.create({ formSectionId: formSection1.id });
+      await FormQuestionFactory.create({ formSectionId: formSection2.id });
+      const i18nIds = await service.getI18nIdsForForm(form);
+      expect(i18nIds).toBeDefined();
     });
   });
 });

@@ -516,7 +516,7 @@ export class SitePolygonsService {
   async updateBulkStatus(
     status: PolygonStatus,
     sitePolygonsUpdate: SitePolygonStatusUpdate[],
-    comment: string | null,
+    comment: string | null | undefined,
     user: User | null
   ) {
     await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
@@ -534,7 +534,7 @@ export class SitePolygonsService {
   private createAuditStatusRecords(
     sitePolygons: SitePolygon[],
     status: PolygonStatus,
-    comment: string | null,
+    comment: string | null | undefined,
     user: User | null
   ): Array<Partial<AuditStatus>> {
     return sitePolygons.map(sitePolygon => ({

@@ -383,7 +383,7 @@ export class SitePolygonsController {
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
     const { data, comment } = request;
-    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment as string, user);
+    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
     const document = buildJsonApi(SitePolygonLightDto);
     for (const sitePolygon of updatedUuids) {
       document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon, {}));

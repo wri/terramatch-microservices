@@ -109,6 +109,7 @@ export class FormsController {
 
   @Post(":uuid/translations")
   @ApiOperation({ operationId: "formPushTranslation", description: "Push translations to Transifex for a form" })
+  @JsonApiResponse(FormTranslationDto)
   @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
   @ExceptionResponse(NotFoundException, { description: "Form not found." })
@@ -125,6 +126,7 @@ export class FormsController {
 
   @Get(":uuid/translations")
   @ApiOperation({ operationId: "formPullTranslations", description: "Pull translations from Transifex for a form" })
+  @JsonApiResponse(FormTranslationDto)
   @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
   @ExceptionResponse(NotFoundException, { description: "Form not found." })

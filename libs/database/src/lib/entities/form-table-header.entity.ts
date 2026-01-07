@@ -14,6 +14,8 @@ import { FormQuestion } from "./form-question.entity";
 
 @Table({ tableName: "form_table_headers", underscored: true, paranoid: true })
 export class FormTableHeader extends Model<FormTableHeader> {
+  static readonly I18N_FIELDS = ["label"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

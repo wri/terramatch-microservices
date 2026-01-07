@@ -115,7 +115,8 @@ export class FormsController {
   async pushFormTranslation(@Param("uuid") uuid: string) {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("update", form);
-    const i18nItemIds = await this.localizationService.pushTranslationByForm(form);
+    const i18nItemIds = await this.formsService.getI18nIdsForForm(form);
+    await this.localizationService.pushTranslationByForm(form, i18nItemIds);
     return this.localizationService.addTranslationDto(
       buildJsonApi<FormTranslationDto>(FormTranslationDto),
       i18nItemIds

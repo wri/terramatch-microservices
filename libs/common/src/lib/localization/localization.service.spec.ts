@@ -21,12 +21,7 @@ import { I18nTranslationFactory } from "@terramatch-microservices/database/facto
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import {
-  FormFactory,
-  FormQuestionFactory,
-  FormSectionFactory,
-  I18nItemFactory
-} from "@terramatch-microservices/database/factories";
+import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "../util/json-api-builder";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 
@@ -248,7 +243,7 @@ describe("LocalizationService", () => {
       (createNativeInstance as jest.Mock).mockImplementation(() => ({
         pushSource: pushSouceMock
       }));
-      await service.pushTranslationByForm(form);
+      await service.pushTranslationByForm(form, [1, 2, 3]);
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });
@@ -295,19 +290,6 @@ describe("LocalizationService", () => {
       const i18nItemIds = [1, 2, 3];
       service.addTranslationDto(document, i18nItemIds);
       expect(document.data.length).toBe(i18nItemIds.length);
-    });
-  });
-
-  describe("getI18nIdsForForm", () => {
-    it("should return the I18n IDs for a form", async () => {
-      const i18nItem = await I18nItemFactory.create();
-      const form = await FormFactory.create({ titleId: i18nItem.id });
-      const formSection1 = await FormSectionFactory.create({ formId: form.uuid });
-      const formSection2 = await FormSectionFactory.create({ formId: form.uuid });
-      await FormQuestionFactory.create({ formSectionId: formSection1.id });
-      await FormQuestionFactory.create({ formSectionId: formSection2.id });
-      const i18nIds = await service.getI18nIdsForForm(form);
-      expect(i18nIds).toBeDefined();
     });
   });
 });

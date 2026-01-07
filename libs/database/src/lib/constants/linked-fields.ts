@@ -36,7 +36,13 @@ export type VirtualDemographicsDescription = {
   demographicsType: DemographicType;
   collections: string[];
 };
-export type VirtualLinkedFieldProps = VirtualDemographicsAggregate | VirtualDemographicsDescription;
+export type VirtualProjectBoundary = {
+  type: "projectBoundary";
+};
+export type VirtualLinkedFieldProps =
+  | VirtualDemographicsAggregate
+  | VirtualDemographicsDescription
+  | VirtualProjectBoundary;
 export type VirtualLinkedField = {
   virtual: VirtualLinkedFieldProps;
   label: string;

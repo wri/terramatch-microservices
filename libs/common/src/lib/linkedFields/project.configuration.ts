@@ -218,7 +218,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Proposed Number of Nurseries",
       inputType: "number"
     },
-    "pro-proj-boundary": { property: "projBoundary", label: "Project Boundary", inputType: "mapInput" },
+    "pro-proj-boundary": { virtual: { type: "projectBoundary" }, label: "Project Boundary", inputType: "mapInput" },
     "pro-states": {
       property: "states",
       label: "States",

@@ -88,7 +88,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       label: "Monitoring and evaluation plan",
       inputType: "long-text"
     },
-    "pro-pit-proj-boundary": { property: "projBoundary", label: "Project Boundary", inputType: "mapInput" },
+    "pro-pit-proj-boundary": { virtual: { type: "projectBoundary" }, label: "Project Boundary", inputType: "mapInput" },
     "pro-pit-sustainable-dev-goals": {
       property: "sustainableDevGoals",
       label: "Sustainable Development Goals",

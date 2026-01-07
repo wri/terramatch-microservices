@@ -3,9 +3,7 @@ import {
   DemographicFactory,
   FormQuestionFactory,
   NurseryFactory,
-  POLYGON,
   ProjectPitchFactory,
-  ProjectPolygonFactory,
   ProjectReportFactory,
   SiteFactory
 } from "@terramatch-microservices/database/factories";
@@ -47,14 +45,6 @@ describe("FieldCollector", () => {
       { sites: site, nurseries: nursery },
       { one: site.name, two: nursery.name, four: site.landscapeCommunityContribution }
     );
-  });
-
-  it("collections polygon fields", async () => {
-    collector.addField(getField("pro-pit-proj-boundary"), "projectPitches", "one");
-
-    const pitch = await ProjectPitchFactory.create();
-    await ProjectPolygonFactory.forPitch(pitch).create();
-    await harness.expectAnswers({ projectPitches: pitch }, { one: POLYGON });
   });
 
   it("collects demographicsDescription virtual fields", async () => {

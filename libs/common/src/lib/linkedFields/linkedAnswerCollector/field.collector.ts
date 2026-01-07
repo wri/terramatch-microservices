@@ -20,18 +20,13 @@ import { WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 
 export function fieldCollector(logger: LoggerService): FieldResourceCollector {
-  const polygonQuestions: Dictionary<string> = {};
   const propertyQuestions: Dictionary<string> = {};
   const virtualQuestions: Dictionary<{ props: VirtualLinkedFieldProps; modelType: FormModelType }> = {};
 
   return {
     addField(field, modelType, questionUuid) {
       if (isPropertyField(field)) {
-        if (field.inputType === "mapInput") {
-          polygonQuestions[questionUuid] = modelType;
-        } else {
-          propertyQuestions[questionUuid] = `${modelType}:${field.property}`;
-        }
+        propertyQuestions[questionUuid] = `${modelType}:${field.property}`;
       } else {
         virtualQuestions[questionUuid] = { props: field.virtual, modelType };
       }
@@ -44,22 +39,6 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         const [modelType, property] = key.split(":") as [FormModelType, string];
         if (models[modelType] == null) logger.error(`Model for type not found: ${modelType}`);
         else answers[questionUuid] = models[modelType][property];
-      }
-
-      // There should never really be more than one of these per form, so looping is fine here.
-      for (const [questionUuid, modelType] of Object.entries(polygonQuestions)) {
-        const model = models[modelType];
-        if (model == null) {
-          logger.error(`Model for type not found: ${modelType}`);
-          continue;
-        }
-
-        const polygon = await ProjectPolygon.findOne({
-          where: { entityType: laravelType(model), entityId: model.id },
-          order: [["createdAt", "DESC"]],
-          include: ["polygon"]
-        });
-        answers[questionUuid] = polygon?.polygon?.polygon; // drill down to the geojson field
       }
 
       // Pull all demographics for affected model types in one query. The entries are not being
@@ -97,6 +76,19 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
               return props.collections.includes(collection);
             }
           )?.description;
+        } else if (props.type === "projectBoundary") {
+          const model = models[modelType];
+          if (model == null) {
+            logger.error(`Model for type not found: ${modelType}`);
+            continue;
+          }
+
+          const polygon = await ProjectPolygon.findOne({
+            where: { entityType: laravelType(model), entityId: model.id },
+            order: [["createdAt", "DESC"]],
+            attributes: ["polyUuid"]
+          });
+          if (polygon?.polyUuid != null) answers[questionUuid] = { polyUuid: polygon?.polyUuid };
         } else {
           throw new InternalServerErrorException(
             `Unrecognized virtual props type: ${(props as VirtualLinkedFieldProps).type}`
@@ -109,7 +101,11 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
       const answer = answers[question.uuid];
       if (isPropertyField(field)) {
         model[field.property] = answer;
-      } else if (field.virtual.type === "demographicsAggregate") {
+        return;
+      }
+
+      const { virtual } = field;
+      if (virtual.type === "demographicsAggregate") {
         const value = answer == null ? null : Number(answer);
         if (value != null && (!isInteger(value) || value < 0)) {
           throw new BadRequestException(
@@ -118,8 +114,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         }
 
         let demographic = await Demographic.for(model)
-          .type(field.virtual.demographicsType)
-          .collection(field.virtual.collection)
+          .type(virtual.demographicsType)
+          .collection(virtual.collection)
           .findOne();
         if (value == null) {
           // We only get null as a value when the entity is being approved and the field was hidden.
@@ -134,8 +130,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           demographic = await Demographic.create({
             demographicalType: laravelType(model),
             demographicalId: model.id,
-            type: field.virtual.demographicsType,
-            collection: field.virtual.collection
+            type: virtual.demographicsType,
+            collection: virtual.collection
           });
 
           await DemographicEntry.bulkCreate([
@@ -157,7 +153,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
 
           await DemographicEntry.update({ amount: value }, { where: { id: entries.map(({ id }) => id) } });
         }
-      } else if (field.virtual.type === "demographicsDescription") {
+      } else if (virtual.type === "demographicsDescription") {
         if (answer != null && !isString(answer)) {
           throw new BadRequestException(`Invalid demographics description: [${question.linkedFieldKey}, ${answer}]`);
         }
@@ -165,8 +161,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         const demographicWhere: WhereOptions<Demographic> = {
           demographicalType: laravelType(model),
           demographicalId: model.id,
-          type: field.virtual.demographicsType,
-          collection: field.virtual.collections
+          type: virtual.demographicsType,
+          collection: virtual.collections
         };
 
         // If we're setting a non-empty value, make sure that each collection / type combination exists
@@ -174,13 +170,13 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           const collections = (await Demographic.findAll({ where: demographicWhere, attributes: ["collection"] }))
             .map(({ collection }) => collection)
             .filter(isNotNull);
-          const missing = difference(field.virtual.collections, collections);
+          const missing = difference(virtual.collections, collections);
           if (missing.length > 0) {
             await Demographic.bulkCreate(
               missing.map(collection => ({
                 demographicalType: laravelType(model),
                 demographicalId: model.id as number,
-                type: field.virtual.demographicsType,
+                type: virtual.demographicsType,
                 collection
               }))
             );
@@ -188,6 +184,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         }
 
         await Demographic.update({ description: answer }, { where: demographicWhere });
+      } else if (virtual.type === "projectBoundary") {
+        // NOOP, the data saving happened in the FE.
       } else {
         throw new InternalServerErrorException(
           `Unrecognized virtual props type: ${(field.virtual as VirtualLinkedFieldProps).type}`

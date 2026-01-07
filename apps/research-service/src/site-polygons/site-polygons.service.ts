@@ -10,7 +10,8 @@ import {
   SitePolygon,
   SitePolygonData,
   SiteReport,
-  TreeSpecies
+  TreeSpecies,
+  User
 } from "@terramatch-microservices/database/entities";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
@@ -24,11 +25,12 @@ import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
-import { Op, Transaction } from "sequelize";
+import { Attributes, Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { INDICATOR_SLUGS } from "@terramatch-microservices/database/constants";
+import { INDICATOR_SLUGS, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -509,5 +511,42 @@ export class SitePolygonsService {
       }),
       "siteId"
     ) as Record<number, SiteReport[]>;
+  }
+
+  async updateBulkStatus(
+    status: PolygonStatus,
+    sitePolygonsUpdate: SitePolygonStatusUpdate[],
+    comment: string | null | undefined,
+    user: User | null
+  ) {
+    await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
+    const sitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
+
+    const auditStatusRecords = this.createAuditStatusRecords(sitePolygons, status, comment, user) as Array<
+      Attributes<AuditStatus>
+    >;
+    if (auditStatusRecords.length > 0) {
+      await AuditStatus.bulkCreate(auditStatusRecords);
+    }
+    return sitePolygons;
+  }
+
+  private createAuditStatusRecords(
+    sitePolygons: SitePolygon[],
+    status: PolygonStatus,
+    comment: string | null | undefined,
+    user: User | null
+  ): Array<Partial<AuditStatus>> {
+    return sitePolygons.map(sitePolygon => ({
+      auditableType: SitePolygon.LARAVEL_TYPE,
+      auditableId: sitePolygon.id,
+      createdBy: user?.emailAddress ?? null,
+      firstName: user?.firstName ?? null,
+      lastName: user?.lastName ?? null,
+      comment: comment ?? null,
+      status: status as PolygonStatus,
+      type: "status",
+      isActive: null
+    }));
   }
 }

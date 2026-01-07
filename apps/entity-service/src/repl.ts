@@ -119,14 +119,10 @@ bootstrapRepl("Entity Service", AppModule, {
       console.log(`Deleted ${deletedAuditCount} audits`);
     },
 
-    // TM-2723: Align slug options for various TM fields in BE
-    // Updates slug values in form_option_list_options and entity data tables
-    // to align with standardized slug naming conventions.
     alignSlugOptions: async () => {
       await withoutSqlLogs(async () => {
         console.log("Starting slug alignment migration...\n");
 
-        // 1. Update form_option_list_options slugs
         console.log("1. Updating form_option_list_options slugs...");
         const optionListUpdates = [
           { listKey: "organisation-type", oldSlug: "government", newSlug: "government-agency" },
@@ -156,9 +152,15 @@ bootstrapRepl("Entity Service", AppModule, {
           }
         ];
 
+        const uniqueListKeys = [...new Set(optionListUpdates.map(update => update.listKey))];
+        const formOptionLists = await FormOptionList.findAll({
+          where: { key: { [Op.in]: uniqueListKeys } }
+        });
+        const listMap = new Map(formOptionLists.map(list => [list.key, list]));
+
         let optionListUpdated = 0;
         for (const update of optionListUpdates) {
-          const list = await FormOptionList.findOne({ where: { key: update.listKey } });
+          const list = listMap.get(update.listKey);
           if (list != null) {
             const updated = await FormOptionListOption.update(
               { slug: update.newSlug },
@@ -169,7 +171,6 @@ bootstrapRepl("Entity Service", AppModule, {
         }
         console.log(`   Updated ${optionListUpdated} form_option_list_options\n`);
 
-        // 2. Update v2_projects.land_tenure_project_area (JSON array)
         console.log("2. Updating v2_projects.land_tenure_project_area...");
         const projectBuilder = new PaginatedQueryBuilder(Project, 100).where({
           landTenureProjectArea: { [Op.ne]: null }
@@ -210,7 +211,6 @@ bootstrapRepl("Entity Service", AppModule, {
         }
         console.log(`   Updated ${projectsUpdated} projects\n`);
 
-        // 3. Update project_pitches.land_tenure_proj_area (JSON array)
         console.log("3. Updating project_pitches.land_tenure_proj_area...");
         const pitchBuilder = new PaginatedQueryBuilder(ProjectPitch, 100).where({
           landTenureProjArea: { [Op.ne]: null }
@@ -253,7 +253,6 @@ bootstrapRepl("Entity Service", AppModule, {
         }
         console.log(`   Updated ${pitchesUpdated} project pitches\n`);
 
-        // 4. Update project_pitches.land_use_types (JSON array)
         console.log("4. Updating project_pitches.land_use_types...");
         const landUseBuilder = new PaginatedQueryBuilder(ProjectPitch, 100).where({
           landUseTypes: { [Op.ne]: null }
@@ -284,7 +283,6 @@ bootstrapRepl("Entity Service", AppModule, {
         }
         console.log(`   Updated ${landUseUpdated} project pitches (land_use_types)\n`);
 
-        // 5. Update v2_sites.land_tenures (JSON array)
         console.log("5. Updating v2_sites.land_tenures...");
         const siteLandTenureBuilder = new PaginatedQueryBuilder(Site, 100).where({
           landTenures: { [Op.ne]: null }
@@ -320,7 +318,6 @@ bootstrapRepl("Entity Service", AppModule, {
         }
         console.log(`   Updated ${siteLandTenureUpdated} sites (land_tenures)\n`);
 
-        // 6. Update v2_sites.siting_strategy (STRING)
         console.log("6. Updating v2_sites.siting_strategy...");
         const sitingStrategyUpdated = await Site.update(
           { sitingStrategy: "concentrated" },
@@ -328,12 +325,10 @@ bootstrapRepl("Entity Service", AppModule, {
         );
         console.log(`   Updated ${sitingStrategyUpdated[0]} sites (siting_strategy)\n`);
 
-        // 7. Update v2_nurseries.type (STRING)
         console.log("7. Updating v2_nurseries.type...");
         const nurseryTypeUpdated = await Nursery.update({ type: "managing" }, { where: { type: "manageing" } });
         console.log(`   Updated ${nurseryTypeUpdated[0]} nurseries (type)\n`);
 
-        // 8. Update organisations.type (STRING)
         console.log("8. Updating organisations.type...");
         const orgTypeUpdated = await Organisation.update(
           { type: "government-agency" },
@@ -341,7 +336,6 @@ bootstrapRepl("Entity Service", AppModule, {
         );
         console.log(`   Updated ${orgTypeUpdated[0]} organisations (type)\n`);
 
-        // 9. Update v2_funding_types.type (STRING)
         console.log("9. Updating v2_funding_types.type...");
         const fundingTypeUpdates = [
           { old: "private_grant_from_foundation", new: "private-grant-from-foundation" },

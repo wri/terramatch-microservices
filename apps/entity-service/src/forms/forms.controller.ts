@@ -107,7 +107,7 @@ export class FormsController {
     return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
   }
 
-  @Post(":uuid/translation")
+  @Post(":uuid/translations")
   @ApiOperation({ operationId: "formPushTranslation", description: "Push translations to Transifex for a form" })
   @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
@@ -122,7 +122,7 @@ export class FormsController {
     );
   }
 
-  @Get(":uuid/translation")
+  @Get(":uuid/translations")
   @ApiOperation({ operationId: "formPullTranslations", description: "Pull translations from Transifex for a form" })
   @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })

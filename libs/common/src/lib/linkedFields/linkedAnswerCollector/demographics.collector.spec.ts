@@ -1,6 +1,7 @@
 import {
   DemographicEntryFactory,
   DemographicFactory,
+  ProjectPitchFactory,
   SiteReportFactory
 } from "@terramatch-microservices/database/factories";
 import { RelationResourceCollector } from "./index";
@@ -33,31 +34,35 @@ describe("DemographicsCollector", () => {
     });
 
     it("collects demographics", async () => {
-      collector.addField(getRelation("site-rep-rel-paid-planting"), "siteReports", "one");
-      collector.addField(getRelation("site-rep-rel-volunteer-other-activities"), "siteReports", "two");
+      collector.addField(getRelation("pro-pit-all-jobs"), "projectPitches", "one");
+      collector.addField(getRelation("pro-pit-all-beneficiaries"), "projectPitches", "two");
 
-      const siteReport = await SiteReportFactory.create();
-      const paidPlanting = await DemographicFactory.siteReportWorkday(siteReport).create({
-        collection: "paid-planting"
+      // Create two demographics that use the same collection to test type disambiguation.
+      const pitch = await ProjectPitchFactory.create();
+      const jobs = await DemographicFactory.projectPitch(pitch).create({
+        collection: "all",
+        type: "jobs"
       });
-      await DemographicEntryFactory.gender(paidPlanting, "unknown").create({ amount: 10 });
-      await DemographicEntryFactory.age(paidPlanting, "unknown").create({ amount: 10 });
-      const volunteerOther = await DemographicFactory.siteReportWorkday(siteReport).create({
-        collection: "volunteer-other-activities"
+      await DemographicEntryFactory.gender(jobs, "unknown").create({ amount: 10 });
+      await DemographicEntryFactory.age(jobs, "unknown").create({ amount: 10 });
+      const employees = await DemographicFactory.projectPitch(pitch).create({
+        collection: "all",
+        type: "all-beneficiaries"
       });
-      await DemographicEntryFactory.gender(volunteerOther, "male").create({ amount: 10 });
-      await DemographicEntryFactory.gender(volunteerOther, "female").create({ amount: 10 });
-      await DemographicEntryFactory.age(volunteerOther, "youth").create({ amount: 5 });
-      await DemographicEntryFactory.age(volunteerOther, "elder").create({ amount: 15 });
-      await DemographicEntryFactory.ethnicity(volunteerOther, "indigenous", "Apache").create({ amount: 20 });
+      await DemographicEntryFactory.gender(employees, "male").create({ amount: 10 });
+      await DemographicEntryFactory.gender(employees, "female").create({ amount: 10 });
+      await DemographicEntryFactory.age(employees, "youth").create({ amount: 5 });
+      await DemographicEntryFactory.age(employees, "elder").create({ amount: 15 });
+      await DemographicEntryFactory.ethnicity(employees, "indigenous", "Apache").create({ amount: 20 });
 
       await harness.expectAnswers(
-        { siteReports: siteReport },
+        { projectPitches: pitch },
         {
           one: [
             expect.objectContaining({
-              uuid: paidPlanting.uuid,
-              collection: "paid-planting",
+              uuid: jobs.uuid,
+              collection: "all",
+              type: "jobs",
               entries: [
                 { type: "gender", subtype: "unknown", name: null, amount: 10 },
                 { type: "age", subtype: "unknown", name: null, amount: 10 }
@@ -66,8 +71,9 @@ describe("DemographicsCollector", () => {
           ],
           two: [
             expect.objectContaining({
-              uuid: volunteerOther.uuid,
-              collection: "volunteer-other-activities",
+              uuid: employees.uuid,
+              collection: "all",
+              type: "all-beneficiaries",
               entries: [
                 { type: "gender", subtype: "male", name: null, amount: 10 },
                 { type: "gender", subtype: "female", name: null, amount: 10 },

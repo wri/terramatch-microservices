@@ -151,8 +151,8 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
     const questions: Dictionary<string> = {};
     const { typeAttribute, idAttribute } = polymorphicAttributes(modelClass);
     const modelAttributes = Object.keys(modelClass.getAttributes());
-    const dtoAttributes = intersection(apiAttributes(dtoClass), modelAttributes) as Attributes<M>[];
-    dtoAttributes.push(typeAttribute);
+    const dtoAttributes = intersection(apiAttributes(dtoClass), modelAttributes);
+    dtoAttributes.push(typeAttribute as string);
     const hasCollection =
       options.usesCollection == null ? modelAttributes.includes("collection") : options.usesCollection;
     const syncRelation = options.syncRelation ?? polymorphicSync(modelClass, dtoClass, options);

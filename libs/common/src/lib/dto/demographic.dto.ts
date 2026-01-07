@@ -98,7 +98,7 @@ export class DemographicDto extends AssociationDto {
   entries: DemographicEntryDto[];
 }
 
-export class EmbeddedDemographicDto extends OmitType(DemographicDto, ["entityType", "entityUuid", "type"]) {
+export class EmbeddedDemographicDto extends OmitType(DemographicDto, ["entityType", "entityUuid"]) {
   constructor(demographic: Demographic) {
     super();
     populateDto<EmbeddedDemographicDto, Demographic>(this, demographic, {

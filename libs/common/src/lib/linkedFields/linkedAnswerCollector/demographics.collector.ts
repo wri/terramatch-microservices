@@ -1,11 +1,14 @@
 import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
 import { DemographicEntryDto, EmbeddedDemographicDto } from "../../dto/demographic.dto";
-import { polymorphicCollector, RelationSync } from "./utils";
-import { InternalServerErrorException } from "@nestjs/common";
+import { mapLaravelTypes, RelationSync } from "./utils";
+import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { kebabCase } from "lodash";
-import { Op } from "sequelize";
+import { Dictionary, intersection, kebabCase } from "lodash";
+import { Op, WhereOptions } from "sequelize";
 import { DemographicType } from "@terramatch-microservices/database/types/demographic";
+import { FormTypeMap, RelationResourceCollector } from "./index";
+import { FormModelType } from "@terramatch-microservices/database/constants/entities";
+import { apiAttributes } from "../../dto/json-api-attributes";
 
 // For each of type, subtype and name, ensure predicate returns true if either they have an identical value,
 // or both are null / undefined.
@@ -84,7 +87,65 @@ const syncDemographics: RelationSync = async (model, field, answer, hidden, logg
   await DemographicEntry.destroy({ where: { demographicId: demographic.id, id: { [Op.notIn]: includedEntryIds } } });
 };
 
-export const demographicsCollector = polymorphicCollector(Demographic, EmbeddedDemographicDto, {
-  syncRelation: syncDemographics,
-  include: { association: "entries" }
-});
+// Since demographics is the only model that disambiguates on more than just collection, the
+// base polymorphic collector is not sufficient.
+export const demographicsCollector = function (logger: LoggerService): RelationResourceCollector {
+  const questions: Dictionary<string> = {};
+  const modelAttributes = Object.keys(Demographic.getAttributes());
+  const dtoAttributes = ["demographicalType", ...intersection(apiAttributes(EmbeddedDemographicDto), modelAttributes)];
+
+  return {
+    addField(field, modelType, questionUuid) {
+      if (field.collection == null) {
+        throw new InternalServerErrorException(`Collection not found for ${modelType}`);
+      }
+
+      const key = `${modelType}:${kebabCase(field.inputType)}:${field.collection}`;
+      if (questions[key] != null) {
+        logger.warn(`Duplicate collection for field ${key}`);
+      }
+
+      questions[key] = questionUuid;
+    },
+
+    async collect(answers, models) {
+      // results in a mapping of model type to an array of keys. Each key is [type, collection] (see addField)
+      const keysByModel = Object.keys(questions).reduce((byModel, key) => {
+        const [modelType, type, collection] = key.split(":") as [FormModelType, string, string];
+        return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), [type, collection]] };
+      }, {} as FormTypeMap<string[][]>);
+
+      const laravelTypes = mapLaravelTypes(models);
+      const demographics = await Demographic.findAll({
+        where: {
+          [Op.or]: Object.entries(keysByModel).map(([modelType, keys]): WhereOptions<Demographic> => {
+            if (models[modelType] == null) {
+              throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+            }
+
+            return {
+              demographicalType: laravelTypes[modelType],
+              demographicalId: models[modelType].id,
+              [Op.or]: keys.map(([type, collection]): WhereOptions<Demographic> => ({ type, collection }))
+            };
+          })
+        },
+        attributes: dtoAttributes,
+        include: [{ association: "entries" }]
+      });
+
+      for (const [key, questionUuid] of Object.entries(questions)) {
+        const [modelType, type, collection] = key.split(":") as [FormModelType, string, string];
+        const demographic = demographics.find(
+          demographic =>
+            demographic.demographicalType === laravelTypes[modelType] &&
+            demographic.type === type &&
+            demographic.collection === collection
+        );
+        if (demographic != null) answers[questionUuid] = [new EmbeddedDemographicDto(demographic)];
+      }
+    },
+
+    syncRelation: (...args) => syncDemographics(...args, logger)
+  };
+};

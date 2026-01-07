@@ -51,6 +51,7 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { MediaDto } from "../entities/dto/media.dto";
+import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -255,20 +256,18 @@ export class FormsService {
   }
 
   private async processTranslationEntity<M extends TranslationModelType>(
-    model: M,
+    model: ModelCtor,
     property: string,
     filterParams: TranslationParamsType | TranslationParamsType[]
   ): Promise<[number[], InstanceType<M>[]]> {
     const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
-    const i18nFields = this.getI18nTranslationEntityFields(model);
-    // @ts-expect-error - entity is a model class
+    const i18nFields = this.getI18nTranslationEntityFields(model as TranslationModelType);
     const entities = await model.findAll({
       where: {
         [property]: {
           [Op.in]: filterParamsArray
         }
       },
-      // @ts-expect-error - model is a model class
       attributes: intersection(Object.keys(model.getAttributes()), [...i18nFields, ...EXTRA_FIELDS])
     });
 
@@ -297,7 +296,7 @@ export class FormsService {
       formQuestions.map(question => question.id)
     );
     const optionsListParams = formQuestions
-      .map(question => question.optionsList)
+      .map((question: FormQuestion) => question.optionsList)
       .filter(optionsList => optionsList != null)
       .filter(optionsList => optionsList != "0");
     const [formOptionListI18nIds, formOptionsLists] = await this.processTranslationEntity(

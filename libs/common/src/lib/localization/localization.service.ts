@@ -180,6 +180,7 @@ export class LocalizationService {
       where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) } }
     });
     const i18nTranslationsMap = groupBy(i18nTranslations, "i18nItemId");
+    const savePromises: Promise<I18nItem | I18nTranslation>[] = [];
     for (const i18nItem of i18nItems) {
       const { hash } = i18nItem;
       txMapHashToTranslations[hash as string].forEach(async txTranslation => {
@@ -193,28 +194,26 @@ export class LocalizationService {
           i18nTranslation.shortValue = isShort ? txTranslation.translation : null;
           i18nTranslation.longValue = isShort ? null : txTranslation.translation;
           i18nTranslation.language = txTranslation.locale;
-          await i18nTranslation.save();
+          savePromises.push(i18nTranslation.save());
         } else {
-          await I18nTranslation.create({
-            i18nItemId,
-            language: txTranslation.locale,
-            shortValue: isShort ? txTranslation.translation : null,
-            longValue: isShort ? null : txTranslation.translation
-          } as I18nTranslation);
+          savePromises.push(
+            I18nTranslation.create({
+              i18nItemId,
+              language: txTranslation.locale,
+              shortValue: isShort ? txTranslation.translation : null,
+              longValue: isShort ? null : txTranslation.translation
+            } as I18nTranslation)
+          );
         }
-        return {
-          i18nItemId,
-          i18nTranslationId: i18nTranslation?.id ?? null,
-          shortValue: i18nTranslation?.shortValue,
-          longValue: i18nTranslation?.longValue,
-          language: txTranslation.locale
-        };
       });
       i18nItem.status = "translated";
-      await i18nItem.save({
-        hooks: false
-      });
+      savePromises.push(
+        i18nItem.save({
+          hooks: false
+        })
+      );
     }
+    await Promise.all(savePromises);
     this.logger.log(`Finished processing ${i18nItems.length} keys`);
     return i18nItems.map(({ id }) => id);
   }

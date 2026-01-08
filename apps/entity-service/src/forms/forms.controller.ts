@@ -120,6 +120,7 @@ export class FormsController {
     await this.localizationService.pushTranslationByForm(form, i18nItemIds);
     return this.localizationService.addTranslationDto(
       buildJsonApi<FormTranslationDto>(FormTranslationDto),
+      uuid,
       i18nItemIds
     );
   }
@@ -136,6 +137,7 @@ export class FormsController {
     const i18nItemIds = await this.localizationService.pullTranslations({ filterTags: form.uuid });
     return this.localizationService.addTranslationDto(
       buildJsonApi<FormTranslationDto>(FormTranslationDto),
+      uuid,
       i18nItemIds
     );
   }

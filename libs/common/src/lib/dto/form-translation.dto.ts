@@ -4,11 +4,18 @@ import { JsonApiDto } from "../decorators/json-api-dto.decorator";
 
 @JsonApiDto({ type: "formTranslations" })
 export class FormTranslationDto {
-  constructor(id: number) {
-    this.i18nItemId = id;
+  constructor(translationKeysNumber: number) {
+    this.translationKeysNumber = translationKeysNumber;
+    this.lightResource = true;
   }
 
-  @ApiProperty({ description: "I18n item ID" })
+  @ApiProperty({ description: "Number of translation keys" })
   @IsNumber()
-  i18nItemId: number;
+  translationKeysNumber: number;
+
+  @ApiProperty({
+    type: Boolean,
+    description: "Indicates if this resource has the full resource definition."
+  })
+  lightResource: boolean;
 }

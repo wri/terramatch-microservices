@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { CommonModule } from "@terramatch-microservices/common";
 import { TreesController } from "./trees/trees.controller";
 import { TreeService } from "./trees/tree.service";
-import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
+import { SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
 import { EntitiesService } from "./entities/entities.service";
 import { EntitiesController } from "./entities/entities.controller";
@@ -29,6 +29,7 @@ import { UpdateRequestsController } from "./entities/update-requests.controller"
 import { ApplicationsController } from "./applications/applications.controller";
 import { SubmissionsController } from "./forms/submissions.controller";
 import { FundingProgrammesController } from "./fundingProgrammes/funding-programmes.controller";
+import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 
 @Module({
   imports: [SentryModule.forRoot(), CommonModule, HealthModule],
@@ -55,10 +56,7 @@ import { FundingProgrammesController } from "./fundingProgrammes/funding-program
     FundingProgrammesController
   ],
   providers: [
-    {
-      provide: APP_FILTER,
-      useClass: SentryGlobalFilter
-    },
+    { provide: APP_FILTER, useClass: TMGlobalFilter },
     EntitiesService,
     TreeService,
     ProjectPitchService,

@@ -8,7 +8,7 @@ import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { GeometryFileProcessingService } from "./site-polygons/geometry-file-processing.service";
 import { APP_FILTER } from "@nestjs/core";
-import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
+import { SentryModule } from "@sentry/nestjs/setup";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { BoundingBoxController } from "./bounding-boxes/bounding-box.controller";
 import { BoundingBoxService } from "./bounding-boxes/bounding-box.service";
@@ -29,6 +29,7 @@ import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
+import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 
 @Module({
   imports: [
@@ -62,10 +63,7 @@ import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
     IndicatorsController
   ],
   providers: [
-    {
-      provide: APP_FILTER,
-      useClass: SentryGlobalFilter
-    },
+    { provide: APP_FILTER, useClass: TMGlobalFilter },
     IndicatorsService,
     SitePolygonsService,
     SitePolygonCreationService,

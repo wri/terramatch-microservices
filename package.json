@@ -105,6 +105,7 @@
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
     "axios": "^1.8.3",
+    "baseline-browser-mapping": "^2.9.12",
     "eslint": "~8.57.0",
     "eslint-config-prettier": "^9.0.0",
     "factory-girl-ts": "^2.3.1",

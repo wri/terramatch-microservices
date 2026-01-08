@@ -56,7 +56,8 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Relati
               inputType: dto.inputType,
               title: dto.title,
               subtitle: dto.subtitle,
-              value: dto.value
+              // When coming from an update request, the value can be an array.
+              value: Array.isArray(dto.value) ? JSON.stringify(dto.value) : dto.value
             });
           }
           entryIds.push(entry.id);

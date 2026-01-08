@@ -280,10 +280,8 @@ export class LocalizationService {
     this.logger.log(`Finished cleaning old I18nItems`);
   }
 
-  addTranslationDto(document: DocumentBuilder, i18nItemIds: number[]) {
-    for (const id of i18nItemIds) {
-      document.addData(id.toString(), new FormTranslationDto(id));
-    }
+  addTranslationDto(document: DocumentBuilder, uuid: string, i18nItemIds: number[]) {
+    document.addData(uuid, new FormTranslationDto(i18nItemIds.length));
     return document;
   }
 }

@@ -288,8 +288,12 @@ describe("LocalizationService", () => {
     it("should add translation DTOs to the document", () => {
       const document = buildJsonApi(FormTranslationDto);
       const i18nItemIds = [1, 2, 3];
-      service.addTranslationDto(document, i18nItemIds);
-      expect(document.data.length).toBe(i18nItemIds.length);
+      service.addTranslationDto(document, "uuid", i18nItemIds);
+      expect(document.data.length).toBe(1);
+      expect(document.data[0].attributes).toEqual({
+        translationKeysNumber: i18nItemIds.length,
+        lightResource: true
+      });
     });
   });
 });

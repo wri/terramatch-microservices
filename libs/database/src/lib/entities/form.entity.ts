@@ -22,6 +22,7 @@ import { FinancialReport } from "./financial-report.entity";
 import { DisturbanceReport } from "./disturbance-report.entity";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
+import { SrpReport } from "./srp-report.entity";
 
 type FormMedia = "banner";
 
@@ -29,6 +30,7 @@ type FormMedia = "banner";
   entity: (entity: EntityModel) => {
     if (entity instanceof FinancialReport) return { where: { type: "financial-report" } };
     if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };
+    if (entity instanceof SrpReport) return { where: { type: "srp-report" } };
 
     return { where: { model: laravelType(entity), frameworkKey: entity.frameworkKey } };
   }

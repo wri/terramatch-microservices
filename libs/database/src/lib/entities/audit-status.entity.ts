@@ -28,6 +28,8 @@ import { FormSubmission } from "./form-submission.entity";
 import { InternalServerErrorException } from "@nestjs/common";
 import { AuditStatusType, AUDIT_STATUS_TYPES } from "../constants";
 import { DateTime } from "luxon";
+import { FinancialReport } from "./financial-report.entity";
+import { SrpReport } from "./srp-report.entity";
 
 type AuditStatusMedia = "attachments";
 
@@ -64,7 +66,9 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
     NurseryReport.LARAVEL_TYPE,
     SitePolygon.LARAVEL_TYPE,
     DisturbanceReport.LARAVEL_TYPE,
-    FormSubmission.LARAVEL_TYPE
+    FormSubmission.LARAVEL_TYPE,
+    FinancialReport.LARAVEL_TYPE,
+    SrpReport.LARAVEL_TYPE
   ];
 
   static for<T extends LaravelModel>(auditable: T | T[]) {

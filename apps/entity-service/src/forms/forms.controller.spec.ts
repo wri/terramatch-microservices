@@ -9,6 +9,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
 import { StoreFormAttributes } from "./dto/form.dto";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("FormsController", () => {
   let controller: FormsController;
@@ -20,7 +21,8 @@ describe("FormsController", () => {
       controllers: [FormsController],
       providers: [
         { provide: FormsService, useValue: (service = createMock<FormsService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() }
       ]
     }).compile();
 

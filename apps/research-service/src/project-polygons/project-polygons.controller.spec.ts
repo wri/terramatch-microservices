@@ -83,8 +83,9 @@ describe("ProjectPolygonsController", () => {
 
       expect(result.data).not.toBeNull();
       const resource = result.data as Resource;
-      expect(resource.id).toBe(projectPolygon.uuid);
+      expect(resource.id).toBe(`?projectPitchUuid=${projectPitch.uuid}`);
       expect(resource.type).toBe("projectPolygons");
+      expect(resource.attributes).toHaveProperty("uuid", projectPolygon.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("read", ProjectPolygon);
     });
 
@@ -514,7 +515,9 @@ describe("ProjectPolygonsController", () => {
         {
           type: "Feature",
           geometry: mockGeometry,
-          properties: null
+          properties: {
+            projectPitchUuid: "project-pitch-uuid"
+          }
         }
       ]
     };
@@ -543,7 +546,7 @@ describe("ProjectPolygonsController", () => {
       expect(resource.attributes).toHaveProperty("features");
     });
 
-    it("should return geometry only (no properties)", async () => {
+    it("should return geometry with projectPitchUuid in properties", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const projectPitchUuid = "project-pitch-uuid";
 
@@ -553,7 +556,9 @@ describe("ProjectPolygonsController", () => {
 
       const resource = result.data as Resource;
       const attributes = resource.attributes as unknown as { features: Array<{ properties: unknown }> };
-      expect(attributes.features[0].properties).toBeNull();
+      expect(attributes.features[0].properties).toEqual({
+        projectPitchUuid
+      });
       expect(attributes.features[0]).toHaveProperty("geometry");
     });
 

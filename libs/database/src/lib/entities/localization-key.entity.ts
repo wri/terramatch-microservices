@@ -4,6 +4,8 @@ import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "localization_keys", underscored: true })
 export class LocalizationKey extends Model<LocalizationKey> {
+  static readonly I18N_FIELDS = ["value"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

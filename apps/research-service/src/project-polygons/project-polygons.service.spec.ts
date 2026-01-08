@@ -393,7 +393,7 @@ describe("ProjectPolygonsService", () => {
     };
     const mockGeoJsonString = JSON.stringify(mockGeometry);
 
-    it("should return FeatureCollection with geometry only (no properties)", async () => {
+    it("should return FeatureCollection with geometry and projectPitchUuid in properties", async () => {
       const projectPitch = await ProjectPitchFactory.build();
       const projectPolygon = await ProjectPolygonFactory.build({
         entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
@@ -413,7 +413,9 @@ describe("ProjectPolygonsService", () => {
       expect(result.features).toHaveLength(1);
       expect(result.features[0].type).toBe("Feature");
       expect(result.features[0].geometry).toEqual(mockGeometry);
-      expect(result.features[0].properties).toBeNull();
+      expect(result.features[0].properties).toEqual({
+        projectPitchUuid: query.projectPitchUuid
+      });
     });
 
     it("should throw NotFoundException when project pitch is not found", async () => {

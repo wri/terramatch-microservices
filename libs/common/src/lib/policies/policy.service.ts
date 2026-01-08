@@ -1,9 +1,39 @@
 import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
+import {
+  Application,
+  AuditStatus,
+  Demographic,
+  Disturbance,
+  DisturbanceReport,
+  FinancialIndicator,
+  FinancialReport,
+  Form,
+  FormQuestionOption,
+  FormSubmission,
+  FundingProgramme,
+  ImpactStory,
+  Media,
+  Nursery,
+  NurseryReport,
+  Organisation,
+  Permission,
+  Project,
+  ProjectPitch,
+  ProjectPolygon,
+  ProjectReport,
+  Site,
+  SitePolygon,
+  SiteReport,
+  SrpReport,
+  Task,
+  User
+} from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
+import { ProjectPolygonPolicy } from "./project-polygon.policy";
 import { isArray } from "lodash";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
@@ -26,34 +56,6 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
-import {
-  Application,
-  AuditStatus,
-  Demographic,
-  Disturbance,
-  DisturbanceReport,
-  FinancialIndicator,
-  FinancialReport,
-  Form,
-  FormQuestionOption,
-  FormSubmission,
-  FundingProgramme,
-  ImpactStory,
-  Media,
-  Nursery,
-  NurseryReport,
-  Organisation,
-  Permission,
-  Project,
-  ProjectPitch,
-  ProjectReport,
-  Site,
-  SitePolygon,
-  SiteReport,
-  SrpReport,
-  Task,
-  User
-} from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "../guards/auth.guard";
 import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
@@ -89,6 +91,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Organisation, OrganisationPolicy],
   [Project, ProjectPolicy],
   [ProjectPitch, ProjectPitchPolicy],
+  [ProjectPolygon, ProjectPolygonPolicy],
   [ProjectReport, ProjectReportPolicy],
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],

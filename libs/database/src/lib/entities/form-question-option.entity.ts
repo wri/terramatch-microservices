@@ -13,6 +13,8 @@ export class FormQuestionOption extends Model<FormQuestionOption> {
     image: { dbCollection: "image", multiple: false, validation: "photos" }
   };
 
+  static readonly I18N_FIELDS = ["label"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

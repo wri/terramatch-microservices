@@ -11,16 +11,41 @@ import {
   I18nTranslation,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Attributes, Model, Op } from "sequelize";
+import { Attributes, Model, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
+import { DocumentBuilder } from "../util";
+import { FormTranslationDto } from "../dto/form-translation.dto";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;
+export type TransifexSource = Record<
+  string,
+  {
+    meta: {
+      character_limit: number;
+      context: string;
+      developer_comment: string;
+      occurrences: string[];
+      tags: string[];
+    };
+    string: string;
+  }
+>;
+export type TransifexPullTranslationsConfig = {
+  filterTags?: string;
+  refresh?: boolean;
+};
+export type TransifexPullTranslationsMap = {
+  locale: string;
+  translation: string;
+  i18nItemId: number | null;
+  i18nTranslationId: number | null;
+};
 
 @Injectable()
 export class LocalizationService {
@@ -123,64 +148,101 @@ export class LocalizationService {
     return t(text, params);
   }
 
-  async pullTranslations() {
-    const tx = createNativeInstance({
-      token: this.configService.get("TRANSIFEX_TOKEN"),
-      secret: this.configService.get("TRANSIFEX_SECRET")
-    });
+  async pullTranslations(config?: TransifexPullTranslationsConfig) {
+    const tx = this.createNativeInstance();
     const locales = ["en_US", "fr_FR", "es_MX", "pt_BR"];
+    const txMapHashToTranslations: Record<string, TransifexPullTranslationsMap[]> = {};
     for (const locale of locales) {
       const dbLocale = locale.split("_").join("-");
-      await tx.fetchTranslations(locale);
+      await tx.fetchTranslations(locale, config);
       const txTranslations = await tx.cache.getTranslations(locale);
       const keys = Object.keys(txTranslations);
       for (const key of keys) {
-        const translation = txTranslations[key];
-        const isShort = translation.length < 256;
-        const i18nItems = await I18nItem.findAll({ where: { hash: key } });
-        const i18nTranslations = await I18nTranslation.findAll({
-          where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) }, language: dbLocale }
-        });
-        const groupByI18nItemId = groupBy(i18nTranslations, "i18nItemId");
-        for (const i18nItem of i18nItems) {
-          if (groupByI18nItemId[i18nItem.id] != null && groupByI18nItemId[i18nItem.id].length > 0) {
-            const i18nTranslation = groupByI18nItemId[i18nItem.id][0];
-            i18nTranslation.shortValue = isShort ? translation : null;
-            i18nTranslation.longValue = isShort ? null : translation;
-            i18nTranslation.language = dbLocale;
-            await i18nTranslation.save();
-          } else {
-            await I18nTranslation.create({
-              i18nItemId: i18nItem.id,
-              language: dbLocale,
-              shortValue: isShort ? translation : null,
-              longValue: isShort ? null : translation
-            } as I18nTranslation);
-          }
-          i18nItem.status = "translated";
-          await i18nItem.save({
-            hooks: false
-          });
+        if (txMapHashToTranslations[key] == null) {
+          txMapHashToTranslations[key] = [];
         }
+        txMapHashToTranslations[key].push({
+          locale: dbLocale,
+          translation: txTranslations[key],
+          i18nItemId: null,
+          i18nTranslationId: null
+        });
       }
-      this.logger.log(`Finished processing ${keys.length} keys for ${normalizeLocale(locale)}`);
     }
+    const i18nItems = await I18nItem.findAll({ where: { hash: { [Op.in]: Object.keys(txMapHashToTranslations) } } });
+    const i18nTranslations = await I18nTranslation.findAll({
+      where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) } }
+    });
+    const i18nTranslationsMap = groupBy(i18nTranslations, "i18nItemId");
+    const savePromises: Promise<I18nItem | I18nTranslation>[] = [];
+    for (const i18nItem of i18nItems) {
+      const { hash } = i18nItem;
+      txMapHashToTranslations[hash as string].forEach(async txTranslation => {
+        const i18nItemId = i18nItem.id;
+        const dbI18nTranslations = i18nTranslationsMap[i18nItemId];
+        const i18nTranslation = dbI18nTranslations?.find(
+          dbI18nTranslation => dbI18nTranslation.language === txTranslation.locale
+        );
+        const isShort = txTranslation.translation.length < 256;
+        if (i18nTranslation !== undefined) {
+          i18nTranslation.shortValue = isShort ? txTranslation.translation : null;
+          i18nTranslation.longValue = isShort ? null : txTranslation.translation;
+          i18nTranslation.language = txTranslation.locale;
+          savePromises.push(i18nTranslation.save());
+        } else {
+          savePromises.push(
+            I18nTranslation.create({
+              i18nItemId,
+              language: txTranslation.locale,
+              shortValue: isShort ? txTranslation.translation : null,
+              longValue: isShort ? null : txTranslation.translation
+            } as I18nTranslation)
+          );
+        }
+      });
+      i18nItem.status = "translated";
+      savePromises.push(
+        i18nItem.save({
+          hooks: false
+        })
+      );
+    }
+    await Promise.all(savePromises);
+    this.logger.log(`Finished processing ${i18nItems.length} keys`);
+    return i18nItems.map(({ id }) => id);
   }
 
-  async pushTranslations() {
-    const tx = createNativeInstance({
+  public async pushNewTranslations() {
+    const tx = this.createNativeInstance();
+    const condition: WhereOptions<I18nItem> = { status: { [Op.in]: [DRAFT, MODIFIED] } };
+    const items = await this.getTranslationsByCondition(condition);
+    const source = this.createSource(items, ["custom-form"]);
+    await tx.pushSource(source);
+    this.logger.log(`Finished pushing ${items.length} items`);
+  }
+
+  public async pushTranslationByForm(form: Form, i18nIds: number[]) {
+    const tx = this.createNativeInstance();
+    const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
+    const source = this.createSource(items, ["custom-form", form.uuid]);
+    await tx.pushSource(source);
+    this.logger.log(`Finished pushing ${items.length} items`);
+    return i18nIds;
+  }
+
+  private createNativeInstance() {
+    return createNativeInstance({
       token: this.configService.get("TRANSIFEX_TOKEN"),
       secret: this.configService.get("TRANSIFEX_SECRET")
     });
+  }
 
-    const items = await I18nItem.findAll({
-      where: {
-        status: {
-          [Op.in]: [DRAFT, MODIFIED]
-        }
-      }
-    });
-    const source = items.reduce((source, item) => {
+  private async getTranslationsByCondition(where: WhereOptions<I18nItem>): Promise<I18nItem[]> {
+    return await I18nItem.findAll({ where, attributes: ["hash", "shortValue", "longValue"] });
+  }
+
+  private createSource(items: I18nItem[], tags: string[]) {
+    return items.reduce((source, item) => {
       return {
         ...source,
         [item.hash ?? ""]: {
@@ -189,26 +251,24 @@ export class LocalizationService {
             context: "",
             developer_comment: "",
             occurrences: [],
-            tags: ["custom-form"]
+            tags
           },
           string: item.shortValue ?? item.longValue ?? ""
         }
       };
-    }, {} as Record<string, { meta: { character_limit: number; context: string; developer_comment: string; occurrences: string[]; tags: string[] }; string: string }>);
-    await tx.pushSource(source);
-    this.logger.log(`Finished pushing ${items.length} items`);
+    }, {} as TransifexSource);
   }
 
   async cleanOldI18nItems() {
     const i18nEntitiesColumns = [
-      { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
       { entity: FormOptionListOption, attributes: ["labelId"] },
-      { entity: FormQuestion, attributes: ["labelId", "descriptionId"] },
       { entity: FormQuestionOption, attributes: ["labelId"] },
+      { entity: FormQuestion, attributes: ["labelId", "descriptionId", "placeholderId"] },
       { entity: FormSection, attributes: ["titleId", "subtitleId", "descriptionId"] },
       { entity: FormTableHeader, attributes: ["labelId"] },
-      { entity: LocalizationKey, attributes: ["valueId"] },
-      { entity: FundingProgramme, attributes: ["locationId"] }
+      { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
+      { entity: FundingProgramme, attributes: ["locationId"] },
+      { entity: LocalizationKey, attributes: ["valueId"] }
     ];
     const i18nIds: number[] = [];
     for (const { entity, attributes } of i18nEntitiesColumns) {
@@ -229,5 +289,10 @@ export class LocalizationService {
     const itemsDeleted = await I18nItem.destroy({ where: { id: { [Op.notIn]: i18nIds } } });
     this.logger.log(`Deleted ${itemsDeleted} I18nItems and ${translationsDeleted} I18nTranslations`);
     this.logger.log(`Finished cleaning old I18nItems`);
+  }
+
+  addTranslationDto(document: DocumentBuilder, uuid: string, i18nItemIds: number[]) {
+    document.addData(uuid, new FormTranslationDto(i18nItemIds.length));
+    return document;
   }
 }

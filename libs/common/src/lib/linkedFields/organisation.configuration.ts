@@ -266,7 +266,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       multiChoice: true,
       optionListKey: "loan-status"
     },
-    "org-tree-restoration-practices": {
+    "org-tree-restoration-strategies": {
       property: "treeRestorationPractices",
       label: "Tree Restoration Practices",
       inputType: "select-image",

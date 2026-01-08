@@ -12,6 +12,7 @@ import {
   FormQuestionOptionFactory,
   FormSectionFactory,
   FormTableHeaderFactory,
+  I18nItemFactory,
   MediaFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -640,8 +641,21 @@ describe("FormsService", () => {
       const updateSections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
       expect(updateSections).toHaveLength(2);
       expect(updateSections.map(({ uuid }) => uuid)).toEqual([sections[2].uuid, sections[0].uuid]);
-      // make sure questions in the removed section are almost gone.
+      // make sure questions in the removed section are also gone.
       expect(await FormQuestion.count({ where: { formSectionId: sections[1].id } })).toBe(0);
+    });
+  });
+
+  describe("getI18nIdsForForm", () => {
+    it("should return the I18n IDs for a form", async () => {
+      const i18nItem = await I18nItemFactory.create();
+      const form = await FormFactory.create({ titleId: i18nItem.id });
+      const section1 = await FormSectionFactory.form(form).create();
+      const section2 = await FormSectionFactory.form(form).create();
+      await FormQuestionFactory.section(section1).create();
+      await FormQuestionFactory.section(section2).create();
+      const i18nIds = await service.getI18nIdsForForm(form);
+      expect(i18nIds).toBeDefined();
     });
   });
 });

@@ -2,6 +2,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
 import {
+  Form,
   FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
@@ -20,7 +21,9 @@ import { I18nTranslationFactory } from "@terramatch-microservices/database/facto
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import { FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { buildJsonApi } from "../util";
+import { FormTranslationDto } from "../dto/form-translation.dto";
 
 jest.mock("@transifex/native", () => ({
   tx: {
@@ -228,7 +231,19 @@ describe("LocalizationService", () => {
       (createNativeInstance as jest.Mock).mockImplementation(() => ({
         pushSource: pushSouceMock
       }));
-      await service.pushTranslations();
+      await service.pushNewTranslations();
+      expect(pushSouceMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("pushTranslationByForm", () => {
+    it("should push translations by form", async () => {
+      const form = await FormFactory.create();
+      const pushSouceMock = jest.fn();
+      (createNativeInstance as jest.Mock).mockImplementation(() => ({
+        pushSource: pushSouceMock
+      }));
+      await service.pushTranslationByForm(form, [1, 2, 3]);
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });
@@ -238,11 +253,12 @@ describe("LocalizationService", () => {
       // Cleaning up the database
       const entities = [
         I18nItem,
-        FormOptionListOption,
+        Form,
+        FormSection,
         FormQuestion,
         FormQuestionOption,
-        FormSection,
         FormTableHeader,
+        FormOptionListOption,
         LocalizationKey,
         FundingProgramme
       ];
@@ -265,6 +281,19 @@ describe("LocalizationService", () => {
       await service.cleanOldI18nItems();
       const afterCount = await I18nItem.count();
       expect(afterCount).toBe(previousCount);
+    });
+  });
+
+  describe("addTranslationDto", () => {
+    it("should add translation DTOs to the document", () => {
+      const document = buildJsonApi(FormTranslationDto);
+      const i18nItemIds = [1, 2, 3];
+      service.addTranslationDto(document, "uuid", i18nItemIds);
+      expect(document.data.length).toBe(1);
+      expect(document.data[0].attributes).toEqual({
+        translationKeysNumber: i18nItemIds.length,
+        lightResource: true
+      });
     });
   });
 });

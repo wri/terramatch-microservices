@@ -29,6 +29,8 @@ import { Subquery } from "../util/subquery.builder";
 export class FormSection extends Model<FormSection> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormSection";
 
+  static readonly I18N_FIELDS = ["title", "subtitle", "description"] as const;
+
   static forForm(formUuid: string) {
     return Subquery.select(FormSection, "id").eq("formId", formUuid).literal;
   }

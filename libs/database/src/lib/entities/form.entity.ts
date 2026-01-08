@@ -59,6 +59,8 @@ export class Form extends Model<Form> {
     return chainScope(this, "entity", entity) as typeof Form;
   }
 
+  static readonly I18N_FIELDS = ["title", "subtitle", "description", "submissionMessage"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

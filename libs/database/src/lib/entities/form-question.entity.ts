@@ -34,6 +34,8 @@ import { chainScope } from "../util/chain-scope";
   }
 })
 export class FormQuestion extends Model<FormQuestion> {
+  static readonly I18N_FIELDS = ["label", "description", "placeholder"] as const;
+
   static forForm(formUuid: string) {
     return chainScope(this, "form", formUuid) as typeof FormQuestion;
   }

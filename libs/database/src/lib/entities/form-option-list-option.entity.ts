@@ -5,6 +5,8 @@ import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "form_option_list_options", underscored: true, paranoid: true })
 export class FormOptionListOption extends Model<FormOptionListOption> {
+  static readonly I18N_FIELDS = ["label"] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

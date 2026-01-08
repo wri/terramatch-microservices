@@ -20,11 +20,17 @@ import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Form } from "@terramatch-microservices/database/entities";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
 
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
 export class FormsController {
-  constructor(private readonly formsService: FormsService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly formsService: FormsService,
+    private readonly policyService: PolicyService,
+    private readonly localizationService: LocalizationService
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -99,5 +105,40 @@ export class FormsController {
     await this.policyService.authorize("update", form);
     await this.formsService.store(payload.data.attributes, form);
     return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
+  }
+
+  @Post(":uuid/translations")
+  @ApiOperation({ operationId: "formPushTranslation", description: "Push translations to Transifex for a form" })
+  @JsonApiResponse(FormTranslationDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
+  @ExceptionResponse(NotFoundException, { description: "Form not found." })
+  async pushFormTranslation(@Param("uuid") uuid: string) {
+    const form = await this.formsService.findOne(uuid);
+    await this.policyService.authorize("update", form);
+    const i18nItemIds = await this.formsService.getI18nIdsForForm(form);
+    await this.localizationService.pushTranslationByForm(form, i18nItemIds);
+    return this.localizationService.addTranslationDto(
+      buildJsonApi<FormTranslationDto>(FormTranslationDto),
+      uuid,
+      i18nItemIds
+    );
+  }
+
+  @Get(":uuid/translations")
+  @ApiOperation({ operationId: "formPullTranslations", description: "Pull translations from Transifex for a form" })
+  @JsonApiResponse(FormTranslationDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
+  @ExceptionResponse(NotFoundException, { description: "Form not found." })
+  async pullFormTranslation(@Param("uuid") uuid: string) {
+    const form = await this.formsService.findOne(uuid);
+    await this.policyService.authorize("update", form);
+    const i18nItemIds = await this.localizationService.pullTranslations({ filterTags: form.uuid });
+    return this.localizationService.addTranslationDto(
+      buildJsonApi<FormTranslationDto>(FormTranslationDto),
+      uuid,
+      i18nItemIds
+    );
   }
 }

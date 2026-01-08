@@ -186,7 +186,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     it("should skip task status check for FinancialReport (which has no taskId)", async () => {
       const financialReport = await FinancialReportFactory.org().create({ status: AWAITING_APPROVAL });
       const handler = createHandler(financialReport);
-      const logSpy = jest.spyOn((handler as any).logger, "warn");
+      const logSpy = jest.spyOn((handler as any).logger, "log");
       await handler.handle();
       expect(logSpy).toHaveBeenCalledWith(
         `Skipping task status check for model without taskId [${financialReport.constructor.name}, ${financialReport.id}]`

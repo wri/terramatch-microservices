@@ -4,17 +4,32 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import {
   Form,
+  FormOptionList,
+  FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
   FormSection,
   FormTableHeader,
+  FundingProgramme,
+  LocalizationKey,
   Media,
   Stage,
   User
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { Dictionary, difference, filter, flatten, flattenDeep, groupBy, sortBy, union, uniq } from "lodash";
+import {
+  Dictionary,
+  difference,
+  filter,
+  flatten,
+  flattenDeep,
+  groupBy,
+  intersection,
+  sortBy,
+  union,
+  uniq
+} from "lodash";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -34,14 +49,29 @@ import {
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { Model } from "sequelize-typescript";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
+const EXTRA_FIELDS: string[] = ["id", "optionsList"];
 
+type TranslationModelType =
+  | typeof Form
+  | typeof FormSection
+  | typeof FormQuestion
+  | typeof FormQuestionOption
+  | typeof FormTableHeader
+  | typeof FormOptionList
+  | typeof FundingProgramme
+  | typeof LocalizationKey
+  | typeof FormOptionListOption;
+
+type TranslationParamsType = string | number;
 @Injectable({ scope: Scope.REQUEST })
 export class FormsService {
   private readonly logger = new TMLogger(FormsService.name);
@@ -231,6 +261,73 @@ export class FormsService {
   async store(attributes: StoreFormAttributes, form = new Form()) {
     await this.storeForm(form, attributes);
     return form;
+  }
+
+  private getI18nTranslationEntityFields(translationEntity: TranslationModelType) {
+    return translationEntity.I18N_FIELDS.map(field => `${field}Id`);
+  }
+
+  private async processTranslationEntity<M extends TranslationModelType>(
+    model: ModelCtor,
+    property: string,
+    filterParams: TranslationParamsType | TranslationParamsType[]
+  ): Promise<[number[], InstanceType<M>[]]> {
+    const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
+    const i18nFields = this.getI18nTranslationEntityFields(model as TranslationModelType);
+    const entities = await model.findAll({
+      where: {
+        [property]: {
+          [Op.in]: filterParamsArray
+        }
+      },
+      attributes: intersection(Object.keys(model.getAttributes()), [...i18nFields, ...EXTRA_FIELDS])
+    });
+
+    const i18nIdsToBePushed = entities.flatMap(entity => this.getI18nIdsFromEntity(entity, i18nFields));
+
+    return [i18nIdsToBePushed, entities as InstanceType<M>[]];
+  }
+
+  private getI18nIdsFromEntity(entity: Model, i18nFields: string[]) {
+    return Object.entries(entity.dataValues)
+      .filter(([key, value]) => i18nFields.includes(key) && value != null)
+      .map(([, value]) => value as number);
+  }
+
+  async getI18nIdsForForm(form: Form) {
+    const formI18nIds = this.getI18nIdsFromEntity(form, this.getI18nTranslationEntityFields(Form));
+    const [formSectionI18nIds, formSections] = await this.processTranslationEntity(FormSection, "formId", [form.uuid]);
+    const [formQuestionI18nIds, formQuestions] = await this.processTranslationEntity(
+      FormQuestion,
+      "formSectionId",
+      formSections.map(section => section.id)
+    );
+    const [formTableHeaderI18nIds] = await this.processTranslationEntity(
+      FormTableHeader,
+      "formQuestionId",
+      formQuestions.map(question => question.id)
+    );
+    const optionsListParams = formQuestions
+      .map((question: FormQuestion) => question.optionsList)
+      .filter(optionsList => optionsList != null)
+      .filter(optionsList => optionsList != "0");
+    const [formOptionListI18nIds, formOptionsLists] = await this.processTranslationEntity(
+      FormOptionList,
+      "key",
+      optionsListParams
+    );
+    await this.processTranslationEntity(
+      FormOptionListOption,
+      "formOptionListId",
+      formOptionsLists.map(list => list.id)
+    );
+    return [
+      ...formI18nIds,
+      ...formSectionI18nIds,
+      ...formQuestionI18nIds,
+      ...formTableHeaderI18nIds,
+      ...formOptionListI18nIds
+    ];
   }
 
   private _userLocale?: ValidLocale;

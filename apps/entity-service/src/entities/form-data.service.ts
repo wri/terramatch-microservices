@@ -296,7 +296,12 @@ export class FormDataService {
     if (isReport(answersModel)) {
       answersModel.completion = this.calculateProgress(answers, questions);
 
-      const isAdmin = (await this.policyService.getPermissions()).includes(`framework-${answersModel.frameworkKey}`);
+      const permissions = await this.policyService.getPermissions();
+      const { frameworkKey } = answersModel;
+      const isAdmin =
+        frameworkKey == null
+          ? permissions.find(permission => permission.startsWith("framework-")) != null
+          : permissions.includes(`framework-${answersModel.frameworkKey}`);
       if (answersModel.createdBy == null && !isAdmin) {
         answersModel.createdBy = authenticatedUserId() ?? null;
       }

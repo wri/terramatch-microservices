@@ -27,6 +27,8 @@ export class SpikesValidator implements PolygonValidator, GeometryValidator {
 
   private readonly SPIKE_RATIO_THRESHOLD = 5;
 
+  private readonly MIN_SEGMENT_DISTANCE_KM = 0.05;
+
   async validatePolygon(polygonUuid: string): Promise<SpikeDetectionResult> {
     const geoJson = await PolygonGeometry.getGeoJSONParsed(polygonUuid);
     if (geoJson == null) {
@@ -97,13 +99,18 @@ export class SpikesValidator implements PolygonValidator, GeometryValidator {
     const spikes: number[][] = [];
 
     if (geometry.type === "Polygon") {
-      for (const ring of geometry.coordinates) {
-        spikes.push(...this.detectSpikesInRing(ring));
+      for (let ringIndex = 0; ringIndex < geometry.coordinates.length; ringIndex++) {
+        const ring = geometry.coordinates[ringIndex];
+        const ringSpikes = this.detectSpikesInRing(ring);
+        spikes.push(...ringSpikes);
       }
     } else if (geometry.type === "MultiPolygon") {
-      for (const polygon of geometry.coordinates) {
-        for (const ring of polygon) {
-          spikes.push(...this.detectSpikesInRing(ring));
+      for (let polyIndex = 0; polyIndex < geometry.coordinates.length; polyIndex++) {
+        const polygon = geometry.coordinates[polyIndex];
+        for (let ringIndex = 0; ringIndex < polygon.length; ringIndex++) {
+          const ring = polygon[ringIndex];
+          const ringSpikes = this.detectSpikesInRing(ring);
+          spikes.push(...ringSpikes);
         }
       }
     }
@@ -128,8 +135,14 @@ export class SpikesValidator implements PolygonValidator, GeometryValidator {
       const d2 = this.calculateDistance(current, next);
       const baseDistance = this.calculateDistance(prev, next);
 
+      const minSegmentDistance = Math.min(d1, d2);
+      if (minSegmentDistance < this.MIN_SEGMENT_DISTANCE_KM) {
+        continue;
+      }
+
       const isSharpAngle = angle < this.SPIKE_ANGLE_THRESHOLD;
-      const isSkinny = baseDistance > 0 && (d1 + d2) / baseDistance > this.SPIKE_RATIO_THRESHOLD;
+      const ratio = baseDistance > 0 ? (d1 + d2) / baseDistance : 0;
+      const isSkinny = baseDistance > 0 && ratio > this.SPIKE_RATIO_THRESHOLD;
 
       if (isSharpAngle && isSkinny) {
         spikes.push(current);

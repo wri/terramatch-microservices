@@ -682,6 +682,25 @@ describe("SitePolygonsController", () => {
     });
   });
 
+  describe("bulkStatusUpdate", () => {
+    it("should throw UnauthorizedException when user is not authorized", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(
+        controller.updateBulkStatus("submitted", { comment: "comment", data: [{ type: "sitePolygons", id: "1234" }] })
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should call updateBulkStatus on sitePolygonService", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const userParams = { id: 1, firstName: "Test", lastName: "User", emailAddress: "test@example.com" };
+      jest.spyOn(User, "findByPk").mockResolvedValue(userParams as User);
+      const data = [{ type: "sitePolygons", id: "1234" }];
+      Object.defineProperty(policyService, "userId", { value: userParams.id });
+      await controller.updateBulkStatus("submitted", { comment: "comment", data });
+      expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("submitted", data, "comment", userParams);
+    });
+  });
+
   describe("bulkUpdate", () => {
     it("Should authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
@@ -1153,6 +1172,64 @@ describe("SitePolygonsController", () => {
         source: "terramatch",
         userFullName: "Test User"
       });
+      const serialized = serialize(result);
+      expect(serialized.data).toBeDefined();
+    });
+  });
+
+  describe("uploadVersionForSitePolygon", () => {
+    let originalSequelize: typeof SitePolygon.sequelize;
+
+    beforeEach(() => {
+      originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    afterEach(() => {
+      if (SitePolygon.sequelize !== originalSequelize) {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize,
+          writable: true,
+          configurable: true
+        });
+      }
+    });
+
+    it("should successfully create version from uploaded file", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid", id: 123 });
+      sitePolygonCreationService.uploadVersionFromFile.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({
+        [newVersion.id]: {}
+      });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      const result = await controller.uploadVersionForSitePolygon(
+        "base-uuid",
+        file,
+        payload as GeometryUploadRequestDto
+      );
+
+      expect(sitePolygonCreationService.uploadVersionFromFile).toHaveBeenCalledWith(
+        file,
+        "base-uuid",
+        "site-uuid",
+        1,
+        user.fullName,
+        "terramatch"
+      );
+      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
     });

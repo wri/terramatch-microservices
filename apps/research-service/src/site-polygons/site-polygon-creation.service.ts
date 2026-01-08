@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import {
   Site,
   SitePolygon,
@@ -32,6 +32,9 @@ import {
   ValidationType
 } from "@terramatch-microservices/database/constants";
 import { VoronoiService } from "../voronoi/voronoi.service";
+import { GeometryFileProcessingService } from "./geometry-file-processing.service";
+import { convertPropertiesToAttributeChanges } from "./utils/attribute-changes-converter";
+import "multer";
 
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
@@ -67,6 +70,7 @@ export class SitePolygonCreationService {
     private readonly pointGeometryService: PointGeometryCreationService,
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
     private readonly voronoiService: VoronoiService,
+    private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly versioningService: SitePolygonVersioningService
   ) {}
 
@@ -777,5 +781,100 @@ export class SitePolygonCreationService {
 
     const description = parts.join(", ");
     return description.length > 0 ? description : "Version created";
+  }
+
+  async uploadVersionFromFile(
+    file: Express.Multer.File,
+    sitePolygonUuid: string,
+    siteId: string,
+    userId: number,
+    userFullName: string | null,
+    source: string
+  ): Promise<SitePolygon> {
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["id", "name"]
+    });
+
+    if (site == null) {
+      throw new NotFoundException(`Site with UUID ${siteId} not found`);
+    }
+
+    const basePolygon = await SitePolygon.findOne({
+      where: { uuid: sitePolygonUuid, siteUuid: siteId },
+      attributes: ["id", "uuid", "primaryUuid", "polyName"]
+    });
+
+    if (basePolygon == null) {
+      throw new NotFoundException(`Site polygon ${sitePolygonUuid} not found in site ${siteId}`);
+    }
+
+    const geojson = await this.geometryFileProcessingService.parseGeometryFile(file);
+
+    if (geojson.features.length === 0) {
+      throw new BadRequestException("No features found in uploaded file");
+    }
+
+    if (geojson.features.length > 1) {
+      throw new BadRequestException(
+        `Explicit versioning only supports single polygon. Received ${geojson.features.length} features`
+      );
+    }
+
+    const feature = geojson.features[0];
+    const properties = feature.properties ?? {};
+    const allProperties = { ...properties };
+    if (siteId != null) {
+      allProperties.siteId = siteId;
+      allProperties.site_id = siteId;
+    }
+
+    const validatedProperties = validateSitePolygonProperties(allProperties);
+    const attributeChanges = convertPropertiesToAttributeChanges(validatedProperties);
+
+    const uploadedPolyName = attributeChanges.polyName ?? attributeChanges.poly_name;
+    const basePolyName = basePolygon.polyName ?? null;
+
+    if (uploadedPolyName != null && uploadedPolyName.length > 0 && uploadedPolyName !== basePolyName) {
+      attributeChanges.polyName = uploadedPolyName;
+      attributeChanges.poly_name = uploadedPolyName;
+    } else {
+      attributeChanges.polyName = basePolyName != null ? `${basePolyName} (new)` : " (new)";
+      attributeChanges.poly_name = attributeChanges.polyName;
+    }
+
+    const versionGeometries: CreateSitePolygonRequestDto[] = [
+      {
+        type: "FeatureCollection" as const,
+        features: [
+          {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              site_id: siteId
+            }
+          } as Feature
+        ]
+      }
+    ];
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const newVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      return await this.createSitePolygonVersion(
+        sitePolygonUuid,
+        versionGeometries,
+        attributeChanges,
+        "Version created from geometry file upload",
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+    });
+
+    return newVersion;
   }
 }

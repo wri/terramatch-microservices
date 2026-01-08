@@ -21,7 +21,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Restoration intervention types",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "pro-pit-detailed-rst-inv-types": {
       property: "detailed_intervention_types",
@@ -52,7 +52,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Land tenure project area",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "land-tenure-proj-area-collection"
+      optionListKey: "land-tenures-brazil"
     },
     "pro-pit-expected-active-rest-start-date": {
       property: "expected_active_restoration_start_date",
@@ -245,14 +245,14 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Land systems",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "pro-pit-tree-rest-prac": {
       property: "tree_restoration_practices",
       label: "Tree Restoration Practices",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-practices"
+      optionListKey: "restoration-strategies"
     },
     "pro-pit-main-cause-deg": {
       property: "main_causes_of_degradation",
@@ -323,14 +323,14 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Land use types",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "pro-pit-restoration_strategy": {
       property: "restoration_strategy",
       label: "Restoration strategy",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-practices"
+      optionListKey: "restoration-strategies"
     },
     "pro-pit-baseline-biodiversity": {
       property: "baseline_biodiversity",
@@ -425,21 +425,21 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Distribution of restoration strategies",
       inputType: "strategy-area",
       multiChoice: false,
-      optionListKey: "strategy-distribution-collection"
+      optionListKey: "restoration-strategies"
     },
     "pro-pit-land-use-type-distribution": {
       property: "land_use_type_distribution",
       label: "Distribution of land use systems",
       inputType: "strategy-area",
       multiChoice: false,
-      optionListKey: "land-use-distribution-collection"
+      optionListKey: "land-use-systems"
     },
     "pro-pit-land-tenure-distribution": {
       property: "land_tenure_distribution",
       label: "Distribution of land tenure agreement",
       inputType: "strategy-area",
       multiChoice: false,
-      optionListKey: "tenure-distribution-collection"
+      optionListKey: "land-tenures"
     },
     "pro-pit-total-tree-second-yr": {
       property: "total_tree_second_yr",
@@ -458,7 +458,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Project site distribution model",
       inputType: "select",
       multiChoice: false,
-      optionListKey: "project-site-model-collection"
+      optionListKey: "siting-strategies"
     },
     "pro-pit-indigenous-impact": {
       property: "indigenous_impact",
@@ -470,7 +470,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "Barriers to Project Activities",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "barriers-project-collection"
+      optionListKey: "project-barriers"
     },
     "pro-pit-barriers-project-activity-description": {
       property: "barriers_project_activity_description",
@@ -492,7 +492,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration = {
       label: "ANR practices that the organization will use during the project",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "anr-practices-proposed-collection"
+      optionListKey: "anr-practices"
     },
     "pro-pit-information-authorization": {
       property: "information_authorization",

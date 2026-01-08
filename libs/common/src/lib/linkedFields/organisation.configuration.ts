@@ -258,7 +258,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       label: "Land Systems",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-systems"
+      optionListKey: "land-use-systems"
     },
     "org-fund-utilisation": {
       property: "fund_utilisation",
@@ -267,12 +267,12 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       multiChoice: true,
       optionListKey: "loan-status"
     },
-    "org-tree-restoration-practices": {
+    "org-tree-restoration-strategies": {
       property: "tree_restoration_practices",
       label: "Tree Restoration Practices",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "restoration-practices"
+      optionListKey: "restoration-strategies"
     },
     "org-detailed-interventions": {
       property: "detailed_intervention_types",
@@ -463,7 +463,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       label: "Territories in which the organization operates",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "territories-of-operation-collection"
+      optionListKey: "land-tenures-brazil"
     },
     "org-decisionmaking-structure-description": {
       property: "decisionmaking_structure_description",
@@ -485,7 +485,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration = {
       label: "ANR practices that the organization has used",
       inputType: "select",
       multiChoice: true,
-      optionListKey: "anr-practices-past-collection"
+      optionListKey: "anr-practices"
     },
     "org-anr-monitoring-approaches": {
       property: "anr_monitoring_approaches",

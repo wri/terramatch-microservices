@@ -88,7 +88,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
             order: [["createdAt", "DESC"]],
             attributes: ["polyUuid"]
           });
-          if (polygon?.polyUuid != null) answers[questionUuid] = { polyUuid: polygon?.polyUuid };
+          if (polygon?.polyUuid != null) answers[questionUuid] = { polygonUuid: polygon?.polyUuid };
         } else {
           throw new InternalServerErrorException(
             `Unrecognized virtual props type: ${(props as VirtualLinkedFieldProps).type}`

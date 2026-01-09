@@ -12,6 +12,7 @@ import {
   FundingProgrammeFactory,
   OrganisationFactory,
   OrganisationUserFactory,
+  ProjectFactory,
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -204,12 +205,14 @@ describe("ApplicationsController", () => {
         stageUuid: stage.uuid,
         userId: user.uuid
       });
+      const project = await ProjectFactory.create({ applicationId: app.id });
 
       const result = serialize(await controller.getApplication({ uuid: app.uuid }, {}));
       const dto = (result.data as Resource).attributes;
       expect(dto.uuid).toBe(app.uuid);
       expect(dto.organisationUuid).toBe(app.organisationUuid);
       expect(dto.fundingProgrammeUuid).toBe(app.fundingProgrammeUuid);
+      expect(dto.projectUuid).toBe(project.uuid);
       expect(dto.submissions).toEqual([
         expect.objectContaining({
           uuid: submission.uuid,

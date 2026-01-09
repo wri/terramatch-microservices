@@ -37,6 +37,9 @@ export class ApplicationDto {
   organisationUuid: string | null;
 
   @ApiProperty({ nullable: true, type: String })
+  projectUuid: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
   fundingProgrammeName: string | null;
 
   @ApiProperty({ nullable: true, type: String })

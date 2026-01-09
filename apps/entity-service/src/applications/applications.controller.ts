@@ -3,7 +3,14 @@ import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/applicat
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApplicationDto, ApplicationHistoryDto, ApplicationHistoryEntryDto } from "./dto/application.dto";
-import { Application, Audit, AuditStatus, FormSubmission, User } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Audit,
+  AuditStatus,
+  FormSubmission,
+  Project,
+  User
+} from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
   buildDeletedResponse,
@@ -19,7 +26,7 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { EmbeddedSubmissionDto, SubmissionDto } from "../entities/dto/submission.dto";
-import { groupBy, last } from "lodash";
+import { groupBy, last, uniqBy } from "lodash";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
@@ -89,7 +96,9 @@ export class ApplicationsController {
     const applications = await builder.execute();
     if (applications.length > 0) await this.policyService.authorize("read", applications);
 
-    const submissions = applications.length === 0 ? [] : await this.findSubmissions(applications.map(({ id }) => id));
+    const applicationIds = applications.map(({ id }) => id);
+    const submissions = applications.length === 0 ? [] : await this.findSubmissions(applicationIds);
+    const projects = applications.length === 0 ? [] : await this.findProjects(applicationIds);
 
     return applications.reduce(
       (document, application) => {
@@ -98,7 +107,8 @@ export class ApplicationsController {
           new ApplicationDto(application, {
             submissions: submissions
               .filter(({ applicationId }) => applicationId === application.id)
-              .map(submission => new EmbeddedSubmissionDto(submission))
+              .map(submission => new EmbeddedSubmissionDto(submission)),
+            projectUuid: projects.find(({ applicationId }) => applicationId === application.id)?.uuid ?? null
           })
         ).document;
       },
@@ -131,10 +141,12 @@ export class ApplicationsController {
     await this.policyService.authorize("read", application);
 
     const submissions = await this.findSubmissions(application.id);
+    const [project] = await this.findProjects(application.id);
     const document = buildJsonApi(ApplicationDto).addData(
       application.uuid,
       new ApplicationDto(application, {
-        submissions: submissions.map(submission => new EmbeddedSubmissionDto(submission))
+        submissions: submissions.map(submission => new EmbeddedSubmissionDto(submission)),
+        projectUuid: project?.uuid ?? null
       })
     ).document;
 
@@ -293,5 +305,17 @@ export class ApplicationsController {
         { association: "user", attributes: ["firstName", "lastName"] }
       ]
     });
+  }
+
+  private async findProjects(applicationIds: number | number[]) {
+    // There can be multiple projects per application, but we just want the newest one per application
+    return uniqBy(
+      await Project.findAll({
+        where: { applicationId: applicationIds },
+        order: [["createdAt", "DESC"]],
+        attributes: ["applicationId", "uuid"]
+      }),
+      "applicationId"
+    );
   }
 }

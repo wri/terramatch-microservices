@@ -89,9 +89,9 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
             : (await Stage.count({
                 where: { fundingProgrammeId: stage.fundingProgrammeId, order: { [Op.gt]: stage.order } }
               })) === 0;
-        if (isFinalStage) withPrefix("final-stage-approved", feedback, i18nKeys, i18nReplacements);
-        else withPrefix("approved", feedback, i18nKeys, i18nReplacements);
-        i18nKeys.cta = "form-submission-approved.cta";
+        const prefix = isFinalStage ? "final-stage-approved" : "approved";
+        withPrefix(prefix, feedback, i18nKeys, i18nReplacements);
+        i18nKeys.cta = `form-submission-${prefix}.cta`;
         break;
       }
 

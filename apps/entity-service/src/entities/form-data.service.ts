@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import {
@@ -138,6 +138,10 @@ export class FormDataService {
 
     formSubmission.organisation ??= (await formSubmission.$get("organisation")) ?? null;
     formSubmission.projectPitch ??= (await formSubmission.$get("projectPitch")) ?? null;
+    if (formSubmission.organisation == null || formSubmission.projectPitch == null) {
+      throw new NotFoundException("Submission is missing the organisation or project pitch.");
+    }
+
     const answers = await this.getAnswers(
       form,
       {

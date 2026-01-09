@@ -300,8 +300,12 @@ export class MediaService {
       ACL: "public-read"
     });
 
-    await this.s3.send(command);
-    this.logger.log(`Copied ${fromPath} to ${toPath} in S3`);
+    try {
+      await this.s3.send(command);
+      this.logger.log(`Copied ${fromPath} to ${toPath} in S3`);
+    } catch (error) {
+      this.logger.error(`Error copying file from ${fromPath} to ${toPath} in S3 [${error}]`);
+    }
   }
 
   private getMediaType(file: Express.Multer.File, configuration: MediaConfiguration) {

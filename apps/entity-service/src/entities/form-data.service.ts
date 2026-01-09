@@ -145,8 +145,8 @@ export class FormDataService {
     const answers = await this.getAnswers(
       form,
       {
-        organisations: formSubmission.organisation ?? undefined,
-        projectPitches: formSubmission.projectPitch ?? undefined
+        organisations: formSubmission.organisation,
+        projectPitches: formSubmission.projectPitch
       },
       formSubmission
     );

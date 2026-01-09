@@ -177,7 +177,7 @@ describe("FundingProgrammesController", () => {
         location: faker.location.city(),
         readMoreUrl: faker.internet.url(),
         status: faker.helpers.arrayElement(FUNDING_PROGRAMME_STATUSES),
-        framework: faker.helpers.arrayElement(FRAMEWORK_KEYS),
+        frameworkKey: faker.helpers.arrayElement(FRAMEWORK_KEYS),
         organisationTypes: [faker.helpers.arrayElement(ORGANISATION_TYPES)],
 
         stages: [
@@ -195,16 +195,16 @@ describe("FundingProgrammesController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith(
         "create",
-        expect.objectContaining({ name: attributes.name, frameworkKey: attributes.framework })
+        expect.objectContaining({ name: attributes.name, frameworkKey: attributes.frameworkKey })
       );
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.name);
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.description);
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.location);
       expect(stages.length).toBe(2);
       expect(stageForms[0].stageId).toBe(stages[0].uuid);
-      expect(stageForms[0].frameworkKey).toBe(attributes.framework);
+      expect(stageForms[0].frameworkKey).toBe(attributes.frameworkKey);
       expect(stageForms[1].stageId).toBe(stages[1].uuid);
-      expect(stageForms[1].frameworkKey).toBe(attributes.framework);
+      expect(stageForms[1].frameworkKey).toBe(attributes.frameworkKey);
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), [
         expect.objectContaining({
           name: attributes.name,
@@ -212,7 +212,7 @@ describe("FundingProgrammesController", () => {
           location: attributes.location,
           readMoreUrl: attributes.readMoreUrl,
           status: attributes.status,
-          frameworkKey: attributes.framework,
+          frameworkKey: attributes.frameworkKey,
           organisationTypes: attributes.organisationTypes
         })
       ]);
@@ -255,7 +255,7 @@ describe("FundingProgrammesController", () => {
         location: faker.location.city(),
         readMoreUrl: faker.internet.url(),
         status: faker.helpers.arrayElement(FUNDING_PROGRAMME_STATUSES),
-        framework: faker.helpers.arrayElement(FRAMEWORK_KEYS),
+        frameworkKey: faker.helpers.arrayElement(FRAMEWORK_KEYS),
         organisationTypes: [faker.helpers.arrayElement(ORGANISATION_TYPES)],
 
         stages: [
@@ -303,7 +303,7 @@ describe("FundingProgrammesController", () => {
           location: attributes.location,
           readMoreUrl: attributes.readMoreUrl,
           status: attributes.status,
-          frameworkKey: attributes.framework,
+          frameworkKey: attributes.frameworkKey,
           organisationTypes: attributes.organisationTypes
         })
       ]);

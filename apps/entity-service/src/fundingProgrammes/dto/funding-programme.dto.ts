@@ -67,7 +67,7 @@ export class FundingProgrammeDto {
   @IsOptional()
   @IsEnum(FRAMEWORK_KEYS)
   @ApiProperty({ required: false, nullable: true, enum: FRAMEWORK_KEYS })
-  framework?: FrameworkKey | null;
+  frameworkKey?: FrameworkKey | null;
 
   @IsString()
   @ApiProperty()
@@ -117,7 +117,7 @@ export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDt
   "location",
   "readMoreUrl",
   "status",
-  "framework",
+  "frameworkKey",
   "organisationTypes"
 ]) {
   @ValidateNested()

@@ -144,7 +144,7 @@ export class FundingProgrammesController {
       locationId: await this.localizationService.generateI18nId(attributes.location),
       readMoreUrl: attributes.readMoreUrl,
       status: attributes.status,
-      frameworkKey: attributes.framework,
+      frameworkKey: attributes.frameworkKey,
       organisationTypes: attributes.organisationTypes
     });
     // authorize creation before saving the built model
@@ -211,7 +211,7 @@ export class FundingProgrammesController {
           : await this.localizationService.generateI18nId(attributes.location),
       readMoreUrl: attributes.readMoreUrl,
       status: attributes.status,
-      frameworkKey: attributes.framework,
+      frameworkKey: attributes.frameworkKey,
       organisationTypes: attributes.organisationTypes
     });
 

@@ -21,7 +21,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
-import { Action, AuditStatus, Organisation, Task } from "@terramatch-microservices/database/entities";
+import { Action, AuditStatus, FinancialReport, Organisation, Task } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
@@ -266,7 +266,11 @@ describe("EntityStatusUpdate EventProcessor", () => {
     it("should send status update email for FinancialReport to createdBy user", async () => {
       mockUserId();
       const user = await UserFactory.create();
-      const financialReport = await FinancialReportFactory.org().create({ status: APPROVED, createdBy: user.id });
+      const { id } = await FinancialReportFactory.org().create({ status: APPROVED, createdBy: user.id });
+      // the org type has to be loaded on the report for this test to work (see Form's entity scope).
+      const financialReport = (await FinancialReport.findByPk(id, {
+        include: [{ association: "organisation", attributes: ["type"] }]
+      })) as FinancialReport;
 
       await new EntityStatusUpdate(eventService, financialReport).handle();
 

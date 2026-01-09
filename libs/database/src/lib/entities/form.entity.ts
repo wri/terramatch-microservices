@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, literal, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
@@ -23,12 +23,24 @@ import { DisturbanceReport } from "./disturbance-report.entity";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 import { SrpReport } from "./srp-report.entity";
+import { InternalServerErrorException } from "@nestjs/common";
 
 type FormMedia = "banner";
 
 @Scopes(() => ({
   entity: (entity: EntityModel) => {
-    if (entity instanceof FinancialReport) return { where: { type: "financial-report" } };
+    if (entity instanceof FinancialReport) {
+      if (entity.organisation?.type == null) {
+        throw new InternalServerErrorException("Cannot determine form for financial report without organisation type.");
+      }
+      if (entity.organisation.type === "non-profit-organization") {
+        return { where: { [Op.and]: [{ type: "financial-report" }, literal("LOWER(title) LIKE '%non%profit%'")] } };
+      } else {
+        return {
+          where: { [Op.and]: [{ type: "financial-report" }, literal("LOWER(title) NOT LIKE '%non%profit%'")] }
+        };
+      }
+    }
     if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };
     if (entity instanceof SrpReport) return { where: { type: "srp-report" } };
 

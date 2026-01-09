@@ -555,7 +555,8 @@ export class ProjectProcessor extends EntityProcessor<
 
     await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
 
-    return project;
+    // Load the full project with necessary associations.
+    return (await this.findOne(project.uuid)) as Project;
   }
 
   private async getProjectCreationOrg(application: Application | undefined) {

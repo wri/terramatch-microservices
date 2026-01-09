@@ -134,7 +134,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       })) as CreationAttributes<DisturbanceReportEntry>[]
     );
 
-    return disturbanceReport;
+    // Load the full report with necessary associations.
+    return (await this.findOne(disturbanceReport.uuid)) as DisturbanceReport;
   }
 
   async findMany(query: EntityQueryDto) {

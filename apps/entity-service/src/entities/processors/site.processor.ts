@@ -417,6 +417,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
-    return site;
+    // Load the full site with necessary associations.
+    return (await this.findOne(site.uuid)) as Site;
   }
 }

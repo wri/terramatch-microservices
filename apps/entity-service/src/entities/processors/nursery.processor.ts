@@ -212,6 +212,7 @@ export class NurseryProcessor extends EntityProcessor<
       }
     }
 
-    return nursery;
+    // Load the full nursery with necessary associations.
+    return (await this.findOne(nursery.uuid)) as Nursery;
   }
 }

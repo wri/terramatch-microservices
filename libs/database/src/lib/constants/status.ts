@@ -172,5 +172,6 @@ export const DelayedJobStatusStates: States<DelayedJob, DelayedJobStatus> = {
 export const INACTIVE = "inactive";
 export const ACTIVE = "active";
 export const DISABLED = "disabled";
-export const FUNDING_PROGRAMME_STATUSES = [INACTIVE, ACTIVE, DISABLED] as const;
+export const COMING_SOON = "coming-soon";
+export const FUNDING_PROGRAMME_STATUSES = [INACTIVE, ACTIVE, DISABLED, COMING_SOON] as const;
 export type FundingProgrammeStatus = (typeof FUNDING_PROGRAMME_STATUSES)[number];

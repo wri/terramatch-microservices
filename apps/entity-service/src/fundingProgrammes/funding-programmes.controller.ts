@@ -119,7 +119,7 @@ export class FundingProgrammesController {
   @ExceptionResponse(NotFoundException, { description: "Funding programme not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to delete this funding programme" })
   async deleteFundingProgramme(@Param() { uuid }: SingleResourceDto) {
-    const fundingProgramme = await FundingProgramme.findOne({ where: { uuid }, attributes: ["id"] });
+    const fundingProgramme = await FundingProgramme.findOne({ where: { uuid }, attributes: ["id", "frameworkKey"] });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
     await this.policyService.authorize("delete", fundingProgramme);

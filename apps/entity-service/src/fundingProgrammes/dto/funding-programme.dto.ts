@@ -33,10 +33,8 @@ export class StageDto {
   @ApiProperty({ required: false, nullable: true, type: String })
   name?: string | null;
 
-  @IsOptional()
-  @IsDate()
-  @ApiProperty({ required: false, nullable: true, type: Date })
-  deadlineAt?: Date | null;
+  @ApiProperty({ nullable: true, type: Date })
+  deadlineAt: Date | null;
 
   @IsOptional()
   @IsString()
@@ -103,12 +101,18 @@ export class FundingProgrammeDto {
   stages: StageDto[] | null;
 }
 
-export class StoreStageAttributes extends PickType(StageDto, ["name", "deadlineAt", "formUuid"]) {
+export class StoreStageAttributes extends PickType(StageDto, ["name", "formUuid"]) {
   // optional on request, but not in response
   @IsOptional()
   @IsString()
   @ApiProperty({ required: false })
   uuid?: string;
+
+  // This can't be marked nullable in the request, or the class transformer chokes on converting to a Date instance.
+  @IsOptional()
+  @IsDate()
+  @ApiProperty({ required: false, type: Date })
+  deadlineAt?: Date;
 }
 
 export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDto, [

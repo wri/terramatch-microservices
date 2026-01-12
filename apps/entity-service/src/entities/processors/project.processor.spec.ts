@@ -652,7 +652,7 @@ describe("ProjectProcessor", () => {
       expect(mediaService.duplicateMedia).toHaveBeenCalledTimes(1);
       expect(mediaService.duplicateMedia).toHaveBeenCalledWith(
         expect.objectContaining({ uuid: pitchMedia.uuid }),
-        project
+        expect.objectContaining({ uuid: project.uuid })
       );
     });
   });

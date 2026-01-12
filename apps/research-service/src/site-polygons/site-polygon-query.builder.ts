@@ -46,7 +46,7 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   private siteJoin: IncludeOptions = {
     model: Site,
-    include: [{ association: "project", attributes: ["uuid", "shortName"] }],
+    include: [{ association: "project", attributes: ["uuid", "shortName", "name"] }],
     attributes: ["id", "projectId", "name"],
     required: true
   };

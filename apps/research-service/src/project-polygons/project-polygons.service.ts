@@ -121,6 +121,13 @@ export class ProjectPolygonsService {
     });
   }
 
+  async findByPolyUuid(polyUuid: string): Promise<ProjectPolygon | null> {
+    return await ProjectPolygon.findOne({
+      where: { polyUuid },
+      attributes: ["id", "uuid", "polyUuid", "entityId", "entityType", "createdBy"]
+    });
+  }
+
   async getGeoJson(query: ProjectPolygonGeoJsonQueryDto): Promise<FeatureCollection> {
     const projectPitch = await ProjectPitch.findOne({
       where: { uuid: query.projectPitchUuid },

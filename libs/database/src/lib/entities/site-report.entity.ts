@@ -74,7 +74,7 @@ type SiteReportMedia =
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } }),
-  lastReport: { order: [["updatedAt", "DESC"]], limit: 1 }
+  lastReport: { order: [["dueAt", "DESC"]], limit: 1 }
 }))
 @Table({
   tableName: "v2_site_reports",

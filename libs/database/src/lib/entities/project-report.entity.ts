@@ -73,7 +73,7 @@ type ProjectReportMedia =
   projectsIds: (ids: number[]) => ({ where: { projectId: { [Op.in]: ids } } }),
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } }),
-  lastReport: { order: [["updatedAt", "DESC"]], limit: 1 }
+  lastReport: { order: [["dueAt", "DESC"]], limit: 1 }
 }))
 @Table({
   tableName: "v2_project_reports",

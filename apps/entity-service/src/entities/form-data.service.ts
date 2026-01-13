@@ -164,14 +164,16 @@ export class FormDataService {
             attributes: ["i18nItemId"]
           })
         ).map(({ i18nItemId }) => i18nItemId);
-    const translations = await this.localizationService.translateIds(i18nItemIds, locale);
+    const translations = uniq(
+      Object.values(await this.localizationService.translateIds(i18nItemIds, locale)).filter(isNotNull)
+    );
 
     document.addData(
       formSubmission.uuid,
       new SubmissionDto(formSubmission, {
         answers,
         frameworkKey: form?.frameworkKey,
-        translatedFeedbackFields: Object.values(translations).filter(isNotNull)
+        translatedFeedbackFields: translations
       })
     );
 

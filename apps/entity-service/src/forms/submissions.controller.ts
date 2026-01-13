@@ -18,7 +18,6 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataDto } from "../entities/dto/form-data.dto";
-import { isEmpty } from "lodash";
 
 @Controller("forms/v3/submissions")
 export class SubmissionsController {
@@ -166,18 +165,17 @@ export class SubmissionsController {
       }
     }
 
-    const hasFeedback = attributes.feedback != null || !isEmpty(attributes.feedbackFields);
-    if (attributes.status != null || hasFeedback) {
+    if (attributes.status != null && attributes.status !== submission.status) {
       await this.policyService.authorize("update", submission);
-      const updates: Parameters<typeof submission.update>[0] = {};
-      if (attributes.status != null) {
-        updates.status = attributes.status;
+
+      if (attributes.status != "awaiting-approval") {
+        submission.feedback = attributes.feedback ?? null;
+        submission.feedbackFields = attributes.feedbackFields ?? null;
       }
-      if (hasFeedback) {
-        updates.feedback = attributes.feedback;
-        updates.feedbackFields = attributes.feedbackFields;
-      }
-      await submission.update(updates);
+
+      submission.status = attributes.status;
+
+      await submission.save();
     } else {
       await AuditStatus.ensureRecentAudit(submission, authenticatedUserId());
     }

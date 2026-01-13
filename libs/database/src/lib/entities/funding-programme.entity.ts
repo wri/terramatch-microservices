@@ -25,7 +25,7 @@ import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { I18nItem } from "./i18n-item.entity";
 import { MediaConfiguration } from "../constants/media-owners";
-import { ACTIVE, COMING_SOON, FundingProgrammeStatus } from "../constants/status";
+import { COMING_SOON, FundingProgrammeStatus } from "../constants/status";
 import { Stage } from "./stage.entity";
 
 type FundingProgrammeMedia = "cover";

@@ -283,6 +283,8 @@ export class ProjectProcessor extends EntityProcessor<
       ) as ProjectMedia)
     });
 
+    await this.entitiesService.removeHiddenValues(project, dto);
+
     return { id: project.uuid, dto };
   }
 

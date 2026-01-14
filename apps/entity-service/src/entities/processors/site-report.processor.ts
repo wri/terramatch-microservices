@@ -169,6 +169,7 @@ export class SiteReportProcessor extends ReportProcessor<
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
+
     const dto = new SiteReportFullDto(siteReport, {
       ...(await this.getFeedback(siteReport)),
       reportTitle,
@@ -184,6 +185,8 @@ export class SiteReportProcessor extends ReportProcessor<
         siteReport.uuid
       ) as SiteReportMedia)
     });
+
+    await this.entitiesService.removeHiddenValues(siteReport, dto);
 
     return { id: siteReport.uuid, dto };
   }

@@ -159,6 +159,8 @@ export class ProjectReportProcessor extends ReportProcessor<
       ) as ProjectReportMedia)
     });
 
+    await this.entitiesService.removeHiddenValues(projectReport, dto);
+
     return { id: projectReport.uuid, dto };
   }
 

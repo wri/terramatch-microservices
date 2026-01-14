@@ -219,6 +219,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       ) as DisturbanceReportMedia)
     });
 
+    await this.entitiesService.removeHiddenValues(disturbanceReport, dto);
+
     return { id: disturbanceReport.uuid, dto };
   }
 

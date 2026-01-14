@@ -135,6 +135,8 @@ export class NurseryProcessor extends EntityProcessor<
       ) as NurseryMedia)
     });
 
+    await this.entitiesService.removeHiddenValues(nursery, dto);
+
     return { id: nursery.uuid, dto };
   }
 

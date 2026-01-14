@@ -91,6 +91,8 @@ export class FinancialReportProcessor extends ReportProcessor<
       financialCollection: financialIndicatorsWithMedia
     });
 
+    await this.entitiesService.removeHiddenValues(financialReport, dto);
+
     return { id: financialReport.uuid, dto };
   }
 

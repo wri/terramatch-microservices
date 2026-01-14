@@ -8,9 +8,12 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import {
   Demographic,
   Disturbance,
+  Form,
+  FormQuestion,
   Invasive,
   Media,
   Seeding,
+  Strata,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
@@ -39,7 +42,6 @@ import { ITranslateParams } from "@transifex/native";
 import { MediaQueryDto } from "./dto/media-query.dto";
 import { DisturbanceDto } from "@terramatch-microservices/common/dto/disturbance.dto";
 import { InvasiveDto } from "@terramatch-microservices/common/dto/invasive.dto";
-import { Strata } from "@terramatch-microservices/database/entities";
 import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
 import {
   MEDIA_OWNER_MODELS,
@@ -51,6 +53,8 @@ import { DisturbanceReportProcessor } from "./processors/disturbance-report.proc
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { EntityCreateData } from "./dto/entity-create.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
+import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
+import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -137,6 +141,32 @@ export class EntitiesService {
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+  }
+
+  /**
+   * A utility to hide values that will eventually be removed in the FieldsApprovalProcessor when
+   * the entity is approved.
+   *
+   * NOOPs quickly if the entity is already in an approved state.
+   */
+  async removeHiddenValues(entity: EntityModel, dto: EntityDto) {
+    const { answers, status } = entity;
+    if (answers == null || status === "approved") return;
+
+    const form = await Form.for(entity).findOne({ attributes: ["uuid"] });
+    const questions = form == null ? [] : await FormQuestion.forForm(form.uuid).findAll();
+    if (questions.length == 0) return;
+
+    await Promise.all(
+      questions.map(async question => {
+        if (question.linkedFieldKey == null || !question.isHidden(answers, questions)) return;
+
+        const field = getLinkedFieldConfig(question.linkedFieldKey)?.field;
+        if (field == null || !isField(field) || !isPropertyField(field)) return;
+
+        if (field.property in dto) dto[field.property] = null;
+      })
+    );
   }
 
   private _userLocale?: ValidLocale;

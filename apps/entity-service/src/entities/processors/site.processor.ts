@@ -275,6 +275,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       ) as SiteMedia)
     });
 
+    await this.entitiesService.removeHiddenValues(site, dto);
+
     return { id: site.uuid, dto };
   }
 

@@ -123,6 +123,8 @@ export class SrpReportProcessor extends ReportProcessor<
       ) as SrpReportMedia)
     });
 
+    await this.entitiesService.removeHiddenValues(srpReport, dto);
+
     return { id: srpReport.uuid, dto };
   }
 

@@ -24,6 +24,7 @@ import { DateTime } from "luxon";
 import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
 import { cloneDeep, Dictionary, isEqual, isUndefined, omitBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -355,6 +356,39 @@ bootstrapRepl("Entity Service", AppModule, {
         }
       });
       console.log(`Deleted ${deletedAuditCount} audits`);
+    },
+
+    fixFundingProgrammeOrgTypes: async () => {
+      await withoutSqlLogs(async () => {
+        const fundingProgrammes = await FundingProgramme.findAll();
+        for (const programme of fundingProgrammes) {
+          const orgTypes = [...(programme.organisationTypes ?? [])];
+          for (let ii = 0; ii < orgTypes.length; ii++) {
+            const orgType = orgTypes[ii];
+            if (!ORGANISATION_TYPES.includes(orgType)) {
+              let replacement: OrganisationType | null = null;
+              if (orgType.includes("non-profit")) {
+                replacement = "non-profit-organization";
+              } else if (orgType.includes("for-profit")) {
+                replacement = "for-profit-organization";
+              }
+
+              if (replacement != null) {
+                console.log(`Replacing ${orgType} with ${replacement} in funding programme ${programme.id}...`);
+                orgTypes[ii] = replacement;
+              } else {
+                console.error(`Unknown funding programme organisation type ${orgType} in ${programme.id}...`);
+                orgTypes.splice(ii, 1);
+                ii--;
+              }
+            }
+          }
+
+          if (!isEqual(orgTypes, programme.organisationTypes)) {
+            await programme.update({ organisationTypes: orgTypes });
+          }
+        }
+      });
     }
   }
 });

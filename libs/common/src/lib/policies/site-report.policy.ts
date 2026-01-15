@@ -4,7 +4,7 @@ import { Op, WhereAttributeHash } from "sequelize";
 
 export class SiteReportPolicy extends UserPermissionsPolicy {
   async addRules() {
-    if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
+    if (this.permissions.includes("view-dashboard")) {
       this.builder.can("read", SiteReport);
       return;
     }

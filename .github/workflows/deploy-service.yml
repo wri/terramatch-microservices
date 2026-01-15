@@ -44,6 +44,7 @@ env:
   AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.service }}
   ECR_REPOSITORY: terramatch-microservices/${{ inputs.service }}-${{ inputs.env }}
   ECR_REGISTRY: 603634817705.dkr.ecr.eu-west-1.amazonaws.com
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
 jobs:
   deploy-service:

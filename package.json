@@ -31,6 +31,7 @@
     "@nestjs/terminus": "^11.0.0",
     "@sentry/nestjs": "^9.6.0",
     "@sentry/profiling-node": "^9.6.0",
+    "@sentry/webpack-plugin": "^4.6.2",
     "@slack/web-api": "^7.8.0",
     "@tmcw/togeojson": "^7.1.2",
     "@transifex/native": "^7.1.3",

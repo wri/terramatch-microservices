@@ -1,3 +1,4 @@
+const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
 const { NxAppWebpackPlugin } = require("@nx/webpack/app-plugin");
 const { join } = require("path");
 const { composePlugins } = require("@nx/webpack");
@@ -40,6 +41,11 @@ module.exports = composePlugins(config => ({
       optimization: false,
       outputHashing: "none",
       generatePackageJson: true
+    }),
+    sentryWebpackPlugin({
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      org: "wri-terramatch",
+      project: "v3-backend"
     })
   ]
 }));

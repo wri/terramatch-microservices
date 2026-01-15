@@ -92,7 +92,7 @@ export class EstimatedAreaValidator implements PolygonValidator {
         {
           model: Site,
           as: "site",
-          attributes: ["hectaresToRestoreGoal", "projectId", "uuid"]
+          attributes: ["hectaresToRestoreGoal", "projectId"]
         }
       ]
     });
@@ -125,7 +125,7 @@ export class EstimatedAreaValidator implements PolygonValidator {
       };
     }
 
-    const sumAreaSiteApproved = await this.calculateSiteAreaSum(site.uuid, "approved");
+    const sumAreaSiteApproved = await this.calculateSiteAreaSum(sitePolygon.siteUuid, "approved");
 
     const lowerBound = EstimatedAreaValidator.LOWER_BOUND_MULTIPLIER * site.hectaresToRestoreGoal;
     const upperBound = EstimatedAreaValidator.UPPER_BOUND_MULTIPLIER * site.hectaresToRestoreGoal;

@@ -1,10 +1,22 @@
 import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
-import { RequestContext } from "nestjs-request-context";
 import { UserPolicy } from "./user.policy";
 import {
+  Application,
+  AuditStatus,
   Demographic,
+  Disturbance,
+  DisturbanceReport,
+  FinancialIndicator,
+  FinancialReport,
+  Form,
+  FormQuestionOption,
+  FormSubmission,
+  FundingProgramme,
+  ImpactStory,
+  Media,
   Nursery,
   NurseryReport,
+  Organisation,
   Permission,
   Project,
   ProjectPitch,
@@ -13,20 +25,9 @@ import {
   Site,
   SitePolygon,
   SiteReport,
-  Task,
-  User,
-  AuditStatus,
-  ImpactStory,
-  FinancialIndicator,
-  FinancialReport,
-  Form,
-  FormQuestionOption,
-  FundingProgramme,
-  Disturbance,
-  Organisation,
-  DisturbanceReport,
   SrpReport,
-  Media
+  Task,
+  User
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
@@ -55,6 +56,9 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
+import { authenticatedUserId } from "../guards/auth.guard";
+import { FormSubmissionPolicy } from "./form-submission.policy";
+import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
 
 type EntityClass = {
@@ -68,6 +72,7 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],
   [Demographic, DemographicPolicy],
   [Disturbance, DisturbancePolicy],
@@ -77,8 +82,10 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [DisturbanceReport, DisturbanceReportPolicy],
   [SrpReport, SrpReportPolicy],
   [Form, FormPolicy],
+  [FormSubmission, FormSubmissionPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
   [FundingProgramme, FundingProgrammePolicy],
+  [Media, MediaPolicy],
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],
   [Organisation, OrganisationPolicy],
@@ -90,8 +97,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
   [Task, TaskPolicy],
-  [User, UserPolicy],
-  [Media, MediaPolicy]
+  [User, UserPolicy]
 ];
 
 /**
@@ -110,8 +116,7 @@ export class PolicyService {
   private permissions?: string[];
 
   get userId() {
-    // Added by AuthGuard
-    return RequestContext.currentContext.req.authenticatedUserId as number | undefined | null;
+    return authenticatedUserId();
   }
 
   async getPermissions() {

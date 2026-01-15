@@ -11,7 +11,21 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { SiteReport } from "./site-report.entity";
 import { Project } from "./project.entity";
@@ -32,6 +46,18 @@ import { chainScope } from "../util/chain-scope";
 import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
+
+type SiteMedia =
+  | "media"
+  | "socioeconomicBenefits"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "treeSpecies"
+  | "documentFiles"
+  | "stratificationForHeterogeneity";
 
 @Scopes(() => ({
   approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
@@ -39,12 +65,12 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
   project: (id: number) => ({ where: { projectId: id } })
 }))
 @Table({ tableName: "v2_sites", underscored: true, paranoid: true, hooks: { afterCreate: statusUpdateSequelizeHook } })
-export class Site extends Model<Site> {
+export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<Site>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = [APPROVED] as EntityStatus[];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<SiteMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -61,7 +87,7 @@ export class Site extends Model<Site> {
       multiple: false,
       validation: "general-documents"
     }
-  } as const;
+  };
 
   static approved() {
     return chainScope(this, "approved") as typeof Site;
@@ -102,13 +128,14 @@ export class Site extends Model<Site> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
+  @AllowNull
   @Column(STRING)
-  name: string;
+  name: string | null;
 
   @StateMachineColumn(EntityStatusStates)
-  status: EntityStatus;
+  status: CreationOptional<EntityStatus>;
 
   @AllowNull
   @Column(STRING)
@@ -116,7 +143,7 @@ export class Site extends Model<Site> {
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -140,12 +167,16 @@ export class Site extends Model<Site> {
     return this.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 
   get projectCountry() {
     return this.project?.country;
+  }
+
+  get organisationUuid() {
+    return this.project?.organisationUuid;
   }
 
   get organisationName() {
@@ -249,8 +280,8 @@ export class Site extends Model<Site> {
   feedbackFields: string[] | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -259,6 +290,10 @@ export class Site extends Model<Site> {
   @AllowNull
   @JsonColumn()
   detailedInterventionTypes: string[] | null;
+
+  @AllowNull
+  @Column(TEXT("long"))
+  boundaryGeojson: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

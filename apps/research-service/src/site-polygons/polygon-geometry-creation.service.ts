@@ -51,10 +51,6 @@ export class PolygonGeometryCreationService {
       return [];
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const polygonGeometries = geometriesWithAreas.map(item => {
         const polygon = JSON.parse(item.geomJson) as Polygon;
@@ -127,10 +123,6 @@ export class PolygonGeometryCreationService {
       return [];
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
       const replacements: Record<string, string> = {};
@@ -142,17 +134,17 @@ export class PolygonGeometryCreationService {
       const orderByCase = `CASE ${orderCases} END`;
 
       const query = `
-        SELECT 
+        SELECT
           uuid,
-          ST_Area(geom) * 
-          POW(6378137 * PI() / 180, 2) * 
+          ST_Area(geom) *
+          POW(6378137 * PI() / 180, 2) *
           COS(RADIANS(ST_Y(ST_Centroid(geom)))) / 10000 as area_hectares
         FROM polygon_geometry
         WHERE uuid IN (${placeholders})
         ORDER BY ${orderByCase}
       `;
 
-      const results = (await PolygonGeometry.sequelize.query(query, {
+      const results = (await PolygonGeometry.sql.query(query, {
         replacements,
         type: QueryTypes.SELECT,
         transaction
@@ -176,10 +168,6 @@ export class PolygonGeometryCreationService {
       return;
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
       const replacements: Record<string, string> = {};
@@ -190,13 +178,13 @@ export class PolygonGeometryCreationService {
       const query = `
         UPDATE site_polygon sp
         JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
-        SET 
+        SET
           sp.lat = ST_Y(ST_Centroid(pg.geom)),
           sp.long = ST_X(ST_Centroid(pg.geom))
         WHERE sp.poly_id IN (${placeholders})
       `;
 
-      await PolygonGeometry.sequelize.query(query, {
+      await PolygonGeometry.sql.query(query, {
         replacements,
         type: QueryTypes.UPDATE,
         transaction
@@ -214,10 +202,6 @@ export class PolygonGeometryCreationService {
       return;
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
       const replacements: Record<string, string> = {};
@@ -226,21 +210,21 @@ export class PolygonGeometryCreationService {
       });
 
       const checkQuery = `
-        SELECT 
+        SELECT
           sp.poly_id,
           sp.uuid as site_polygon_uuid,
           ST_Area(pg.geom) as st_area,
           ST_Y(ST_Centroid(pg.geom)) as centroid_y,
           COS(RADIANS(ST_Y(ST_Centroid(pg.geom)))) as cos_value,
-          ST_Area(pg.geom) * 
-          POW(6378137 * PI() / 180, 2) * 
+          ST_Area(pg.geom) *
+          POW(6378137 * PI() / 180, 2) *
           COS(RADIANS(ST_Y(ST_Centroid(pg.geom)))) / 10000 as calculated_area
         FROM site_polygon sp
         JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
         WHERE sp.poly_id IN (${placeholders})
       `;
 
-      const checkResults = (await PolygonGeometry.sequelize.query(checkQuery, {
+      const checkResults = (await PolygonGeometry.sql.query(checkQuery, {
         replacements,
         type: QueryTypes.SELECT,
         transaction
@@ -275,9 +259,9 @@ export class PolygonGeometryCreationService {
       const query = `
         UPDATE site_polygon sp
         JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
-        SET 
-          sp.calc_area = ST_Area(pg.geom) * 
-          POW(6378137 * PI() / 180, 2) * 
+        SET
+          sp.calc_area = ST_Area(pg.geom) *
+          POW(6378137 * PI() / 180, 2) *
           COS(RADIANS(ST_Y(ST_Centroid(pg.geom)))) / 10000
         WHERE sp.poly_id IN (${placeholders})
       `;
@@ -287,14 +271,14 @@ export class PolygonGeometryCreationService {
         totalCount: polygonUuids.length
       });
 
-      await PolygonGeometry.sequelize.query(query, {
+      await PolygonGeometry.sql.query(query, {
         replacements,
         type: QueryTypes.UPDATE,
         transaction
       });
 
       const verifyQuery = `
-        SELECT 
+        SELECT
           sp.poly_id,
           sp.uuid as site_polygon_uuid,
           sp.calc_area
@@ -302,7 +286,7 @@ export class PolygonGeometryCreationService {
         WHERE sp.poly_id IN (${placeholders})
       `;
 
-      const verifyResults = (await PolygonGeometry.sequelize.query(verifyQuery, {
+      const verifyResults = (await PolygonGeometry.sql.query(verifyQuery, {
         replacements,
         type: QueryTypes.SELECT,
         transaction
@@ -345,10 +329,6 @@ export class PolygonGeometryCreationService {
       return;
     }
 
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const placeholders = polygonUuids.map((_, index) => `:uuid${index}`).join(",");
       const replacements: Record<string, string> = {};
@@ -359,7 +339,7 @@ export class PolygonGeometryCreationService {
       const query = `
         UPDATE v2_projects p
         JOIN (
-          SELECT 
+          SELECT
             s.project_id,
             AVG(ST_Y(ST_Centroid(pg.geom))) as avg_lat,
             AVG(ST_X(ST_Centroid(pg.geom))) as avg_long
@@ -377,12 +357,12 @@ export class PolygonGeometryCreationService {
             AND pg.geom IS NOT NULL
           GROUP BY s.project_id
         ) centroids ON centroids.project_id = p.id
-        SET 
+        SET
           p.lat = centroids.avg_lat,
           p.long = centroids.avg_long
       `;
 
-      await PolygonGeometry.sequelize.query(query, {
+      await PolygonGeometry.sql.query(query, {
         replacements,
         type: QueryTypes.UPDATE,
         transaction

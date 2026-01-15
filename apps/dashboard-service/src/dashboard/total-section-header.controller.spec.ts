@@ -4,14 +4,18 @@ import { CacheService } from "./dto/cache.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 
-jest.mock("@terramatch-microservices/database/entities", () => ({
-  DelayedJob: {
-    create: jest.fn().mockResolvedValue({
-      id: 1,
-      uuid: "fake-uuid"
-    })
-  }
-}));
+jest.mock("@terramatch-microservices/database/entities", () => {
+  const original = jest.requireActual("@terramatch-microservices/database/entities");
+  return {
+    ...original,
+    DelayedJob: {
+      create: jest.fn().mockResolvedValue({
+        id: 1,
+        uuid: "fake-uuid"
+      })
+    }
+  };
+});
 
 describe("TotalSectionHeaderController", () => {
   let controller: TotalSectionHeaderController;

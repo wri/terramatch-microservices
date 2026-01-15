@@ -1,49 +1,42 @@
+/* istanbul ignore file */
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { Dictionary } from "lodash";
 import { User } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../util/tm-logger";
-import { Queue } from "bullmq";
 
 type AdminUserCreationEmailData = {
   userId: number;
   fundingProgrammeName: string;
 };
 
-export class AdminUserCreationEmail extends EmailSender {
+export class AdminUserCreationEmail extends EmailSender<AdminUserCreationEmailData> {
+  static readonly NAME = "adminUserCreation";
+
   private readonly logger = new TMLogger(AdminUserCreationEmail.name);
 
-  private readonly userId: number;
-  private readonly fundingProgrammeName: string;
-
-  constructor({ userId, fundingProgrammeName }: AdminUserCreationEmailData) {
-    super();
-    this.userId = userId;
-    this.fundingProgrammeName = fundingProgrammeName;
-  }
-
-  async sendLater(queue: Queue) {
-    await queue.add("adminUserCreation", { userId: this.userId, fundingProgrammeName: this.fundingProgrammeName });
+  constructor(data: AdminUserCreationEmailData) {
+    super(AdminUserCreationEmail.NAME, data);
   }
 
   async send(emailService: EmailService) {
     const user = await User.findOne({
-      where: { id: this.userId },
+      where: { id: this.data.userId },
       attributes: ["uuid", "emailAddress", "firstName", "lastName", "locale"]
     });
     if (user == null) {
-      this.logger.error(`User not found [${this.userId}]`);
+      this.logger.error(`User not found [${this.data.userId}]`);
       return;
     }
     if (user.emailAddress == null) {
-      this.logger.error(`User has no email address [${this.userId}]`);
+      this.logger.error(`User has no email address [${this.data.userId}]`);
       return;
     }
 
     const i18nReplacements: Dictionary<string> = {
       "{userName}": user.fullName ?? "",
       "{mail}": user.emailAddress,
-      "{fundingProgrammeName}": this.fundingProgrammeName
+      "{fundingProgrammeName}": this.data.fundingProgrammeName
     };
     const resetToken = await emailService.jwtService.signAsync({ sub: user.uuid }, { expiresIn: "7d" });
     const additionalValues = {

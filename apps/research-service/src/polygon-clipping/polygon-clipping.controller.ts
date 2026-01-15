@@ -90,7 +90,7 @@ export class PolygonClippingController {
 
       entityId = result.site.id;
       entityType = Site.LARAVEL_TYPE;
-      entityName = result.site.name;
+      entityName = result.site.name ?? "";
       siteUuid = query.siteUuid;
     } else {
       if (query.projectUuid == null) {
@@ -236,7 +236,7 @@ export class PolygonClippingController {
             const site = sites[0];
             entityId = site.id;
             entityType = Site.LARAVEL_TYPE;
-            entityName = site.name;
+            entityName = site.name ?? "";
             siteUuidForEmail = site.uuid;
           } else if (uniqueProjectIds.size === 1) {
             const project = sites[0]?.project;

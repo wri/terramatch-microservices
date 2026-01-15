@@ -1,25 +1,30 @@
 import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
+  Application,
   Demographic,
   DemographicEntry,
+  Form,
   Media,
   Nursery,
   NurseryReport,
+  Organisation,
   Project,
+  ProjectPitch,
+  ProjectReport,
   ProjectUser,
   Seeding,
   Site,
   SitePolygon,
   SiteReport,
   TreeSpecies,
-  ProjectReport
+  User
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
-import { Op, Sequelize } from "sequelize";
+import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException, UnauthorizedException, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
@@ -27,6 +32,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
+import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -43,19 +49,52 @@ const ASSOCIATION_FIELD_MAP = {
   organisationType: "$organisation.type$"
 };
 
+type SharedPitchAttributes = keyof Attributes<Project> & keyof Attributes<ProjectPitch>;
+const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
+  "environmentalGoals",
+  "projectCountyDistrict",
+  "descriptionOfProjectTimeline",
+  "landholderCommEngage",
+  "projPartnerInfo",
+  "projSuccessRisks",
+  "seedlingsSource",
+  "pctEmployeesMen",
+  "pctEmployeesWomen",
+  "pctEmployees18To35",
+  "pctEmployeesOlder35",
+  "pctEmployeesMarginalised",
+  "projBeneficiaries",
+  "pctBeneficiariesMen",
+  "pctBeneficiariesWomen",
+  "pctBeneficiariesSmall",
+  "pctBeneficiariesLarge",
+  "pctBeneficiariesYouth",
+  "pctBeneficiariesMarginalised",
+  "detailedInterventionTypes",
+  "projImpactFoodsec",
+  "proposedGovPartners",
+  "proposedNumNurseries",
+  "projBoundary",
+  "proposedGovPartners",
+  "proposedNumNurseries",
+  "states",
+  "waterSource",
+  "baselineBiodiversity",
+  "goalTreesRestoredPlanting",
+  "goalTreesRestoredAnr",
+  "goalTreesRestoredDirectSeeding",
+  "directSeedingSurvivalRate"
+];
+
 export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
   ProjectFullDto,
-  ProjectUpdateAttributes
+  ProjectUpdateAttributes,
+  ProjectCreateAttributes
 > {
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;
-
-  get sql() {
-    if (Project.sequelize == null) throw new InternalServerErrorException("Model is missing sequelize connection");
-    return Project.sequelize;
-  }
 
   async findOne(uuid: string) {
     return await Project.findOne({
@@ -113,7 +152,7 @@ export class ProjectProcessor extends EntityProcessor<
 
     if (query.cohort != null && query.cohort.length > 0) {
       const cohortConditions = query.cohort
-        .map(cohort => `JSON_CONTAINS(cohort, ${this.sql.escape(`"${cohort}"`)})`)
+        .map(cohort => `JSON_CONTAINS(cohort, ${Project.sql.escape(`"${cohort}"`)})`)
         .join(" OR ");
       builder.where(Sequelize.literal(`(${cohortConditions})`));
     }
@@ -198,7 +237,7 @@ export class ProjectProcessor extends EntityProcessor<
           );
 
     const assistedNaturalRegenerationList: ANRDto[] = approvedSites.map(({ id, name }) => ({
-      name,
+      name: name ?? "",
       treeCount: sumBy(approvedSiteReports[id], "numTreesRegenerating") ?? 0
     }));
     const regeneratedTreesCount = sumBy(assistedNaturalRegenerationList, "treeCount");
@@ -208,6 +247,8 @@ export class ProjectProcessor extends EntityProcessor<
     const lastReport = await this.getLastReport(projectId);
 
     const dto = new ProjectFullDto(project, {
+      ...(await this.getFeedback(project)),
+
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -241,6 +282,8 @@ export class ProjectProcessor extends EntityProcessor<
         project.uuid
       ) as ProjectMedia)
     });
+
+    await this.entitiesService.removeHiddenValues(project, dto);
 
     return { id: project.uuid, dto };
   }
@@ -403,5 +446,141 @@ export class ProjectProcessor extends EntityProcessor<
       attributes: ["id", "projectId"],
       raw: true
     });
+  }
+
+  async create({ applicationUuid, formUuid }: ProjectCreateAttributes) {
+    const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["frameworkKey", "model"] });
+    if (form?.frameworkKey == null || form?.model !== Project.LARAVEL_TYPE) {
+      throw new BadRequestException(`Invalid form for project creation: ${formUuid}`);
+    }
+
+    const application =
+      applicationUuid == null
+        ? undefined
+        : (await Application.findOne({ where: { uuid: applicationUuid } })) ?? undefined;
+    if (application == null && applicationUuid != null) {
+      throw new BadRequestException(`Invalid application for project creation: ${applicationUuid}`);
+    }
+
+    const organisation = await this.getProjectCreationOrg(application);
+    const attributes: CreationAttributes<Project> = {
+      frameworkKey: form.frameworkKey,
+      organisationId: organisation.id,
+      isTest: organisation.isTest
+    };
+
+    const pitch = application == null ? undefined : await ProjectPitch.application(application.id).findOne();
+    if (application != null) {
+      if (pitch == null) throw new BadRequestException(`No pitch found for application: ${applicationUuid}`);
+
+      for (const attribute of PITCH_COPY_ATTRIBUTES) {
+        attributes[attribute] = pitch[attribute];
+      }
+
+      // These attributes don't simply copy data from one record to the other with the same name.
+      attributes.applicationId = application.id;
+      attributes.name = pitch.projectName;
+      attributes.boundaryGeojson = pitch.projBoundary;
+      attributes.landUseTypes = pitch.landUseTypes ?? pitch.landSystems;
+      attributes.restorationStrategy = pitch.restorationStrategy ?? pitch.treeRestorationPractices;
+      attributes.country = pitch.projectCountry;
+      attributes.plantingStartDate = pitch.expectedActiveRestorationStartDate;
+      attributes.plantingEndDate = pitch.expectedActiveRestorationEndDate;
+      attributes.description = pitch.descriptionOfProjectTimeline;
+      attributes.history = pitch.currLandDegradation;
+      attributes.objectives = pitch.projectObjectives;
+      attributes.socioeconomicGoals = pitch.projImpactSocieconom;
+      attributes.budget = pitch.projectBudget;
+      attributes.jobsCreatedGoal = pitch.numJobsCreated;
+      attributes.totalHectaresRestoredGoal = pitch.totalHectares;
+      attributes.treesGrownGoal = pitch.totalTrees;
+      attributes.landTenureProjectArea = pitch.landTenureProjArea;
+      attributes.projImpactBiodiv = pitch.biodiversityImpact;
+    }
+
+    const project = await Project.create(attributes);
+
+    if (pitch != null) {
+      const treesToCreate: CreationAttributes<TreeSpecies>[] = [];
+      for (const tree of await TreeSpecies.for(pitch).findAll()) {
+        if (tree.hidden) continue;
+
+        treesToCreate.push({
+          speciesableType: Project.LARAVEL_TYPE,
+          speciesableId: project.id,
+          collection: tree.collection ?? "tree-planted",
+          name: tree.name,
+          taxonId: tree.taxonId,
+          amount: tree.amount
+        });
+      }
+      if (treesToCreate.length > 0) await TreeSpecies.bulkCreate(treesToCreate);
+
+      const entriesToCreate: CreationAttributes<DemographicEntry>[] = [];
+      const demographics = await Demographic.for(pitch).findAll();
+      const entries = groupBy(
+        await DemographicEntry.findAll({
+          where: { demographicId: { [Op.in]: demographics.map(d => d.id) } }
+        }),
+        "demographicId"
+      );
+      for (const demographic of demographics) {
+        if (demographic.hidden) continue;
+
+        // There aren't many demographic types associated with each project / pitch, so this
+        // initial creation list is short, and we can less awkwardly collect all the entries
+        // to create if we create the demographics sequentially to get each id here.
+        const projDemographic = await Demographic.create({
+          demographicalType: Project.LARAVEL_TYPE,
+          demographicalId: project.id,
+          type: demographic.type,
+          collection: demographic.collection,
+          description: demographic.description
+        });
+        for (const entry of entries[demographic.id] ?? []) {
+          entriesToCreate.push({
+            demographicId: projDemographic.id,
+            type: entry.type,
+            subtype: entry.subtype,
+            name: entry.name,
+            amount: entry.amount
+          });
+        }
+      }
+      if (entriesToCreate.length > 0) await DemographicEntry.bulkCreate(entriesToCreate);
+
+      const medias = await Media.for(pitch)
+        .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])
+        .findAll();
+      await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
+    }
+
+    await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
+
+    // Load the full project with necessary associations.
+    return (await this.findOne(project.uuid)) as Project;
+  }
+
+  private async getProjectCreationOrg(application: Application | undefined) {
+    if (application == null) {
+      const user = await User.findOne({
+        where: { id: this.entitiesService.userId },
+        attributes: [],
+        include: [{ association: "organisation", attributes: ["id", "isTest"] }]
+      });
+      if (user?.organisation == null) {
+        throw new BadRequestException("Current user does not have an organisation associated");
+      }
+      return user.organisation;
+    } else {
+      const organisation =
+        application.organisationUuid == null
+          ? undefined
+          : await Organisation.findOne({ where: { uuid: application.organisationUuid }, attributes: ["id", "isTest"] });
+      if (organisation == null) {
+        throw new BadRequestException(`Invalid application for project creation: ${application.uuid}`);
+      }
+      return organisation;
+    }
   }
 }

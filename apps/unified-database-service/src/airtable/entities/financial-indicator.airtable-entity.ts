@@ -2,6 +2,7 @@
 import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associatedValueColumn, ColumnMapping } from "./airtable-entity";
 import { uniq } from "lodash";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type FinancialIndicatorAssociations = {
   organisationUuid?: string;
@@ -35,7 +36,7 @@ export class FinancialIndicatorEntity extends AirtableEntity<FinancialIndicator,
       attributes: ["id", "uuid"]
     });
     const financialReports = await FinancialReport.findAll({
-      where: { id: uniq(indicators.map(({ financialReportId }) => financialReportId)) },
+      where: { id: uniq(indicators.map(({ financialReportId }) => financialReportId).filter(isNotNull)) },
       attributes: ["id", "uuid"]
     });
     return indicators.reduce(

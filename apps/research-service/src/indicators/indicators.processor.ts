@@ -89,7 +89,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
 
     let processed = 0;
     const successfulPolygons: string[] = [];
-    const allResults: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
 
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
@@ -118,7 +117,6 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
 
       if (batchResults.length > 0) {
         await this.indicatorService.saveResults(batchResults, slug);
-        allResults.push(...batchResults);
       }
 
       await this.updateJobProgress(job, {

@@ -8,18 +8,22 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import {
   Demographic,
   Disturbance,
+  Form,
+  FormQuestion,
+  Invasive,
   Media,
   Seeding,
+  Strata,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
-import { MediaDto } from "./dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
 import { groupBy } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
-import { AssociationDto, AssociationDtoAdditionalProps } from "./dto/association.dto";
+import { AssociationDto, AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
 import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
@@ -27,26 +31,30 @@ import { NurseryReportProcessor } from "./processors/nursery-report.processor";
 import { SiteReportProcessor } from "./processors/site-report.processor";
 import { FinancialReportProcessor } from "./processors/financial-report.processor";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
-import { SeedingDto } from "./dto/seeding.dto";
-import { TreeSpeciesDto } from "./dto/tree-species.dto";
-import { DemographicDto } from "./dto/demographic.dto";
+import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ITranslateParams } from "@transifex/native";
 import { MediaQueryDto } from "./dto/media-query.dto";
-import { Invasive } from "@terramatch-microservices/database/entities/invasive.entity";
-import { DisturbanceDto } from "./dto/disturbance.dto";
-import { InvasiveDto } from "./dto/invasive.dto";
-import { Strata } from "@terramatch-microservices/database/entities/stratas.entity";
-import { StrataDto } from "./dto/strata.dto";
-import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import { DisturbanceDto } from "@terramatch-microservices/common/dto/disturbance.dto";
+import { InvasiveDto } from "@terramatch-microservices/common/dto/invasive.dto";
+import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
+import {
+  MEDIA_OWNER_MODELS,
+  MediaOwnerModel,
+  MediaOwnerType
+} from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { EntityCreateData } from "./dto/entity-create.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
+import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
+import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -135,6 +143,32 @@ export class EntitiesService {
     return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
   }
 
+  /**
+   * A utility to hide values that will eventually be removed in the FieldsApprovalProcessor when
+   * the entity is approved.
+   *
+   * NOOPs quickly if the entity is already in an approved state.
+   */
+  async removeHiddenValues(entity: EntityModel, dto: EntityDto) {
+    const { answers, status } = entity;
+    if (answers == null || status === "approved") return;
+
+    const form = await Form.for(entity).findOne({ attributes: ["uuid"] });
+    const questions = form == null ? [] : await FormQuestion.forForm(form.uuid).findAll();
+    if (questions.length == 0) return;
+
+    await Promise.all(
+      questions.map(async question => {
+        if (question.linkedFieldKey == null || !question.isHidden(answers, questions)) return;
+
+        const field = getLinkedFieldConfig(question.linkedFieldKey)?.field;
+        if (field == null || !isField(field) || !isPropertyField(field)) return;
+
+        if (field.property in dto) dto[field.property] = null;
+      })
+    );
+  }
+
   private _userLocale?: ValidLocale;
   async getUserLocale() {
     if (this._userLocale == null) {
@@ -189,7 +223,7 @@ export class EntitiesService {
     return new MediaOwnerProcessor(mediaOwnerType, mediaOwnerUuid, mediaOwnerModelClass);
   }
 
-  async buildQuery<T extends Model<T>>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
+  async buildQuery<T extends Model>(modelClass: ModelCtor<T>, query: EntityQueryDto, include?: Includeable[]) {
     if (query.taskId != null) {
       // special case for internal sideloading.
       return new PaginatedQueryBuilder(modelClass, undefined, include);
@@ -199,6 +233,8 @@ export class EntitiesService {
 
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
+
+  duplicateMedia = (media: Media, newOwner: MediaOwnerModel) => this.mediaService.duplicateMedia(media, newOwner);
 
   mediaDto(media: Media, additional: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {

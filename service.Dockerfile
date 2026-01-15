@@ -4,7 +4,8 @@ ARG SERVICE
 ARG BUILD_FLAG
 WORKDIR /app/builder
 COPY . .
-RUN npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
+    npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
     ls dist/apps && \
     ls dist/apps/${SERVICE}*
 

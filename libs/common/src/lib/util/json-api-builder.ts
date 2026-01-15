@@ -5,7 +5,7 @@ import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
 import { cloneDeep } from "lodash";
 import * as qs from "qs";
-import { DelayedJobDto } from "../dto/delayed-job.dto";
+import { DelayedJobDto } from "../dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 type AttributeValue = string | number | boolean;
@@ -36,6 +36,7 @@ type DocumentMeta = {
   // Only supplied in the case of a delete
   resourceIds?: string[];
   indices?: IndexData[];
+  deleted?: Deleted[];
 };
 
 type ResourceMeta = {
@@ -136,10 +137,16 @@ export type IndexData = {
   pageNumber?: number;
 };
 
+export type Deleted = {
+  resource: string;
+  id: string;
+};
+
 export class DocumentBuilder {
   data: ResourceBuilder[] = [];
   included: ResourceBuilder[] = [];
   indexData: IndexData[] = [];
+  deleted: Deleted[] = [];
 
   constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
 
@@ -187,6 +194,14 @@ export class DocumentBuilder {
     return this;
   }
 
+  /**
+   * Adds deletions to the response that were the result of side effects on the API action
+   */
+  addDeletedResource(resource: string, id: string): DocumentBuilder {
+    this.deleted.push({ resource, id });
+    return this;
+  }
+
   serialize({ deletedResourceIds }: SerializeOptions = {}): JsonApiDocument {
     const singular = this.data.length === 1 && this.indexData.length === 0 && this.options.forceDataArray !== true;
     const doc: JsonApiDocument = {
@@ -209,6 +224,10 @@ export class DocumentBuilder {
       doc.meta.indices = this.indexData;
     }
 
+    if (this.deleted.length > 0) {
+      doc.meta.deleted = this.deleted;
+    }
+
     return doc;
   }
 }
@@ -218,8 +237,13 @@ export const getDtoType = <DTO>(dtoClass: Type<DTO>) => Reflect.getMetadata(DTO_
 export const buildJsonApi = <DTO>(dtoClass: Type<DTO>, options?: DocumentBuilderOptions) =>
   new DocumentBuilder(getDtoType(dtoClass), options);
 
-export const buildDeletedResponse = (resourceType: string, ids: string | string[]) =>
-  new DocumentBuilder(resourceType).serialize({ deletedResourceIds: Array.isArray(ids) ? ids : [ids] });
+export const buildDeletedResponse = (resourceType: string, ids: string | string[], additionalDeleted?: Deleted[]) =>
+  (additionalDeleted ?? [])
+    .reduce(
+      (document, { resource, id }) => document.addDeletedResource(resource, id),
+      new DocumentBuilder(resourceType)
+    )
+    .serialize({ deletedResourceIds: Array.isArray(ids) ? ids : [ids] });
 
 export const getStableRequestQuery = (originalQuery: object) => {
   const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };

@@ -57,7 +57,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         projectShortName: sitePolygon.site?.project?.shortName,
         projectName: sitePolygon.site?.project?.name ?? null,
         indicators: indicators ?? [],
-        siteName: sitePolygon.site?.name,
+        siteName: sitePolygon.site?.name ?? undefined,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
         lightResource: true
       });
@@ -208,7 +208,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       projectShortName: sitePolygon.site?.project?.shortName,
       projectName: sitePolygon.site?.project?.name ?? null,
       indicators: indicators ?? [],
-      siteName: sitePolygon.site?.name,
+      siteName: sitePolygon.site?.name ?? undefined,
       geometry: sitePolygon.polygon?.polygon,
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],

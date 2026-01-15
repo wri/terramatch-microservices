@@ -4,8 +4,8 @@ import { APP_GUARD } from "@nestjs/core";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { JwtService } from "@nestjs/jwt";
 import { Controller, Get, HttpStatus, INestApplication } from "@nestjs/common";
-import * as request from "supertest";
 import { UserFactory } from "@terramatch-microservices/database/factories";
+import request from "supertest";
 
 @Controller("test")
 class TestController {

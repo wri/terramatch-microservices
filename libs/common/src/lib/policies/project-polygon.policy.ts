@@ -1,12 +1,13 @@
 import {
-  ProjectPolygon,
-  ProjectPitch,
-  User,
   FundingProgramme,
-  Organisation
+  Organisation,
+  ProjectPitch,
+  ProjectPolygon,
+  User
 } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Op } from "sequelize";
+
 export class ProjectPolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("polygons-manage")) {
@@ -29,7 +30,7 @@ export class ProjectPolygonPolicy extends UserPermissionsPolicy {
         const projectPitchIds = projectPitches.map(pitch => pitch.id);
         if (projectPitchIds.length > 0) {
           this.builder.can(["read", "create"], ProjectPolygon, {
-            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+            entityType: ProjectPitch.LARAVEL_TYPE,
             entityId: { $in: projectPitchIds }
           });
         }
@@ -49,7 +50,7 @@ export class ProjectPolygonPolicy extends UserPermissionsPolicy {
           const projectPitchIds = projectPitches.map(pitch => pitch.id);
           if (projectPitchIds.length > 0) {
             this.builder.can(["read", "create", "update", "delete"], ProjectPolygon, {
-              entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+              entityType: ProjectPitch.LARAVEL_TYPE,
               entityId: { $in: projectPitchIds }
             });
           }

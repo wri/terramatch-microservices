@@ -6,15 +6,18 @@ import { InternalServerErrorException } from "@nestjs/common";
 
 @Table({ tableName: "polygon_geometry", underscored: true, paranoid: true })
 export class PolygonGeometry extends Model<PolygonGeometry> {
-  static async checkIsSimple(polygonUuid: string): Promise<boolean | undefined> {
+  static get sql() {
     if (this.sequelize == null) {
       throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
     }
+    return this.sequelize;
+  }
 
-    const result = (await this.sequelize.query(
+  static async checkIsSimple(polygonUuid: string): Promise<boolean | undefined> {
+    const result = (await this.sql.query(
       `
         SELECT ST_IsSimple(geom) as isSimple
-        FROM polygon_geometry 
+        FROM polygon_geometry
         WHERE uuid = :polygonUuid
       `,
       {
@@ -27,14 +30,10 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
   }
 
   static async checkIsSimpleBatch(polygonUuids: string[]): Promise<{ uuid: string; isSimple: boolean }[]> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    return (await this.sequelize.query(
+    return (await this.sql.query(
       `
         SELECT uuid, ST_IsSimple(geom) as isSimple
-        FROM polygon_geometry 
+        FROM polygon_geometry
         WHERE uuid IN (:polygonUuids)
       `,
       {
@@ -45,14 +44,10 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
   }
 
   static async getGeoJSON(polygonUuid: string): Promise<string | undefined> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const result = (await this.sequelize.query(
+    const result = (await this.sql.query(
       `
         SELECT ST_AsGeoJSON(geom) as geoJson
-        FROM polygon_geometry 
+        FROM polygon_geometry
         WHERE uuid = :polygonUuid
       `,
       {
@@ -65,14 +60,10 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
   }
 
   static async getGeoJSONBatch(polygonUuids: string[]): Promise<{ uuid: string; geoJson: string }[]> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    return (await this.sequelize.query(
+    return (await this.sql.query(
       `
         SELECT uuid, ST_AsGeoJSON(geom) as geoJson
-        FROM polygon_geometry 
+        FROM polygon_geometry
         WHERE uuid IN (:polygonUuids)
       `,
       {
@@ -102,15 +93,11 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     candidateUuids: string[],
     transaction?: Transaction
   ): Promise<{ targetUuid: string; candidateUuid: string }[]> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     if (targetUuids.length === 0 || candidateUuids.length === 0) {
       return [];
     }
 
-    return (await this.sequelize.query(
+    return (await this.sql.query(
       `
         SELECT DISTINCT
           target.uuid as targetUuid,
@@ -145,17 +132,13 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
       intersectionLatitude: number;
     }[]
   > {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     if (targetUuids.length === 0 || candidateUuids.length === 0) {
       return [];
     }
 
-    return (await this.sequelize.query(
+    return (await this.sql.query(
       `
-        SELECT 
+        SELECT
           target.uuid as targetUuid,
           candidate.uuid as candidateUuid,
           sp.poly_name as candidateName,
@@ -197,13 +180,9 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     intersectionArea: number;
     country: string;
   } | null> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const results = (await this.sequelize.query(
+    const results = (await this.sql.query(
       `
-        SELECT 
+        SELECT
           ST_Area(pg.geom) as "polygonArea",
           ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
           wcg.country
@@ -241,17 +220,13 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
       country: string;
     }[]
   > {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     if (polygonUuids.length === 0) {
       return [];
     }
 
-    return (await this.sequelize.query(
+    return (await this.sql.query(
       `
-        SELECT 
+        SELECT
           pg.uuid as polygonUuid,
           ST_Area(pg.geom) as "polygonArea",
           ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
@@ -282,17 +257,13 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     polygonUuids: string[],
     transaction?: Transaction
   ): Promise<Map<string, string>> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     if (polygonUuids.length === 0) {
       return new Map();
     }
 
-    const results = (await this.sequelize.query(
+    const results = (await this.sql.query(
       `
-        SELECT 
+        SELECT
           pg.uuid as polygonUuid,
           p.country
         FROM polygon_geometry pg
@@ -312,18 +283,14 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
   }
 
   static async calculateArea(geometry: { type: string; coordinates: number[][][] | number[][][][] }): Promise<number> {
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const geojson = JSON.stringify(geometry);
 
-      const result = (await this.sequelize.query(
+      const result = (await this.sql.query(
         `
-        SELECT 
-          ST_Area(ST_GeomFromGeoJSON(?)) * 
-          POW(6378137 * PI() / 180, 2) * 
+        SELECT
+          ST_Area(ST_GeomFromGeoJSON(?)) *
+          POW(6378137 * PI() / 180, 2) *
           COS(RADIANS(ST_Y(ST_Centroid(ST_GeomFromGeoJSON(?))))) / 10000 as area_hectares
       `,
         {
@@ -345,10 +312,6 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
       return [];
     }
 
-    if (this.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
     try {
       const geoJsonStrings = geometries.map(geom => JSON.stringify(geom));
 
@@ -365,16 +328,16 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
         WITH geom_data AS (
           ${sqlCases}
         )
-        SELECT 
+        SELECT
           idx,
-          ST_Area(ST_GeomFromGeoJSON(geoJson)) * 
-          POW(6378137 * PI() / 180, 2) * 
+          ST_Area(ST_GeomFromGeoJSON(geoJson)) *
+          POW(6378137 * PI() / 180, 2) *
           COS(RADIANS(ST_Y(ST_Centroid(ST_GeomFromGeoJSON(geoJson))))) / 10000 as area_hectares
         FROM geom_data
         ORDER BY idx
       `;
 
-      const results = (await this.sequelize.query(query, {
+      const results = (await this.sql.query(query, {
         replacements,
         type: QueryTypes.SELECT
       })) as { area_hectares: number }[];

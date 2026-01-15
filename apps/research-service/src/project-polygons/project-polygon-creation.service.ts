@@ -1,5 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
-import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { PolygonGeometry, ProjectPitch, ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { Transaction } from "sequelize";
 import { CreateProjectPolygonBatchRequestDto, Feature } from "./dto/create-project-polygon-request.dto";
 import { PolygonGeometryCreationService } from "../site-polygons/polygon-geometry-creation.service";
@@ -45,7 +45,7 @@ export class ProjectPolygonCreationService {
 
         const existingProjectPolygon = await ProjectPolygon.findOne({
           where: {
-            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+            entityType: ProjectPitch.LARAVEL_TYPE,
             entityId: projectPitch.id
           },
           transaction
@@ -74,7 +74,7 @@ export class ProjectPolygonCreationService {
         const projectPolygon = await ProjectPolygon.create(
           {
             polyUuid: polygonUuid,
-            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+            entityType: ProjectPitch.LARAVEL_TYPE,
             entityId: projectPitch.id,
             createdBy: userId,
             lastModifiedBy: userId
@@ -136,7 +136,7 @@ export class ProjectPolygonCreationService {
       const projectPolygon = await ProjectPolygon.create(
         {
           polyUuid: polygonUuids[0],
-          entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+          entityType: ProjectPitch.LARAVEL_TYPE,
           entityId: projectPitch.id,
           createdBy: userId,
           lastModifiedBy: userId
@@ -155,7 +155,7 @@ export class ProjectPolygonCreationService {
   private async deleteExistingProjectPolygon(projectPitchId: number, transaction: Transaction): Promise<void> {
     const existingProjectPolygon = await ProjectPolygon.findOne({
       where: {
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitchId
       },
       transaction

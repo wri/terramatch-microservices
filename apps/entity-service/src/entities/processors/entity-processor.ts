@@ -1,23 +1,27 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, col, fn, Op, WhereOptions } from "sequelize";
+import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { BadRequestException, Type } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
-import { EntityModel, ReportModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
-import { ProjectReport } from "@terramatch-microservices/database/entities";
+import {
+  APPROVED,
+  AWAITING_APPROVAL,
+  NEEDS_MORE_INFORMATION
+} from "@terramatch-microservices/database/constants/status";
+import { ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 
-export type Aggregate<M extends Model<M>> = {
+export type Aggregate<M extends Model> = {
   func: string;
   attr: keyof Attributes<M>;
 };
 
-export async function aggregateColumns<M extends Model<M>>(
+export async function aggregateColumns<M extends Model>(
   model: ModelCtor<M>,
   aggregates: Aggregate<M>[],
   where?: WhereOptions<M>
@@ -54,6 +58,8 @@ const getIndexData = (
   return { resource, requestPath, total, pageNumber };
 };
 
+const APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
+
 export abstract class EntityProcessor<
   ModelType extends EntityModel,
   LightDto extends EntityDto,
@@ -64,24 +70,13 @@ export abstract class EntityProcessor<
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  readonly APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
-
   constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
 
   abstract findOne(uuid: string): Promise<ModelType | null>;
   abstract findMany(query: EntityQueryDto): Promise<PaginatedResult<ModelType>>;
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
-
   abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
-
-  async getFullDtos(models: ModelType[]): Promise<DtoResult<FullDto>[]> {
-    const results: DtoResult<FullDto>[] = [];
-    for (const model of models) {
-      results.push(await this.getFullDto(model));
-    }
-    return results;
-  }
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
@@ -146,7 +141,7 @@ export abstract class EntityProcessor<
    */
   async update(model: ModelType, update: UpdateDto) {
     if (update.status != null) {
-      if (this.APPROVAL_STATUSES.includes(update.status)) {
+      if (APPROVAL_STATUSES.includes(update.status)) {
         await this.entitiesService.authorize("approve", model);
 
         // If an admin is doing an update, set the feedback / feedbackFields to whatever is in the
@@ -154,9 +149,19 @@ export abstract class EntityProcessor<
         // also being updated.
         model.feedback = update.feedback ?? null;
         model.feedbackFields = update.feedbackFields ?? null;
+        if (isReport(model)) model.completion = 100;
+        model.status = update.status as ModelType["status"];
+      } else if (update.status === AWAITING_APPROVAL) {
+        // If we're submitting for approval, check for an update request and submit that instead if there is one
+        const updateRequest = await UpdateRequest.for(model).current().findOne();
+        if (updateRequest == null) {
+          model.status = AWAITING_APPROVAL;
+        } else {
+          await updateRequest.update({ status: AWAITING_APPROVAL });
+        }
+      } else {
+        model.status = update.status as ModelType["status"];
       }
-
-      model.status = update.status as ModelType["status"];
     }
 
     await model.save();
@@ -175,6 +180,31 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
+  }
+
+  protected async authorizedCreation(modelCtor: ModelCtor<ModelType>, attributes: CreationAttributes<ModelType>) {
+    if (modelCtor.sequelize == null) {
+      throw new InternalServerErrorException("Sequelize instance not found");
+    }
+    const transaction = await modelCtor.sequelize.transaction();
+    const model = (await modelCtor.create(attributes, { transaction })) as ModelType;
+    try {
+      await this.entitiesService.authorize("create", model);
+    } catch (e) {
+      await transaction.rollback();
+      throw e;
+    }
+    await transaction.commit();
+    return model;
+  }
+
+  protected async getFeedback(entity: ModelType) {
+    const currentUpdateRequest = await UpdateRequest.for(entity)
+      .current()
+      .findOne({ attributes: ["feedback", "feedbackFields"] });
+    const hasURFeedback = currentUpdateRequest?.feedback != null || currentUpdateRequest?.feedbackFields != null;
+    const { feedback, feedbackFields } = hasURFeedback ? currentUpdateRequest : entity;
+    return { feedback, feedbackFields };
   }
 }
 

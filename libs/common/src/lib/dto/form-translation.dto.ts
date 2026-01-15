@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsNumber } from "class-validator";
-import { JsonApiDto } from "../decorators/json-api-dto.decorator";
+import { JsonApiDto } from "../decorators";
 
 @JsonApiDto({ type: "formTranslations" })
 export class FormTranslationDto {

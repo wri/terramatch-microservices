@@ -12,6 +12,7 @@ export const SiteReportFactory = FactoryGirl.define(SiteReport, async () => {
   return {
     siteId: SiteFactory.associate("id"),
     taskId: TaskFactory.associate("id"),
+    frameworkKey: "ppc",
     dueAt,
     submittedAt: faker.date.between({ from: dueAt, to: DateTime.fromJSDate(dueAt).plus({ days: 14 }).toJSDate() }),
     updateRequestStatus: NO_UPDATE,

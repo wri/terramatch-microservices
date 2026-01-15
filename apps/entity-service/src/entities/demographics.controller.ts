@@ -10,7 +10,7 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DemographicDto } from "./dto/demographic.dto";
+import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
 import { LARAVEL_MODEL_TYPES, LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";

@@ -3,7 +3,6 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
-  Default,
   ForeignKey,
   HasMany,
   Index,
@@ -11,7 +10,22 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  ENUM,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  TEXT,
+  TINYINT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { ProjectReport } from "./project-report.entity";
@@ -24,6 +38,20 @@ import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+import { InternalServerErrorException } from "@nestjs/common";
+import { Dictionary } from "lodash";
+
+type ProjectMedia =
+  | "media"
+  | "socioeconomicBenefits"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "documentFiles"
+  | "programmeSubmission"
+  | "detailedProjectBudget"
+  | "proofOfLandTenureMou";
 
 @Table({
   tableName: "v2_projects",
@@ -31,11 +59,11 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class Project extends Model<Project> {
+export class Project extends Model<InferAttributes<Project>, InferCreationAttributes<Project>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<ProjectMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -53,7 +81,14 @@ export class Project extends Model<Project> {
       validation: "general-documents"
     },
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
-  } as const;
+  };
+
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("Project model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
 
   static forOrganisation(organisationId: number) {
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;
@@ -74,11 +109,11 @@ export class Project extends Model<Project> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -95,9 +130,8 @@ export class Project extends Model<Project> {
   @JsonColumn()
   cohort: string[] | null;
 
-  @Default(false)
-  @Column(BOOLEAN)
-  isTest: boolean;
+  @Column({ type: BOOLEAN, defaultValue: false })
+  isTest: CreationOptional<boolean>;
 
   @AllowNull
   @Column(TEXT)
@@ -114,12 +148,12 @@ export class Project extends Model<Project> {
   applicationId: number | null;
 
   @StateMachineColumn(EntityStatusStates)
-  status: EntityStatus;
+  status: CreationOptional<EntityStatus>;
 
-  @AllowNull
-  @Default("no-update")
-  @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  // Note: this is marked as nullable in the current schema, but has a default value. The
+  // nullability should be removed when v3 is responsible for the DB schema.
+  @Column({ type: STRING, defaultValue: "no-update" })
+  updateRequestStatus: CreationOptional<UpdateRequestStatus>;
 
   @AllowNull
   @Column(TEXT)
@@ -230,8 +264,8 @@ export class Project extends Model<Project> {
   ppcExternalId: number | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)

@@ -14,7 +14,7 @@ import {
 import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
-import { FrameworkKey } from "../constants";
+import { FrameworkKey, PlantingStatus } from "../constants";
 import {
   AWAITING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
@@ -32,14 +32,40 @@ import { User } from "./user.entity";
 import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { PlantingStatus } from "../constants/planting-status";
+import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
   dueBefore?: string | Date;
 };
 
-// Incomplete stub
+type ProjectReportMedia =
+  | "socioeconomicBenefits"
+  | "media"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "baselineReportUpload"
+  | "localGovernanceOrderLetterUpload"
+  | "eventsMeetingsPhotos"
+  | "localGovernanceProofOfPartnershipUpload"
+  | "topThreeSuccessesUpload"
+  | "directJobsUpload"
+  | "convergenceJobsUpload"
+  | "convergenceSchemesUpload"
+  | "livelihoodActivitiesUpload"
+  | "directLivelihoodImpactsUpload"
+  | "certifiedDatabaseUpload"
+  | "physicalAssetsPhotos"
+  | "indirectCommunityPartnersUpload"
+  | "trainingCapacityBuildingUpload"
+  | "trainingCapacityBuildingPhotos"
+  | "financialReportUpload"
+  | "treePlantingUpload"
+  | "soilWaterConservationUpload"
+  | "soilWaterConservationPhotos";
+
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
@@ -61,7 +87,7 @@ export class ProjectReport extends Model<ProjectReport> {
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<ProjectReportMedia, MediaConfiguration> = {
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -138,7 +164,7 @@ export class ProjectReport extends Model<ProjectReport> {
       multiple: true,
       validation: "photos"
     }
-  } as const;
+  };
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof ProjectReport;
@@ -212,12 +238,17 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(BIGINT.UNSIGNED)
   projectId: number;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
   createdByUser: User | null;
+
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  approvedBy: number;
 
   get createdByFirstName() {
     return this.createdByUser?.firstName;
@@ -237,7 +268,7 @@ export class ProjectReport extends Model<ProjectReport> {
     return this.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 
@@ -355,6 +386,26 @@ export class ProjectReport extends Model<ProjectReport> {
   newJobsDescription: string | null;
 
   @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  newJobsCreated: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  newVolunteers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftJobsNonYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftJobsYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerNonYouth: number | null;
+
+  @AllowNull
   @Column(TEXT)
   volunteersWorkDescription: string | null;
 
@@ -369,6 +420,62 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   beneficiariesIncomeIncreaseDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesTrainingWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesTrainingMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesTrainingOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesTrainingYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesTrainingNonYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiaries: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesNonYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesSmallholder: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesLargeScale: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  beneficiariesSkillsKnowledgeIncrease: number | null;
 
   @AllowNull
   @Column(TEXT)
@@ -484,7 +591,27 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
+  volunteerOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
   volunteerSmallholderFarmers: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  volunteerTotal: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
@@ -495,6 +622,10 @@ export class ProjectReport extends Model<ProjectReport> {
   oldModel: string;
 
   @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  oldId: number | null;
+
+  @AllowNull
   @Column(BOOLEAN)
   siteAddition: boolean;
 
@@ -502,12 +633,56 @@ export class ProjectReport extends Model<ProjectReport> {
   paidOtherActivityDescription: string;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(STRING)
   plantingStatus: PlantingStatus | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ftTotal: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptOther: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptWomen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptMen: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptNonYouth: number | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  ptTotal: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",

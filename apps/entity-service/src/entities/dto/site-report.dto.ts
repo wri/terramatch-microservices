@@ -3,8 +3,14 @@ import { EntityDto } from "./entity.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import {
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "siteReports" })
 export class SiteReportLightDto extends EntityDto {
@@ -32,11 +38,18 @@ export class SiteReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
 
-  @ApiProperty()
-  status: string;
+  @ApiProperty({
+    description: "Report status for this site report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
 
-  @ApiProperty()
-  updateRequestStatus: string;
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this site report",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
@@ -94,7 +107,10 @@ export class SiteReportLightDto extends EntityDto {
 export type SiteReportMedia = Pick<SiteReportFullDto, keyof typeof SiteReport.MEDIA>;
 
 export class SiteReportFullDto extends SiteReportLightDto {
-  constructor(siteReport: SiteReport, props: HybridSupportProps<SiteReportFullDto, SiteReport>) {
+  constructor(
+    siteReport: SiteReport,
+    props: HybridSupportProps<SiteReportFullDto, Omit<SiteReport, "feedback" | "feedbackFields">>
+  ) {
     super();
     populateDto<SiteReportFullDto, SiteReport>(this, siteReport, { lightResource: false, ...props });
   }
@@ -135,12 +151,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
-
-  @ApiProperty()
-  status: string;
-
-  @ApiProperty()
-  updateRequestStatus: string;
 
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;

@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  Request,
   UnauthorizedException
 } from "@nestjs/common";
 import { User } from "@terramatch-microservices/database/entities";
@@ -20,7 +19,7 @@ import { UserUpdateBody } from "./dto/user-update.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserCreateBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -40,7 +39,7 @@ const USER_RESPONSE_SHAPE = {
   included: [OrganisationDto]
 };
 
-@Controller("users/v3/users")
+@Controller("users/v3")
 export class UsersController {
   constructor(
     private readonly policyService: PolicyService,
@@ -53,8 +52,8 @@ export class UsersController {
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
   @ExceptionResponse(NotFoundException, { description: "User with that UUID not found" })
-  async findOne(@Param("uuid") pathId: string, @Request() { authenticatedUserId }) {
-    const userWhere = pathId === "me" ? { id: authenticatedUserId } : { uuid: pathId };
+  async findOne(@Param("uuid") pathId: string) {
+    const userWhere = pathId === "me" ? { id: authenticatedUserId() } : { uuid: pathId };
     const user = await User.findOne({
       include: ["roles", "organisation", "frameworks"],
       where: userWhere
@@ -114,7 +113,7 @@ export class UsersController {
 
     const org = await user.primaryOrganisation();
     if (org != null) {
-      const orgResource = document.addData(org.uuid, populateDto(new OrganisationDto(), org));
+      const orgResource = document.addData(org.uuid, new OrganisationDto(org));
       const userStatus = org.OrganisationUser?.status ?? "na";
       userResource.relateTo("org", orgResource, { meta: { userStatus } });
     }

@@ -5,6 +5,7 @@ import { Queue } from "bullmq";
 import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import { StatusUpdateModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "../util/tm-logger";
+import { MediaService } from "../media/media.service";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and
@@ -16,7 +17,8 @@ export class EventService {
 
   constructor(
     @InjectQueue("email") readonly emailQueue: Queue,
-    @InjectQueue("analytics") readonly analyticsQueue: Queue
+    @InjectQueue("analytics") readonly analyticsQueue: Queue,
+    readonly mediaService: MediaService
   ) {}
 
   @OnEvent("database.statusUpdated")

@@ -3,9 +3,16 @@ import * as FakeTimers from "@sinonjs/fake-timers";
 import { EventService } from "./event.service";
 import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import {
+  ApplicationFactory,
+  EntityFormFactory,
   FinancialReportFactory,
+  FormFactory,
+  FormQuestionFactory,
+  FormSectionFactory,
+  FormSubmissionFactory,
   NurseryReportFactory,
   ProjectFactory,
+  ProjectPitchFactory,
   ProjectReportFactory,
   SiteReportFactory,
   TaskFactory,
@@ -13,9 +20,8 @@ import {
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { RequestContext } from "nestjs-request-context";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
-import { Action, AuditStatus, Task } from "@terramatch-microservices/database/entities";
+import { Action, AuditStatus, FinancialReport, Organisation, Task } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
@@ -25,16 +31,16 @@ import {
   AWAITING_APPROVAL,
   DUE,
   NEEDS_MORE_INFORMATION,
+  REJECTED,
   ReportStatus,
   STARTED
 } from "@terramatch-microservices/database/constants/status";
 import { InternalServerErrorException } from "@nestjs/common";
-
-function mockUserId(userId?: number) {
-  jest
-    .spyOn(RequestContext, "currentContext", "get")
-    .mockReturnValue({ req: { authenticatedUserId: userId }, res: {} });
-}
+import { mockUserId } from "../util/testing";
+import { getLinkedFieldConfig } from "../linkedFields";
+import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
+import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 
 describe("EntityStatusUpdate EventProcessor", () => {
   let eventService: DeepMocked<EventService>;
@@ -49,7 +55,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
   it("should avoid status email and actions for non-entities", async () => {
     mockUserId();
-    const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.forProject.create());
+    const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.project().create());
     const statusUpdateSpy = jest.spyOn(processor as any, "sendStatusUpdateEmail");
     const updateActionsSpy = jest.spyOn(processor as any, "updateActions");
     const createAuditStatusSpy = jest.spyOn(processor as any, "createAuditStatus");
@@ -64,7 +70,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     const project = await ProjectFactory.create();
     await new EntityStatusUpdate(eventService, project).handle();
     expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-      "statusUpdate",
+      EntityStatusUpdateEmail.NAME,
       expect.objectContaining({ type: "projects", id: project.id })
     );
   });
@@ -88,7 +94,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
   });
 
-  it("should create an audit status", async () => {
+  it("should create an approved audit status", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);
 
@@ -102,6 +108,29 @@ describe("EntityStatusUpdate EventProcessor", () => {
       firstName: user.firstName,
       lastName: user.lastName,
       comment: `Approved: ${feedback}`
+    });
+  });
+
+  it("should create a needs more information audit status", async () => {
+    const user = await UserFactory.create();
+    mockUserId(user.id);
+
+    const feedback = faker.lorem.sentence();
+    const question = await FormQuestionFactory.section().create({ label: "Form Question Label" });
+    const project = await ProjectFactory.create({
+      status: NEEDS_MORE_INFORMATION,
+      feedback,
+      feedbackFields: [question.uuid]
+    });
+    await new EntityStatusUpdate(eventService, project).handle();
+
+    const auditStatus = await AuditStatus.for(project).findOne({ order: [["createdAt", "DESC"]] });
+    expect(auditStatus).toMatchObject({
+      createdBy: user.emailAddress,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      type: "change-request",
+      comment: `Request More Information on the following fields: ${question.label}. Feedback: ${feedback}`
     });
   });
 
@@ -155,9 +184,9 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should skip task status check for FinancialReport (which has no taskId)", async () => {
-      const financialReport = await FinancialReportFactory.create({ status: AWAITING_APPROVAL });
+      const financialReport = await FinancialReportFactory.org().create({ status: AWAITING_APPROVAL });
       const handler = createHandler(financialReport);
-      const logSpy = jest.spyOn((handler as any).logger, "warn");
+      const logSpy = jest.spyOn((handler as any).logger, "log");
       await handler.handle();
       expect(logSpy).toHaveBeenCalledWith(
         `Skipping task status check for model without taskId [${financialReport.constructor.name}, ${financialReport.id}]`
@@ -237,16 +266,137 @@ describe("EntityStatusUpdate EventProcessor", () => {
     it("should send status update email for FinancialReport to createdBy user", async () => {
       mockUserId();
       const user = await UserFactory.create();
-      const financialReport = await FinancialReportFactory.create({
-        status: APPROVED,
-        createdBy: user.id
-      });
+      const { id } = await FinancialReportFactory.org().create({ status: APPROVED, createdBy: user.id });
+      // the org type has to be loaded on the report for this test to work (see Form's entity scope).
+      const financialReport = (await FinancialReport.findByPk(id, {
+        include: [{ association: "organisation", attributes: ["type"] }]
+      })) as FinancialReport;
 
       await new EntityStatusUpdate(eventService, financialReport).handle();
 
       expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-        "statusUpdate",
+        EntityStatusUpdateEmail.NAME,
         expect.objectContaining({ type: "financialReports", id: financialReport.id })
+      );
+    });
+  });
+
+  describe("handleUpdateRequest", () => {
+    it("should NOOP if base model is missing or not an entity", async () => {
+      const project = await ProjectFactory.create();
+      let updateRequest = await UpdateRequestFactory.project(project).create();
+      await project.destroy();
+      await expect(new EntityStatusUpdate(eventService, updateRequest).handle()).resolves.toBeUndefined();
+
+      const org = await Organisation.create();
+      updateRequest = await UpdateRequestFactory.project().create({
+        updateRequestableType: Organisation.LARAVEL_TYPE,
+        updateRequestableId: org.id
+      });
+      await expect(new EntityStatusUpdate(eventService, updateRequest).handle()).resolves.toBeUndefined();
+    });
+
+    it("turns off nothingToReport", async () => {
+      const siteReport = await SiteReportFactory.create({ status: AWAITING_APPROVAL, nothingToReport: true });
+      const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({ status: APPROVED });
+      await new EntityStatusUpdate(eventService, updateRequest).handle();
+      await siteReport.reload();
+      expect(siteReport.nothingToReport).toBe(false);
+      expect(siteReport.updateRequestStatus).toBe(APPROVED);
+      expect(siteReport.status).toBe(APPROVED);
+    });
+
+    it("sends status update email and checks status", async () => {
+      const siteReport = await SiteReportFactory.create({ status: AWAITING_APPROVAL });
+      const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({
+        status: NEEDS_MORE_INFORMATION
+      });
+      const processor = new EntityStatusUpdate(eventService, updateRequest);
+      const statusUpdateSpy = jest.spyOn(processor as any, "sendStatusUpdateEmail");
+      const checkStatusSpy = jest.spyOn(processor as any, "checkTaskStatus");
+      await processor.handle();
+      expect(statusUpdateSpy).toHaveBeenCalledWith("siteReports");
+      expect(checkStatusSpy).toHaveBeenCalledWith(expect.objectContaining({ uuid: siteReport.uuid }));
+    });
+
+    it("creates and audit status and sends a PM email", async () => {
+      const siteReport = await SiteReportFactory.create({ status: NEEDS_MORE_INFORMATION });
+      const form = await EntityFormFactory.siteReport(siteReport).create();
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create({
+        linkedFieldKey: "site-rep-survival-calculation"
+      });
+      const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({
+        status: AWAITING_APPROVAL,
+        content: { [question.uuid]: "survival calculation" }
+      });
+      const processor = new EntityStatusUpdate(eventService, updateRequest);
+      const auditStatusSpy = jest.spyOn(processor as any, "createAuditStatus");
+      const pmEmailSpy = jest.spyOn(processor as any, "sendProjectManagerEmail");
+      await processor.handle();
+      expect(auditStatusSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ uuid: siteReport.uuid }),
+        AWAITING_APPROVAL,
+        `Awaiting Review: ${getLinkedFieldConfig("site-rep-survival-calculation")?.field.label}`
+      );
+      expect(pmEmailSpy).toHaveBeenCalledWith("siteReports", expect.objectContaining({ uuid: siteReport.uuid }));
+    });
+  });
+
+  describe("handleFormSubmission", () => {
+    it("should create an audit status", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const feedback = faker.lorem.sentence();
+      const submission = await FormSubmissionFactory.create({ status: REJECTED, feedback });
+      await new EntityStatusUpdate(eventService, submission).handle();
+
+      const auditStatus = await AuditStatus.for(submission).findOne({ order: [["createdAt", "DESC"]] });
+      expect(auditStatus).toMatchObject({
+        createdBy: user.emailAddress,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        comment: feedback
+      });
+    });
+
+    it("should handle submit for approval", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const application = await ApplicationFactory.create();
+      const pitch = await ProjectPitchFactory.create();
+      const form = await FormFactory.create({ submissionMessage: faker.lorem.sentence() });
+      const submission = await FormSubmissionFactory.create({
+        applicationId: application.id,
+        projectPitchUuid: pitch.uuid,
+        formId: form.uuid,
+        status: "awaiting-approval"
+      });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      await application.reload();
+      await pitch.reload();
+
+      expect(application.updatedBy).toBe(user.id);
+      expect(pitch.status).toBe("active");
+      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
+        ApplicationSubmittedEmail.NAME,
+        expect.objectContaining({ message: form.submissionMessage, userId: user.id })
+      );
+    });
+
+    it("should handle admin feedback", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const submission = await FormSubmissionFactory.create({ status: "rejected" });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
+        FormSubmissionFeedbackEmail.NAME,
+        expect.objectContaining({ submissionId: submission.id })
       );
     });
   });

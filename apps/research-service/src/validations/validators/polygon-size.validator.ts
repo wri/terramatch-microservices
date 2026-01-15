@@ -81,8 +81,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
     let totalAreaSqMeters = 0;
 
     if (geometry.type === "Polygon") {
-      const areaSqMeters = await this.calculateAreaFromGeoJSON(geometry);
-      totalAreaSqMeters = areaSqMeters;
+      totalAreaSqMeters = await this.calculateAreaFromGeoJSON(geometry);
     } else if (geometry.type === "MultiPolygon") {
       for (const polygonCoordinates of geometry.coordinates) {
         const polygonGeometry: Polygon = {
@@ -118,7 +117,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
 
     const result = (await PolygonGeometry.sequelize.query(
       `
-        SELECT 
+        SELECT
           ST_Area(ST_GeomFromGeoJSON(:geojson)) AS area,
           ST_Y(ST_Centroid(ST_GeomFromGeoJSON(:geojson))) AS latitude
         FROM (SELECT 1) AS dummy
@@ -137,8 +136,6 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
     const latitude = result[0].latitude;
     const unitLatitude = 111320;
     const latitudeRad = (latitude * Math.PI) / 180;
-    const areaSqMeters = areaSqDegrees * Math.pow(unitLatitude * Math.cos(latitudeRad), 2);
-
-    return areaSqMeters;
+    return areaSqDegrees * Math.pow(unitLatitude * Math.cos(latitudeRad), 2);
   }
 }

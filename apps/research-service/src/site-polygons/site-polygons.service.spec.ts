@@ -102,7 +102,7 @@ describe("SitePolygonsService", () => {
   it("should return all establishment tree species", async () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = (await sitePolygon.loadSite()) as Site;
-    await TreeSpeciesFactory.forSiteTreePlanted.createMany(3, { speciesableId: site.id });
+    await TreeSpeciesFactory.siteTreePlanted(site).createMany(3);
 
     const treeSpecies = await site.loadTreesPlanted();
     const associations = await service.loadAssociationDtos([sitePolygon], false);
@@ -122,8 +122,8 @@ describe("SitePolygonsService", () => {
     const site = (await sitePolygon.loadSite()) as Site;
     await SiteReportFactory.createMany(2, { siteId: site.id });
     const siteReports = await site.loadReports();
-    await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReports[0].id });
-    await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(5, { speciesableId: siteReports[1].id });
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReports[0]).createMany(3);
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReports[1]).createMany(5);
 
     await siteReports[0].loadTreesPlanted();
     await siteReports[1].loadTreesPlanted();
@@ -171,8 +171,8 @@ describe("SitePolygonsService", () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = (await sitePolygon.loadSite()) as Site;
     const siteReport = await SiteReportFactory.create({ siteId: site.id });
-    await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, { speciesableId: site.id });
-    await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReport.id });
+    await TreeSpeciesFactory.siteTreePlanted(site).createMany(2);
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(3);
     const associations = await service.loadAssociationDtos([sitePolygon], false);
     const siteTrees = associations[sitePolygon.id]?.establishmentTreeSpecies;
     expect(siteTrees?.length).toBe(2);
@@ -683,17 +683,9 @@ describe("SitePolygonsService", () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = (await sitePolygon.loadSite()) as Site;
     const siteReport = await SiteReportFactory.create({ siteId: site.id });
-    await TreeSpeciesFactory.forSiteTreePlanted.createMany(2, {
-      speciesableId: site.id,
-      name: "Oak",
-      amount: 100
-    });
+    await TreeSpeciesFactory.siteTreePlanted(site).createMany(2, { name: "Oak", amount: 100 });
 
-    await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(1, {
-      speciesableId: siteReport.id,
-      name: "Pine",
-      amount: 50
-    });
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(1, { name: "Pine", amount: 50 });
 
     const associations = await service.loadAssociationDtos([sitePolygon], false);
 
@@ -719,7 +711,7 @@ describe("SitePolygonsService", () => {
     const site = (await sitePolygon.loadSite()) as Site;
     expect(sitePolygon.siteUuid).toBe(site.uuid);
     expect(site.id).toBeDefined();
-    await TreeSpeciesFactory.forSiteTreePlanted.create({ speciesableId: site.id });
+    await TreeSpeciesFactory.siteTreePlanted(site).create();
     await SiteReportFactory.create({ siteId: site.id });
 
     const associations = await service.loadAssociationDtos([sitePolygon], false);
@@ -738,27 +730,11 @@ describe("SitePolygonsService", () => {
     const siteReport1 = await SiteReportFactory.create({ siteId: site1.id });
     const siteReport2 = await SiteReportFactory.create({ siteId: site2.id });
 
-    await TreeSpeciesFactory.forSiteTreePlanted.create({
-      speciesableId: site1.id,
-      name: "Site1Tree",
-      amount: 100
-    });
-    await TreeSpeciesFactory.forSiteTreePlanted.create({
-      speciesableId: site2.id,
-      name: "Site2Tree",
-      amount: 200
-    });
+    await TreeSpeciesFactory.siteTreePlanted(site1).create({ name: "Site1Tree", amount: 100 });
+    await TreeSpeciesFactory.siteTreePlanted(site2).create({ name: "Site2Tree", amount: 200 });
 
-    await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-      speciesableId: siteReport1.id,
-      name: "Report1Tree",
-      amount: 50
-    });
-    await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-      speciesableId: siteReport2.id,
-      name: "Report2Tree",
-      amount: 75
-    });
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReport1).create({ name: "Report1Tree", amount: 50 });
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReport2).create({ name: "Report2Tree", amount: 75 });
 
     const associations = await service.loadAssociationDtos([sitePolygon1, sitePolygon2], false);
 
@@ -787,18 +763,10 @@ describe("SitePolygonsService", () => {
       indicatorSlug: "restorationByStrategy"
     });
 
-    await TreeSpeciesFactory.forSiteTreePlanted.create({
-      speciesableId: site.id,
-      name: "TestTree",
-      amount: 150
-    });
+    await TreeSpeciesFactory.siteTreePlanted(site).create({ name: "TestTree", amount: 150 });
 
     const siteReport = await SiteReportFactory.create({ siteId: site.id });
-    await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-      speciesableId: siteReport.id,
-      name: "ReportTree",
-      amount: 75
-    });
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({ name: "ReportTree", amount: 75 });
 
     const associations = await service.loadAssociationDtos([sitePolygon], false);
 
@@ -819,11 +787,7 @@ describe("SitePolygonsService", () => {
     const site = await SiteFactory.create({ projectId: project.id });
     const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-    await TreeSpeciesFactory.forSiteTreePlanted.create({
-      speciesableId: site.id,
-      name: "EstablishmentOak",
-      amount: 200
-    });
+    await TreeSpeciesFactory.siteTreePlanted(site).create({ name: "EstablishmentOak", amount: 200 });
 
     const siteReport = await SiteReportFactory.create({
       siteId: site.id,
@@ -831,11 +795,7 @@ describe("SitePolygonsService", () => {
       submittedAt: new Date("2024-06-20")
     });
 
-    await TreeSpeciesFactory.forSiteReportTreePlanted.create({
-      speciesableId: siteReport.id,
-      name: "ReportMaple",
-      amount: 100
-    });
+    await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({ name: "ReportMaple", amount: 100 });
 
     const associations = await service.loadAssociationDtos([sitePolygon], false);
 

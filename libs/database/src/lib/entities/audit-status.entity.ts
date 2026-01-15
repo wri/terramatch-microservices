@@ -1,6 +1,18 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, ENUM, NOW, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { LaravelModel, laravelType } from "../types/util";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  NOW,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
+import { LaravelModel, laravelType, StatusModel } from "../types/util";
 import { MediaConfiguration } from "../constants/media-owners";
 import { chainScope } from "../util/chain-scope";
 import { Project } from "./project.entity";
@@ -11,17 +23,26 @@ import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { SitePolygon } from "./site-polygon.entity";
 import { DisturbanceReport } from "./disturbance-report.entity";
+import { User } from "./user.entity";
+import { FormSubmission } from "./form-submission.entity";
+import { InternalServerErrorException } from "@nestjs/common";
+import { AuditStatusType, AUDIT_STATUS_TYPES } from "../constants";
+import { DateTime } from "luxon";
+import { FinancialReport } from "./financial-report.entity";
+import { SrpReport } from "./srp-report.entity";
 
-const TYPES = ["change-request", "status", "submission", "comment", "change-request-updated", "reminder-sent"] as const;
-type AuditStatusType = (typeof TYPES)[number];
+type AuditStatusMedia = "attachments";
 
 @Scopes(() => ({
-  auditable: (auditable: LaravelModel) => ({
-    where: {
-      auditableType: laravelType(auditable),
-      auditableId: auditable.id
-    }
-  })
+  auditable: <T extends LaravelModel>(models: T | T[]) => {
+    models = Array.isArray(models) ? models : [models];
+    return {
+      where: {
+        auditableType: laravelType(models[0]),
+        auditableId: models.map(({ id }) => id)
+      }
+    };
+  }
 }))
 @Table({
   tableName: "audit_statuses",
@@ -30,9 +51,9 @@ type AuditStatusType = (typeof TYPES)[number];
   // @Index doesn't work with underscored column names in all contexts
   indexes: [{ name: "audit_statuses_auditable_type_auditable_id_index", fields: ["auditable_type", "auditable_id"] }]
 })
-export class AuditStatus extends Model<AuditStatus> {
+export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreationAttributes<AuditStatus>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus\\AuditStatus";
-  static readonly MEDIA: Record<string, MediaConfiguration> = {
+  static readonly MEDIA: Record<AuditStatusMedia, MediaConfiguration> = {
     attachments: { dbCollection: "attachments", multiple: true, validation: "general-documents" }
   };
 
@@ -44,21 +65,78 @@ export class AuditStatus extends Model<AuditStatus> {
     SiteReport.LARAVEL_TYPE,
     NurseryReport.LARAVEL_TYPE,
     SitePolygon.LARAVEL_TYPE,
-    DisturbanceReport.LARAVEL_TYPE
+    DisturbanceReport.LARAVEL_TYPE,
+    FormSubmission.LARAVEL_TYPE,
+    FinancialReport.LARAVEL_TYPE,
+    SrpReport.LARAVEL_TYPE
   ];
 
-  static for(auditable: LaravelModel) {
+  static for<T extends LaravelModel>(auditable: T | T[]) {
     return chainScope(this, "auditable", auditable) as typeof AuditStatus;
+  }
+
+  static async createAudit(
+    model: LaravelModel & StatusModel,
+    createdBy?: number | null,
+    type?: AuditStatusType | null,
+    comment?: string | null
+  ) {
+    const auditableType = laravelType(model);
+    if (!AuditStatus.AUDITABLE_LARAVEL_TYPES.includes(auditableType)) {
+      return;
+    }
+
+    if (type != null && !AUDIT_STATUS_TYPES.includes(type)) {
+      throw new InternalServerErrorException(`Invalid audit status type: ${type})`);
+    }
+
+    const user =
+      createdBy == null
+        ? undefined
+        : await User.findOne({
+            where: { id: createdBy },
+            attributes: ["emailAddress", "firstName", "lastName"]
+          });
+    await AuditStatus.create({
+      auditableType,
+      auditableId: model.id,
+      status: model.status,
+      createdBy: user?.emailAddress,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      type,
+      comment
+    });
+  }
+
+  static async ensureRecentAudit(
+    model: LaravelModel & StatusModel,
+    createdBy?: number | null,
+    type: AuditStatusType = "updated"
+  ) {
+    // When the user is going through a form, their progress gets saved a lot. We only really care
+    // about when last save in a session, so if the most recent audit is less than an hour old, and
+    // is an update, just change that one instead of creating a new one.
+    const currentAudit = await AuditStatus.for(model).findOne({ order: [["createdAt", "DESC"]] });
+    if (
+      currentAudit?.type === type &&
+      DateTime.fromJSDate(currentAudit.updatedAt) > DateTime.now().minus({ hours: 1 })
+    ) {
+      // This is the simplest way to update updated_at without changing any other values.
+      await AuditStatus.update({}, { where: { id: currentAudit.id } });
+    } else {
+      await AuditStatus.createAudit(model, createdBy, type);
+    }
   }
 
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -77,7 +155,7 @@ export class AuditStatus extends Model<AuditStatus> {
   lastName: string | null;
 
   @AllowNull
-  @Column({ type: ENUM, values: TYPES })
+  @Column(STRING)
   type: AuditStatusType | null;
 
   /**

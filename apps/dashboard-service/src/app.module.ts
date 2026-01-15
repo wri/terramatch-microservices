@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CommonModule } from "@terramatch-microservices/common";
-import { SentryGlobalFilter, SentryModule } from "@sentry/nestjs/setup";
+import { SentryModule } from "@sentry/nestjs/setup";
 import { APP_FILTER } from "@nestjs/core";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { TotalSectionHeaderController } from "./dashboard/total-section-header.controller";
@@ -26,6 +26,7 @@ import { DashboardProjectsService } from "./dashboard/dashboard-projects.service
 import { DashboardSitePolygonsController } from "./dashboard/dashboard-sitepolygons.controller";
 import { DashboardSitePolygonsService } from "./dashboard/dashboard-sitepolygons.service";
 import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.service";
+import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 
 @Module({
   imports: [
@@ -57,10 +58,7 @@ import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.
     DashboardSitePolygonsController
   ],
   providers: [
-    {
-      provide: APP_FILTER,
-      useClass: SentryGlobalFilter
-    },
+    { provide: APP_FILTER, useClass: TMGlobalFilter },
     TotalSectionHeaderService,
     CacheService,
     DashboardProcessor,

@@ -22,7 +22,7 @@ import { LocalizationKeyFactory } from "@terramatch-microservices/database/facto
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
 import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
-import { buildJsonApi } from "../util/json-api-builder";
+import { buildJsonApi } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 
 jest.mock("@transifex/native", () => ({
@@ -267,7 +267,7 @@ describe("LocalizationService", () => {
         await entity.truncate();
       }
       // First form question with a label
-      const formQuestion = await FormQuestionFactory.create();
+      const formQuestion = await FormQuestionFactory.section().create();
       const firstLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
       formQuestion.labelId = firstLabelI18nItem.id;
       await formQuestion.save();

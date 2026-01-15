@@ -1,12 +1,20 @@
+/* istanbul ignore file */
 import { EmailService } from "./email.service";
 import { ProjectEmailSender } from "./project-email-sender";
 import { TMLogger } from "../util/tm-logger";
 import { Project, User } from "@terramatch-microservices/database/entities";
 import { groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { ProjectEmailData } from "./email.processor";
 
 export class TerrafundSiteAndNurseryReminderEmail extends ProjectEmailSender {
+  static readonly NAME = "terrafundSiteAndNurseryReminder";
+
   override logger = new TMLogger(TerrafundSiteAndNurseryReminderEmail.name);
+
+  constructor(data: ProjectEmailData) {
+    super(TerrafundSiteAndNurseryReminderEmail.NAME, data);
+  }
 
   async sendForProject(projectId: number, users: User[], emailService: EmailService) {
     const project = await Project.findOne({ where: { id: projectId }, attributes: ["frameworkKey"] });

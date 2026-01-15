@@ -1,13 +1,54 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  Index,
+  Model,
+  PrimaryKey,
+  Scopes,
+  Table
+} from "sequelize-typescript";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  TEXT,
+  TINYINT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Organisation } from "./organisation.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+import { FormSubmission } from "./form-submission.entity";
+import { Subquery } from "../util/subquery.builder";
+import { chainScope } from "../util/chain-scope";
 
+type ProjectPitchMedia =
+  | "cover"
+  | "additional"
+  | "restorationPhotos"
+  | "detailedProjectBudget"
+  | "proofOfLandTenureMou";
+
+@Scopes(() => ({
+  application: (applicationId: number) => ({
+    where: { uuid: { [Op.in]: ProjectPitch.uuidForApplication(applicationId) } }
+  })
+}))
 @Table({ tableName: "project_pitches", underscored: true, paranoid: true })
-export class ProjectPitch extends Model<ProjectPitch> {
+export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCreationAttributes<ProjectPitch>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ProjectPitch";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<ProjectPitchMedia, MediaConfiguration> = {
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" },
     additional: { dbCollection: "additional", multiple: true, validation: "general-documents" },
     restorationPhotos: { dbCollection: "restoration_photos", multiple: true, validation: "photos" },
@@ -17,16 +58,32 @@ export class ProjectPitch extends Model<ProjectPitch> {
       validation: "spreadsheet"
     },
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
-  } as const;
+  };
+
+  static application(applicationId: number) {
+    return chainScope(this, "application", applicationId) as typeof ProjectPitch;
+  }
+
+  /**
+   * A subquery to get the project pitch UUID associated with an application. Applications can have
+   * multiple form submissions (one for each stage), but they're all associated with the same project
+   * pitch.
+   *
+   * This would typically be used with the application scope and fineOne:
+   * await ProjectPitch.application(applicationId).findOne();
+   */
+  static uuidForApplication(applicationId: number) {
+    return Subquery.select(FormSubmission, "projectPitchUuid").eq("applicationId", applicationId).literal;
+  }
 
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @JsonColumn()
@@ -88,7 +145,7 @@ export class ProjectPitch extends Model<ProjectPitch> {
   howDiscovered: string[] | null;
 
   @Column({ type: STRING, defaultValue: "draft" })
-  status: string;
+  status: CreationOptional<string>;
 
   @AllowNull
   @Column(DATE)

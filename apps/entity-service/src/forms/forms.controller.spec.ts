@@ -64,10 +64,10 @@ describe("FormsController", () => {
 
     it("Destroys the form and all questions", async () => {
       const form = await FormFactory.create({ published: false });
-      const sections = await FormSectionFactory.createMany(2, { formId: form.uuid });
+      const sections = await FormSectionFactory.form(form).createMany(2);
       const questions = [
-        ...(await FormQuestionFactory.createMany(3, { formSectionId: sections[0].id })),
-        ...(await FormQuestionFactory.createMany(2, { formSectionId: sections[1].id }))
+        ...(await FormQuestionFactory.section(sections[0]).createMany(3)),
+        ...(await FormQuestionFactory.section(sections[1]).createMany(2))
       ];
       service.findOne.mockResolvedValue(form);
       await controller.delete(form.uuid);

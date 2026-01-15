@@ -43,7 +43,8 @@ export type Indicator =
   active: { where: { isActive: true } },
   approved: { where: { status: "approved" } },
   sites: (uuids: string[] | Literal) => ({ where: { siteUuid: { [Op.in]: uuids } } }),
-  forUuids: (uuids: string[] | Literal) => ({ where: { uuid: { [Op.in]: uuids } } })
+  forUuids: (uuids: string[] | Literal) => ({ where: { uuid: { [Op.in]: uuids } } }),
+  disturbance: (disturbanceId: number) => ({ where: { disturbanceId } })
 }))
 @Table({
   tableName: "site_polygon",
@@ -62,6 +63,10 @@ export class SitePolygon extends Model<SitePolygon> {
 
   static approved() {
     return chainScope(this, "approved") as typeof SitePolygon;
+  }
+
+  static disturbance(disturbanceId: number) {
+    return chainScope(this, "disturbance", disturbanceId) as typeof SitePolygon;
   }
 
   static sites(uuids: string[] | Literal) {

@@ -11,11 +11,9 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Model, ModelStatic, Op, Sequelize, WhereOptions } from "sequelize";
 import { DataApiService } from "@terramatch-microservices/data-api";
-import { ConfigService } from "@nestjs/config";
 import { isEmpty, isObject, isString } from "lodash";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { PolicyService } from "@terramatch-microservices/common";
 
 enum EntityType {
   POLYGON = "Polygon",
@@ -37,11 +35,7 @@ interface BoundingBoxCoordinates {
 export class BoundingBoxService {
   private readonly logger = new TMLogger(BoundingBoxService.name);
 
-  constructor(
-    private readonly dataApiService: DataApiService,
-    private readonly configService: ConfigService,
-    private readonly policyService: PolicyService
-  ) {}
+  constructor(private readonly dataApiService: DataApiService) {}
 
   private createBoundingBoxDto(minLng: number, minLat: number, maxLng: number, maxLat: number): BoundingBoxDto {
     const dto = new BoundingBoxDto();
@@ -203,7 +197,7 @@ export class BoundingBoxService {
 
     const projectPolygons = await ProjectPolygon.findAll({
       where: {
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitch.id
       },
       attributes: ["polyUuid"]

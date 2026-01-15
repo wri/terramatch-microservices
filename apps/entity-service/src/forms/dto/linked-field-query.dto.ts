@@ -1,5 +1,5 @@
-import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/common/linkedFields";
 import { ApiProperty } from "@nestjs/swagger";
+import { FORM_MODEL_TYPES, FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { IsArray, IsIn, IsOptional } from "class-validator";
 
 export class LinkedFieldQueryDto {

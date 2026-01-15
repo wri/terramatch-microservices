@@ -21,7 +21,7 @@ import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-micr
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
-import { MediaDto } from "./dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
@@ -177,11 +177,8 @@ export class EntitiesController {
     }
 
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-
     const model = await processor.create(createPayload.data.attributes);
-
     const { id, dto } = await processor.getFullDto(model);
-
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 }

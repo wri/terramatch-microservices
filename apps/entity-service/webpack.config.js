@@ -4,7 +4,8 @@ const { join } = require("path");
 
 module.exports = {
   output: {
-    path: join(__dirname, "../../dist/apps/entity-service")
+    path: join(__dirname, "../../dist/apps/entity-service"),
+    sourceMapFilename: "[file].map"
   },
 
   plugins: [

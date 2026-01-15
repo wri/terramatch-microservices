@@ -6,7 +6,8 @@ const { composePlugins } = require("@nx/webpack");
 module.exports = composePlugins(config => ({
   ...config,
   output: {
-    path: join(__dirname, "../../dist/apps/research-service")
+    path: join(__dirname, "../../dist/apps/research-service"),
+    sourceMapFilename: "[file].map"
   },
   externalsPresets: {
     node: true

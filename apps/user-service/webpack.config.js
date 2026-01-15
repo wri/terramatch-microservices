@@ -4,7 +4,8 @@ const { join } = require("path");
 
 module.exports = {
   output: {
-    path: join(__dirname, "../../dist/apps/user-service")
+    path: join(__dirname, "../../dist/apps/user-service"),
+    sourceMapFilename: "[file].map"
   },
   plugins: [
     new NxAppWebpackPlugin({

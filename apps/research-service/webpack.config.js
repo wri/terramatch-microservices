@@ -41,12 +41,15 @@ module.exports = composePlugins(config => ({
       assets: ["./src/assets"],
       optimization: false,
       outputHashing: "none",
-      generatePackageJson: true
+      generatePackageJson: true,
+      sourceMap: true
     }),
     sentryWebpackPlugin({
       authToken: process.env.SENTRY_AUTH_TOKEN,
       org: "wri-terramatch",
       project: "v3-backend"
     })
-  ]
+  ],
+
+  devtool: "source-map"
 }));

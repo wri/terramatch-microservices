@@ -94,7 +94,7 @@ jobs:
             --build-arg DEPLOY_ENV=${{ inputs.env }} \
             --build-arg SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
             --build-arg BUILD_FLAG='--prod --verbose --no-cloud' \
-            --secret id=SENTRY_AUTH_TOKEN
+            --secret id=SENTRY_AUTH_TOKEN \
             -f service.Dockerfile \
             -t $SERVICE_IMAGE .
           docker push $SERVICE_IMAGE

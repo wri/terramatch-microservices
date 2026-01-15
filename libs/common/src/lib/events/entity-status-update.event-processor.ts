@@ -135,6 +135,8 @@ export class EntityStatusUpdate extends EventProcessor {
     baseModel.updateRequestStatus = updateRequest.status;
     if (updateRequest.status === APPROVED) {
       baseModel.status = APPROVED;
+      baseModel.feedback = updateRequest.feedback;
+      baseModel.feedbackFields = null;
       if (hasNothingToReport(baseModel)) {
         baseModel.nothingToReport = false;
       }

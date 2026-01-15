@@ -2,11 +2,10 @@ FROM terramatch-microservices-base:nx-base AS builder
 
 ARG SERVICE
 ARG BUILD_FLAG
-ARG SENTRY_AUTH_TOKEN
 WORKDIR /app/builder
 COPY . .
-ENV SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
-RUN npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
+    npx nx run-many -t build build-repl -p ${SERVICE} ${BUILD_FLAG} && \
     ls dist/apps && \
     ls dist/apps/${SERVICE}*
 

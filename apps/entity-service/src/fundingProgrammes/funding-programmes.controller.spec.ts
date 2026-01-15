@@ -47,7 +47,7 @@ describe("FundingProgrammesController", () => {
       await FundingProgramme.truncate();
       policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
       const programmes = await FundingProgrammeFactory.createMany(3);
-      await controller.indexFundingProgrammes({ translated: false });
+      await controller.index({ translated: false });
       expect(policyService.authorize).toHaveBeenCalledWith(
         "read",
         expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid })))
@@ -64,7 +64,7 @@ describe("FundingProgrammesController", () => {
       mockUserId(user.id);
       policyService.getPermissions.mockResolvedValue(["manage-own"]);
       await FundingProgrammeFactory.createMany(3);
-      await controller.indexFundingProgrammes({ translated: false });
+      await controller.index({ translated: false });
       expect(policyService.authorize).toHaveBeenCalledWith("read", []);
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), [], undefined);
     });
@@ -89,7 +89,7 @@ describe("FundingProgrammesController", () => {
       });
       await FundingProgrammeFactory.create({ organisationTypes: ["for-profit"] as unknown as OrganisationType[] });
 
-      await controller.indexFundingProgrammes({ translated: false });
+      await controller.index({ translated: false });
 
       expect(policyService.authorize).toHaveBeenCalledWith(
         "read",
@@ -106,7 +106,7 @@ describe("FundingProgrammesController", () => {
       await FundingProgramme.truncate();
       const user = await UserFactory.create({ locale: "es-MX" });
       mockUserId(user.id);
-      await controller.indexFundingProgrammes({});
+      await controller.index({});
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
@@ -117,14 +117,12 @@ describe("FundingProgrammesController", () => {
 
   describe("getFundingProgramme", () => {
     it("throws if the programme is not found", async () => {
-      await expect(controller.getFundingProgramme({ uuid: "fake-uuid" }, {})).rejects.toThrow(
-        "Funding programme not found"
-      );
+      await expect(controller.get({ uuid: "fake-uuid" }, {})).rejects.toThrow("Funding programme not found");
     });
 
     it("returns the programme UUID", async () => {
       const programme = await FundingProgrammeFactory.create();
-      await controller.getFundingProgramme({ uuid: programme.uuid }, { translated: false });
+      await controller.get({ uuid: programme.uuid }, { translated: false });
       await programme.reload();
       expect(policyService.authorize).toHaveBeenCalledWith("read", programme);
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
@@ -138,7 +136,7 @@ describe("FundingProgrammesController", () => {
       const programme = await FundingProgrammeFactory.create();
       const user = await UserFactory.create({ locale: "es-MX" });
       mockUserId(user.id);
-      await controller.getFundingProgramme({ uuid: programme.uuid }, {});
+      await controller.get({ uuid: programme.uuid }, {});
       await programme.reload();
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
@@ -150,15 +148,13 @@ describe("FundingProgrammesController", () => {
 
   describe("deleteFundingProgramme", () => {
     it("throws if the programme is not found", async () => {
-      await expect(controller.deleteFundingProgramme({ uuid: "fake-uuid" })).rejects.toThrow(
-        "Funding programme not found"
-      );
+      await expect(controller.delete({ uuid: "fake-uuid" })).rejects.toThrow("Funding programme not found");
     });
 
     it("deletes the programme", async () => {
       const programme = await FundingProgrammeFactory.create();
 
-      const result = serialize(await controller.deleteFundingProgramme({ uuid: programme.uuid }));
+      const result = serialize(await controller.delete({ uuid: programme.uuid }));
       await programme.reload({ paranoid: false });
 
       expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: programme.id }));
@@ -188,7 +184,7 @@ describe("FundingProgrammesController", () => {
 
       localizationService.generateI18nId.mockResolvedValue(1);
 
-      await controller.createFundingProgramme({ data: { type: "fundingProgrammes", attributes } });
+      await controller.create({ data: { type: "fundingProgrammes", attributes } });
       const fp = await FundingProgramme.findOne({ order: [["createdAt", "DESC"]], attributes: ["uuid"] });
       const stages = await Stage.findAll({ where: { fundingProgrammeId: fp?.uuid }, order: [["order", "ASC"]] });
       await Promise.all(stageForms.map(form => form.reload()));
@@ -222,7 +218,7 @@ describe("FundingProgrammesController", () => {
   describe("updateFundingProgramme", () => {
     it("throws if the programme is not found", async () => {
       await expect(
-        controller.updateFundingProgramme(
+        controller.update(
           { uuid: "fake-uuid" },
           { data: { id: "fake-uuid", type: "fundingProgrammes", attributes: {} as StoreFundingProgrammeAttributes } }
         )
@@ -231,7 +227,7 @@ describe("FundingProgrammesController", () => {
 
     it("throws if the path and payload UUIDs don't match", async () => {
       await expect(
-        controller.updateFundingProgramme(
+        controller.update(
           { uuid: "fake-id-1" },
           { data: { id: "fake-id-2", type: "fundingProgrammes", attributes: {} as StoreFundingProgrammeAttributes } }
         )
@@ -272,7 +268,7 @@ describe("FundingProgrammesController", () => {
 
       localizationService.generateI18nId.mockResolvedValue(1);
 
-      await controller.updateFundingProgramme(
+      await controller.update(
         { uuid: programme.uuid },
         { data: { id: programme.uuid, type: "fundingProgrammes", attributes } }
       );

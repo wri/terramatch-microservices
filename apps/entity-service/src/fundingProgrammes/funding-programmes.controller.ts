@@ -54,7 +54,7 @@ export class FundingProgrammesController {
   @ExceptionResponse(UnauthorizedException, {
     description: "User is not authorized to access these funding programmes"
   })
-  async indexFundingProgrammes(@Query() query: FundingProgrammeQueryDto) {
+  async index(@Query() query: FundingProgrammeQueryDto) {
     const permissions = await this.policyService.getPermissions();
     let fundingProgrammes: FundingProgramme[];
     if (permissions.find(p => p.startsWith("framework-")) == null) {
@@ -99,7 +99,7 @@ export class FundingProgrammesController {
   @JsonApiResponse(FundingProgrammeDto)
   @ExceptionResponse(NotFoundException, { description: "Funding programme not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this funding programme" })
-  async getFundingProgramme(@Param() { uuid }: SingleResourceDto, @Query() { translated }: FundingProgrammeQueryDto) {
+  async get(@Param() { uuid }: SingleResourceDto, @Query() { translated }: FundingProgrammeQueryDto) {
     const fundingProgramme = await FundingProgramme.findOne({ where: { uuid } });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
@@ -118,7 +118,7 @@ export class FundingProgrammesController {
   @JsonApiDeletedResponse(getDtoType(ApplicationDto), { description: "Funding programme was deleted" })
   @ExceptionResponse(NotFoundException, { description: "Funding programme not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to delete this funding programme" })
-  async deleteFundingProgramme(@Param() { uuid }: SingleResourceDto) {
+  async delete(@Param() { uuid }: SingleResourceDto) {
     const fundingProgramme = await FundingProgramme.findOne({ where: { uuid }, attributes: ["id", "frameworkKey"] });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
@@ -133,7 +133,7 @@ export class FundingProgrammesController {
   @JsonApiResponse(FundingProgrammeDto)
   @ExceptionResponse(UnauthorizedException, { description: "Funding programme creation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Funding programme payload malformed." })
-  async createFundingProgramme(@Body() payload: CreateFundingProgrammeBody) {
+  async create(@Body() payload: CreateFundingProgrammeBody) {
     const attributes = payload.data.attributes;
     const fundingProgramme = FundingProgramme.build({
       name: attributes.name,
@@ -182,7 +182,7 @@ export class FundingProgrammesController {
   @ExceptionResponse(UnauthorizedException, { description: "Funding Programme update not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Funding Programme payload malformed." })
   @ExceptionResponse(NotFoundException, { description: "Funding Programme not found." })
-  async updateFundingProgramme(@Param() { uuid }: SingleResourceDto, @Body() payload: UpdateFundingProgrammeBody) {
+  async update(@Param() { uuid }: SingleResourceDto, @Body() payload: UpdateFundingProgrammeBody) {
     if (uuid !== payload.data.id) {
       throw new BadRequestException("Funding programme id in path and payload do not match");
     }

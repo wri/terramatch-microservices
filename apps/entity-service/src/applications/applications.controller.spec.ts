@@ -49,7 +49,7 @@ describe("ApplicationsController", () => {
     it("returns all applications to admins", async () => {
       const apps = await ApplicationFactory.createMany(3);
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
-      const result = serialize(await controller.indexApplications({}));
+      const result = serialize(await controller.index({}));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(3);
       expect(dtos).toMatchObject(
@@ -69,7 +69,7 @@ describe("ApplicationsController", () => {
       const apps = await Promise.all(orgs.map(({ uuid }) => ApplicationFactory.create({ organisationUuid: uuid })));
       const userApps = apps.slice(0, 2); // the third is not a confirmed org association
       await ApplicationFactory.create();
-      const result = serialize(await controller.indexApplications({}));
+      const result = serialize(await controller.index({}));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(2);
       expect(dtos).toMatchObject(
@@ -91,7 +91,7 @@ describe("ApplicationsController", () => {
       // excluded - latest submission is started
       await FormSubmissionFactory.create({ applicationId: excluded.id, status: "awaiting-approval" });
       await FormSubmissionFactory.create({ applicationId: excluded.id, status: "started" });
-      const result = serialize(await controller.indexApplications({ currentSubmissionStatus: "awaiting-approval" }));
+      const result = serialize(await controller.index({ currentSubmissionStatus: "awaiting-approval" }));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(2);
       expect(dtos).toMatchObject(
@@ -104,16 +104,12 @@ describe("ApplicationsController", () => {
     it("filters on application fields", async () => {
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       const apps = await ApplicationFactory.createMany(2);
-      let result = serialize(
-        await controller.indexApplications({ organisationUuid: apps[0].organisationUuid as string })
-      );
+      let result = serialize(await controller.index({ organisationUuid: apps[0].organisationUuid as string }));
       let dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(1);
       expect(dtos[0].uuid).toBe(apps[0].uuid);
 
-      result = serialize(
-        await controller.indexApplications({ fundingProgrammeUuid: apps[1].fundingProgrammeUuid as string })
-      );
+      result = serialize(await controller.index({ fundingProgrammeUuid: apps[1].fundingProgrammeUuid as string }));
       dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(1);
       expect(dtos[0].uuid).toBe(apps[1].uuid);
@@ -121,7 +117,7 @@ describe("ApplicationsController", () => {
 
     it("throws with an invalid sort", async () => {
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
-      await expect(controller.indexApplications({ sort: { field: "foo" } })).rejects.toThrow("Invalid sort field: foo");
+      await expect(controller.index({ sort: { field: "foo" } })).rejects.toThrow("Invalid sort field: foo");
     });
 
     it("sorts", async () => {
@@ -140,26 +136,24 @@ describe("ApplicationsController", () => {
 
         policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
 
-        let result = serialize(await controller.indexApplications({ sort: { field: "createdAt" } }));
+        let result = serialize(await controller.index({ sort: { field: "createdAt" } }));
         let uuids = (result.data as Resource[]).map(({ id }) => id);
         expect(uuids).toEqual([app1.uuid, app2.uuid]);
-        result = serialize(await controller.indexApplications({ sort: { field: "createdAt", direction: "DESC" } }));
+        result = serialize(await controller.index({ sort: { field: "createdAt", direction: "DESC" } }));
         uuids = (result.data as Resource[]).map(({ id }) => id);
         expect(uuids).toEqual([app2.uuid, app1.uuid]);
 
-        result = serialize(await controller.indexApplications({ sort: { field: "updatedAt" } }));
+        result = serialize(await controller.index({ sort: { field: "updatedAt" } }));
         uuids = (result.data as Resource[]).map(({ id }) => id);
         expect(uuids).toEqual([app2.uuid, app1.uuid]);
-        result = serialize(await controller.indexApplications({ sort: { field: "updatedAt", direction: "DESC" } }));
+        result = serialize(await controller.index({ sort: { field: "updatedAt", direction: "DESC" } }));
         uuids = (result.data as Resource[]).map(({ id }) => id);
         expect(uuids).toEqual([app1.uuid, app2.uuid]);
 
-        result = serialize(await controller.indexApplications({ sort: { field: "organisationName" } }));
+        result = serialize(await controller.index({ sort: { field: "organisationName" } }));
         uuids = (result.data as Resource[]).map(({ id }) => id);
         expect(uuids).toEqual([app2.uuid, app1.uuid]);
-        result = serialize(
-          await controller.indexApplications({ sort: { field: "organisationName", direction: "DESC" } })
-        );
+        result = serialize(await controller.index({ sort: { field: "organisationName", direction: "DESC" } }));
         uuids = (result.data as Resource[]).map(({ id }) => id);
         expect(uuids).toEqual([app1.uuid, app2.uuid]);
       } finally {
@@ -177,15 +171,15 @@ describe("ApplicationsController", () => {
 
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
 
-      let result = serialize(await controller.indexApplications({ search: "Test" }));
+      let result = serialize(await controller.index({ search: "Test" }));
       let uuids = (result.data as Resource[]).map(({ id }) => id);
       expect(uuids).toEqual([app1.uuid, app2.uuid]);
 
-      result = serialize(await controller.indexApplications({ search: "Trees" }));
+      result = serialize(await controller.index({ search: "Trees" }));
       uuids = (result.data as Resource[]).map(({ id }) => id);
       expect(uuids).toEqual([app1.uuid]);
 
-      result = serialize(await controller.indexApplications({ search: "Foo" }));
+      result = serialize(await controller.index({ search: "Foo" }));
       uuids = (result.data as Resource[]).map(({ id }) => id);
       expect(uuids).toEqual([]);
     });
@@ -193,7 +187,7 @@ describe("ApplicationsController", () => {
 
   describe("getApplication", () => {
     it("throws if the application is not found", async () => {
-      await expect(controller.getApplication({ uuid: "fake-uuid" }, {})).rejects.toThrow("Application not found");
+      await expect(controller.get({ uuid: "fake-uuid" }, {})).rejects.toThrow("Application not found");
     });
 
     it("returns the DTO", async () => {
@@ -207,7 +201,7 @@ describe("ApplicationsController", () => {
       });
       const project = await ProjectFactory.create({ applicationId: app.id });
 
-      const result = serialize(await controller.getApplication({ uuid: app.uuid }, {}));
+      const result = serialize(await controller.get({ uuid: app.uuid }, {}));
       const dto = (result.data as Resource).attributes;
       expect(dto.uuid).toBe(app.uuid);
       expect(dto.organisationUuid).toBe(app.organisationUuid);
@@ -246,7 +240,7 @@ describe("ApplicationsController", () => {
 
       formDataService.getFullSubmission.mockResolvedValue(submissions[1]);
 
-      await controller.getApplication({ uuid: app.uuid }, { sideloads: ["currentSubmission", "fundingProgramme"] });
+      await controller.get({ uuid: app.uuid }, { sideloads: ["currentSubmission", "fundingProgramme"] });
       expect(formDataService.getFullSubmission).toHaveBeenCalledWith(submissions[1].uuid);
       expect(formDataService.addSubmissionDto).toHaveBeenCalledWith(
         expect.anything(),
@@ -262,14 +256,14 @@ describe("ApplicationsController", () => {
 
   describe("deleteApplication", () => {
     it("throws if the application is not found", async () => {
-      await expect(controller.deleteApplication({ uuid: "fake-uuid" })).rejects.toThrow("Application not found");
+      await expect(controller.delete({ uuid: "fake-uuid" })).rejects.toThrow("Application not found");
     });
 
     it("deletes the application and its submissions", async () => {
       const application = await ApplicationFactory.create();
       const submissions = await FormSubmissionFactory.createMany(2, { applicationId: application.id });
 
-      const result = serialize(await controller.deleteApplication({ uuid: application.uuid }));
+      const result = serialize(await controller.delete({ uuid: application.uuid }));
       expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: application.id }));
       expect(result.meta.resourceType).toBe("applications");
       expect(result.meta.resourceIds).toEqual([application.uuid]);
@@ -288,7 +282,7 @@ describe("ApplicationsController", () => {
 
   describe("getApplicationHistory", () => {
     it("throws if the application is not found", async () => {
-      await expect(controller.getApplicationHistory({ uuid: "fake-uuid" })).rejects.toThrow("Application not found");
+      await expect(controller.getHistory({ uuid: "fake-uuid" })).rejects.toThrow("Application not found");
     });
 
     it("assembles the application history from submission audits", async () => {
@@ -337,7 +331,7 @@ describe("ApplicationsController", () => {
           comment: "Requires More Feedback"
         });
 
-        const result = serialize(await controller.getApplicationHistory({ uuid: app.uuid }));
+        const result = serialize(await controller.getHistory({ uuid: app.uuid }));
         const dto = (result.data as Resource).attributes;
         // result is in reverse chronological order
         expect(dto.entries).toEqual([

@@ -42,7 +42,7 @@ describe("UpdateRequestsController", () => {
 
   describe("findUpdateRequest", () => {
     it("throws if the entity is not found", async () => {
-      await expect(controller.updateRequestGet({ entity: "projects", uuid: "fake-uuid" })).rejects.toThrow(
+      await expect(controller.get({ entity: "projects", uuid: "fake-uuid" })).rejects.toThrow(
         "Entity not found for uuid: fake-uuid"
       );
     });
@@ -50,7 +50,7 @@ describe("UpdateRequestsController", () => {
     it("throws if an update request is not found", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      await expect(controller.updateRequestGet({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
+      await expect(controller.get({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
         `Update request not found for uuid: ${project.uuid}`
       );
     });
@@ -59,7 +59,7 @@ describe("UpdateRequestsController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       await UpdateRequestFactory.project(project).create();
-      await expect(controller.updateRequestGet({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
+      await expect(controller.get({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
         `Form not found for update request: ${project.uuid}`
       );
     });
@@ -75,7 +75,7 @@ describe("UpdateRequestsController", () => {
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       service.getAnswers.mockResolvedValue({ color: "blue" });
 
-      const result = serialize(await controller.updateRequestGet({ entity: "projects", uuid: project.uuid }));
+      const result = serialize(await controller.get({ entity: "projects", uuid: project.uuid }));
       const resource = result.data as Resource;
       expect(policyService.authorize).toHaveBeenCalledWith("approve", project);
       expect(resource.id).toBe(`projects|${project.uuid}`);
@@ -101,7 +101,7 @@ describe("UpdateRequestsController", () => {
 
     it("throws if the payload and path do not match", async () => {
       await expect(
-        controller.updateRequestUpdate({ entity: "projects", uuid: "fake-uuid" }, createPayload("fake-uuid"))
+        controller.update({ entity: "projects", uuid: "fake-uuid" }, createPayload("fake-uuid"))
       ).rejects.toThrow("Payload type and ID do not match the request path");
     });
 
@@ -116,7 +116,7 @@ describe("UpdateRequestsController", () => {
 
       jest.spyOn(UpdateRequest, "findOne").mockResolvedValue(updateRequest);
       const updateSpy = jest.spyOn(updateRequest, "update");
-      await controller.updateRequestUpdate(
+      await controller.update(
         { entity: "projects", uuid: project.uuid },
         createPayload(`projects|${project.uuid}`, updateRequest.status)
       );
@@ -135,7 +135,7 @@ describe("UpdateRequestsController", () => {
 
       jest.spyOn(UpdateRequest, "findOne").mockResolvedValue(updateRequest);
       const updateSpy = jest.spyOn(updateRequest, "update");
-      await controller.updateRequestUpdate(
+      await controller.update(
         { entity: "projects", uuid: project.uuid },
         createPayload(`projects|${project.uuid}`, "needs-more-information", "feedback", ["feedback", "fields"])
       );
@@ -159,7 +159,7 @@ describe("UpdateRequestsController", () => {
       await form.reload();
       service.getAnswers.mockResolvedValue({ color: "blue" });
 
-      await controller.updateRequestUpdate(
+      await controller.update(
         { entity: "projects", uuid: project.uuid },
         createPayload(`projects|${project.uuid}`, "approved")
       );

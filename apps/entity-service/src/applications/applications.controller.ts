@@ -45,7 +45,7 @@ export class ApplicationsController {
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
   @ExceptionResponse(BadRequestException, { description: "Invalid query params" })
-  async indexApplications(@Query() query: ApplicationIndexQueryDto) {
+  async index(@Query() query: ApplicationIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Application, query.page, [
       { association: "organisation", attributes: ["name"] },
       { association: "fundingProgramme", attributes: ["name"] }
@@ -125,10 +125,7 @@ export class ApplicationsController {
   @JsonApiResponse(ApplicationDto)
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
-  async getApplication(
-    @Param() { uuid }: SingleResourceDto,
-    @Query() { sideloads, translated }: ApplicationGetQueryDto
-  ) {
+  async get(@Param() { uuid }: SingleResourceDto, @Query() { sideloads, translated }: ApplicationGetQueryDto) {
     const application = await Application.findOne({
       where: { uuid },
       include: [
@@ -174,7 +171,7 @@ export class ApplicationsController {
   @JsonApiDeletedResponse(getDtoType(ApplicationDto), { description: "Application and its submissions were deleted" })
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to delete this application" })
-  async deleteApplication(@Param() { uuid }: SingleResourceDto) {
+  async delete(@Param() { uuid }: SingleResourceDto) {
     const application = await Application.findOne({ where: { uuid }, attributes: ["id", "uuid"] });
     if (application == null) throw new NotFoundException("Application not found");
 
@@ -199,7 +196,7 @@ export class ApplicationsController {
   @JsonApiResponse(ApplicationHistoryDto)
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
-  async getApplicationHistory(@Param() { uuid }: SingleResourceDto) {
+  async getHistory(@Param() { uuid }: SingleResourceDto) {
     const application = await Application.findOne({
       where: { uuid },
       include: [

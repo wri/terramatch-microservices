@@ -26,7 +26,7 @@ export class UpdateRequestsController {
   @JsonApiResponse(UpdateRequestDto)
   @ExceptionResponse(NotFoundException, { description: "Update request or base entity not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current use is not authorized to access this resource" })
-  async updateRequestGet(@Param() { entity, uuid }: SpecificEntityDto) {
+  async get(@Param() { entity, uuid }: SpecificEntityDto) {
     const { updateRequest, model, form } = await this.findUpdateRequest(entity, uuid);
     return await this.addDto(buildJsonApi(UpdateRequestDto), form, updateRequest, entity, model);
   }
@@ -37,10 +37,7 @@ export class UpdateRequestsController {
   @ExceptionResponse(NotFoundException, { description: "Update request or base entity not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Current use is not authorized to access this resource" })
   @ExceptionResponse(BadRequestException, { description: "Payload is malformed" })
-  async updateRequestUpdate(
-    @Param() { entity, uuid }: SpecificEntityDto,
-    @Body() updatePayload: UpdateRequestUpdateBody
-  ) {
+  async update(@Param() { entity, uuid }: SpecificEntityDto, @Body() updatePayload: UpdateRequestUpdateBody) {
     if (updatePayload.data.type !== "updateRequests" || updatePayload.data.id !== `${entity}|${uuid}`) {
       throw new BadRequestException("Payload type and ID do not match the request path");
     }

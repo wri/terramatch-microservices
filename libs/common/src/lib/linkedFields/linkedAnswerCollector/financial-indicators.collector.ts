@@ -41,7 +41,10 @@ export function financialIndicatorsCollector(
         ]
       });
 
-      const medias = await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
+      const medias =
+        financialIndicators.length === 0
+          ? []
+          : await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
       const createMediaDto = (media: Media) =>
         new EmbeddedMediaDto(media, {
           url: mediaService.getUrl(media),

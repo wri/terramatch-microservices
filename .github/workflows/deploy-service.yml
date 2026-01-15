@@ -44,7 +44,6 @@ env:
   AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.service }}
   ECR_REPOSITORY: terramatch-microservices/${{ inputs.service }}-${{ inputs.env }}
   ECR_REGISTRY: 603634817705.dkr.ecr.eu-west-1.amazonaws.com
-  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
 jobs:
   deploy-service:
@@ -93,6 +92,7 @@ jobs:
             --build-arg NODE_ENV=production \
             --build-arg DEPLOY_ENV=${{ inputs.env }} \
             --build-arg SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+            --build-arg SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}" \
             --build-arg BUILD_FLAG='--prod --verbose --no-cloud' \
             -f service.Dockerfile \
             -t $SERVICE_IMAGE .

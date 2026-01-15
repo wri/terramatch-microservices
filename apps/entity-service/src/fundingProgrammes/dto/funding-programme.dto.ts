@@ -19,7 +19,7 @@ import {
   JsonApiDataDto
 } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsDate, IsEnum, IsOptional, IsString, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
+import { Transform, TransformFnParams, Type } from "class-transformer";
 
 type FundingProgrammeExtras = "name" | "description" | "location" | "stages";
 type FundingProgrammeWithoutExtras = Omit<FundingProgramme, FundingProgrammeExtras>;
@@ -33,8 +33,15 @@ export class StageDto {
   @ApiProperty({ required: false, nullable: true, type: String })
   name?: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  deadlineAt: Date | null;
+  @IsOptional()
+  @IsDate()
+  @Transform(({ value }: TransformFnParams): Date | undefined => {
+    if (value == null || value === "") return undefined;
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? value : date;
+  })
+  @ApiProperty({ nullable: true, required: false, type: Date })
+  deadlineAt?: Date | null;
 
   @IsOptional()
   @IsString()
@@ -101,18 +108,12 @@ export class FundingProgrammeDto {
   stages: StageDto[] | null;
 }
 
-export class StoreStageAttributes extends PickType(StageDto, ["name", "formUuid"]) {
+export class StoreStageAttributes extends PickType(StageDto, ["name", "formUuid", "deadlineAt"]) {
   // optional on request, but not in response
   @IsOptional()
   @IsString()
   @ApiProperty({ required: false })
   uuid?: string;
-
-  // This can't be marked nullable in the request, or the class transformer chokes on converting to a Date instance.
-  @IsOptional()
-  @IsDate()
-  @ApiProperty({ required: false, type: Date })
-  deadlineAt?: Date;
 }
 
 export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDto, [
@@ -125,6 +126,7 @@ export class StoreFundingProgrammeAttributes extends PickType(FundingProgrammeDt
   "organisationTypes"
 ]) {
   @ValidateNested()
+  @IsOptional()
   @Type(() => StoreStageAttributes)
   @ApiProperty({ required: false, isArray: true, type: () => StoreStageAttributes })
   stages?: StoreStageAttributes[];

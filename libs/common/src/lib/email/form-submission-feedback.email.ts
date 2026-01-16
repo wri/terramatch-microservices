@@ -2,12 +2,12 @@
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { TMLogger } from "../util/tm-logger";
-import { FormSubmission, Notification, Stage } from "@terramatch-microservices/database/entities";
+import { FormSubmission, Notification } from "@terramatch-microservices/database/entities";
 import { Dictionary, escape } from "lodash";
-import { Op } from "sequelize";
 
 export type FormSubmissionFeedbackEmailData = {
   submissionId: number;
+  projectUuid?: string;
 };
 
 const escapeFeedback = (feedback: string | null) => escape(feedback ?? "").replaceAll("\n", "<br />\n");
@@ -83,15 +83,13 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
 
       case "approved": {
         await this.createNotification(userId, "Application Updated", "Your application has been approved");
-        const isFinalStage =
-          stage?.fundingProgrammeId == null
-            ? true
-            : (await Stage.count({
-                where: { fundingProgrammeId: stage.fundingProgrammeId, order: { [Op.gt]: stage.order } }
-              })) === 0;
+        const isFinalStage = stage == null || (await stage.isFinalStage());
         const prefix = isFinalStage ? "final-stage-approved" : "approved";
         withPrefix(prefix, feedback, i18nKeys, i18nReplacements);
         i18nKeys.cta = `form-submission-${prefix}.cta`;
+        if (this.data.projectUuid != null) {
+          additionalValues.link = `/project/${this.data.projectUuid}`;
+        }
         break;
       }
 

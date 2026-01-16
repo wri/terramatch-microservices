@@ -25,6 +25,7 @@ import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
+import { FrameworkKey } from "../constants";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
@@ -288,7 +289,7 @@ export class User extends Model<User> {
           ...permissions
             .filter(permission => permission.startsWith(prefix))
             .map(permission => permission.substring(prefix.length))
-        ];
+        ] as FrameworkKey[];
       } else {
         // Other users have access to the frameworks embodied by their set of projects
         frameworkSlugs = [
@@ -325,7 +326,7 @@ export class User extends Model<User> {
     if (org != null) orgUuids.push(org.uuid);
 
     let confirmed = this.organisationsConfirmed;
-    if (confirmed.length === 0 || confirmed[0].uuid == null) {
+    if (confirmed == null || confirmed.length === 0 || confirmed[0].uuid == null) {
       confirmed = (await this.$get("organisationsConfirmed", {
         attributes: ["uuid"]
       })) as Array<Organisation & { OrganisationUser: OrganisationUser }>;

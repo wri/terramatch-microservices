@@ -10,11 +10,13 @@ import {
   FormQuestionFactory,
   FormSectionFactory,
   FormSubmissionFactory,
+  FundingProgrammeFactory,
   NurseryReportFactory,
   ProjectFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
   SiteReportFactory,
+  StageFactory,
   TaskFactory,
   UpdateRequestFactory,
   UserFactory
@@ -398,6 +400,50 @@ describe("EntityStatusUpdate EventProcessor", () => {
         FormSubmissionFeedbackEmail.NAME,
         expect.objectContaining({ submissionId: submission.id })
       );
+    });
+
+    it("should add a job to the entities queue on approval when stage is null", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const submission = await FormSubmissionFactory.create({ status: "approved" });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      expect(eventService.entitiesQueue.add).toHaveBeenCalledWith("createProjectForApplication", {
+        applicationId: submission.applicationId
+      });
+    });
+
+    it("should add a job to the entities queue on approval when stage is final in programme", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const fp = await FundingProgrammeFactory.create();
+      const stages = await Promise.all([
+        StageFactory.create({ fundingProgrammeId: fp.uuid, name: "Stage 1", order: 1 }),
+        StageFactory.create({ fundingProgrammeId: fp.uuid, name: "Stage 2", order: 2 })
+      ]);
+      const submission = await FormSubmissionFactory.create({ status: "approved", stageUuid: stages[1].uuid });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      expect(eventService.entitiesQueue.add).toHaveBeenCalledWith("createProjectForApplication", {
+        applicationId: submission.applicationId
+      });
+    });
+
+    it("should not add a job to the entities queue on approval when stage is not final in programme", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const fp = await FundingProgrammeFactory.create();
+      const stages = await Promise.all([
+        StageFactory.create({ fundingProgrammeId: fp.uuid, name: "Stage 1", order: 1 }),
+        StageFactory.create({ fundingProgrammeId: fp.uuid, name: "Stage 2", order: 2 })
+      ]);
+      const submission = await FormSubmissionFactory.create({ status: "approved", stageUuid: stages[0].uuid });
+
+      await new EntityStatusUpdate(eventService, submission).handle();
+      expect(eventService.entitiesQueue.add).not.toHaveBeenCalled();
     });
   });
 });

@@ -63,7 +63,7 @@ describe("FinancialIndicatorCollector", () => {
       const org = await OrganisationFactory.create({ finStartMonth: 12, currency: "EUR" });
       const report = await FinancialReportFactory.org(org).create({ finStartMonth: 11, currency: "USD" });
       await FinancialReportFactory.org(org).create();
-      const indicators = await FinancialIndicatorFactory.report(report).createMany(3);
+      const indicators = orderBy(await FinancialIndicatorFactory.report(report).createMany(3), "id");
       await Promise.all(indicators.map(indicator => indicator.reload()));
       const media = await Promise.all(
         indicators.map(indicator =>
@@ -73,7 +73,7 @@ describe("FinancialIndicatorCollector", () => {
       await harness.expectAnswers(
         { financialReports: report },
         {
-          one: orderBy(indicators, "id").map(
+          one: indicators.map(
             (indicator, index) =>
               new EmbeddedFinancialIndicatorDto(indicator, {
                 startMonth: report.finStartMonth,

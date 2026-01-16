@@ -5,6 +5,7 @@ import {
   DATE,
   InferAttributes,
   InferCreationAttributes,
+  Op,
   STRING,
   TINYINT,
   UUID,
@@ -43,4 +44,16 @@ export class Stage extends Model<InferAttributes<Stage>, InferCreationAttributes
   @AllowNull
   @Column(DATE)
   deadlineAt: Date | null;
+
+  /**
+   * Resolves to true if this stage is not in a funding programme, or if it's the last stage in its funding programme.
+   */
+  async isFinalStage() {
+    return (
+      this.fundingProgramme == null ||
+      (await Stage.count({
+        where: { fundingProgrammeId: this.fundingProgrammeId, order: { [Op.gt]: this.order } }
+      })) === 0
+    );
+  }
 }

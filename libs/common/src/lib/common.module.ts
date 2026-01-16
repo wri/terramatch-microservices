@@ -19,7 +19,7 @@ import { ReportGenerationService } from "./tasks/report-generation-service";
 import { AnalyticsEventService } from "./analytics/analytics-events.service";
 import { AnalyticsProcessor } from "./analytics/analytics.processor";
 
-export const QUEUES = ["email", "analytics"];
+export const QUEUES = ["email", "analytics", "entities"];
 
 @Module({
   imports: [

@@ -18,6 +18,7 @@ export class EventService {
   constructor(
     @InjectQueue("email") readonly emailQueue: Queue,
     @InjectQueue("analytics") readonly analyticsQueue: Queue,
+    @InjectQueue("entities") readonly entitiesQueue: Queue,
     readonly mediaService: MediaService
   ) {}
 

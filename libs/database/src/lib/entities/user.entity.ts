@@ -325,7 +325,7 @@ export class User extends Model<User> {
     if (org != null) orgUuids.push(org.uuid);
 
     let confirmed = this.organisationsConfirmed;
-    if (confirmed.length === 0 || confirmed[0].uuid == null) {
+    if (confirmed == null || confirmed.length === 0 || confirmed[0].uuid == null) {
       confirmed = (await this.$get("organisationsConfirmed", {
         attributes: ["uuid"]
       })) as Array<Organisation & { OrganisationUser: OrganisationUser }>;

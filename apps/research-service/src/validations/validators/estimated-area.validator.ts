@@ -92,7 +92,7 @@ export class EstimatedAreaValidator implements PolygonValidator {
         {
           model: Site,
           as: "site",
-          attributes: ["hectaresToRestoreGoal", "projectId"]
+          attributes: ["hectaresToRestoreGoal", "projectId", "uuid"]
         }
       ]
     });
@@ -106,6 +106,15 @@ export class EstimatedAreaValidator implements PolygonValidator {
     projectedSumAreaSite?: number | null;
     projectedPercentageSite?: number | null;
   }> {
+    if (sitePolygon.siteUuid == null || sitePolygon.siteUuid === "") {
+      return {
+        valid: false,
+        sumAreaSiteApproved: null,
+        percentageSiteApproved: null,
+        totalAreaSite: null
+      };
+    }
+
     const site = await sitePolygon.loadSite();
     if (site == null || site.hectaresToRestoreGoal == null || site.hectaresToRestoreGoal <= 0) {
       return {
@@ -209,7 +218,8 @@ export class EstimatedAreaValidator implements PolygonValidator {
 
     const whereClause: WhereOptions<SitePolygon> = {
       siteUuid,
-      isActive: true
+      isActive: true,
+      calcArea: { [Op.gt]: 0 }
     };
 
     if (status != null) {
@@ -219,13 +229,15 @@ export class EstimatedAreaValidator implements PolygonValidator {
     const result = await SitePolygon.sum("calcArea", {
       where: whereClause
     });
+
     return result ?? 0;
   }
 
   private async calculateProjectAreaSum(projectId: number, status?: string): Promise<number> {
     const whereClause: WhereOptions<SitePolygon> = {
       siteUuid: { [Op.in]: Site.uuidsSubquery(projectId) },
-      isActive: true
+      isActive: true,
+      calcArea: { [Op.gt]: 0 }
     };
 
     if (status != null) {

@@ -25,6 +25,7 @@ import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
+import { FrameworkKey } from "../constants";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
@@ -288,7 +289,7 @@ export class User extends Model<User> {
           ...permissions
             .filter(permission => permission.startsWith(prefix))
             .map(permission => permission.substring(prefix.length))
-        ];
+        ] as FrameworkKey[];
       } else {
         // Other users have access to the frameworks embodied by their set of projects
         frameworkSlugs = [

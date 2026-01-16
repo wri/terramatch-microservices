@@ -164,7 +164,7 @@ describe("FilesController", () => {
       const mockedMedia2 = { uuid: "media-uuid-2" } as Media;
       mediaService.getMedia.mockResolvedValue(mockedMedia);
       policyService.authorize.mockResolvedValue();
-      (mediaService as any).updateMedia.mockResolvedValue(mockedMedia);
+      mediaService.updateMedia.mockResolvedValue(mockedMedia);
       mediaService.getProjectForModel.mockResolvedValue({ id: 1 } as Project);
       mediaService.unsetMediaCoverForProject.mockResolvedValue([mockedMedia2]);
       await controller.mediaUpdate(

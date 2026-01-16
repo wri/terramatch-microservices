@@ -208,7 +208,10 @@ export class EntityStatusUpdate extends EventProcessor {
     }
 
     if (submission.status === "approved") {
-      const stage = await submission.$get("stage", { attributes: ["order", "fundingProgrammeId"] });
+      const stage =
+        submission.stageUuid == null
+          ? null
+          : await submission.$get("stage", { attributes: ["order", "fundingProgrammeId"] });
       if (stage == null || (await stage.isFinalStage())) {
         // This will send the submission status email when complete.
         const { applicationId } = submission;

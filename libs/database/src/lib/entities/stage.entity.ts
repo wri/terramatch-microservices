@@ -50,7 +50,7 @@ export class Stage extends Model<InferAttributes<Stage>, InferCreationAttributes
    */
   async isFinalStage() {
     return (
-      this.fundingProgramme == null ||
+      this.fundingProgrammeId == null ||
       (await Stage.count({
         where: { fundingProgrammeId: this.fundingProgrammeId, order: { [Op.gt]: this.order } }
       })) === 0

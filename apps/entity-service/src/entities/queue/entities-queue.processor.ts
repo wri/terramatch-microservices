@@ -23,11 +23,11 @@ export class EntitiesQueueProcessor extends WorkerHost {
         throw new InternalServerErrorException(`Invalid applicationId: ${JSON.stringify(data)}`);
       }
       await this.createProjectForApplication(data.applicationId);
+    } else {
+      throw new NotImplementedException(
+        `Received unknown job ${name} with data ${JSON.stringify(data)} in entities queue.`
+      );
     }
-
-    throw new NotImplementedException(
-      `Received unknown job ${name} with data ${JSON.stringify(data)} in entities queue.`
-    );
   }
 
   private async createProjectForApplication(applicationId: number) {

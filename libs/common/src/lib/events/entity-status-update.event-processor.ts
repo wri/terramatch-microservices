@@ -192,6 +192,8 @@ export class EntityStatusUpdate extends EventProcessor {
   private async handleFormSubmission(submission: FormSubmission) {
     await this.createAuditStatus();
 
+    if (submission.status === "started") return;
+
     if (submission.status === "awaiting-approval") {
       if (submission.applicationId != null) {
         await Application.update({ updatedBy: authenticatedUserId() }, { where: { id: submission.applicationId } });
@@ -202,9 +204,23 @@ export class EntityStatusUpdate extends EventProcessor {
       }
 
       await this.sendApplicationSubmittedEmail(submission);
-    } else if (submission.status !== "started") {
-      await this.sendSubmissionStatusEmail(submission);
+      return;
     }
+
+    if (submission.status === "approved") {
+      const stage =
+        submission.stageUuid == null
+          ? null
+          : await submission.$get("stage", { attributes: ["order", "fundingProgrammeId"] });
+      if (stage == null || (await stage.isFinalStage())) {
+        // This will send the submission status email when complete.
+        const { applicationId } = submission;
+        await this.eventService.entitiesQueue.add("createProjectForApplication", { applicationId });
+        return;
+      }
+    }
+
+    await this.sendSubmissionStatusEmail(submission);
   }
 
   private async sendStatusUpdateEmail(type: EntityType, model: StatusUpdateModel = this.model) {

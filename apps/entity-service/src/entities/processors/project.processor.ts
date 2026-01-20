@@ -559,7 +559,14 @@ export class ProjectProcessor extends EntityProcessor<
       await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
     }
 
-    await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
+    if (application != null) {
+      const userIds = (await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] })).map(
+        ({ id }) => id
+      );
+      await ProjectUser.bulkCreate(userIds.map(userId => ({ projectId: project.id, userId })));
+    } else {
+      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
+    }
 
     // Load the full project with necessary associations.
     return (await this.findOne(project.uuid)) as Project;

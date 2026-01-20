@@ -668,7 +668,7 @@ describe("ProjectProcessor", () => {
       );
     });
 
-    it("creates a test project is the org is a test org", async () => {
+    it("creates a test project if the org is a test org", async () => {
       const org = await OrganisationFactory.create({ isTest: true });
       const user = await UserFactory.create({ organisationId: org.id });
       (policyService as unknown as Dictionary<unknown>).userId = user.id;
@@ -696,6 +696,20 @@ describe("ProjectProcessor", () => {
       const project = await processor.create({ formUuid: form.uuid });
       const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
       expect(projectUser).toBeDefined();
+    });
+
+    it("adds all org users when creating with an application", async () => {
+      const org = await OrganisationFactory.create();
+      const userIds = (await UserFactory.createMany(3, { organisationId: org.id })).map(({ id }) => id);
+      const form = await EntityFormFactory.project().create();
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      const pitch = await ProjectPitchFactory.create();
+      await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
+      const project = await processor.create({ formUuid: form.uuid, applicationUuid: application.uuid });
+      const projectUserIds = (await ProjectUser.findAll({ where: { projectId: project.id } })).map(
+        ({ userId }) => userId
+      );
+      expect(userIds.sort()).toEqual(projectUserIds.sort());
     });
 
     it("throws if the application doesn't have a pitch", async () => {

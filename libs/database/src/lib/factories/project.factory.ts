@@ -15,7 +15,6 @@ export const ProjectFactory = FactoryGirl.define(Project, async () => {
     name: faker.animal.petName(),
     frameworkKey: faker.helpers.arrayElement(FRAMEWORK_KEYS),
     updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES),
-    plantingStatus: faker.helpers.arrayElement([null, ...PLANTING_STATUSES]),
     applicationId: ApplicationFactory.associate("id"),
     organisationId: OrganisationFactory.associate("id"),
     continent: faker.helpers.arrayElement(CONTINENTS),

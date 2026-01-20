@@ -149,58 +149,6 @@ describe("ProjectProcessor", () => {
       await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
     });
 
-    it("filters by plantingStatus using latest approved report", async () => {
-      // Project with approved report having "in-progress" status
-      const project1 = await ProjectFactory.create({ plantingStatus: "not-started" });
-      await ProjectReportFactory.create({
-        projectId: project1.id,
-        status: "approved",
-        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
-        plantingStatus: "in-progress"
-      });
-
-      // Project with approved report having "completed" status
-      const project2 = await ProjectFactory.create({ plantingStatus: "not-started" });
-      await ProjectReportFactory.create({
-        projectId: project2.id,
-        status: "approved",
-        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
-        plantingStatus: "completed"
-      });
-
-      // Project with no approved reports, should use project's own plantingStatus
-      const project3 = await ProjectFactory.create({ plantingStatus: "in-progress" });
-      await ProjectReportFactory.create({
-        projectId: project3.id,
-        status: "started",
-        plantingStatus: "completed"
-      });
-
-      // Project with multiple approved reports, should use most recent by dueAt
-      const project4 = await ProjectFactory.create({ plantingStatus: "not-started" });
-      await ProjectReportFactory.create({
-        projectId: project4.id,
-        status: "approved",
-        dueAt: DateTime.now().minus({ months: 3 }).toJSDate(),
-        plantingStatus: "completed"
-      });
-      await ProjectReportFactory.create({
-        projectId: project4.id,
-        status: "approved",
-        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
-        plantingStatus: "in-progress" // Most recent approved
-      });
-
-      // Filter by "in-progress" should return project1, project3, and project4
-      await expectProjects([project1, project3, project4], { plantingStatus: "in-progress" });
-
-      // Filter by "completed" should return only project2
-      await expectProjects([project2], { plantingStatus: "completed" });
-
-      // Filter by "not-started" should return nothing (no project has this as their effective status)
-      await expectProjects([], { plantingStatus: "not-started" });
-    });
-
     it("filters by landscape, cohort and organisationType", async () => {
       const orgForProfit = await OrganisationFactory.create({ type: "for-profit-organisation" });
       const orgNonProfit = await OrganisationFactory.create({ type: "non-profit-organisation" });
@@ -406,9 +354,8 @@ describe("ProjectProcessor", () => {
 
     describe("plantingStatus", () => {
       it("uses plantingStatus from the most recent approved project report (by dueAt)", async () => {
-        const { id: projectId, uuid } = await ProjectFactory.create({ plantingStatus: "not-started" });
+        const { id: projectId, uuid } = await ProjectFactory.create();
 
-        // Create approved reports with different due dates and statuses
         await ProjectReportFactory.create({
           projectId,
           status: "approved",
@@ -419,7 +366,7 @@ describe("ProjectProcessor", () => {
           projectId,
           status: "approved",
           dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
-          plantingStatus: "in-progress" // This should be selected (most recent by dueAt)
+          plantingStatus: "in-progress"
         });
         await ProjectReportFactory.create({
           projectId,
@@ -427,7 +374,6 @@ describe("ProjectProcessor", () => {
           dueAt: DateTime.now().minus({ months: 2 }).toJSDate(),
           plantingStatus: "completed"
         });
-        // Non-approved report should be ignored
         await ProjectReportFactory.create({
           projectId,
           status: "started",
@@ -445,28 +391,8 @@ describe("ProjectProcessor", () => {
         expect(lightDto.plantingStatus).toBe("in-progress");
       });
 
-      it("falls back to project plantingStatus when no approved reports exist", async () => {
-        const { uuid } = await ProjectFactory.create({ plantingStatus: "completed" });
-
-        // Create only non-approved reports
-        const project = await processor.findOne(uuid);
-        await ProjectReportFactory.create({
-          projectId: project!.id,
-          status: "started",
-          plantingStatus: "in-progress"
-        });
-
-        const { dto: fullDto } = await processor.getFullDto(project!);
-        expect(fullDto.plantingStatus).toBe("completed");
-
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
-        const { models } = await processor.findMany({});
-        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
-        expect(lightDto.plantingStatus).toBe("completed");
-      });
-
       it("returns null when no approved reports and project has no plantingStatus", async () => {
-        const { uuid } = await ProjectFactory.create({ plantingStatus: null });
+        const { uuid } = await ProjectFactory.create();
 
         const project = await processor.findOne(uuid);
         const { dto: fullDto } = await processor.getFullDto(project!);

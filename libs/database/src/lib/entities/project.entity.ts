@@ -433,10 +433,6 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(STRING)
   shortName: string | null;
 
-  @AllowNull
-  @Column(STRING)
-  plantingStatus: PlantingStatus | null;
-
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

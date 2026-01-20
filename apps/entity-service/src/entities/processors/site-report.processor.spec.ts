@@ -179,7 +179,7 @@ describe("SiteReportProcessor", () => {
       await expect(processor.findMany({ siteUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
-    it("should filter site reports by taskUuid", async () => {
+    it("should filter site reports by taskId", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
       const task1 = await TaskFactory.create({ projectId: project.id });
@@ -193,11 +193,7 @@ describe("SiteReportProcessor", () => {
         report.site = await report.$get("site");
       }
 
-      await expectSiteReports(task1Reports, { taskUuid: task1.uuid }, { permissions: ["manage-own"] });
-    });
-
-    it("should throw an error if the task uuid is not found", async () => {
-      await expect(processor.findMany({ taskUuid: "non-existent-uuid" })).rejects.toThrow(BadRequestException);
+      await expectSiteReports(task1Reports, { taskId: task1.id }, { permissions: ["manage-own"] });
     });
 
     it("should sort site reports by project name", async () => {

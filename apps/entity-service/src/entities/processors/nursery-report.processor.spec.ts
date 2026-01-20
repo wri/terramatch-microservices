@@ -186,7 +186,7 @@ describe("NurseryReportProcessor", () => {
       await expect(processor.findMany({ nurseryUuid: "123" })).rejects.toThrow(BadRequestException);
     });
 
-    it("should filter nursery reports by taskUuid", async () => {
+    it("should filter nursery reports by taskId", async () => {
       const project = await ProjectFactory.create();
       const nursery = await NurseryFactory.create({ projectId: project.id });
       const task1 = await TaskFactory.create({ projectId: project.id });
@@ -200,11 +200,7 @@ describe("NurseryReportProcessor", () => {
         report.nursery = await report.$get("nursery");
       }
 
-      await expectNurseryReports(task1Reports, { taskUuid: task1.uuid }, { permissions: ["manage-own"] });
-    });
-
-    it("should throw an error if the task uuid is not found", async () => {
-      await expect(processor.findMany({ taskUuid: "non-existent-uuid" })).rejects.toThrow(BadRequestException);
+      await expectNurseryReports(task1Reports, { taskId: task1.id }, { permissions: ["manage-own"] });
     });
 
     it("should sort nursery reports by project name", async () => {

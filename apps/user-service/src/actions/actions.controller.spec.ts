@@ -167,7 +167,8 @@ describe("ActionsController", () => {
 
       expect(result.meta.indices?.[0].total).toBe(15);
       expect(result.meta.indices?.[0].pageNumber).toBe(2);
-      expect(result.meta.indices?.[0].requestPath).toContain("page%5Bnumber%5D=2");
+      expect(result.meta.indices?.[0].requestPath).toContain("page%5Bsize%5D=10");
+      expect(result.meta.indices?.[0].requestPath).not.toContain("page%5Bnumber%5D");
     });
 
     it("should include target in action attributes", async () => {

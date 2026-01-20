@@ -79,6 +79,7 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
       case "rejected":
         await this.createNotification(userId, "Application Rejected", "Your application has been rejected");
         withPrefix("rejected", feedback, i18nKeys, i18nReplacements);
+        delete additionalValues.link;
         break;
 
       case "approved": {

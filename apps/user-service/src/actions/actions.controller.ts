@@ -26,10 +26,8 @@ export class ActionsController {
       throw new Error("User ID not found in request context");
     }
 
-    // Get actions from service
     const { data, paginationTotal, pageNumber } = await this.actionsService.getMyActions(userId, query);
 
-    // Build JSON:API document
     const document = buildJsonApi(ActionDto, { pagination: "number" });
 
     for (const { action, target, targetableType } of data) {

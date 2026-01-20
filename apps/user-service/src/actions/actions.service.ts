@@ -188,7 +188,7 @@ export class ActionsService {
     }
 
     const actionsByType = groupBy(actions, "targetableType");
-    const targetablesMap = new Map<number, { type: string; model: EntityModel }>();
+    const targetablesMap = new Map<number, EntityModel>();
 
     await Promise.all(
       Object.entries(actionsByType).map(async ([laravelType, typeActions]) => {
@@ -248,27 +248,22 @@ export class ActionsService {
         }
 
         for (const model of models) {
-          targetablesMap.set(model.id, { type: laravelType, model });
+          targetablesMap.set(model.id, model);
         }
       })
     );
 
     return actions.map(action => {
-      const targetable = targetablesMap.get(action.targetableId);
-      const target = this.createTargetForAction(action, targetable);
+      const targetModel = targetablesMap.get(action.targetableId);
+      const target = this.createTargetForAction(action, targetModel);
       const targetableType = this.laravelTypeToEntityType(action.targetableType);
       return { action, target, targetableType };
     });
   }
 
-  private createTargetForAction(
-    action: Action,
-    targetable: { type: string; model: EntityModel } | undefined
-  ): ActionTarget {
-    // Return the model as a plain object (Sequelize models are objects)
-    // This is the simplest approach that follows the ActionTarget type (object | EntityType)
-    if (targetable != null) {
-      return targetable.model.toJSON() as ActionTarget;
+  private createTargetForAction(action: Action, targetModel?: EntityModel): ActionTarget {
+    if (targetModel != null) {
+      return targetModel as ActionTarget;
     }
 
     const entityType = this.laravelTypeToEntityType(action.targetableType);

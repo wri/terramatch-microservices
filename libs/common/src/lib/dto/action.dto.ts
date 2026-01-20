@@ -4,7 +4,6 @@ import { populateDto } from "./json-api-attributes";
 import { Action } from "@terramatch-microservices/database/entities";
 import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
 
-// Type for target - can be a LightDto object or EntityType string
 export type ActionTarget = object | EntityType;
 
 @JsonApiDto({ type: "actions" })
@@ -13,7 +12,7 @@ export class ActionDto {
     populateDto<ActionDto, Action>(this, action, {
       target: target ?? (action.targetableType as EntityType)
     });
-    // Override targetableType if provided (since it exists in Action, we can't use AdditionalProps)
+
     if (targetableType != null) {
       this.targetableType = targetableType;
     }

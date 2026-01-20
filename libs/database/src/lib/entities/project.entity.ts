@@ -35,13 +35,7 @@ import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants";
 import { Framework } from "./framework.entity";
-import {
-  EntityStatus,
-  EntityStatusStates,
-  PlantingStatus,
-  statusUpdateSequelizeHook,
-  UpdateRequestStatus
-} from "../constants/status";
+import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";

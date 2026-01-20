@@ -31,7 +31,7 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     ResetPasswordController,
     VerificationUserController,
     OrganisationsController,
-    ActionsController, // Must be before UsersController to avoid route conflict with users/v3/:uuid
+    ActionsController,
     UsersController
   ],
   providers: [

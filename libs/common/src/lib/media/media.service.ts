@@ -30,6 +30,8 @@ import { EntityModel, getProjectId } from "@terramatch-microservices/database/co
 import { TranslatableException } from "../exceptions/translatable.exception";
 import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
+import { Readable } from "stream";
+import path from "path";
 
 export type MediaAttributes = {
   isPublic: boolean;
@@ -387,5 +389,45 @@ export class MediaService {
     return Media.findAll({
       where: { uuid: { [Op.in]: uuids } }
     });
+  }
+
+  public async fetchDataFromUrlAsMulterFile(url: string): Promise<Express.Multer.File> {
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (error) {
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${error.message}`);
+    }
+
+    if (!res.ok) {
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${res.statusText}`);
+    }
+
+    const filename = path.basename(new URL(url).pathname);
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const allowedMimeTypes = ["image/png", "image/jpg", "image/jpeg", "image/heif", "image/heic"];
+
+    if (!allowedMimeTypes.includes(res.headers.get("content-type") ?? "")) {
+      throw new BadRequestException("Invalid file type");
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    const contentLength =
+      res.headers.get("content-length") == null ? buffer.length : Number(res.headers.get("content-length"));
+
+    return {
+      fieldname: "uploadFile",
+      originalname: url.split("/").pop() ?? "downloaded-file",
+      encoding: "7bit",
+      mimetype: contentType,
+      size: contentLength,
+      buffer,
+      stream: Readable.from(buffer),
+      destination: "",
+      filename,
+      path: ""
+    };
   }
 }

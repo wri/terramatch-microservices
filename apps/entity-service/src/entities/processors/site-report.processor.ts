@@ -5,6 +5,7 @@ import {
   Seeding,
   Site,
   SiteReport,
+  Task,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
@@ -119,7 +120,13 @@ export class SiteReportProcessor extends ReportProcessor<
       }
     }
 
-    if (query.taskId != null) {
+    if (query.taskUuid != null) {
+      const task = await Task.findOne({ where: { uuid: query.taskUuid }, attributes: ["id"] });
+      if (task == null) {
+        throw new BadRequestException(`Task with uuid ${query.taskUuid} not found`);
+      }
+      builder.where({ taskId: task.id });
+    } else if (query.taskId != null) {
       builder.where({ taskId: query.taskId });
     }
 

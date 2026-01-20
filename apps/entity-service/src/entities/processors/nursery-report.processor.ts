@@ -1,4 +1,11 @@
-import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
+import {
+  Media,
+  Nursery,
+  NurseryReport,
+  ProjectReport,
+  ProjectUser,
+  Task
+} from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op } from "sequelize";
@@ -107,7 +114,13 @@ export class NurseryReportProcessor extends ReportProcessor<
       }
     });
 
-    if (query.taskId != null) {
+    if (query.taskUuid != null) {
+      const task = await Task.findOne({ where: { uuid: query.taskUuid }, attributes: ["id"] });
+      if (task == null) {
+        throw new BadRequestException(`Task with uuid ${query.taskUuid} not found`);
+      }
+      builder.where({ taskId: task.id });
+    } else if (query.taskId != null) {
       builder.where({ taskId: query.taskId });
     }
 

@@ -13,6 +13,7 @@ import {
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
+  TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -183,6 +184,27 @@ describe("NurseryReportProcessor", () => {
 
     it("should throw an error if the nursery uuid is not found", async () => {
       await expect(processor.findMany({ nurseryUuid: "123" })).rejects.toThrow(BadRequestException);
+    });
+
+    it("should filter nursery reports by taskUuid", async () => {
+      const project = await ProjectFactory.create();
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+      const task1 = await TaskFactory.create({ projectId: project.id });
+      const task2 = await TaskFactory.create({ projectId: project.id });
+      await ProjectUserFactory.create({ userId, projectId: project.id });
+
+      const task1Reports = await NurseryReportFactory.createMany(2, { nurseryId: nursery.id, taskId: task1.id });
+      await NurseryReportFactory.createMany(3, { nurseryId: nursery.id, taskId: task2.id });
+
+      for (const report of task1Reports) {
+        report.nursery = await report.$get("nursery");
+      }
+
+      await expectNurseryReports(task1Reports, { taskUuid: task1.uuid }, { permissions: ["manage-own"] });
+    });
+
+    it("should throw an error if the task uuid is not found", async () => {
+      await expect(processor.findMany({ taskUuid: "non-existent-uuid" })).rejects.toThrow(BadRequestException);
     });
 
     it("should sort nursery reports by project name", async () => {

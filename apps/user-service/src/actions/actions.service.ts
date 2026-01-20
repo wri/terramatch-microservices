@@ -12,24 +12,12 @@ import {
 import { Op } from "sequelize";
 import { groupBy } from "lodash";
 import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
-import { ProjectLightDto } from "../../../entity-service/src/entities/dto/project.dto";
-import { SiteLightDto } from "../../../entity-service/src/entities/dto/site.dto";
-import { NurseryLightDto } from "../../../entity-service/src/entities/dto/nursery.dto";
-import { ProjectReportLightDto } from "../../../entity-service/src/entities/dto/project-report.dto";
-import { SiteReportLightDto } from "../../../entity-service/src/entities/dto/site-report.dto";
-import { NurseryReportLightDto } from "../../../entity-service/src/entities/dto/nursery-report.dto";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
+import { ActionTarget } from "@terramatch-microservices/common/dto/action.dto";
 
-type ActionWithTarget = {
+export type ActionWithTarget = {
   action: Action;
-  target:
-    | ProjectLightDto
-    | SiteLightDto
-    | NurseryLightDto
-    | ProjectReportLightDto
-    | SiteReportLightDto
-    | NurseryReportLightDto
-    | EntityType;
+  target: ActionTarget;
   targetableType: EntityType | null;
 };
 
@@ -276,19 +264,11 @@ export class ActionsService {
   private createTargetForAction(
     action: Action,
     targetable: { type: string; model: EntityModel } | undefined
-  ):
-    | ProjectLightDto
-    | SiteLightDto
-    | NurseryLightDto
-    | ProjectReportLightDto
-    | SiteReportLightDto
-    | NurseryReportLightDto
-    | EntityType {
+  ): ActionTarget {
+    // Return the model as a plain object (Sequelize models are objects)
+    // This is the simplest approach that follows the ActionTarget type (object | EntityType)
     if (targetable != null) {
-      const targetDto = this.createTargetDto(targetable.model);
-      if (targetDto != null) {
-        return targetDto;
-      }
+      return targetable.model.toJSON() as ActionTarget;
     }
 
     const entityType = this.laravelTypeToEntityType(action.targetableType);
@@ -297,46 +277,6 @@ export class ActionsService {
     }
 
     return "projects";
-  }
-
-  private createTargetDto(
-    targetable: EntityModel
-  ):
-    | ProjectLightDto
-    | SiteLightDto
-    | NurseryLightDto
-    | ProjectReportLightDto
-    | SiteReportLightDto
-    | NurseryReportLightDto
-    | null {
-    if (targetable instanceof Project) {
-      return new ProjectLightDto(targetable, {
-        totalHectaresRestoredSum: 0,
-        treesPlantedCount: 0,
-        plantingStatus: null
-      });
-    } else if (targetable instanceof ProjectReport) {
-      return new ProjectReportLightDto(targetable);
-    } else if (targetable instanceof Site) {
-      return new SiteLightDto(targetable, {
-        totalHectaresRestoredSum: 0,
-        treesPlantedCount: 0,
-        plantingStatus: null
-      });
-    } else if (targetable instanceof SiteReport) {
-      return new SiteReportLightDto(targetable, {
-        reportTitle: null
-      });
-    } else if (targetable instanceof Nursery) {
-      return new NurseryLightDto(targetable, {
-        seedlingsGrownCount: 0
-      });
-    } else if (targetable instanceof NurseryReport) {
-      return new NurseryReportLightDto(targetable, {
-        reportTitle: null
-      });
-    }
-    return null;
   }
 
   private laravelTypeToEntityType(laravelType: string): EntityType | null {

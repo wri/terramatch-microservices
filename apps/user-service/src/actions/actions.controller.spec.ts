@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ActionsController } from "./actions.controller";
-import { ActionsService } from "./actions.service";
+import { ActionsService, type ActionWithTarget } from "./actions.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { Action } from "@terramatch-microservices/database/entities";
@@ -13,7 +13,6 @@ import {
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
-import { ProjectReportLightDto } from "../../../entity-service/src/entities/dto/project-report.dto";
 
 describe("ActionsController", () => {
   let controller: ActionsController;
@@ -52,9 +51,9 @@ describe("ActionsController", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const mockData = {
+      const mockData: ActionWithTarget = {
         action,
-        target: { uuid: projectReport.uuid, status: "due" } as unknown as ProjectReportLightDto,
+        target: { uuid: projectReport.uuid, status: "due" } as unknown as ActionWithTarget["target"],
         targetableType: "projectReports" as const
       };
 
@@ -98,10 +97,8 @@ describe("ActionsController", () => {
     });
 
     it("should throw error when user ID not found", async () => {
-      // Mock authenticatedUserId to return null
-      jest
-        .spyOn(require("@terramatch-microservices/common/guards/auth.guard"), "authenticatedUserId")
-        .mockReturnValue(null);
+      // Mock authenticatedUserId to return undefined
+      mockUserId(undefined);
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
 
@@ -127,9 +124,9 @@ describe("ActionsController", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const mockData = {
+      const mockData: ActionWithTarget = {
         action,
-        target: { uuid: projectReport.uuid, status: "due" } as unknown as ProjectReportLightDto,
+        target: { uuid: projectReport.uuid, status: "due" } as unknown as ActionWithTarget["target"],
         targetableType: "projectReports" as const
       };
 
@@ -197,11 +194,11 @@ describe("ActionsController", () => {
         status: "due",
         frameworkKey: "ppc",
         lightResource: true
-      } as unknown as ProjectReportLightDto;
+      } as unknown;
 
-      const mockData = {
+      const mockData: ActionWithTarget = {
         action,
-        target: mockTarget,
+        target: mockTarget as unknown as ActionWithTarget["target"],
         targetableType: "projectReports" as const
       };
 
@@ -219,7 +216,7 @@ describe("ActionsController", () => {
       if (Array.isArray(result.data) && result.data.length > 0) {
         const resource = result.data[0] as Resource;
         expect(resource.attributes.target).toBeDefined();
-        expect(resource.attributes.target).toMatchObject(mockTarget);
+        expect(resource.attributes.target).toMatchObject(mockTarget as unknown as object);
       }
     });
   });

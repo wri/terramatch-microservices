@@ -1,5 +1,4 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { getSchemaPath } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
 import { populateDto } from "./json-api-attributes";
 import { Action } from "@terramatch-microservices/database/entities";

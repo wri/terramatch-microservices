@@ -1,15 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ActionsService } from "./actions.service";
-import {
-  Action,
-  Project,
-  ProjectReport,
-  Site,
-  SiteReport,
-  Nursery,
-  NurseryReport,
-  User
-} from "@terramatch-microservices/database/entities";
+import { Action, ProjectReport, Site, SiteReport, Nursery } from "@terramatch-microservices/database/entities";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import {
   ProjectFactory,
@@ -18,7 +9,6 @@ import {
   SiteFactory,
   SiteReportFactory,
   NurseryFactory,
-  NurseryReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";

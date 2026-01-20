@@ -352,6 +352,59 @@ describe("ProjectProcessor", () => {
       });
     });
 
+    describe("plantingStatus", () => {
+      it("uses plantingStatus from the most recent approved project report (by dueAt)", async () => {
+        const { id: projectId, uuid } = await ProjectFactory.create();
+
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 3 }).toJSDate(),
+          plantingStatus: "not-started"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+          plantingStatus: "in-progress"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 2 }).toJSDate(),
+          plantingStatus: "completed"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "started",
+          dueAt: DateTime.now().toJSDate(),
+          plantingStatus: "replacement-planting"
+        });
+
+        const project = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(project!);
+        expect(fullDto.plantingStatus).toBe("in-progress");
+
+        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        const { models } = await processor.findMany({});
+        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
+        expect(lightDto.plantingStatus).toBe("in-progress");
+      });
+
+      it("returns null when no approved reports and project has no plantingStatus", async () => {
+        const { uuid } = await ProjectFactory.create();
+
+        const project = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(project!);
+        expect(fullDto.plantingStatus).toBeNull();
+
+        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        const { models } = await processor.findMany({});
+        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
+        expect(lightDto.plantingStatus).toBeNull();
+      });
+    });
+
     it("includes calculated fields in ProjectFullDto", async () => {
       const org = await OrganisationFactory.create();
       const application = await ApplicationFactory.create({ organisationUuid: org.uuid });

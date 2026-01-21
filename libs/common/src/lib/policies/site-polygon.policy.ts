@@ -12,6 +12,11 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
       return;
     }
 
+    if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
+      this.builder.can("read", SitePolygon);
+      return;
+    }
+
     if (this.frameworks.length > 0) {
       const sites = await Site.findAll({
         where: { frameworkKey: { [Op.in]: this.frameworks } },

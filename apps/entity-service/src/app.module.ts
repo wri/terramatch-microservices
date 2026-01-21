@@ -30,9 +30,17 @@ import { ApplicationsController } from "./applications/applications.controller";
 import { SubmissionsController } from "./forms/submissions.controller";
 import { FundingProgrammesController } from "./fundingProgrammes/funding-programmes.controller";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
+import { BullModule } from "@nestjs/bullmq";
+import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processor";
 
 @Module({
-  imports: [SentryModule.forRoot(), CommonModule, HealthModule],
+  imports: [
+    SentryModule.forRoot(),
+    CommonModule,
+    HealthModule,
+    BullModule.registerQueue({ name: "email" }),
+    BullModule.registerQueue({ name: "entities" })
+  ],
   // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
   // needs to be provided in this list before EntitiesController, or it will be superseded by the
   // wildcard route on EntitiesController.
@@ -65,7 +73,8 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     DemographicService,
     DisturbanceService,
     FormsService,
-    FormDataService
+    FormDataService,
+    EntitiesQueueProcessor
   ]
 })
 export class AppModule {}

@@ -5,7 +5,7 @@ import { TMLogger } from "../util/tm-logger";
 
 @Injectable()
 export class AnalyticsEventService {
-  private readonly analyticsUrl;
+  private readonly analyticsUrl: string;
   private readonly logger = new TMLogger(AnalyticsEventService.name);
 
   constructor(readonly configService: ConfigService) {

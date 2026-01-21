@@ -6,6 +6,7 @@ import {
   ForeignKey,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
@@ -21,6 +22,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { Dictionary } from "lodash";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { InternalServerErrorException } from "@nestjs/common";
+import { chainScope } from "../util/chain-scope";
 
 @Table({
   tableName: "form_submissions",
@@ -28,6 +30,9 @@ import { InternalServerErrorException } from "@nestjs/common";
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
+@Scopes(() => ({
+  application: (applicationId: number) => ({ where: { applicationId } })
+}))
 export class FormSubmission extends Model<InferAttributes<FormSubmission>, InferCreationAttributes<FormSubmission>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormSubmission";
 
@@ -36,6 +41,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
       throw new InternalServerErrorException("FormSubmission model is missing sequelize connection");
     }
     return this.sequelize;
+  }
+
+  static application(applicationId: number) {
+    return chainScope(this, "application", applicationId) as typeof FormSubmission;
   }
 
   @PrimaryKey

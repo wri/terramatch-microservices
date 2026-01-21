@@ -352,6 +352,59 @@ describe("ProjectProcessor", () => {
       });
     });
 
+    describe("plantingStatus", () => {
+      it("uses plantingStatus from the most recent approved project report (by dueAt)", async () => {
+        const { id: projectId, uuid } = await ProjectFactory.create();
+
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 3 }).toJSDate(),
+          plantingStatus: "not-started"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+          plantingStatus: "in-progress"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 2 }).toJSDate(),
+          plantingStatus: "completed"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "started",
+          dueAt: DateTime.now().toJSDate(),
+          plantingStatus: "replacement-planting"
+        });
+
+        const project = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(project!);
+        expect(fullDto.plantingStatus).toBe("in-progress");
+
+        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        const { models } = await processor.findMany({});
+        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
+        expect(lightDto.plantingStatus).toBe("in-progress");
+      });
+
+      it("returns null when no approved reports and project has no plantingStatus", async () => {
+        const { uuid } = await ProjectFactory.create();
+
+        const project = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(project!);
+        expect(fullDto.plantingStatus).toBeNull();
+
+        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        const { models } = await processor.findMany({});
+        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
+        expect(lightDto.plantingStatus).toBeNull();
+      });
+    });
+
     it("includes calculated fields in ProjectFullDto", async () => {
       const org = await OrganisationFactory.create();
       const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
@@ -541,7 +594,7 @@ describe("ProjectProcessor", () => {
       );
     });
 
-    it("creates a test project is the org is a test org", async () => {
+    it("creates a test project if the org is a test org", async () => {
       const org = await OrganisationFactory.create({ isTest: true });
       const user = await UserFactory.create({ organisationId: org.id });
       (policyService as unknown as Dictionary<unknown>).userId = user.id;
@@ -569,6 +622,20 @@ describe("ProjectProcessor", () => {
       const project = await processor.create({ formUuid: form.uuid });
       const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
       expect(projectUser).toBeDefined();
+    });
+
+    it("adds all org users when creating with an application", async () => {
+      const org = await OrganisationFactory.create();
+      const userIds = (await UserFactory.createMany(3, { organisationId: org.id })).map(({ id }) => id);
+      const form = await EntityFormFactory.project().create();
+      const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
+      const pitch = await ProjectPitchFactory.create();
+      await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
+      const project = await processor.create({ formUuid: form.uuid, applicationUuid: application.uuid });
+      const projectUserIds = (await ProjectUser.findAll({ where: { projectId: project.id } })).map(
+        ({ userId }) => userId
+      );
+      expect(userIds.sort()).toEqual(projectUserIds.sort());
     });
 
     it("throws if the application doesn't have a pitch", async () => {

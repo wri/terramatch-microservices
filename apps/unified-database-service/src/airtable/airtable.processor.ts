@@ -26,6 +26,7 @@ import {
   SiteEntity,
   SitePolygonEntity,
   SiteReportEntity,
+  SrpReportEntity,
   StrataEntity,
   TreeSpeciesEntity
 } from "./entities";
@@ -58,6 +59,7 @@ export const AIRTABLE_ENTITIES = {
   sites: SiteEntity,
   sitePolygons: SitePolygonEntity,
   siteReports: SiteReportEntity,
+  srpReports: SrpReportEntity,
   stratas: StrataEntity,
   treeSpecies: TreeSpeciesEntity,
   users: UserEntity

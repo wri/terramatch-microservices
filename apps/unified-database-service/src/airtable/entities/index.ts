@@ -20,5 +20,6 @@ export * from "./seeding.airtable-entity";
 export * from "./site.airtable-entity";
 export * from "./site-polygon.airtable-entity";
 export * from "./site-report.airtable-entity";
+export * from "./srp-report.airtable-entity";
 export * from "./strata.airtable-entity";
 export * from "./tree-species.airtable-entity";

@@ -129,7 +129,6 @@ export class IndicatorsService {
       throw new NotFoundException(`Indicator slug ${slug} not found or not supported for export`);
     }
 
-    // Fetch and authorize against the specific entity being exported
     if (entityType === "sites") {
       const site = await Site.findOne({ where: { uuid: entityUuid }, attributes: ["uuid", "id"] });
       if (site == null) throw new NotFoundException(`Site not found for uuid: ${entityUuid}`);

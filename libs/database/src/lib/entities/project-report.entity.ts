@@ -701,17 +701,14 @@ export class ProjectReport extends Model<ProjectReport> {
         SELECT p.uuid
         FROM v2_projects p
         WHERE p.deleted_at IS NULL
-          AND COALESCE(
-            (
-              SELECT pr.planting_status
-              FROM v2_project_reports pr
-              WHERE pr.project_id = p.id
-                AND pr.deleted_at IS NULL
-                AND pr.status = 'approved'
-              ORDER BY pr.due_at DESC
-              LIMIT 1
-            ),
-            p.planting_status
+          AND (
+            SELECT pr.planting_status
+            FROM v2_project_reports pr
+            WHERE pr.project_id = p.id
+              AND pr.deleted_at IS NULL
+              AND pr.status = 'approved'
+            ORDER BY pr.due_at DESC
+            LIMIT 1
           ) = ${sql.escape(plantingStatus)}
       )`
     );

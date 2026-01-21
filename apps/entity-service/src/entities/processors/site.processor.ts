@@ -210,8 +210,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const approvedReports = await SiteReport.approved()
       .sites(siteIds)
       .findAll({
-        attributes: ["id", "siteId", "plantingStatus", "updatedAt"],
-        order: [["updatedAt", "DESC"]]
+        attributes: ["id", "siteId", "plantingStatus", "dueAt"],
+        order: [["dueAt", "DESC"]]
       });
 
     if (approvedReports.length === 0) {

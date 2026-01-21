@@ -3,7 +3,7 @@ import { ApiExtraModels, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { IndicatorTreeCoverLossDto } from "../site-polygons/dto/indicators.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { DelayedJob, SitePolygon } from "@terramatch-microservices/database/entities";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
@@ -13,7 +13,6 @@ import { IndicatorsParamDto } from "./dto/indicators-param.dto";
 import { IndicatorHectaresDto } from "../site-polygons/dto/indicators.dto";
 import { SitePolygonLightDto } from "../site-polygons/dto/site-polygon.dto";
 import { IndicatorsService } from "./indicators.service";
-import { PolicyService } from "@terramatch-microservices/common";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 
@@ -24,8 +23,7 @@ export class IndicatorsController {
 
   constructor(
     @InjectQueue("sitePolygons") private readonly sitePolygonsQueue: Queue,
-    private readonly indicatorsService: IndicatorsService,
-    private readonly policyService: PolicyService
+    private readonly indicatorsService: IndicatorsService
   ) {}
 
   @Post(":slug")
@@ -91,7 +89,6 @@ export class IndicatorsController {
     @Param("entityUuid") entityUuid: string,
     @Param("slug") slug: IndicatorSlug
   ): Promise<string> {
-    await this.policyService.authorize("read", SitePolygon);
     return await this.indicatorsService.exportIndicatorToCsv(entityType, entityUuid, slug);
   }
 }

@@ -19,6 +19,7 @@ import { RestorationByTypeCalculator } from "./calculators/restoration-by-type.c
 import { Polygon } from "geojson";
 import { Op } from "sequelize";
 import { stringify } from "csv-stringify/sync";
+import { PolicyService } from "@terramatch-microservices/common";
 
 export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   treeCoverLoss: new TreeCoverLossCalculator(),
@@ -35,11 +36,46 @@ const SLUG_MAPPINGS = {
   restorationByStrategy: IndicatorOutputHectares,
   restorationByLandUse: IndicatorOutputHectares
 };
+
+const DEFAULT_EXPORT_HEADERS: Record<string, string> = {
+  poly_name: "Polygon Name",
+  size: "Size (ha)",
+  site_name: "Site Name",
+  status: "Status",
+  plantstart: "Plant Start Date"
+};
+
+const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: string }> = {
+  treeCoverLoss: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: "Tree Cover Loss" },
+  treeCoverLossFires: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: "Tree Cover Loss from Fire" },
+  restorationByStrategy: {
+    columns: { ...DEFAULT_EXPORT_HEADERS, created_at: "Baseline" },
+    title: "Hectares Under Restoration By Strategy"
+  },
+  restorationByLandUse: {
+    columns: { ...DEFAULT_EXPORT_HEADERS, created_at: "Baseline" },
+    title: "Hectares Under Restoration By Target Land Use System"
+  },
+  restorationByEcoRegion: {
+    columns: { ...DEFAULT_EXPORT_HEADERS, created_at: "Baseline" },
+    title: "Hectares Under Restoration By WWF EcoRegion"
+  },
+  treeCover: {
+    columns: {
+      ...DEFAULT_EXPORT_HEADERS,
+      percent_cover: "Percent Cover",
+      project_phase: "Project Phase",
+      plus_minus_percent: "Plus Minus Percent"
+    },
+    title: "Tree Cover"
+  }
+};
+
 @Injectable()
 export class IndicatorsService {
   private readonly logger = new TMLogger(IndicatorsService.name);
 
-  constructor(private readonly dataApiService: DataApiService) {}
+  constructor(private readonly dataApiService: DataApiService, private readonly policyService: PolicyService) {}
 
   async process(slug: IndicatorSlug, polygonUuids: string[]) {
     const results = await Promise.all(polygonUuids.map(polygonUuid => this.processPolygon(slug, polygonUuid)));
@@ -93,6 +129,17 @@ export class IndicatorsService {
       throw new NotFoundException(`Indicator slug ${slug} not found or not supported for export`);
     }
 
+    // Fetch and authorize against the specific entity being exported
+    if (entityType === "sites") {
+      const site = await Site.findOne({ where: { uuid: entityUuid }, attributes: ["uuid", "id"] });
+      if (site == null) throw new NotFoundException(`Site not found for uuid: ${entityUuid}`);
+      await this.policyService.authorize("read", site);
+    } else {
+      const project = await Project.findOne({ where: { uuid: entityUuid }, attributes: ["uuid", "id"] });
+      if (project == null) throw new NotFoundException(`Project not found for uuid: ${entityUuid}`);
+      await this.policyService.authorize("read", project);
+    }
+
     const polygons = await this.getPolygonsForEntity(entityType, entityUuid);
     if (polygons.length === 0) {
       this.logger.warn(`No polygons found for ${entityType} ${entityUuid}`);
@@ -104,41 +151,7 @@ export class IndicatorsService {
   }
 
   private getExportConfig(slug: IndicatorSlug) {
-    const defaultHeaders: Record<string, string> = {
-      poly_name: "Polygon Name",
-      size: "Size (ha)",
-      site_name: "Site Name",
-      status: "Status",
-      plantstart: "Plant Start Date"
-    };
-
-    const configs: Record<string, { columns: Record<string, string>; title: string }> = {
-      treeCoverLoss: { columns: { ...defaultHeaders }, title: "Tree Cover Loss" },
-      treeCoverLossFires: { columns: { ...defaultHeaders }, title: "Tree Cover Loss from Fire" },
-      restorationByStrategy: {
-        columns: { ...defaultHeaders, created_at: "Baseline" },
-        title: "Hectares Under Restoration By Strategy"
-      },
-      restorationByLandUse: {
-        columns: { ...defaultHeaders, created_at: "Baseline" },
-        title: "Hectares Under Restoration By Target Land Use System"
-      },
-      restorationByEcoRegion: {
-        columns: { ...defaultHeaders, created_at: "Baseline" },
-        title: "Hectares Under Restoration By WWF EcoRegion"
-      },
-      treeCover: {
-        columns: {
-          ...defaultHeaders,
-          percent_cover: "Percent Cover",
-          project_phase: "Project Phase",
-          plus_minus_percent: "Plus Minus Percent"
-        },
-        title: "Tree Cover"
-      }
-    };
-
-    return configs[slug] ?? null;
+    return EXPORT_CONFIGS[slug] ?? null;
   }
 
   private async getPolygonsForEntity(entityType: "sites" | "projects", entityUuid: string): Promise<SitePolygon[]> {

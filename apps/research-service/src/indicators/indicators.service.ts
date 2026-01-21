@@ -20,6 +20,7 @@ import { Polygon } from "geojson";
 import { Op } from "sequelize";
 import { stringify } from "csv-stringify/sync";
 import { PolicyService } from "@terramatch-microservices/common";
+import { intersection } from "lodash";
 
 export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   treeCoverLoss: new TreeCoverLossCalculator(),
@@ -130,11 +131,19 @@ export class IndicatorsService {
     }
 
     if (entityType === "sites") {
-      const site = await Site.findOne({ where: { uuid: entityUuid }, attributes: ["uuid", "id"] });
+      const attributes = intersection(
+        ["id", "uuid", "frameworkKey", "projectId", "status"],
+        Object.keys(Site.getAttributes())
+      );
+      const site = await Site.findOne({ where: { uuid: entityUuid }, attributes });
       if (site == null) throw new NotFoundException(`Site not found for uuid: ${entityUuid}`);
       await this.policyService.authorize("read", site);
     } else {
-      const project = await Project.findOne({ where: { uuid: entityUuid }, attributes: ["uuid", "id"] });
+      const attributes = intersection(
+        ["id", "uuid", "frameworkKey", "organisationId", "status"],
+        Object.keys(Project.getAttributes())
+      );
+      const project = await Project.findOne({ where: { uuid: entityUuid }, attributes });
       if (project == null) throw new NotFoundException(`Project not found for uuid: ${entityUuid}`);
       await this.policyService.authorize("read", project);
     }

@@ -12,12 +12,17 @@ import {
   IndicatorOutputHectares
 } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
+import { PolicyService } from "@terramatch-microservices/common";
 
 describe("IndicatorsService", () => {
   let service: IndicatorsService;
 
   const mockDataApiService = {
     getIndicatorsDataset: jest.fn().mockResolvedValue([])
+  };
+
+  const mockPolicyService = {
+    authorize: jest.fn().mockResolvedValue(undefined)
   };
 
   beforeEach(async () => {
@@ -29,6 +34,10 @@ describe("IndicatorsService", () => {
         {
           provide: DataApiService,
           useValue: mockDataApiService
+        },
+        {
+          provide: PolicyService,
+          useValue: mockPolicyService
         }
       ]
     }).compile();
@@ -87,6 +96,7 @@ describe("IndicatorsService", () => {
       await expect(service.exportIndicatorToCsv("sites", "non-existent-uuid", "treeCoverLoss")).rejects.toThrow(
         NotFoundException
       );
+      expect(mockPolicyService.authorize).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when project is not found", async () => {
@@ -95,20 +105,23 @@ describe("IndicatorsService", () => {
       await expect(service.exportIndicatorToCsv("projects", "non-existent-uuid", "treeCoverLoss")).rejects.toThrow(
         NotFoundException
       );
+      expect(mockPolicyService.authorize).not.toHaveBeenCalled();
     });
 
     it("should return empty CSV when no polygons found", async () => {
-      jest.spyOn(Site, "findOne").mockResolvedValue({ uuid: "site-uuid" } as Site);
+      jest.spyOn(Site, "findOne").mockResolvedValue({ uuid: "site-uuid", id: 1 } as Site);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
 
       const result = await service.exportIndicatorToCsv("sites", "site-uuid", "treeCoverLoss");
 
+      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", expect.objectContaining({ uuid: "site-uuid" }));
       expect(result).toContain("Polygon Name");
       expect(result).toContain("Size (ha)");
     });
 
     it("should export tree cover loss data with dynamic years", async () => {
-      const mockSite = { uuid: "site-uuid", name: "Test Site" } as Site;
+      const mockSite = { uuid: "site-uuid", id: 1, name: "Test Site" } as Site;
       const mockPolygon = {
         id: 1,
         polyName: "Polygon 1",
@@ -128,9 +141,11 @@ describe("IndicatorsService", () => {
       jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([mockPolygon]);
       jest.spyOn(IndicatorOutputTreeCoverLoss, "findOne").mockResolvedValue(mockIndicator);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
 
       const result = await service.exportIndicatorToCsv("sites", "site-uuid", "treeCoverLoss");
 
+      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);
       expect(result).toContain("Polygon 1");
       expect(result).toContain("100.5");
       expect(result).toContain("2020");
@@ -139,7 +154,7 @@ describe("IndicatorsService", () => {
     });
 
     it("should export restoration by strategy data", async () => {
-      const mockSite = { uuid: "site-uuid", name: "Test Site" } as Site;
+      const mockSite = { uuid: "site-uuid", id: 1, name: "Test Site" } as Site;
       const mockPolygon = {
         id: 1,
         polyName: "Polygon 1",
@@ -159,9 +174,11 @@ describe("IndicatorsService", () => {
       jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([mockPolygon]);
       jest.spyOn(IndicatorOutputHectares, "findOne").mockResolvedValue(mockIndicator);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
 
       const result = await service.exportIndicatorToCsv("sites", "site-uuid", "restorationByStrategy");
 
+      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockSite);
       expect(result).toContain("Polygon 1");
       expect(result).toContain("50.25");
     });
@@ -189,9 +206,11 @@ describe("IndicatorsService", () => {
       jest.spyOn(Site, "findAll").mockResolvedValue([mockSite]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([mockPolygon]);
       jest.spyOn(IndicatorOutputTreeCoverLoss, "findOne").mockResolvedValue(mockIndicator);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
 
       const result = await service.exportIndicatorToCsv("projects", "project-uuid", "treeCoverLoss");
 
+      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockProject);
       expect(result).toContain("Polygon 1");
       expect(result).toContain("2020");
     });

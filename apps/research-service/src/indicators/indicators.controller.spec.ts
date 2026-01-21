@@ -6,9 +6,8 @@ import { IndicatorsService } from "./indicators.service";
 import { getQueueToken } from "@nestjs/bullmq";
 import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
-import { DelayedJob, SitePolygon } from "@terramatch-microservices/database/entities";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
-import { PolicyService } from "@terramatch-microservices/common";
 
 describe("IndicatorsController", () => {
   let controller: IndicatorsController;
@@ -25,10 +24,6 @@ describe("IndicatorsController", () => {
 
   const mockQueue = {
     add: jest.fn()
-  };
-
-  const mockPolicyService = {
-    authorize: jest.fn()
   };
 
   beforeEach(async () => {
@@ -55,10 +50,6 @@ describe("IndicatorsController", () => {
         {
           provide: getQueueToken("sitePolygons"),
           useValue: mockQueue
-        },
-        {
-          provide: PolicyService,
-          useValue: mockPolicyService
         }
       ]
     }).compile();
@@ -96,21 +87,24 @@ describe("IndicatorsController", () => {
   });
 
   describe("exportIndicator", () => {
-    it("should call authorize before exporting", async () => {
+    it("should call service exportIndicatorToCsv with correct parameters", async () => {
       const mockCsvContent = "Polygon Name,Size (ha)\nTest,100";
-      mockPolicyService.authorize.mockResolvedValue(undefined);
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
-      await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
+      const result = await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
 
-      expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(result).toBe(mockCsvContent);
+      expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
+        "sites",
+        "site-uuid-123",
+        "treeCoverLoss"
+      );
     });
 
     it("should return CSV content for tree cover loss", async () => {
       const mockCsvContent =
         "Polygon Name,Size (ha),Site Name,Status,Plant Start Date,2020,2021\nPolygon 1,100.5,Site A,approved,2020-01-01,0.5,0.3";
 
-      mockPolicyService.authorize.mockResolvedValue(undefined);
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
       const result = await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
@@ -127,7 +121,6 @@ describe("IndicatorsController", () => {
       const mockCsvContent =
         "Polygon Name,Size (ha),Site Name,Status,Plant Start Date,2020\nPolygon 1,100,Site A,approved,2020-01-01,0.5";
 
-      mockPolicyService.authorize.mockResolvedValue(undefined);
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
       const result = await controller.exportIndicator("projects", "project-uuid", "treeCoverLoss");
@@ -143,7 +136,6 @@ describe("IndicatorsController", () => {
     it("should work with different indicator slugs", async () => {
       const mockCsvContent = "Polygon Name,Size (ha),Site Name,Status,Plant Start Date,Baseline,Tree Planting\n";
 
-      mockPolicyService.authorize.mockResolvedValue(undefined);
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
       await controller.exportIndicator("sites", "site-uuid", "restorationByStrategy");

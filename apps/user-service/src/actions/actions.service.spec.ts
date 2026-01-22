@@ -28,12 +28,12 @@ describe("ActionsService", () => {
     jest.clearAllMocks();
   });
 
-  describe("getMyActions", () => {
+  describe("getActions", () => {
     it("should return empty array when user has no projects", async () => {
       const user = await UserFactory.create();
       const query: IndexQueryDto = { page: { number: 1 } };
 
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data).toEqual([]);
       expect(result.paginationTotal).toBe(0);
@@ -43,7 +43,7 @@ describe("ActionsService", () => {
     it("should throw error when user not found", async () => {
       const query: IndexQueryDto = { page: { number: 1 } };
 
-      await expect(service.getMyActions(99999, query)).rejects.toThrow("User not found");
+      await expect(service.getActions(99999, query)).rejects.toThrow("User not found");
     });
 
     it("should return actions for project reports with due status", async () => {
@@ -66,7 +66,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.length).toBeGreaterThan(0);
       expect(result.data.some(d => d.action.id === action.id)).toBe(true);
@@ -94,7 +94,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.length).toBeGreaterThan(0);
       expect(result.data.some(d => d.action.id === action.id)).toBe(true);
@@ -112,7 +112,7 @@ describe("ActionsService", () => {
       });
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.length).toBeGreaterThan(0);
       expect(result.data.some(d => d.action.id === action.id)).toBe(true);
@@ -135,7 +135,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.length).toBeGreaterThan(0);
       expect(result.data.some(d => d.action.id === action.id)).toBe(true);
@@ -158,7 +158,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.length).toBeGreaterThan(0);
       expect(result.data.some(d => d.action.id === action.id)).toBe(true);
@@ -184,7 +184,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.every(d => d.action.status === "pending")).toBe(true);
     });
@@ -209,7 +209,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.every(d => d.action.targetableId !== projectReport.id)).toBe(true);
     });
@@ -237,7 +237,7 @@ describe("ActionsService", () => {
       }
 
       const query: IndexQueryDto = { page: { number: 1, size: 5 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       expect(result.data.length).toBeLessThanOrEqual(5);
       expect(result.paginationTotal).toBeGreaterThanOrEqual(5);
@@ -264,7 +264,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       const actionData = result.data.find(d => d.action.id === action.id);
       expect(actionData).toBeDefined();
@@ -289,7 +289,7 @@ describe("ActionsService", () => {
       ).save();
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getMyActions(user.id, query);
+      const result = await service.getActions(user.id, query);
 
       const actionData = result.data.find(d => d.action.id === action.id);
       expect(actionData).toBeDefined();

@@ -13,20 +13,17 @@ export class ActionsController {
 
   @Get()
   @ApiOperation({
-    operationId: "indexMyActions",
-    summary: "Get actions for the authenticated user",
+    operationId: "actionsIndex",
+    summary: "Get actions",
     description: "Returns pending actions for reports and entities associated with the user's projects"
   })
   @JsonApiResponse(ActionDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   @ExceptionResponse(BadRequestException, { description: "Invalid query parameters" })
-  async indexMyActions(@Query() query: IndexQueryDto) {
-    const userId = authenticatedUserId();
-    if (userId == null) {
-      throw new Error("User ID not found in request context");
-    }
+  async index(@Query() query: IndexQueryDto) {
+    const userId = authenticatedUserId() as number;
 
-    const { data, paginationTotal, pageNumber } = await this.actionsService.getMyActions(userId, query);
+    const { data, paginationTotal, pageNumber } = await this.actionsService.getActions(userId, query);
 
     const document = buildJsonApi(ActionDto, { pagination: "number" });
 

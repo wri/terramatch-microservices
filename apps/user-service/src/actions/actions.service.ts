@@ -14,6 +14,68 @@ import { groupBy } from "lodash";
 import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { ActionTarget } from "@terramatch-microservices/common/dto/action.dto";
+import { ModelStatic, Includeable } from "sequelize";
+
+type TargetableLoaderConfig = {
+  model: ModelStatic<EntityModel>;
+  include?: Includeable[];
+};
+
+const TARGETABLE_LOADERS: Record<string, TargetableLoaderConfig> = {
+  [Project.LARAVEL_TYPE]: {
+    model: Project
+  },
+  [ProjectReport.LARAVEL_TYPE]: {
+    model: ProjectReport,
+    include: [
+      { association: "project", attributes: ["id", "uuid", "name"] },
+      { association: "task", attributes: ["uuid"] }
+    ]
+  },
+  [Site.LARAVEL_TYPE]: {
+    model: Site,
+    include: [{ association: "project", attributes: ["uuid", "name"] }]
+  },
+  [SiteReport.LARAVEL_TYPE]: {
+    model: SiteReport,
+    include: [
+      {
+        association: "site",
+        attributes: ["id", "uuid", "name"],
+        include: [
+          {
+            association: "project",
+            attributes: ["uuid", "name"]
+          }
+        ]
+      },
+      { association: "task", attributes: ["uuid"] }
+    ]
+  },
+  [Nursery.LARAVEL_TYPE]: {
+    model: Nursery
+  },
+  [NurseryReport.LARAVEL_TYPE]: {
+    model: NurseryReport,
+    include: [
+      {
+        association: "nursery",
+        attributes: ["id", "uuid", "name"],
+        include: [
+          {
+            association: "project",
+            attributes: ["uuid", "name"]
+          }
+        ]
+      },
+      { association: "task", attributes: ["uuid"] }
+    ]
+  }
+};
+
+const reportLaravelTypes = [ProjectReport.LARAVEL_TYPE, SiteReport.LARAVEL_TYPE, NurseryReport.LARAVEL_TYPE];
+
+const entityLaravelTypes = [Project.LARAVEL_TYPE, Site.LARAVEL_TYPE, Nursery.LARAVEL_TYPE];
 
 export type ActionWithTarget = {
   action: Action;
@@ -23,7 +85,7 @@ export type ActionWithTarget = {
 
 @Injectable()
 export class ActionsService {
-  async getMyActions(
+  async getActions(
     userId: number,
     query: IndexQueryDto
   ): Promise<{ data: ActionWithTarget[]; paginationTotal: number; pageNumber: number }> {
@@ -46,123 +108,30 @@ export class ActionsService {
       };
     }
 
-    const statuses = ["needs-more-information", "due"];
-
-    const reportLaravelTypes = [ProjectReport.LARAVEL_TYPE, SiteReport.LARAVEL_TYPE, NurseryReport.LARAVEL_TYPE];
-
-    const entityLaravelTypes = [Project.LARAVEL_TYPE, Site.LARAVEL_TYPE, Nursery.LARAVEL_TYPE];
-
-    const [projectReportIds, siteReportIds, nurseryReportIds] = await Promise.all([
-      ProjectReport.findAll({
-        where: {
-          status: { [Op.in]: statuses },
-          projectId: { [Op.in]: projectIds }
-        },
-        attributes: ["id"]
-      }),
-      SiteReport.findAll({
-        where: {
-          status: { [Op.in]: statuses },
-          "$site.project.id$": { [Op.in]: projectIds }
-        },
-        include: [
-          {
-            association: "site",
-            attributes: ["id"],
-            include: [
-              {
-                association: "project",
-                attributes: ["id"]
-              }
-            ]
-          }
-        ],
-        attributes: ["id"]
-      }),
-      NurseryReport.findAll({
-        where: {
-          status: { [Op.in]: statuses },
-          "$nursery.project.id$": { [Op.in]: projectIds }
-        },
-        include: [
-          {
-            association: "nursery",
-            attributes: ["id"],
-            include: [
-              {
-                association: "project",
-                attributes: ["id"]
-              }
-            ]
-          }
-        ],
-        attributes: ["id"]
-      })
-    ]);
-
-    const reportTargetableIds = [
-      ...projectReportIds.map(r => r.id),
-      ...siteReportIds.map(r => r.id),
-      ...nurseryReportIds.map(r => r.id)
-    ];
-
-    const [projectIdsWithStatus, siteIds, nurseryIds] = await Promise.all([
-      Project.findAll({
-        where: {
-          status: { [Op.in]: statuses },
-          id: { [Op.in]: projectIds }
-        },
-        attributes: ["id"]
-      }),
-      Site.findAll({
-        where: {
-          status: { [Op.in]: statuses },
-          projectId: { [Op.in]: projectIds }
-        },
-        attributes: ["id"]
-      }),
-      Nursery.findAll({
-        where: {
-          status: { [Op.in]: statuses },
-          projectId: { [Op.in]: projectIds }
-        },
-        attributes: ["id"]
-      })
-    ]);
-
-    const entityTargetableIds = [
-      ...projectIdsWithStatus.map(p => p.id),
-      ...siteIds.map(s => s.id),
-      ...nurseryIds.map(n => n.id)
-    ];
-
     const [reportActions, entityActions] = await Promise.all([
-      reportTargetableIds.length > 0
-        ? Action.findAll({
-            where: {
-              status: "pending",
-              targetableType: { [Op.in]: reportLaravelTypes },
-              targetableId: { [Op.in]: reportTargetableIds },
-              projectId: { [Op.in]: projectIds }
-            },
-            order: [["updatedAt", "DESC"]],
-            limit: 5
-          })
-        : Promise.resolve([]),
-      entityTargetableIds.length > 0
-        ? Action.findAll({
-            where: {
-              status: "pending",
-              targetableType: { [Op.in]: entityLaravelTypes },
-              targetableId: { [Op.in]: entityTargetableIds },
-              projectId: { [Op.in]: projectIds }
-            },
-            order: [["updatedAt", "DESC"]],
-            limit: 5
-          })
-        : Promise.resolve([])
+      Action.withTargetableStatus().findAll({
+        where: {
+          status: "pending",
+          projectId: { [Op.in]: projectIds },
+          targetableType: { [Op.in]: reportLaravelTypes }
+        },
+        order: [["updatedAt", "DESC"]],
+        limit: 10
+      }),
+      Action.withTargetableStatus().findAll({
+        where: {
+          status: "pending",
+          projectId: { [Op.in]: projectIds },
+          targetableType: { [Op.in]: entityLaravelTypes }
+        },
+        order: [["updatedAt", "DESC"]],
+        limit: 10
+      })
     ]);
-    const allActions = reportActions.concat(entityActions);
+
+    const allActions = [...reportActions, ...entityActions].sort(
+      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+    );
 
     const pageSize = query.page?.size ?? 50;
     const pageNumber = query.page?.number ?? 1;
@@ -192,60 +161,18 @@ export class ActionsService {
 
     await Promise.all(
       Object.entries(actionsByType).map(async ([laravelType, typeActions]) => {
+        const loader = TARGETABLE_LOADERS[laravelType];
+        if (loader == null) {
+          return;
+        }
+
         const ids = [...new Set(typeActions.map(a => a.targetableId))];
         if (ids.length === 0) return;
 
-        let models: EntityModel[] = [];
-
-        if (laravelType === Project.LARAVEL_TYPE) {
-          models = await Project.findAll({ where: { id: { [Op.in]: ids } } });
-        } else if (laravelType === ProjectReport.LARAVEL_TYPE) {
-          models = await ProjectReport.findAll({
-            where: { id: { [Op.in]: ids } },
-            include: [
-              { association: "project", attributes: ["uuid", "name"] },
-              { association: "task", attributes: ["uuid"] }
-            ]
-          });
-        } else if (laravelType === Site.LARAVEL_TYPE) {
-          models = await Site.findAll({ where: { id: { [Op.in]: ids } } });
-        } else if (laravelType === SiteReport.LARAVEL_TYPE) {
-          models = await SiteReport.findAll({
-            where: { id: { [Op.in]: ids } },
-            include: [
-              {
-                association: "site",
-                attributes: ["id", "uuid", "name"],
-                include: [
-                  {
-                    association: "project",
-                    attributes: ["uuid", "name"]
-                  }
-                ]
-              },
-              { association: "task", attributes: ["uuid"] }
-            ]
-          });
-        } else if (laravelType === Nursery.LARAVEL_TYPE) {
-          models = await Nursery.findAll({ where: { id: { [Op.in]: ids } } });
-        } else if (laravelType === NurseryReport.LARAVEL_TYPE) {
-          models = await NurseryReport.findAll({
-            where: { id: { [Op.in]: ids } },
-            include: [
-              {
-                association: "nursery",
-                attributes: ["id", "uuid", "name"],
-                include: [
-                  {
-                    association: "project",
-                    attributes: ["uuid", "name"]
-                  }
-                ]
-              },
-              { association: "task", attributes: ["uuid"] }
-            ]
-          });
-        }
+        const models = await loader.model.findAll({
+          where: { id: { [Op.in]: ids } },
+          ...(loader.include != null && { include: loader.include })
+        });
 
         for (const model of models) {
           targetablesMap.set(model.id, model);

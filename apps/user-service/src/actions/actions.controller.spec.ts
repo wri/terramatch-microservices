@@ -31,7 +31,7 @@ describe("ActionsController", () => {
     jest.restoreAllMocks();
   });
 
-  describe("indexMyActions", () => {
+  describe("index", () => {
     it("should return actions from service", async () => {
       const user = await UserFactory.create();
       const project = await ProjectFactory.create();
@@ -57,7 +57,7 @@ describe("ActionsController", () => {
         targetableType: "projectReports" as const
       };
 
-      actionsService.getMyActions.mockResolvedValue({
+      actionsService.getActions.mockResolvedValue({
         data: [mockData],
         paginationTotal: 1,
         pageNumber: 1
@@ -66,7 +66,7 @@ describe("ActionsController", () => {
       mockUserId(user.id);
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.indexMyActions(query));
+      const result = serialize(await controller.index(query));
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
@@ -74,35 +74,26 @@ describe("ActionsController", () => {
       expect(result.meta.indices?.[0].total).toBe(1);
       expect(result.meta.indices?.[0].pageNumber).toBe(1);
 
-      expect(actionsService.getMyActions).toHaveBeenCalledWith(user.id, query);
+      expect(actionsService.getActions).toHaveBeenCalledWith(user.id, query);
     });
 
     it("should handle empty results", async () => {
       const user = await UserFactory.create();
       mockUserId(user.id);
 
-      actionsService.getMyActions.mockResolvedValue({
+      actionsService.getActions.mockResolvedValue({
         data: [],
         paginationTotal: 0,
         pageNumber: 1
       });
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.indexMyActions(query));
+      const result = serialize(await controller.index(query));
 
       expect(result.data).toBeDefined();
       expect(Array.isArray(result.data)).toBe(true);
       expect(result.meta.indices?.[0].total).toBe(0);
       expect(result.meta.indices?.[0].pageNumber).toBe(1);
-    });
-
-    it("should throw error when user ID not found", async () => {
-      // Mock authenticatedUserId to return undefined
-      mockUserId(undefined);
-
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-
-      await expect(controller.indexMyActions(query)).rejects.toThrow("User ID not found in request context");
     });
 
     it("should return correct JSON:API structure", async () => {
@@ -130,7 +121,7 @@ describe("ActionsController", () => {
         targetableType: "projectReports" as const
       };
 
-      actionsService.getMyActions.mockResolvedValue({
+      actionsService.getActions.mockResolvedValue({
         data: [mockData],
         paginationTotal: 1,
         pageNumber: 1
@@ -139,7 +130,7 @@ describe("ActionsController", () => {
       mockUserId(user.id);
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.indexMyActions(query));
+      const result = serialize(await controller.index(query));
 
       expect(result.data).toBeDefined();
       if (Array.isArray(result.data) && result.data.length > 0) {
@@ -156,14 +147,14 @@ describe("ActionsController", () => {
       const user = await UserFactory.create();
       mockUserId(user.id);
 
-      actionsService.getMyActions.mockResolvedValue({
+      actionsService.getActions.mockResolvedValue({
         data: [],
         paginationTotal: 15,
         pageNumber: 2
       });
 
       const query: IndexQueryDto = { page: { number: 2, size: 10 } };
-      const result = serialize(await controller.indexMyActions(query));
+      const result = serialize(await controller.index(query));
 
       expect(result.meta.indices?.[0].total).toBe(15);
       expect(result.meta.indices?.[0].pageNumber).toBe(2);
@@ -203,7 +194,7 @@ describe("ActionsController", () => {
         targetableType: "projectReports" as const
       };
 
-      actionsService.getMyActions.mockResolvedValue({
+      actionsService.getActions.mockResolvedValue({
         data: [mockData],
         paginationTotal: 1,
         pageNumber: 1
@@ -212,7 +203,7 @@ describe("ActionsController", () => {
       mockUserId(user.id);
 
       const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.indexMyActions(query));
+      const result = serialize(await controller.index(query));
 
       if (Array.isArray(result.data) && result.data.length > 0) {
         const resource = result.data[0] as Resource;

@@ -7,7 +7,7 @@ import {
   PROCESSABLE_ENTITIES
 } from "../entities.service";
 import { Type } from "class-transformer";
-import { IndexQueryDto } from "./index-query.dto";
+import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
@@ -120,6 +120,11 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   plantingStatus?: PlantingStatus;
 
-  // This one is internal use only, not exposed to the API surface
+  @ApiProperty({
+    required: false,
+    type: Number,
+    description: "Filter reports by task ID (used to get site/nursery reports for a specific reporting period)"
+  })
+  @IsOptional()
   taskId?: number;
 }

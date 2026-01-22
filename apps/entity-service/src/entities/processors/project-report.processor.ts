@@ -147,6 +147,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     const reportTitle = await this.getReportTitle(projectReport);
 
     const dto = new ProjectReportFullDto(projectReport, {
+      ...(await this.getFeedback(projectReport)),
       ...(await this.getTaskDependentAggregates(projectReport.id, projectReport.taskId)),
       reportTitle,
       seedlingsGrown: await this.getSeedlingsGrown(projectReport),
@@ -157,6 +158,8 @@ export class ProjectReportProcessor extends ReportProcessor<
         projectReport.uuid
       ) as ProjectReportMedia)
     });
+
+    await this.entitiesService.removeHiddenValues(projectReport, dto);
 
     return { id: projectReport.uuid, dto };
   }

@@ -55,8 +55,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
         siteId: sitePolygon.siteUuid,
         projectId: sitePolygon.site?.project?.uuid,
         projectShortName: sitePolygon.site?.project?.shortName,
+        projectName: sitePolygon.site?.project?.name ?? null,
         indicators: indicators ?? [],
-        siteName: sitePolygon.site?.name,
+        siteName: sitePolygon.site?.name ?? undefined,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
         lightResource: true
       });
@@ -88,6 +89,9 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ nullable: true, type: String })
   projectShortName?: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  projectName?: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
   plantStart: Date | null;
@@ -202,8 +206,9 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       siteId: sitePolygon.siteUuid,
       projectId: sitePolygon.site?.project?.uuid,
       projectShortName: sitePolygon.site?.project?.shortName,
+      projectName: sitePolygon.site?.project?.name ?? null,
       indicators: indicators ?? [],
-      siteName: sitePolygon.site?.name,
+      siteName: sitePolygon.site?.name ?? undefined,
       geometry: sitePolygon.polygon?.polygon,
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],

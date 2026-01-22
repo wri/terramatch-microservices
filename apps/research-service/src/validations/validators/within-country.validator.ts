@@ -1,6 +1,6 @@
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
-import { NotFoundException, InternalServerErrorException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { Transaction } from "sequelize";
 
 interface WithinCountryValidationResult extends ValidationResult {
@@ -80,19 +80,14 @@ export class WithinCountryValidator implements PolygonValidator {
     intersectionArea: number;
     country: string;
   } | null> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const transaction = await PolygonGeometry.sequelize.transaction({
+    const transaction = await PolygonGeometry.sql.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 
     let shouldCommit = true;
 
     try {
-      const result = await PolygonGeometry.checkWithinCountryIntersection(polygonUuid, transaction);
-      return result;
+      return await PolygonGeometry.checkWithinCountryIntersection(polygonUuid, transaction);
     } catch (error) {
       shouldCommit = false;
       await transaction.rollback();
@@ -112,19 +107,14 @@ export class WithinCountryValidator implements PolygonValidator {
       country: string;
     }[]
   > {
-    if (PolygonGeometry.sequelize == null) {
-      throw new InternalServerErrorException("PolygonGeometry model is missing sequelize connection");
-    }
-
-    const transaction = await PolygonGeometry.sequelize.transaction({
+    const transaction = await PolygonGeometry.sql.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 
     let shouldCommit = true;
 
     try {
-      const results = await PolygonGeometry.checkWithinCountryIntersectionBatch(polygonUuids, transaction);
-      return results;
+      return await PolygonGeometry.checkWithinCountryIntersectionBatch(polygonUuids, transaction);
     } catch (error) {
       shouldCommit = false;
       await transaction.rollback();

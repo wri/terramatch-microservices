@@ -1,12 +1,11 @@
-import { AuditStatus } from "../entities";
+import { AuditStatus, FormSubmission } from "../entities";
 import { FactoryGirl } from "factory-girl-ts";
 import { Project } from "../entities";
 import { ProjectFactory } from "./project.factory";
 import { faker } from "@faker-js/faker";
+import { FormSubmissionFactory } from "./form-submission.factory";
 
-export const AuditStatusFactory = FactoryGirl.define(AuditStatus, async () => ({
-  auditableType: Project.LARAVEL_TYPE,
-  auditableId: ProjectFactory.associate("id"),
+const defaultAttributesFactory = async () => ({
   status: faker.lorem.words(1),
   comment: faker.lorem.words(1),
   firstName: faker.person.firstName(),
@@ -24,4 +23,20 @@ export const AuditStatusFactory = FactoryGirl.define(AuditStatus, async () => ({
   requestRemoved: faker.datatype.boolean(),
   dateCreated: faker.date.recent(),
   createdBy: faker.internet.email()
-}));
+});
+
+export const AuditStatusFactory = {
+  project: (project?: Project) =>
+    FactoryGirl.define(AuditStatus, async () => ({
+      ...(await defaultAttributesFactory()),
+      auditableType: Project.LARAVEL_TYPE,
+      auditableId: (project?.id as number) ?? ProjectFactory.associate("id")
+    })),
+
+  formSubmission: (fs?: FormSubmission) =>
+    FactoryGirl.define(AuditStatus, async () => ({
+      ...(await defaultAttributesFactory()),
+      auditableType: FormSubmission.LARAVEL_TYPE,
+      auditableId: (fs?.id as number) ?? FormSubmissionFactory.associate("id")
+    }))
+};

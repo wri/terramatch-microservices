@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Test, TestingModule } from "@nestjs/testing";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FilesController } from "./files.controller";
-import { FileUploadService } from "../file/file-upload.service";
 import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "./entities.service";
@@ -20,7 +20,6 @@ jest.mock("./processors/media-owner-processor", () => ({
 
 describe("FilesController", () => {
   let controller: FilesController;
-  let fileUploadService: jest.Mocked<FileUploadService>;
   let policyService: jest.Mocked<PolicyService>;
   let mediaService: jest.Mocked<MediaService>;
   let entitiesService: jest.Mocked<EntitiesService>;
@@ -29,7 +28,6 @@ describe("FilesController", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    fileUploadService = { uploadFile: jest.fn() } as unknown as jest.Mocked<FileUploadService>;
     policyService = {
       authorize: jest.fn(),
       getPermissions: jest.fn()
@@ -37,6 +35,7 @@ describe("FilesController", () => {
     mediaService = {
       getUrl: jest.fn(),
       getMedia: jest.fn(),
+      createMedia: jest.fn(),
       deleteMediaByUuid: jest.fn(),
       deleteMedia: jest.fn(),
       getMedias: jest.fn(),
@@ -47,14 +46,13 @@ describe("FilesController", () => {
     mockMediaOwnerProcessor = { getBaseEntity: jest.fn() };
     entitiesService = {
       createMediaOwnerProcessor: jest.fn().mockReturnValue(mockMediaOwnerProcessor),
-      userId: "user-uuid",
+      userId: 1,
       mediaDto: jest.fn()
     } as unknown as jest.Mocked<EntitiesService>;
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilesController],
       providers: [
-        { provide: FileUploadService, useValue: fileUploadService },
         { provide: PolicyService, useValue: policyService },
         { provide: MediaService, useValue: mediaService },
         { provide: EntitiesService, useValue: entitiesService }
@@ -102,7 +100,7 @@ describe("FilesController", () => {
       mockMediaOwnerProcessor.getBaseEntity.mockResolvedValue(model);
       policyService.authorize.mockResolvedValue(undefined);
       const media: Media = { uuid: "media-uuid" } as Media;
-      fileUploadService.uploadFile.mockResolvedValue(media);
+      mediaService.createMedia.mockResolvedValue(media);
       mediaService.getUrl.mockImplementation((m: Media, conversion?: string) =>
         conversion != null ? `thumbUrl/${m.uuid}` : `url/${m.uuid}`
       );
@@ -112,9 +110,10 @@ describe("FilesController", () => {
       expect(entitiesService.createMediaOwnerProcessor).toHaveBeenCalledWith(params.entity, params.uuid);
       expect(mockMediaOwnerProcessor.getBaseEntity).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("uploadFiles", model);
-      expect(fileUploadService.uploadFile).toHaveBeenCalledWith(
+      expect(mediaService.createMedia).toHaveBeenCalledWith(
         model,
         params.entity,
+        1,
         params.collection,
         file,
         body.data.attributes
@@ -130,7 +129,7 @@ describe("FilesController", () => {
       await expect(controller.uploadFile(params, file as Express.Multer.File, body)).rejects.toThrow(
         UnauthorizedException
       );
-      expect(fileUploadService.uploadFile).not.toHaveBeenCalled();
+      expect(mediaService.createMedia).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when entity not found", async () => {
@@ -138,7 +137,7 @@ describe("FilesController", () => {
 
       await expect(controller.uploadFile(params, file as Express.Multer.File, body)).rejects.toThrow(NotFoundException);
       expect(policyService.authorize).not.toHaveBeenCalled();
-      expect(fileUploadService.uploadFile).not.toHaveBeenCalled();
+      expect(mediaService.createMedia).not.toHaveBeenCalled();
     });
   });
 

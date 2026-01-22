@@ -11,11 +11,25 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  NonAttribute,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Site } from "./site.entity";
 import { Seeding } from "./seeding.entity";
-import { FrameworkKey } from "../constants";
+import { FrameworkKey, PlantingStatus } from "../constants";
 import { Literal } from "sequelize/types/utils";
 import {
   AWAITING_APPROVAL,
@@ -32,12 +46,27 @@ import { Task } from "./task.entity";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
-import { PlantingStatus } from "../constants/planting-status";
+import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
   dueBefore?: string | Date;
 };
+
+type SiteReportMedia =
+  | "socioeconomicBenefits"
+  | "media"
+  | "file"
+  | "otherAdditionalDocuments"
+  | "photos"
+  | "treeSpecies"
+  | "siteSubmission"
+  | "documentFiles"
+  | "treePlantingUpload"
+  | "anrPhotos"
+  | "soilWaterConservationUpload"
+  | "soilWaterConservationPhotos";
 
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
@@ -45,7 +74,7 @@ type ApprovedIdsSubqueryOptions = {
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } }),
-  lastReport: { order: [["updatedAt", "DESC"]], limit: 1 }
+  lastReport: { order: [["dueAt", "DESC"]], limit: 1 }
 }))
 @Table({
   tableName: "v2_site_reports",
@@ -53,14 +82,14 @@ type ApprovedIdsSubqueryOptions = {
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class SiteReport extends Model<SiteReport> {
+export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreationAttributes<SiteReport>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly UNSUBMITTED_STATUSES = ["due", "started"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<SiteReportMedia, MediaConfiguration> = {
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
@@ -85,7 +114,7 @@ export class SiteReport extends Model<SiteReport> {
       multiple: true,
       validation: "photos"
     }
-  } as const;
+  };
 
   static incomplete() {
     return chainScope(this, "incomplete") as typeof SiteReport;
@@ -129,11 +158,11 @@ export class SiteReport extends Model<SiteReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -155,13 +184,15 @@ export class SiteReport extends Model<SiteReport> {
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
   approvedByUser: User | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number;
+  createdBy: number | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  approvedBy: number | null;
 
   @ForeignKey(() => Task)
   @AllowNull
@@ -175,7 +206,7 @@ export class SiteReport extends Model<SiteReport> {
     return this.site?.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.site?.project?.uuid;
   }
 
@@ -191,7 +222,7 @@ export class SiteReport extends Model<SiteReport> {
     return this.site?.name;
   }
 
-  get siteUuid() {
+  get siteUuid(): string | undefined {
     return this.site?.uuid;
   }
 
@@ -216,9 +247,9 @@ export class SiteReport extends Model<SiteReport> {
   }
 
   @StateMachineColumn(ReportStatusStates)
-  status: ReportStatus;
+  status: CreationOptional<ReportStatus>;
 
-  get isComplete() {
+  get isComplete(): NonAttribute<boolean> {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
   }
 
@@ -226,8 +257,8 @@ export class SiteReport extends Model<SiteReport> {
    * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
    * transition to it.
    */
-  get isCompletable() {
-    return this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
+  get isCompletable(): NonAttribute<boolean> {
+    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL)) ?? false;
   }
 
   @AllowNull
@@ -283,10 +314,10 @@ export class SiteReport extends Model<SiteReport> {
   numTreesRegenerating: number | null;
 
   @Column({ type: TEXT, defaultValue: "" })
-  soilWaterRestorationDescription: string;
+  soilWaterRestorationDescription: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  waterStructures: string;
+  waterStructures: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
@@ -297,7 +328,7 @@ export class SiteReport extends Model<SiteReport> {
   disturbanceDetails: string | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: number;
+  completion: CreationOptional<number>;
 
   @AllowNull
   @Column(DATE)
@@ -316,8 +347,8 @@ export class SiteReport extends Model<SiteReport> {
   oldId: number | null;
 
   @AllowNull
-  @Column(TEXT("long"))
-  answers: string | null;
+  @JsonColumn({ type: TEXT("long") })
+  answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
@@ -332,16 +363,16 @@ export class SiteReport extends Model<SiteReport> {
   plantingStatus: PlantingStatus | null;
 
   @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesRemoved: string;
+  invasiveSpeciesRemoved: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesManagement: string;
+  invasiveSpeciesManagement: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersDescription: string;
+  siteCommunityPartnersDescription: CreationOptional<string>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersIncomeIncreaseDescription: string;
+  siteCommunityPartnersIncomeIncreaseDescription: CreationOptional<string>;
 
   @AllowNull
   @Column(TEXT)
@@ -404,7 +435,7 @@ export class SiteReport extends Model<SiteReport> {
             WHERE sr2.site_id = s.id
               AND sr2.deleted_at IS NULL
               AND sr2.status = 'approved'
-            ORDER BY sr2.updated_at DESC
+            ORDER BY sr2.due_at DESC
             LIMIT 1
           ) = ${sql.escape(plantingStatus)}
       )`

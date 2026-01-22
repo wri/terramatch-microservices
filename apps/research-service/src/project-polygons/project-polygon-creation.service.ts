@@ -1,5 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
-import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { PolygonGeometry, ProjectPitch, ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { Transaction } from "sequelize";
 import { CreateProjectPolygonBatchRequestDto, Feature } from "./dto/create-project-polygon-request.dto";
 import { PolygonGeometryCreationService } from "../site-polygons/polygon-geometry-creation.service";
@@ -7,6 +7,7 @@ import { GeometryFileProcessingService } from "../site-polygons/geometry-file-pr
 import { ProjectPolygonGeometryService } from "./project-polygon-geometry.service";
 import { ProjectPolygonsService } from "./project-polygons.service";
 import { Geometry } from "@terramatch-microservices/database/constants";
+import { Polygon } from "geojson";
 import "multer";
 
 @Injectable()
@@ -42,19 +43,7 @@ export class ProjectPolygonCreationService {
           throw new NotFoundException(`Project pitch not found: ${projectPitchUuid}`);
         }
 
-        const existingProjectPolygon = await ProjectPolygon.findOne({
-          where: {
-            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-            entityId: projectPitch.id
-          },
-          transaction
-        });
-
-        if (existingProjectPolygon != null) {
-          throw new BadRequestException(
-            `Project polygon already exists for project pitch ${projectPitchUuid}. Only one polygon per project pitch is allowed.`
-          );
-        }
+        await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
 
         const geometries = features.map(f => f.geometry as Geometry);
 
@@ -73,7 +62,7 @@ export class ProjectPolygonCreationService {
         const projectPolygon = await ProjectPolygon.create(
           {
             polyUuid: polygonUuid,
-            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+            entityType: ProjectPitch.LARAVEL_TYPE,
             entityId: projectPitch.id,
             createdBy: userId,
             lastModifiedBy: userId
@@ -135,7 +124,7 @@ export class ProjectPolygonCreationService {
       const projectPolygon = await ProjectPolygon.create(
         {
           polyUuid: polygonUuids[0],
-          entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+          entityType: ProjectPitch.LARAVEL_TYPE,
           entityId: projectPitch.id,
           createdBy: userId,
           lastModifiedBy: userId
@@ -154,7 +143,7 @@ export class ProjectPolygonCreationService {
   private async deleteExistingProjectPolygon(projectPitchId: number, transaction: Transaction): Promise<void> {
     const existingProjectPolygon = await ProjectPolygon.findOne({
       where: {
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitchId
       },
       transaction
@@ -206,6 +195,59 @@ export class ProjectPolygonCreationService {
 
     if (missingProjectPitches.length > 0) {
       throw new NotFoundException(`Project pitches not found: ${missingProjectPitches.join(", ")}`);
+    }
+  }
+
+  async updateProjectPolygon(
+    projectPolygon: ProjectPolygon,
+    geometries: CreateProjectPolygonBatchRequestDto["geometries"],
+    userId: number
+  ): Promise<ProjectPolygon> {
+    if (PolygonGeometry.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const transaction = await PolygonGeometry.sequelize.transaction();
+
+    try {
+      if (geometries.length === 0 || geometries[0].features.length === 0) {
+        throw new BadRequestException("At least one geometry must be provided");
+      }
+
+      const polyUuid = projectPolygon.polyUuid;
+
+      if (polyUuid == null) {
+        throw new BadRequestException("Project polygon does not have an associated polygon geometry");
+      }
+
+      const polygonGeometry = await PolygonGeometry.findOne({
+        where: { uuid: polyUuid },
+        transaction
+      });
+
+      if (polygonGeometry == null) {
+        throw new NotFoundException(`Polygon geometry not found for uuid: ${polyUuid}`);
+      }
+
+      const newGeometry = geometries[0].features[0].geometry as Geometry;
+
+      if (newGeometry.type !== "Polygon") {
+        throw new BadRequestException(
+          `Only Polygon geometry is supported for project polygons. Received: ${newGeometry.type}`
+        );
+      }
+
+      polygonGeometry.polygon = newGeometry as Polygon;
+      await polygonGeometry.save({ transaction });
+
+      projectPolygon.lastModifiedBy = userId;
+      await projectPolygon.save({ transaction });
+
+      await transaction.commit();
+      return projectPolygon;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
   }
 }

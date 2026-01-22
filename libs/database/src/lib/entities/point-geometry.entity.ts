@@ -2,9 +2,17 @@ import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey,
 import { BIGINT, DECIMAL, GEOMETRY, UUID, UUIDV4 } from "sequelize";
 import { Point } from "geojson";
 import { User } from "./user.entity";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @Table({ tableName: "point_geometry", underscored: true, paranoid: true })
 export class PointGeometry extends Model<PointGeometry> {
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("PointGeometry model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

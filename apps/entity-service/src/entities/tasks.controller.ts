@@ -13,7 +13,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
-import { SingleTaskDto, TaskQueryDto } from "./dto/task-query.dto";
+import { TaskQueryDto } from "./dto/task-query.dto";
 import { ProjectReportLightDto } from "./dto/project-report.dto";
 import { SiteReportLightDto } from "./dto/site-report.dto";
 import { NurseryReportLightDto } from "./dto/nursery-report.dto";
@@ -21,6 +21,7 @@ import { TaskFullDto, TaskLightDto } from "./dto/task.dto";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { TasksService } from "./tasks.service";
 import { SrpReportLightDto } from "./dto/srp-report.dto";
+import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 
 @Controller("entities/v3/tasks")
 export class TasksController {
@@ -72,7 +73,7 @@ export class TasksController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async taskGet(@Param() { uuid }: SingleTaskDto) {
+  async taskGet(@Param() { uuid }: SingleResourceDto) {
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("read", task);
     return await this.tasksService.addFullTaskDto(buildJsonApi(TaskFullDto), task);
@@ -98,7 +99,7 @@ export class TasksController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async taskUpdate(@Param() { uuid }: SingleTaskDto, @Body() updatePayload: TaskUpdateBody) {
+  async taskUpdate(@Param() { uuid }: SingleResourceDto, @Body() updatePayload: TaskUpdateBody) {
     if (uuid !== updatePayload.data.id) {
       throw new BadRequestException("Task id in path and payload do not match");
     }

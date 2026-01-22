@@ -25,13 +25,30 @@ import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
+import { FrameworkKey } from "../constants";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\User";
 
-  static async findLocale(userId: number) {
-    return (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;
+  static async findLocale(userId?: number) {
+    return userId == null ? undefined : (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;
+  }
+
+  static async orgUuids(userId?: number) {
+    const user =
+      userId == null
+        ? undefined
+        : await User.findOne({
+            where: { id: userId },
+            attributes: ["id", "organisationId"],
+            include: [
+              { association: "organisation", attributes: ["uuid"] },
+              { association: "organisationsConfirmed", attributes: ["uuid"] }
+            ]
+          });
+
+    return (await user?.myOrgUuids()) ?? [];
   }
 
   @PrimaryKey
@@ -272,7 +289,7 @@ export class User extends Model<User> {
           ...permissions
             .filter(permission => permission.startsWith(prefix))
             .map(permission => permission.substring(prefix.length))
-        ];
+        ] as FrameworkKey[];
       } else {
         // Other users have access to the frameworks embodied by their set of projects
         frameworkSlugs = [
@@ -297,5 +314,25 @@ export class User extends Model<User> {
     }
 
     return this._myFrameworks;
+  }
+
+  async myOrgUuids(): Promise<string[]> {
+    const orgUuids: string[] = [];
+
+    let org = this.organisation;
+    if (org?.uuid == null) {
+      org = await this.$get("organisation", { attributes: ["uuid"] });
+    }
+    if (org != null) orgUuids.push(org.uuid);
+
+    let confirmed = this.organisationsConfirmed;
+    if (confirmed == null || confirmed.length === 0 || confirmed[0].uuid == null) {
+      confirmed = (await this.$get("organisationsConfirmed", {
+        attributes: ["uuid"]
+      })) as Array<Organisation & { OrganisationUser: OrganisationUser }>;
+    }
+    orgUuids.push(...confirmed.map(({ uuid }) => uuid));
+
+    return orgUuids;
   }
 }

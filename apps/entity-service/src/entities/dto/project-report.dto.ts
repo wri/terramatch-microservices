@@ -3,8 +3,14 @@ import { EntityDto } from "./entity.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import {
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "projectReports" })
 export class ProjectReportLightDto extends EntityDto {
@@ -38,8 +44,11 @@ export class ProjectReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   projectUuid: string | null;
 
-  @ApiProperty()
-  status: string;
+  @ApiProperty({
+    description: "Report status for this project report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
 
   @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
@@ -54,11 +63,18 @@ export class ProjectReportLightDto extends EntityDto {
   })
   taskUuid: string | null;
 
+  @ApiProperty({ nullable: true, type: Number, description: "The associated task id" })
+  taskId: number | null;
+
   @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty()
-  updateRequestStatus: string;
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this project report",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
@@ -76,13 +92,13 @@ export class ProjectReportLightDto extends EntityDto {
 export type ProjectReportMedia = Pick<ProjectReportFullDto, keyof typeof ProjectReport.MEDIA>;
 
 export class ProjectReportFullDto extends ProjectReportLightDto {
-  constructor(projectReport: ProjectReport, props: HybridSupportProps<ProjectReportFullDto, ProjectReport>) {
+  constructor(
+    projectReport: ProjectReport,
+    props: HybridSupportProps<ProjectReportFullDto, Omit<ProjectReport, "feedback" | "feedbackFields">>
+  ) {
     super();
     populateDto<ProjectReportFullDto, ProjectReport>(this, projectReport, { lightResource: false, ...props });
   }
-
-  @ApiProperty()
-  updateRequestStatus: string;
 
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;

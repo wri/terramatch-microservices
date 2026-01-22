@@ -28,7 +28,7 @@ export class DatabaseModule {
     DatabaseModule.eventEmitter = eventEmitter;
   }
 
-  static emitModelEvent(eventName: string, model: Model) {
-    this.eventEmitter?.emit(`database.${eventName}`, model);
+  static async emitModelEvent(eventName: string, model: Model) {
+    await this.eventEmitter?.emitAsync(`database.${eventName}`, model);
   }
 }

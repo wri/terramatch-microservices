@@ -6,41 +6,65 @@ import {
   ForeignKey,
   Model,
   PrimaryKey,
+  Scopes,
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Application } from "./application.entity";
-import { FormSubmissionStatus } from "../constants/status";
+import { FormSubmissionStatus, FormSubmissionStatusStates, statusUpdateSequelizeHook } from "../constants/status";
 import { ProjectPitch } from "./project-pitch.entity";
 import { User } from "./user.entity";
 import { Form } from "./form.entity";
 import { Stage } from "./stage.entity";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Dictionary } from "lodash";
+import { StateMachineColumn } from "../util/model-column-state-machine";
+import { InternalServerErrorException } from "@nestjs/common";
+import { chainScope } from "../util/chain-scope";
 
-@Table({ tableName: "form_submissions", underscored: true, paranoid: true })
-export class FormSubmission extends Model<FormSubmission> {
+@Table({
+  tableName: "form_submissions",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook }
+})
+@Scopes(() => ({
+  application: (applicationId: number) => ({ where: { applicationId } })
+}))
+export class FormSubmission extends Model<InferAttributes<FormSubmission>, InferCreationAttributes<FormSubmission>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormSubmission";
+
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("FormSubmission model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
+
+  static application(applicationId: number) {
+    return chainScope(this, "application", applicationId) as typeof FormSubmission;
+  }
 
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(TEXT)
   name: string | null;
 
-  @Column(STRING)
-  status: FormSubmissionStatus;
+  @StateMachineColumn(FormSubmissionStatusStates)
+  status: CreationOptional<FormSubmissionStatus>;
 
   @JsonColumn()
-  answers: object;
+  answers: Dictionary<unknown>;
 
   @AllowNull
   @Column(TEXT)
@@ -58,6 +82,10 @@ export class FormSubmission extends Model<FormSubmission> {
   @BelongsTo(() => Application)
   application: Application | null;
 
+  get applicationUuid(): string | null {
+    return this.application?.uuid ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   projectPitchUuid: string | null;
@@ -72,12 +100,20 @@ export class FormSubmission extends Model<FormSubmission> {
   @BelongsTo(() => User, { foreignKey: "userId", targetKey: "uuid", constraints: false })
   user: User | null;
 
+  get updatedByName(): string | null {
+    return this.user?.fullName ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   formId: string | null;
 
   @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid", constraints: false })
   form: Form | null;
+
+  get formUuid() {
+    return this.formId;
+  }
 
   @AllowNull
   @Column(UUID)
@@ -86,10 +122,18 @@ export class FormSubmission extends Model<FormSubmission> {
   @BelongsTo(() => Stage, { foreignKey: "stageUuid", targetKey: "uuid", constraints: false })
   stage: Stage | null;
 
+  get stageName(): string | null {
+    return this.stage?.name ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   organisationUuid: string | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationUuid", targetKey: "uuid", constraints: false })
   organisation: Organisation | null;
+
+  get organisationName(): string | null {
+    return this.organisation?.name ?? null;
+  }
 }

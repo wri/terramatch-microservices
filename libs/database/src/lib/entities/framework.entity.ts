@@ -1,21 +1,22 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, STRING, UUID, UUIDV4 } from "sequelize";
+import { FrameworkKey } from "../constants";
 
 @Table({ tableName: "frameworks", underscored: true })
-export class Framework extends Model<Framework> {
+export class Framework extends Model<InferAttributes<Framework>, InferCreationAttributes<Framework>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @AllowNull
   @Index
   @Column(STRING(20))
-  slug: string | null;
+  slug: FrameworkKey | null;
 
   @Column(STRING)
   name: string;

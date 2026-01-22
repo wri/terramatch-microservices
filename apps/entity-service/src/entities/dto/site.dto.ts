@@ -11,7 +11,7 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 import { Site } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "sites" })
@@ -76,7 +76,7 @@ export class SiteLightDto extends EntityDto {
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
 
 export class SiteFullDto extends SiteLightDto {
-  constructor(site: Site, props: HybridSupportProps<SiteFullDto, Site>) {
+  constructor(site: Site, props: HybridSupportProps<SiteFullDto, Omit<Site, "feedback" | "feedbackFields">>) {
     super();
     populateDto<SiteLightDto, Site>(this, site, { lightResource: false, ...props });
   }
@@ -204,26 +204,36 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ type: () => MediaDto, isArray: true })
   documentFiles: MediaDto[];
 
-  @ApiProperty({ type: () => MediaDto, isArray: false })
+  @ApiProperty({ type: () => MediaDto })
   stratificationForHeterogeneity: MediaDto;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project uuid"
   })
-  projectUuid: string;
+  projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project country"
   })
-  projectCountry: string;
+  projectCountry: string | null;
 
   @ApiProperty({
     nullable: true,
+    type: String,
     description: "The associated project organisation name"
   })
   organisationName: string;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation uuid"
+  })
+  organisationUuid: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   treesPlantedPolygonsCount: number | null;

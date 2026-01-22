@@ -1,3 +1,5 @@
+import "source-map-support/register";
+
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import "../../../instrument-sentry";
 

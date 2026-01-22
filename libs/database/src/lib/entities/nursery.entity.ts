@@ -11,7 +11,19 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, INTEGER, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Project } from "./project.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import { NurseryReport } from "./nursery-report.entity";
@@ -28,6 +40,10 @@ import { Subquery } from "../util/subquery.builder";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
+import { MediaConfiguration } from "../constants/media-owners";
+import { Dictionary } from "lodash";
+
+type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
@@ -40,12 +56,12 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
-export class Nursery extends Model<Nursery> {
+export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttributes<Nursery>> {
   static readonly APPROVED_STATUSES = [APPROVED];
   static readonly TREE_ASSOCIATIONS = ["seedlings"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Nurseries\\Nursery";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<NurseryMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" },
     file: { dbCollection: "file", multiple: true, validation: "general-documents" },
     otherAdditionalDocuments: {
@@ -54,7 +70,7 @@ export class Nursery extends Model<Nursery> {
       validation: "general-documents"
     },
     photos: { dbCollection: "photos", multiple: true, validation: "photos" }
-  } as const;
+  };
 
   static approved() {
     return chainScope(this, "approved") as typeof Nursery;
@@ -79,14 +95,14 @@ export class Nursery extends Model<Nursery> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @StateMachineColumn(EntityStatusStates)
-  status: EntityStatus;
+  status: CreationOptional<EntityStatus>;
 
   @AllowNull
   @Column(STRING)
@@ -136,6 +152,14 @@ export class Nursery extends Model<Nursery> {
   @Column(STRING)
   oldModel: string | null;
 
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  oldId: number | null;
+
+  @AllowNull
+  @JsonColumn({ type: TEXT("long") })
+  answers: Dictionary<unknown> | null;
+
   @BelongsTo(() => Project)
   project: Project | null;
 
@@ -143,12 +167,16 @@ export class Nursery extends Model<Nursery> {
     return this.project?.name;
   }
 
-  get projectUuid() {
+  get projectUuid(): string | undefined {
     return this.project?.uuid;
   }
 
   get organisationName() {
     return this.project?.organisationName;
+  }
+
+  get organisationUuid() {
+    return this.project?.organisationUuid;
   }
 
   @HasMany(() => TreeSpecies, {

@@ -4,9 +4,15 @@ import { FinancialReport } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
-import { OrganisationStatus } from "@terramatch-microservices/database/constants/status";
-import { FinancialIndicatorDto } from "./financial-indicator.dto";
-import { FundingTypeDto } from "./funding-type.dto";
+import {
+  OrganisationStatus,
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
+import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 
 @JsonApiDto({ type: "financialReports" })
 export class FinancialReportLightDto extends EntityDto {
@@ -17,18 +23,24 @@ export class FinancialReportLightDto extends EntityDto {
     }
   }
 
-  @ApiProperty()
-  status: string;
-
-  @ApiProperty()
-  updateRequestStatus: string;
+  @ApiProperty({
+    description: "Report status for this financial report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
 
   @ApiProperty({
     nullable: true,
-    type: String,
-    description: "The associated organisation name"
+    description: "Update request status for this financial report",
+    enum: UPDATE_REQUEST_STATUSES
   })
+  updateRequestStatus: UpdateRequestStatus | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation name" })
   organisationName: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "The associated organisation uuid" })
+  organisationUuid: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   yearOfReport: number | null;
@@ -44,7 +56,10 @@ export class FinancialReportLightDto extends EntityDto {
 }
 
 export class FinancialReportFullDto extends FinancialReportLightDto {
-  constructor(financialReport: FinancialReport, props?: HybridSupportProps<FinancialReportFullDto, FinancialReport>) {
+  constructor(
+    financialReport: FinancialReport,
+    props?: HybridSupportProps<FinancialReportFullDto, Omit<FinancialReport, "feedback" | "feedbackFields">>
+  ) {
     super();
     if (financialReport != null && props != null) {
       populateDto<FinancialReportFullDto, FinancialReport>(this, financialReport, { lightResource: false, ...props });

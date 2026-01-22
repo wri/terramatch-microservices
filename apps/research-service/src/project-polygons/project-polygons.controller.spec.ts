@@ -8,6 +8,7 @@ import { BadRequestException, NotFoundException, UnauthorizedException } from "@
 import { ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonFactory, ProjectPitchFactory } from "@terramatch-microservices/database/factories";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";
+import { UpdateProjectPolygonRequestDto } from "./dto/update-project-polygon-request.dto";
 import { ProjectPolygonUploadRequestDto } from "./dto/project-polygon-upload.dto";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
@@ -71,19 +72,16 @@ describe("ProjectPolygonsController", () => {
 
     it("should return a valid project polygon when found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
       projectPolygonService.findByProjectPitchUuid.mockResolvedValue(projectPolygon);
 
-      const result = serialize(await controller.findOne({ projectPitchUuid: projectPitch.uuid }));
+      const result = serialize(await controller.findOne({ projectPitchUuid: pitch.uuid }));
 
       expect(result.data).not.toBeNull();
       const resource = result.data as Resource;
-      expect(resource.id).toBe(`?projectPitchUuid=${projectPitch.uuid}`);
+      expect(resource.id).toBe(`?projectPitchUuid=${pitch.uuid}`);
       expect(resource.type).toBe("projectPolygons");
       expect(resource.attributes).toHaveProperty("uuid", projectPolygon.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("read", ProjectPolygon);
@@ -91,18 +89,15 @@ describe("ProjectPolygonsController", () => {
 
     it("should include projectPitchUuid in the response", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
       projectPolygonService.findByProjectPitchUuid.mockResolvedValue(projectPolygon);
 
-      const result = serialize(await controller.findOne({ projectPitchUuid: projectPitch.uuid }));
+      const result = serialize(await controller.findOne({ projectPitchUuid: pitch.uuid }));
 
       const resource = result.data as Resource;
-      expect(resource.attributes).toHaveProperty("projectPitchUuid", projectPitch.uuid);
+      expect(resource.attributes).toHaveProperty("projectPitchUuid", pitch.uuid);
     });
   });
 
@@ -164,15 +159,12 @@ describe("ProjectPolygonsController", () => {
 
     it("should create project polygons with JSON:API format", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
       projectPolygonCreationService.createProjectPolygons.mockResolvedValue([projectPolygon]);
       projectPolygonService.loadProjectPitchAssociation.mockResolvedValue({
-        [projectPolygon.entityId]: projectPitch.uuid
+        [projectPolygon.entityId]: pitch.uuid
       });
 
       const geometries = [
@@ -194,7 +186,7 @@ describe("ProjectPolygonsController", () => {
                 ]
               },
               properties: {
-                projectPitchUuid: projectPitch.uuid
+                projectPitchUuid: pitch.uuid
               }
             }
           ]
@@ -212,28 +204,22 @@ describe("ProjectPolygonsController", () => {
         expect(result.data).toHaveLength(1);
         expect(result.data[0].id).toBe(projectPolygon.uuid);
         expect(result.data[0].type).toBe("projectPolygons");
-        expect(result.data[0].attributes).toHaveProperty("projectPitchUuid", projectPitch.uuid);
+        expect(result.data[0].attributes).toHaveProperty("projectPitchUuid", pitch.uuid);
       }
     });
 
     it("should create multiple project polygons for different project pitches", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const projectPitch1 = await ProjectPitchFactory.build();
-      const projectPitch2 = await ProjectPitchFactory.build();
+      const pitch1 = await ProjectPitchFactory.build();
+      const pitch2 = await ProjectPitchFactory.build();
 
-      const projectPolygon1 = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch1.id
-      });
-      const projectPolygon2 = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch2.id
-      });
+      const projectPolygon1 = await ProjectPolygonFactory.forPitch(pitch1).build();
+      const projectPolygon2 = await ProjectPolygonFactory.forPitch(pitch2).build();
 
       projectPolygonCreationService.createProjectPolygons.mockResolvedValue([projectPolygon1, projectPolygon2]);
       projectPolygonService.loadProjectPitchAssociation.mockResolvedValue({
-        [projectPolygon1.entityId]: projectPitch1.uuid,
-        [projectPolygon2.entityId]: projectPitch2.uuid
+        [projectPolygon1.entityId]: pitch1.uuid,
+        [projectPolygon2.entityId]: pitch2.uuid
       });
 
       const geometries = [
@@ -254,7 +240,7 @@ describe("ProjectPolygonsController", () => {
                   ]
                 ]
               },
-              properties: { projectPitchUuid: projectPitch1.uuid }
+              properties: { projectPitchUuid: pitch1.uuid }
             }
           ]
         },
@@ -275,7 +261,7 @@ describe("ProjectPolygonsController", () => {
                   ]
                 ]
               },
-              properties: { projectPitchUuid: projectPitch2.uuid }
+              properties: { projectPitchUuid: pitch2.uuid }
             }
           ]
         }
@@ -294,15 +280,12 @@ describe("ProjectPolygonsController", () => {
 
     it("should load project pitch associations for created polygons", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
       projectPolygonCreationService.createProjectPolygons.mockResolvedValue([projectPolygon]);
       projectPolygonService.loadProjectPitchAssociation.mockResolvedValue({
-        [projectPolygon.entityId]: projectPitch.uuid
+        [projectPolygon.entityId]: pitch.uuid
       });
 
       const geometries = [
@@ -323,7 +306,7 @@ describe("ProjectPolygonsController", () => {
                   ]
                 ]
               },
-              properties: { projectPitchUuid: projectPitch.uuid }
+              properties: { projectPitchUuid: pitch.uuid }
             }
           ]
         }
@@ -416,32 +399,25 @@ describe("ProjectPolygonsController", () => {
 
     it("should successfully upload file and create project polygon", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
       const file = createMockFile();
-      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: projectPitch.uuid } } };
+      const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: pitch.uuid } } };
 
       projectPolygonCreationService.uploadProjectPolygonFromFile.mockResolvedValue(projectPolygon);
 
       const result = serialize(await controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto));
 
       expect(policyService.authorize).toHaveBeenCalledWith("create", ProjectPolygon);
-      expect(projectPolygonCreationService.uploadProjectPolygonFromFile).toHaveBeenCalledWith(
-        file,
-        projectPitch.uuid,
-        1
-      );
-      expect(projectPolygonService.buildDto).toHaveBeenCalledWith(projectPolygon, projectPitch.uuid);
+      expect(projectPolygonCreationService.uploadProjectPolygonFromFile).toHaveBeenCalledWith(file, pitch.uuid, 1);
+      expect(projectPolygonService.buildDto).toHaveBeenCalledWith(projectPolygon, pitch.uuid);
       expect(result.data).toBeDefined();
 
       const resource = result.data as Resource;
       expect(resource.id).toBe(projectPolygon.uuid);
       expect(resource.type).toBe("projectPolygons");
-      expect(resource.attributes).toHaveProperty("projectPitchUuid", projectPitch.uuid);
+      expect(resource.attributes).toHaveProperty("projectPitchUuid", pitch.uuid);
     });
 
     it("should handle service errors and propagate them", async () => {
@@ -461,36 +437,260 @@ describe("ProjectPolygonsController", () => {
       );
     });
   });
-  describe("delete", () => {
-    it("should throw NotFoundException when project polygon is not found", async () => {
-      projectPolygonService.findOne.mockResolvedValue(null);
 
-      await expect(controller.delete("non-existent-uuid")).rejects.toThrow(NotFoundException);
-      await expect(controller.delete("non-existent-uuid")).rejects.toThrow(
-        "Project polygon not found for uuid: non-existent-uuid"
+  describe("update", () => {
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw BadRequestException when polyUuid in path does not match body", async () => {
+      const polyUuid = "poly-uuid-1";
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: "poly-uuid-2",
+          attributes: { geometries: [{ type: "FeatureCollection", features: [] }] }
+        }
+      };
+
+      await expect(controller.update(polyUuid, request as UpdateProjectPolygonRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(controller.update(polyUuid, request as UpdateProjectPolygonRequestDto)).rejects.toThrow(
+        "Polygon geometry UUID in path and payload do not match"
+      );
+    });
+
+    it("should throw NotFoundException when project polygon is not found by polyUuid", async () => {
+      const polyUuid = "non-existent-poly-uuid";
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: polyUuid,
+          attributes: { geometries: [{ type: "FeatureCollection", features: [] }] }
+        }
+      };
+
+      projectPolygonService.findByPolyUuid.mockResolvedValue(null);
+
+      await expect(controller.update(polyUuid, request as UpdateProjectPolygonRequestDto)).rejects.toThrow(
+        NotFoundException
+      );
+      await expect(controller.update(polyUuid, request as UpdateProjectPolygonRequestDto)).rejects.toThrow(
+        `Project polygon not found for polygon geometry UUID: ${polyUuid}`
       );
     });
 
     it("should throw UnauthorizedException when authorization fails", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
-      projectPolygonService.findOne.mockResolvedValue(projectPolygon);
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: projectPolygon.polyUuid,
+          attributes: { geometries: [{ type: "FeatureCollection", features: [] }] }
+        }
+      };
+
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.delete(projectPolygon.uuid)).rejects.toThrow(UnauthorizedException);
+      await expect(
+        controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto)
+      ).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should call deleteProjectPolygon with the model", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
-      projectPolygonService.findOne.mockResolvedValue(projectPolygon);
+    it("should throw UnauthorizedException when userId is null", async () => {
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: projectPolygon.polyUuid,
+          attributes: { geometries: [{ type: "FeatureCollection", features: [] }] }
+        }
+      };
+
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      await expect(
+        controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto)
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto)
+      ).rejects.toThrow("User must be authenticated");
+    });
+
+    it("should throw BadRequestException when geometries array is empty", async () => {
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: projectPolygon.polyUuid,
+          attributes: { geometries: [] }
+        }
+      };
+
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      await expect(
+        controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto)
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto)
+      ).rejects.toThrow("geometries array is required");
+    });
+
+    it("should successfully update project polygon geometry", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
+
+      const geometries = [
+        {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [0, 0],
+                    [0, 1],
+                    [1, 1],
+                    [1, 0],
+                    [0, 0]
+                  ]
+                ]
+              },
+              properties: {}
+            }
+          ]
+        }
+      ];
+
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: projectPolygon.polyUuid,
+          attributes: { geometries }
+        }
+      };
+
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      projectPolygonCreationService.updateProjectPolygon.mockResolvedValue(projectPolygon);
+      projectPolygonService.loadProjectPitchAssociation.mockResolvedValue({
+        [projectPolygon.entityId]: pitch.uuid
+      });
+
+      const result = serialize(
+        await controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto)
+      );
+
+      expect(projectPolygonService.findByPolyUuid).toHaveBeenCalledWith(projectPolygon.polyUuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", projectPolygon);
+      expect(projectPolygonCreationService.updateProjectPolygon).toHaveBeenCalledWith(projectPolygon, geometries, 1);
+      expect(result.data).toBeDefined();
+
+      const resource = result.data as Resource;
+      expect(resource.id).toBe(projectPolygon.uuid);
+      expect(resource.type).toBe("projectPolygons");
+      expect(resource.attributes).toHaveProperty("projectPitchUuid", pitch.uuid);
+    });
+
+    it("should update metadata on project polygon", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
+        lastModifiedBy: 999
+      });
+
+      const geometries = [
+        {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [0, 0],
+                    [0, 1],
+                    [1, 1],
+                    [1, 0],
+                    [0, 0]
+                  ]
+                ]
+              },
+              properties: {}
+            }
+          ]
+        }
+      ];
+
+      const request = {
+        data: {
+          type: "projectPolygons",
+          id: projectPolygon.polyUuid,
+          attributes: { geometries }
+        }
+      };
+
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockResolvedValue(undefined);
+      projectPolygonCreationService.updateProjectPolygon.mockResolvedValue(projectPolygon);
+      projectPolygonService.loadProjectPitchAssociation.mockResolvedValue({
+        [projectPolygon.entityId]: pitch.uuid
+      });
+
+      await controller.update(projectPolygon.polyUuid, request as UpdateProjectPolygonRequestDto);
+
+      expect(projectPolygonCreationService.updateProjectPolygon).toHaveBeenCalledWith(projectPolygon, geometries, 1);
+    });
+  });
+
+  describe("delete", () => {
+    it("should throw NotFoundException when project polygon is not found by polyUuid", async () => {
+      const polyUuid = "non-existent-poly-uuid";
+      projectPolygonService.findByPolyUuid.mockResolvedValue(null);
+
+      await expect(controller.delete(polyUuid)).rejects.toThrow(NotFoundException);
+      await expect(controller.delete(polyUuid)).rejects.toThrow(
+        `Project polygon not found for polygon geometry UUID: ${polyUuid}`
+      );
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.delete(projectPolygon.polyUuid)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should call deleteProjectPolygon with the model using polyUuid", async () => {
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
+      projectPolygonService.findByPolyUuid.mockResolvedValue(projectPolygon);
       policyService.authorize.mockResolvedValue(undefined);
       projectPolygonService.deleteProjectPolygon.mockResolvedValue(projectPolygon.uuid);
 
-      const result = serialize(await controller.delete(projectPolygon.uuid));
+      const result = serialize(await controller.delete(projectPolygon.polyUuid));
 
+      expect(projectPolygonService.findByPolyUuid).toHaveBeenCalledWith(projectPolygon.polyUuid);
       expect(policyService.authorize).toHaveBeenCalledWith("delete", projectPolygon);
       expect(projectPolygonService.deleteProjectPolygon).toHaveBeenCalledWith(projectPolygon);
       expect(result.meta.resourceType).toBe("projectPolygons");
-      expect(result.meta.resourceIds).toStrictEqual([projectPolygon.uuid]);
+      expect(result.meta.resourceIds).toStrictEqual([projectPolygon.polyUuid]);
       expect(result.data).toBeUndefined();
     });
   });

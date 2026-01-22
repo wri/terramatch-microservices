@@ -15,7 +15,7 @@ type UpdateBaseOptions = { startPage?: number; updatedSince?: Date };
 // Limit in Airtable
 const LONG_TEXT_MAX_LENGTH = 100000;
 
-export abstract class AirtableEntity<ModelType extends Model<ModelType>, AssociationType = Record<string, never>> {
+export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
@@ -296,7 +296,7 @@ type AirtableValue = null | undefined | string | number | boolean | Date | strin
 /**
  * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), or a more descriptive object
  */
-export type ColumnMapping<T extends Model<T>, A = Record<string, never>> =
+export type ColumnMapping<T extends Model, A = Record<string, never>> =
   | keyof Attributes<T>
   | {
       airtableColumn: string;
@@ -313,10 +313,10 @@ export type PolymorphicUuidAssociation<AssociationType> = {
 };
 
 // used in the test suite
-export const airtableColumnName = <T extends Model<T>>(mapping: ColumnMapping<T, unknown>) =>
+export const airtableColumnName = <T extends Model>(mapping: ColumnMapping<T, unknown>) =>
   isObject(mapping) ? mapping.airtableColumn : (mapping as string);
 
-const selectAttributes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
+const selectAttributes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
   uniq([
     "id",
     ...flatten(
@@ -352,7 +352,7 @@ const mergeInclude = (includes: Include[], include: Include) => {
   return includes;
 };
 
-const selectIncludes = <T extends Model<T>, A>(columns: ColumnMapping<T, A>[]) =>
+const selectIncludes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
   columns.reduce((includes, mapping) => {
     if (!isObject(mapping)) return includes;
     if (mapping.include == null) return includes;
@@ -376,7 +376,7 @@ export const commonEntityColumns = <T extends UuidModel, A = Record<string, neve
         ])
   ] as ColumnMapping<T, A>[];
 
-export const associatedValueColumn = <T extends Model<T>, A>(
+export const associatedValueColumn = <T extends Model, A>(
   valueName: keyof A,
   dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[]
 ): ColumnMapping<T, A> => ({
@@ -385,7 +385,7 @@ export const associatedValueColumn = <T extends Model<T>, A>(
   valueMap: async (_, associations: A) => associations?.[valueName] as AirtableValue
 });
 
-export const percentageColumn = <T extends Model<T>, A = Record<string, never>>(
+export const percentageColumn = <T extends Model, A = Record<string, never>>(
   dbColumn: keyof Attributes<T>
 ): ColumnMapping<T, A> => ({
   airtableColumn: dbColumn as string,

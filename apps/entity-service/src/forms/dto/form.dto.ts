@@ -14,7 +14,7 @@ import {
 } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { IsBoolean, IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
-import { MediaDto } from "../../entities/dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 
 type FormExtras = "title" | "subtitle" | "description" | "submissionMessage";
 type FormWithoutExtras = Omit<Form, FormExtras>;

@@ -6,13 +6,13 @@ import { Model } from "sequelize-typescript";
 import { getStateMachine, getStateMachineProperties } from "./util/model-column-state-machine";
 
 export const SEQUELIZE_GLOBAL_HOOKS = {
-  afterSave: function (model: Model) {
+  afterSave: async function (model: Model) {
     // After any model saves, check if we have a state machine defined on one or more of its
     // columns, and if so, call afterSave on the state machine instance for the possible
     // processing of afterTransitionHooks. See StateMachineColumn decorator in
     // model-column-state-machine.ts
     for (const key of getStateMachineProperties(model)) {
-      getStateMachine(model, key)?.afterSave();
+      await getStateMachine(model, key)?.afterSave();
     }
   }
 };

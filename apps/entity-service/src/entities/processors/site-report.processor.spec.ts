@@ -13,6 +13,7 @@ import {
   ProjectUserFactory,
   SiteFactory,
   SiteReportFactory,
+  TaskFactory,
   TreeSpeciesFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -176,6 +177,23 @@ describe("SiteReportProcessor", () => {
 
     it("should throw an error if the site uuid is not found", async () => {
       await expect(processor.findMany({ siteUuid: "123" })).rejects.toThrow(BadRequestException);
+    });
+
+    it("should filter site reports by taskId", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const task1 = await TaskFactory.create({ projectId: project.id });
+      const task2 = await TaskFactory.create({ projectId: project.id });
+      await ProjectUserFactory.create({ userId, projectId: project.id });
+
+      const task1Reports = await SiteReportFactory.createMany(2, { siteId: site.id, taskId: task1.id });
+      await SiteReportFactory.createMany(3, { siteId: site.id, taskId: task2.id });
+
+      for (const report of task1Reports) {
+        report.site = await report.$get("site");
+      }
+
+      await expectSiteReports(task1Reports, { taskId: task1.id }, { permissions: ["manage-own"] });
     });
 
     it("should sort site reports by project name", async () => {
@@ -466,7 +484,7 @@ describe("SiteReportProcessor", () => {
   describe("processSideload", () => {
     it("should include sideloaded tree species", async () => {
       const siteReport = await SiteReportFactory.create();
-      await TreeSpeciesFactory.forSiteReportTreePlanted.createMany(3, { speciesableId: siteReport.id });
+      await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(3);
 
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const document = buildJsonApi(SiteReportLightDto);

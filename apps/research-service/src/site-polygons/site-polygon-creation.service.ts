@@ -108,11 +108,7 @@ export class SitePolygonCreationService {
     duplicatePolygons: SitePolygon[];
     duplicateValidations: ValidationIncludedData[];
   }> {
-    if (PolygonGeometry.sequelize == null) {
-      throw new BadRequestException("Database connection not available");
-    }
-
-    const transaction = await PolygonGeometry.sequelize.transaction();
+    const transaction = await PolygonGeometry.sql.transaction();
     const allCreatedSitePolygons: SitePolygon[] = [];
     const allDuplicatePolygons: SitePolygon[] = [];
     const allPolygonUuids: string[] = [];
@@ -747,7 +743,7 @@ export class SitePolygonCreationService {
       newPolygonGeometryUuid != null
     );
 
-    const newVersion = await this.versioningService.createVersion(
+    return await this.versioningService.createVersion(
       basePolygon,
       sitePolygonAttributes,
       newPolygonGeometryUuid,
@@ -756,8 +752,6 @@ export class SitePolygonCreationService {
       userFullName,
       transaction
     );
-
-    return newVersion;
   }
 
   private buildDetailedChangeDescription(

@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
-import { ProjectPolygon, ProjectPitch, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, ProjectPitch, ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op, Transaction } from "sequelize";
 import { FeatureCollection, Geometry } from "geojson";
@@ -19,9 +19,9 @@ export class ProjectPolygonsService {
       return null;
     }
 
-    const projectPolygon = await ProjectPolygon.findOne({
+    return await ProjectPolygon.findOne({
       where: {
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitch.id
       },
       include: [
@@ -31,8 +31,6 @@ export class ProjectPolygonsService {
         }
       ]
     });
-
-    return projectPolygon;
   }
 
   async loadProjectPitchAssociation(projectPolygons: ProjectPolygon[]): Promise<Record<number, string>> {
@@ -40,9 +38,7 @@ export class ProjectPolygonsService {
       return {};
     }
 
-    const entityIds = projectPolygons
-      .filter(pp => pp.entityType === ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH)
-      .map(pp => pp.entityId);
+    const entityIds = projectPolygons.filter(pp => pp.entityType === ProjectPitch.LARAVEL_TYPE).map(pp => pp.entityId);
 
     if (entityIds.length === 0) {
       return {};
@@ -67,15 +63,14 @@ export class ProjectPolygonsService {
 
     if (projectPitchUuid != null) {
       finalProjectPitchUuid = projectPitchUuid;
-    } else if (projectPolygon.entityType === ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH) {
+    } else if (projectPolygon.entityType === ProjectPitch.LARAVEL_TYPE) {
       const projectPitch = await ProjectPitch.findByPk(projectPolygon.entityId, {
         attributes: ["uuid"]
       });
       finalProjectPitchUuid = projectPitch?.uuid ?? null;
     }
 
-    const dto = new ProjectPolygonDto(projectPolygon, finalProjectPitchUuid);
-    return dto;
+    return new ProjectPolygonDto(projectPolygon, finalProjectPitchUuid);
   }
 
   async transaction<TReturn>(callback: (transaction: Transaction) => Promise<TReturn>) {
@@ -126,6 +121,13 @@ export class ProjectPolygonsService {
     });
   }
 
+  async findByPolyUuid(polyUuid: string): Promise<ProjectPolygon | null> {
+    return await ProjectPolygon.findOne({
+      where: { polyUuid },
+      attributes: ["id", "uuid", "polyUuid", "entityId", "entityType", "createdBy"]
+    });
+  }
+
   async getGeoJson(query: ProjectPolygonGeoJsonQueryDto): Promise<FeatureCollection> {
     const projectPitch = await ProjectPitch.findOne({
       where: { uuid: query.projectPitchUuid },
@@ -138,7 +140,7 @@ export class ProjectPolygonsService {
 
     const projectPolygon = await ProjectPolygon.findOne({
       where: {
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+        entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitch.id
       },
       attributes: ["polyUuid"]

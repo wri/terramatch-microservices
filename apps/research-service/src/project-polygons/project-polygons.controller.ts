@@ -7,6 +7,7 @@ import {
   Logger,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UnauthorizedException,
@@ -26,6 +27,7 @@ import {
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { ProjectPolygonQueryDto } from "./dto/project-polygon-query.dto";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";
+import { UpdateProjectPolygonRequestDto } from "./dto/update-project-polygon-request.dto";
 import { ProjectPolygonUploadRequestDto } from "./dto/project-polygon-upload.dto";
 import { ProjectPolygonsService } from "./project-polygons.service";
 import { ProjectPolygonCreationService } from "./project-polygon-creation.service";
@@ -110,12 +112,12 @@ export class ProjectPolygonsController {
     description: `Create a project polygon for a project pitch from GeoJSON.
     
     Each feature must have \`projectPitchUuid\` in properties.
-    Only one polygon per project pitch is supported. If a polygon already exists for the project pitch, the request will fail.`
+    Only one polygon per project pitch is supported. If a polygon already exists for the project pitch, it will be deleted and replaced with the new polygon.`
   })
   @JsonApiResponse(ProjectPolygonDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, {
-    description: "Invalid request data, project pitch not found, or polygon already exists for project pitch."
+    description: "Invalid request data or project pitch not found."
   })
   async create(@Body() createRequest: CreateProjectPolygonJsonApiRequestDto) {
     await this.policyService.authorize("create", ProjectPolygon);
@@ -195,30 +197,91 @@ export class ProjectPolygonsController {
     document.addData(createdProjectPolygon.uuid, dto);
     return document;
   }
-  @Delete(":uuid")
+  @Patch(":polyUuid")
+  @ApiOperation({
+    operationId: "updateProjectPolygon",
+    summary: "Update project polygon geometry by polygon geometry UUID",
+    description: `Update the geometry of an existing project polygon using the polygon geometry UUID (polyUuid).
+    
+    The polygon geometry will be updated in place with the new geometry provided in the request.
+    The polyUuid remains the same - only the geometry data is updated.
+    The project pitch association remains unchanged.`
+  })
+  @JsonApiResponse(ProjectPolygonDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, {
+    description: "Project polygon not found for the given polygon geometry UUID."
+  })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data or geometry." })
+  async update(@Param("polyUuid") polyUuid: string, @Body() updateRequest: UpdateProjectPolygonRequestDto) {
+    if (polyUuid !== updateRequest.data.id) {
+      throw new BadRequestException("Polygon geometry UUID in path and payload do not match");
+    }
+
+    const projectPolygon = await this.projectPolygonService.findByPolyUuid(polyUuid);
+
+    if (projectPolygon === null) {
+      throw new NotFoundException(`Project polygon not found for polygon geometry UUID: ${polyUuid}`);
+    }
+
+    await this.policyService.authorize("update", projectPolygon);
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const geometries = updateRequest?.data?.attributes?.geometries;
+
+    if (geometries == null || geometries.length === 0) {
+      throw new BadRequestException("geometries array is required");
+    }
+
+    const updatedProjectPolygon = await this.projectPolygonCreationService.updateProjectPolygon(
+      projectPolygon,
+      geometries,
+      userId
+    );
+
+    const document = buildJsonApi(ProjectPolygonDto);
+
+    const projectPitchMap = await this.projectPolygonService.loadProjectPitchAssociation([updatedProjectPolygon]);
+    const projectPitchUuid = projectPitchMap[updatedProjectPolygon.entityId];
+
+    const dto = await this.projectPolygonService.buildDto(updatedProjectPolygon, projectPitchUuid);
+    document.addData(updatedProjectPolygon.uuid, dto);
+
+    this.logger.log(`Updated project polygon with polyUuid ${polyUuid} by user ${userId}`);
+
+    return document;
+  }
+
+  @Delete(":polyUuid")
   @ApiOperation({
     operationId: "deleteProjectPolygon",
-    summary: "Delete a project polygon and its polygon geometry",
-    description: `Soft deletes a project polygon and its associated polygon geometry record.`
+    summary: "Delete a project polygon and its polygon geometry by polygon geometry UUID",
+    description: `Soft deletes a project polygon and its associated polygon geometry record using the polygon geometry UUID (polyUuid).`
   })
   @JsonApiDeletedResponse(getDtoType(ProjectPolygonDto), {
     description: "Project polygon and all associated records were deleted"
   })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
-  @ExceptionResponse(NotFoundException, { description: "Project polygon not found." })
-  async delete(@Param("uuid") uuid: string) {
-    const projectPolygon = await this.projectPolygonService.findOne(uuid);
+  @ExceptionResponse(NotFoundException, {
+    description: "Project polygon not found for the given polygon geometry UUID."
+  })
+  async delete(@Param("polyUuid") polyUuid: string) {
+    const projectPolygon = await this.projectPolygonService.findByPolyUuid(polyUuid);
 
     if (projectPolygon === null) {
-      throw new NotFoundException(`Project polygon not found for uuid: ${uuid}`);
+      throw new NotFoundException(`Project polygon not found for polygon geometry UUID: ${polyUuid}`);
     }
 
     await this.policyService.authorize("delete", projectPolygon);
 
     await this.projectPolygonService.deleteProjectPolygon(projectPolygon);
 
-    this.logger.log(`Deleted project polygon ${uuid}`);
+    this.logger.log(`Deleted project polygon with polyUuid ${polyUuid}`);
 
-    return buildDeletedResponse(getDtoType(ProjectPolygonDto), uuid);
+    return buildDeletedResponse(getDtoType(ProjectPolygonDto), polyUuid);
   }
 }

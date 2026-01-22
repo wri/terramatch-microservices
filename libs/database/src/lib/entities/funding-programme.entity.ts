@@ -1,28 +1,56 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
-import { FrameworkKey } from "../constants";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  HasMany,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
+import {
+  BIGINT,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
+import { FrameworkKey, OrganisationType } from "../constants";
 import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { I18nItem } from "./i18n-item.entity";
+import { MediaConfiguration } from "../constants/media-owners";
+import { COMING_SOON, FundingProgrammeStatus } from "../constants/status";
+import { Stage } from "./stage.entity";
+
+type FundingProgrammeMedia = "cover";
 
 @Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
-export class FundingProgramme extends Model<FundingProgramme> {
+export class FundingProgramme extends Model<
+  InferAttributes<FundingProgramme>,
+  InferCreationAttributes<FundingProgramme>
+> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FundingProgramme";
 
-  static readonly MEDIA = {
+  static readonly MEDIA: Record<FundingProgrammeMedia, MediaConfiguration> = {
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" }
-  } as const;
+  };
 
   static readonly I18N_FIELDS = ["location"] as const;
 
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column(STRING)
   name: string;
@@ -41,8 +69,8 @@ export class FundingProgramme extends Model<FundingProgramme> {
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  @Column({ type: STRING(30), defaultValue: "active" })
-  status: string;
+  @Column({ type: STRING(30), defaultValue: COMING_SOON })
+  status: CreationOptional<FundingProgrammeStatus>;
 
   @Column(TEXT)
   description: string;
@@ -59,17 +87,20 @@ export class FundingProgramme extends Model<FundingProgramme> {
   location: string | null;
 
   @AllowNull
+  @Column(INTEGER)
+  locationId: number | null;
+
+  @AllowNull
   @Column(TEXT)
   readMoreUrl: string | null;
 
   @AllowNull
-  @JsonColumn()
-  organisationTypes: string[] | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  locationId: number | null;
+  @JsonColumn({ type: TEXT })
+  organisationTypes: OrganisationType[] | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
   locationI18nItem: I18nItem | null;
+
+  @HasMany(() => Stage, { foreignKey: "fundingProgrammeId", sourceKey: "uuid", constraints: false })
+  stages: Stage[] | null;
 }

@@ -1,13 +1,13 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, STRING, TEXT } from "sequelize";
+import { BIGINT, BOOLEAN, CreationOptional, InferAttributes, InferCreationAttributes, STRING, TEXT } from "sequelize";
 import { User } from "./user.entity";
 
 @Table({ tableName: "notifications", underscored: true })
-export class Notification extends Model<Notification> {
+export class Notification extends Model<InferAttributes<Notification>, InferCreationAttributes<Notification>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
@@ -32,8 +32,8 @@ export class Notification extends Model<Notification> {
   referencedModelId: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: true })
-  unread: boolean;
+  unread: CreationOptional<boolean>;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hiddenFromApp: boolean;
+  hiddenFromApp: CreationOptional<boolean>;
 }

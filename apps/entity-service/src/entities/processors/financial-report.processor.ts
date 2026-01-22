@@ -1,19 +1,15 @@
-import {
-  FinancialReport,
-  FundingType,
-  FinancialIndicator,
-  Media,
-  Organisation
-} from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, FundingType, Media } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
-import { FundingTypeDto } from "../dto/funding-type.dto";
-import { FinancialIndicatorDto, FinancialIndicatorMedia } from "../dto/financial-indicator.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
+import {
+  FinancialIndicatorDto,
+  FinancialIndicatorMedia
+} from "@terramatch-microservices/common/dto/financial-indicator.dto";
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus"];
 
@@ -29,102 +25,6 @@ export class FinancialReportProcessor extends ReportProcessor<
 > {
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;
-  private logger = new TMLogger(FinancialReportProcessor.name);
-
-  async update(model: FinancialReport, update: ReportUpdateAttributes) {
-    await super.update(model, update);
-
-    if (update.status === "approved") {
-      await this.processReportSpecificLogic(model);
-    }
-  }
-
-  /**
-   * Specific method for FinancialReport custom logic. This is called automatically when the report is approved
-   */
-  private async processReportSpecificLogic(model: FinancialReport): Promise<void> {
-    const organisation = await Organisation.findByPk(model.organisationId);
-    if (organisation == null) {
-      this.logger.warn(`Organisation not found for FinancialReport ${model.uuid}`);
-      return;
-    }
-
-    if (model.finStartMonth != null || model.currency != null) {
-      const updateData: Partial<Organisation> = {};
-      if (model.finStartMonth != null) updateData.finStartMonth = model.finStartMonth;
-      if (model.currency != null) updateData.currency = model.currency;
-
-      await organisation.update(updateData);
-    }
-
-    const reportIndicators = await FinancialIndicator.financialReport(model.id).findAll();
-    const existingOrgIndicators = await FinancialIndicator.organisation(organisation.id).findAll();
-
-    const orgIndicatorMap = new Map<string, FinancialIndicator>();
-    existingOrgIndicators.forEach(indicator => {
-      const key = `${indicator.year}-${indicator.collection}`;
-      orgIndicatorMap.set(key, indicator);
-    });
-
-    const indicatorsToCreate: Partial<FinancialIndicator>[] = [];
-    const indicatorsToUpdate: { id: number; data: Partial<FinancialIndicator> }[] = [];
-
-    for (const reportIndicator of reportIndicators) {
-      const key = `${reportIndicator.year}-${reportIndicator.collection}`;
-      const orgIndicator = orgIndicatorMap.get(key);
-
-      if (orgIndicator == null) {
-        indicatorsToCreate.push({
-          organisationId: organisation.id,
-          year: reportIndicator.year,
-          collection: reportIndicator.collection,
-          amount: reportIndicator.amount,
-          description: reportIndicator.description,
-          exchangeRate: reportIndicator.exchangeRate
-        });
-      } else {
-        indicatorsToUpdate.push({
-          id: orgIndicator.id,
-          data: {
-            amount: reportIndicator.amount,
-            description: reportIndicator.description,
-            exchangeRate: reportIndicator.exchangeRate
-          }
-        });
-      }
-    }
-
-    if (indicatorsToCreate.length > 0) {
-      await FinancialIndicator.bulkCreate(indicatorsToCreate as FinancialIndicator[]);
-    }
-
-    if (indicatorsToUpdate.length > 0) {
-      await Promise.all(indicatorsToUpdate.map(({ id, data }) => FinancialIndicator.update(data, { where: { id } })));
-    }
-
-    // Delete existing FundingTypes for this organisation where financial_report_id is null
-    await FundingType.destroy({
-      where: {
-        organisationId: organisation.uuid,
-        financialReportId: null
-      }
-    });
-
-    // Get the funding types from the financial report
-    const fundingTypes = await FundingType.financialReport(model.id).findAll();
-
-    // Create new FundingTypes for the organisation based on the financial report data
-    for (const fundingType of fundingTypes) {
-      await FundingType.create({
-        organisationId: organisation.uuid,
-        source: fundingType.source,
-        year: fundingType.year,
-        type: fundingType.type,
-        amount: fundingType.amount,
-        financialReportId: null
-      } as FundingType);
-    }
-  }
 
   async findOne(uuid: string) {
     return await FinancialReport.findOne({
@@ -186,9 +86,12 @@ export class FinancialReportProcessor extends ReportProcessor<
     const financialIndicatorsWithMedia = await Promise.all(financialIndicators);
 
     const dto = new FinancialReportFullDto(financialReport, {
+      ...(await this.getFeedback(financialReport)),
       fundingTypes,
       financialCollection: financialIndicatorsWithMedia
     });
+
+    await this.entitiesService.removeHiddenValues(financialReport, dto);
 
     return { id: financialReport.uuid, dto };
   }

@@ -41,40 +41,37 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should return project polygon when found", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
 
-      const result = await service.findByProjectPitchUuid(projectPitch.uuid);
+      const result = await service.findByProjectPitchUuid(pitch.uuid);
 
       expect(result).not.toBeNull();
       expect(result?.uuid).toBe(projectPolygon.uuid);
-      expect(result?.entityId).toBe(projectPitch.id);
-      expect(result?.entityType).toBe(ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH);
+      expect(result?.entityId).toBe(pitch.id);
+      expect(result?.entityType).toBe(ProjectPitch.LARAVEL_TYPE);
     });
 
     it("should query with correct parameters", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPitchFindOneSpy = jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      const pitch = await ProjectPitchFactory.build();
+      const projectPitchFindOneSpy = jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       const projectPolygonFindOneSpy = jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
 
-      await service.findByProjectPitchUuid(projectPitch.uuid);
+      await service.findByProjectPitchUuid(pitch.uuid);
 
       expect(projectPitchFindOneSpy).toHaveBeenCalledWith({
-        where: { uuid: projectPitch.uuid },
+        where: { uuid: pitch.uuid },
         attributes: ["id", "uuid"]
       });
 
       expect(projectPolygonFindOneSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-            entityId: projectPitch.id
+            entityType: ProjectPitch.LARAVEL_TYPE,
+            entityId: pitch.id
           }
         })
       );
@@ -88,7 +85,7 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should return empty object when no project pitch entities", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build({
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build({
         entityType: "SomeOtherType",
         entityId: 1
       });
@@ -98,40 +95,31 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should map project pitch IDs to UUIDs", async () => {
-      const projectPitch1 = await ProjectPitchFactory.build();
-      const projectPitch2 = await ProjectPitchFactory.build();
+      const pitch1 = await ProjectPitchFactory.build();
+      const pitch2 = await ProjectPitchFactory.build();
 
-      const projectPolygon1 = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch1.id
-      });
-      const projectPolygon2 = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch2.id
-      });
+      const projectPolygon1 = await ProjectPolygonFactory.forPitch(pitch1).build();
+      const projectPolygon2 = await ProjectPolygonFactory.forPitch(pitch2).build();
 
-      jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch1, projectPitch2]);
+      jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch1, pitch2]);
 
       const result = await service.loadProjectPitchAssociation([projectPolygon1, projectPolygon2]);
 
       expect(result).toEqual({
-        [projectPitch1.id]: projectPitch1.uuid,
-        [projectPitch2.id]: projectPitch2.uuid
+        [pitch1.id]: pitch1.uuid,
+        [pitch2.id]: pitch2.uuid
       });
     });
 
     it("should filter out non-project-pitch polygons", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
-      const otherPolygon = await ProjectPolygonFactory.build({
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
+      const otherPolygon = await ProjectPolygonFactory.forPitch().build({
         entityType: "SomeOtherType",
         entityId: 999
       });
 
-      const findAllSpy = jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
+      const findAllSpy = jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
 
       await service.loadProjectPitchAssociation([projectPolygon, otherPolygon]);
 
@@ -139,7 +127,7 @@ describe("ProjectPolygonsService", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             id: expect.objectContaining({
-              [Symbol.for("in")]: [projectPitch.id]
+              [Symbol.for("in")]: [pitch.id]
             })
           })
         })
@@ -149,37 +137,30 @@ describe("ProjectPolygonsService", () => {
 
   describe("buildDto", () => {
     it("should build DTO with provided projectPitchUuid", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      const dto = await service.buildDto(projectPolygon, projectPitch.uuid);
+      const dto = await service.buildDto(projectPolygon, pitch.uuid);
 
       expect(dto).toBeInstanceOf(ProjectPolygonDto);
       expect(dto.uuid).toBe(projectPolygon.uuid);
-      expect(dto.projectPitchUuid).toBe(projectPitch.uuid);
+      expect(dto.projectPitchUuid).toBe(pitch.uuid);
       expect(dto.polygonUuid).toBe(projectPolygon.polyUuid);
     });
 
     it("should fetch projectPitchUuid when not provided", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      jest.spyOn(ProjectPitch, "findByPk").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPitch, "findByPk").mockResolvedValue(pitch);
 
       const dto = await service.buildDto(projectPolygon);
 
-      expect(dto.projectPitchUuid).toBe(projectPitch.uuid);
+      expect(dto.projectPitchUuid).toBe(pitch.uuid);
     });
 
     it("should set projectPitchUuid to null when project pitch not found", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build({
         entityId: 999
       });
 
@@ -191,7 +172,7 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should set projectPitchUuid to null for non-project-pitch entities", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build({
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build({
         entityType: "SomeOtherType",
         entityId: 1
       });
@@ -267,7 +248,7 @@ describe("ProjectPolygonsService", () => {
 
   describe("findOne", () => {
     it("should return project polygon when found", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
 
       const result = await service.findOne(projectPolygon.uuid);
@@ -287,7 +268,7 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should query with correct parameters", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
       const findOneSpy = jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
 
       await service.findOne(projectPolygon.uuid);
@@ -320,7 +301,7 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should delete project polygon and polygon geometry", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
       jest.spyOn(ProjectPolygon, "destroy").mockResolvedValue(1);
       jest.spyOn(PolygonGeometry, "destroy").mockResolvedValue(1);
 
@@ -341,7 +322,7 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should rollback transaction on error", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
       jest.spyOn(ProjectPolygon, "destroy").mockRejectedValue(new Error("Database error"));
 
       await expect(service.deleteProjectPolygon(projectPolygon)).rejects.toThrow("Database error");
@@ -351,7 +332,7 @@ describe("ProjectPolygonsService", () => {
 
   describe("deleteProjectPolygonAndGeometry", () => {
     it("should delete project polygon and polygon geometry with provided transaction", async () => {
-      const projectPolygon = await ProjectPolygonFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch().build();
       const providedTransaction = {
         commit: jest.fn(),
         rollback: jest.fn()
@@ -394,16 +375,13 @@ describe("ProjectPolygonsService", () => {
     const mockGeoJsonString = JSON.stringify(mockGeometry);
 
     it("should return FeatureCollection with geometry and projectPitchUuid in properties", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
       const query: ProjectPolygonGeoJsonQueryDto = {
-        projectPitchUuid: projectPitch.uuid
+        projectPitchUuid: pitch.uuid
       };
 
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
       jest.spyOn(PolygonGeometry, "getGeoJSON").mockResolvedValue(mockGeoJsonString);
 
@@ -445,17 +423,14 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should throw NotFoundException when polygon geometry UUID is null", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
       Object.assign(projectPolygon, { polyUuid: null });
       const query: ProjectPolygonGeoJsonQueryDto = {
-        projectPitchUuid: projectPitch.uuid
+        projectPitchUuid: pitch.uuid
       };
 
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
 
       await expect(service.getGeoJson(query)).rejects.toThrow(
@@ -464,16 +439,13 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should throw NotFoundException when polygon geometry is not found", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
       const query: ProjectPolygonGeoJsonQueryDto = {
-        projectPitchUuid: projectPitch.uuid
+        projectPitchUuid: pitch.uuid
       };
 
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
       jest.spyOn(PolygonGeometry, "getGeoJSON").mockResolvedValue(undefined);
 
@@ -483,16 +455,13 @@ describe("ProjectPolygonsService", () => {
     });
 
     it("should throw InternalServerErrorException on invalid geometry JSON", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.build({
-        entityType: ProjectPolygon.LARAVEL_TYPE_PROJECT_PITCH,
-        entityId: projectPitch.id
-      });
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
       const query: ProjectPolygonGeoJsonQueryDto = {
-        projectPitchUuid: projectPitch.uuid
+        projectPitchUuid: pitch.uuid
       };
 
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
+      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(projectPolygon);
       jest.spyOn(PolygonGeometry, "getGeoJSON").mockResolvedValue("invalid-json");
 

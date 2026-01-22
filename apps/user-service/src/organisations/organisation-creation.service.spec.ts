@@ -176,7 +176,7 @@ describe("OrganisationCreationService", () => {
         projectPitchUuid: pitch!.uuid,
         applicationId: application!.id,
         status: "started",
-        answers: []
+        answers: {}
       });
 
       // email queue

@@ -3,8 +3,14 @@ import { EntityDto } from "./entity.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators/json-api-dto.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import {
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "nurseryReports" })
 export class NurseryReportLightDto extends EntityDto {
@@ -32,14 +38,21 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
 
-  @ApiProperty()
-  status: string;
+  @ApiProperty({
+    description: "Report status for this nursery report",
+    enum: REPORT_STATUSES
+  })
+  status: ReportStatus;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Update request status for this nursery report",
+    enum: UPDATE_REQUEST_STATUSES
+  })
+  updateRequestStatus: UpdateRequestStatus | null;
 
   @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
-
-  @ApiProperty()
-  updateRequestStatus: string;
 
   @ApiProperty({
     nullable: true,
@@ -97,7 +110,10 @@ export class NurseryReportLightDto extends EntityDto {
 export type NurseryReportMedia = Pick<NurseryReportFullDto, keyof typeof NurseryReport.MEDIA>;
 
 export class NurseryReportFullDto extends NurseryReportLightDto {
-  constructor(nurseryReport: NurseryReport, props: HybridSupportProps<NurseryReportFullDto, NurseryReport>) {
+  constructor(
+    nurseryReport: NurseryReport,
+    props: HybridSupportProps<NurseryReportFullDto, Omit<NurseryReport, "feedback" | "feedbackFields">>
+  ) {
     super();
     populateDto<NurseryReportFullDto, NurseryReport>(this, nurseryReport, { lightResource: false, ...props });
   }
@@ -138,12 +154,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
 
   @ApiProperty({ nullable: true, type: Date })
   dueAt: Date | null;
-
-  @ApiProperty()
-  status: string;
-
-  @ApiProperty()
-  updateRequestStatus: string;
 
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;

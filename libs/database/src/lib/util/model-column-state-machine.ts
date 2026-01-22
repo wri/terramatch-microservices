@@ -23,12 +23,14 @@ export type States<M extends Model, S extends string> = {
    * Specify hooks that should be fired when a given state is transitioned to. The callback
    * will be executed after the model has been saved.
    *
+   * If the hook should block further action with asynchronous code, return a Promise.
+   *
    * Note: This means that if multiple transitions are executed on a given model column without
    * a save to the database in between, this hook will only fire after the _last_ transition. To
    * ensure the hook fires for every transition, make sure to save the model state between
    * successive transitions.
    */
-  afterTransitionHooks?: Partial<Record<S, (from: S, model: M) => void>>;
+  afterTransitionHooks?: Partial<Record<S, (from: S, model: M) => void | Promise<void>>>;
 };
 
 /**
@@ -150,11 +152,11 @@ export class ModelColumnStateMachine<M extends Model, S extends string> {
     }
   }
 
-  afterSave() {
+  async afterSave() {
     if (this.fromState == null) return;
 
     const fromState = this.fromState;
     this.fromState = undefined;
-    this.states.afterTransitionHooks?.[this.current]?.(fromState, this.model);
+    await this.states.afterTransitionHooks?.[this.current]?.(fromState, this.model);
   }
 }

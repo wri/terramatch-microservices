@@ -11,7 +11,7 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
-import { MediaDto } from "./media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
 
 @JsonApiDto({ type: "projects" })
@@ -32,6 +32,13 @@ export class ProjectLightDto extends EntityDto {
     description: "The associated organisation name"
   })
   organisationName: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated organisation uuid"
+  })
+  organisationUuid: string | null;
 
   @ApiProperty({
     nullable: true,
@@ -113,7 +120,10 @@ export class ProjectApplicationDto {
 }
 
 export class ProjectFullDto extends ProjectLightDto {
-  constructor(project: Project, props: HybridSupportProps<ProjectFullDto, Omit<Project, "application">>) {
+  constructor(
+    project: Project,
+    props: HybridSupportProps<ProjectFullDto, Omit<Project, "application" | "feedback" | "feedbackFields">>
+  ) {
     super();
     populateDto<ProjectFullDto, Project>(this, project, { lightResource: false, ...props });
   }

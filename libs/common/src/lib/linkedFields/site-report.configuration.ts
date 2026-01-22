@@ -2,155 +2,160 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 import { SiteReport } from "@terramatch-microservices/database/entities";
 
 // Note: All field / fileCollection / relation keys _must_ be unique across all LinkedFieldConfigurations.
-export const SiteReportConfiguration: LinkedFieldConfiguration = {
+export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
   label: "Site Report",
-  laravelModelType: SiteReport.LARAVEL_TYPE,
   fields: {
     "site-rep-title": { property: "title", label: "Title", inputType: "text" },
-    "site-rep-shared-drive-link": { property: "shared_drive_link", label: "Shared drive link", inputType: "url" },
+    "site-rep-shared-drive-link": { property: "sharedDriveLink", label: "Shared drive link", inputType: "url" },
     "site-rep-technical-narrative": {
-      property: "technical_narrative",
+      property: "technicalNarrative",
       label: "Technical narrative",
       inputType: "long-text"
     },
-    "site-rep-public-narrative": { property: "public_narrative", label: "Public narrative", inputType: "long-text" },
+    "site-rep-public-narrative": { property: "publicNarrative", label: "Public narrative", inputType: "long-text" },
     "site-rep-disturbance-details": {
-      property: "disturbance_details",
+      property: "disturbanceDetails",
       label: "Additional Disturbance Details",
       inputType: "long-text"
     },
-    "site-rep-workdays-paid": { property: "workdays_paid", label: "Workdays paid", inputType: "number" },
-    "site-rep-seeds-planted": { property: "seeds_planted", label: "Seeds planted", inputType: "number" },
-    "site-rep-workdays-volunteer": { property: "workdays_volunteer", label: "Workdays volunteer", inputType: "number" },
-    "site-rep-polygon-status": { property: "polygon_status", label: "Polygon status", inputType: "long-text" },
+    // @deprecated - this should not be used in new forms
+    "site-rep-workdays-paid": { property: "workdaysPaid", label: "Workdays paid", inputType: "number" },
+    "site-rep-seeds-planted": { property: "seedsPlanted", label: "Seeds planted", inputType: "number" },
+    // @deprecated - this should not be used in new forms
+    "site-rep-workdays-volunteer": { property: "workdaysVolunteer", label: "Workdays volunteer", inputType: "number" },
+    "site-rep-polygon-status": { property: "polygonStatus", label: "Polygon status", inputType: "long-text" },
     "site-rep-planting-status": {
-      property: "planting_status",
+      property: "plantingStatus",
       label: "Planting status",
       inputType: "select",
       multiChoice: false,
       optionListKey: "planting-status"
     },
     "site-rep-invasive_species_removed": {
-      property: "invasive_species_removed",
+      property: "invasiveSpeciesRemoved",
       label: "Invasive Species Removed",
       inputType: "long-text"
     },
     "site-rep-invasive_species_management": {
-      property: "invasive_species_management",
+      property: "invasiveSpeciesManagement",
       label: "Invasive Species Management Plan",
       inputType: "long-text"
     },
     "site-rep-soil_water_restoration_description": {
-      property: "soil_water_restoration_description",
+      property: "soilWaterRestorationDescription",
       label: "Soil + Water Restoration Methods",
       inputType: "long-text"
     },
     "site-rep-water_structures": {
-      property: "water_structures",
+      property: "waterStructures",
       label: "Water Structures Created",
       inputType: "long-text"
     },
     "site-rep-site_community_partners_description": {
-      property: "site_community_partners_description",
+      property: "siteCommunityPartnersDescription",
       label: "Community Partners (Site)",
       inputType: "long-text"
     },
     "site-rep-site_community_partners_income_increase_description": {
-      property: "site_community_partners_income_increase_description",
+      property: "siteCommunityPartnersIncomeIncreaseDescription",
       label: "Community Partners Income Increase (Site)",
       inputType: "long-text"
     },
     // TODO (TM-912) Deprecated, to be removed.
     "site-rep-paid-other-activity-description": {
-      property: "paid_other_activity_description",
+      property: "paidOtherActivityDescription",
       label: "Paid Other Activities Description",
       inputType: "long-text"
     },
     "site-rep-other-workdays-description": {
-      property: "other_workdays_description",
+      virtual: {
+        type: "demographicsDescription",
+        demographicsType: "workdays",
+        collections: ["paid-other-activities", "volunteer-other-activities"]
+      },
       label: "Other Activities Description",
       inputType: "long-text"
     },
     "site-rep-num-trees-regenerating": {
-      property: "num_trees_regenerating",
+      property: "numTreesRegenerating",
       label: "Estimate Number of Trees Restored via ANR",
       inputType: "number"
     },
     "site-rep-regeneration-description": {
-      property: "regeneration_description",
+      property: "regenerationDescription",
       label: "Description of ANR Activities",
       inputType: "long-text"
     },
     "site-rep-pct-survival-to-date": {
-      property: "pct_survival_to_date",
+      property: "pctSurvivalToDate",
       label: "Survival Rate",
       inputType: "number-percentage"
     },
     "site-rep-survival-calculation": {
-      property: "survival_calculation",
+      property: "survivalCalculation",
       label: "Description of Survival Rate Calculation",
       inputType: "long-text"
     },
     "site-rep-survival-description": {
-      property: "survival_description",
+      property: "survivalDescription",
       label: "Explanation of Survival Rate",
       inputType: "long-text"
     },
     "site-rep-maintenance-activities": {
-      property: "maintenance_activities",
+      property: "maintenanceActivities",
       label: "Maintenance Activities",
       inputType: "long-text"
     }
   },
   fileCollections: {
-    "site-rep-col-media": { property: "media", label: "Media", inputType: "file", multiChoice: true },
+    "site-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
     "site-rep-col-socioeconomic-benefits": {
-      property: "socioeconomic_benefits",
+      collection: "socioeconomic_benefits",
       label: "Socioeconomic benefits",
       inputType: "file",
       multiChoice: true
     },
-    "site-rep-col-file": { property: "file", label: "File", inputType: "file", multiChoice: true },
+    "site-rep-col-file": { collection: "file", label: "File", inputType: "file", multiChoice: true },
     "site-rep-col-other-additional-documents": {
-      property: "other_additional_documents",
+      collection: "other_additional_documents",
       label: "Other additional documents",
       inputType: "file",
       multiChoice: true
     },
-    "site-rep-col-photos": { property: "photos", label: "Photos", inputType: "file", multiChoice: true },
+    "site-rep-col-photos": { collection: "photos", label: "Photos", inputType: "file", multiChoice: true },
     "site-rep-col-document-files": {
-      property: "document_files",
+      collection: "document_files",
       label: "Photos",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-tree-species": {
-      property: "tree_species",
+      collection: "tree_species",
       label: "programme_submission",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-site-submission": {
-      property: "site_submission",
+      collection: "site_submission",
       label: "Site submission",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-tree-planting-upload": {
-      property: "tree_planting_upload",
+      collection: "tree_planting_upload",
       label: "Tree Planting Upload",
       inputType: "file",
       multiChoice: true
     },
-    "site-rep-col-anr-photos": { property: "anr_photos", label: "ANR Photos", inputType: "file", multiChoice: true },
+    "site-rep-col-anr-photos": { collection: "anr_photos", label: "ANR Photos", inputType: "file", multiChoice: true },
     "site-rep-col-soil-water-conservation-upload": {
-      property: "soil_water_conservation_upload",
+      collection: "soil_water_conservation_upload",
       label: "Soil or Water Conservation Upload",
       inputType: "file",
       multiChoice: true
     },
     "site-rep-col-soil-water-conservation-photos": {
-      property: "soil_water_conservation_photos",
+      collection: "soil_water_conservation_photos",
       label: "Soil or Water Conservation Photos",
       inputType: "file",
       multiChoice: true
@@ -158,120 +163,103 @@ export const SiteReportConfiguration: LinkedFieldConfiguration = {
   },
   relations: {
     "site-rep-rel-replanting-tree-species": {
-      property: "replantingTreeSpecies",
       label: "Replanting Species + Count",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "replanting"
     },
     "site-rep-rel-tree-species": {
-      property: "treeSpecies",
       label: "Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "site-rep-rel-non-tree-species": {
-      property: "nonTreeSpecies",
       label: "Non Tree Species",
-      resource: "App\\Http\\Resources\\V2\\TreeSpecies\\TreeSpeciesResource",
+      resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "non-tree"
     },
     "site-rep-rel-disturbances": {
-      property: "disturbances",
       label: "Disturbances",
-      resource: "App\\Http\\Resources\\V2\\Disturbances\\DisturbanceResource",
+      resource: "disturbances",
       inputType: "disturbances",
       collection: "disturbance"
     },
     "site-rep-rel-seedings": {
-      property: "seedings",
       label: "Seedings",
-      resource: "App\\Http\\Resources\\V2\\Seedings\\SeedingResource",
+      resource: "seedings",
       inputType: "seedings"
     },
     "site-rep-rel-paid-site-establishment": {
-      property: "workdaysPaidSiteEstablishment",
       label: "Paid Site Establishment",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-establishment"
     },
     "site-rep-rel-paid-planting": {
-      property: "workdaysPaidPlanting",
       label: "Paid Planting",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-planting"
     },
     "site-rep-rel-paid-site-maintenance": {
-      property: "workdaysPaidSiteMaintenance",
       label: "Paid Site Maintenance",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-maintenance"
     },
     "site-rep-rel-paid-site-monitoring": {
-      property: "workdaysPaidSiteMonitoring",
       label: "Paid Site Monitoring",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-monitoring"
     },
     "site-rep-rel-paid-other-activities": {
-      property: "workdaysPaidOtherActivities",
       label: "Paid Other Activities",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "paid-other-activities"
     },
     "site-rep-rel-volunteer-site-establishment": {
-      property: "workdaysVolunteerSiteEstablishment",
       label: "Volunteer Site Establishment",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-establishment"
     },
     "site-rep-rel-volunteer-planting": {
-      property: "workdaysVolunteerPlanting",
       label: "Volunteer Planting",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-planting"
     },
     "site-rep-rel-volunteer-site-maintenance": {
-      property: "workdaysVolunteerSiteMaintenance",
       label: "volunteer Site Maintenance",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-maintenance"
     },
     "site-rep-rel-volunteer-site-monitoring": {
-      property: "workdaysVolunteerSiteMonitoring",
       label: "Volunteer Site Monitoring",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-monitoring"
     },
     "site-rep-rel-volunteer-other-activities": {
-      property: "workdaysVolunteerOtherActivities",
       label: "Volunteer Other Activities",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-other-activities"
     },
     "site-rep-direct-workdays": {
-      property: "workdaysDirect",
       label: "Direct Workday",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "direct"
     },
     "site-rep-convergence-workdays": {
-      property: "workdaysConvergence",
       label: "Convergence Workday",
-      resource: "App\\Http\\Resources\\V2\\Demographics\\DemographicResource",
+      resource: "demographics",
       inputType: "workdays",
       collection: "convergence"
     }

@@ -1,3 +1,4 @@
+const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
 const { NxAppWebpackPlugin } = require("@nx/webpack/app-plugin");
 const { join } = require("path");
 const { composePlugins } = require("@nx/webpack");
@@ -5,7 +6,8 @@ const { composePlugins } = require("@nx/webpack");
 module.exports = composePlugins(config => ({
   ...config,
   output: {
-    path: join(__dirname, "../../dist/apps/research-service")
+    path: join(__dirname, "../../dist/apps/research-service"),
+    sourceMapFilename: "[file].map"
   },
   externalsPresets: {
     node: true
@@ -39,7 +41,15 @@ module.exports = composePlugins(config => ({
       assets: ["./src/assets"],
       optimization: false,
       outputHashing: "none",
-      generatePackageJson: true
+      generatePackageJson: true,
+      sourceMap: true
+    }),
+    sentryWebpackPlugin({
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      org: "wri-terramatch",
+      project: "v3-backend"
     })
-  ]
+  ],
+
+  devtool: "source-map"
 }));

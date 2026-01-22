@@ -1,13 +1,33 @@
-import { FinancialReport, Organisation, Project, ProjectPitch, ProjectReport, SiteReport } from "../entities";
+import {
+  DisturbanceReport,
+  FinancialReport,
+  Nursery,
+  NurseryReport,
+  Organisation,
+  Project,
+  ProjectPitch,
+  ProjectReport,
+  Site,
+  SiteReport,
+  SrpReport
+} from "../entities";
 import { DemographicAssociationType } from "../types/demographic";
+import { Dictionary } from "lodash";
+import { ModelCtor } from "sequelize-typescript";
+import { LaravelModel, UuidModel } from "../types/util";
 
-export const LARAVEL_MODELS = {
+export const LARAVEL_MODELS: Dictionary<ModelCtor<UuidModel & LaravelModel>> = {
+  [DisturbanceReport.LARAVEL_TYPE]: DisturbanceReport,
+  [FinancialReport.LARAVEL_TYPE]: FinancialReport,
+  [Nursery.LARAVEL_TYPE]: Nursery,
+  [NurseryReport.LARAVEL_TYPE]: NurseryReport,
   [Organisation.LARAVEL_TYPE]: Organisation,
   [Project.LARAVEL_TYPE]: Project,
   [ProjectPitch.LARAVEL_TYPE]: ProjectPitch,
   [ProjectReport.LARAVEL_TYPE]: ProjectReport,
+  [Site.LARAVEL_TYPE]: Site,
   [SiteReport.LARAVEL_TYPE]: SiteReport,
-  [FinancialReport.LARAVEL_TYPE]: FinancialReport
+  [SrpReport.LARAVEL_TYPE]: SrpReport
 };
 
 export const LARAVEL_MODEL_TYPES: Record<string, DemographicAssociationType> = {

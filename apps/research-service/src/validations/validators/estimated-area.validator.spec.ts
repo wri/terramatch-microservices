@@ -47,6 +47,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-1";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-1",
         status: "approved",
         calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
@@ -86,6 +87,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-2";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-2",
         status: "approved",
         calcArea: 50,
         loadSite: jest.fn().mockResolvedValue({
@@ -125,6 +127,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-3";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-3",
         status: "approved",
         calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
@@ -153,6 +156,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-4";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-4",
         status: "approved",
         calcArea: 50,
         loadSite: jest.fn().mockResolvedValue({
@@ -181,6 +185,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-5";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-5",
         status: "approved",
         calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
@@ -209,6 +214,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-6";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-6",
         status: "approved",
         calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
@@ -245,6 +251,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-7";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-7",
         status: "approved",
         calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
@@ -273,6 +280,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-8";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-8",
         status: "approved",
         calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
@@ -300,6 +308,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-draft";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-draft",
         status: "draft",
         calcArea: 100,
         loadSite: jest.fn().mockResolvedValue({
@@ -343,6 +352,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-submitted";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-submitted",
         status: "submitted",
         calcArea: 250,
         loadSite: jest.fn().mockResolvedValue({
@@ -386,6 +396,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-zero-area";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-zero",
         status: "draft",
         calcArea: 0,
         loadSite: jest.fn().mockResolvedValue({
@@ -417,6 +428,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuid = "test-uuid-over-limit";
       const mockSitePolygon = {
         polygonUuid,
+        siteUuid: "site-uuid-over",
         status: "draft",
         calcArea: 500,
         loadSite: jest.fn().mockResolvedValue({
@@ -462,6 +474,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuids = ["uuid-1", "uuid-2"];
       const mockSitePolygon1 = {
         polygonUuid: "uuid-1",
+        siteUuid: "site-uuid-1",
         status: "approved",
         calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({
@@ -473,6 +486,7 @@ describe("EstimatedAreaValidator", () => {
 
       const mockSitePolygon2 = {
         polygonUuid: "uuid-2",
+        siteUuid: "site-uuid-2",
         status: "approved",
         calcArea: 150,
         loadSite: jest.fn().mockResolvedValue({
@@ -529,6 +543,7 @@ describe("EstimatedAreaValidator", () => {
       const polygonUuids = ["uuid-1", "uuid-2"];
       const mockSitePolygon = {
         polygonUuid: "uuid-1",
+        siteUuid: "site-uuid-1",
         status: "approved",
         calcArea: 80,
         loadSite: jest.fn().mockResolvedValue({

@@ -1,5 +1,5 @@
 import { States, transitions } from "../util/model-column-state-machine";
-import { DelayedJob, Nursery, Project, ProjectReport, Site, Task } from "../entities";
+import { DelayedJob, FormSubmission, Nursery, Project, ProjectReport, Site, Task, UpdateRequest } from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 import { ReportModel } from "./entities";
@@ -20,9 +20,9 @@ export const PLANTING_STATUSES = [
 export type EntityStatus = (typeof ENTITY_STATUSES)[number];
 export type PlantingStatus = (typeof PLANTING_STATUSES)[number];
 
-export const statusUpdateSequelizeHook = (model: Model) => {
+export const statusUpdateSequelizeHook = async (model: Model) => {
   // Processed in event.service.ts in the common lib
-  DatabaseModule.emitModelEvent("statusUpdated", model);
+  await DatabaseModule.emitModelEvent("statusUpdated", model);
 };
 
 const emitStatusUpdateHook = (from: string, model: Model) => statusUpdateSequelizeHook(model);
@@ -88,6 +88,21 @@ export const NO_UPDATE = "no-update";
 export const UPDATE_REQUEST_STATUSES = [NO_UPDATE, DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
 
+export const UpdateRequestStatusStates: States<UpdateRequest, UpdateRequestStatus> = {
+  default: DRAFT,
+
+  transitions: transitions<UpdateRequestStatus>()
+    .from(DRAFT, () => [AWAITING_APPROVAL])
+    .from(AWAITING_APPROVAL, () => [APPROVED, NEEDS_MORE_INFORMATION])
+    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL]).transitions,
+
+  afterTransitionHooks: {
+    [APPROVED]: emitStatusUpdateHook,
+    [AWAITING_APPROVAL]: emitStatusUpdateHook,
+    [NEEDS_MORE_INFORMATION]: emitStatusUpdateHook
+  }
+};
+
 export const REJECTED = "rejected";
 export const REQUIRES_MORE_INFORMATION = "requires-more-information";
 export const FORM_SUBMISSION_STATUSES = [
@@ -99,11 +114,27 @@ export const FORM_SUBMISSION_STATUSES = [
 ] as const;
 export type FormSubmissionStatus = (typeof FORM_SUBMISSION_STATUSES)[number];
 
+export const FormSubmissionStatusStates: States<FormSubmission, FormSubmissionStatus> = {
+  default: STARTED,
+
+  transitions: transitions<FormSubmissionStatus>()
+    .from(STARTED, () => [AWAITING_APPROVAL])
+    .from(REQUIRES_MORE_INFORMATION, () => [AWAITING_APPROVAL])
+    .from(AWAITING_APPROVAL, () => [APPROVED, REQUIRES_MORE_INFORMATION, REJECTED]).transitions,
+
+  afterTransitionHooks: {
+    [APPROVED]: emitStatusUpdateHook,
+    [AWAITING_APPROVAL]: emitStatusUpdateHook,
+    [REQUIRES_MORE_INFORMATION]: emitStatusUpdateHook,
+    [REJECTED]: emitStatusUpdateHook
+  }
+};
+
 export const PENDING = "pending";
 export const ORGANISATION_STATUSES = [APPROVED, PENDING, REJECTED, DRAFT] as const;
 export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];
 
-type AllStatuses = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
+export type AnyStatus = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
 
 /**
  * A mapping of all statuses to an English language display string for that status.
@@ -115,7 +146,7 @@ type AllStatuses = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmi
  * Ideally we fix up and remove those needs over time, and eventually git rid of this structure from
  * BE code.
  */
-export const STATUS_DISPLAY_STRINGS: Record<AllStatuses, string> = {
+export const STATUS_DISPLAY_STRINGS: Record<AnyStatus, string> = {
   [DRAFT]: "Draft",
   [DUE]: "Due",
   [PENDING]: "Pending",
@@ -137,3 +168,10 @@ export const DelayedJobStatusStates: States<DelayedJob, DelayedJobStatus> = {
   default: PENDING,
   transitions: transitions<DelayedJobStatus>().from(PENDING, () => [FAILED, SUCCEEDED]).transitions
 };
+
+export const INACTIVE = "inactive";
+export const ACTIVE = "active";
+export const DISABLED = "disabled";
+export const COMING_SOON = "coming-soon";
+export const FUNDING_PROGRAMME_STATUSES = [INACTIVE, ACTIVE, DISABLED, COMING_SOON] as const;
+export type FundingProgrammeStatus = (typeof FUNDING_PROGRAMME_STATUSES)[number];

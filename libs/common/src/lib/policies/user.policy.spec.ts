@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
-import { expectCan, expectCannot, mockPermissions, mockUserId } from "./policy.service.spec";
+import { expectCan, expectCannot } from "./policy.service.spec";
 import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
+import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("UserPolicy", () => {
   let service: PolicyService;

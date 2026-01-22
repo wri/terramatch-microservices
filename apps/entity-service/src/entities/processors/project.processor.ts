@@ -4,6 +4,7 @@ import {
   Demographic,
   DemographicEntry,
   Form,
+  FormSubmission,
   Media,
   Nursery,
   NurseryReport,
@@ -205,15 +206,18 @@ export class ProjectProcessor extends EntityProcessor<
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
+    const plantingStatus = (lastReport?.plantingStatus ?? null) as PlantingStatus | null;
+
+    const dto = new ProjectLightDto(project, {
+      totalHectaresRestoredSum,
+      treesPlantedCount: 0,
+      plantingStatus,
+      ...associateDto
+    });
 
     return {
       id: project.uuid,
-      dto: new ProjectLightDto(project, {
-        totalHectaresRestoredSum,
-        treesPlantedCount: 0,
-        plantingStatus: lastReport?.plantingStatus as PlantingStatus,
-        ...associateDto
-      })
+      dto
     };
   }
 
@@ -245,10 +249,11 @@ export class ProjectProcessor extends EntityProcessor<
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
+    const plantingStatus = (lastReport?.plantingStatus ?? null) as PlantingStatus | null;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
-
+      plantingStatus,
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -258,7 +263,6 @@ export class ProjectProcessor extends EntityProcessor<
       regeneratedTreesCount,
       treesPlantedCount,
       seedsPlantedCount,
-      plantingStatus: lastReport?.plantingStatus as PlantingStatus,
       treesRestoredPpc:
         regeneratedTreesCount +
         (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
@@ -556,12 +560,26 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (application != null) {
+      const submission = await FormSubmission.application(application.id).findOne({
+        order: [["id", "DESC"]],
+        attributes: ["id"],
+        include: [{ association: "user", attributes: ["id"] }]
+      });
       const userIds = (await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] })).map(
         ({ id }) => id
       );
-      await ProjectUser.bulkCreate(userIds.map(userId => ({ projectId: project.id, userId })));
+      await ProjectUser.bulkCreate(
+        userIds.map(userId => ({
+          projectId: project.id,
+          userId,
+          status: "active",
+          // All org users other than the one that submitted the application are monitoring partners. The
+          // submitter is the project "owner"
+          isMonitoring: userId !== submission?.user?.id
+        }))
+      );
     } else {
-      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
+      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId, status: "active" });
     }
 
     // Load the full project with necessary associations.

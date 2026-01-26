@@ -28,9 +28,6 @@ export class AuditStatusDto {
   @ApiProperty({ nullable: true, type: String })
   type: string | null;
 
-  @ApiProperty({ nullable: true, type: Boolean })
-  requestRemoved: boolean | null;
-
   @ApiProperty({ nullable: true, type: Date })
   dateCreated: Date | null;
 
@@ -45,7 +42,6 @@ export class AuditStatusDto {
     lastName: string | null,
     comment: string | null,
     type: string | null,
-    requestRemoved: boolean | null,
     dateCreated: Date | null,
     attachments: MediaDto[]
   ) {
@@ -56,13 +52,12 @@ export class AuditStatusDto {
     this.lastName = lastName;
     this.comment = comment;
     this.type = type;
-    this.requestRemoved = requestRemoved;
     this.dateCreated = dateCreated;
     this.attachments = attachments;
   }
 
   static fromAuditStatus(auditStatus: AuditStatus, attachments: MediaDto[] = []): AuditStatusDto {
-    // Transform status: 'started' -> 'Draft'
+    // Transform status from V2: 'started' -> 'Draft'
     let transformedStatus = auditStatus.status;
     if (transformedStatus === "started") {
       transformedStatus = "Draft";
@@ -76,8 +71,7 @@ export class AuditStatusDto {
       auditStatus.lastName,
       auditStatus.comment,
       auditStatus.type,
-      auditStatus.requestRemoved,
-      auditStatus.dateCreated ?? auditStatus.createdAt,
+      auditStatus.createdAt,
       attachments
     );
   }
@@ -110,7 +104,6 @@ export class AuditStatusDto {
       firstName,
       lastName,
       comment,
-      null,
       null,
       audit.updatedAt ?? audit.createdAt,
       []

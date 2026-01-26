@@ -34,15 +34,18 @@ describe("AuditStatusController", () => {
     it("should return audit statuses for a project", async () => {
       const project = await ProjectFactory.create();
       const auditStatuses = [
-        new AuditStatusDto(1, "uuid-1", "approved", "John", "Doe", "Comment", "status", null, new Date(), [])
+        new AuditStatusDto(1, "uuid-1", "approved", "John", "Doe", "Comment", "status", new Date(), [])
       ];
 
+      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
 
       const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }));
 
-      expect(service.getAuditStatuses).toHaveBeenCalledWith("projects", project.uuid);
+      expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
+      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "projects", project.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("read", expect.anything());
       expect(result.data).toHaveLength(1);
       expect((result.data as Resource[])[0].id).toBe("uuid-1");
@@ -51,20 +54,22 @@ describe("AuditStatusController", () => {
     it("should return audit statuses for sitePolygons", async () => {
       const site = await SiteFactory.create();
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
-      const auditStatuses = [
-        new AuditStatusDto(1, "uuid-1", "approved", null, null, "Comment", null, null, new Date(), [])
-      ];
+      const auditStatuses = [new AuditStatusDto(1, "uuid-1", "approved", null, null, "Comment", null, new Date(), [])];
 
+      const mockEntity = { id: 1, uuid: sitePolygon.uuid } as any;
+      service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
 
       const result = serialize(await controller.getAuditStatuses({ entity: "sitePolygons", uuid: sitePolygon.uuid }));
 
-      expect(service.getAuditStatuses).toHaveBeenCalledWith("sitePolygons", sitePolygon.uuid);
+      expect(service.resolveEntity).toHaveBeenCalledWith("sitePolygons", sitePolygon.uuid);
+      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "sitePolygons", sitePolygon.uuid);
       expect(result.data).toHaveLength(1);
     });
 
     it("should throw NotFoundException for non-existent entity", async () => {
+      service.resolveEntity.mockRejectedValue(new NotFoundException());
       await expect(controller.getAuditStatuses({ entity: "projects", uuid: "non-existent-uuid" })).rejects.toThrow(
         NotFoundException
       );
@@ -72,6 +77,8 @@ describe("AuditStatusController", () => {
 
     it("should throw UnauthorizedException when user cannot read entity", async () => {
       const project = await ProjectFactory.create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      service.resolveEntity.mockResolvedValue(mockEntity);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.getAuditStatuses({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
@@ -81,6 +88,8 @@ describe("AuditStatusController", () => {
 
     it("should return empty array when no audit statuses exist", async () => {
       const project = await ProjectFactory.create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue([]);
       policyService.authorize.mockResolvedValue();
 
@@ -92,10 +101,12 @@ describe("AuditStatusController", () => {
     it("should return JSON:API format with multiple audit statuses", async () => {
       const project = await ProjectFactory.create();
       const auditStatuses = [
-        new AuditStatusDto(1, "uuid-1", "approved", "John", "Doe", "Comment 1", "status", null, new Date(), []),
-        new AuditStatusDto(2, "uuid-2", "draft", "Jane", "Smith", "Comment 2", "updated", null, new Date(), [])
+        new AuditStatusDto(1, "uuid-1", "approved", "John", "Doe", "Comment 1", "status", new Date(), []),
+        new AuditStatusDto(2, "uuid-2", "draft", "Jane", "Smith", "Comment 2", "updated", new Date(), [])
       ];
 
+      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
 

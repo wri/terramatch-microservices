@@ -51,7 +51,8 @@ describe("AuditStatusService", () => {
         type: "status"
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(auditStatus.id);
@@ -63,7 +64,8 @@ describe("AuditStatusService", () => {
       const project = await ProjectFactory.create();
       await AuditStatusFactory.project(project).create({ status: "started" });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].status).toBe("Draft");
     });
@@ -94,7 +96,8 @@ describe("AuditStatusService", () => {
       });
       entitiesService.mediaDto.mockReturnValue(mediaDto);
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].attachments).toHaveLength(1);
       expect(entitiesService.mediaDto).toHaveBeenCalled();
@@ -109,7 +112,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "approved", feedback: "Good work" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result).toHaveLength(1);
       expect(result[0].uuid).toContain("legacy-");
@@ -125,7 +129,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "approved" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result).toHaveLength(0);
     });
@@ -140,7 +145,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "draft" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result.length).toBeGreaterThanOrEqual(2);
     });
@@ -154,7 +160,8 @@ describe("AuditStatusService", () => {
         dateCreated: DateTime.now().minus({ days: 5 }).toJSDate()
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].id).toBe(newer.id);
       expect(result[1].id).toBe(older.id);
@@ -171,7 +178,8 @@ describe("AuditStatusService", () => {
         dateCreated: DateTime.now().minus({ days: 10 }).toJSDate()
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result).toHaveLength(1);
       expect(result[0].comment).toBe("Same comment");
@@ -181,7 +189,8 @@ describe("AuditStatusService", () => {
       const project = await ProjectFactory.create();
       await AuditStatusFactory.project(project).createMany(2, { comment: null });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result).toHaveLength(1);
     });
@@ -197,7 +206,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "approved" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].firstName).toBe(user.firstName);
       expect(result[0].lastName).toBe(user.lastName);
@@ -213,7 +223,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "approved" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].firstName).toBeNull();
       expect(result[0].lastName).toBeNull();
@@ -230,17 +241,18 @@ describe("AuditStatusService", () => {
         type: "status"
       } as InferCreationAttributes<AuditStatus>);
 
-      const result = await service.getAuditStatuses("sitePolygons", sitePolygon.uuid);
+      const entity = await service.resolveEntity("sitePolygons", sitePolygon.uuid);
+      const result = await service.getAuditStatuses(entity, "sitePolygons", sitePolygon.uuid);
 
       expect(result.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should throw NotFoundException for invalid entity type", async () => {
-      await expect(service.getAuditStatuses("invalidType" as EntityType, "uuid")).rejects.toThrow(NotFoundException);
+      await expect(service.resolveEntity("invalidType" as EntityType, "uuid")).rejects.toThrow(NotFoundException);
     });
 
     it("should throw NotFoundException for non-existent entity", async () => {
-      await expect(service.getAuditStatuses("projects", "non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(service.resolveEntity("projects", "non-existent-uuid")).rejects.toThrow(NotFoundException);
     });
 
     it("should handle legacy audit with invalid JSON in newValues", async () => {
@@ -253,7 +265,8 @@ describe("AuditStatusService", () => {
       // Simulate invalid JSON by setting newValues to null
       await audit.update({ newValues: null });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result).toHaveLength(1);
       expect(result[0].comment).toBeNull();
@@ -268,7 +281,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "approved", feedback: "Great job" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].comment).toBe("approved: Great job");
     });
@@ -282,7 +296,8 @@ describe("AuditStatusService", () => {
         newValues: { status: "needs-more-information", feedback: "please-update" }
       });
 
-      const result = await service.getAuditStatuses("projects", project.uuid);
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
       expect(result[0].comment).toBe("needs more information: please update");
     });

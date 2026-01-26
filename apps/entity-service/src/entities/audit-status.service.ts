@@ -15,13 +15,12 @@ import { LaravelModel } from "@terramatch-microservices/database/types/util";
 export class AuditStatusService {
   constructor(private readonly entitiesService: EntitiesService) {}
 
-  async getAuditStatuses(entityType: EntityType | "sitePolygons", entityUuid: string): Promise<AuditStatusDto[]> {
-    // Handle SitePolygon separately since it's not in ENTITY_MODELS (it's in research service)
+  async resolveEntity(entityType: EntityType | "sitePolygons", entityUuid: string): Promise<LaravelModel> {
     let entity: LaravelModel | null;
     if (entityType === "sitePolygons") {
       entity = await SitePolygon.findOne({
         where: { uuid: entityUuid },
-        attributes: ["id"]
+        attributes: ["id", "uuid"]
       });
     } else {
       const entityModelClass = ENTITY_MODELS[entityType];
@@ -30,12 +29,20 @@ export class AuditStatusService {
       }
       entity = await entityModelClass.findOne({
         where: { uuid: entityUuid },
-        attributes: ["id"]
+        attributes: ["id", "uuid"]
       });
     }
     if (entity == null) {
       throw new NotFoundException(`Entity not found: [${entityType}, ${entityUuid}]`);
     }
+    return entity;
+  }
+
+  async getAuditStatuses(
+    entity: LaravelModel,
+    entityType: EntityType | "sitePolygons",
+    entityUuid: string
+  ): Promise<AuditStatusDto[]> {
     const modernAuditStatuses = await AuditStatus.for(entity).findAll({
       order: [
         ["updatedAt", "DESC"],

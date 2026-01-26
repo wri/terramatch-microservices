@@ -6,9 +6,6 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { AuditStatusService } from "./audit-status.service";
 import { AuditStatusParamsDto } from "./dto/audit-status-params.dto";
 import { AuditStatusDto } from "./dto/audit-status.dto";
-import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
-import { SitePolygon } from "@terramatch-microservices/database/entities/site-polygon.entity";
-import { LaravelModel } from "@terramatch-microservices/database/types/util";
 
 @Controller("entities/v3/auditStatuses")
 export class AuditStatusController {
@@ -25,30 +22,9 @@ export class AuditStatusController {
   })
   @ExceptionResponse(NotFoundException, { description: "Entity not found." })
   async getAuditStatuses(@Param() { entity, uuid }: AuditStatusParamsDto) {
-    let baseEntity: LaravelModel | null = null;
-    if (entity === "sitePolygons") {
-      baseEntity = await SitePolygon.findOne({
-        where: { uuid },
-        attributes: ["id", "uuid"]
-      });
-    } else {
-      const entityModelClass = ENTITY_MODELS[entity as EntityType];
-      if (entityModelClass == null) {
-        throw new NotFoundException(`Entity type not found: ${entity}`);
-      }
-      baseEntity = await entityModelClass.findOne({
-        where: { uuid },
-        attributes: ["id", "uuid"]
-      });
-    }
-
-    if (baseEntity == null) {
-      throw new NotFoundException(`Entity not found: [${entity}, ${uuid}]`);
-    }
-
+    const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
     await this.policyService.authorize("read", baseEntity);
-
-    const auditStatuses = await this.auditStatusService.getAuditStatuses(entity, uuid);
+    const auditStatuses = await this.auditStatusService.getAuditStatuses(baseEntity, entity, uuid);
     const document = buildJsonApi(AuditStatusDto, { forceDataArray: true });
     for (const auditStatus of auditStatuses) {
       document.addData(auditStatus.uuid, auditStatus);

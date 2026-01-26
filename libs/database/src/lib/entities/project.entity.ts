@@ -427,6 +427,49 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(STRING)
   shortName: string | null;
 
+  @AllowNull
+  @JsonColumn({ field: "level_1_project" })
+  level1Project: string[] | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_2_project" })
+  level2Project: string[] | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "land_tenure_approach" })
+  landTenureApproach: string | null;
+
+  @AllowNull
+  @Column({ type: STRING(255), field: "seedlings_procurement" })
+  seedlingsProcurement: string | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "jobs_goal_description" })
+  jobsGoalDescription: string | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "volunteers_goal_description" })
+  volunteersGoalDescription: string | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "community_engagement_plan" })
+  communityEngagementPlan: string | null;
+
+  @AllowNull
+  @Column({ type: TEXT, field: "direct_beneficiaries_goal_description" })
+  directBeneficiariesGoalDescription: string | null;
+
+  @Column({ type: TINYINT, defaultValue: 0, field: "elp_project" })
+  elpProject: CreationOptional<number>;
+
+  @AllowNull
+  @Column(TEXT)
+  consortium: string | null;
+
+  @AllowNull
+  @Column({ type: STRING(255), field: "landowner_agreement" })
+  landownerAgreement: string | null;
+
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

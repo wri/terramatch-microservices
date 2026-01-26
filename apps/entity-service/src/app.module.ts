@@ -32,6 +32,8 @@ import { FundingProgrammesController } from "./fundingProgrammes/funding-program
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 import { BullModule } from "@nestjs/bullmq";
 import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processor";
+import { AuditStatusController } from "./entities/audit-status.controller";
+import { AuditStatusService } from "./entities/audit-status.service";
 
 @Module({
   imports: [
@@ -52,6 +54,7 @@ import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processo
     TreesController,
     DemographicsController,
     DisturbancesController,
+    AuditStatusController, // must be before EntitiesController
     EntitiesController,
     FormDataController, // must be before entity association controller.
     UpdateRequestsController, // must be before entity association controller.
@@ -72,6 +75,7 @@ import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processo
     TasksService,
     DemographicService,
     DisturbanceService,
+    AuditStatusService,
     FormsService,
     FormDataService,
     EntitiesQueueProcessor

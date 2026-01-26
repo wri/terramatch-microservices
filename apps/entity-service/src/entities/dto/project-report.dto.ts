@@ -63,6 +63,9 @@ export class ProjectReportLightDto extends EntityDto {
   })
   taskUuid: string | null;
 
+  @ApiProperty({ nullable: true, type: Number, description: "The associated task id" })
+  taskId: number | null;
+
   @ApiProperty({ nullable: true, type: String })
   title: string | null;
 

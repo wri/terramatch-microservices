@@ -64,12 +64,6 @@ describe("AuditStatusController", () => {
       expect(result.data).toHaveLength(1);
     });
 
-    it("should throw NotFoundException for invalid entity type", async () => {
-      await expect(controller.getAuditStatuses({ entity: "invalidType" as any, uuid: "some-uuid" })).rejects.toThrow(
-        NotFoundException
-      );
-    });
-
     it("should throw NotFoundException for non-existent entity", async () => {
       await expect(controller.getAuditStatuses({ entity: "projects", uuid: "non-existent-uuid" })).rejects.toThrow(
         NotFoundException

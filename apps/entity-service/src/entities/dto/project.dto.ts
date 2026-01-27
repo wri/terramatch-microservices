@@ -310,40 +310,4 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true, type: MediaDto })
   detailedProjectBudget: MediaDto | null;
-
-  @ApiProperty({ type: () => MediaDto, isArray: true })
-  proofOfLandTenureMou: MediaDto[];
-
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  level1Project: string[] | null;
-
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  level2Project: string[] | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  landTenureApproach: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  seedlingsProcurement: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  jobsGoalDescription: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  volunteersGoalDescription: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  communityEngagementPlan: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  directBeneficiariesGoalDescription: string | null;
-
-  @ApiProperty({ type: Number, description: "Early Learning Program flag (0 or 1)" })
-  elpProject: number;
-
-  @ApiProperty({ nullable: true, type: String })
-  consortium: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  landownerAgreement: string | null;
 }

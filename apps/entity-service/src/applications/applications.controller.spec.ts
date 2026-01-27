@@ -384,7 +384,9 @@ describe("ApplicationsController", () => {
         const dto = (result.data as Resource).attributes;
 
         expect(dto.entries).toHaveLength(8);
-        expect(applicationsService.getApplicationHistory).toHaveBeenCalledWith(app);
+        expect(applicationsService.getApplicationHistory).toHaveBeenCalledWith(
+          expect.objectContaining({ id: app.id, uuid: app.uuid })
+        );
       } finally {
         clock.uninstall();
       }

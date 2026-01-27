@@ -13,14 +13,9 @@ import {
 import { BIGINT, STRING, UUID, UUIDV4, Op } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
-import { ProjectReport } from "./project-report.entity";
-import { Site } from "./site.entity";
-import { SiteReport } from "./site-report.entity";
-import { Nursery } from "./nursery.entity";
-import { NurseryReport } from "./nursery-report.entity";
+import { Subquery } from "../util/subquery.builder";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, LaravelModelCtor, laravelType } from "../types/util";
-import { Subquery } from "../util/subquery.builder";
 
 @Scopes(() => ({
   targetable: (targetable: LaravelModel) => ({

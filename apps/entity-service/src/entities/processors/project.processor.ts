@@ -32,7 +32,6 @@ import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
-import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [

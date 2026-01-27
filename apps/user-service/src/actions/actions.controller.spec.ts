@@ -2,7 +2,6 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ActionsController } from "./actions.controller";
 import { ActionsService, type ActionWithTarget } from "./actions.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { Action } from "@terramatch-microservices/database/entities";
 import {
   ProjectFactory,
@@ -57,43 +56,28 @@ describe("ActionsController", () => {
         targetableType: "projectReports" as const
       };
 
-      actionsService.getActions.mockResolvedValue({
-        data: [mockData],
-        paginationTotal: 1,
-        pageNumber: 1
-      });
+      actionsService.getActions.mockResolvedValue([mockData]);
 
       mockUserId(user.id);
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.index(query));
+      const result = serialize(await controller.index());
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
-      expect(result.meta).toBeDefined();
-      expect(result.meta.indices?.[0].total).toBe(1);
-      expect(result.meta.indices?.[0].pageNumber).toBe(1);
 
-      expect(actionsService.getActions).toHaveBeenCalledWith(user.id, query);
+      expect(actionsService.getActions).toHaveBeenCalledWith(user.id);
     });
 
     it("should handle empty results", async () => {
       const user = await UserFactory.create();
       mockUserId(user.id);
 
-      actionsService.getActions.mockResolvedValue({
-        data: [],
-        paginationTotal: 0,
-        pageNumber: 1
-      });
+      actionsService.getActions.mockResolvedValue([]);
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.index(query));
+      const result = serialize(await controller.index());
 
       expect(result.data).toBeDefined();
       expect(Array.isArray(result.data)).toBe(true);
-      expect(result.meta.indices?.[0].total).toBe(0);
-      expect(result.meta.indices?.[0].pageNumber).toBe(1);
     });
 
     it("should return correct JSON:API structure", async () => {
@@ -121,16 +105,11 @@ describe("ActionsController", () => {
         targetableType: "projectReports" as const
       };
 
-      actionsService.getActions.mockResolvedValue({
-        data: [mockData],
-        paginationTotal: 1,
-        pageNumber: 1
-      });
+      actionsService.getActions.mockResolvedValue([mockData]);
 
       mockUserId(user.id);
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.index(query));
+      const result = serialize(await controller.index());
 
       expect(result.data).toBeDefined();
       if (Array.isArray(result.data) && result.data.length > 0) {
@@ -141,25 +120,6 @@ describe("ActionsController", () => {
         expect(resource.attributes.targetableType).toBe("projectReports");
         expect(resource.attributes.target).toBeDefined();
       }
-    });
-
-    it("should handle pagination metadata correctly", async () => {
-      const user = await UserFactory.create();
-      mockUserId(user.id);
-
-      actionsService.getActions.mockResolvedValue({
-        data: [],
-        paginationTotal: 15,
-        pageNumber: 2
-      });
-
-      const query: IndexQueryDto = { page: { number: 2, size: 10 } };
-      const result = serialize(await controller.index(query));
-
-      expect(result.meta.indices?.[0].total).toBe(15);
-      expect(result.meta.indices?.[0].pageNumber).toBe(2);
-      expect(result.meta.indices?.[0].requestPath).toContain("page%5Bsize%5D=10");
-      expect(result.meta.indices?.[0].requestPath).not.toContain("page%5Bnumber%5D");
     });
 
     it("should include target in action attributes", async () => {
@@ -194,16 +154,11 @@ describe("ActionsController", () => {
         targetableType: "projectReports" as const
       };
 
-      actionsService.getActions.mockResolvedValue({
-        data: [mockData],
-        paginationTotal: 1,
-        pageNumber: 1
-      });
+      actionsService.getActions.mockResolvedValue([mockData]);
 
       mockUserId(user.id);
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = serialize(await controller.index(query));
+      const result = serialize(await controller.index());
 
       if (Array.isArray(result.data) && result.data.length > 0) {
         const resource = result.data[0] as Resource;

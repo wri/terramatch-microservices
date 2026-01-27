@@ -1,7 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ActionsService } from "./actions.service";
 import { Action, ProjectReport, Site, SiteReport, Nursery } from "@terramatch-microservices/database/entities";
-import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import {
   ProjectFactory,
   ProjectReportFactory,
@@ -31,19 +30,14 @@ describe("ActionsService", () => {
   describe("getActions", () => {
     it("should return empty array when user has no projects", async () => {
       const user = await UserFactory.create();
-      const query: IndexQueryDto = { page: { number: 1 } };
 
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data).toEqual([]);
-      expect(result.paginationTotal).toBe(0);
-      expect(result.pageNumber).toBe(1);
+      expect(result).toEqual([]);
     });
 
     it("should throw error when user not found", async () => {
-      const query: IndexQueryDto = { page: { number: 1 } };
-
-      await expect(service.getActions(99999, query)).rejects.toThrow("User not found");
+      await expect(service.getActions(99999)).rejects.toThrow("User not found");
     });
 
     it("should return actions for project reports with due status", async () => {
@@ -65,12 +59,10 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.length).toBeGreaterThan(0);
-      expect(result.data.some(d => d.action.id === action.id)).toBe(true);
-      expect(result.paginationTotal).toBeGreaterThan(0);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
     it("should return actions for site reports with needs-more-information status", async () => {
@@ -93,11 +85,10 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.length).toBeGreaterThan(0);
-      expect(result.data.some(d => d.action.id === action.id)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
     it("should return actions for projects with due status", async () => {
@@ -111,11 +102,10 @@ describe("ActionsService", () => {
         status: "pending"
       });
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.length).toBeGreaterThan(0);
-      expect(result.data.some(d => d.action.id === action.id)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
     it("should return actions for sites with needs-more-information status", async () => {
@@ -134,11 +124,10 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.length).toBeGreaterThan(0);
-      expect(result.data.some(d => d.action.id === action.id)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
     it("should return actions for nurseries with due status", async () => {
@@ -157,11 +146,10 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.length).toBeGreaterThan(0);
-      expect(result.data.some(d => d.action.id === action.id)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
     it("should not return actions for non-pending status", async () => {
@@ -183,10 +171,9 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.every(d => d.action.status === "pending")).toBe(true);
+      expect(result.every(d => d.action.status === "pending")).toBe(true);
     });
 
     it("should not return actions for reports with non-matching status", async () => {
@@ -208,40 +195,9 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      expect(result.data.every(d => d.action.targetableId !== projectReport.id)).toBe(true);
-    });
-
-    it("should handle pagination correctly", async () => {
-      const user = await UserFactory.create();
-      const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
-
-      // Create multiple reports and actions
-      const reports = await ProjectReportFactory.createMany(10, {
-        projectId: project.id,
-        status: "due"
-      });
-
-      for (const report of reports) {
-        await (
-          Action.build({
-            projectId: project.id,
-            targetableType: ProjectReport.LARAVEL_TYPE,
-            targetableId: report.id,
-            status: "pending"
-          } as unknown as Action) as Action
-        ).save();
-      }
-
-      const query: IndexQueryDto = { page: { number: 1, size: 5 } };
-      const result = await service.getActions(user.id, query);
-
-      expect(result.data.length).toBeLessThanOrEqual(5);
-      expect(result.paginationTotal).toBeGreaterThanOrEqual(5);
-      expect(result.pageNumber).toBe(1);
+      expect(result.every(d => d.action.targetableId !== projectReport.id)).toBe(true);
     });
 
     it("should return target with correct type for project reports", async () => {
@@ -263,10 +219,9 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      const actionData = result.data.find(d => d.action.id === action.id);
+      const actionData = result.find(d => d.action.id === action.id);
       expect(actionData).toBeDefined();
       expect(actionData?.targetableType).toBe("projectReports");
       expect(actionData?.target).toBeDefined();
@@ -288,10 +243,9 @@ describe("ActionsService", () => {
         } as unknown as Action) as Action
       ).save();
 
-      const query: IndexQueryDto = { page: { number: 1, size: 10 } };
-      const result = await service.getActions(user.id, query);
+      const result = await service.getActions(user.id);
 
-      const actionData = result.data.find(d => d.action.id === action.id);
+      const actionData = result.find(d => d.action.id === action.id);
       expect(actionData).toBeDefined();
       expect(actionData?.targetableType).toBe("sites");
       expect(actionData?.target).toBeDefined();

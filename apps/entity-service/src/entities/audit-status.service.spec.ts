@@ -302,4 +302,106 @@ describe("AuditStatusService", () => {
       expect(result[0].comment).toBe("needs more information: please update");
     });
   });
+
+  describe("getAuditStatusesForMultiple", () => {
+    it("should return empty map for empty array", async () => {
+      const result = await service.getAuditStatusesForMultiple([]);
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    it("should return audit statuses grouped by entity ID", async () => {
+      const project1 = await ProjectFactory.create();
+      const project2 = await ProjectFactory.create();
+
+      await AuditStatusFactory.project(project1).create({ status: "approved" });
+      await AuditStatusFactory.project(project2).create({ status: "draft" });
+
+      const result = await service.getAuditStatusesForMultiple([project1, project2]);
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(2);
+      expect(result.get(project1.id)).toHaveLength(1);
+      expect(result.get(project1.id)?.[0].status).toBe("approved");
+      expect(result.get(project2.id)).toHaveLength(1);
+      expect(result.get(project2.id)?.[0].status).toBe("draft");
+    });
+
+    it("should merge modern and legacy audits for multiple entities", async () => {
+      const project1 = await ProjectFactory.create();
+      const project2 = await ProjectFactory.create();
+      const oldDate = DateTime.fromISO("2024-08-01").toJSDate();
+
+      await AuditStatusFactory.project(project1).create({ status: "approved" });
+      await AuditFactory.project(project1).create({
+        createdAt: oldDate,
+        updatedAt: oldDate,
+        newValues: { status: "draft" }
+      });
+      await AuditStatusFactory.project(project2).create({ status: "rejected" });
+
+      const result = await service.getAuditStatusesForMultiple([project1, project2]);
+
+      expect(result.get(project1.id)?.length).toBeGreaterThanOrEqual(2);
+      expect(result.get(project2.id)?.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("should not deduplicate by comment (unlike getAuditStatuses)", async () => {
+      const project = await ProjectFactory.create();
+      await AuditStatusFactory.project(project).create({
+        comment: "Same comment",
+        createdAt: DateTime.now().minus({ days: 5 }).toJSDate()
+      });
+      await AuditStatusFactory.project(project).create({
+        comment: "Same comment",
+        createdAt: DateTime.now().minus({ days: 10 }).toJSDate()
+      });
+
+      const result = await service.getAuditStatusesForMultiple([project]);
+
+      // Should return both (no deduplication)
+      expect(result.get(project.id)?.length).toBe(2);
+    });
+
+    it("should not load media attachments (unlike getAuditStatuses)", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create();
+      await Media.create({
+        modelType: AuditStatus.LARAVEL_TYPE,
+        modelId: auditStatus.id,
+        collectionName: "attachments",
+        name: "test-attachment",
+        fileName: "test.jpg",
+        size: 1000,
+        isPublic: true,
+        isCover: false,
+        fileType: "media",
+        customProperties: {},
+        disk: "s3",
+        manipulation: []
+      } as unknown as InferCreationAttributes<Media>);
+
+      const result = await service.getAuditStatusesForMultiple([project]);
+
+      expect(result.get(project.id)?.[0].attachments).toHaveLength(0);
+      expect(entitiesService.mediaDto).not.toHaveBeenCalled();
+    });
+
+    it("should handle submissions entity type", async () => {
+      const { FormSubmissionFactory } = await import("@terramatch-microservices/database/factories");
+      const submission = await FormSubmissionFactory.create();
+
+      await AuditStatus.create({
+        auditableType: "App\\Models\\V2\\Forms\\FormSubmission",
+        auditableId: submission.id,
+        status: "approved",
+        comment: "Test comment",
+        type: "status"
+      } as InferCreationAttributes<AuditStatus>);
+
+      const result = await service.getAuditStatusesForMultiple([submission]);
+
+      expect(result.get(submission.id)?.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

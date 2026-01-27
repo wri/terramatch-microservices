@@ -8,6 +8,7 @@ import { ProjectFactory, SitePolygonFactory, SiteFactory } from "@terramatch-mic
 import { AuditStatusDto } from "./dto/audit-status.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
+import { LaravelModel } from "@terramatch-microservices/database/types/util";
 
 describe("AuditStatusController", () => {
   let controller: AuditStatusController;
@@ -37,7 +38,7 @@ describe("AuditStatusController", () => {
         new AuditStatusDto(1, "uuid-1", "approved", "John", "Doe", "Comment", "status", new Date(), [])
       ];
 
-      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
       service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
@@ -56,7 +57,7 @@ describe("AuditStatusController", () => {
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
       const auditStatuses = [new AuditStatusDto(1, "uuid-1", "approved", null, null, "Comment", null, new Date(), [])];
 
-      const mockEntity = { id: 1, uuid: sitePolygon.uuid } as any;
+      const mockEntity = { id: 1, uuid: sitePolygon.uuid } as unknown as LaravelModel;
       service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
@@ -77,7 +78,7 @@ describe("AuditStatusController", () => {
 
     it("should throw UnauthorizedException when user cannot read entity", async () => {
       const project = await ProjectFactory.create();
-      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
       service.resolveEntity.mockResolvedValue(mockEntity);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
@@ -88,7 +89,7 @@ describe("AuditStatusController", () => {
 
     it("should return empty array when no audit statuses exist", async () => {
       const project = await ProjectFactory.create();
-      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
       service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue([]);
       policyService.authorize.mockResolvedValue();
@@ -105,7 +106,7 @@ describe("AuditStatusController", () => {
         new AuditStatusDto(2, "uuid-2", "draft", "Jane", "Smith", "Comment 2", "updated", new Date(), [])
       ];
 
-      const mockEntity = { id: project.id, uuid: project.uuid } as any;
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
       service.resolveEntity.mockResolvedValue(mockEntity);
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();

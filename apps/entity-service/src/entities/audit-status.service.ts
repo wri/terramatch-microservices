@@ -8,8 +8,14 @@ import { EntityType, ENTITY_MODELS } from "@terramatch-microservices/database/co
 import { AuditStatusDto } from "./dto/audit-status.dto";
 import { EntitiesService } from "./entities.service";
 import { Op } from "sequelize";
-import { orderBy, uniqBy } from "lodash";
+import { groupBy, orderBy, uniqBy } from "lodash";
 import { LaravelModel } from "@terramatch-microservices/database/types/util";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+
+interface RawAuditData {
+  modernAuditStatuses: AuditStatus[];
+  legacyAudits: Audit[];
+}
 
 @Injectable()
 export class AuditStatusService {
@@ -38,12 +44,12 @@ export class AuditStatusService {
     return entity;
   }
 
-  async getAuditStatuses(
-    entity: LaravelModel,
-    entityType: EntityType | "sitePolygons",
-    entityUuid: string
-  ): Promise<AuditStatusDto[]> {
-    const modernAuditStatuses = await AuditStatus.for(entity).findAll({
+  private async queryAuditData(entities: LaravelModel[]): Promise<RawAuditData> {
+    if (entities.length === 0) {
+      return { modernAuditStatuses: [], legacyAudits: [] };
+    }
+
+    const modernAuditStatuses = await AuditStatus.for(entities).findAll({
       order: [
         ["updatedAt", "DESC"],
         ["createdAt", "DESC"]
@@ -51,7 +57,7 @@ export class AuditStatusService {
     });
 
     const legacyCutoffDate = new Date("2024-09-01");
-    const legacyAudits = await Audit.for(entity).findAll({
+    const legacyAudits = await Audit.for(entities).findAll({
       where: {
         [Op.or]: [{ createdAt: { [Op.lt]: legacyCutoffDate } }, { updatedAt: { [Op.lt]: legacyCutoffDate } }]
       },
@@ -61,8 +67,18 @@ export class AuditStatusService {
       ]
     });
 
-    const auditStatusWithAttachments = await Promise.all(
-      modernAuditStatuses.map(async auditStatus => {
+    return { modernAuditStatuses, legacyAudits };
+  }
+
+  private async loadMediaAttachments(
+    auditStatuses: AuditStatus[],
+    entityType: EntityType | "sitePolygons" | "submissions",
+    entityUuid: string
+  ): Promise<Map<number, MediaDto[]>> {
+    const attachmentsMap = new Map<number, MediaDto[]>();
+
+    await Promise.all(
+      auditStatuses.map(async auditStatus => {
         const attachments = await Media.for(auditStatus).collection("attachments").findAll();
         const attachmentDtos = attachments.map(media =>
           this.entitiesService.mediaDto(media, { entityType, entityUuid } as {
@@ -70,12 +86,17 @@ export class AuditStatusService {
             entityUuid: string;
           })
         );
-
-        return { auditStatus, attachments: attachmentDtos };
+        attachmentsMap.set(auditStatus.id, attachmentDtos);
       })
     );
 
-    const userIds = legacyAudits.map(audit => audit.userId).filter((id): id is number => id != null);
+    return attachmentsMap;
+  }
+  private async transformToDtos(
+    data: RawAuditData,
+    attachmentsMap?: Map<number, MediaDto[]>
+  ): Promise<AuditStatusDto[]> {
+    const userIds = data.legacyAudits.map(audit => audit.userId).filter((id): id is number => id != null);
     const uniqueUserIds = [...new Set(userIds)];
 
     const users =
@@ -88,24 +109,61 @@ export class AuditStatusService {
 
     const userMap = new Map(users.map(user => [user.id, user]));
 
-    const modernDtos = auditStatusWithAttachments.map(({ auditStatus, attachments }) =>
-      AuditStatusDto.fromAuditStatus(auditStatus, attachments)
-    );
+    const modernDtos = data.modernAuditStatuses.map(auditStatus => {
+      const attachments = attachmentsMap?.get(auditStatus.id) ?? [];
+      return AuditStatusDto.fromAuditStatus(auditStatus, attachments);
+    });
 
-    const legacyDtos = legacyAudits.map(audit => {
+    const legacyDtos = data.legacyAudits.map(audit => {
       const user = audit.userId != null ? userMap.get(audit.userId) : null;
       return AuditStatusDto.fromAudits(audit, user?.firstName ?? null, user?.lastName ?? null);
     });
 
-    const allDtos = orderBy(
+    return orderBy(
       [...modernDtos, ...legacyDtos],
       dto => (dto.dateCreated != null ? new Date(dto.dateCreated).getTime() : 0),
       "desc"
     );
+  }
 
-    // Match V2 behavior unique('comment')
-    const uniqueDtos = uniqBy(allDtos, dto => dto.comment ?? null);
+  async getAuditStatuses(
+    entity: LaravelModel,
+    entityType: EntityType | "sitePolygons" | "submissions",
+    entityUuid: string
+  ): Promise<AuditStatusDto[]> {
+    const data = await this.queryAuditData([entity]);
+    const attachmentsMap = await this.loadMediaAttachments(data.modernAuditStatuses, entityType, entityUuid);
+    const dtos = await this.transformToDtos(data, attachmentsMap);
+    return uniqBy(dtos, dto => dto.comment ?? null);
+  }
 
-    return uniqueDtos;
+  async getAuditStatusesForMultiple(entities: LaravelModel[]): Promise<Map<number, AuditStatusDto[]>> {
+    if (entities.length === 0) {
+      return new Map<number, AuditStatusDto[]>();
+    }
+
+    const data = await this.queryAuditData(entities);
+    const dtos = await this.transformToDtos(data);
+
+    const auditStatusMap = new Map(data.modernAuditStatuses.map(as => [as.id, as]));
+    const legacyAuditMap = new Map(data.legacyAudits.map(a => [a.id, a]));
+
+    const grouped = groupBy(dtos, dto => {
+      if (!dto.uuid.startsWith("legacy-")) {
+        const auditStatus = auditStatusMap.get(dto.id);
+        return auditStatus?.auditableId ?? 0;
+      } else {
+        const legacyId = Number.parseInt(dto.uuid.replace("legacy-", ""), 10);
+        const legacyAudit = legacyAuditMap.get(legacyId);
+        return legacyAudit?.auditableId ?? 0;
+      }
+    });
+
+    const result = new Map<number, AuditStatusDto[]>();
+    for (const [auditableId, dtos] of Object.entries(grouped)) {
+      result.set(Number(auditableId), dtos);
+    }
+
+    return result;
   }
 }

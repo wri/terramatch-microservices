@@ -30,6 +30,10 @@ export class ActionsController {
       document.addData(action.uuid, new ActionDto(action, target, targetableType));
     }
 
-    return document;
+    return data.reduce(
+      (document, { action, target, targetableType }) =>
+        document.addData(action.uuid, new ActionDto(action, target, targetableType)).document,
+      buildJsonApi(ActionDto)
+    );
   }
 }

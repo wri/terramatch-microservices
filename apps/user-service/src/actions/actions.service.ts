@@ -177,7 +177,6 @@ export class ActionsService {
 
   private getEntityTypeFromModel(targetModel?: EntityModel): EntityType | null {
     if (targetModel == null) return null;
-    // formModelType devuelve un FormModelType; en este contexto sólo usamos entity/report models
     return formModelType(targetModel) as EntityType | null;
   }
 }

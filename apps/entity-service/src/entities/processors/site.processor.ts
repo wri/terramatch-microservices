@@ -265,6 +265,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
       plantingStatus: lastReport?.plantingStatus as PlantingStatus,
+      lastReportedSurvivalRate: lastReport?.pctSurvivalToDate ?? null,
       treesPlantedPolygonsCount,
       hectaresRestoredPolygonsCount,
       ...(this.entitiesService.mapMediaCollection(
@@ -367,7 +368,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return await SiteReport.approved()
       .sites([siteId])
       .lastReport()
-      .findOne({ attributes: ["plantingStatus"] });
+      .findOne({ attributes: ["plantingStatus", "pctSurvivalToDate"] });
   }
 
   async delete(site: Site) {

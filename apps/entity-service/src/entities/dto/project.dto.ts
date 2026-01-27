@@ -190,6 +190,9 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Number })
   survivalRate: number | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  lastReportedSurvivalRate: number | null;
+
   @ApiProperty({ nullable: true, type: String, isArray: true })
   landUseTypes: string[] | null;
 

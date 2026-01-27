@@ -254,6 +254,7 @@ export class ProjectProcessor extends EntityProcessor<
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
       plantingStatus,
+      lastReportedSurvivalRate: lastReport?.pctSurvivalToDate ?? null,
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -371,7 +372,7 @@ export class ProjectProcessor extends EntityProcessor<
     return await ProjectReport.approved()
       .project(projectId)
       .lastReport()
-      .findOne({ attributes: ["plantingStatus"] });
+      .findOne({ attributes: ["plantingStatus", "pctSurvivalToDate"] });
   }
 
   /* istanbul ignore next */

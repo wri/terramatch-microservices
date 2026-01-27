@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ApplicationsService } from "./applications.service";
 import { AuditStatusService } from "../entities/audit-status.service";
-import { Application, FormSubmission } from "@terramatch-microservices/database/entities";
 import { ApplicationFactory, FormSubmissionFactory, StageFactory } from "@terramatch-microservices/database/factories";
 import { AuditStatusDto } from "../entities/dto/audit-status.dto";
 import { DateTime } from "luxon";

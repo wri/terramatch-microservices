@@ -427,6 +427,49 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(STRING)
   shortName: string | null;
 
+  @AllowNull
+  @JsonColumn()
+  level1Project: string[] | null;
+
+  @AllowNull
+  @JsonColumn()
+  level2Project: string[] | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landTenureApproach: string | null;
+
+  @AllowNull
+  @Column(STRING(255))
+  seedlingsProcurement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  jobsGoalDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  volunteersGoalDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  communityEngagementPlan: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  directBeneficiariesGoalDescription: string | null;
+
+  @Column({ type: TINYINT, defaultValue: 0 })
+  elpProject: CreationOptional<number>;
+
+  @AllowNull
+  @Column(TEXT)
+  consortium: string | null;
+
+  @AllowNull
+  @Column(STRING(255))
+  landownerAgreement: string | null;
+
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

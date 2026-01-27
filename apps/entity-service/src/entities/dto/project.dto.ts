@@ -308,9 +308,9 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ type: () => MediaDto, isArray: true })
   programmeSubmission: MediaDto[];
 
-  @ApiProperty({ nullable: true, type: MediaDto })
-  detailedProjectBudget: MediaDto | null;
-
   @ApiProperty({ type: () => MediaDto, isArray: true })
   proofOfLandTenureMou: MediaDto[];
+
+  @ApiProperty({ nullable: true, type: MediaDto })
+  detailedProjectBudget: MediaDto | null;
 }

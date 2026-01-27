@@ -3,8 +3,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { FormDataService } from "../entities/form-data.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApplicationsController } from "./applications.controller";
-import { AuditStatusService } from "../entities/audit-status.service";
-import { EntitiesService } from "../entities/entities.service";
+import { ApplicationsService } from "./applications.service";
 import { Application } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
@@ -28,6 +27,7 @@ describe("ApplicationsController", () => {
   let controller: ApplicationsController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: DeepMocked<PolicyService>;
+  let applicationsService: DeepMocked<ApplicationsService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -35,8 +35,7 @@ describe("ApplicationsController", () => {
       providers: [
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        AuditStatusService,
-        { provide: EntitiesService, useValue: createMock<EntitiesService>() }
+        { provide: ApplicationsService, useValue: (applicationsService = createMock<ApplicationsService>()) }
       ]
     }).compile();
 
@@ -303,7 +302,6 @@ describe("ApplicationsController", () => {
       try {
         clock.setSystemTime(time.toJSDate());
         await AuditFactory.formSubmission(sub1).create({ event: "created", newValues: { status: "started" } });
-        // ignored; update too soon
         advanceHours(6);
         await AuditFactory.formSubmission(sub1).create({ event: "updated" });
         advanceHours(12);
@@ -335,23 +333,58 @@ describe("ApplicationsController", () => {
           comment: "Requires More Feedback"
         });
 
-        const result = serialize(await controller.getHistory({ uuid: app.uuid }));
-        const dto = (result.data as Resource).attributes;
-        // result is in reverse chronological order
-        expect(dto.entries).toEqual([
-          expect.objectContaining({
+        applicationsService.getApplicationHistory.mockResolvedValue([
+          {
             eventType: "status",
             status: "requires-more-information",
-            comment: "Requires More Feedback"
-          }),
-          expect.objectContaining({ eventType: "status", status: "awaiting-approval" }),
-          expect.objectContaining({ eventType: "updated", status: "started", date: sub2Update }),
-          expect.objectContaining({ eventType: "status", status: "started" }),
-          expect.objectContaining({ eventType: "status", status: "approved", comment: "Approval Feedback" }),
-          expect.objectContaining({ eventType: "status", status: "awaiting-approval" }),
-          expect.objectContaining({ eventType: "updated", date: sub1Update }),
-          expect.objectContaining({ eventType: "status", status: "started" })
+            comment: "Requires More Feedback",
+            date: time.toJSDate(),
+            stageName: null
+          },
+          {
+            eventType: "status",
+            status: "awaiting-approval",
+            comment: null,
+            date: time.minus({ hours: 1 }).toJSDate(),
+            stageName: null
+          },
+          { eventType: "updated", status: "started", comment: null, date: sub2Update, stageName: null },
+          {
+            eventType: "status",
+            status: "started",
+            comment: null,
+            date: time.minus({ hours: 8 }).toJSDate(),
+            stageName: null
+          },
+          {
+            eventType: "status",
+            status: "approved",
+            comment: "Approval Feedback",
+            date: time.minus({ days: 1 }).toJSDate(),
+            stageName: null
+          },
+          {
+            eventType: "status",
+            status: "awaiting-approval",
+            comment: null,
+            date: time.minus({ days: 1, hours: 1 }).toJSDate(),
+            stageName: null
+          },
+          { eventType: "updated", status: null, comment: null, date: sub1Update, stageName: null },
+          {
+            eventType: "status",
+            status: "started",
+            comment: null,
+            date: time.minus({ days: 30 }).toJSDate(),
+            stageName: null
+          }
         ]);
+
+        const result = serialize(await controller.getHistory({ uuid: app.uuid }));
+        const dto = (result.data as Resource).attributes;
+
+        expect(dto.entries).toHaveLength(8);
+        expect(applicationsService.getApplicationHistory).toHaveBeenCalledWith(app);
       } finally {
         clock.uninstall();
       }

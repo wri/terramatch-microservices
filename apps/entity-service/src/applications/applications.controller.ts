@@ -2,7 +2,7 @@ import { Controller, Delete, Get, NotFoundException, Param, Query, UnauthorizedE
 import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/application-query.dto";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ApplicationDto, ApplicationHistoryDto, ApplicationHistoryEntryDto } from "./dto/application.dto";
+import { ApplicationDto, ApplicationHistoryDto } from "./dto/application.dto";
 import { Application, FormSubmission, Project, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
@@ -19,14 +19,10 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { EmbeddedSubmissionDto, SubmissionDto } from "../entities/dto/submission.dto";
-import { last, uniqBy } from "lodash";
+import { uniqBy } from "lodash";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
-import { DateTime } from "luxon";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import { AuditStatusService } from "../entities/audit-status.service";
-import { AuditStatusDto } from "../entities/dto/audit-status.dto";
-import { AuditStatusType } from "@terramatch-microservices/database/constants";
+import { ApplicationsService } from "./applications.service";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
@@ -36,7 +32,7 @@ export class ApplicationsController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly formDataService: FormDataService,
-    private readonly auditStatusService: AuditStatusService
+    private readonly applicationsService: ApplicationsService
   ) {}
 
   @Get()
@@ -205,18 +201,7 @@ export class ApplicationsController {
 
     await this.policyService.authorize("read", application);
 
-    const submissions = await this.findSubmissions(application.id);
-    const auditStatusesBySubmissionId = await this.auditStatusService.getAuditStatusesForMultiple(submissions);
-
-    const history: ApplicationHistoryEntryDto[] = [];
-    for (const submission of submissions.reverse()) {
-      const auditStatusDtos = auditStatusesBySubmissionId.get(submission.id) ?? [];
-
-      for (const dto of auditStatusDtos) {
-        const entry = this.createHistoryEntryDtoFromAuditStatusDto(dto, submission.stageName);
-        this.addHistoryEntry(history, entry);
-      }
-    }
+    const history = await this.applicationsService.getApplicationHistory(application);
 
     return buildJsonApi(ApplicationHistoryDto).addData(
       application.uuid,
@@ -225,62 +210,6 @@ export class ApplicationsController {
         entries: history
       })
     );
-  }
-
-  private addHistoryEntry(history: ApplicationHistoryEntryDto[], entry: ApplicationHistoryEntryDto) {
-    const earliestEntry = last(history);
-    const earliestHistoryDate = earliestEntry == null ? undefined : DateTime.fromJSDate(earliestEntry.date);
-
-    if (earliestHistoryDate != null && DateTime.fromJSDate(entry.date) > earliestHistoryDate) {
-      return;
-    }
-
-    const earliest = last(history);
-    if (
-      earliest?.eventType === "updated" &&
-      entry.eventType === "updated" &&
-      DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(entry.date), "hours").hours < 12
-    ) {
-      return;
-    }
-
-    if (
-      earliest?.eventType === "updated" &&
-      entry.eventType === "status" &&
-      entry.status === "started" &&
-      DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(entry.date), "hours").hours < 12
-    ) {
-      history[history.length - 1] = entry;
-    } else {
-      history.push(entry);
-    }
-  }
-
-  private createHistoryEntryDtoFromAuditStatusDto(
-    dto: AuditStatusDto,
-    stageName: string | null
-  ): ApplicationHistoryEntryDto {
-    let status: FormSubmissionStatus | null = null;
-    if (dto.status != null) {
-      if (dto.status === "Draft") {
-        status = "started";
-      } else {
-        status = dto.status as FormSubmissionStatus;
-      }
-    }
-
-    let eventType: AuditStatusType | null = dto.type as AuditStatusType | null;
-    if (eventType == null) {
-      eventType = status != null ? ("status" as AuditStatusType) : ("updated" as AuditStatusType);
-    }
-
-    return populateDto(new ApplicationHistoryEntryDto(), {
-      eventType,
-      status,
-      date: dto.dateCreated ?? new Date(),
-      stageName,
-      comment: dto.comment
-    });
   }
 
   private async findSubmissions(applicationIds: number | number[]) {

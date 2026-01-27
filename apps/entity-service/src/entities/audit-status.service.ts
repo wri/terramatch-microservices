@@ -92,6 +92,7 @@ export class AuditStatusService {
 
     return attachmentsMap;
   }
+
   private async transformToDtos(
     data: RawAuditData,
     attachmentsMap?: Map<number, MediaDto[]>
@@ -116,7 +117,11 @@ export class AuditStatusService {
 
     const legacyDtos = data.legacyAudits.map(audit => {
       const user = audit.userId != null ? userMap.get(audit.userId) : null;
-      return AuditStatusDto.fromAudits(audit, user?.firstName ?? null, user?.lastName ?? null);
+      return AuditStatusDto.fromAudits(
+        audit,
+        user != null ? user.firstName : null,
+        user != null ? user.lastName : null
+      );
     });
 
     return orderBy(
@@ -137,7 +142,7 @@ export class AuditStatusService {
     return uniqBy(dtos, dto => dto.comment ?? null);
   }
 
-  async getAuditStatusesForMultiple(entities: LaravelModel[]): Promise<Map<number, AuditStatusDto[]>> {
+  async getAuditStatusesForApplicationHistory(entities: LaravelModel[]): Promise<Map<number, AuditStatusDto[]>> {
     if (entities.length === 0) {
       return new Map<number, AuditStatusDto[]>();
     }
@@ -145,17 +150,17 @@ export class AuditStatusService {
     const data = await this.queryAuditData(entities);
     const dtos = await this.transformToDtos(data);
 
-    const auditStatusMap = new Map(data.modernAuditStatuses.map(as => [as.id, as]));
-    const legacyAuditMap = new Map(data.legacyAudits.map(a => [a.id, a]));
+    const auditStatusIdToAuditableId = new Map(data.modernAuditStatuses.map(as => [as.id, as.auditableId]));
+    const legacyAuditIdToAuditableId = new Map(data.legacyAudits.map(a => [a.id, a.auditableId]));
 
     const grouped = groupBy(dtos, dto => {
       if (!dto.uuid.startsWith("legacy-")) {
-        const auditStatus = auditStatusMap.get(dto.id);
-        return auditStatus?.auditableId ?? 0;
+        const auditableId = auditStatusIdToAuditableId.get(dto.id);
+        return auditableId != null ? auditableId : 0;
       } else {
         const legacyId = Number.parseInt(dto.uuid.replace("legacy-", ""), 10);
-        const legacyAudit = legacyAuditMap.get(legacyId);
-        return legacyAudit?.auditableId ?? 0;
+        const auditableId = legacyAuditIdToAuditableId.get(legacyId);
+        return auditableId != null ? auditableId : 0;
       }
     });
 

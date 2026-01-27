@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID, UUIDV4, Op, ModelStatic } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4, Op } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { ProjectReport } from "./project-report.entity";
@@ -19,7 +19,7 @@ import { SiteReport } from "./site-report.entity";
 import { Nursery } from "./nursery.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { chainScope } from "../util/chain-scope";
-import { LaravelModel, laravelType } from "../types/util";
+import { LaravelModel, LaravelModelCtor, laravelType } from "../types/util";
 import { Subquery } from "../util/subquery.builder";
 
 @Scopes(() => ({
@@ -29,9 +29,9 @@ import { Subquery } from "../util/subquery.builder";
       targetableId: targetable.id
     }
   }),
-  withTargetableStatus: (statuses: string[] = ["needs-more-information", "due"]) => {
-    const buildConditionForType = (ModelClass: ModelStatic<Model>, laravelType: string) => ({
-      targetableType: laravelType,
+  withTargetableStatus: (targets: LaravelModelCtor[], statuses: string[]) => {
+    const buildCondition = (ModelClass: LaravelModelCtor) => ({
+      targetableType: laravelType(ModelClass),
       targetableId: {
         [Op.in]: Subquery.select(ModelClass, "id").in("status", statuses).literal
       }
@@ -39,14 +39,7 @@ import { Subquery } from "../util/subquery.builder";
 
     return {
       where: {
-        [Op.or]: [
-          buildConditionForType(Project, Project.LARAVEL_TYPE),
-          buildConditionForType(ProjectReport, ProjectReport.LARAVEL_TYPE),
-          buildConditionForType(Site, Site.LARAVEL_TYPE),
-          buildConditionForType(SiteReport, SiteReport.LARAVEL_TYPE),
-          buildConditionForType(Nursery, Nursery.LARAVEL_TYPE),
-          buildConditionForType(NurseryReport, NurseryReport.LARAVEL_TYPE)
-        ]
+        [Op.or]: targets.map(ModelClass => buildCondition(ModelClass))
       }
     };
   }
@@ -63,8 +56,8 @@ export class Action extends Model<Action> {
     return chainScope(this, "targetable", targetable) as typeof Action;
   }
 
-  static withTargetableStatus(statuses: string[] = ["needs-more-information", "due"]) {
-    return chainScope(this, "withTargetableStatus", statuses) as typeof Action;
+  static withTargetableStatus(targets: LaravelModelCtor[], statuses: string[]) {
+    return chainScope(this, "withTargetableStatus", targets, statuses) as typeof Action;
   }
 
   @PrimaryKey

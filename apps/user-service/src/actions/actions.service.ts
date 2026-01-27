@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import {
   Action,
   Project,
@@ -11,8 +11,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { groupBy } from "lodash";
-import { EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
-import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
+import { EntityModel, EntityType, formModelType } from "@terramatch-microservices/database/constants/entities";
 import { ActionTarget } from "@terramatch-microservices/common/dto/action.dto";
 import { ModelStatic, Includeable } from "sequelize";
 
@@ -73,10 +72,6 @@ const TARGETABLE_LOADERS: Record<string, TargetableLoaderConfig> = {
   }
 };
 
-const reportLaravelTypes = [ProjectReport.LARAVEL_TYPE, SiteReport.LARAVEL_TYPE, NurseryReport.LARAVEL_TYPE];
-
-const entityLaravelTypes = [Project.LARAVEL_TYPE, Site.LARAVEL_TYPE, Nursery.LARAVEL_TYPE];
-
 export type ActionWithTarget = {
   action: Action;
   target: ActionTarget;
@@ -85,44 +80,38 @@ export type ActionWithTarget = {
 
 @Injectable()
 export class ActionsService {
-  async getActions(
-    userId: number,
-    query: IndexQueryDto
-  ): Promise<{ data: ActionWithTarget[]; paginationTotal: number; pageNumber: number }> {
+  async getActions(userId: number): Promise<ActionWithTarget[]> {
     const user = await User.findOne({
       where: { id: userId },
       include: [{ association: "projects", attributes: ["id"] }]
     });
 
     if (user == null) {
-      throw new Error("User not found");
+      throw new BadRequestException("User not found");
     }
 
     const projectIds = user.projects.map(({ id }) => id);
 
     if (projectIds.length === 0) {
-      return {
-        data: [],
-        paginationTotal: 0,
-        pageNumber: query.page?.number ?? 1
-      };
+      return [];
     }
 
     const [reportActions, entityActions] = await Promise.all([
-      Action.withTargetableStatus().findAll({
+      Action.withTargetableStatus(
+        [ProjectReport, SiteReport, NurseryReport],
+        ["needs-more-information", "due"]
+      ).findAll({
         where: {
           status: "pending",
-          projectId: { [Op.in]: projectIds },
-          targetableType: { [Op.in]: reportLaravelTypes }
+          projectId: { [Op.in]: projectIds }
         },
         order: [["updatedAt", "DESC"]],
         limit: 10
       }),
-      Action.withTargetableStatus().findAll({
+      Action.withTargetableStatus([Project, Site, Nursery], ["needs-more-information"]).findAll({
         where: {
           status: "pending",
-          projectId: { [Op.in]: projectIds },
-          targetableType: { [Op.in]: entityLaravelTypes }
+          projectId: { [Op.in]: projectIds }
         },
         order: [["updatedAt", "DESC"]],
         limit: 10
@@ -133,22 +122,7 @@ export class ActionsService {
       (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
     );
 
-    const pageSize = query.page?.size ?? 50;
-    const pageNumber = query.page?.number ?? 1;
-
-    const paginationTotal = allActions.length;
-
-    const startIndex = (pageNumber - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedActions = allActions.slice(startIndex, endIndex);
-
-    const data = await this.loadTargetablesAndCreateDtos(paginatedActions);
-
-    return {
-      data,
-      paginationTotal,
-      pageNumber
-    };
+    return await this.loadTargetablesAndCreateDtos(allActions);
   }
 
   private async loadTargetablesAndCreateDtos(actions: Action[]): Promise<ActionWithTarget[]> {
@@ -183,7 +157,7 @@ export class ActionsService {
     return actions.map(action => {
       const targetModel = targetablesMap.get(action.targetableId);
       const target = this.createTargetForAction(action, targetModel);
-      const targetableType = this.laravelTypeToEntityType(action.targetableType);
+      const targetableType = this.getEntityTypeFromModel(targetModel);
       return { action, target, targetableType };
     });
   }
@@ -193,7 +167,7 @@ export class ActionsService {
       return targetModel as ActionTarget;
     }
 
-    const entityType = this.laravelTypeToEntityType(action.targetableType);
+    const entityType = this.getEntityTypeFromModel(targetModel);
     if (entityType != null) {
       return entityType;
     }
@@ -201,13 +175,9 @@ export class ActionsService {
     return "projects";
   }
 
-  private laravelTypeToEntityType(laravelType: string): EntityType | null {
-    if (laravelType === Project.LARAVEL_TYPE) return "projects";
-    else if (laravelType === Site.LARAVEL_TYPE) return "sites";
-    else if (laravelType === Nursery.LARAVEL_TYPE) return "nurseries";
-    else if (laravelType === ProjectReport.LARAVEL_TYPE) return "projectReports";
-    else if (laravelType === SiteReport.LARAVEL_TYPE) return "siteReports";
-    else if (laravelType === NurseryReport.LARAVEL_TYPE) return "nurseryReports";
-    return null;
+  private getEntityTypeFromModel(targetModel?: EntityModel): EntityType | null {
+    if (targetModel == null) return null;
+    // formModelType devuelve un FormModelType; en este contexto sólo usamos entity/report models
+    return formModelType(targetModel) as EntityType | null;
   }
 }

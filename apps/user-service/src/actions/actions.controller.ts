@@ -1,9 +1,8 @@
-import { BadRequestException, Controller, Get, Query, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Controller, Get, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ActionDto } from "@terramatch-microservices/common/dto";
-import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { ActionsService } from "./actions.service";
 
@@ -20,21 +19,17 @@ export class ActionsController {
   @JsonApiResponse(ActionDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   @ExceptionResponse(BadRequestException, { description: "Invalid query parameters" })
-  async index(@Query() query: IndexQueryDto) {
+  async index() {
     const userId = authenticatedUserId() as number;
 
-    const { data, paginationTotal, pageNumber } = await this.actionsService.getActions(userId, query);
+    const data = await this.actionsService.getActions(userId);
 
-    const document = buildJsonApi(ActionDto, { pagination: "number" });
+    const document = buildJsonApi(ActionDto);
 
     for (const { action, target, targetableType } of data) {
       document.addData(action.uuid, new ActionDto(action, target, targetableType));
     }
 
-    return document.addIndex({
-      requestPath: `/users/v3/actions${getStableRequestQuery(query)}`,
-      total: paginationTotal,
-      pageNumber: pageNumber
-    });
+    return document;
   }
 }

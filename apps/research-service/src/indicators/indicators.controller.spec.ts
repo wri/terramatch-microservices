@@ -18,7 +18,9 @@ describe("IndicatorsController", () => {
     totalPolygons: 2
   });
 
-  const mockValidationService = {};
+  const mockIndicatorsService = {
+    exportIndicatorToCsv: jest.fn()
+  };
 
   const mockQueue = {
     add: jest.fn()
@@ -43,7 +45,7 @@ describe("IndicatorsController", () => {
       providers: [
         {
           provide: IndicatorsService,
-          useValue: mockValidationService
+          useValue: mockIndicatorsService
         },
         {
           provide: getQueueToken("sitePolygons"),
@@ -81,6 +83,68 @@ describe("IndicatorsController", () => {
         delayedJobId: 1
       });
       expect(result.data).toBeDefined();
+    });
+  });
+
+  describe("exportIndicator", () => {
+    it("should call service exportIndicatorToCsv with correct parameters", async () => {
+      const mockCsvContent = "Polygon Name,Size (ha)\nTest,100";
+      mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
+
+      const result = await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
+
+      expect(result).toBe(mockCsvContent);
+      expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
+        "sites",
+        "site-uuid-123",
+        "treeCoverLoss"
+      );
+    });
+
+    it("should return CSV content for tree cover loss", async () => {
+      const mockCsvContent =
+        "Polygon Name,Size (ha),Site Name,Status,Plant Start Date,2020,2021\nPolygon 1,100.5,Site A,approved,2020-01-01,0.5,0.3";
+
+      mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
+
+      const result = await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
+
+      expect(result).toBe(mockCsvContent);
+      expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
+        "sites",
+        "site-uuid-123",
+        "treeCoverLoss"
+      );
+    });
+
+    it("should return CSV content for project entity type", async () => {
+      const mockCsvContent =
+        "Polygon Name,Size (ha),Site Name,Status,Plant Start Date,2020\nPolygon 1,100,Site A,approved,2020-01-01,0.5";
+
+      mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
+
+      const result = await controller.exportIndicator("projects", "project-uuid", "treeCoverLoss");
+
+      expect(result).toBe(mockCsvContent);
+      expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
+        "projects",
+        "project-uuid",
+        "treeCoverLoss"
+      );
+    });
+
+    it("should work with different indicator slugs", async () => {
+      const mockCsvContent = "Polygon Name,Size (ha),Site Name,Status,Plant Start Date,Baseline,Tree Planting\n";
+
+      mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
+
+      await controller.exportIndicator("sites", "site-uuid", "restorationByStrategy");
+
+      expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
+        "sites",
+        "site-uuid",
+        "restorationByStrategy"
+      );
     });
   });
 });

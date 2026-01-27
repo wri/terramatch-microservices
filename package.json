@@ -44,6 +44,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "commander": "^13.1.0",
+    "csv-stringify": "^6.6.0",
     "d3-delaunay": "^6.0.4",
     "debug": "^4.4.0",
     "geojson": "^0.5.0",

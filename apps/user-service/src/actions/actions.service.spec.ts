@@ -91,9 +91,9 @@ describe("ActionsService", () => {
       expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
-    it("should return actions for projects with due status", async () => {
+    it("should return actions for projects with needs-more-information status", async () => {
       const user = await UserFactory.create();
-      const project = await ProjectFactory.create({ status: "due" });
+      const project = await ProjectFactory.create({ status: "needs-more-information" });
       await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
 
       const action = await ActionFactory.forProject.create({
@@ -130,12 +130,12 @@ describe("ActionsService", () => {
       expect(result.some(d => d.action.id === action.id)).toBe(true);
     });
 
-    it("should return actions for nurseries with due status", async () => {
+    it("should return actions for nurseries with needs-more-information status", async () => {
       const user = await UserFactory.create();
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
 
-      const nursery = await NurseryFactory.create({ projectId: project.id, status: "due" });
+      const nursery = await NurseryFactory.create({ projectId: project.id, status: "needs-more-information" });
 
       const action = await (
         Action.build({
@@ -232,7 +232,7 @@ describe("ActionsService", () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
 
-      const site = await SiteFactory.create({ projectId: project.id, status: "due" });
+      const site = await SiteFactory.create({ projectId: project.id, status: "needs-more-information" });
 
       const action = await (
         Action.build({

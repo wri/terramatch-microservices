@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing";
-import { Demographic } from "@terramatch-microservices/database/entities";
+import { Tracking } from "@terramatch-microservices/database/entities";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { DemographicService } from "./demographic.service";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
-import { DemographicFactory } from "@terramatch-microservices/database/factories";
+import { TrackingFactory } from "@terramatch-microservices/database/factories";
 
 function getDefaultPagination() {
   const params = new DemographicQueryDto();
@@ -30,8 +30,8 @@ describe("DemographicService", () => {
 
   describe("Get Demographics", () => {
     it("returns paginated demographics", async () => {
-      const demographics = await DemographicFactory.projectReport().createMany(2);
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = await TrackingFactory.projectReport().createMany(2);
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
 
@@ -44,8 +44,8 @@ describe("DemographicService", () => {
     });
 
     it("deny unexpected filter", async () => {
-      const demographics = [await DemographicFactory.projectReport().create()];
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = [await TrackingFactory.projectReport().create()];
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
       params["unexpectedFilter"] = ["value1", "value2"];
@@ -54,8 +54,8 @@ describe("DemographicService", () => {
     });
 
     it("applies projectUuid filter", async () => {
-      const demographics = [await DemographicFactory.projectReport().create()];
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = [await TrackingFactory.projectReport().create()];
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
       params.projectReportUuid = ["uuid10", "uid20"];
@@ -65,8 +65,8 @@ describe("DemographicService", () => {
     });
 
     it("applies projectReportUuid filter", async () => {
-      const demographics = [await DemographicFactory.projectReport().create()];
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = [await TrackingFactory.projectReport().create()];
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
       params.projectReportUuid = ["uuid1", "uid2"];
@@ -76,8 +76,8 @@ describe("DemographicService", () => {
     });
 
     it("applies siteReportUuid filter", async () => {
-      const demographics = [await DemographicFactory.projectReport().create()];
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = [await TrackingFactory.projectReport().create()];
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
       params.projectReportUuid = ["uuid44", "uid45"];
@@ -87,8 +87,8 @@ describe("DemographicService", () => {
     });
 
     it("deny orders fields", async () => {
-      const demographics = [await DemographicFactory.projectReport().create()];
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = [await TrackingFactory.projectReport().create()];
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
       params.sort = { field: "no_exist_column", direction: "ASC" };
@@ -97,8 +97,8 @@ describe("DemographicService", () => {
     });
 
     it("applies order correctly", async () => {
-      const demographics = [await DemographicFactory.projectReport().create()];
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve(demographics));
+      const demographics = [await TrackingFactory.projectReport().create()];
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve(demographics));
 
       const params = getDefaultPagination();
       params.sort = { field: "type", direction: "ASC" };

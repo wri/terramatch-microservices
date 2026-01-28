@@ -1,8 +1,8 @@
 import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
   Application,
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Form,
   FormSubmission,
   Media,
@@ -293,26 +293,26 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
-    const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
+    const dueAfter = useDemographicsCutoff ? Tracking.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
     const siteIds = Site.approvedIdsSubquery(projectId);
     const siteReportIds = SiteReport.approvedIdsSubquery(siteIds, { dueAfter });
-    const siteReportWorkdays = Demographic.idsSubquery(
+    const siteReportWorkdays = Tracking.demographicIdsSubquery(
       siteReportIds,
       SiteReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
+      Tracking.WORKDAYS_TYPE
     );
     const projectReportIds = ProjectReport.approvedIdsSubquery(projectId, { dueAfter });
-    const projectReportWorkdays = Demographic.idsSubquery(
+    const projectReportWorkdays = Tracking.demographicIdsSubquery(
       projectReportIds,
       ProjectReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
+      Tracking.WORKDAYS_TYPE
     );
 
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
+          trackingId: {
             [Op.or]: [{ [Op.in]: siteReportWorkdays }, { [Op.in]: projectReportWorkdays }]
           }
         }
@@ -324,8 +324,8 @@ export class ProjectProcessor extends EntityProcessor<
     let SR = SiteReport.approved().sites(Site.approvedIdsSubquery(projectId));
     let PR = ProjectReport.approved().project(projectId);
     if (useDemographicsCutoff) {
-      PR = PR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
-      SR = SR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
+      PR = PR.dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF);
+      SR = SR.dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF);
     }
 
     const aggregates = [
@@ -344,13 +344,13 @@ export class ProjectProcessor extends EntityProcessor<
 
   protected async getTotalJobs(projectId: number) {
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
-            [Op.in]: Demographic.idsSubquery(
+          trackingId: {
+            [Op.in]: Tracking.demographicIdsSubquery(
               ProjectReport.approvedIdsSubquery(projectId),
               ProjectReport.LARAVEL_TYPE,
-              Demographic.JOBS_TYPE
+              Tracking.JOBS_TYPE
             )
           }
         }
@@ -520,11 +520,11 @@ export class ProjectProcessor extends EntityProcessor<
       }
       if (treesToCreate.length > 0) await TreeSpecies.bulkCreate(treesToCreate);
 
-      const entriesToCreate: CreationAttributes<DemographicEntry>[] = [];
-      const demographics = await Demographic.for(pitch).findAll();
+      const entriesToCreate: CreationAttributes<TrackingEntry>[] = [];
+      const demographics = await Tracking.for(pitch).findAll();
       const entries = groupBy(
-        await DemographicEntry.findAll({
-          where: { demographicId: { [Op.in]: demographics.map(d => d.id) } }
+        await TrackingEntry.findAll({
+          where: { trackingId: { [Op.in]: demographics.map(d => d.id) } }
         }),
         "demographicId"
       );
@@ -534,16 +534,17 @@ export class ProjectProcessor extends EntityProcessor<
         // There aren't many demographic types associated with each project / pitch, so this
         // initial creation list is short, and we can less awkwardly collect all the entries
         // to create if we create the demographics sequentially to get each id here.
-        const projDemographic = await Demographic.create({
-          demographicalType: Project.LARAVEL_TYPE,
-          demographicalId: project.id,
+        const projDemographic = await Tracking.create({
+          trackableType: Project.LARAVEL_TYPE,
+          trackableId: project.id,
+          domain: "demographics",
           type: demographic.type,
           collection: demographic.collection,
           description: demographic.description
         });
         for (const entry of entries[demographic.id] ?? []) {
           entriesToCreate.push({
-            demographicId: projDemographic.id,
+            trackingId: projDemographic.id,
             type: entry.type,
             subtype: entry.subtype,
             name: entry.name,
@@ -551,7 +552,7 @@ export class ProjectProcessor extends EntityProcessor<
           });
         }
       }
-      if (entriesToCreate.length > 0) await DemographicEntry.bulkCreate(entriesToCreate);
+      if (entriesToCreate.length > 0) await TrackingEntry.bulkCreate(entriesToCreate);
 
       const medias = await Media.for(pitch)
         .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])

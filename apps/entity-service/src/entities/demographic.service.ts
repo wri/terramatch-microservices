@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { Demographic, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
+import { Tracking, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { Model, ModelStatic, Op } from "sequelize";
@@ -33,7 +33,7 @@ const VALID_FILTER_KEYS = DEMOGRAPHIC_FILTERS.map(({ uuidKey }) => uuidKey);
 @Injectable()
 export class DemographicService {
   async getDemographics(query: DemographicQueryDto) {
-    const builder = PaginatedQueryBuilder.forNumberPage(Demographic, query);
+    const builder = PaginatedQueryBuilder.forNumberPage(Tracking, query);
 
     Object.keys(query).forEach(key => {
       if (key === "page" || key === "sort") return;
@@ -51,7 +51,7 @@ export class DemographicService {
         })) as unknown as { id: number }[];
 
         if (records.length > 0) {
-          const demographicIds = Demographic.idsSubquery(
+          const demographicIds = Tracking.demographicIdsSubquery(
             records.map(record => record.id),
             laravelType
           );

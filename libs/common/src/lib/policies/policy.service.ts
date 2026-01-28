@@ -3,7 +3,7 @@ import { UserPolicy } from "./user.policy";
 import {
   Application,
   AuditStatus,
-  Demographic,
+  Tracking,
   Disturbance,
   DisturbanceReport,
   FinancialIndicator,
@@ -74,7 +74,7 @@ type PolicyClass = {
 const POLICIES: [EntityClass, PolicyClass][] = [
   [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],
-  [Demographic, DemographicPolicy],
+  [Tracking, DemographicPolicy],
   [Disturbance, DisturbancePolicy],
   [ImpactStory, ImpactStoryPolicy],
   [FinancialIndicator, FinancialIndicatorPolicy],

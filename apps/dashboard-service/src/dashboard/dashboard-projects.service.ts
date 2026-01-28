@@ -5,8 +5,8 @@ import {
   SitePolygon,
   TreeSpecies,
   SiteReport,
-  DemographicEntry,
-  Demographic,
+  TrackingEntry,
+  Tracking,
   ProjectReport
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
@@ -22,13 +22,13 @@ export class DashboardProjectsService {
 
   protected async getTotalJobs(projectId: number) {
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
-            [Op.in]: Demographic.idsSubquery(
+          trackingId: {
+            [Op.in]: Tracking.demographicIdsSubquery(
               ProjectReport.approvedIdsSubquery(projectId),
               ProjectReport.LARAVEL_TYPE,
-              Demographic.JOBS_TYPE
+              Tracking.JOBS_TYPE
             )
           }
         }
@@ -46,7 +46,7 @@ export class DashboardProjectsService {
 
     const projects = await projectsBuilder.execute();
 
-    const projectsData = await Promise.all(
+    return await Promise.all(
       projects.map(async project => {
         const approvedSitesQuery = Site.approvedIdsSubquery(project.id);
         const approvedSiteReportsQuery = SiteReport.approvedIdsSubquery(approvedSitesQuery);
@@ -71,7 +71,5 @@ export class DashboardProjectsService {
         } as HybridSupportProps<DashboardProjectsLightDto, Project>);
       })
     );
-
-    return projectsData;
   }
 }

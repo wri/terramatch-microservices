@@ -1,7 +1,7 @@
 import { Dictionary } from "lodash";
 import { Attributes } from "sequelize";
 import { FormModel } from "./entities";
-import { DemographicType } from "../types/demographic";
+import { DemographicType } from "../types/tracking";
 
 export type LinkedFieldConfiguration<M extends FormModel> = {
   label: string;

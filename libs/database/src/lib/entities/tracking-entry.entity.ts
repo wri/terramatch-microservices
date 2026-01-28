@@ -1,27 +1,24 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
 import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
-import { Demographic } from "./demographic.entity";
 import { chainScope } from "../util/chain-scope";
+import { Tracking } from "./tracking.entity";
 
 @Scopes(() => ({
   gender: { where: { type: "gender" } },
-  demographic: (id: number) => ({ where: { demographicId: id } })
+  tracking: (id: number) => ({ where: { trackingId: id } })
 }))
 @Table({
-  tableName: "demographic_entries",
+  tableName: "tracking_entries",
   underscored: true,
   paranoid: true
 })
-export class DemographicEntry extends Model<
-  InferAttributes<DemographicEntry>,
-  InferCreationAttributes<DemographicEntry>
-> {
-  static demographic(id: number) {
-    return chainScope(this, "demographic", id) as typeof DemographicEntry;
+export class TrackingEntry extends Model<InferAttributes<TrackingEntry>, InferCreationAttributes<TrackingEntry>> {
+  static tracking(id: number) {
+    return chainScope(this, "tracking", id) as typeof TrackingEntry;
   }
 
   static gender() {
-    return chainScope(this, "gender") as typeof DemographicEntry;
+    return chainScope(this, "gender") as typeof TrackingEntry;
   }
 
   @PrimaryKey
@@ -43,7 +40,7 @@ export class DemographicEntry extends Model<
   @Column(INTEGER({ length: 10 }))
   amount: number;
 
-  @ForeignKey(() => Demographic)
+  @ForeignKey(() => Tracking)
   @Column(BIGINT.UNSIGNED)
-  demographicId: number;
+  trackingId: number;
 }

@@ -230,7 +230,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  get frameworkUuid() {
+  get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
   }
 

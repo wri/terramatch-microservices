@@ -4,8 +4,8 @@ import {
   SitePolygon,
   TreeSpecies,
   SiteReport,
-  DemographicEntry,
-  Demographic,
+  TrackingEntry,
+  Tracking,
   ProjectReport
 } from "@terramatch-microservices/database/entities";
 import { DashboardEntityProcessor, DtoResult } from "./dashboard-entity-processor";
@@ -54,13 +54,13 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
 
   protected async getTotalJobs(projectId: number) {
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
-            [Op.in]: Demographic.idsSubquery(
+          trackingId: {
+            [Op.in]: Tracking.demographicIdsSubquery(
               ProjectReport.approvedIdsSubquery(projectId),
               ProjectReport.LARAVEL_TYPE,
-              Demographic.JOBS_TYPE
+              Tracking.JOBS_TYPE
             )
           }
         }

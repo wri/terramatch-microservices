@@ -1,5 +1,5 @@
 import { AssociationDto } from "./association.dto";
-import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
+import { Tracking, TrackingEntry } from "@terramatch-microservices/database/entities";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "./json-api-attributes";
 import { JsonApiDto } from "../decorators";
@@ -56,7 +56,7 @@ export class DemographicCollections {
 }
 
 export class DemographicEntryDto {
-  constructor(entry: DemographicEntry) {
+  constructor(entry: TrackingEntry) {
     populateDto<DemographicEntryDto>(this, entry);
   }
 
@@ -75,10 +75,10 @@ export class DemographicEntryDto {
 
 @JsonApiDto({ type: "demographics" })
 export class DemographicDto extends AssociationDto {
-  constructor(demographic?: Demographic, additional?: AdditionalProps<DemographicDto, Demographic>) {
+  constructor(demographic?: Tracking, additional?: AdditionalProps<DemographicDto, Tracking>) {
     super();
     if (demographic != null && additional != null) {
-      populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
+      populateDto<DemographicDto, Omit<Tracking, "entries">>(this, demographic, {
         ...additional,
         entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
       });
@@ -88,7 +88,7 @@ export class DemographicDto extends AssociationDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ enum: Demographic.VALID_TYPES })
+  @ApiProperty({ enum: Tracking.VALID_TYPES })
   type: string;
 
   @ApiProperty()
@@ -99,9 +99,9 @@ export class DemographicDto extends AssociationDto {
 }
 
 export class EmbeddedDemographicDto extends OmitType(DemographicDto, ["entityType", "entityUuid"]) {
-  constructor(demographic: Demographic) {
+  constructor(demographic: Tracking) {
     super();
-    populateDto<EmbeddedDemographicDto, Demographic>(this, demographic, {
+    populateDto<EmbeddedDemographicDto, Tracking>(this, demographic, {
       entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
     });
   }

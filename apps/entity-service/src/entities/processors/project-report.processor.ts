@@ -6,8 +6,8 @@ import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Media,
   NurseryReport,
   Project,
@@ -224,16 +224,20 @@ export class ProjectReportProcessor extends ReportProcessor<
   }
 
   protected async getTaskTotalWorkdays(projectReportId: number, siteIds: Literal) {
-    const projectReportDemographics = Demographic.idsSubquery(
+    const projectReportDemographics = Tracking.demographicIdsSubquery(
       [projectReportId],
       ProjectReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
+      Tracking.WORKDAYS_TYPE
     );
-    const siteReportDemographics = Demographic.idsSubquery(siteIds, SiteReport.LARAVEL_TYPE, Demographic.WORKDAYS_TYPE);
+    const siteReportDemographics = Tracking.demographicIdsSubquery(
+      siteIds,
+      SiteReport.LARAVEL_TYPE,
+      Tracking.WORKDAYS_TYPE
+    );
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
+          trackingId: {
             [Op.or]: [{ [Op.in]: projectReportDemographics }, { [Op.in]: siteReportDemographics }]
           }
         }

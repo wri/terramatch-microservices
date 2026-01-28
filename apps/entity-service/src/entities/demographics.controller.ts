@@ -36,15 +36,15 @@ export class DemographicsController {
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const demographic of data) {
-        const { demographicalType: laravelType, demographicalId } = demographic;
+        const { trackableType: laravelType, trackableId } = demographic;
         const model = LARAVEL_MODELS[laravelType];
         if (model == null) {
           this.logger.error("Unknown model type", model);
           throw new InternalServerErrorException("Unexpected demographic association type");
         }
-        const entity = await model.findOne({ where: { id: demographicalId }, attributes: ["uuid"] });
+        const entity = await model.findOne({ where: { id: trackableId }, attributes: ["uuid"] });
         if (entity == null) {
-          this.logger.error("Demographic parent entity not found", { model, id: demographicalId });
+          this.logger.error("Demographic parent entity not found", { model, id: trackableId });
           throw new NotFoundException();
         }
         const entityType = LARAVEL_MODEL_TYPES[laravelType];

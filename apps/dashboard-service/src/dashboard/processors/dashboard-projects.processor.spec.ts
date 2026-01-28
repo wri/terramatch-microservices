@@ -9,8 +9,8 @@ import {
   SitePolygon,
   TreeSpecies,
   SiteReport,
-  DemographicEntry,
-  Demographic,
+  TrackingEntry,
+  Tracking,
   ProjectReport
 } from "@terramatch-microservices/database/entities";
 import { DashboardProjectsLightDto, DashboardProjectsFullDto } from "../dto/dashboard-projects.dto";
@@ -120,8 +120,8 @@ describe("DashboardProjectsProcessor", () => {
       })
     } as never);
     jest.spyOn(ProjectReport, "approvedIdsSubquery").mockReturnValue("query3" as never);
-    jest.spyOn(Demographic, "idsSubquery").mockReturnValue("query4" as never);
-    jest.spyOn(DemographicEntry, "gender").mockReturnValue({
+    jest.spyOn(Tracking, "demographicIdsSubquery").mockReturnValue("query4" as never);
+    jest.spyOn(TrackingEntry, "gender").mockReturnValue({
       sum: jest.fn().mockResolvedValue(25)
     } as never);
 

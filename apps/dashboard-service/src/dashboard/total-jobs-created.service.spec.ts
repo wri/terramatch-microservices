@@ -1,4 +1,4 @@
-import { Demographic, ProjectReport } from "@terramatch-microservices/database/entities";
+import { Tracking, ProjectReport } from "@terramatch-microservices/database/entities";
 import { TotalJobsCreatedService } from "./total-jobs-created.service";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
@@ -62,7 +62,7 @@ describe("TotalJobsCreatedService - filters", () => {
       const filters: DashboardQueryDto = {};
       const mockBuilder = baseMocks();
       jest.spyOn(ProjectReport, "findAll").mockImplementation(() => Promise.resolve([] as unknown as ProjectReport[]));
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve([] as unknown as Demographic[]));
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve([] as unknown as Tracking[]));
 
       const result = await service.getTotals(filters);
 
@@ -127,7 +127,7 @@ describe("TotalJobsCreatedService - filters", () => {
           { type: "gender", subtype: "other", amount: 3 },
           { type: "age", subtype: "senior", amount: 2 }
         ]
-      } as unknown as Demographic;
+      } as unknown as Tracking;
 
       const partTimeJobs = {
         id: 2,
@@ -141,13 +141,13 @@ describe("TotalJobsCreatedService - filters", () => {
           { type: "gender", subtype: "prefer-not-to-say", amount: 4 },
           { type: "age", subtype: "middle-aged", amount: 3 }
         ]
-      } as unknown as Demographic;
+      } as unknown as Tracking;
 
-      jest.spyOn(Demographic, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
         if (options?.where?.type === "jobs") {
-          return Promise.resolve([fullTimeJobs, partTimeJobs] as unknown as Demographic[]);
+          return Promise.resolve([fullTimeJobs, partTimeJobs] as unknown as Tracking[]);
         }
-        return Promise.resolve([] as unknown as Demographic[]);
+        return Promise.resolve([] as unknown as Tracking[]);
       });
 
       const result = await service.getTotals(filters);
@@ -213,16 +213,16 @@ describe("TotalJobsCreatedService - filters", () => {
           { type: "gender", subtype: "prefer-not-to-say", amount: 5 },
           { type: "age", subtype: "senior", amount: 4 }
         ]
-      } as unknown as Demographic;
+      } as unknown as Tracking;
 
-      jest.spyOn(Demographic, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
         if (options?.where?.type === "jobs") {
-          return Promise.resolve([] as unknown as Demographic[]);
+          return Promise.resolve([] as unknown as Tracking[]);
         }
         if (options?.where?.type === "volunteers") {
-          return Promise.resolve([volunteerDemographics] as unknown as Demographic[]);
+          return Promise.resolve([volunteerDemographics] as unknown as Tracking[]);
         }
-        return Promise.resolve([] as unknown as Demographic[]);
+        return Promise.resolve([] as unknown as Tracking[]);
       });
 
       const result = await service.getTotals(filters);
@@ -261,22 +261,22 @@ describe("TotalJobsCreatedService - filters", () => {
         id: 1,
         collection: FULL_TIME,
         entries: [{ type: "gender", subtype: "male", amount: 10 }]
-      } as unknown as Demographic;
+      } as unknown as Tracking;
 
       const volunteerDemographics = {
         id: 2,
         collection: "volunteers",
         entries: [{ type: "gender", subtype: "male", amount: 15 }]
-      } as unknown as Demographic;
+      } as unknown as Tracking;
 
-      jest.spyOn(Demographic, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
         if (options?.where?.type === "jobs") {
-          return Promise.resolve([fullTimeJobs] as unknown as Demographic[]);
+          return Promise.resolve([fullTimeJobs] as unknown as Tracking[]);
         }
         if (options?.where?.type === "volunteers") {
-          return Promise.resolve([volunteerDemographics] as unknown as Demographic[]);
+          return Promise.resolve([volunteerDemographics] as unknown as Tracking[]);
         }
-        return Promise.resolve([] as unknown as Demographic[]);
+        return Promise.resolve([] as unknown as Tracking[]);
       });
 
       const result = await service.getTotals(filters);
@@ -301,7 +301,7 @@ describe("TotalJobsCreatedService - filters", () => {
       const mockBuilder = baseMocks();
 
       jest.spyOn(ProjectReport, "findAll").mockImplementation(() => Promise.resolve([] as unknown as ProjectReport[]));
-      jest.spyOn(Demographic, "findAll").mockImplementation(() => Promise.resolve([] as unknown as Demographic[]));
+      jest.spyOn(Tracking, "findAll").mockImplementation(() => Promise.resolve([] as unknown as Tracking[]));
 
       await service.getTotals(filters);
 

@@ -4,8 +4,8 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { createMock } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import {
-  DemographicEntryFactory,
-  DemographicFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   ProjectReportFactory,
   SeedingFactory,
   SiteReportFactory,
@@ -43,17 +43,17 @@ describe("AssociationProcessor", () => {
   describe("addDtos", () => {
     it("should include demographic entries", async () => {
       const projectReport = await ProjectReportFactory.create();
-      const demographic = await DemographicFactory.projectReportJobs(projectReport).create();
+      const demographic = await TrackingFactory.projectReportJobs(projectReport).create();
       const female = pickApiProperties(
-        await DemographicEntryFactory.gender(demographic, "female").create(),
+        await TrackingEntryFactory.gender(demographic, "female").create(),
         DemographicEntryDto
       );
       const unknown = pickApiProperties(
-        await DemographicEntryFactory.gender(demographic, "unknown").create(),
+        await TrackingEntryFactory.gender(demographic, "unknown").create(),
         DemographicEntryDto
       );
       const youth = pickApiProperties(
-        await DemographicEntryFactory.age(demographic, "youth").create(),
+        await TrackingEntryFactory.age(demographic, "youth").create(),
         DemographicEntryDto
       );
 

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Project,
   ProjectReport,
   Site,
@@ -56,13 +56,13 @@ export class TotalSectionHeaderService {
       return 0;
     }
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
-            [Op.in]: Demographic.idsSubquery(
+          trackingId: {
+            [Op.in]: Tracking.demographicIdsSubquery(
               ProjectReport.approvedProjectsIdsSubquery(projectIds),
               ProjectReport.LARAVEL_TYPE,
-              Demographic.JOBS_TYPE
+              Tracking.JOBS_TYPE
             )
           }
         }

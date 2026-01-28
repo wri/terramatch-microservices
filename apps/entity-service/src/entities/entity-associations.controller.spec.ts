@@ -1,4 +1,4 @@
-import { Demographic, ProjectReport } from "@terramatch-microservices/database/entities";
+import { Tracking, ProjectReport } from "@terramatch-microservices/database/entities";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -6,15 +6,15 @@ import { Test } from "@nestjs/testing";
 import { EntityAssociationsController } from "./entity-associations.controller";
 import { AssociationProcessor } from "./processors/association-processor";
 import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
-import { DemographicFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
+import { TrackingFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 
-class StubProcessor extends AssociationProcessor<Demographic, DemographicDto> {
+class StubProcessor extends AssociationProcessor<Tracking, DemographicDto> {
   DTO = DemographicDto;
 
   addDtos = jest.fn(() => Promise.resolve());
-  getAssociations = jest.fn(() => Promise.resolve([] as Demographic[]));
+  getAssociations = jest.fn(() => Promise.resolve([] as Tracking[]));
 }
 
 describe("EntityAssociationsController", () => {
@@ -93,8 +93,8 @@ describe("EntityAssociationsController", () => {
 
     it("should add all DTOs to the document", async () => {
       const pr = await ProjectReportFactory.create();
-      await DemographicFactory.projectReportWorkday(pr).create();
-      await DemographicFactory.projectReportJobs(pr).create();
+      await TrackingFactory.projectReportWorkday(pr).create();
+      await TrackingFactory.projectReportJobs(pr).create();
       const result = serialize(
         await controller.associationIndex(
           {

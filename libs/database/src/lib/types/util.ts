@@ -22,7 +22,15 @@ export const isCollectionModel = (model: Model): model is CollectionModel =>
 
 export type LaravelModelCtor = ModelCtor & { LARAVEL_TYPE: string };
 export type LaravelModel = InstanceType<LaravelModelCtor>;
-export const laravelType = (model: LaravelModel) => (model.constructor as LaravelModelCtor).LARAVEL_TYPE;
+export const laravelType = (model: LaravelModel | LaravelModelCtor) => {
+  // When called with an instance, the type is stored on the constructor.
+  if (model instanceof Model) {
+    return (model.constructor as LaravelModelCtor).LARAVEL_TYPE;
+  }
+
+  // When called with a ModelCtor, the type is stored directly on the class.
+  return (model as LaravelModelCtor).LARAVEL_TYPE;
+};
 
 export type PolymorphicModelCtor<M extends Model = Model> = ModelCtor<M> & {
   POLYMORPHIC_TYPE: keyof Attributes<M>;

@@ -108,7 +108,7 @@ export class ActionsService {
         order: [["updatedAt", "DESC"]],
         limit: 10
       }),
-      Action.withTargetableStatus([Project, Site, Nursery], ["needs-more-information"]).findAll({
+      Action.withTargetableStatus([Project, Site, Nursery], ["needs-more-information", "started"]).findAll({
         where: {
           status: "pending",
           projectId: { [Op.in]: projectIds }

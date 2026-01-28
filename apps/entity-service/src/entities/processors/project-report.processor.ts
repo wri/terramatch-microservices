@@ -6,14 +6,14 @@ import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
-  Tracking,
-  TrackingEntry,
   Media,
   NurseryReport,
   Project,
   ProjectUser,
   Seeding,
   SiteReport,
+  Tracking,
+  TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ProcessableAssociation } from "../entities.service";
@@ -224,16 +224,14 @@ export class ProjectReportProcessor extends ReportProcessor<
   }
 
   protected async getTaskTotalWorkdays(projectReportId: number, siteIds: Literal) {
-    const projectReportDemographics = Tracking.demographicIdsSubquery(
-      [projectReportId],
-      ProjectReport.LARAVEL_TYPE,
-      Tracking.WORKDAYS_TYPE
-    );
-    const siteReportDemographics = Tracking.demographicIdsSubquery(
-      siteIds,
-      SiteReport.LARAVEL_TYPE,
-      Tracking.WORKDAYS_TYPE
-    );
+    const projectReportDemographics = Tracking.idsSubquery([projectReportId], ProjectReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
+    const siteReportDemographics = Tracking.idsSubquery(siteIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
     return (
       (await TrackingEntry.gender().sum("amount", {
         where: {

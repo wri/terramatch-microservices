@@ -1,38 +1,35 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { Tracking, Project, ProjectReport, SiteReport } from "@terramatch-microservices/database/entities";
+import { Project, ProjectReport, SiteReport, Tracking } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { DemographicQueryDto } from "./dto/demographic-query.dto";
-import { Model, ModelStatic, Op } from "sequelize";
+import { TrackingsQueryDto } from "./dto/trackings-query.dto";
+import { Op } from "sequelize";
+import { LaravelModelCtor, laravelType } from "@terramatch-microservices/database/types/util";
 
-type DemographicFilter<T extends Model = Model> = {
+type TrackingsFilter = {
   uuidKey: string;
-  model: ModelStatic<T>;
-  laravelType: string;
+  model: LaravelModelCtor;
 };
 
-const DEMOGRAPHIC_FILTERS: DemographicFilter[] = [
+const TRACKINGS_FILTERS: TrackingsFilter[] = [
   {
     uuidKey: "projectUuid",
-    model: Project,
-    laravelType: Project.LARAVEL_TYPE
+    model: Project
   },
   {
     uuidKey: "projectReportUuid",
-    model: ProjectReport,
-    laravelType: ProjectReport.LARAVEL_TYPE
+    model: ProjectReport
   },
   {
     uuidKey: "siteReportUuid",
-    model: SiteReport,
-    laravelType: SiteReport.LARAVEL_TYPE
+    model: SiteReport
   }
 ] as const;
 
-const VALID_FILTER_KEYS = DEMOGRAPHIC_FILTERS.map(({ uuidKey }) => uuidKey);
+const VALID_FILTER_KEYS = TRACKINGS_FILTERS.map(({ uuidKey }) => uuidKey);
 
 @Injectable()
-export class DemographicService {
-  async getDemographics(query: DemographicQueryDto) {
+export class TrackingsService {
+  async getTrackings(query: TrackingsQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Tracking, query);
 
     Object.keys(query).forEach(key => {
@@ -42,21 +39,19 @@ export class DemographicService {
       }
     });
 
-    for (const { uuidKey, model, laravelType } of DEMOGRAPHIC_FILTERS) {
+    for (const { uuidKey, model } of TRACKINGS_FILTERS) {
       const uuids = query[uuidKey];
       if (uuids != null && uuids.length > 0) {
-        const records = (await model.findAll({
-          attributes: ["id"],
-          where: { uuid: { [Op.in]: uuids } }
-        })) as unknown as { id: number }[];
+        const recordIds = (
+          await model.findAll({
+            attributes: ["id"],
+            where: { uuid: { [Op.in]: uuids } }
+          })
+        ).map(({ id }) => id as number);
 
-        if (records.length > 0) {
-          const demographicIds = Tracking.demographicIdsSubquery(
-            records.map(record => record.id),
-            laravelType
-          );
+        if (recordIds.length > 0) {
           builder.where({
-            id: { [Op.in]: demographicIds }
+            id: { [Op.in]: Tracking.idsSubquery(recordIds, laravelType(model)) }
           });
         }
       }

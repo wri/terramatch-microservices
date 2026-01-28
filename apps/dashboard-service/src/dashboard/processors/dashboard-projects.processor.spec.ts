@@ -120,7 +120,7 @@ describe("DashboardProjectsProcessor", () => {
       })
     } as never);
     jest.spyOn(ProjectReport, "approvedIdsSubquery").mockReturnValue("query3" as never);
-    jest.spyOn(Tracking, "demographicIdsSubquery").mockReturnValue("query4" as never);
+    jest.spyOn(Tracking, "idsSubquery").mockReturnValue("query4" as never);
     jest.spyOn(TrackingEntry, "gender").mockReturnValue({
       sum: jest.fn().mockResolvedValue(25)
     } as never);

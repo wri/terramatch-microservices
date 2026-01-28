@@ -57,11 +57,10 @@ export class DashboardProjectsProcessor extends DashboardEntityProcessor<
       (await TrackingEntry.gender().sum("amount", {
         where: {
           trackingId: {
-            [Op.in]: Tracking.demographicIdsSubquery(
-              ProjectReport.approvedIdsSubquery(projectId),
-              ProjectReport.LARAVEL_TYPE,
-              Tracking.JOBS_TYPE
-            )
+            [Op.in]: Tracking.idsSubquery(ProjectReport.approvedIdsSubquery(projectId), ProjectReport.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE
+            })
           }
         }
       })) ?? 0

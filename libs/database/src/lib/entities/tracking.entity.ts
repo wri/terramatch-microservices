@@ -99,16 +99,18 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     return chainScope(this, "collection", collection) as typeof Tracking;
   }
 
-  static demographicIdsSubquery(trackableIds: Literal | number[], trackableType: string, type?: TrackingType) {
+  static idsSubquery(
+    trackableIds: Literal | number[],
+    trackableType: string,
+    options: { type?: TrackingType; domain?: TrackingDomain } = {}
+  ) {
     const query = Subquery.select(Tracking, "id")
       .eq("trackableType", trackableType)
       .in("trackableId", trackableIds)
-      .eq("domain", "demographics")
       .eq("hidden", false);
 
-    if (type != null) {
-      query.eq("type", type);
-    }
+    if (options.domain != null) query.eq("domain", options.domain);
+    if (options.type != null) query.eq("type", options.type);
 
     return query.literal;
   }

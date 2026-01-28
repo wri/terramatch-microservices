@@ -297,17 +297,15 @@ export class ProjectProcessor extends EntityProcessor<
 
     const siteIds = Site.approvedIdsSubquery(projectId);
     const siteReportIds = SiteReport.approvedIdsSubquery(siteIds, { dueAfter });
-    const siteReportWorkdays = Tracking.demographicIdsSubquery(
-      siteReportIds,
-      SiteReport.LARAVEL_TYPE,
-      Tracking.WORKDAYS_TYPE
-    );
+    const siteReportWorkdays = Tracking.idsSubquery(siteReportIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
     const projectReportIds = ProjectReport.approvedIdsSubquery(projectId, { dueAfter });
-    const projectReportWorkdays = Tracking.demographicIdsSubquery(
-      projectReportIds,
-      ProjectReport.LARAVEL_TYPE,
-      Tracking.WORKDAYS_TYPE
-    );
+    const projectReportWorkdays = Tracking.idsSubquery(projectReportIds, ProjectReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
 
     return (
       (await TrackingEntry.gender().sum("amount", {
@@ -347,11 +345,10 @@ export class ProjectProcessor extends EntityProcessor<
       (await TrackingEntry.gender().sum("amount", {
         where: {
           trackingId: {
-            [Op.in]: Tracking.demographicIdsSubquery(
-              ProjectReport.approvedIdsSubquery(projectId),
-              ProjectReport.LARAVEL_TYPE,
-              Tracking.JOBS_TYPE
-            )
+            [Op.in]: Tracking.idsSubquery(ProjectReport.approvedIdsSubquery(projectId), ProjectReport.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE
+            })
           }
         }
       })) ?? 0

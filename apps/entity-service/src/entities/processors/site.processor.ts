@@ -325,11 +325,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const dueAfter = useDemographicsCutoff ? Tracking.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
     const siteReportIds = SiteReport.approvedIdsSubquery([siteId], { dueAfter });
-    const siteReportWorkdays = Tracking.demographicIdsSubquery(
-      siteReportIds,
-      SiteReport.LARAVEL_TYPE,
-      Tracking.WORKDAYS_TYPE
-    );
+    const siteReportWorkdays = Tracking.idsSubquery(siteReportIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
 
     return (
       (await TrackingEntry.gender().sum("amount", {

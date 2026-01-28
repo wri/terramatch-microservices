@@ -32,7 +32,7 @@ const baseMocks = () => {
   (TrackingEntry.gender as jest.Mock).mockReturnValue({
     sum: jest.fn().mockResolvedValue(50)
   });
-  (Tracking.demographicIdsSubquery as jest.Mock).mockReturnValue("demo-subquery");
+  (Tracking.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
   (ProjectReport.approvedProjectsIdsSubquery as jest.Mock).mockReturnValue("project-subquery");
   (SitePolygon.active as jest.Mock).mockReturnValue({
     approved: jest.fn().mockReturnThis(),
@@ -85,7 +85,7 @@ describe("TotalSectionHeaderService - filters", () => {
     (TrackingEntry.gender as jest.Mock).mockReturnValue({
       sum: jest.fn().mockResolvedValue(50)
     });
-    (Tracking.demographicIdsSubquery as jest.Mock).mockReturnValue("demo-subquery");
+    (Tracking.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
     (ProjectReport.approvedProjectsIdsSubquery as jest.Mock).mockReturnValue("project-subquery");
     (SitePolygon.active as jest.Mock).mockReturnValue({
       approved: jest.fn().mockReturnThis(),
@@ -131,7 +131,7 @@ describe("TotalSectionHeaderService - filters", () => {
     (TrackingEntry.gender as jest.Mock).mockReturnValue({
       sum: jest.fn().mockResolvedValue(0)
     });
-    (Tracking.demographicIdsSubquery as jest.Mock).mockReturnValue("demo-subquery");
+    (Tracking.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
     (ProjectReport.approvedProjectsIdsSubquery as jest.Mock).mockReturnValue("project-subquery");
     (SitePolygon.active as jest.Mock).mockReturnValue({
       approved: jest.fn().mockReturnThis(),

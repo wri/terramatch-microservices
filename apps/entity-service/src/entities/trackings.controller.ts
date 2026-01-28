@@ -11,32 +11,32 @@ import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
-import { DemographicQueryDto } from "./dto/demographic-query.dto";
-import { DemographicService } from "./demographic.service";
+import { TrackingsQueryDto } from "./dto/trackings-query.dto";
+import { TrackingsService } from "./trackings.service";
 import { LARAVEL_MODEL_TYPES, LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
-@Controller("entities/v3/demographics")
-export class DemographicsController {
-  private logger = new TMLogger(DemographicsController.name);
+@Controller("entities/v3/trackings")
+export class TrackingsController {
+  private logger = new TMLogger(TrackingsController.name);
 
-  constructor(private readonly demographicService: DemographicService, private readonly policyService: PolicyService) {}
+  constructor(private readonly trackingsService: TrackingsService, private readonly policyService: PolicyService) {}
 
   @Get()
   @ApiOperation({
-    operationId: "demographicsIndex",
-    summary: "Get demographics."
+    operationId: "trackingsIndex",
+    summary: "Get trackings."
   })
   @JsonApiResponse([{ data: TrackingDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
-  async demographicsIndex(@Query() params: DemographicQueryDto) {
-    const { data, paginationTotal, pageNumber } = await this.demographicService.getDemographics(params);
+  async index(@Query() params: TrackingsQueryDto) {
+    const { data, paginationTotal, pageNumber } = await this.trackingsService.getTrackings(params);
     const document = buildJsonApi(TrackingDto, { pagination: "number" });
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
-      for (const demographic of data) {
-        const { trackableType: laravelType, trackableId } = demographic;
+      for (const tracking of data) {
+        const { trackableType: laravelType, trackableId } = tracking;
         const model = LARAVEL_MODELS[laravelType];
         if (model == null) {
           this.logger.error("Unknown model type", model);
@@ -49,11 +49,11 @@ export class DemographicsController {
         }
         const entityType = LARAVEL_MODEL_TYPES[laravelType];
         const additionalProps = { entityType, entityUuid: entity.uuid };
-        document.addData(demographic.uuid, new TrackingDto(demographic, additionalProps));
+        document.addData(tracking.uuid, new TrackingDto(tracking, additionalProps));
       }
     }
     return document.addIndex({
-      requestPath: `/entities/v3/demographics${getStableRequestQuery(params)}`,
+      requestPath: `/entities/v3/trackings${getStableRequestQuery(params)}`,
       total: paginationTotal,
       pageNumber: pageNumber
     });

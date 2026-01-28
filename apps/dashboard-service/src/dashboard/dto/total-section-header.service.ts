@@ -59,10 +59,10 @@ export class TotalSectionHeaderService {
       (await TrackingEntry.gender().sum("amount", {
         where: {
           trackingId: {
-            [Op.in]: Tracking.demographicIdsSubquery(
+            [Op.in]: Tracking.idsSubquery(
               ProjectReport.approvedProjectsIdsSubquery(projectIds),
               ProjectReport.LARAVEL_TYPE,
-              Tracking.JOBS_TYPE
+              { domain: "demographics", type: Tracking.JOBS_TYPE }
             )
           }
         }

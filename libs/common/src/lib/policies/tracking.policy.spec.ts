@@ -4,7 +4,7 @@ import { expectCan, expectCannot } from "./policy.service.spec";
 import { Tracking } from "@terramatch-microservices/database/entities";
 import { mockPermissions, mockUserId } from "../util/testing";
 
-describe("DemographicPolicy", () => {
+describe("TrackingPolicy", () => {
   let service: PolicyService;
 
   beforeEach(async () => {
@@ -19,14 +19,14 @@ describe("DemographicPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows reading all demographics with framework permissions", async () => {
+  it("allows reading all trackings with framework permissions", async () => {
     mockUserId(123);
     mockPermissions("framework-ppc");
     await expectCan(service, "read", new Tracking());
     await expectCannot(service, "delete", new Tracking());
   });
 
-  it("dany reading all demographics with projects-read permissions", async () => {
+  it("dany reading all trackings with projects-read permissions", async () => {
     mockUserId(123);
     mockPermissions("projects-read");
     await expectCannot(service, "read", new Tracking());

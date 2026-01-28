@@ -521,30 +521,30 @@ export class ProjectProcessor extends EntityProcessor<
       if (treesToCreate.length > 0) await TreeSpecies.bulkCreate(treesToCreate);
 
       const entriesToCreate: CreationAttributes<TrackingEntry>[] = [];
-      const demographics = await Tracking.for(pitch).findAll();
+      const trackings = await Tracking.for(pitch).findAll();
       const entries = groupBy(
         await TrackingEntry.findAll({
-          where: { trackingId: { [Op.in]: demographics.map(d => d.id) } }
+          where: { trackingId: { [Op.in]: trackings.map(d => d.id) } }
         }),
-        "demographicId"
+        "trackingId"
       );
-      for (const demographic of demographics) {
-        if (demographic.hidden) continue;
+      for (const tracking of trackings) {
+        if (tracking.hidden) continue;
 
-        // There aren't many demographic types associated with each project / pitch, so this
+        // There aren't many tracking types associated with each project / pitch, so this
         // initial creation list is short, and we can less awkwardly collect all the entries
-        // to create if we create the demographics sequentially to get each id here.
-        const projDemographic = await Tracking.create({
+        // to create if we create the trackings sequentially to get each id here.
+        const projTracking = await Tracking.create({
           trackableType: Project.LARAVEL_TYPE,
           trackableId: project.id,
-          domain: "demographics",
-          type: demographic.type,
-          collection: demographic.collection,
-          description: demographic.description
+          domain: tracking.domain,
+          type: tracking.type,
+          collection: tracking.collection,
+          description: tracking.description
         });
-        for (const entry of entries[demographic.id] ?? []) {
+        for (const entry of entries[tracking.id] ?? []) {
           entriesToCreate.push({
-            trackingId: projDemographic.id,
+            trackingId: projTracking.id,
             type: entry.type,
             subtype: entry.subtype,
             name: entry.name,

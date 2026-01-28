@@ -55,7 +55,7 @@ describe("EntityAssociationsController", () => {
         {
           entity: "projectReports",
           uuid: pr.uuid,
-          association: "demographics"
+          association: "trackings"
         },
         {}
       );
@@ -70,7 +70,7 @@ describe("EntityAssociationsController", () => {
           {
             entity: "projectReports",
             uuid: pr.uuid,
-            association: "demographics"
+            association: "trackings"
           },
           {}
         )
@@ -84,7 +84,7 @@ describe("EntityAssociationsController", () => {
           {
             entity: "projectReports",
             uuid: "fake uuid",
-            association: "demographics"
+            association: "trackings"
           },
           {}
         )
@@ -100,7 +100,7 @@ describe("EntityAssociationsController", () => {
           {
             entity: "projectReports",
             uuid: pr.uuid,
-            association: "demographics"
+            association: "trackings"
           },
           {}
         )
@@ -108,7 +108,7 @@ describe("EntityAssociationsController", () => {
 
       const processor = entitiesService.createAssociationProcessor.mock.results[0].value;
       expect(processor.addDtos).toHaveBeenCalled();
-      expect(result.meta.resourceType).toBe("demographics");
+      expect(result.meta.resourceType).toBe("trackings");
     });
   });
 });

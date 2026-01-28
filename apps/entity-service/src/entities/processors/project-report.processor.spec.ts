@@ -446,12 +446,12 @@ describe("ProjectReportProcessor", () => {
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const document = buildJsonApi(ProjectReportLightDto);
       await processor.addIndex(document, {
-        sideloads: [{ entity: "demographics", pageSize: 5 }]
+        sideloads: [{ entity: "trackings", pageSize: 5 }]
       });
 
       const result = document.serialize();
       expect(result.included?.length).toBe(2);
-      expect(result.included!.filter(({ type }) => type === "demographics").length).toBe(2);
+      expect(result.included!.filter(({ type }) => type === "trackings").length).toBe(2);
     });
   });
 });

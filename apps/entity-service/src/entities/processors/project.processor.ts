@@ -32,7 +32,6 @@ import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
-import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -206,7 +205,7 @@ export class ProjectProcessor extends EntityProcessor<
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
-    const plantingStatus = (lastReport?.plantingStatus ?? null) as PlantingStatus | null;
+    const plantingStatus = lastReport?.plantingStatus ?? null;
 
     const dto = new ProjectLightDto(project, {
       totalHectaresRestoredSum,
@@ -249,7 +248,7 @@ export class ProjectProcessor extends EntityProcessor<
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
-    const plantingStatus = (lastReport?.plantingStatus ?? null) as PlantingStatus | null;
+    const plantingStatus = lastReport?.plantingStatus ?? null;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),

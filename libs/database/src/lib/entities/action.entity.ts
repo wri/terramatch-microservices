@@ -10,11 +10,12 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4, Op } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
+import { Subquery } from "../util/subquery.builder";
 import { chainScope } from "../util/chain-scope";
-import { LaravelModel, laravelType } from "../types/util";
+import { LaravelModel, LaravelModelCtor, laravelType } from "../types/util";
 
 @Scopes(() => ({
   targetable: (targetable: LaravelModel) => ({
@@ -22,7 +23,21 @@ import { LaravelModel, laravelType } from "../types/util";
       targetableType: laravelType(targetable),
       targetableId: targetable.id
     }
-  })
+  }),
+  withTargetableStatus: (targets: LaravelModelCtor[], statuses: string[]) => {
+    const buildCondition = (ModelClass: LaravelModelCtor) => ({
+      targetableType: laravelType(ModelClass),
+      targetableId: {
+        [Op.in]: Subquery.select(ModelClass, "id").in("status", statuses).literal
+      }
+    });
+
+    return {
+      where: {
+        [Op.or]: targets.map(ModelClass => buildCondition(ModelClass))
+      }
+    };
+  }
 }))
 @Table({
   tableName: "v2_actions",
@@ -34,6 +49,10 @@ import { LaravelModel, laravelType } from "../types/util";
 export class Action extends Model<Action> {
   static for(targetable: LaravelModel) {
     return chainScope(this, "targetable", targetable) as typeof Action;
+  }
+
+  static withTargetableStatus(targets: LaravelModelCtor[], statuses: string[]) {
+    return chainScope(this, "withTargetableStatus", targets, statuses) as typeof Action;
   }
 
   @PrimaryKey

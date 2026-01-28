@@ -10,7 +10,7 @@ import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/c
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
+import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
 import { DemographicQueryDto } from "./dto/demographic-query.dto";
 import { DemographicService } from "./demographic.service";
 import { LARAVEL_MODEL_TYPES, LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
@@ -27,12 +27,12 @@ export class DemographicsController {
     operationId: "demographicsIndex",
     summary: "Get demographics."
   })
-  @JsonApiResponse([{ data: DemographicDto, pagination: "number" }])
+  @JsonApiResponse([{ data: TrackingDto, pagination: "number" }])
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Records not found" })
   async demographicsIndex(@Query() params: DemographicQueryDto) {
     const { data, paginationTotal, pageNumber } = await this.demographicService.getDemographics(params);
-    const document = buildJsonApi(DemographicDto, { pagination: "number" });
+    const document = buildJsonApi(TrackingDto, { pagination: "number" });
     if (data.length !== 0) {
       await this.policyService.authorize("read", data);
       for (const demographic of data) {
@@ -49,7 +49,7 @@ export class DemographicsController {
         }
         const entityType = LARAVEL_MODEL_TYPES[laravelType];
         const additionalProps = { entityType, entityUuid: entity.uuid };
-        document.addData(demographic.uuid, new DemographicDto(demographic, additionalProps));
+        document.addData(demographic.uuid, new TrackingDto(demographic, additionalProps));
       }
     }
     return document.addIndex({

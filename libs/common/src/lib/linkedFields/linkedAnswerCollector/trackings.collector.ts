@@ -1,33 +1,43 @@
 import { Tracking, TrackingEntry } from "@terramatch-microservices/database/entities";
-import { DemographicEntryDto, EmbeddedDemographicDto } from "../../dto/demographic.dto";
+import { TrackingEntryDto, EmbeddedTrackingDto } from "../../dto/tracking.dto";
 import { mapLaravelTypes, RelationSync } from "./utils";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Dictionary, intersection, kebabCase } from "lodash";
 import { Op, WhereOptions } from "sequelize";
-import { DemographicType } from "@terramatch-microservices/database/types/tracking";
+import { TrackingType, TrackingDomain } from "@terramatch-microservices/database/types/tracking";
 import { FormTypeMap, RelationResourceCollector } from "./index";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { apiAttributes } from "../../dto/json-api-attributes";
+import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 
 // For each of type, subtype and name, ensure predicate returns true if either they have an identical value,
 // or both are null / undefined.
-const entryMatches = (a: TrackingEntry | DemographicEntryDto, b: TrackingEntry | DemographicEntryDto) => {
+const entryMatches = (a: TrackingEntry | TrackingEntryDto, b: TrackingEntry | TrackingEntryDto) => {
   if ((a.type == null) !== (b.type == null) || (a.type != null && a.type !== b.type)) return false;
   if ((a.subtype == null) !== (b.subtype == null) || (a.subtype != null && a.subtype !== b.subtype)) return false;
   if ((a.name == null) !== (b.name == null) || (a.name != null && a.name !== b.name)) return false;
   return true;
 };
 
-const syncTrackings: RelationSync = async (model, field, answer, hidden, logger) => {
-  if (field.collection == null) {
-    throw new InternalServerErrorException(`Collection not found for ${field.inputType}`);
+const trackingProps = ({ resource, inputType, collection }: LinkedRelation) => {
+  const domain = resource as TrackingDomain;
+  const type = kebabCase(inputType) as TrackingType;
+  if (!Tracking.DOMAINS.includes(domain) || !Tracking.VALID_TYPES.includes(type) || collection == null) {
+    throw new InternalServerErrorException(`Invalid tracking field definition [${domain}, ${type}, ${collection}]`);
   }
 
-  // Demographics have only one answer per linked field.
-  const dto = ((answer ?? []) as EmbeddedDemographicDto[])[0];
+  return { domain, type, collection };
+};
+
+const syncTrackings: RelationSync = async (model, field, answer, hidden, logger) => {
+  const { domain, type, collection } = trackingProps(field);
+  const scope = Tracking.for(model).domain(domain).type(type).collection(collection);
+
+  // Trackings have only one answer per linked field.
+  const dto = ((answer ?? []) as EmbeddedTrackingDto[])[0];
   if (dto == null) {
-    await Tracking.for(model).collection(field.collection).destroy();
+    await scope.destroy();
     return;
   }
 
@@ -35,14 +45,14 @@ const syncTrackings: RelationSync = async (model, field, answer, hidden, logger)
     logger.error("Answer has an invalid collection set, ignoring answer collection", { answer, field });
   }
 
-  let tracking = await Tracking.for(model).collection(field.collection).findOne();
+  let tracking = await scope.findOne();
   if (tracking == null) {
     tracking = await Tracking.create({
       trackableType: laravelType(model),
       trackableId: model.id,
-      domain: "demographics",
-      type: kebabCase(field.inputType) as DemographicType,
-      collection: field.collection,
+      domain,
+      type,
+      collection,
       hidden
     });
   } else {
@@ -61,7 +71,7 @@ const syncTrackings: RelationSync = async (model, field, answer, hidden, logger)
     }
 
     return [...entries, entry];
-  }, [] as DemographicEntryDto[]);
+  }, [] as TrackingEntryDto[]);
 
   const currentEntries = await TrackingEntry.tracking(tracking.id).findAll();
   const includedEntryIds: number[] = [];
@@ -88,20 +98,28 @@ const syncTrackings: RelationSync = async (model, field, answer, hidden, logger)
   await TrackingEntry.destroy({ where: { trackingId: tracking.id, id: { [Op.notIn]: includedEntryIds } } });
 };
 
-// Since demographics is the only model that disambiguates on more than just collection, the
+const makeKey = (field: LinkedRelation, modelType: FormModelType) => {
+  const { domain, type, collection } = trackingProps(field);
+  return `${modelType}:${domain}:${type}:${collection}`;
+};
+
+const parseKey = (key: string) => {
+  const [modelType, domain, type, collection] = key.split(":") as [FormModelType, TrackingDomain, TrackingType, string];
+  return { modelType, domain, type, collection };
+};
+
+type ModelKey = { domain: TrackingDomain; type: TrackingType; collection: string };
+
+// Since trackings is the only model that disambiguates on more than just 'collection', the
 // base polymorphic collector is not sufficient.
-export const demographicsCollector = function (logger: LoggerService): RelationResourceCollector {
+export const trackingsCollector = function (logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
   const modelAttributes = Object.keys(Tracking.getAttributes());
-  const dtoAttributes = ["demographicalType", ...intersection(apiAttributes(EmbeddedDemographicDto), modelAttributes)];
+  const dtoAttributes = ["trackableType", ...intersection(apiAttributes(EmbeddedTrackingDto), modelAttributes)];
 
   return {
     addField(field, modelType, questionUuid) {
-      if (field.collection == null) {
-        throw new InternalServerErrorException(`Collection not found for ${modelType}`);
-      }
-
-      const key = `${modelType}:${kebabCase(field.inputType)}:${field.collection}`;
+      const key = makeKey(field, modelType);
       if (questions[key] != null) {
         logger.warn(`Duplicate collection for field ${key}`);
       }
@@ -110,11 +128,10 @@ export const demographicsCollector = function (logger: LoggerService): RelationR
     },
 
     async collect(answers, models) {
-      // results in a mapping of model type to an array of keys. Each key is [type, collection] (see addField)
       const keysByModel = Object.keys(questions).reduce((byModel, key) => {
-        const [modelType, type, collection] = key.split(":") as [FormModelType, string, string];
-        return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), [type, collection]] };
-      }, {} as FormTypeMap<string[][]>);
+        const { modelType, domain, type, collection } = parseKey(key);
+        return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), { domain, type, collection }] };
+      }, {} as FormTypeMap<ModelKey[]>);
 
       const laravelTypes = mapLaravelTypes(models);
       const trackings = await Tracking.findAll({
@@ -127,8 +144,9 @@ export const demographicsCollector = function (logger: LoggerService): RelationR
             return {
               trackableType: laravelTypes[modelType],
               trackableId: models[modelType].id,
-              domain: "demographics",
-              [Op.or]: keys.map(([type, collection]): WhereOptions<Tracking> => ({ type, collection }))
+              [Op.or]: keys.map(
+                ({ domain, type, collection }): WhereOptions<Tracking> => ({ domain, type, collection })
+              )
             };
           })
         },
@@ -137,15 +155,15 @@ export const demographicsCollector = function (logger: LoggerService): RelationR
       });
 
       for (const [key, questionUuid] of Object.entries(questions)) {
-        const [modelType, type, collection] = key.split(":") as [FormModelType, string, string];
+        const { modelType, domain, type, collection } = parseKey(key);
         const tracking = trackings.find(
           tracking =>
             tracking.trackableType === laravelTypes[modelType] &&
-            tracking.domain === "demographics" &&
+            tracking.domain === domain &&
             tracking.type === type &&
             tracking.collection === collection
         );
-        if (tracking != null) answers[questionUuid] = [new EmbeddedDemographicDto(tracking)];
+        if (tracking != null) answers[questionUuid] = [new EmbeddedTrackingDto(tracking)];
       }
     },
 

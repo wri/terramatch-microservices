@@ -1,8 +1,8 @@
 import { Tracking } from "../entities";
 
 export type TrackingDomain = (typeof Tracking.DOMAINS)[number];
+export type TrackingType = (typeof Tracking.VALID_TYPES)[number];
 
-export type DemographicType = (typeof Tracking.VALID_TYPES)[number];
 export const DEMOGRAPHIC_ASSOCIATION_TYPES = [
   "organisations",
   "projectPitches",

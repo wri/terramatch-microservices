@@ -55,9 +55,9 @@ export class DemographicCollections {
   BENEFICIARIES_PROJECT_TRAINING: string[];
 }
 
-export class DemographicEntryDto {
+export class TrackingEntryDto {
   constructor(entry: TrackingEntry) {
-    populateDto<DemographicEntryDto>(this, entry);
+    populateDto<TrackingEntryDto>(this, entry);
   }
 
   @ApiProperty()
@@ -73,14 +73,14 @@ export class DemographicEntryDto {
   amount: number;
 }
 
-@JsonApiDto({ type: "demographics" })
-export class DemographicDto extends AssociationDto {
-  constructor(demographic?: Tracking, additional?: AdditionalProps<DemographicDto, Tracking>) {
+@JsonApiDto({ type: "trackings" })
+export class TrackingDto extends AssociationDto {
+  constructor(demographic?: Tracking, additional?: AdditionalProps<TrackingDto, Tracking>) {
     super();
     if (demographic != null && additional != null) {
-      populateDto<DemographicDto, Omit<Tracking, "entries">>(this, demographic, {
+      populateDto<TrackingDto, Omit<Tracking, "entries">>(this, demographic, {
         ...additional,
-        entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+        entries: demographic.entries?.map(entry => new TrackingEntryDto(entry)) ?? []
       });
     }
   }
@@ -88,21 +88,24 @@ export class DemographicDto extends AssociationDto {
   @ApiProperty()
   uuid: string;
 
+  @ApiProperty({ enum: Tracking.DOMAINS })
+  domain: string;
+
   @ApiProperty({ enum: Tracking.VALID_TYPES })
   type: string;
 
   @ApiProperty()
   collection: string;
 
-  @ApiProperty({ type: () => DemographicEntryDto, isArray: true })
-  entries: DemographicEntryDto[];
+  @ApiProperty({ type: () => TrackingEntryDto, isArray: true })
+  entries: TrackingEntryDto[];
 }
 
-export class EmbeddedDemographicDto extends OmitType(DemographicDto, ["entityType", "entityUuid"]) {
-  constructor(demographic: Tracking) {
+export class EmbeddedTrackingDto extends OmitType(TrackingDto, ["entityType", "entityUuid"]) {
+  constructor(tracking: Tracking) {
     super();
-    populateDto<EmbeddedDemographicDto, Tracking>(this, demographic, {
-      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+    populateDto<EmbeddedTrackingDto, Tracking>(this, tracking, {
+      entries: tracking.entries?.map(entry => new TrackingEntryDto(entry)) ?? []
     });
   }
 }

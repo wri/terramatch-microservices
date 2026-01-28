@@ -1,7 +1,7 @@
 import { Dictionary } from "lodash";
 import { Attributes } from "sequelize";
 import { FormModel } from "./entities";
-import { DemographicType } from "../types/tracking";
+import { TrackingType } from "../types/tracking";
 
 export type LinkedFieldConfiguration<M extends FormModel> = {
   label: string;
@@ -28,12 +28,12 @@ export type FieldInputType = (typeof FIELD_INPUT_TYPES)[number];
 
 export type VirtualDemographicsAggregate = {
   type: "demographicsAggregate";
-  demographicsType: DemographicType;
+  demographicsType: TrackingType;
   collection: string;
 };
 export type VirtualDemographicsDescription = {
   type: "demographicsDescription";
-  demographicsType: DemographicType;
+  demographicsType: TrackingType;
   collections: string[];
 };
 export type VirtualProjectBoundary = {

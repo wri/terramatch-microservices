@@ -5,13 +5,13 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Test } from "@nestjs/testing";
 import { EntityAssociationsController } from "./entity-associations.controller";
 import { AssociationProcessor } from "./processors/association-processor";
-import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
+import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
 import { TrackingFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 
-class StubProcessor extends AssociationProcessor<Tracking, DemographicDto> {
-  DTO = DemographicDto;
+class StubProcessor extends AssociationProcessor<Tracking, TrackingDto> {
+  DTO = TrackingDto;
 
   addDtos = jest.fn(() => Promise.resolve());
   getAssociations = jest.fn(() => Promise.resolve([] as Tracking[]));

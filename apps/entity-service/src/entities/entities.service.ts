@@ -33,7 +33,7 @@ import { FinancialReportProcessor } from "./processors/financial-report.processo
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
-import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
+import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
@@ -82,7 +82,7 @@ export const POLYGON_STATUSES_FILTERS = [
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
 
 const ASSOCIATION_PROCESSORS = {
-  demographics: AssociationProcessor.buildSimpleProcessor(DemographicDto, ({ id: trackableId }, trackableType) =>
+  demographics: AssociationProcessor.buildSimpleProcessor(TrackingDto, ({ id: trackableId }, trackableType) =>
     Tracking.findAll({
       where: { trackableType, trackableId, domain: "demographics", hidden: false },
       include: [{ association: "entries" }]

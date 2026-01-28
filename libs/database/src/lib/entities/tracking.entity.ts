@@ -24,7 +24,7 @@ import {
 import { TrackingEntry } from "./tracking-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
-import { DemographicType } from "../types/tracking";
+import { TrackingType } from "../types/tracking";
 import { LaravelModel, laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 import { TrackingDomain } from "../types/tracking";
@@ -39,7 +39,7 @@ import { TrackingDomain } from "../types/tracking";
     }
   }),
   domain: (domain: TrackingDomain) => ({ where: { domain } }),
-  type: (type: DemographicType) => ({ where: { type } }),
+  type: (type: TrackingType) => ({ where: { type } }),
   collection: (collection: string) => ({ where: { collection } })
 }))
 @Table({
@@ -68,7 +68,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   static readonly TRAINING_BENEFICIARIES_TYPE = "training-beneficiaries";
   static readonly INDIRECT_BENEFICIARIES_TYPE = "indirect-beneficiaries";
   static readonly ASSOCIATES_TYPES = "associates";
-  static readonly VALID_TYPES = [
+  static readonly DEMOGRAPHICS_TYPES = [
     Tracking.WORKDAYS_TYPE,
     Tracking.RESTORATION_PARTNERS_TYPE,
     Tracking.JOBS_TYPE,
@@ -80,6 +80,9 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     Tracking.ASSOCIATES_TYPES
   ] as const;
 
+  // All values that are valid for the `type` field across domains.
+  static readonly VALID_TYPES = [...Tracking.DEMOGRAPHICS_TYPES] as const;
+
   static for(models: LaravelModel | LaravelModel[]) {
     return chainScope(this, "forModels", Array.isArray(models) ? models : [models]) as typeof Tracking;
   }
@@ -88,7 +91,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     return chainScope(this, "domain", domain) as typeof Tracking;
   }
 
-  static type(type: DemographicType) {
+  static type(type: TrackingType) {
     return chainScope(this, "type", type) as typeof Tracking;
   }
 
@@ -96,7 +99,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     return chainScope(this, "collection", collection) as typeof Tracking;
   }
 
-  static demographicIdsSubquery(trackableIds: Literal | number[], trackableType: string, type?: DemographicType) {
+  static demographicIdsSubquery(trackableIds: Literal | number[], trackableType: string, type?: TrackingType) {
     const query = Subquery.select(Tracking, "id")
       .eq("trackableType", trackableType)
       .in("trackableId", trackableIds)
@@ -123,9 +126,10 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   domain: TrackingDomain;
 
   @Column(STRING)
-  type: DemographicType;
+  type: TrackingType;
 
-  // Note: this allows null, but the only rows with a null value have been soft deleted.
+  // Note: this allows null in the current schema, but the only rows with a null value have been soft deleted.
+  // This column will be made non-nullable in a future update.
   @AllowNull
   @Column(STRING)
   collection: string | null;

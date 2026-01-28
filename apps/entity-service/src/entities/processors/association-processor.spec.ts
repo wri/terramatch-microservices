@@ -12,7 +12,7 @@ import {
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
-import { DemographicDto, DemographicEntryDto } from "@terramatch-microservices/common/dto/demographic.dto";
+import { TrackingDto, TrackingEntryDto } from "@terramatch-microservices/common/dto/tracking.dto";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
 import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
@@ -46,24 +46,21 @@ describe("AssociationProcessor", () => {
       const demographic = await TrackingFactory.projectReportJobs(projectReport).create();
       const female = pickApiProperties(
         await TrackingEntryFactory.gender(demographic, "female").create(),
-        DemographicEntryDto
+        TrackingEntryDto
       );
       const unknown = pickApiProperties(
         await TrackingEntryFactory.gender(demographic, "unknown").create(),
-        DemographicEntryDto
+        TrackingEntryDto
       );
-      const youth = pickApiProperties(
-        await TrackingEntryFactory.age(demographic, "youth").create(),
-        DemographicEntryDto
-      );
+      const youth = pickApiProperties(await TrackingEntryFactory.age(demographic, "youth").create(), TrackingEntryDto);
 
-      const document = buildJsonApi(DemographicDto, { forceDataArray: true });
+      const document = buildJsonApi(TrackingDto, { forceDataArray: true });
       await service.createAssociationProcessor("projectReports", projectReport.uuid, "demographics").addDtos(document);
       const result = document.serialize();
       const data = result.data as Resource[];
       expect(data.length).toEqual(1);
 
-      const dto = data.find(({ id }) => id === demographic.uuid)?.attributes as unknown as DemographicDto;
+      const dto = data.find(({ id }) => id === demographic.uuid)?.attributes as unknown as TrackingDto;
       expect(dto).not.toBeNull();
       expect(dto.entries.length).toBe(3);
       expect(dto.entries.find(({ type, subtype }) => type === "gender" && subtype === "female")).toMatchObject(female);

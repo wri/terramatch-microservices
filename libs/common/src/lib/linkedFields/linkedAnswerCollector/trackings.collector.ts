@@ -1,11 +1,11 @@
 import { Tracking, TrackingEntry } from "@terramatch-microservices/database/entities";
-import { TrackingEntryDto, EmbeddedTrackingDto } from "../../dto/tracking.dto";
+import { EmbeddedTrackingDto, TrackingEntryDto } from "../../dto/tracking.dto";
 import { mapLaravelTypes, RelationSync } from "./utils";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { Dictionary, intersection, kebabCase } from "lodash";
+import { Dictionary, intersection, isEqualWith, kebabCase } from "lodash";
 import { Op, WhereOptions } from "sequelize";
-import { TrackingType, TrackingDomain } from "@terramatch-microservices/database/types/tracking";
+import { TrackingDomain, TrackingType } from "@terramatch-microservices/database/types/tracking";
 import { FormTypeMap, RelationResourceCollector } from "./index";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { apiAttributes } from "../../dto/json-api-attributes";
@@ -13,12 +13,12 @@ import { LinkedRelation } from "@terramatch-microservices/database/constants/lin
 
 // For each of type, subtype and name, ensure predicate returns true if either they have an identical value,
 // or both are null / undefined.
-const entryMatches = (a: TrackingEntry | TrackingEntryDto, b: TrackingEntry | TrackingEntryDto) => {
-  if ((a.type == null) !== (b.type == null) || (a.type != null && a.type !== b.type)) return false;
-  if ((a.subtype == null) !== (b.subtype == null) || (a.subtype != null && a.subtype !== b.subtype)) return false;
-  if ((a.name == null) !== (b.name == null) || (a.name != null && a.name !== b.name)) return false;
-  return true;
-};
+const entryMatches = (a: TrackingEntry | TrackingEntryDto, b: TrackingEntry | TrackingEntryDto) =>
+  isEqualWith(
+    { type: a.type, subtype: a.subtype, name: a.name },
+    { type: b.type, subtype: b.subtype, name: b.name },
+    (valueA, valueB) => (valueA == null && valueB == null ? true : undefined)
+  );
 
 const trackingProps = ({ resource, inputType, collection }: LinkedRelation) => {
   const domain = resource as TrackingDomain;

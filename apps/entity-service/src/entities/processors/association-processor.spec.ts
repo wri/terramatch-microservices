@@ -41,7 +41,7 @@ describe("AssociationProcessor", () => {
   });
 
   describe("addDtos", () => {
-    it("should include demographic entries", async () => {
+    it("should include tracking entries", async () => {
       const projectReport = await ProjectReportFactory.create();
       const demographic = await TrackingFactory.projectReportJobs(projectReport).create();
       const female = pickApiProperties(
@@ -55,13 +55,14 @@ describe("AssociationProcessor", () => {
       const youth = pickApiProperties(await TrackingEntryFactory.age(demographic, "youth").create(), TrackingEntryDto);
 
       const document = buildJsonApi(TrackingDto, { forceDataArray: true });
-      await service.createAssociationProcessor("projectReports", projectReport.uuid, "demographics").addDtos(document);
+      await service.createAssociationProcessor("projectReports", projectReport.uuid, "trackings").addDtos(document);
       const result = document.serialize();
       const data = result.data as Resource[];
       expect(data.length).toEqual(1);
 
       const dto = data.find(({ id }) => id === demographic.uuid)?.attributes as unknown as TrackingDto;
       expect(dto).not.toBeNull();
+      expect(dto.domain).toBe("demographics");
       expect(dto.entries.length).toBe(3);
       expect(dto.entries.find(({ type, subtype }) => type === "gender" && subtype === "female")).toMatchObject(female);
       expect(dto.entries.find(({ type, subtype }) => type === "gender" && subtype === "unknown")).toMatchObject(
@@ -71,8 +72,8 @@ describe("AssociationProcessor", () => {
 
       expect(result.meta.indices?.length).toBe(1);
       expect(result.meta.indices?.[0]).toMatchObject({
-        resource: "demographics",
-        requestPath: `/entities/v3/projectReports/${projectReport.uuid}/demographics`,
+        resource: "trackings",
+        requestPath: `/entities/v3/projectReports/${projectReport.uuid}/trackings`,
         ids: undefined
       });
     });

@@ -82,9 +82,9 @@ export const POLYGON_STATUSES_FILTERS = [
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
 
 const ASSOCIATION_PROCESSORS = {
-  demographics: AssociationProcessor.buildSimpleProcessor(TrackingDto, ({ id: trackableId }, trackableType) =>
+  trackings: AssociationProcessor.buildSimpleProcessor(TrackingDto, ({ id: trackableId }, trackableType) =>
     Tracking.findAll({
-      where: { trackableType, trackableId, domain: "demographics", hidden: false },
+      where: { trackableType, trackableId, hidden: false },
       include: [{ association: "entries" }]
     })
   ),

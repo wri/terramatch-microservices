@@ -21,7 +21,7 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Literal } from "sequelize/types/utils";
 
-const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",

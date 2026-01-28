@@ -394,4 +394,62 @@ describe("AuditStatusService", () => {
       expect(result.get(project2.id)).toHaveLength(2);
     });
   });
+
+  describe("createAuditStatus", () => {
+    it("creates an audit status and updates entity status for non change-request types", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create();
+
+      Object.defineProperty(entitiesService, "userId", {
+        get: () => user.id
+      });
+
+      const result = await service.createAuditStatus(project, {
+        status: "approved",
+        type: "status"
+      });
+
+      const reloadedProject = await project.reload();
+
+      expect(result.status).toBe("approved");
+      expect(result.comment).toBeNull();
+      expect(result.type).toBe("status");
+      expect(result.createdBy).toBe(user.emailAddress);
+      expect(result.firstName).toBe(user.firstName);
+      expect(result.lastName).toBe(user.lastName);
+      expect(reloadedProject.status).toBe("approved");
+    });
+
+    it("deactivates previous active change-requests and does not update entity status", async () => {
+      const project = await ProjectFactory.create({ status: "draft" });
+      const user = await UserFactory.create();
+
+      Object.defineProperty(entitiesService, "userId", {
+        get: () => user.id
+      });
+
+      await AuditStatusFactory.project(project).create({
+        type: "change-request",
+        isActive: true
+      });
+
+      const result = await service.createAuditStatus(project, {
+        status: "needs-more-information",
+        type: "change-request",
+        isActive: true,
+        requestRemoved: false
+      });
+
+      const allStatuses = await AuditStatus.for(project).findAll();
+      const activeStatuses = allStatuses.filter(status => status.isActive === true);
+      const reloadedProject = await project.reload();
+
+      expect(activeStatuses).toHaveLength(1);
+      expect(activeStatuses[0].id).toBe(result.id);
+      expect(result.type).toBe("change-request");
+      expect(result.isActive).toBe(true);
+      expect(result.requestRemoved).toBe(false);
+      expect(reloadedProject.status).toBe("draft");
+    });
+  });
 });

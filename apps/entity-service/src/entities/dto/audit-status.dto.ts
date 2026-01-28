@@ -4,6 +4,8 @@ import { AuditStatus } from "@terramatch-microservices/database/entities/audit-s
 import { Audit } from "@terramatch-microservices/database/entities/audit.entity";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { Dictionary } from "lodash";
+import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
 
 @JsonApiDto({ type: "auditStatuses" })
 export class AuditStatusDto {
@@ -110,3 +112,34 @@ export class AuditStatusDto {
     );
   }
 }
+
+export class CreateAuditStatusAttributes {
+  @ApiProperty({ required: false, nullable: true, type: String })
+  @IsOptional()
+  @IsString()
+  type?: string | null;
+
+  @ApiProperty({ required: false, nullable: true, type: String })
+  @IsOptional()
+  @IsString()
+  comment?: string | null;
+
+  @ApiProperty({ required: false, nullable: true, type: String })
+  @IsOptional()
+  @IsString()
+  status?: string | null;
+
+  @ApiProperty({ required: false, nullable: true, type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean | null;
+
+  @ApiProperty({ required: false, nullable: true, type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  requestRemoved?: boolean | null;
+}
+
+export class CreateAuditStatusBody extends JsonApiBodyDto(
+  class CreateAuditStatusData extends CreateDataDto("auditStatuses", CreateAuditStatusAttributes) {}
+) {}

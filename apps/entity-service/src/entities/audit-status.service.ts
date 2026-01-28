@@ -9,8 +9,10 @@ import { AuditStatusDto } from "./dto/audit-status.dto";
 import { EntitiesService } from "./entities.service";
 import { Op } from "sequelize";
 import { groupBy, orderBy, uniqBy } from "lodash";
-import { LaravelModel } from "@terramatch-microservices/database/types/util";
+import { LaravelModel, laravelType } from "@terramatch-microservices/database/types/util";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { InferCreationAttributes } from "sequelize";
+import { ModelCtor } from "sequelize-typescript";
 
 interface RawAuditData {
   modernAuditStatuses: AuditStatus[];
@@ -170,5 +172,68 @@ export class AuditStatusService {
     }
 
     return result;
+  }
+
+  async createAuditStatus(
+    entity: LaravelModel,
+    attributes: {
+      type?: string | null;
+      comment?: string | null;
+      status?: string | null;
+      isActive?: boolean | null;
+      requestRemoved?: boolean | null;
+    }
+  ): Promise<AuditStatus> {
+    const userId = this.entitiesService.userId;
+    if (userId == null) {
+      throw new NotFoundException("Authenticated user not found");
+    }
+
+    const user = await User.findByPk(userId, {
+      attributes: ["emailAddress", "firstName", "lastName"]
+    });
+    if (user == null) {
+      throw new NotFoundException("User not found");
+    }
+
+    const auditableType = laravelType(entity);
+    const auditableId = entity.id;
+
+    if (attributes.type === "change-request") {
+      await AuditStatus.update(
+        { isActive: false },
+        {
+          where: {
+            auditableType,
+            auditableId,
+            type: "change-request",
+            isActive: true
+          }
+        }
+      );
+    }
+
+    const auditStatus = await AuditStatus.create({
+      auditableType,
+      auditableId,
+      status: attributes.status ?? null,
+      comment: attributes.comment ?? null,
+      type: attributes.type ?? null,
+      isActive: attributes.type === "change-request" ? attributes.isActive ?? null : null,
+      requestRemoved: attributes.type === "change-request" ? attributes.requestRemoved ?? null : null,
+      createdBy: user.emailAddress, // this is storing the email of the user, not the ID
+      firstName: user.firstName,
+      lastName: user.lastName
+    } as InferCreationAttributes<AuditStatus>);
+
+    if (attributes.type !== "change-request" && attributes.status != null) {
+      const modelClass = entity.constructor as ModelCtor<LaravelModel>;
+      const modelAttributes = modelClass.getAttributes();
+      if ("status" in modelAttributes) {
+        await modelClass.update({ status: attributes.status }, { where: { id: entity.id } });
+      }
+    }
+
+    return auditStatus;
   }
 }

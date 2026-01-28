@@ -341,9 +341,9 @@ describe("AirtableEntity", () => {
 
       // create one with a bogus association type for testing
       allDemographics.push(
-        await TrackingFactory.projectReportWorkday().create({ demographicalType: "foo", demographicalId: 1 })
+        await TrackingFactory.projectReportWorkday().create({ trackableType: "foo", trackableId: 1 })
       );
-      allDemographics.push(await TrackingFactory.siteReportWorkday().create({ demographicalId: 0 }));
+      allDemographics.push(await TrackingFactory.siteReportWorkday().create({ trackableId: 0 }));
 
       demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && !workday.hidden);
     });
@@ -352,16 +352,14 @@ describe("AirtableEntity", () => {
       await testAirtableUpdates(
         new TrackingEntity(dataApi),
         demographics,
-        ({ uuid, collection, demographicalType, demographicalId }) => ({
+        ({ uuid, collection, trackableType, trackableId }) => ({
           fields: {
             uuid,
             collection,
             projectReportUuid:
-              demographicalType === ProjectReport.LARAVEL_TYPE ? associationUuids[demographicalType] : undefined,
+              trackableType === ProjectReport.LARAVEL_TYPE ? associationUuids[trackableType] : undefined,
             siteReportUuid:
-              demographicalType === SiteReport.LARAVEL_TYPE && demographicalId > 0
-                ? associationUuids[demographicalType]
-                : undefined
+              trackableType === SiteReport.LARAVEL_TYPE && trackableId > 0 ? associationUuids[trackableType] : undefined
           }
         })
       );
@@ -410,14 +408,14 @@ describe("AirtableEntity", () => {
       await testAirtableUpdates(
         new TrackingEntryEntity(dataApi),
         entries,
-        ({ id, type, subtype, name, amount, demographicId }) => ({
+        ({ id, type, subtype, name, amount, trackingId }) => ({
           fields: {
             id,
             type,
             subtype,
             name,
             amount,
-            demographicUuid: demographicUuids[demographicId]
+            trackingUuid: demographicUuids[trackingId]
           }
         })
       );

@@ -3,7 +3,7 @@ import { UserPolicy } from "./user.policy";
 import {
   Application,
   AuditStatus,
-  Demographic,
+  Tracking,
   Disturbance,
   DisturbanceReport,
   FinancialIndicator,
@@ -44,7 +44,7 @@ import { NurseryPolicy } from "./nursery.policy";
 import { TMLogger } from "../util/tm-logger";
 import { ProjectPitchPolicy } from "./project-pitch.policy";
 import { TaskPolicy } from "./task.policy";
-import { DemographicPolicy } from "./demographic.policy";
+import { TrackingPolicy } from "./tracking.policy";
 import { AuditStatusPolicy } from "./audit-status.policy";
 import { FinancialIndicatorPolicy } from "./financial-indicator.policy";
 import { FinancialReportPolicy } from "./financial-report.policy";
@@ -74,7 +74,6 @@ type PolicyClass = {
 const POLICIES: [EntityClass, PolicyClass][] = [
   [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],
-  [Demographic, DemographicPolicy],
   [Disturbance, DisturbancePolicy],
   [ImpactStory, ImpactStoryPolicy],
   [FinancialIndicator, FinancialIndicatorPolicy],
@@ -97,15 +96,13 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],
   [Task, TaskPolicy],
+  [Tracking, TrackingPolicy],
   [User, UserPolicy]
 ];
 
 /**
  * A service for finding the correct policy given an entity subject, building rules for the currently
  * authenticated user and checking the given action and subject against those rules.
- *
- * In the future, this will need some additional methods for acting on an array of subjects, and
- * potentially subjects of different types.
  *
  * @throws UnauthorizedException if there is no authenticated user id, there's no policy defined for
  *   the subject, or if the requested action is not allowed against the subject for this user.
@@ -126,31 +123,25 @@ export class PolicyService {
     return (this.permissions = await Permission.getUserPermissionNames(this.userId));
   }
 
-  async authorize(action: string, subject: Model | EntityClass | Model[]) {
-    if (this.userId == null) throw new UnauthorizedException();
+  async hasAccess(action: string, subject: Model | EntityClass | Model[]) {
+    if (this.userId == null) return false;
 
     const subjects = isArray(subject) ? subject : [subject];
     const [, PolicyClass] =
       POLICIES.find(([entityClass]) => subjects[0] instanceof entityClass || subjects[0] === entityClass) ?? [];
     if (PolicyClass == null) {
       this.log.error(`No policy found for subject type [${subject.constructor.name}]`);
-      throw new UnauthorizedException();
+      return false;
     }
 
     const builder = new AbilityBuilder(createMongoAbility);
     await new PolicyClass(this.userId, await this.getPermissions(), builder).addRules();
 
     const ability = builder.build();
-    const hasUnauthorized = subjects.find(subject => ability.cannot(action, subject)) != null;
-    if (hasUnauthorized) throw new UnauthorizedException();
+    return subjects.find(subject => ability.cannot(action, subject)) == null;
   }
 
-  async hasAccess(action: string, subject: Model | EntityClass | Model[]): Promise<boolean> {
-    try {
-      await this.authorize(action, subject);
-      return true;
-    } catch {
-      return false;
-    }
+  async authorize(action: string, subject: Model | EntityClass | Model[]) {
+    if (!(await this.hasAccess(action, subject))) throw new UnauthorizedException();
   }
 }

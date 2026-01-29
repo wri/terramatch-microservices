@@ -1,7 +1,7 @@
 import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Media,
   Project,
   ProjectUser,
@@ -322,19 +322,18 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
-    const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
+    const dueAfter = useDemographicsCutoff ? Tracking.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
     const siteReportIds = SiteReport.approvedIdsSubquery([siteId], { dueAfter });
-    const siteReportWorkdays = Demographic.idsSubquery(
-      siteReportIds,
-      SiteReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
-    );
+    const siteReportWorkdays = Tracking.idsSubquery(siteReportIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
 
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: { [Op.in]: siteReportWorkdays }
+          trackingId: { [Op.in]: siteReportWorkdays }
         }
       })) ?? 0
     );
@@ -343,7 +342,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getSelfReportedWorkdayCount(siteId: number, useDemographicsCutoff = false) {
     let SR = SiteReport.approved().sites([siteId]);
     if (useDemographicsCutoff) {
-      SR = SR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
+      SR = SR.dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF);
     }
 
     const aggregates = [

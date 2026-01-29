@@ -1,6 +1,4 @@
 export * from "./application.airtable-entity";
-export * from "./demographic.airtable-entity";
-export * from "./demographic-entry.airtable-entity";
 export * from "./disturbance.airtable-entity";
 export * from "./financial-indicator.airtable-entity";
 export * from "./financial-report.airtable-entity";
@@ -22,4 +20,7 @@ export * from "./site-polygon.airtable-entity";
 export * from "./site-report.airtable-entity";
 export * from "./srp-report.airtable-entity";
 export * from "./strata.airtable-entity";
+export * from "./tracking.airtable-entity";
+export * from "./tracking-entry.airtable-entity";
 export * from "./tree-species.airtable-entity";
+export * from "./users.airtable-entity";

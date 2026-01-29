@@ -6,14 +6,14 @@ import { Includeable, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
-  Demographic,
-  DemographicEntry,
   Media,
   NurseryReport,
   Project,
   ProjectUser,
   Seeding,
   SiteReport,
+  Tracking,
+  TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ProcessableAssociation } from "../entities.service";
@@ -21,7 +21,7 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Literal } from "sequelize/types/utils";
 
-const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["demographics", "seedings", "treeSpecies"];
+const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -224,16 +224,18 @@ export class ProjectReportProcessor extends ReportProcessor<
   }
 
   protected async getTaskTotalWorkdays(projectReportId: number, siteIds: Literal) {
-    const projectReportDemographics = Demographic.idsSubquery(
-      [projectReportId],
-      ProjectReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
-    );
-    const siteReportDemographics = Demographic.idsSubquery(siteIds, SiteReport.LARAVEL_TYPE, Demographic.WORKDAYS_TYPE);
+    const projectReportDemographics = Tracking.idsSubquery([projectReportId], ProjectReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
+    const siteReportDemographics = Tracking.idsSubquery(siteIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
+          trackingId: {
             [Op.or]: [{ [Op.in]: projectReportDemographics }, { [Op.in]: siteReportDemographics }]
           }
         }

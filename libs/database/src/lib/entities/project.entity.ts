@@ -122,7 +122,7 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  get frameworkUuid() {
+  get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
   }
 

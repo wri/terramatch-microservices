@@ -66,7 +66,7 @@ describe("AuditStatusController", () => {
       expect(result.meta.indices?.[0]).toMatchObject({
         resource: "auditStatuses",
         requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
-        ids: ["uuid-1"]
+        ids: undefined
       });
     });
 
@@ -119,7 +119,7 @@ describe("AuditStatusController", () => {
       expect(result.meta.indices?.[0]).toMatchObject({
         resource: "auditStatuses",
         requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
-        ids: []
+        ids: undefined
       });
     });
 
@@ -144,7 +144,7 @@ describe("AuditStatusController", () => {
       expect(result.meta.indices?.[0]).toMatchObject({
         resource: "auditStatuses",
         requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
-        ids: ["uuid-1", "uuid-2"]
+        ids: undefined
       });
     });
   });

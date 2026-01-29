@@ -62,6 +62,12 @@ describe("AuditStatusController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("read", expect.anything());
       expect(result.data).toHaveLength(1);
       expect((result.data as Resource[])[0].id).toBe("uuid-1");
+      expect(result.meta.indices?.length).toBe(1);
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "auditStatuses",
+        requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
+        ids: ["uuid-1"]
+      });
     });
 
     it("should return audit statuses for sitePolygons", async () => {
@@ -109,6 +115,12 @@ describe("AuditStatusController", () => {
       const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }));
 
       expect(result.data).toHaveLength(0);
+      expect(result.meta.indices?.length).toBe(1);
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "auditStatuses",
+        requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
+        ids: []
+      });
     });
 
     it("should return JSON:API format with multiple audit statuses", async () => {
@@ -128,6 +140,12 @@ describe("AuditStatusController", () => {
       expect(result.data).toHaveLength(2);
       expect((result.data as Resource[])[0].type).toBe("auditStatuses");
       expect((result.data as Resource[])[1].type).toBe("auditStatuses");
+      expect(result.meta.indices?.length).toBe(1);
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "auditStatuses",
+        requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
+        ids: ["uuid-1", "uuid-2"]
+      });
     });
   });
 

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, NotFoundException, Param, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { AuditStatusService } from "./audit-status.service";
 import { AuditStatusParamsDto } from "./dto/audit-status-params.dto";
@@ -34,9 +34,17 @@ export class AuditStatusController {
     await this.policyService.authorize("read", baseEntity);
     const auditStatuses = await this.auditStatusService.getAuditStatuses(baseEntity, entity, uuid);
     const document = buildJsonApi(AuditStatusDto, { forceDataArray: true });
+    const indexIds: string[] = [];
     for (const auditStatus of auditStatuses) {
+      indexIds.push(auditStatus.uuid);
       document.addData(auditStatus.uuid, auditStatus);
     }
+
+    document.addIndex({
+      resource: getDtoType(AuditStatusDto),
+      requestPath: `/entities/v3/auditStatuses/${entity}/${uuid}`,
+      ids: indexIds
+    });
 
     return document;
   }

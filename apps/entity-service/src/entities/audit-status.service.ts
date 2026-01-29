@@ -27,8 +27,7 @@ export class AuditStatusService {
     let entity: LaravelModel | null;
     if (entityType === "sitePolygons") {
       entity = await SitePolygon.findOne({
-        where: { uuid: entityUuid },
-        attributes: ["id", "uuid"]
+        where: { uuid: entityUuid }
       });
     } else {
       const entityModelClass = ENTITY_MODELS[entityType];
@@ -36,8 +35,7 @@ export class AuditStatusService {
         throw new NotFoundException(`Entity type not found: ${entityType}`);
       }
       entity = await entityModelClass.findOne({
-        where: { uuid: entityUuid },
-        attributes: ["id", "uuid"]
+        where: { uuid: entityUuid }
       });
     }
     if (entity == null) {

@@ -3,7 +3,6 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { FormDataService } from "../entities/form-data.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApplicationsController } from "./applications.controller";
-import { AuditStatusService } from "../entities/audit-status.service";
 import { Application } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
@@ -33,8 +32,7 @@ describe("ApplicationsController", () => {
       controllers: [ApplicationsController],
       providers: [
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: AuditStatusService, useValue: (auditStatusService = createMock<AuditStatusService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
       ]
     }).compile();
 

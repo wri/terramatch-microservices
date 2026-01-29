@@ -331,7 +331,7 @@ describe("ImpactStoriesController", () => {
 
   describe("impactStoryBulkDelete", () => {
     it("should bulk delete impact stories as admin", async () => {
-      jest.spyOn(policyService, "getPermissions").mockResolvedValue(["framework-terrafund"]);
+      jest.spyOn(policyService, "authorize").mockResolvedValue(undefined);
       jest.spyOn(impactStoryService, "bulkDeleteImpactStories").mockResolvedValue(["uuid1", "uuid2"]);
 
       const deleteRequest: ImpactStoryBulkDeleteBodyDto = {
@@ -347,12 +347,12 @@ describe("ImpactStoriesController", () => {
       expect(result.meta).toBeDefined();
       expect(result.meta.resourceIds).toEqual(["uuid1", "uuid2"]);
       expect(result.meta.resourceType).toBe("impactStories");
-      expect(policyService.getPermissions).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledWith("bulkDelete", ImpactStory);
       expect(impactStoryService.bulkDeleteImpactStories).toHaveBeenCalledWith(["uuid1", "uuid2"]);
     });
 
     it("should throw UnauthorizedException when not admin", async () => {
-      jest.spyOn(policyService, "getPermissions").mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "authorize").mockRejectedValue(new UnauthorizedException());
 
       const deleteRequest: ImpactStoryBulkDeleteBodyDto = {
         data: [{ type: "impactStories", id: "uuid1" }]
@@ -362,7 +362,7 @@ describe("ImpactStoriesController", () => {
     });
 
     it("should throw BadRequestException when empty UUID list", async () => {
-      jest.spyOn(policyService, "getPermissions").mockResolvedValue(["framework-terrafund"]);
+      jest.spyOn(policyService, "authorize").mockResolvedValue(undefined);
       jest
         .spyOn(impactStoryService, "bulkDeleteImpactStories")
         .mockRejectedValue(new BadRequestException("At least one impact story UUID must be provided"));
@@ -375,7 +375,7 @@ describe("ImpactStoriesController", () => {
     });
 
     it("should throw NotFoundException when stories not found", async () => {
-      jest.spyOn(policyService, "getPermissions").mockResolvedValue(["framework-terrafund"]);
+      jest.spyOn(policyService, "authorize").mockResolvedValue(undefined);
       jest
         .spyOn(impactStoryService, "bulkDeleteImpactStories")
         .mockRejectedValue(new NotFoundException("Impact stories not found"));

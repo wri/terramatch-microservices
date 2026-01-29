@@ -33,7 +33,7 @@ import { EntityType } from "@terramatch-microservices/database/constants/entitie
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { SiteMediaBulkUploadDto } from "./dto/site-media-bulk-upload.dto";
 import { MediaRequestBulkBody } from "./dto/media-request-bulk.dto";
-import { MediaBulkResponseDto } from "./dto/media-bulk-response.dto";
+import { MediaBulkErrorDto } from "./dto/media-bulk-error.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 
 @Controller("entities/v3/files")
@@ -72,7 +72,7 @@ export class FilesController {
   })
   @ExceptionResponse(NotFoundException, { description: "Site not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request." })
-  @JsonApiResponse([MediaDto, MediaBulkResponseDto])
+  @JsonApiResponse([MediaDto, MediaBulkErrorDto])
   async siteMediaBulkUpload(
     @Param() { entity, uuid, collection }: SiteMediaBulkUploadDto,
     @Body() payload: MediaRequestBulkBody
@@ -80,7 +80,7 @@ export class FilesController {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const errors: MediaBulkResponseDto[] = [];
+    const errors: MediaBulkErrorDto[] = [];
     const createdMedias: Media[] = [];
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const transaction = await Media.sequelize!.transaction();
@@ -98,7 +98,7 @@ export class FilesController {
         );
         createdMedias.push(media);
       } catch (error) {
-        errors.push(new MediaBulkResponseDto(index, error.message));
+        errors.push(new MediaBulkErrorDto(index, error.message));
       }
     }
     if (errors.length > 0) {
@@ -109,9 +109,9 @@ export class FilesController {
     }
     let document;
     if (errors.length > 0) {
-      document = buildJsonApi(MediaBulkResponseDto);
+      document = buildJsonApi(MediaBulkErrorDto);
       for (const error of errors) {
-        document.addData(error.index.toString(), new MediaBulkResponseDto(error.index, error.error));
+        document.addData(error.index.toString(), new MediaBulkErrorDto(error.index, error.error));
       }
     } else {
       await transaction.commit();

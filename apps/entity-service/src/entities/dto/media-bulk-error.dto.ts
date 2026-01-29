@@ -3,7 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 
 @JsonApiDto({ type: "mediaBulkResponses" })
-export class MediaBulkResponseDto {
+export class MediaBulkErrorDto {
   constructor(index: number, error: string) {
     this.index = index;
     this.error = error;

@@ -122,7 +122,25 @@ export class ActionsService {
       (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
     );
 
-    return await this.loadTargetablesAndCreateDtos(allActions);
+    const seen = new Set<string>();
+    const deduplicatedActions: Action[] = [];
+    const duplicatesToDelete: Action[] = [];
+    for (const action of allActions) {
+      const key = `${action.targetableType}|${action.targetableId}`;
+      if (seen.has(key)) {
+        duplicatesToDelete.push(action);
+      } else {
+        seen.add(key);
+        deduplicatedActions.push(action);
+      }
+    }
+
+    if (duplicatesToDelete.length > 0) {
+      const duplicateIds = duplicatesToDelete.map(a => a.id);
+      await Action.destroy({ where: { id: { [Op.in]: duplicateIds } } });
+    }
+
+    return await this.loadTargetablesAndCreateDtos(deduplicatedActions);
   }
 
   private async loadTargetablesAndCreateDtos(actions: Action[]): Promise<ActionWithTarget[]> {

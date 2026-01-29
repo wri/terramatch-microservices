@@ -13,7 +13,7 @@ import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { groupBy, uniq } from "lodash";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { CreateImpactStoryAttributes } from "./dto/create-impact-story.dto";
-import { UpdateImpactStoryAttributes } from "./dto/update-impact-story.dto";
+import { StoreImpactStoryAttributes } from "./dto/update-impact-story.dto";
 
 interface OrganizationData {
   uuid: string | null;
@@ -292,7 +292,7 @@ export class ImpactStoryService {
     return reloadedStory;
   }
 
-  async updateImpactStory(uuid: string, attributes: UpdateImpactStoryAttributes): Promise<ImpactStory> {
+  async updateImpactStory(uuid: string, attributes: StoreImpactStoryAttributes): Promise<ImpactStory> {
     const impactStory = await ImpactStory.findOne({ where: { uuid }, include: ORGANISATION_ASSOCIATION_FULL });
 
     if (impactStory == null) {
@@ -301,27 +301,27 @@ export class ImpactStoryService {
 
     impactStory.status = attributes.status;
 
-    if (attributes.title !== undefined) {
+    if (attributes.title != null) {
       impactStory.title = attributes.title;
     }
 
-    if (attributes.date !== undefined && attributes.date != null) {
+    if (attributes.date != null) {
       impactStory.date = attributes.date;
     }
 
-    if (attributes.category !== undefined) {
+    if (attributes.category != null) {
       impactStory.category = attributes.category ?? [];
     }
 
-    if (attributes.content !== undefined && attributes.content != null) {
+    if (attributes.content != null) {
       impactStory.content = attributes.content;
     }
 
-    if (attributes.thumbnail !== undefined) {
+    if (attributes.thumbnail != null) {
       impactStory.thumbnail = attributes.thumbnail ?? "";
     }
 
-    if (attributes.organizationUuid !== undefined) {
+    if (attributes.organizationUuid != null) {
       const organisation = await Organisation.findOne({
         where: { uuid: attributes.organizationUuid },
         attributes: ["id"]

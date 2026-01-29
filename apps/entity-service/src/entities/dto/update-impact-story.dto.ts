@@ -5,7 +5,7 @@ import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common
 const IMPACT_STORY_STATUSES = ["draft", "published"] as const;
 type ImpactStoryStatus = (typeof IMPACT_STORY_STATUSES)[number];
 
-export class UpdateImpactStoryAttributes {
+export class StoreImpactStoryAttributes {
   @IsOptional()
   @IsString()
   @Length(1, 70, { message: "Title must be between 1 and 70 characters" })
@@ -49,6 +49,6 @@ export class UpdateImpactStoryAttributes {
   thumbnail?: string;
 }
 
-export class UpdateImpactStoryDataDto extends JsonApiDataDto({ type: "impactStories" }, UpdateImpactStoryAttributes) {}
+export class UpdateImpactStoryDataDto extends JsonApiDataDto({ type: "impactStories" }, StoreImpactStoryAttributes) {}
 
 export class UpdateImpactStoryBody extends JsonApiBodyDto(UpdateImpactStoryDataDto) {}

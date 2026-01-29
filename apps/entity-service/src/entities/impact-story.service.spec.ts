@@ -11,7 +11,7 @@ import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { CreateImpactStoryAttributes } from "./dto/create-impact-story.dto";
-import { UpdateImpactStoryAttributes } from "./dto/update-impact-story.dto";
+import { StoreImpactStoryAttributes } from "./dto/update-impact-story.dto";
 
 describe("ImpactStoryService", () => {
   let service: ImpactStoryService;
@@ -405,7 +405,7 @@ describe("ImpactStoryService", () => {
   });
 
   describe("updateImpactStory", () => {
-    const updateAttributes: UpdateImpactStoryAttributes = {
+    const updateAttributes: StoreImpactStoryAttributes = {
       status: "published",
       title: "Updated Title"
     };
@@ -433,7 +433,7 @@ describe("ImpactStoryService", () => {
     });
 
     it("should handle organization UUID update", async () => {
-      const updateWithOrg: UpdateImpactStoryAttributes = {
+      const updateWithOrg: StoreImpactStoryAttributes = {
         status: "published",
         organizationUuid: "new-org-uuid"
       };
@@ -453,7 +453,7 @@ describe("ImpactStoryService", () => {
     });
 
     it("should throw BadRequestException when organization not found", async () => {
-      const updateWithOrg: UpdateImpactStoryAttributes = {
+      const updateWithOrg: StoreImpactStoryAttributes = {
         status: "published",
         organizationUuid: "non-existent-org"
       };
@@ -463,7 +463,7 @@ describe("ImpactStoryService", () => {
     });
 
     it("should handle undefined optional fields", async () => {
-      const updateWithUndefined: UpdateImpactStoryAttributes = {
+      const updateWithUndefined: StoreImpactStoryAttributes = {
         status: "published",
         date: undefined,
         content: undefined

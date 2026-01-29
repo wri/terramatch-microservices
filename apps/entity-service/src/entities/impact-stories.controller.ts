@@ -133,10 +133,6 @@ export class ImpactStoriesController {
 
     const impactStory = await this.impactStoryService.createImpactStory(createRequest.data.attributes);
 
-    if (impactStory.uuid == null || impactStory.uuid === "") {
-      throw new BadRequestException("Created impact story has invalid UUID");
-    }
-
     const { mediaCollection, organization } = await this.impactStoryService.getImpactStoryWithMedia(
       impactStory.uuid,
       true
@@ -178,10 +174,6 @@ export class ImpactStoriesController {
 
     const updatedImpactStory = await this.impactStoryService.updateImpactStory(uuid, updateRequest.data.attributes);
 
-    if (updatedImpactStory.uuid == null || updatedImpactStory.uuid === "") {
-      throw new BadRequestException("Updated impact story has invalid UUID");
-    }
-
     const { mediaCollection, organization } = await this.impactStoryService.getImpactStoryWithMedia(
       updatedImpactStory.uuid,
       true
@@ -214,12 +206,7 @@ export class ImpactStoriesController {
   @ExceptionResponse(NotFoundException, { description: "One or more impact stories not found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
   async impactStoryBulkDelete(@Body() deletePayload: ImpactStoryBulkDeleteBodyDto) {
-    const permissions = await this.policyService.getPermissions();
-    const frameworks = permissions.filter((p: string) => p.startsWith("framework-"));
-
-    if (frameworks.length === 0) {
-      throw new UnauthorizedException("Bulk delete requires administrator permissions");
-    }
+    await this.policyService.authorize("bulkDelete", ImpactStory);
 
     const uuids = deletePayload.data.map(item => item.id).filter((id): id is string => id != null && id !== "");
 

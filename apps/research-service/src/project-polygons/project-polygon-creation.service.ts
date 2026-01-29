@@ -43,19 +43,7 @@ export class ProjectPolygonCreationService {
           throw new NotFoundException(`Project pitch not found: ${projectPitchUuid}`);
         }
 
-        const existingProjectPolygon = await ProjectPolygon.findOne({
-          where: {
-            entityType: ProjectPitch.LARAVEL_TYPE,
-            entityId: projectPitch.id
-          },
-          transaction
-        });
-
-        if (existingProjectPolygon != null) {
-          throw new BadRequestException(
-            `Project polygon already exists for project pitch ${projectPitchUuid}. Only one polygon per project pitch is allowed.`
-          );
-        }
+        await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
 
         const geometries = features.map(f => f.geometry as Geometry);
 

@@ -12,13 +12,20 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
       return;
     }
 
+    if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
+      this.builder.can("read", SitePolygon);
+      return;
+    }
+
     if (this.frameworks.length > 0) {
       const sites = await Site.findAll({
         where: { frameworkKey: { [Op.in]: this.frameworks } },
         attributes: ["uuid"]
       });
       const siteUuids = sites.map(site => site.uuid);
-      this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+      if (siteUuids.length > 0) {
+        this.builder.can(["read", "manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+      }
     }
 
     if (this.permissions.includes("manage-own")) {
@@ -27,9 +34,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
         attributes: ["uuid"]
       });
       const siteUuids = sites.map(site => site.uuid);
-      if (siteUuids.length > 0) {
-        this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
-      }
+      this.builder.can(["read", "manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
     }
 
     if (this.permissions.includes("projects-manage")) {
@@ -42,7 +47,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
           });
           const siteUuids = sites.map(site => site.uuid);
           if (siteUuids.length > 0) {
-            this.builder.can(["manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
+            this.builder.can(["read", "manage", "delete"], SitePolygon, { siteUuid: { $in: siteUuids } });
           }
         }
       }

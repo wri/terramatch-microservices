@@ -18,6 +18,7 @@ import {
   Action,
   Application,
   AuditStatus,
+  FinancialReport,
   Form,
   FormQuestion,
   FormSubmission,
@@ -114,7 +115,15 @@ export class EntityStatusUpdate extends EventProcessor {
 
   private async handleUpdateRequest(updateRequest: UpdateRequest) {
     const baseModelClass = LARAVEL_MODELS[updateRequest.updateRequestableType];
-    const baseModel = await baseModelClass?.findOne({ where: { id: updateRequest.updateRequestableId } });
+
+    // FinancialReport requires the organisation relation to be loaded for Form.for() scope
+    const include = updateRequest.updateRequestableType === FinancialReport.LARAVEL_TYPE ? ["organisation"] : undefined;
+
+    const baseModel = await baseModelClass?.findOne({
+      where: { id: updateRequest.updateRequestableId },
+      include
+    });
+
     if (baseModel == null) {
       this.logger.error("Cannot find base model for update request", {
         id: updateRequest.id,

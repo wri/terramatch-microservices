@@ -230,7 +230,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  get frameworkUuid() {
+  get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
   }
 
@@ -701,20 +701,13 @@ export class ProjectReport extends Model<ProjectReport> {
         SELECT p.uuid
         FROM v2_projects p
         WHERE p.deleted_at IS NULL
-          AND EXISTS (
-            SELECT 1
+          AND (
+            SELECT pr.planting_status
             FROM v2_project_reports pr
             WHERE pr.project_id = p.id
               AND pr.deleted_at IS NULL
               AND pr.status = 'approved'
-          )
-          AND (
-            SELECT pr2.planting_status
-            FROM v2_project_reports pr2
-            WHERE pr2.project_id = p.id
-              AND pr2.deleted_at IS NULL
-              AND pr2.status = 'approved'
-            ORDER BY pr2.updated_at DESC
+            ORDER BY pr.due_at DESC
             LIMIT 1
           ) = ${sql.escape(plantingStatus)}
       )`

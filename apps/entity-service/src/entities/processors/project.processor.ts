@@ -1,9 +1,10 @@
 import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
   Application,
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Form,
+  FormSubmission,
   Media,
   Nursery,
   NurseryReport,
@@ -31,7 +32,6 @@ import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
-import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -205,15 +205,18 @@ export class ProjectProcessor extends EntityProcessor<
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
+    const plantingStatus = lastReport?.plantingStatus ?? null;
+
+    const dto = new ProjectLightDto(project, {
+      totalHectaresRestoredSum,
+      treesPlantedCount: 0,
+      plantingStatus,
+      ...associateDto
+    });
 
     return {
       id: project.uuid,
-      dto: new ProjectLightDto(project, {
-        totalHectaresRestoredSum,
-        treesPlantedCount: 0,
-        plantingStatus: lastReport?.plantingStatus as PlantingStatus,
-        ...associateDto
-      })
+      dto
     };
   }
 
@@ -245,10 +248,11 @@ export class ProjectProcessor extends EntityProcessor<
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
+    const plantingStatus = lastReport?.plantingStatus ?? null;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
-
+      plantingStatus,
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -258,7 +262,6 @@ export class ProjectProcessor extends EntityProcessor<
       regeneratedTreesCount,
       treesPlantedCount,
       seedsPlantedCount,
-      plantingStatus: lastReport?.plantingStatus as PlantingStatus,
       treesRestoredPpc:
         regeneratedTreesCount +
         (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
@@ -289,26 +292,24 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
-    const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
+    const dueAfter = useDemographicsCutoff ? Tracking.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
     const siteIds = Site.approvedIdsSubquery(projectId);
     const siteReportIds = SiteReport.approvedIdsSubquery(siteIds, { dueAfter });
-    const siteReportWorkdays = Demographic.idsSubquery(
-      siteReportIds,
-      SiteReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
-    );
+    const siteReportWorkdays = Tracking.idsSubquery(siteReportIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
     const projectReportIds = ProjectReport.approvedIdsSubquery(projectId, { dueAfter });
-    const projectReportWorkdays = Demographic.idsSubquery(
-      projectReportIds,
-      ProjectReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
-    );
+    const projectReportWorkdays = Tracking.idsSubquery(projectReportIds, ProjectReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
 
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
+          trackingId: {
             [Op.or]: [{ [Op.in]: siteReportWorkdays }, { [Op.in]: projectReportWorkdays }]
           }
         }
@@ -320,8 +321,8 @@ export class ProjectProcessor extends EntityProcessor<
     let SR = SiteReport.approved().sites(Site.approvedIdsSubquery(projectId));
     let PR = ProjectReport.approved().project(projectId);
     if (useDemographicsCutoff) {
-      PR = PR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
-      SR = SR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
+      PR = PR.dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF);
+      SR = SR.dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF);
     }
 
     const aggregates = [
@@ -340,14 +341,13 @@ export class ProjectProcessor extends EntityProcessor<
 
   protected async getTotalJobs(projectId: number) {
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: {
-            [Op.in]: Demographic.idsSubquery(
-              ProjectReport.approvedIdsSubquery(projectId),
-              ProjectReport.LARAVEL_TYPE,
-              Demographic.JOBS_TYPE
-            )
+          trackingId: {
+            [Op.in]: Tracking.idsSubquery(ProjectReport.approvedIdsSubquery(projectId), ProjectReport.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE
+            })
           }
         }
       })) ?? 0
@@ -516,30 +516,31 @@ export class ProjectProcessor extends EntityProcessor<
       }
       if (treesToCreate.length > 0) await TreeSpecies.bulkCreate(treesToCreate);
 
-      const entriesToCreate: CreationAttributes<DemographicEntry>[] = [];
-      const demographics = await Demographic.for(pitch).findAll();
+      const entriesToCreate: CreationAttributes<TrackingEntry>[] = [];
+      const trackings = await Tracking.for(pitch).findAll();
       const entries = groupBy(
-        await DemographicEntry.findAll({
-          where: { demographicId: { [Op.in]: demographics.map(d => d.id) } }
+        await TrackingEntry.findAll({
+          where: { trackingId: { [Op.in]: trackings.map(d => d.id) } }
         }),
-        "demographicId"
+        "trackingId"
       );
-      for (const demographic of demographics) {
-        if (demographic.hidden) continue;
+      for (const tracking of trackings) {
+        if (tracking.hidden) continue;
 
-        // There aren't many demographic types associated with each project / pitch, so this
+        // There aren't many tracking types associated with each project / pitch, so this
         // initial creation list is short, and we can less awkwardly collect all the entries
-        // to create if we create the demographics sequentially to get each id here.
-        const projDemographic = await Demographic.create({
-          demographicalType: Project.LARAVEL_TYPE,
-          demographicalId: project.id,
-          type: demographic.type,
-          collection: demographic.collection,
-          description: demographic.description
+        // to create if we create the trackings sequentially to get each id here.
+        const projTracking = await Tracking.create({
+          trackableType: Project.LARAVEL_TYPE,
+          trackableId: project.id,
+          domain: tracking.domain,
+          type: tracking.type,
+          collection: tracking.collection,
+          description: tracking.description
         });
-        for (const entry of entries[demographic.id] ?? []) {
+        for (const entry of entries[tracking.id] ?? []) {
           entriesToCreate.push({
-            demographicId: projDemographic.id,
+            trackingId: projTracking.id,
             type: entry.type,
             subtype: entry.subtype,
             name: entry.name,
@@ -547,7 +548,7 @@ export class ProjectProcessor extends EntityProcessor<
           });
         }
       }
-      if (entriesToCreate.length > 0) await DemographicEntry.bulkCreate(entriesToCreate);
+      if (entriesToCreate.length > 0) await TrackingEntry.bulkCreate(entriesToCreate);
 
       const medias = await Media.for(pitch)
         .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])
@@ -556,12 +557,26 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (application != null) {
+      const submission = await FormSubmission.application(application.id).findOne({
+        order: [["id", "DESC"]],
+        attributes: ["id"],
+        include: [{ association: "user", attributes: ["id"] }]
+      });
       const userIds = (await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] })).map(
         ({ id }) => id
       );
-      await ProjectUser.bulkCreate(userIds.map(userId => ({ projectId: project.id, userId })));
+      await ProjectUser.bulkCreate(
+        userIds.map(userId => ({
+          projectId: project.id,
+          userId,
+          status: "active",
+          // All org users other than the one that submitted the application are monitoring partners. The
+          // submitter is the project "owner"
+          isMonitoring: userId !== submission?.user?.id
+        }))
+      );
     } else {
-      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId });
+      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId, status: "active" });
     }
 
     // Load the full project with necessary associations.

@@ -120,6 +120,11 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   plantingStatus?: PlantingStatus;
 
-  // This one is internal use only, not exposed to the API surface
+  @ApiProperty({
+    required: false,
+    type: Number,
+    description: "Filter reports by task ID (used to get site/nursery reports for a specific reporting period)"
+  })
+  @IsOptional()
   taskId?: number;
 }

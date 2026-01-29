@@ -6,7 +6,7 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
-  Demographic,
+  Tracking,
   Disturbance,
   Form,
   FormQuestion,
@@ -33,7 +33,7 @@ import { FinancialReportProcessor } from "./processors/financial-report.processo
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
-import { DemographicDto } from "@terramatch-microservices/common/dto/demographic.dto";
+import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaProcessor } from "./processors/media.processor";
 import { EntityUpdateData } from "./dto/entity-update.dto";
@@ -82,13 +82,11 @@ export const POLYGON_STATUSES_FILTERS = [
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
 
 const ASSOCIATION_PROCESSORS = {
-  demographics: AssociationProcessor.buildSimpleProcessor(
-    DemographicDto,
-    ({ id: demographicalId }, demographicalType) =>
-      Demographic.findAll({
-        where: { demographicalType, demographicalId, hidden: false },
-        include: [{ association: "entries" }]
-      })
+  trackings: AssociationProcessor.buildSimpleProcessor(TrackingDto, ({ id: trackableId }, trackableType) =>
+    Tracking.findAll({
+      where: { trackableType, trackableId, hidden: false },
+      include: [{ association: "entries" }]
+    })
   ),
   seedings: AssociationProcessor.buildSimpleProcessor(SeedingDto, ({ id: seedableId }, seedableType) =>
     Seeding.findAll({ where: { seedableType, seedableId, hidden: false } })

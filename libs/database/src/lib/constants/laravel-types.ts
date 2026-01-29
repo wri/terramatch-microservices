@@ -11,7 +11,7 @@ import {
   SiteReport,
   SrpReport
 } from "../entities";
-import { DemographicAssociationType } from "../types/demographic";
+import { DemographicAssociationType } from "../types/tracking";
 import { Dictionary } from "lodash";
 import { ModelCtor } from "sequelize-typescript";
 import { LaravelModel, UuidModel } from "../types/util";

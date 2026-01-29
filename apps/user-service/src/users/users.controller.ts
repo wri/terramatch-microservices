@@ -39,7 +39,7 @@ const USER_RESPONSE_SHAPE = {
   included: [OrganisationDto]
 };
 
-@Controller("users/v3")
+@Controller("users/v3/users")
 export class UsersController {
   constructor(
     private readonly policyService: PolicyService,

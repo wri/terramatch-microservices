@@ -13,8 +13,6 @@ import { ProjectPitchesController } from "./entities/project-pitches.controller"
 import { ProjectPitchService } from "./entities/project-pitch.service";
 import { TasksController } from "./entities/tasks.controller";
 import { TasksService } from "./entities/tasks.service";
-import { DemographicsController } from "./entities/demographics.controller";
-import { DemographicService } from "./entities/demographic.service";
 import { ImpactStoriesController } from "./entities/impact-stories.controller";
 import { ImpactStoryService } from "./entities/impact-story.service";
 import { DisturbancesController } from "./entities/disturbances.controller";
@@ -50,7 +48,6 @@ import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processo
     TasksController,
     FilesController,
     TreesController,
-    DemographicsController,
     DisturbancesController,
     EntitiesController,
     FormDataController, // must be before entity association controller.
@@ -70,7 +67,6 @@ import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processo
     ProjectPitchService,
     ImpactStoryService,
     TasksService,
-    DemographicService,
     DisturbanceService,
     FormsService,
     FormDataService,

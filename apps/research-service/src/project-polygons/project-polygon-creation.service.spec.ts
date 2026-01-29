@@ -289,9 +289,11 @@ describe("ProjectPolygonCreationService", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("should throw BadRequestException when project polygon already exists", async () => {
+    it("should delete existing project polygon and create new one", async () => {
+      const userId = 1;
       const pitch = await ProjectPitchFactory.build();
       const existingPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
+      const polygonUuid = crypto.randomUUID();
 
       const request: CreateProjectPolygonBatchRequestDto = {
         geometries: [
@@ -330,12 +332,30 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(existingPolygon);
+      projectPolygonsService.deleteProjectPolygonAndGeometry.mockResolvedValue(existingPolygon.uuid);
+      polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
+        uuids: [polygonUuid],
+        areas: [100]
+      });
 
-      await expect(service.createProjectPolygons(request, 1)).rejects.toThrow(BadRequestException);
-      await expect(service.createProjectPolygons(request, 1)).rejects.toThrow(
-        `Project polygon already exists for project pitch ${pitch.uuid}`
+      const mockProjectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
+        polyUuid: polygonUuid,
+        createdBy: userId,
+        lastModifiedBy: userId
+      });
+      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+
+      const result = await service.createProjectPolygons(request, userId);
+
+      expect(projectPolygonsService.deleteProjectPolygonAndGeometry).toHaveBeenCalledWith(
+        existingPolygon,
+        mockTransaction
       );
-      expect(mockTransaction.rollback).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0].entityId).toBe(pitch.id);
+      expect(result[0].polyUuid).toBe(polygonUuid);
+      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(mockTransaction.rollback).not.toHaveBeenCalled();
     });
 
     it("should throw BadRequestException when no valid geometries are created", async () => {

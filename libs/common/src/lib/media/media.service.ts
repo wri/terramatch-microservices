@@ -14,7 +14,7 @@ import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand, S3Client } fr
 import { TMLogger } from "../util/tm-logger";
 import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import {
   abbreviatedValidationMimeTypes,
   FILE_VALIDATION,
@@ -160,7 +160,8 @@ export class MediaService {
     creatorId: number,
     collection: string,
     file: Express.Multer.File,
-    data: MediaAttributes = { isPublic: true }
+    data: MediaAttributes = { isPublic: true },
+    transaction?: Transaction
   ) {
     const configuration = mediaConfiguration(entity, collection);
     if (configuration == null) {
@@ -174,23 +175,26 @@ export class MediaService {
       attributes: ["firstName", "lastName"]
     });
 
-    const media = await Media.create({
-      collectionName: collection,
-      modelType: laravelType(model),
-      modelId: model.id,
-      name: file.originalname,
-      fileName: file.originalname,
-      mimeType: file.mimetype,
-      fileType: this.getMediaType(file, configuration),
-      isPublic: data.isPublic,
-      customProperties: { custom_headers: { ACL: "public-read" } },
-      generatedConversions: {},
-      lat: data.lat ?? null,
-      lng: data.lng ?? null,
-      size: file.size,
-      createdBy: creatorId,
-      photographer: user?.fullName ?? null
-    });
+    const media = await Media.create(
+      {
+        collectionName: collection,
+        modelType: laravelType(model),
+        modelId: model.id,
+        name: file.originalname,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        fileType: this.getMediaType(file, configuration),
+        isPublic: data.isPublic,
+        customProperties: { custom_headers: { ACL: "public-read" } },
+        generatedConversions: {},
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
+        size: file.size,
+        createdBy: creatorId,
+        photographer: user?.fullName ?? null
+      },
+      { transaction }
+    );
 
     try {
       const { buffer, originalname, mimetype } = file;
@@ -212,16 +216,21 @@ export class MediaService {
         const extension = originalname.substring(extensionIdx);
         const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${extension}`;
         await this.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
-        await media.update({
-          generatedConversions: { thumbnail: true },
-          customProperties: { ...media.customProperties, thumbnailExtension: extension }
-        });
+        await media.update(
+          {
+            generatedConversions: { thumbnail: true },
+            customProperties: { ...media.customProperties, thumbnailExtension: extension }
+          },
+          { transaction }
+        );
       }
 
       return media;
     } catch (error) {
       this.logger.error(`Error uploading file to S3 [${error}]`);
-      await media.destroy({ force: true });
+      if (transaction != null) {
+        await media.destroy({ force: true });
+      }
       throw error;
     }
   }
@@ -361,7 +370,7 @@ export class MediaService {
     return media;
   }
 
-  async deleteMedia(media: Media) {
+  async deleteMediaFromS3(media: Media) {
     const key = `${media.id}/${media.fileName}`;
 
     const command = new DeleteObjectCommand({
@@ -371,6 +380,10 @@ export class MediaService {
 
     this.logger.log(`Deleting media ${media.uuid} from S3`);
     await this.s3.send(command);
+  }
+
+  async deleteMedia(media: Media) {
+    this.deleteMediaFromS3(media);
     await media.destroy();
 
     return media;

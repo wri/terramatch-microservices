@@ -82,32 +82,31 @@ export class FilesController {
     await this.policyService.authorize("uploadFiles", model);
     const errors: MediaBulkResponseDto[] = [];
     const createdMedias: Media[] = [];
-    await Media.sequelize!.transaction(async transaction => {
-      for (const [index, payloadData] of payload.data.entries()) {
-        let file: Express.Multer.File;
-        try {
-          file = await this.mediaService.fetchDataFromUrlAsMulterFile(payloadData.attributes.downloadUrl);
-          const media = await this.mediaService.createMedia(
-            model,
-            entity,
-            this.entitiesService.userId,
-            collection,
-            file,
-            payloadData.attributes
-          );
-          createdMedias.push(media);
-        } catch (error) {
-          errors.push(new MediaBulkResponseDto(index, error.message));
-        }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const transaction = await Media.sequelize!.transaction();
+    for (const [index, payloadData] of payload.data.entries()) {
+      try {
+        const file = await this.mediaService.fetchDataFromUrlAsMulterFile(payloadData.attributes.downloadUrl);
+        const media = await this.mediaService.createMedia(
+          model,
+          entity,
+          this.entitiesService.userId,
+          collection,
+          file,
+          payloadData.attributes,
+          transaction
+        );
+        createdMedias.push(media);
+      } catch (error) {
+        errors.push(new MediaBulkResponseDto(index, error.message));
       }
-      if (errors.length > 0) {
-        // clear s3 files
-        for (const media of createdMedias) {
-          await this.mediaService.deleteMedia(media);
-        }
-        throw new BadRequestException("Failed to upload some files");
+    }
+    if (errors.length > 0) {
+      await transaction.rollback();
+      for (const media of createdMedias) {
+        await this.mediaService.deleteMediaFromS3(media);
       }
-    });
+    }
     let document;
     if (errors.length > 0) {
       document = buildJsonApi(MediaBulkResponseDto);
@@ -115,6 +114,7 @@ export class FilesController {
         document.addData(error.index.toString(), new MediaBulkResponseDto(error.index, error.error));
       }
     } else {
+      await transaction.commit();
       document = buildJsonApi(MediaDto);
       for (const media of createdMedias) {
         document.addData(

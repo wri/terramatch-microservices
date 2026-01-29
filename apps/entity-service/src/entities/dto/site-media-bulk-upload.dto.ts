@@ -3,7 +3,6 @@ import { MediaOwnerType } from "@terramatch-microservices/database/constants/med
 import { IsString, IsUUID } from "class-validator";
 
 export class SiteMediaBulkUploadDto {
-  @IsUUID()
   @ApiProperty({ description: "Entity type to upload media to" })
   entity: MediaOwnerType;
 

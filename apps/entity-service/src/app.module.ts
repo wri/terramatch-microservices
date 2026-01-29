@@ -34,7 +34,6 @@ import { BullModule } from "@nestjs/bullmq";
 import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processor";
 import { AuditStatusController } from "./entities/audit-status.controller";
 import { AuditStatusService } from "./entities/audit-status.service";
-import { ApplicationsService } from "./applications/applications.service";
 
 @Module({
   imports: [
@@ -77,7 +76,6 @@ import { ApplicationsService } from "./applications/applications.service";
     DemographicService,
     DisturbanceService,
     AuditStatusService,
-    ApplicationsService,
     FormsService,
     FormDataService,
     EntitiesQueueProcessor

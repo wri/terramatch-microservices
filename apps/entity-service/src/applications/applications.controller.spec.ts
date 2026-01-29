@@ -3,7 +3,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { FormDataService } from "../entities/form-data.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApplicationsController } from "./applications.controller";
-import { ApplicationsService } from "./applications.service";
+import { AuditStatusService } from "../entities/audit-status.service";
+import { AuditStatusDto } from "../entities/dto/audit-status.dto";
 import { Application } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
@@ -27,7 +28,7 @@ describe("ApplicationsController", () => {
   let controller: ApplicationsController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: DeepMocked<PolicyService>;
-  let applicationsService: DeepMocked<ApplicationsService>;
+  let auditStatusService: DeepMocked<AuditStatusService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -35,7 +36,7 @@ describe("ApplicationsController", () => {
       providers: [
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: ApplicationsService, useValue: (applicationsService = createMock<ApplicationsService>()) }
+        { provide: AuditStatusService, useValue: (auditStatusService = createMock<AuditStatusService>()) }
       ]
     }).compile();
 
@@ -333,59 +334,92 @@ describe("ApplicationsController", () => {
           comment: "Requires More Feedback"
         });
 
-        applicationsService.getApplicationHistory.mockResolvedValue([
-          {
-            eventType: "status",
-            status: "requires-more-information",
-            comment: "Requires More Feedback",
-            date: time.toJSDate(),
-            stageName: null
-          },
-          {
-            eventType: "status",
-            status: "awaiting-approval",
-            comment: null,
-            date: time.minus({ hours: 1 }).toJSDate(),
-            stageName: null
-          },
-          { eventType: "updated", status: "started", comment: null, date: sub2Update, stageName: null },
-          {
-            eventType: "status",
-            status: "started",
-            comment: null,
-            date: time.minus({ hours: 8 }).toJSDate(),
-            stageName: null
-          },
-          {
-            eventType: "status",
-            status: "approved",
-            comment: "Approval Feedback",
-            date: time.minus({ days: 1 }).toJSDate(),
-            stageName: null
-          },
-          {
-            eventType: "status",
-            status: "awaiting-approval",
-            comment: null,
-            date: time.minus({ days: 1, hours: 1 }).toJSDate(),
-            stageName: null
-          },
-          { eventType: "updated", status: null, comment: null, date: sub1Update, stageName: null },
-          {
-            eventType: "status",
-            status: "started",
-            comment: null,
-            date: time.minus({ days: 30 }).toJSDate(),
-            stageName: null
-          }
-        ]);
+        // Mock audit status service to return DTOs for the submissions
+        // The controller will transform these into history entries with 12-hour deduplication
+        const auditStatusDtos = [
+          new AuditStatusDto(
+            1,
+            "uuid-1",
+            "requires-more-information",
+            null,
+            null,
+            "Requires More Feedback",
+            "status",
+            time.toJSDate(),
+            []
+          ),
+          new AuditStatusDto(
+            2,
+            "uuid-2",
+            "awaiting-approval",
+            null,
+            null,
+            null,
+            "status",
+            time.minus({ hours: 1 }).toJSDate(),
+            []
+          ),
+          new AuditStatusDto(3, "uuid-3", "started", null, null, null, "updated", sub2Update, []),
+          new AuditStatusDto(
+            4,
+            "uuid-4",
+            "started",
+            null,
+            null,
+            null,
+            "status",
+            time.minus({ hours: 8 }).toJSDate(),
+            []
+          ),
+          new AuditStatusDto(
+            5,
+            "uuid-5",
+            "approved",
+            null,
+            null,
+            "Approval Feedback",
+            "status",
+            time.minus({ days: 1 }).toJSDate(),
+            []
+          ),
+          new AuditStatusDto(
+            6,
+            "uuid-6",
+            "awaiting-approval",
+            null,
+            null,
+            null,
+            "status",
+            time.minus({ days: 1, hours: 1 }).toJSDate(),
+            []
+          ),
+          new AuditStatusDto(7, "uuid-7", null, null, null, null, "updated", sub1Update, []),
+          new AuditStatusDto(
+            8,
+            "uuid-8",
+            "started",
+            null,
+            null,
+            null,
+            "status",
+            time.minus({ days: 30 }).toJSDate(),
+            []
+          )
+        ];
+
+        auditStatusService.getAuditStatusesForApplicationHistory.mockResolvedValue(
+          new Map([
+            [sub2.id, auditStatusDtos.slice(0, 4)], // First 4 for sub2
+            [sub1.id, auditStatusDtos.slice(4)] // Last 4 for sub1
+          ])
+        );
 
         const result = serialize(await controller.getHistory({ uuid: app.uuid }));
         const dto = (result.data as Resource).attributes;
 
         expect(dto.entries).toHaveLength(8);
-        expect(applicationsService.getApplicationHistory).toHaveBeenCalledWith(
-          expect.objectContaining({ id: app.id, uuid: app.uuid })
+        expect(auditStatusService.getAuditStatusesForApplicationHistory).toHaveBeenCalledWith(
+          expect.arrayContaining([expect.objectContaining({ id: sub1.id }), expect.objectContaining({ id: sub2.id })])
         );
       } finally {
         clock.uninstall();

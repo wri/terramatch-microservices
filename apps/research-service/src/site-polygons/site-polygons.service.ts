@@ -11,8 +11,13 @@ import {
   SitePolygonData,
   SiteReport,
   TreeSpecies,
-  User
+  User,
+  Project,
+  DelayedJob
 } from "@terramatch-microservices/database/entities";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
   IndicatorDto,
@@ -40,7 +45,12 @@ type AssociationDtos = {
 
 @Injectable()
 export class SitePolygonsService {
-  constructor(private readonly polygonGeometryService: PolygonGeometryCreationService) {}
+  private readonly logger = new TMLogger(SitePolygonsService.name);
+
+  constructor(
+    private readonly polygonGeometryService: PolygonGeometryCreationService,
+    @InjectQueue("validation") private readonly validationQueue: Queue
+  ) {}
 
   async buildQuery(page: CursorPage | NumberPage) {
     const builder = new SitePolygonQueryBuilder(page.size);
@@ -528,7 +538,68 @@ export class SitePolygonsService {
     if (auditStatusRecords.length > 0) {
       await AuditStatus.bulkCreate(auditStatusRecords);
     }
+
+    if (status === "approved" && user != null) {
+      await this.triggerProjectValidationJobs(sitePolygons, user.id);
+    }
+
     return sitePolygons;
+  }
+
+  async triggerProjectValidationJobs(sitePolygons: SitePolygon[], userId: number): Promise<void> {
+    const siteUuids = [
+      ...new Set(sitePolygons.map(sp => sp.siteUuid).filter((uuid): uuid is string => uuid != null && uuid !== ""))
+    ];
+    if (siteUuids.length === 0) {
+      return;
+    }
+
+    const sites = await Site.findAll({
+      where: { uuid: { [Op.in]: siteUuids } },
+      attributes: ["id", "projectId", "name"]
+    });
+
+    const projectIds = [...new Set(sites.map(s => s.projectId).filter((id): id is number => id != null))];
+    if (projectIds.length === 0) {
+      return;
+    }
+
+    for (const projectId of projectIds) {
+      try {
+        const project = await Project.findByPk(projectId, { attributes: ["id", "name"] });
+        if (project === null) {
+          this.logger.warn(`Project with ID ${projectId} not found, skipping validation job creation`);
+          continue;
+        }
+
+        const delayedJob = await DelayedJob.create({
+          isAcknowledged: false,
+          name: "Project Area Validation Refresh",
+          totalContent: 0,
+          processedContent: 0,
+          progressMessage: "Starting project-wide validation...",
+          createdBy: userId,
+          metadata: {
+            entity_id: project.id,
+            entity_type: Project.LARAVEL_TYPE,
+            entity_name: project.name ?? null
+          }
+        } as DelayedJob);
+
+        await this.validationQueue.add("projectValidation", {
+          projectId,
+          validationTypes: ["ESTIMATED_AREA"],
+          delayedJobId: delayedJob.id
+        });
+
+        this.logger.log(`Queued project area validation refresh for project ${projectId} (job ${delayedJob.id})`);
+      } catch (error) {
+        this.logger.error(
+          `Failed to queue project area validation refresh for project ${projectId}`,
+          error instanceof Error ? error.stack : String(error)
+        );
+      }
+    }
   }
 
   private createAuditStatusRecords(

@@ -24,7 +24,9 @@ import {
   Project,
   Site,
   SitePolygon,
-  TreeSpecies
+  TreeSpecies,
+  AuditStatus,
+  User
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
@@ -33,14 +35,22 @@ import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/sit
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { Op } from "sequelize";
+import { getQueueToken } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
   let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
+  let validationQueue: jest.Mocked<Queue>;
 
   beforeEach(async () => {
     const mockPolygonGeometryService = {
       bulkUpdateProjectCentroids: jest.fn().mockResolvedValue(undefined)
+    };
+
+    const mockValidationQueue = {
+      add: jest.fn().mockResolvedValue(undefined)
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,12 +59,17 @@ describe("SitePolygonsService", () => {
         {
           provide: PolygonGeometryCreationService,
           useValue: mockPolygonGeometryService
+        },
+        {
+          provide: getQueueToken("validation"),
+          useValue: mockValidationQueue
         }
       ]
     }).compile();
 
     service = module.get<SitePolygonsService>(SitePolygonsService);
     polygonGeometryService = module.get(PolygonGeometryCreationService);
+    validationQueue = module.get(getQueueToken("validation"));
   });
 
   afterEach(() => {
@@ -1126,11 +1141,116 @@ describe("SitePolygonsService", () => {
       const comment = "comment";
       const user = await UserFactory.create();
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([{ id: 1, uuid: "1234", siteUuid: "site-1" } as SitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
       await service.updateBulkStatus(status, data, comment, user);
       expect(SitePolygon.update).toHaveBeenCalledWith(
         { status },
         { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
       );
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should trigger project validation when approving polygons", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "approved";
+      const comment = "comment";
+      const user = { id: 1 } as User;
+      const project = { id: 100, name: "Test Project" } as Project;
+      const site = { id: 10, uuid: "site-1", projectId: 100, name: "Test Site" } as Site;
+      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([site]);
+      jest.spyOn(Project, "findByPk").mockResolvedValue(project);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 1,
+        uuid: "job-uuid",
+        name: "Project Area Validation Refresh",
+        totalContent: 0,
+        processedContent: 0,
+        progressMessage: "Starting project-wide validation...",
+        createdBy: user.id,
+        metadata: {
+          entity_id: project.id,
+          entity_type: Project.LARAVEL_TYPE,
+          entity_name: project.name
+        }
+      } as unknown as DelayedJob);
+
+      await service.updateBulkStatus(status, data, comment, user);
+
+      expect(SitePolygon.update).toHaveBeenCalled();
+      expect(Site.findAll).toHaveBeenCalledWith({
+        where: { uuid: { [Op.in]: [site.uuid] } },
+        attributes: ["id", "projectId", "name"]
+      });
+      expect(Project.findByPk).toHaveBeenCalledWith(project.id, { attributes: ["id", "name"] });
+      expect(DelayedJob.create).toHaveBeenCalled();
+      expect(validationQueue.add).toHaveBeenCalledWith("projectValidation", {
+        projectId: project.id,
+        validationTypes: ["ESTIMATED_AREA"],
+        delayedJobId: 1
+      });
+    });
+
+    it("should not trigger validation for non-approved status", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "submitted";
+      const comment = "comment";
+      const user = { id: 1 } as User;
+      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      await service.updateBulkStatus(status, data, comment, user);
+
+      expect(SitePolygon.update).toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should handle missing project gracefully", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "approved";
+      const comment = "comment";
+      const user = { id: 1 } as User;
+      const site = { id: 10, uuid: "site-1", projectId: 999, name: "Test Site" } as Site;
+      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([site]);
+      jest.spyOn(Project, "findByPk").mockResolvedValue(null);
+
+      await service.updateBulkStatus(status, data, comment, user);
+
+      expect(SitePolygon.update).toHaveBeenCalled();
+      expect(Project.findByPk).toHaveBeenCalledWith(999, { attributes: ["id", "name"] });
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should handle polygons without site UUIDs", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "approved";
+      const comment = "comment";
+      const user = { id: 1 } as User;
+      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: undefined } as unknown as SitePolygon;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      await service.updateBulkStatus(status, data, comment, user);
+
+      expect(SitePolygon.update).toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
     });
   });
 });

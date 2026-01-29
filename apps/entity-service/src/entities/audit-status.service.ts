@@ -8,7 +8,7 @@ import { EntityType, ENTITY_MODELS } from "@terramatch-microservices/database/co
 import { AuditStatusDto } from "./dto/audit-status.dto";
 import { EntitiesService } from "./entities.service";
 import { Op } from "sequelize";
-import { groupBy, orderBy, uniqBy } from "lodash";
+import { orderBy, uniqBy } from "lodash";
 import { LaravelModel, laravelType } from "@terramatch-microservices/database/types/util";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { InferCreationAttributes } from "sequelize";
@@ -142,36 +142,6 @@ export class AuditStatusService {
     const attachmentsMap = await this.loadMediaAttachments(data.modernAuditStatuses, entityType, entityUuid);
     const dtos = await this.transformToDtos(data, attachmentsMap);
     return uniqBy(dtos, dto => dto.comment ?? null);
-  }
-
-  async getAuditStatusesForApplicationHistory(entities: LaravelModel[]): Promise<Map<number, AuditStatusDto[]>> {
-    if (entities.length === 0) {
-      return new Map<number, AuditStatusDto[]>();
-    }
-
-    const data = await this.queryAuditData(entities);
-    const dtos = await this.transformToDtos(data);
-
-    const auditStatusIdToAuditableId = new Map(data.modernAuditStatuses.map(as => [as.id, as.auditableId]));
-    const legacyAuditIdToAuditableId = new Map(data.legacyAudits.map(a => [a.id, a.auditableId]));
-
-    const grouped = groupBy(dtos, dto => {
-      if (!dto.uuid.startsWith("legacy-")) {
-        const auditableId = auditStatusIdToAuditableId.get(dto.id);
-        return auditableId != null ? auditableId : 0;
-      } else {
-        const legacyId = Number.parseInt(dto.uuid.replace("legacy-", ""), 10);
-        const auditableId = legacyAuditIdToAuditableId.get(legacyId);
-        return auditableId != null ? auditableId : 0;
-      }
-    });
-
-    const result = new Map<number, AuditStatusDto[]>();
-    for (const [auditableId, dtos] of Object.entries(grouped)) {
-      result.set(Number(auditableId), dtos);
-    }
-
-    return result;
   }
 
   async createAuditStatus(

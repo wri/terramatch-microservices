@@ -3,7 +3,14 @@ import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/applicat
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApplicationDto, ApplicationHistoryDto, ApplicationHistoryEntryDto } from "./dto/application.dto";
-import { Application, FormSubmission, Project, User } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Audit,
+  AuditStatus,
+  FormSubmission,
+  Project,
+  User
+} from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
   buildDeletedResponse,
@@ -19,26 +26,18 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { EmbeddedSubmissionDto, SubmissionDto } from "../entities/dto/submission.dto";
-import { uniqBy } from "lodash";
+import { groupBy, last, uniqBy } from "lodash";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import { AuditStatusService } from "../entities/audit-status.service";
-import { AuditStatusDto } from "../entities/dto/audit-status.dto";
-import { AuditStatusType } from "@terramatch-microservices/database/constants";
 import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
-import { last } from "lodash";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
 
 @Controller("applications/v3/applications")
 export class ApplicationsController {
-  constructor(
-    private readonly policyService: PolicyService,
-    private readonly formDataService: FormDataService,
-    private readonly auditStatusService: AuditStatusService
-  ) {}
+  constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
 
   @Get()
   @ApiOperation({ operationId: "applicationIndex", summary: "Get a filtered, paginated view of applications" })
@@ -54,11 +53,14 @@ export class ApplicationsController {
 
     const permissions = await this.policyService.getPermissions();
     if (permissions.find(p => p.startsWith("framework-")) == null) {
+      // admins have access to everything, so we just filter what's available for non-admins
       const orgUuids = await User.orgUuids(authenticatedUserId());
       builder.where({ organisationUuid: { [Op.in]: orgUuids } });
     }
 
     if (query.currentSubmissionStatus != null) {
+      // Use EXISTS() with an INNER JOIN to find applications that have a current submission with the given status
+      // within our builder query.
       builder.where({
         [Op.and]: [
           Subquery.select(FormSubmission, "id")
@@ -206,7 +208,20 @@ export class ApplicationsController {
 
     await this.policyService.authorize("read", application);
 
-    const history = await this.getApplicationHistory(application);
+    const submissions = await this.findSubmissions(application.id);
+    const audits = groupBy(await Audit.for(submissions).findAll({ order: [["updatedAt", "DESC"]] }), "auditableId");
+    const auditStatuses = groupBy(
+      await AuditStatus.for(submissions).findAll({ order: [["updatedAt", "DESC"]] }),
+      "auditableId"
+    );
+    const history: ApplicationHistoryEntryDto[] = [];
+    // Reverse the submissions so we go through the history of the newest one first
+    for (const { id, stageName } of submissions.reverse()) {
+      // Consider audit statuses first, as that's the more modern system and will have the most
+      // correct data.
+      this.addHistory(history, auditStatuses[id] ?? [], stageName);
+      this.addHistory(history, audits[id] ?? [], stageName);
+    }
 
     return buildJsonApi(ApplicationHistoryDto).addData(
       application.uuid,
@@ -215,6 +230,67 @@ export class ApplicationsController {
         entries: history
       })
     );
+  }
+
+  private addHistory(history: ApplicationHistoryEntryDto[], audits: Audit[] | AuditStatus[], stageName: string | null) {
+    const earliestEntry = last(history);
+    const earliestHistoryDate = earliestEntry == null ? undefined : DateTime.fromJSDate(earliestEntry.date);
+    const startIndex =
+      earliestHistoryDate == null
+        ? 0
+        : audits.findIndex(
+            ({ updatedAt }: Audit | AuditStatus) => DateTime.fromJSDate(updatedAt) <= earliestHistoryDate
+          );
+    if (startIndex < 0) return;
+
+    for (const audit of audits.slice(startIndex)) {
+      const dto = this.createHistoryEntryDto(audit, stageName);
+      // don't record back-to-back updated events unless they're at least 12 hours apart
+      const earliest = last(history);
+      if (
+        earliest?.eventType === "updated" &&
+        dto.eventType === "updated" &&
+        DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(dto.date), "hours").hours < 12
+      ) {
+        continue;
+      }
+
+      // If our earliest history event is an update and this one is "started", and they occurred within
+      // 12 hours of each other, replace the update with the started
+      if (
+        earliest?.eventType === "updated" &&
+        dto.eventType === "status" &&
+        dto.status === "started" &&
+        DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(dto.date), "hours").hours < 12
+      ) {
+        history[history.length - 1] = dto;
+      } else {
+        history.push(dto);
+      }
+    }
+  }
+
+  private createHistoryEntryDto(audit: Audit | AuditStatus, stageName: string | null) {
+    if (audit instanceof AuditStatus) {
+      return populateDto(new ApplicationHistoryEntryDto(), {
+        eventType: audit.type,
+        status: audit.status as FormSubmissionStatus,
+        date: audit.updatedAt,
+        stageName,
+        comment: audit.comment
+      });
+    } else {
+      const status = (audit.newValues?.status ?? null) as FormSubmissionStatus | null;
+      const eventType = audit.event === "updated" && status == null ? audit.event : "status";
+      const comment = eventType === "updated" ? null : (audit.newValues?.feedback as string) ?? null;
+      return populateDto(new ApplicationHistoryEntryDto(), {
+        eventType,
+        status,
+        date: audit.updatedAt,
+        stageName,
+        comment
+      });
+    }
   }
 
   private async findSubmissions(applicationIds: number | number[]) {
@@ -238,90 +314,5 @@ export class ApplicationsController {
       }),
       "applicationId"
     );
-  }
-
-  /**
-   * Builds application history from audit statuses.
-   *
-   * Deduplication differences:
-   * - Audit-status endpoint deduplicates by comment value in service
-   * - Application history deduplicates by 12-hour time window in controller where it skips/replaces entries within 12 hours
-   */
-  private async getApplicationHistory(application: Application): Promise<ApplicationHistoryEntryDto[]> {
-    const submissions = await this.findSubmissions(application.id);
-    const auditStatusesBySubmissionId = await this.auditStatusService.getAuditStatusesForApplicationHistory(
-      submissions
-    );
-
-    const history: ApplicationHistoryEntryDto[] = [];
-
-    for (const submission of submissions.reverse()) {
-      const auditStatusDtos = auditStatusesBySubmissionId.get(submission.id) ?? [];
-
-      for (const dto of auditStatusDtos) {
-        const entry = this.createHistoryEntryDtoFromAuditStatusDto(dto, submission.stageName);
-        this.addHistoryEntry(history, entry);
-      }
-    }
-
-    return history;
-  }
-
-  private addHistoryEntry(history: ApplicationHistoryEntryDto[], entry: ApplicationHistoryEntryDto) {
-    const earliestEntry = last(history);
-    const earliestHistoryDate = earliestEntry == null ? undefined : DateTime.fromJSDate(earliestEntry.date);
-
-    if (earliestHistoryDate != null && DateTime.fromJSDate(entry.date) > earliestHistoryDate) {
-      return;
-    }
-
-    const earliest = last(history);
-    if (
-      earliest != null &&
-      earliest.eventType === "updated" &&
-      entry.eventType === "updated" &&
-      DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(entry.date), "hours").hours < 12
-    ) {
-      return;
-    }
-
-    if (
-      earliest != null &&
-      earliest.eventType === "updated" &&
-      entry.eventType === "status" &&
-      entry.status === "started" &&
-      DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(entry.date), "hours").hours < 12
-    ) {
-      history[history.length - 1] = entry;
-    } else {
-      history.push(entry);
-    }
-  }
-
-  private createHistoryEntryDtoFromAuditStatusDto(
-    dto: AuditStatusDto,
-    stageName: string | null
-  ): ApplicationHistoryEntryDto {
-    let status: FormSubmissionStatus | null = null;
-    if (dto.status != null) {
-      if (dto.status === "Draft") {
-        status = "started";
-      } else {
-        status = dto.status as FormSubmissionStatus;
-      }
-    }
-
-    let eventType: AuditStatusType | null = dto.type as AuditStatusType | null;
-    if (eventType == null) {
-      eventType = status != null ? ("status" as AuditStatusType) : ("updated" as AuditStatusType);
-    }
-
-    return populateDto(new ApplicationHistoryEntryDto(), {
-      eventType,
-      status,
-      date: dto.dateCreated ?? new Date(),
-      stageName,
-      comment: dto.comment
-    });
   }
 }
